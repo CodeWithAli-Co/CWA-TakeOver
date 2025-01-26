@@ -1,0 +1,92 @@
+#pin-div {
+  width: 100%;
+  height: 100%;
+  display: grid;
+  grid-template-columns: 0.5fr 1fr 0.5fr;
+  grid-template-rows: 1fr 1fr 1fr;
+  grid-column-gap: 0px;
+  grid-row-gap: 0px;
+  place-items: center;
+}
+
+#big-title {
+  grid-column: 2/2;
+  grid-row: 1/1;
+  font-size: 5em;
+  font-family: "Lexend Giga", serif;
+  font-optical-sizing: auto;
+  font-weight: 400;
+  font-style: normal;
+  background: linear-gradient(90deg, #b40000 0%, #c42a2a 25%, #aaaaaa 50%, #636363 75%, #4d4d4d 100%);
+  background-size: 150% 150%;
+  color: transparent;
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  text-fill-color: transparent;
+  animation: gradientText 5s ease infinite;
+}
+
+@keyframes gradientText {
+  0% {
+    background-position: 0% 50%;
+  }
+
+  50% {
+    background-position: 100% 50%;
+  }
+
+  100% {
+    background-position: 0% 50%;
+  }
+}
+
+
+#cwa-logo-full {
+  grid-column: 2/2;
+  grid-row: 2/2;
+  width: 500px;
+  height: 500px;
+  z-index: -1;
+}
+
+
+#pin-form {
+  position: relative;
+  grid-column: 2/2;
+  grid-row: 3/3;
+  bottom: 150px;
+}
+
+@media (min-width: 1440px) {
+  #pin-form {
+    bottom: 250px;
+  }
+}
+
+#pin-input {
+  width: 12rem;
+  height: 3rem;
+  place-items: center;
+  border: 2px solid rgb(220, 45, 45);
+  outline: none;
+  border-radius: 15px;
+  -webkit-box-shadow: inset 0px 0px 15px 0px rgba(220, 45, 45, 0.25);
+  -moz-box-shadow: inset 0px 0px 15px 0px rgba(220, 45, 45, 0.25);
+  box-shadow: inset 0px 0px 15px 0px rgba(220, 45, 45, 0.25);
+}
+
+#pin-input::placeholder {
+  font-style: italic;
+  color: rgba(110, 110, 110, 0.5);
+}
+
+#pin-input:focus {
+  -webkit-box-shadow: inset 0px 0px 25px 0px rgba(220, 45, 45, 0.25);
+  -moz-box-shadow: inset 0px 0px 25px 0px rgba(220, 45, 45, 0.25);
+  box-shadow: inset 0px 0px 25px 0px rgba(220, 45, 45, 0.25);
+}
+
+#pin-input:focus~#pin-input::placeholder {
+  color: black;
+}

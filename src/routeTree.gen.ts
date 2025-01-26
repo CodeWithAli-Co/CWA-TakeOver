@@ -16,9 +16,30 @@ import { Route as rootRoute } from './routes/__root'
 
 // Create Virtual Routes
 
+const EmployeeLazyImport = createFileRoute('/employee')()
+const BroadcastLazyImport = createFileRoute('/broadcast')()
+const BotLazyImport = createFileRoute('/bot')()
 const IndexLazyImport = createFileRoute('/')()
 
 // Create/Update Routes
+
+const EmployeeLazyRoute = EmployeeLazyImport.update({
+  id: '/employee',
+  path: '/employee',
+  getParentRoute: () => rootRoute,
+} as any).lazy(() => import('./routes/employee.lazy').then((d) => d.Route))
+
+const BroadcastLazyRoute = BroadcastLazyImport.update({
+  id: '/broadcast',
+  path: '/broadcast',
+  getParentRoute: () => rootRoute,
+} as any).lazy(() => import('./routes/broadcast.lazy').then((d) => d.Route))
+
+const BotLazyRoute = BotLazyImport.update({
+  id: '/bot',
+  path: '/bot',
+  getParentRoute: () => rootRoute,
+} as any).lazy(() => import('./routes/bot.lazy').then((d) => d.Route))
 
 const IndexLazyRoute = IndexLazyImport.update({
   id: '/',
@@ -37,6 +58,27 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexLazyImport
       parentRoute: typeof rootRoute
     }
+    '/bot': {
+      id: '/bot'
+      path: '/bot'
+      fullPath: '/bot'
+      preLoaderRoute: typeof BotLazyImport
+      parentRoute: typeof rootRoute
+    }
+    '/broadcast': {
+      id: '/broadcast'
+      path: '/broadcast'
+      fullPath: '/broadcast'
+      preLoaderRoute: typeof BroadcastLazyImport
+      parentRoute: typeof rootRoute
+    }
+    '/employee': {
+      id: '/employee'
+      path: '/employee'
+      fullPath: '/employee'
+      preLoaderRoute: typeof EmployeeLazyImport
+      parentRoute: typeof rootRoute
+    }
   }
 }
 
@@ -44,32 +86,47 @@ declare module '@tanstack/react-router' {
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexLazyRoute
+  '/bot': typeof BotLazyRoute
+  '/broadcast': typeof BroadcastLazyRoute
+  '/employee': typeof EmployeeLazyRoute
 }
 
 export interface FileRoutesByTo {
   '/': typeof IndexLazyRoute
+  '/bot': typeof BotLazyRoute
+  '/broadcast': typeof BroadcastLazyRoute
+  '/employee': typeof EmployeeLazyRoute
 }
 
 export interface FileRoutesById {
   __root__: typeof rootRoute
   '/': typeof IndexLazyRoute
+  '/bot': typeof BotLazyRoute
+  '/broadcast': typeof BroadcastLazyRoute
+  '/employee': typeof EmployeeLazyRoute
 }
 
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/'
+  fullPaths: '/' | '/bot' | '/broadcast' | '/employee'
   fileRoutesByTo: FileRoutesByTo
-  to: '/'
-  id: '__root__' | '/'
+  to: '/' | '/bot' | '/broadcast' | '/employee'
+  id: '__root__' | '/' | '/bot' | '/broadcast' | '/employee'
   fileRoutesById: FileRoutesById
 }
 
 export interface RootRouteChildren {
   IndexLazyRoute: typeof IndexLazyRoute
+  BotLazyRoute: typeof BotLazyRoute
+  BroadcastLazyRoute: typeof BroadcastLazyRoute
+  EmployeeLazyRoute: typeof EmployeeLazyRoute
 }
 
 const rootRouteChildren: RootRouteChildren = {
   IndexLazyRoute: IndexLazyRoute,
+  BotLazyRoute: BotLazyRoute,
+  BroadcastLazyRoute: BroadcastLazyRoute,
+  EmployeeLazyRoute: EmployeeLazyRoute,
 }
 
 export const routeTree = rootRoute
@@ -82,11 +139,23 @@ export const routeTree = rootRoute
     "__root__": {
       "filePath": "__root.tsx",
       "children": [
-        "/"
+        "/",
+        "/bot",
+        "/broadcast",
+        "/employee"
       ]
     },
     "/": {
       "filePath": "index.lazy.tsx"
+    },
+    "/bot": {
+      "filePath": "bot.lazy.tsx"
+    },
+    "/broadcast": {
+      "filePath": "broadcast.lazy.tsx"
+    },
+    "/employee": {
+      "filePath": "employee.lazy.tsx"
     }
   }
 }

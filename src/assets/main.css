@@ -1,5 +1,9 @@
 @import 'tailwindcss';
 
+:root {
+  --page-marginL: 15px;
+}
+
 body {
   width: 100vw;
   height: 100vh;
@@ -19,4 +23,57 @@ body {
   grid-template-rows: 1fr;
   grid-column-gap: 0px;
   grid-row-gap: 0px;
+  overflow-x: hidden;
+}
+
+@media (min-width: 1440px) {
+  .main-div {
+    grid-template-columns: 0.05fr 1fr;
+  }
+}
+
+/* width */
+::-webkit-scrollbar {
+  width: 10px;
+}
+
+/* Track */
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+/* Handle */
+::-webkit-scrollbar-thumb {
+  background: #202020;
+  border-radius: 10px;
+}
+
+/* Handle on hover */
+::-webkit-scrollbar-thumb:hover {
+  background: #555;
+}
+
+ol {
+  list-style-type: decimal;
+  margin-left: var(--page-marginL);
+}
+
+ul {
+  list-style-type: disc;
+  margin-left: var(--page-marginL);
+}
+
+.ul-2 {
+  list-style-type: circle;
+  margin-left: var(--page-marginL);
+}
+
+h1 {
+  font-size: 2em;
+  font-weight: 600;
+}
+
+h3 {
+  font-size: 1.5em;
+  font-weight: 600;
 }
