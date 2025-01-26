@@ -12,9 +12,9 @@
   "app": {
     "windows": [
       {
-        "title": "cwa-manager",
-        "width": 800,
-        "height": 600
+        "title": "CWA Manager",
+        "width": 1250,
+        "height": 850
       }
     ],
     "security": {

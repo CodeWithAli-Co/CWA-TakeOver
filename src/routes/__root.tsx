@@ -7,7 +7,6 @@ export const Route = createRootRoute({
         <div>
           <Link to="/"></Link>{" "}
         </div>
-        <hr />
         <Outlet />
       </>
     );

@@ -1,0 +1,32 @@
+#sidebar {
+  grid-column: 1/1;
+  display: grid;
+  grid-template-columns: 1fr;
+  grid-template-rows: repeat(5, 0.1fr);
+  grid-column-gap: 0px;
+  grid-row-gap: 0px;
+  place-items: center;
+  border-right: solid 2px rgb(180, 0, 0);
+  user-select: none;
+}
+
+.sidebar-icon {
+  width: 50px;
+  padding: 5px;
+  border-radius: 10px;
+  transition: all 0.15s ease-out;
+}
+
+.sidebar-icon:hover {
+  background: rgba(128, 128, 128, 0.25);
+}
+
+#cwa-logo {
+  width: 60px;
+  border-radius: 50%;
+}
+
+#main-section {
+  grid-column: 2/2;
+}
+
