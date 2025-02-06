@@ -7,6 +7,7 @@
   grid-column-gap: 0px;
   grid-row-gap: 0px;
   place-items: center;
+  user-select: none;
 }
 
 #big-title {

@@ -38,6 +38,12 @@
   }
 }
 
+/* the 'active' class comes built-in with Tanstack Rounter!!! SO HYPE! */
+.active {
+  background: rgba(128, 128, 128, 0.25);
+  border-radius: 10px;
+}
+
 #cwa-logo {
   width: 60px;
   border-radius: 50%;

@@ -4,7 +4,7 @@
 // *Note: `env.d.ts` was auto generated here, but if having issues with THIS specific file, move it to project src folder
 
 interface ImportMetaEnv {
-  // readonly VITE_SECRET_KEY: string
+  readonly VITE_DATABASE_URL: string
   // more env variables...
 }
 

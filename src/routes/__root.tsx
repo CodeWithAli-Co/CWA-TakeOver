@@ -1,4 +1,4 @@
-import { createRootRoute, Link, Outlet } from "@tanstack/react-router";
+import { createRootRoute, Link, Outlet, useNavigate } from "@tanstack/react-router";
 import cwa_logo from "/codewithali_logo.png";
 import home_icon from "/home_icon.svg";
 import bot_icon from "/bot_icon.svg";
@@ -68,4 +68,19 @@ export const Route = createRootRoute({
       </>
     );
   },
+  errorComponent: () => {
+    const navigate = useNavigate();
+
+    const goBack = () => {
+      navigate({ to: '..' });
+    }
+    return (
+      <>
+      <h3>
+        <strong>Error</strong>
+      </h3>
+      <button type="button" onClick={() => goBack()}>Back</button>
+      </>
+    )
+  }
 });
