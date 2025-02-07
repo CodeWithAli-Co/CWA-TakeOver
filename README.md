@@ -1,6 +1,6 @@
-# Tauri + React + Typescript
+# CWA Manager
 
-This template should help get you started developing with Tauri, React and Typescript in Vite.
+This Manager app will be used to manage the majority of CodeWithAli company.
 
 ## Recommended IDE Setup
 
