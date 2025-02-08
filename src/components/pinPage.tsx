@@ -2,9 +2,17 @@ import { useForm } from '@tanstack/react-form';
 import './compAssets/pinPage.css';
 import { useAppStore } from '../stores/main';
 import cwa_logo_full from '/codewithali_logo_full.png';
+import { useEffect } from 'react';
 
 export default function PinPage() {
-  const { setLoggedIn } = useAppStore();
+  const { setPinCheck, setIsLoggedIn } = useAppStore();
+  useEffect(() => {
+    const checkLogin = localStorage.getItem('isLoggedIn');
+    if (checkLogin === 'true') {
+      setIsLoggedIn('true');
+    }
+  }, [])
+  
 
   const form = useForm({
     defaultValues: {
@@ -13,8 +21,9 @@ export default function PinPage() {
     onSubmit: async ({ value }) => {
       console.log(value);
       document.startViewTransition(() => {
-        setLoggedIn(true);
+        setPinCheck('true');
       })
+  
       // // Checks if User's Input only contains numbers
       // const regex = /^\d+$/;
       // if (!regex.test(value.pin)) {

@@ -1,19 +1,32 @@
-import { createRootRoute, Link, Outlet, useNavigate } from "@tanstack/react-router";
+import {
+  createRootRoute,
+  Link,
+  Outlet,
+  useNavigate,
+} from "@tanstack/react-router";
 import cwa_logo from "/codewithali_logo.png";
-import home_icon from "/home_icon.svg";
+import book_icon from "/book_icon.svg";
 import bot_icon from "/bot_icon.svg";
 import employee_icon from "/employee_icon.svg";
 import broadcast_icon from "/broadcast_icon.svg";
 import "../assets/root.css";
 import { useAppStore } from "../stores/main";
 import PinPage from "../components/pinPage";
+import { SingUpPage } from "../components/signup";
+import { LoginPage } from "../components/login";
 
 export const Route = createRootRoute({
   component: () => {
-    const { loggedIn } = useAppStore();
+    const { pinCheck, isLoggedIn } = useAppStore();
     return (
       <>
-        {loggedIn ? (
+        {pinCheck === "false" ? (
+          <PinPage />
+        ) : pinCheck === "true" && isLoggedIn === "false" ? (
+          <LoginPage />
+        ) : pinCheck === "true" && isLoggedIn === "makeAcc" ? (
+          <SingUpPage />
+        ) : pinCheck === "true" && isLoggedIn === "true" ? (
           <div className="main-div">
             <section id="sidebar">
               <Link to="/" draggable={false}>
@@ -24,10 +37,10 @@ export const Route = createRootRoute({
                   draggable={false}
                 />
               </Link>
-              <Link to="/" draggable={false}>
+              <Link to="/details" draggable={false}>
                 <img
-                  src={home_icon}
-                  alt="Home Icon"
+                  src={book_icon}
+                  alt="Book Icon"
                   className="sidebar-icon"
                   draggable={false}
                 />
@@ -63,7 +76,7 @@ export const Route = createRootRoute({
             </section>
           </div>
         ) : (
-          <PinPage />
+          <h3>Error Loading App Components</h3>
         )}
       </>
     );
@@ -72,15 +85,17 @@ export const Route = createRootRoute({
     const navigate = useNavigate();
 
     const goBack = () => {
-      navigate({ to: '..' });
-    }
+      navigate({ to: ".." });
+    };
     return (
       <>
-      <h3>
-        <strong>Error</strong>
-      </h3>
-      <button type="button" onClick={() => goBack()}>Back</button>
+        <h3>
+          <strong>Error</strong>
+        </h3>
+        <button type="button" onClick={() => goBack()}>
+          Back
+        </button>
       </>
-    )
-  }
+    );
+  },
 });

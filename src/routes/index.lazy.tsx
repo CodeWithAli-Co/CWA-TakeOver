@@ -17,9 +17,12 @@ import Welcome from "../components/welcome";
 // }
 
 function Index() {
-  
+  const remLS = () => {
+    localStorage.removeItem('isLoggedIn')
+  }
   return (
     <>
+      <button type="button" onClick={() => remLS()}>Reset LocalStorage</button>
       <Welcome />
     </>
   );
