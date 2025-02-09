@@ -14,22 +14,39 @@ export const SingUpPage = () => {
     defaultValues: {
       username: '',
       email: '',
-      password: ''
+      password: '',
+      position: 'Employee'
     },
     onSubmit: async ({ value }) => {
       console.log(value);
       // Need to Insert data into app_users table
 
-      let { error } = await supabase.auth.signUp({
+      let { data, error } = await supabase.auth.signUp({
         email: value.email,
         password: value.password
       })
-
       
       if (error) return console.log(error.message);
 
+      if (value.position === 'Employee') {
+        const { error } = await supabase.from("app_users").insert({
+          username: value.username,
+          email: value.email,
+          supa_id: data.user?.id
+        });
+        if (error) return console.log('Signing Employee up Error:', error.message);
+  
+      } else if (value.position === 'Intern') {
+        const { error } = await supabase.from("interns").insert({
+          username: value.username,
+          email: value.email,
+          supa_id: data.user?.id
+        });
+        if (error) return console.log('Signing Intern up Error:', error.message);
+      }
+
       // add delay for email to reach user
-      await new Promise((r) => setTimeout(r, 15000))
+      await new Promise((r) => setTimeout(r, 10000))
       setIsLoggedIn('false') // Go to login page
     }
   });
@@ -73,6 +90,20 @@ export const SingUpPage = () => {
                       value={field.state.value}
                       onChange={(e) => field.handleChange(e.target.value)}
                     />
+                  </>
+                );
+              }}
+            />
+            <br />
+            <form.Field
+              name='position'
+              children={(field) => {
+                return (
+                  <>
+                  <select name={field.name} id="position-select" onChange={(e) => field.handleChange(e.target.value)}>
+                    <option value="Employee">Employee</option>
+                    <option value="Intern">Intern</option>
+                  </select>
                   </>
                 );
               }}

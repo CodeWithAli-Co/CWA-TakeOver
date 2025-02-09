@@ -5,17 +5,19 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useEffect, useRef } from "react";
 import "../assets/details.css";
 import supabase from "@/MyComponents/supabase";
-import { EditData } from "@/MyComponents/editForm";
 import { useAppStore } from "@/stores/store";
+import { AddData } from "@/MyComponents/subForms/addForm";
+import { EditData } from "@/MyComponents/subForms/editForm";
 
 function Details() {
-  const { setDialog, dialog } = useAppStore();
+  const { setDialog, dialog, setDisplayer, displayer, resetDisplayer } = useAppStore();
   const dialogRef = useRef<HTMLDialogElement | null>(null);
 
-  const showModal = () => {
+  const showModal = (dialogDisplay: string) => {
     document.startViewTransition(() => {
       dialogRef.current?.showModal();
     });
+    setDisplayer(dialogDisplay);
     setDialog("shown");
   };
 
@@ -23,45 +25,22 @@ function Details() {
     document.startViewTransition(() => {
       dialogRef.current?.close();
     });
+    resetDisplayer();
     setDialog("closed");
   };
 
+  // Close dialog when form is submitted (bc form sets dialog state to 'closed')
   useEffect(() => {
     if (dialog === "closed") {
       document.startViewTransition(() => {
         dialogRef.current?.close();
       });
+      resetDisplayer();
     }
   }, [dialog]);
 
-  // Insert data
-  // Encrypting password before inserting
-  const AddData = async (
-    platform_name: string,
-    username: string,
-    email: string,
-    password: string,
-    AddInfo: string,
-    Status: boolean
-  ) => {
-    const encPassword = invoke("encrypt", {
-      keyStr: import.meta.env.VITE_ENCRYPTION_KEY,
-      plaintext: password,
-    });
-    encPassword.then(async (res) => {
-      const { error } = await supabase.from("cwa_creds").insert({
-        platform_name: platform_name,
-        acc_username: username,
-        acc_email: email,
-        acc_enc_password: res,
-        acc_addinfo: AddInfo,
-        active: Status,
-      });
-      if (error) return console.log(error.message);
-    });
-  };
-
-  const getPassword = async (credID: string) => {
+  // Reveal Password
+  const getPassword = async (credID: number) => {
     const { data } = await supabase
       .from("cwa_creds")
       .select("id, acc_enc_password")
@@ -74,7 +53,7 @@ function Details() {
   };
 
   // Delete Data
-  const DelData = async (rowID: any) => {
+  const DelData = async (rowID: number) => {
     const { data: result, error } = await supabase
       .from("cwa_creds")
       .delete()
@@ -110,14 +89,14 @@ function Details() {
             <button
               className="neonbtn"
               type="button"
-              onClick={() => getPassword(String(cred.id))}
+              onClick={() => getPassword(cred.id)}
             >
               Reveal Pass
             </button>
             <button
               className="neonbtn"
               type="button"
-              onClick={() => showModal()}
+              onClick={() => showModal("editDialog")}
             >
               Edit
             </button>
@@ -129,6 +108,8 @@ function Details() {
               Delete
             </button>
           </div>
+
+          {/* Might need to insert dynamic id number in forms so each btn has unique id 'submit${number}' so DOM doesnt complain */}
           <dialog ref={dialogRef} className="dialog">
             <button
               type="button"
@@ -137,16 +118,17 @@ function Details() {
             >
               X
             </button>
-            <EditData rowID={cred.id} />
+            {displayer === "editDialog" ? (
+              <EditData rowID={cred.id} />
+            ) : displayer === "addDialog" ? (
+              <AddData />
+            ) : (
+              "Error Loading Dialog..."
+            )}
           </dialog>
         </div>
       ))}
-      <button
-        type="button"
-        onClick={() =>
-          AddData("Boom", "rawr", "rawr@gm.com", "lolgagger", "pls work", true)
-        }
-      >
+      <button type="button" onClick={() => showModal("addDialog")}>
         Add Data
       </button>
     </>

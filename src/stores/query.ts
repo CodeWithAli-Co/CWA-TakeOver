@@ -42,3 +42,16 @@ export const Employees = () => {
     refetchInterval: 5000,
   });
 };
+
+// Fetch All CWA Interns
+const fetchInterns= async () => {
+  const { data } = await supabase.from("interns").select("*");
+  return data;
+};
+export const Interns = () => {
+  return useQuery({
+    queryKey: ["interns"],
+    queryFn: fetchInterns,
+    refetchInterval: 5000,
+  });
+};

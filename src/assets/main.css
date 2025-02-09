@@ -113,8 +113,13 @@ body {
 }
 
 input {
+  color: black;
   outline: transparent;
   background: whitesmoke;
+}
+
+select, option {
+  color: black;
 }
 
 ol {
