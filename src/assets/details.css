@@ -1,0 +1,14 @@
+#details-grid {
+
+}
+
+#card {
+
+}
+
+.password {
+  -webkit-text-security: disc;
+  width: 4rem;
+  clip-path: view-box;
+  user-select: none;
+}

@@ -1,5 +1,5 @@
 import { useForm } from '@tanstack/react-form';
-import { useAppStore } from '../stores/main';
+import { useAppStore } from '../stores/store';
 import supabase from '../components/supabase';
 
 export const SingUpPage = () => {

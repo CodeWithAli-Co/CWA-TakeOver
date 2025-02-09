@@ -16,69 +16,57 @@ export default function Welcome() {
         </h1>
 
         <div id="sec-2">
-          <h3 className="wlc-subtitle">About CodeWithAli</h3>
+          <h3 className="wlc-subtitle">About CodeWithAli Manager</h3>
           <p>
-            At CodeWithAli, we empower individuals and businesses with the
-            tools, knowledge, and applications needed to thrive in the digital
-            age.
+            The CodeWithAli Manager app is the main manager for the CodeWithAli Company.
           </p>
         </div>
 
         <div id="sec-3">
-          <h3 className="wlc-subtitle">Who We Are</h3>
-          <p>We are dedicated to:</p>
-          <ol>
-            <li>
-              <strong>Teaching Real-World Coding:</strong> Educating students on
-              applying coding concepts to create impactful applications.
-            </li>
-            <li>
-              <strong>Web and App Development:</strong> Designing websites for
-              individuals to advertise goods and building apps for corporations.
-            </li>
-            <li>
-              <strong>Innovative Applications:</strong> Creating apps like
-              expense trackers to serve the broader public.
-            </li>
-          </ol>
+          <h3 className="wlc-subtitle">Roles</h3>
+          <p>Member</p>
+          <li>You are an Employee of CodeWithAli. You mostly only have view permissions.</li>
+          <p>Admin</p>
+          <li>You have the 2nd highest most powerfull role. You ( or your group ) are responsible for managing CodeWithAli.</li>
+          <p>CEO</p>
+          <li>You have the highest role in the Company. You <strong>own</strong> CodeWithAli.</li>
         </div>
 
         <div id="sec-4">
-          <h3 className="wlc-subtitle">What We Offer</h3>
+          <h3 className="wlc-subtitle">Tabs</h3>
           <ol>
             <li>
-              <strong>Education</strong>
+              <strong>Home</strong>
               <ul>
-                <li>Coding lessons covering:</li>
-                <ul className="ul-2">
-                  <li>Front-End and Back-End Development.</li>
-                  <li>Full-Stack Application Integration.</li>
-                </ul>
+                <li>This is the page you're currently on. The Home tab can be navigated to by clicking on the CodeWithAli Logo.</li>
+              </ul>
+            </li>
+            <li>
+              <strong>Details</strong>
+              <ul>
                 <li>
-                  Hands-on projects to build real-world skills and portfolios.
+                  The Details tab is where Admins can manage <p style={{ display: "inline-flex", width: 'max-content', fontStyle: 'italic'  }}>( view, insert, export and delete )</p> all of CodeWithAli's accounts.
                 </li>
               </ul>
             </li>
             <li>
-              <strong>Development Services</strong>
+              <strong>Employees/Members</strong>
               <ul>
                 <li>
-                  <strong>For Individuals:</strong> Custom websites for
-                  showcasing goods.
-                </li>
-                <li>
-                  <strong>For Corporations:</strong> Scalable, enterprise-level
-                  apps.
+                  The Employees/Members tab is where Admins can manage all of the employees of CodeWithAli.
                 </li>
               </ul>
             </li>
             <li>
-              <strong>Open-Source Projects</strong>
+              <strong>Bot</strong>
               <ul>
-                <li>
-                  Public tools like expense trackers and other collaborative
-                  projects.
-                </li>
+                <li>The Bot tab is where Admins can manage the CodeWithAli discord bot.</li>
+              </ul>
+            </li>
+            <li>
+              <strong>Broadcast</strong>
+              <ul>
+                <li>The Broadcast tab is where Admins can broadcast emails to employees.</li>
               </ul>
             </li>
           </ol>

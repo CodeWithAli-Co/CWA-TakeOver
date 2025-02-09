@@ -1,5 +1,5 @@
 import { useForm } from '@tanstack/react-form';
-import { useAppStore } from '../stores/main';
+import { useAppStore } from '../stores/store';
 import supabase from './supabase';
 
 export const LoginPage = () => {
@@ -24,18 +24,18 @@ export const LoginPage = () => {
         password: value.password
       })
 
-      const { data: role } = await supabase.from('app_users').select('email, role').eq('email', value.email)
+      const { data: verify } = await supabase.auth.getUserIdentities();
       // checks if user is authenticated by supabase and if they have the specified custom role
-      if (data.user?.role === 'authenticated' && role![0].role === 'admin') {
+      if (data.user?.role === 'authenticated' && verify?.identities[0].identity_data!.email_verified) {
         setIsLoggedIn('true');
+        localStorage.setItem('isLoggedIn', 'true');
       }
+      console.log()
+
 
       if (error?.message === 'Invalid login credentials') {
         setIsLoggedIn('makeAcc');
       }
-
-      // trying out sessionStorage
-      localStorage.setItem('isLoggedIn', 'true');
     }
   });
 

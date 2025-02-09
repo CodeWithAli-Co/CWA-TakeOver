@@ -1,25 +1,12 @@
+import { Employees } from "../stores/query";
 import "./compAssets/dispEmployees.css";
-import supabase from "./supabase";
-import { useQuery } from "@tanstack/react-query";
-
-const fetchData = async () => {
-  const { data } = await supabase.from("app_users").select("*");
-  return data;
-};
 
 function DisplayEmployees() {
-  const {
-    data: users,
-    isLoading,
-    error,
-    status,
-  } = useQuery({
-    queryKey: ["data"],
-    queryFn: fetchData,
-    refetchInterval: 5000,
-  });
+  // use isPending instead of isLoading for when state is fetching data
+  // Can also use react's Suspense
+  const { data: employees, isPending, error } = Employees();
 
-  if (isLoading) return <p>Loading...</p>;
+  if (isPending) return <p>Loading...</p>;
   if (error) return <p>Error Fetching Data</p>;
 
   const temp = (x: any) => {
@@ -29,14 +16,13 @@ function DisplayEmployees() {
     <>
       {/* Add table to display Employees */}
       <h3>Employees</h3>
-      <p>Status: {status}</p>
       
       <section>
         <p>Add new user</p>
       </section>
 
       <section>
-        {users!.map((user) => (
+        {employees!.map((user) => (
           <ul key={user.id} onClick={() => temp(user)}>
             <li>
               {user.username} | Role: {user.role}

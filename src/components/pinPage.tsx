@@ -1,6 +1,6 @@
 import { useForm } from '@tanstack/react-form';
 import './compAssets/pinPage.css';
-import { useAppStore } from '../stores/main';
+import { useAppStore } from '../stores/store';
 import cwa_logo_full from '/codewithali_logo_full.png';
 import { useEffect } from 'react';
 

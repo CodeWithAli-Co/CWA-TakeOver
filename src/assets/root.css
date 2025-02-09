@@ -49,6 +49,17 @@
   border-radius: 50%;
 }
 
+#cwa-logo-link.active {
+  background: transparent;
+}
+
+#cwa-logo-link.active::after {
+  content: '';
+  display: block;
+  border-bottom: rgb(212, 0, 0) 3px solid;
+  border-radius: 15px;
+}
+
 #main-section {
   grid-column: 2/2;
   overflow-y: auto;

@@ -1,6 +1,6 @@
 import { createLazyFileRoute } from "@tanstack/react-router";
 import "../assets/employee.css";
-import { useAppStore } from "../stores/main";
+import { useAppStore } from "../stores/store";
 import DisplayEmployees from "../components/displayEmployees";
 import DisplayInterns from "../components/displayInterns";
 
