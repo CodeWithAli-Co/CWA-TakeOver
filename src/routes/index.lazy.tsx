@@ -1,7 +1,7 @@
 import { createLazyFileRoute } from "@tanstack/react-router";
 import "../assets/index.css";
-import Welcome from "../components/welcome";
 import { ActiveUser } from "../stores/query";
+import Welcome from "@/MyComponents/welcome";
 
 // Assets in public directory cannot be imported from JavaScript.
 // If you intend to import that asset, put the file in the src directory, and use /src/codewithali_logo.png instead of /public/codewithali_logo.png.
@@ -26,7 +26,7 @@ function Index() {
 
   return (
     <>
-      {activeuser?.map((user) => (
+      {activeuser?.map((user: any) => (
         <div key={user.supa_id}>
           <h3>Logged in as: {user.username}</h3>
         </div>

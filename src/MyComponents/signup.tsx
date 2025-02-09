@@ -1,6 +1,6 @@
 import { useForm } from '@tanstack/react-form';
 import { useAppStore } from '../stores/store';
-import supabase from '../components/supabase';
+import supabase from './supabase';
 
 export const SingUpPage = () => {
   const { setIsLoggedIn } = useAppStore();

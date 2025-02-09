@@ -1,4 +1,5 @@
 import { Employees } from "../stores/query";
+import { Skeleton } from "@/components/ui/skeleton";
 import "./compAssets/dispEmployees.css";
 
 function DisplayEmployees() {
@@ -6,7 +7,8 @@ function DisplayEmployees() {
   // Can also use react's Suspense
   const { data: employees, isPending, error } = Employees();
 
-  if (isPending) return <p>Loading...</p>;
+  // Need to fix visibily of Shadcn
+  if (isPending) return <Skeleton className="w-[100px] h-[20px] rounded-full" />;
   if (error) return <p>Error Fetching Data</p>;
 
   const temp = (x: any) => {

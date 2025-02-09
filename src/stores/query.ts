@@ -1,5 +1,5 @@
+import supabase from "@/MyComponents/supabase";
 import { useQuery } from "@tanstack/react-query";
-import supabase from "../components/supabase";
 
 // Fetch Active User
 const fetchActiveUser = async () => {

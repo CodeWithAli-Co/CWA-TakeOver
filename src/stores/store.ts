@@ -8,6 +8,8 @@ interface AppState {
   setIsLoggedIn: (isLoggedIn: string) => void
   displayer: string
   setDisplayer: (displayer: string) => void
+  dialog: string
+  setDialog: (dialog: string) => void
 }
 
 export const useAppStore = create<AppState>()((set) => ({
@@ -16,5 +18,7 @@ export const useAppStore = create<AppState>()((set) => ({
   isLoggedIn: 'false',
   setIsLoggedIn: (isLoggedIn: string) => set({ isLoggedIn }),
   displayer: 'Employees',
-  setDisplayer: (displayer: string) => set({ displayer })
+  setDisplayer: (displayer: string) => set({ displayer }),
+  dialog: 'closed',
+  setDialog: (dialog: string) => set({ dialog })
 }))

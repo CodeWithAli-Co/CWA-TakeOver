@@ -11,9 +11,9 @@ import employee_icon from "/employee_icon.svg";
 import broadcast_icon from "/broadcast_icon.svg";
 import "../assets/root.css";
 import { useAppStore } from "../stores/store";
-import PinPage from "../components/pinPage";
-import { SingUpPage } from "../components/signup";
-import { LoginPage } from "../components/login";
+import PinPage from "@/MyComponents/pinPage";
+import { LoginPage } from "@/MyComponents/login";
+import { SingUpPage } from "@/MyComponents/signup";
 
 export const Route = createRootRoute({
   component: () => {
