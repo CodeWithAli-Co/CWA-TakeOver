@@ -27,7 +27,7 @@ export const EditResendContact = () => {
 
   return (
     <>
-      <div>
+      <div className="form-Outdiv">
         <form
           onSubmit={(e) => {
             e.preventDefault();
@@ -35,13 +35,13 @@ export const EditResendContact = () => {
             form.handleSubmit();
           }}
         >
-          <div>
+          <div className="form">
             <form.Field
               name="Email"
               children={(field) => {
                 return (
                   <>
-                    <label htmlFor={field.name}>Email:</label>
+                    <label className="form-label" htmlFor={field.name}>Email:</label>
                     <input
                       name={field.name}
                       type="email"
@@ -59,10 +59,11 @@ export const EditResendContact = () => {
               children={(field) => {
                 return (
                   <>
-                    <label htmlFor={field.name}>First Name:</label>
+                    <label className="form-label" htmlFor={field.name}>First Name:</label>
                     <input
                       name={field.name}
                       type="text"
+                      className="form-input"
                       required
                       value={field.state.value}
                       onChange={(e) => field.handleChange(e.target.value)}
@@ -77,10 +78,11 @@ export const EditResendContact = () => {
               children={(field) => {
                 return (
                   <>
-                    <label htmlFor={field.name}>Last Name:</label>
+                    <label className="form-label" htmlFor={field.name}>Last Name:</label>
                     <input
                       name={field.name}
                       type="text"
+                      className="form-input"
                       required
                       value={field.state.value}
                       onChange={(e) => field.handleChange(e.target.value)}
@@ -97,11 +99,11 @@ export const EditResendContact = () => {
                   <>
                     <select
                       name={field.name}
-                      id="role-select"
+                      className="form-select"
                       onChange={(e) => field.handleChange(e.target.value)}
                     >
-                      <option value="false">False</option>
-                      <option value="true">True</option>
+                      <option value="false" className="form-option">False</option>
+                      <option value="true" className="form-option">True</option>
                     </select>
                   </>
                 );
@@ -112,7 +114,7 @@ export const EditResendContact = () => {
           <form.Subscribe
             selector={(state) => [state.canSubmit]}
             children={([canSubmit]) => (
-              <button type="submit" disabled={!canSubmit}>
+              <button type="submit" className="neonbtn" disabled={!canSubmit}>
                 Save Changes
               </button>
             )}

@@ -85,7 +85,7 @@ export const EditData = (props: Props) => {
 
   return (
     <>
-      <div>
+      <div className="form-Outdiv">
         <form
           onSubmit={(e) => {
             e.preventDefault();
@@ -93,16 +93,17 @@ export const EditData = (props: Props) => {
             form.handleSubmit();
           }}
         >
-          <div>
+          <div className="form">
             <form.Field
               name="platformName"
               children={(field) => {
                 return (
                   <>
-                    <label htmlFor={field.name}>Platform Name:</label>
+                    <label className="form-label" htmlFor={field.name}>Platform Name:</label>
                     <input
                       name={field.name}
                       type="text"
+                      className="form-input"
                       value={field.state.value}
                       onChange={(e) => field.handleChange(e.target.value)}
                     />
@@ -116,10 +117,11 @@ export const EditData = (props: Props) => {
               children={(field) => {
                 return (
                   <>
-                    <label htmlFor={field.name}>Username:</label>
+                    <label className="form-label" htmlFor={field.name}>Username:</label>
                     <input
                       name={field.name}
                       type="text"
+                      className="form-input"
                       value={field.state.value}
                       onChange={(e) => field.handleChange(e.target.value)}
                     />
@@ -133,10 +135,11 @@ export const EditData = (props: Props) => {
               children={(field) => {
                 return (
                   <>
-                    <label htmlFor={field.name}>Email:</label>
+                    <label className="form-label" htmlFor={field.name}>Email:</label>
                     <input
                       name={field.name}
                       type="email"
+                      className="form-input"
                       value={field.state.value}
                       onChange={(e) => field.handleChange(e.target.value)}
                     />
@@ -150,10 +153,11 @@ export const EditData = (props: Props) => {
               children={(field) => {
                 return (
                   <>
-                    <label htmlFor={field.name}>Password:</label>
+                    <label className="form-label" htmlFor={field.name}>Password:</label>
                     <input
                       name={field.name}
                       type="password"
+                      className="form-input"
                       value={field.state.value}
                       onChange={(e) => field.handleChange(e.target.value)}
                     />
@@ -167,11 +171,12 @@ export const EditData = (props: Props) => {
               children={(field) => {
                 return (
                   <>
-                    <label htmlFor={field.name}>Additional Info:</label>
+                    <label className="form-label" htmlFor={field.name}>Additional Info:</label>
                     {/* Can make this into textarea of editable div */}
                     <input
                       name={field.name}
                       type="text"
+                      className="form-input"
                       value={field.state.value}
                       onChange={(e) => field.handleChange(e.target.value)}
                     />
@@ -185,20 +190,22 @@ export const EditData = (props: Props) => {
               children={(field) => {
                 return (
                   <>
-                    <label htmlFor={field.name}>Status:</label>
+                    <label className="form-label" htmlFor={field.name}>Status:</label>
 
-                    <label htmlFor={field.name}>Active:</label>
+                    <label className="form-label" htmlFor={field.name}>Active:</label>
                     <input
                       name={field.name}
                       type="radio"
+                      className="form-radio"
                       value="true"
                       onChange={(e) => field.handleChange(e.target.value)}
                     />
 
-                    <label htmlFor={field.name}>Inactive:</label>
+                    <label className="form-label" htmlFor={field.name}>Inactive:</label>
                     <input
                       name={field.name}
                       type="radio"
+                      className="form-radio"
                       value="false"
                       onChange={(e) => field.handleChange(e.target.value)}
                     />
@@ -211,7 +218,7 @@ export const EditData = (props: Props) => {
           <form.Subscribe
             selector={(state) => [state.canSubmit]}
             children={([canSubmit]) => (
-              <button type="submit" id="Editsubmit" disabled={!canSubmit}>
+              <button type="submit" className="neonbtn" disabled={!canSubmit}>
                 Save Changes
               </button>
             )}

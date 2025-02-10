@@ -72,9 +72,13 @@ function Details() {
   return (
     <>
       <h3>Details Page</h3>
+      <button className="neonbtn" type="button" onClick={() => showModal("addDialog")}>
+        Add Data
+      </button>
+      <br />
       {cwaCreds?.map((cred: any) => (
-        <div id="details-grid" key={cred.id}>
-          <div>
+        <div className="data-div" key={cred.id}>
+          <div className="card">
             <p>Platform: {cred.platform_name}</p>
             <p>Username: {cred.acc_username}</p>
             <p>Email: {cred.acc_email}</p>
@@ -128,9 +132,6 @@ function Details() {
           </dialog>
         </div>
       ))}
-      <button type="button" onClick={() => showModal("addDialog")}>
-        Add Data
-      </button>
     </>
   );
 }

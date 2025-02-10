@@ -8,8 +8,8 @@ This Manager app will be used to manage the majority of CodeWithAli company.
 
 ## Run the Code
 
-This project uses Bun for project management. Make sure you have this installed before running the app.
-**Project currently uses **Bun version 1.2+** and of course Rust as well -> currently using **Rust version 1.82***
+This project uses [Bun](https://bun.sh/), [Rust](https://community.chocolatey.org/packages/rust) and [OpenSSL](https://community.chocolatey.org/packages/openssl) for project management. Make sure you have this installed before running the app.
+**Project currently uses **Bun version 1.2+, Rust version 1.82***
 
 1. Clone the project
 ```bash

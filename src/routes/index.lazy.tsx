@@ -2,6 +2,7 @@ import { createLazyFileRoute } from "@tanstack/react-router";
 import "../assets/index.css";
 import { ActiveUser } from "../stores/query";
 import Welcome from "@/MyComponents/welcome";
+import supabase from "@/MyComponents/supabase";
 
 // Assets in public directory cannot be imported from JavaScript.
 // If you intend to import that asset, put the file in the src directory, and use /src/codewithali_logo.png instead of /public/codewithali_logo.png.
@@ -20,8 +21,13 @@ import Welcome from "@/MyComponents/welcome";
 function Index() {
   const { data: activeuser } = ActiveUser();
 
-  const remLS = () => {
-    localStorage.removeItem('isLoggedIn')
+  const Logout = async() => {
+    const { error } = await supabase.auth.signOut();
+    if (error) {
+      console.log('Error Signing Out:', error.message)
+    } else {
+      localStorage.removeItem('isLoggedIn');
+    }
   }
 
   return (
@@ -34,7 +40,7 @@ function Index() {
           </h3>
         </div>
       ))}
-      <button className="neonbtn" type="button" onClick={() => remLS()}>Reset LocalStorage</button>
+      <button className="neonbtn" type="button" onClick={() => Logout()}>Log Out</button>
       <Welcome />
     </>
   );

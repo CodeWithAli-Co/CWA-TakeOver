@@ -47,7 +47,7 @@ export const EditEmployee = (props: Props) => {
 
   return (
     <>
-      <div>
+      <div className="form-Outdiv">
         <form
           onSubmit={(e) => {
             e.preventDefault();
@@ -55,16 +55,17 @@ export const EditEmployee = (props: Props) => {
             form.handleSubmit();
           }}
         >
-          <div>
+          <div className="form">
             <form.Field
               name="Username"
               children={(field) => {
                 return (
                   <>
-                    <label htmlFor={field.name}>Username:</label>
+                    <label className="form-label" htmlFor={field.name}>Username:</label>
                     <input
                       name={field.name}
                       type="text"
+                      className="form-input"
                       value={field.state.value}
                       onChange={(e) => field.handleChange(e.target.value)}
                     />
@@ -78,10 +79,11 @@ export const EditEmployee = (props: Props) => {
               children={(field) => {
                 return (
                   <>
-                    <label htmlFor={field.name}>Email:</label>
+                    <label className="form-label" htmlFor={field.name}>Email:</label>
                     <input
                       name={field.name}
                       type="email"
+                      className="form-input"
                       value={field.state.value}
                       onChange={(e) => field.handleChange(e.target.value)}
                     />
@@ -95,9 +97,9 @@ export const EditEmployee = (props: Props) => {
               children={(field) => {
                 return (
                   <>
-                    <select name={field.name} id="role-select" onChange={(e) => field.handleChange(e.target.value)}>
-                      <option value="Member">Member</option>
-                      <option value="Admin">Admin</option>
+                    <select name={field.name} id="role-select" className="form-select" onChange={(e) => field.handleChange(e.target.value)}>
+                      <option value="Member" className="form-option">Member</option>
+                      <option value="Admin" className="form-option">Admin</option>
                     </select>
                   </>
                 );
@@ -108,7 +110,7 @@ export const EditEmployee = (props: Props) => {
           <form.Subscribe
             selector={(state) => [state.canSubmit]}
             children={([canSubmit]) => (
-              <button type="submit" id="Editsubmit" disabled={!canSubmit}>
+              <button type="submit" className="neonbtn" disabled={!canSubmit}>
                 Save Changes
               </button>
             )}

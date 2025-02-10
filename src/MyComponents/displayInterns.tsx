@@ -1,11 +1,11 @@
-import { useAppStore } from '@/stores/store';
-import './compAssets/dispInterns.css';
-import { useEffect, useRef } from 'react';
-import { Interns } from '@/stores/query';
-import { Skeleton } from '@/components/ui/skeleton';
-import supabase from './supabase';
-import { AddIntern } from './subForms/addIntern';
-import { EditIntern } from './subForms/editIntern';
+import { useAppStore } from "@/stores/store";
+import "./compAssets/dispInterns.css";
+import { useEffect, useRef } from "react";
+import { Interns } from "@/stores/query";
+import { Skeleton } from "@/components/ui/skeleton";
+import supabase from "./supabase";
+import { AddIntern } from "./subForms/addIntern";
+import { EditIntern } from "./subForms/editIntern";
 
 function DisplayInterns() {
   const { setDialog, dialog } = useAppStore();
@@ -68,7 +68,8 @@ function DisplayInterns() {
 
       <section>
         {interns?.map((user: any) => (
-            <div key={user.id}>
+          <div className="data-div" key={user.id}>
+            <div className="card">
               <p>
                 {user.username} | Role: {user.role}
               </p>
@@ -98,10 +99,11 @@ function DisplayInterns() {
                 <EditIntern rowID={user.id} />
               </dialog>
             </div>
+          </div>
         ))}
       </section>
     </>
   );
 }
 
-export default DisplayInterns
+export default DisplayInterns;

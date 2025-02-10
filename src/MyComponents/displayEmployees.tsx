@@ -68,7 +68,8 @@ function DisplayEmployees() {
 
       <section>
         {employees?.map((user: any) => (
-            <div key={user.id}>
+          <div className="data-div" key={user.id}>
+            <div className="card">
               <p>
                 {user.username} | Role: {user.role}
               </p>
@@ -98,6 +99,7 @@ function DisplayEmployees() {
                 <EditEmployee rowID={user.id} />
               </dialog>
             </div>
+          </div>
         ))}
       </section>
     </>
