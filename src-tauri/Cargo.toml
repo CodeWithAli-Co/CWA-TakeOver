@@ -5,27 +5,23 @@ description = "A Tauri App"
 authors = ["you"]
 edition = "2021"
 
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
-
 [lib]
-# The `_lib` suffix may seem redundant but it is necessary
-# to make the lib name unique and wouldn't conflict with the bin name.
-# This seems to be only an issue on Windows, see https://github.com/rust-lang/cargo/issues/8519
 name = "cwa_manager_lib"
 crate-type = ["staticlib", "cdylib", "rlib"]
 
 [build-dependencies]
 tauri-build = { version = "2", features = [] }
 
-# Had some issues adding postgres for the first time, so i follow this guide: https://github.com/sfackler/rust-openssl/issues/1542
 [dependencies]
 tauri = { version = "2", features = [] }
+
 tauri-plugin-opener = "2"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 tauri-plugin-sql = { version = "2", features = ["postgres"] }
 postgres-openssl = "0.5.1"
 openssl = "0.10.70"
+openssl-sys = "0.9.105"
 dotenv = "0.15.0"
 postgres = "0.19.10"
 aes-gcm = "0.10.3"
@@ -38,3 +34,7 @@ rustflags = [
     "-Ctarget-feature=+crt-static",
     "-Lnative=C:\\Program Files\\OpenSSL-Win64\\lib"
 ]
+
+[features]
+default = ["custom-protocol"]
+custom-protocol = ["tauri/custom-protocol"]
