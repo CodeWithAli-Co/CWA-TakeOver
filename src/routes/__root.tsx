@@ -14,10 +14,18 @@ import { useAppStore } from "../stores/store";
 import PinPage from "@/MyComponents/pinPage";
 import { LoginPage } from "@/MyComponents/login";
 import { SingUpPage } from "@/MyComponents/signup";
+import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
+import { AppSidebar } from "@/components/app-sidebar";
+
+
+// Import Sidebar Components
+// import { SidebarProvider, SidebarTrigger } from "../components/ui/sidebar";
+// import { AppSidebar } from "../ui/components/app-sidebar";
 
 export const Route = createRootRoute({
   component: () => {
     const { pinCheck, isLoggedIn } = useAppStore();
+
     return (
       <>
         {pinCheck === "false" ? (
@@ -27,54 +35,17 @@ export const Route = createRootRoute({
         ) : pinCheck === "true" && isLoggedIn === "makeAcc" ? (
           <SingUpPage />
         ) : pinCheck === "true" && isLoggedIn === "true" ? (
-          <div className="main-div">
-            <section id="sidebar">
-              <Link to="/" id="cwa-logo-link" draggable={false}>
-                <img
-                  src={cwa_logo}
-                  alt="CodeWithAli Logo"
-                  id="cwa-logo"
-                  draggable={false}
-                />
-              </Link>
-              <Link to="/details" draggable={false}>
-                <img
-                  src={book_icon}
-                  alt="Book Icon"
-                  className="sidebar-icon"
-                  draggable={false}
-                />
-              </Link>
-              <Link to="/employee" draggable={false}>
-                <img
-                  src={employee_icon}
-                  alt="Employee Icon"
-                  className="sidebar-icon"
-                  draggable={false}
-                />
-              </Link>
-              <Link to="/bot" draggable={false}>
-                <img
-                  src={bot_icon}
-                  alt="Bot Icon"
-                  className="sidebar-icon"
-                  draggable={false}
-                />
-              </Link>
-              <Link to="/broadcast" draggable={false}>
-                <img
-                  src={broadcast_icon}
-                  alt="Broadcast Icon"
-                  className="sidebar-icon"
-                  draggable={false}
-                />
-              </Link>
-            </section>
+          <SidebarProvider>
+            <div className="main-div">
+              {/* Sidebar Component */}
+              <AppSidebar />
 
-            <section id="main-section">
-              <Outlet />
-            </section>
-          </div>
+              <section id="main-section">
+                <SidebarTrigger />
+                <Outlet />
+              </section>
+            </div>
+          </SidebarProvider>
         ) : (
           <h3>Error Loading App Components</h3>
         )}
@@ -92,7 +63,7 @@ export const Route = createRootRoute({
         <h3>
           <strong>Error</strong>
         </h3>
-        <button type="button" onClick={() => goBack()}>
+        <button type="button" onClick={goBack}>
           Back
         </button>
       </>

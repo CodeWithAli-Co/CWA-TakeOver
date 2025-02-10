@@ -33,3 +33,8 @@ hex = "0.4.3"
 resend-rs = "0.11.2"
 tokio = { version = "1.43.0", features = ["macros", "rt-multi-thread"] }
 
+[target.x86_64-pc-windows-msvc]
+rustflags = [
+    "-Ctarget-feature=+crt-static",
+    "-Lnative=C:\\Program Files\\OpenSSL-Win64\\lib"
+]
