@@ -36,5 +36,11 @@ export default defineConfig(async () => ({
       // 3. tell vite to ignore watching `src-tauri`
       ignored: ["**/src-tauri/**"],
     },
+    proxy: {
+      "/send-message": {
+        target: 'https://koi-climbing-squid.ngrok-free.app',
+        changeOrigin: true,
+      },
+    },
   },
 }));
