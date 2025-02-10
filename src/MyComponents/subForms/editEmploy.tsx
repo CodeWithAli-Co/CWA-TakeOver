@@ -98,8 +98,8 @@ export const EditEmployee = (props: Props) => {
                 return (
                   <>
                     <select name={field.name} id="role-select" className="form-select" onChange={(e) => field.handleChange(e.target.value)}>
-                      <option value="Member" className="form-option">Member</option>
-                      <option value="Admin" className="form-option">Admin</option>
+                      <option value="member" className="form-option">Member</option>
+                      <option value="admin" className="form-option">Admin</option>
                     </select>
                   </>
                 );

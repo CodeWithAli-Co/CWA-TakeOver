@@ -114,10 +114,11 @@ function Details() {
           </div>
 
           {/* Might need to insert dynamic id number in forms so each btn has unique id 'submit${number}' so DOM doesnt complain */}
+          {/* When table is empty, need alternative way to display dialog */}
           <dialog ref={dialogRef} className="dialog">
             <button
               type="button"
-              id="dialog-close"
+              id="dialog-close5"
               onClick={() => closeModal()}
             >
               X
