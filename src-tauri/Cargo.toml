@@ -30,4 +30,6 @@ dotenv = "0.15.0"
 postgres = "0.19.10"
 aes-gcm = "0.10.3"
 hex = "0.4.3"
+resend-rs = "0.11.2"
+tokio = { version = "1.43.0", features = ["macros", "rt-multi-thread"] }
 

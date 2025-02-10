@@ -2,6 +2,9 @@ import { create } from "zustand";
 
 // App Store
 interface AppState {
+  broadcastID: string
+  setBroadcastID: (broadcastID: string) => void
+  resetBroadcastID: () => void
   pinCheck: string
   setPinCheck: (pinCheck: string) => void
   isLoggedIn: string
@@ -14,6 +17,9 @@ interface AppState {
 }
 
 export const useAppStore = create<AppState>()((set) => ({
+  broadcastID: '',
+  setBroadcastID: (broadcastID: string) => set({ broadcastID }),
+  resetBroadcastID: () => set({ broadcastID: '' }),
   pinCheck: 'false',
   setPinCheck: (pinCheck: string) => set({ pinCheck }),
   isLoggedIn: 'false',

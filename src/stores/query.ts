@@ -6,7 +6,7 @@ const fetchActiveUser = async () => {
   const { data: supaID } = await supabase.auth.getUser();
   const { data } = await supabase
     .from("app_users")
-    .select("supa_id, username")
+    .select("supa_id, username, role")
     .eq("supa_id", supaID.user?.id);
   return data;
 };

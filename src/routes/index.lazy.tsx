@@ -28,7 +28,10 @@ function Index() {
     <>
       {activeuser?.map((user: any) => (
         <div key={user.supa_id}>
-          <h3>Logged in as: {user.username}</h3>
+          <h3>
+            Logged in as: {user.username}
+            <p style={{ display: 'inline-block' }} className={`roleTag ${user.role === 'admin' ? ('admin-role') : user.role === 'member' ? ('member-role') : ('')}`}>{user.role}</p>
+          </h3>
         </div>
       ))}
       <button className="neonbtn" type="button" onClick={() => remLS()}>Reset LocalStorage</button>
