@@ -9,7 +9,7 @@ import book_icon from "/book_icon.svg";
 import bot_icon from "/bot_icon.svg";
 import employee_icon from "/employee_icon.svg";
 import broadcast_icon from "/broadcast_icon.svg";
-import "../assets/root.css";
+import "../assets/sidebar.css";
 import { useAppStore } from "../stores/store";
 import PinPage from "@/MyComponents/pinPage";
 import { LoginPage } from "@/MyComponents/login";

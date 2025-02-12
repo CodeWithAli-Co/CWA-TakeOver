@@ -1,0 +1,117 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --sidebar-background: 0 0% 98%;
+    --sidebar-foreground: 240 5.3% 26.1%;
+    --sidebar-primary: 240 5.9% 10%;
+    --sidebar-primary-foreground: 0 0% 98%;
+    --sidebar-accent: 240 4.8% 95.9%;
+    --sidebar-accent-foreground: 240 5.9% 10%;
+    --sidebar-border: 220 13% 91%;
+    --sidebar-ring: 217.2 91.2% 59.8%;
+  }
+
+  .dark {
+    --sidebar-background: 240 5.9% 10%;
+    --sidebar-foreground: 240 4.8% 95.9%;
+    --sidebar-primary: 224.3 76.3% 48%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 240 3.7% 15.9%;
+    --sidebar-accent-foreground: 240 4.8% 95.9%;
+    --sidebar-border: 240 3.7% 15.9%;
+    --sidebar-ring: 217.2 91.2% 59.8%;
+  }
+}
+
+/* 🔹 Sidebar Container */
+.sidebar {
+  position: fixed;
+  left: 0;
+  top: 0;
+  height: 100vh;
+  width: 60px;
+  background: #1a1a1a;
+  transition: width 0.3s ease-in-out;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding-top: 10px;
+  border-right: solid 2px rgb(180, 0, 0);
+  z-index: 1000; /* Ensures the sidebar stays above content */
+}
+
+.sidebar.expanded {
+  width: 200px;
+}
+
+/* 🔹 Sidebar Items */
+.sidebar-item {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  width: 100%;
+  padding: 10px;
+  color: white;
+  text-decoration: none;
+  transition: background 0.2s ease-in-out;
+  white-space: nowrap;
+}
+
+.sidebar-item:hover {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+/* 🔹 Sidebar Icons */
+.sidebar-icon {
+  width: 30px;
+  height: 30px;
+  margin-right: 10px;
+  transition: transform 0.2s ease-in-out;
+}
+
+.sidebar-item:hover .sidebar-icon {
+  transform: scale(1.1);
+}
+
+/* 🔹 Sidebar Text (Only Visible When Expanded) */
+.sidebar-text {
+  opacity: 0;
+  transition: opacity 0.2s ease-in-out;
+}
+
+.sidebar.expanded .sidebar-text {
+  opacity: 1;
+}
+
+/* 🔹 Logo */
+#cwa-logo {
+  width: 50px;
+  border-radius: 50%;
+  margin-bottom: 15px;
+}
+
+/* 🔹 Active Class (Built-in with TanStack Router) */
+.active {
+  background: rgba(255, 255, 255, 0.25);
+  border-radius: 10px;
+}
+
+/* 🔹 Active Logo Underline */
+#cwa-logo-link.active::after {
+  content: '';
+  display: block;
+  border-bottom: rgb(212, 0, 0) 3px solid;
+  border-radius: 15px;
+}
+
+/* 🔹 Main Section */
+#main-section {
+  margin-left: 60px; /* Keep content in place */
+  transition: margin-left 0.3s ease-in-out;
+}
+
+/* ❌ Removed margin-left adjustment for expanded sidebar */
