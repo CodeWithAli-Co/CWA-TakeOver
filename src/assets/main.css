@@ -58,6 +58,9 @@
   }
 }
 
+/* Remove the overflow-x for better UI, as of Feb 12 2025 the overflow-x isnt set so it's auto
+  so on devices where the UI isnt (fully) responsive it showes the X scrollbar
+*/
 
 :root {
   --page-marginL: 15px;
