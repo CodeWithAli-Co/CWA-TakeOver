@@ -1,6 +1,5 @@
 import {
   createRootRoute,
-  Link,
   Outlet,
   useNavigate,
 } from "@tanstack/react-router";
@@ -15,7 +14,7 @@ import PinPage from "@/MyComponents/pinPage";
 import { LoginPage } from "@/MyComponents/login";
 import { SingUpPage } from "@/MyComponents/signup";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
-import { AppSidebar } from "@/components/app-sidebar";
+import { AppSidebar } from "@/MyComponents/app-sidebar";
 
 // Import Sidebar Components
 // import { SidebarProvider, SidebarTrigger } from "../components/ui/sidebar";
