@@ -54,7 +54,7 @@
   align-items: center;
   justify-content: flex-start;
   width: 100%;
-  padding: 10px;
+  padding: 12px 15px;
   color: white;
   text-decoration: none;
   transition: background 0.2s ease-in-out;
@@ -69,18 +69,17 @@
 .sidebar-icon {
   width: 30px;
   height: 30px;
-  margin-right: 10px;
+  flex-shrink: 0; /* Ensures the icon does not collapse */
+  color: white;
   transition: transform 0.2s ease-in-out;
-}
-
-.sidebar-item:hover .sidebar-icon {
-  transform: scale(1.1);
 }
 
 /* 🔹 Sidebar Text (Only Visible When Expanded) */
 .sidebar-text {
+  display: inline-block; /* Prevents text from disappearing */
   opacity: 0;
   transition: opacity 0.2s ease-in-out;
+  white-space: nowrap;
 }
 
 .sidebar.expanded .sidebar-text {
@@ -100,18 +99,23 @@
   border-radius: 10px;
 }
 
-/* 🔹 Active Logo Underline */
-#cwa-logo-link.active::after {
-  content: '';
-  display: block;
-  border-bottom: rgb(212, 0, 0) 3px solid;
-  border-radius: 15px;
+/* 🔹 Sidebar Footer */
+.sidebar-footer {
+  margin-top: auto;
+  padding: 10px;
+  text-align: center;
+  color: white;
 }
 
-/* 🔹 Main Section */
-#main-section {
-  margin-left: 60px; /* Keep content in place */
-  transition: margin-left 0.3s ease-in-out;
+/* 🔹 Debugging - Force Visibility */
+.sidebar-container * {
+  display: flex !important;
+  opacity: 1 !important;
+  color: white !important;
+  visibility: visible !important;
 }
 
-/* ❌ Removed margin-left adjustment for expanded sidebar */
+
+/* 
+ */
+ 

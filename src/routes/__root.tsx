@@ -17,7 +17,6 @@ import { SingUpPage } from "@/MyComponents/signup";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/app-sidebar";
 
-
 // Import Sidebar Components
 // import { SidebarProvider, SidebarTrigger } from "../components/ui/sidebar";
 // import { AppSidebar } from "../ui/components/app-sidebar";
@@ -36,12 +35,10 @@ export const Route = createRootRoute({
           <SingUpPage />
         ) : pinCheck === "true" && isLoggedIn === "true" ? (
           <SidebarProvider>
-            <div className="main-div">
-              {/* Sidebar Component */}
+            // root.tsx layout section
+            <div className="app-container">
               <AppSidebar />
-
               <section id="main-section">
-                <SidebarTrigger />
                 <Outlet />
               </section>
             </div>
