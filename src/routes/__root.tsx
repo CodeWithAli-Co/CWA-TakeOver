@@ -8,7 +8,7 @@ import "../assets/sidebar.css";
 import { useAppStore } from "../stores/store";
 import PinPage from "@/MyComponents/pinPage";
 import { LoginPage } from "@/MyComponents/login";
-import { SingUpPage } from "@/MyComponents/signup";
+import { SignUpPage } from "@/MyComponents/signup";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/app-sidebar";
 // import { AppSidebar } from "@/MyComponents/Dashboard/app-sidebar";
@@ -28,7 +28,7 @@ export const Route = createRootRoute({
         ) : pinCheck === "true" && isLoggedIn === "false" ? (
           <LoginPage />
         ) : pinCheck === "true" && isLoggedIn === "makeAcc" ? (
-          <SingUpPage />
+          <SignUpPage />
         ) : pinCheck === "true" && isLoggedIn === "true" ? (
           <SidebarProvider>
             {/* // root.tsx layout section */}

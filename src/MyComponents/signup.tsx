@@ -2,7 +2,7 @@ import { useForm } from "@tanstack/react-form";
 import { useAppStore } from "../stores/store";
 import supabase from "./supabase";
 
-export const SingUpPage = () => {
+export const SignUpPage = () => {
   const { setIsLoggedIn } = useAppStore();
   // const { data: role, isLoading, error: roleError } = useQuery({
   //   queryKey: ["getrole"],
