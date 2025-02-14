@@ -9,7 +9,7 @@
 body {
   width: 100vw;
   height: 100vh;
-  background: rgb(0, 0, 0);
+  background: linear-gradient(180deg, #000000 0%, #1a0808 100%);
   color: whitesmoke;
   #root {
     width: 100%;

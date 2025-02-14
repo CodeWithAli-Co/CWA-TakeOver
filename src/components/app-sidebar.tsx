@@ -45,27 +45,31 @@ const data = {
   ],
   navMain: [
     {
-      title: "Playground",
+      title: "Admin Permissions",
       url: "#",
       icon: SquareTerminal,
       isActive: true,
       items: [
         {
-          title: "History",
+          title: "Email Broadcast",
           url: "#",
         },
         {
-          title: "Starred",
+          title: "Account Management",
           url: "#",
         },
         {
           title: "Settings",
           url: "#",
         },
+        {
+          title: "Users",
+          url: "#",
+        }
       ],
     },
     {
-      title: "Models",
+      title: "Bot Management",
       url: "#",
       icon: Bot,
       items: [
@@ -81,6 +85,7 @@ const data = {
           title: "Quantum",
           url: "#",
         },
+        
       ],
     },
     {
