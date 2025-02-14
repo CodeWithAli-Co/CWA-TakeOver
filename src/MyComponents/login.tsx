@@ -59,7 +59,7 @@ export const LoginPage = () => {
         >
           <div className="w-full space-y-4">
             {/* Email Field */}
-            <form.Field
+            <form.Field 
               name="email"
               children={(field) => (
                 <div className="w-full">
@@ -72,7 +72,7 @@ export const LoginPage = () => {
                   <input
                     name={field.name}
                     type="email"
-                    className="w-full p-4 bg-transparent text-amber-50 border-b border-amber-50 
+                    className="w-full p-1 bg-transparent text-amber-50 border-b border-amber-50 
                              focus:outline-none focus:bg-gray-600 focus:rounded-lg transition-all duration-300
                              hover:bg-gray-600 hover:rounded-lg hover:border-none"
                     value={field.state.value}
@@ -96,7 +96,7 @@ export const LoginPage = () => {
                   <input
                     name={field.name}
                     type="password"
-                    className="w-full p-4 bg-transparent text-amber-50 border-b border-amber-50 
+                    className="w-full p-1 bg-transparent text-amber-50 border-b border-amber-50 
                              focus:outline-none focus:bg-gray-600 focus:rounded-lg transition-all duration-300
                              hover:bg-gray-600 hover:rounded-lg hover:border-none"
                     value={field.state.value}
@@ -114,7 +114,7 @@ export const LoginPage = () => {
               <button
                 type="submit"
                 disabled={!canSubmit}
-                className="mt-4 neonbtn"
+                className="mt-7 neonbtn"
               >
                 Submit
               </button>
