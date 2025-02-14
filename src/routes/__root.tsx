@@ -1,8 +1,4 @@
-import {
-  createRootRoute,
-  Outlet,
-  useNavigate,
-} from "@tanstack/react-router";
+import { createRootRoute, Outlet, useNavigate } from "@tanstack/react-router";
 import cwa_logo from "/codewithali_logo.png";
 import book_icon from "/book_icon.svg";
 import bot_icon from "/bot_icon.svg";
@@ -14,7 +10,7 @@ import PinPage from "@/MyComponents/pinPage";
 import { LoginPage } from "@/MyComponents/login";
 import { SingUpPage } from "@/MyComponents/signup";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
-import { AppSidebar } from "@/components/ui/Dashboard/app-sidebar";
+import { AppSidebar } from "@/components/app-sidebar";
 // import { AppSidebar } from "@/MyComponents/Dashboard/app-sidebar";
 
 // Import Sidebar Components
@@ -35,13 +31,12 @@ export const Route = createRootRoute({
           <SingUpPage />
         ) : pinCheck === "true" && isLoggedIn === "true" ? (
           <SidebarProvider>
-            // root.tsx layout section
-            <div className="app-container">
-              <AppSidebar />
-              <section id="main-section">
-                <Outlet />
-              </section>
-            </div>
+            {/* // root.tsx layout section */}
+            <AppSidebar />
+            <section id="main-section">
+              <SidebarTrigger />
+              <Outlet />
+            </section>
           </SidebarProvider>
         ) : (
           <h3>Error Loading App Components</h3>

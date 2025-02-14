@@ -26,8 +26,7 @@
   }
 }
 
-/* 🔹 Sidebar Container */
-.sidebar {
+/* .sidebar {
   position: fixed;
   left: 0;
   top: 0;
@@ -41,14 +40,13 @@
   align-items: center;
   padding-top: 10px;
   border-right: solid 2px rgb(180, 0, 0);
-  z-index: 1000; /* Ensures the sidebar stays above content */
+  z-index: 1000; 
 }
 
 .sidebar.expanded {
   width: 200px;
 }
 
-/* 🔹 Sidebar Items */
 .sidebar-item {
   display: flex;
   align-items: center;
@@ -65,18 +63,16 @@
   background: rgba(255, 255, 255, 0.1);
 }
 
-/* 🔹 Sidebar Icons */
 .sidebar-icon {
   width: 30px;
   height: 30px;
-  flex-shrink: 0; /* Ensures the icon does not collapse */
+  flex-shrink: 0; 
   color: white;
   transition: transform 0.2s ease-in-out;
 }
 
-/* 🔹 Sidebar Text (Only Visible When Expanded) */
 .sidebar-text {
-  display: inline-block; /* Prevents text from disappearing */
+  display: inline-block;
   opacity: 0;
   transition: opacity 0.2s ease-in-out;
   white-space: nowrap;
@@ -86,20 +82,17 @@
   opacity: 1;
 }
 
-/* 🔹 Logo */
 #cwa-logo {
   width: 50px;
   border-radius: 50%;
   margin-bottom: 15px;
 }
 
-/* 🔹 Active Class (Built-in with TanStack Router) */
 .active {
   background: rgba(255, 255, 255, 0.25);
   border-radius: 10px;
 }
 
-/* 🔹 Sidebar Footer */
 .sidebar-footer {
   margin-top: auto;
   padding: 10px;
@@ -107,7 +100,6 @@
   color: white;
 }
 
-/* 🔹 Debugging - Force Visibility */
 .sidebar-container * {
   display: flex !important;
   opacity: 1 !important;
@@ -116,11 +108,6 @@
 }
 
 
-/* 
- */
- /* Update your existing sidebar.css */
-
-/* Remove the align-items: center from the sidebar container */
 .sidebar {
   position: fixed;
   left: 0;
@@ -137,12 +124,10 @@
   z-index: 1000;
 }
 
-/* Top section takes available space */
 .sidebar-top {
   flex: 1;
 }
 
-/* Bottom section stays at bottom */
 .sidebar-bottom {
   margin-top: auto;
   border-top: 1px solid rgba(255, 255, 255, 0.1);
@@ -150,13 +135,11 @@
   padding-bottom: 1rem;
 }
 
-/* Ensure items are left-aligned */
 .sidebar-item {
   justify-content: flex-start;
   padding: 12px 15px;
 }
 
-/* Profile section styling */
 .profile-button {
   display: flex;
   align-items: center;
@@ -193,39 +176,33 @@
   opacity: 0.7;
 }
 
-/* Admin section adjustments */
 .admin-section {
   margin-bottom: 1rem;
 }
-/* Update these specific styles in your CSS */
-
-/* Sidebar Items - adjust left padding */
 .sidebar-item {
   display: flex;
   align-items: center;
   justify-content: flex-start;
   width: 100%;
-  padding: 12px 12px; /* Reduced left padding */
+  padding: 12px 12px; 
   color: white;
   text-decoration: none;
   transition: background 0.2s ease-in-out;
   white-space: nowrap;
 }
 
-/* Sidebar Icons - make more compact */
 .sidebar-icon {
-  width: 24px; /* Made smaller */
+  width: 24px; 
   height: 24px;
   flex-shrink: 0;
   color: white;
   transition: transform 0.2s ease-in-out;
-  margin-right: 8px; /* Reduced spacing */
+  margin-right: 8px; 
   display: flex;
   align-items: center;
-  justify-content: flex-start; /* Left align icons */
+  justify-content: flex-start; 
 }
 
-/* Remove any center alignment from containers */
 .sidebar-bottom, 
 .sidebar-top,
 .admin-section,
@@ -235,9 +212,8 @@
   padding-right: 0;
 }
 
-/* Profile section adjustments */
 .profile-button {
-  padding: 12px 12px; /* Match sidebar-item padding */
+  padding: 12px 12px; 
   justify-content: flex-start;
 }
 
@@ -249,4 +225,4 @@
 .profile-info {
   margin-left: 8px;
   align-items: flex-start;
-}
+} */

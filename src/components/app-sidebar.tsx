@@ -1,5 +1,3 @@
-"use client"
-
 import type * as React from "react"
 import {
   AudioWaveform,
@@ -14,12 +12,12 @@ import {
   SquareTerminal,
 } from "lucide-react"
 
-import { NavMain } from "./nav-main";
-import { NavProjects } from "./nav-project";
-import { NavUser } from "./nav-user.tsx";
-import { TeamSwitcher } from "./team-switch";
 
 import { Sidebar, SidebarContent, SidebarFooter, SidebarHeader, SidebarRail } from "@/components/ui/sidebar"
+import { TeamSwitcher } from "./ui/Dashboard/team-switch"
+import { NavMain } from "./ui/Dashboard/nav-main"
+import { NavProjects } from "./ui/Dashboard/nav-project"
+import { NavUser } from "./ui/Dashboard/nav-user"
 
 // This is sample data.
 const data = {
@@ -168,4 +166,3 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
     </Sidebar>
   )
 }
-
