@@ -22,18 +22,18 @@ import { NavUser } from "./ui/Dashboard/nav-user"
 // This is sample data.
 const data = {
   user: {
-    name: "shadcn",
-    email: "m@example.com",
-    avatar: "/avatars/shadcn.jpg",
+    name: "CodeWithAli",
+    email: "unfold@codewithali.com",
+    avatar: "/public/codewithali_logo.png",
   },
   teams: [
     {
-      name: "Acme Inc",
+      name: "CodeWithAli Co.",
       logo: GalleryVerticalEnd,
       plan: "Enterprise",
     },
     {
-      name: "Acme Corp.",
+      name: "Interns",
       logo: AudioWaveform,
       plan: "Startup",
     },
