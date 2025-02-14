@@ -151,7 +151,7 @@ export const SignUpPage = () => {
                 {/* Show error message below Retype Password field */}
                 {form.getFieldValue("password") !== form.getFieldValue("retypepassword") &&
                   form.getFieldValue("retypepassword").length > 0 && (
-                    <p className="text-red-500 mt-2">Passwords do not match!</p>
+                    <p className="text-red-900 mt-2">Passwords do not match!</p>
                   )}
               </div>
             )}
