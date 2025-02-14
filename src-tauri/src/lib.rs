@@ -142,7 +142,7 @@ pub fn run() {
             send_broadcast,
             add_contact,
             edit_contact,
-            del_contact
+            del_contact,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
