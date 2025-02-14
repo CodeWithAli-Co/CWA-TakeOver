@@ -31,6 +31,8 @@
 body {
   width: 100vw;
   height: 100vh;
+  overflow-y: hidden;
+  overflow-x: hidden;
   background: linear-gradient(180deg, #000000 0%, #1a0808 100%);
   color: whitesmoke;
   #root {
