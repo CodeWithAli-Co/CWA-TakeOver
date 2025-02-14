@@ -10,6 +10,11 @@ export const SignUpPage = () => {
   //   refetchInterval: 5000
   // });
 
+  const handleLogIn = () => {
+    setIsLoggedIn("false"); // Indicate that user should go back to login
+  
+  };
+
   const form = useForm({
     defaultValues: {
       username: "",
@@ -134,7 +139,24 @@ export const SignUpPage = () => {
                 Submit
               </button>
             )}
-          />
+/>
+            // Log in route feature
+             {/* Sign Up Button */}
+        <div className="mt-4 text-center">
+        <p>Don't have an account?</p>
+        <button
+          // goes to the above function, pretty simple right?
+          onClick={handleLogIn}
+          className="mt-4 w-full h-12 bg-gradient-to-b from-black to-red-950 rounded-lg text-lg font-medium
+         transition-all duration-300 cursor-pointer
+         hover:bg-amber-100 hover:shadow-none
+         disabled:opacity-50 disabled:cursor-not-allowed
+         shadow-[0_0_10px_antiquewhite,0_0_10px_antiquewhite]"
+        >
+          Log In
+        </button>
+      </div>
+          
         </form>
       </div>
     </>
