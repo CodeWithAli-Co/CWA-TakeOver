@@ -147,11 +147,7 @@ export const SignUpPage = () => {
         <button
           // goes to the above function, pretty simple right?
           onClick={handleLogIn}
-          className="mt-4 w-full h-12 bg-gradient-to-b from-black to-red-950 rounded-lg text-lg font-medium
-         transition-all duration-300 cursor-pointer
-         hover:bg-amber-100 hover:shadow-none
-         disabled:opacity-50 disabled:cursor-not-allowed
-         shadow-[0_0_10px_antiquewhite,0_0_10px_antiquewhite]"
+         className="neonbtn"
         >
           Log In
         </button>
