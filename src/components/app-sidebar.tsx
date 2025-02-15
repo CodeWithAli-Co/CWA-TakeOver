@@ -71,12 +71,12 @@ const data = {
     },
     {
       title: "Bot Management",
-      url: "/bot",
+      url: "#",
       icon: Bot,
       items: [
         {
-          title: "Genesis",
-          url: "#",
+          title: "Discord",
+          url: "/bot",
         },
         {
           title: "Explorer",
