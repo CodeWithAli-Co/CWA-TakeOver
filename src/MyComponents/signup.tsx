@@ -62,8 +62,8 @@ export const SignUpPage = () => {
       }
 
       // add delay for email to reach user
-      // ill shorten the time for the email to reach the user sooner
-      await new Promise((r) => setTimeout(r, 10000));
+      // ill shorten the time for the email to reach the user sooner by removing the line entirely
+      // await new Promise((r) => setTimeout(r, 10000));
       setIsLoggedIn("false"); // Go to login page
     },
   });
