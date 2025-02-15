@@ -40,9 +40,8 @@ function Index() {
           </h3>
         </div>
       ))}
-      <button className="neonbtn" type="button" onClick={() => Logout()}>Log Out</button>
-      <br />
-      <h3>Welcome to Home Page</h3>
+       <br />
+      <h3 className="ml-1">Welcome to Home Page</h3>
     </>
   );
 }
