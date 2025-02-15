@@ -1,19 +1,76 @@
 import { createLazyFileRoute } from "@tanstack/react-router";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Switch } from "@/components/ui/switch";
+import { useAppStore } from "@/stores/store";
 import { CWACreds } from "../stores/query";
 import { invoke } from "@tauri-apps/api/core";
-import { Skeleton } from "@/components/ui/skeleton";
-import { useEffect, useRef } from "react";
-import "../assets/details.css";
+import { useRef, useState } from "react";
 import supabase from "@/MyComponents/supabase";
-import { useAppStore } from "@/stores/store";
 import { AddData } from "@/MyComponents/subForms/addForm";
 import { EditData } from "@/MyComponents/subForms/editForm";
+import { 
+  Eye, 
+  EyeOff, 
+  Edit2, 
+  Trash2, 
+  Plus,
+  Github, 
+  Globe,
+  Twitter,
+  Linkedin,
+  Facebook,
+  Mail,
+  Store,
+  FileCode2
+} from "lucide-react";
+
+// Platform icon mapping
+const platformIcons: { [key: string]: React.ComponentType<any> } = {
+  github: Github,
+  twitter: Twitter,
+  linkedin: Linkedin,
+  facebook: Facebook,
+  gmail: Mail,
+  upwork: Globe,
+  fiverr: Store,
+  patreon: Store,
+  dev: FileCode2,
+  default: Globe
+};
+
+
+// Type definitions
+interface Credential {
+  id: number;
+  platform_name: string;
+  acc_username: string;
+  acc_email: string;
+  acc_enc_password: string;
+  acc_addinfo?: string;
+  active: boolean;
+}
 
 function Details() {
   const { setDialog, dialog, setDisplayer, displayer, resetDisplayer } = useAppStore();
   const dialogRef = useRef<HTMLDialogElement | null>(null);
+  // Track expanded state for each card
+  const [expandedCards, setExpandedCards] = useState<number[]>([]);
 
-  const showModal = (dialogDisplay: string) => {
+  const toggleCard = (id: number) => {
+    setExpandedCards(prev => 
+      prev.includes(id) 
+        ? prev.filter(cardId => cardId !== id)
+        : [...prev, id]
+    );
+  };
+  const getPlatformIcon = (platformName: string) => {
+    const lowerPlatform = platformName.toLowerCase();
+    const IconComponent = platformIcons[lowerPlatform] || platformIcons.default;
+    return <IconComponent size={24} />;
+  };
+
+  const showModal = (dialogDisplay: "addDialog" | "editDialog") => {
     document.startViewTransition(() => {
       dialogRef.current?.showModal();
     });
@@ -29,27 +86,20 @@ function Details() {
     setDialog("closed");
   };
 
-  // Close dialog when form is submitted (bc form sets dialog state to 'closed')
-  useEffect(() => {
-    if (dialog === "closed") {
-      document.startViewTransition(() => {
-        dialogRef.current?.close();
-      });
-      resetDisplayer();
-    }
-  }, [dialog]);
-
   // Reveal Password
   const getPassword = async (credID: number) => {
     const { data } = await supabase
       .from("cwa_creds")
       .select("id, acc_enc_password")
       .eq("id", credID);
-    const decPassword = invoke("decrypt", {
-      keyStr: import.meta.env.VITE_ENCRYPTION_KEY,
-      encryptedData: data![0].acc_enc_password,
-    });
-    decPassword.then((res) => console.log(res));
+      
+    if (data && data[0]) {
+      const decPassword = await invoke("decrypt", {
+        keyStr: import.meta.env.VITE_ENCRYPTION_KEY,
+        encryptedData: data[0].acc_enc_password,
+      });
+      console.log(decPassword);
+    }
   };
 
   // Delete Data
@@ -59,84 +109,141 @@ function Details() {
       .delete()
       .eq("id", rowID)
       .select();
+      
+    if (error) {
+      console.log("Error: ", error.message);
+      return;
+    }
     console.log(result);
-    if (error) return console.log("Error: ", error.message);
   };
 
   // Display Table
   const { data: cwaCreds, isPending, error } = CWACreds();
-  // Need to fix visibily of Shadcn
-  if (isPending)
-    return <Skeleton className="w-[100px] h-[20px] rounded-full" />;
-  if (error) return console.log(error.message);
-  return (
-    <>
-      <h3>Details Page</h3>
-      <button className="neonbtn" type="button" onClick={() => showModal("addDialog")}>
-        Add Data
-      </button>
-      <br />
-      {cwaCreds?.map((cred: any) => (
-        <div className="data-div" key={cred.id}>
-          <div className="card">
-            <p>Platform: {cred.platform_name}</p>
-            <p>Username: {cred.acc_username}</p>
-            <p>Email: {cred.acc_email}</p>
-            <div>
-              Password:{" "}
-              <p className="password" style={{ display: "inline-block" }}>
-                {cred.acc_enc_password}
-              </p>
-            </div>
-            <p>Additional Info: {cred.acc_addinfo}</p>
-            <p>Status: {JSON.stringify(cred.active)}</p>
-            <button
-              className="neonbtn"
-              type="button"
-              onClick={() => getPassword(cred.id)}
-            >
-              Reveal Pass
-            </button>
-            <button
-              className="neonbtn"
-              type="button"
-              onClick={() => showModal("editDialog")}
-            >
-              Edit
-            </button>
-            <button
-              className="neonbtn"
-              type="button"
-              onClick={() => DelData(cred.id)}
-            >
-              Delete
-            </button>
-          </div>
 
-          {/* Might need to insert dynamic id number in forms so each btn has unique id 'submit${number}' so DOM doesnt complain */}
-          {/* When table is empty, need alternative way to display dialog */}
-          <dialog ref={dialogRef} className="dialog">
-            <button
-              type="button"
-              id="dialog-close5"
-              onClick={() => closeModal()}
+  if (isPending) return <div className="p-6">Loading...</div>;
+  if (error) {
+    console.log(error.message);
+    return <div className="p-6">Error loading data</div>;
+  }
+
+  return (
+    <div className="p-6">
+      <div className="flex justify-between items-center mb-8">
+        <h2 className="text-3xl font-bold">Accounts</h2>
+        <Button 
+          variant="default" 
+          className="bg-white text-black hover:bg-gray-100"
+          onClick={() => showModal("addDialog")}
+        >
+          Add Account
+        </Button>
+      </div>
+
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+        {cwaCreds?.map((cred: Credential) => {
+          const isExpanded = expandedCards.includes(cred.id);
+          
+          return (
+            <Card 
+              key={cred.id} 
+              className={`bg-zinc-950 border-zinc-800 transition-all duration-300 ${
+                isExpanded ? 'min-h-[300px]' : 'min-h-[180px]'
+              }`}
             >
-              X
-            </button>
-            {displayer === "editDialog" ? (
-              <EditData rowID={cred.id} />
-            ) : displayer === "addDialog" ? (
-              <AddData />
-            ) : (
-              "Error Loading Dialog..."
-            )}
-          </dialog>
-        </div>
-      ))}
-    </>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-xl font-semibold">
+                  {cred.platform_name}
+                </CardTitle>
+                <div className="h-12 w-12 rounded-full overflow-hidden bg-zinc-800 flex items-center justify-center text-white">
+                  {getPlatformIcon(cred.platform_name)}
+                </div>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  <CardDescription className="text-sm text-zinc-400">
+                    Username: {cred.acc_username}
+                  </CardDescription>
+
+                  <div className={`space-y-2 overflow-hidden transition-all duration-300 ${
+                    isExpanded ? 'max-h-[500px] opacity-100' : 'max-h-0 opacity-0'
+                  }`}>
+                    <CardDescription className="text-sm text-zinc-400">
+                      Email: {cred.acc_email}
+                    </CardDescription>
+                    <CardDescription className="text-sm text-zinc-400">
+                      Password: {cred.acc_enc_password}
+                    </CardDescription>
+                    {cred.acc_addinfo && (
+                      <CardDescription className="text-sm text-zinc-400">
+                        Additional Info: {cred.acc_addinfo}
+                      </CardDescription>
+                    )}
+                  </div>
+                  
+                  <div className="flex items-center justify-between pt-4">
+                    <div className="flex space-x-2">
+                      <Button 
+                        variant="outline" 
+                        size="sm"
+                        className="text-zinc-400 border-zinc-800 hover:bg-zinc-800"
+                        onClick={() => {
+                          toggleCard(cred.id);
+                          if (!isExpanded) getPassword(cred.id);
+                        }}
+                      >
+                        {isExpanded ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                        <span className="ml-2">{isExpanded ? 'Hide' : 'Reveal'}</span>
+                      </Button>
+                      <Button 
+                        variant="outline"
+                        size="sm"
+                        className="text-zinc-400 border-zinc-800 hover:bg-zinc-800"
+                        onClick={() => showModal("editDialog")}
+                      >
+                        <Edit2 className="w-4 h-4" />
+                      </Button>
+                      <Button 
+                        variant="outline"
+                        size="sm"
+                        className="text-zinc-400 border-zinc-800 hover:bg-zinc-800"
+                        onClick={() => DelData(cred.id)}
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </Button>
+                    </div>
+                    <Switch
+                      checked={cred.active}
+                      className="data-[state=checked]:bg-zinc-700"
+                    />
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          );
+        })}
+      </div>
+
+      <dialog ref={dialogRef} className="dialog">
+        <Button
+          variant="ghost"
+          size="sm"
+          className="absolute right-4 top-4"
+          onClick={closeModal}
+        >
+          X
+        </Button>
+        {displayer === "editDialog" ? (
+          <EditData rowID={cwaCreds[0]?.id} />
+        ) : displayer === "addDialog" ? (
+          <AddData />
+        ) : (
+          "Error Loading Dialog..."
+        )}
+      </dialog>
+    </div>
   );
 }
 
-export const Route = createLazyFileRoute("/details")({
-  component: Details,
+export const Route = createLazyFileRoute('/details')({
+  component: Details
 });
