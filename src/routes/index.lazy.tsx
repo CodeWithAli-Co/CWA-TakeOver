@@ -17,29 +17,10 @@ import supabase from "@/MyComponents/supabase";
 //   setGreetMsg(await invoke("greet", { name }));
 // }
 
-function Index() {
-  const { data: activeuser } = ActiveUser();
-
-  const Logout = async() => {
-    const { error } = await supabase.auth.signOut();
-    if (error) {
-      console.log('Error Signing Out:', error.message)
-    } else {
-      localStorage.removeItem('isLoggedIn');
-      window.location.reload();
-    }
-  }
-
+const Index = () => {
   return (
     <>
-      {activeuser?.map((user: any) => (
-        <div key={user.supa_id}>
-          <h3>
-            Logged in as: {user.username}
-            <p style={{ display: 'inline-block' }} className={`roleTag ${user.role === 'admin' ? ('admin-role') : user.role === 'member' ? ('member-role') : ('')}`}>{user.role}</p>
-          </h3>
-        </div>
-      ))}
+     
        <br />
       <h3 className="ml-1">Welcome to Home Page</h3>
     </>
