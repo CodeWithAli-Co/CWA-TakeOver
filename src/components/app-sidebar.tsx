@@ -114,12 +114,13 @@ const data = {
     },
     {
       title: "Settings",
-      url: "#",
+      url: "/settings",
       icon: Settings2,
       items: [
         {
+          // // In your sidebar navigation <Link to="/settings">Settings</Link>
           title: "General",
-          url: "#",
+          url: "/settings",
         },
         {
           title: "Team",

@@ -16,6 +16,7 @@ import { Route as rootRoute } from './routes/__root'
 
 // Create Virtual Routes
 
+const SettingsLazyImport = createFileRoute('/settings')()
 const EmployeeLazyImport = createFileRoute('/employee')()
 const DetailsLazyImport = createFileRoute('/details')()
 const BroadcastLazyImport = createFileRoute('/broadcast')()
@@ -23,7 +24,14 @@ const BotLazyImport = createFileRoute('/bot')()
 const AboutLazyImport = createFileRoute('/about')()
 const IndexLazyImport = createFileRoute('/')()
 
+
 // Create/Update Routes
+
+const SettingsLazyRoute = SettingsLazyImport.update({
+  id: '/settings',
+  path: '/settings',
+  getParentRoute: () => rootRoute,
+} as any).lazy(() => import('./routes/settings.lazy').then((d) => d.Route))
 
 const EmployeeLazyRoute = EmployeeLazyImport.update({
   id: '/employee',
@@ -107,6 +115,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof EmployeeLazyImport
       parentRoute: typeof rootRoute
     }
+    '/settings': {
+      id: '/settings'
+      path: '/settings'
+      fullPath: '/settings'
+      preLoaderRoute: typeof SettingsLazyImport
+      parentRoute: typeof rootRoute
+    }
   }
 }
 
@@ -119,6 +134,7 @@ export interface FileRoutesByFullPath {
   '/broadcast': typeof BroadcastLazyRoute
   '/details': typeof DetailsLazyRoute
   '/employee': typeof EmployeeLazyRoute
+  '/settings': typeof SettingsLazyRoute
 }
 
 export interface FileRoutesByTo {
@@ -128,6 +144,7 @@ export interface FileRoutesByTo {
   '/broadcast': typeof BroadcastLazyRoute
   '/details': typeof DetailsLazyRoute
   '/employee': typeof EmployeeLazyRoute
+  '/settings': typeof SettingsLazyRoute
 }
 
 export interface FileRoutesById {
@@ -138,13 +155,28 @@ export interface FileRoutesById {
   '/broadcast': typeof BroadcastLazyRoute
   '/details': typeof DetailsLazyRoute
   '/employee': typeof EmployeeLazyRoute
+  '/settings': typeof SettingsLazyRoute
 }
 
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/about' | '/bot' | '/broadcast' | '/details' | '/employee'
+  fullPaths:
+    | '/'
+    | '/about'
+    | '/bot'
+    | '/broadcast'
+    | '/details'
+    | '/employee'
+    | '/settings'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/about' | '/bot' | '/broadcast' | '/details' | '/employee'
+  to:
+    | '/'
+    | '/about'
+    | '/bot'
+    | '/broadcast'
+    | '/details'
+    | '/employee'
+    | '/settings'
   id:
     | '__root__'
     | '/'
@@ -153,6 +185,7 @@ export interface FileRouteTypes {
     | '/broadcast'
     | '/details'
     | '/employee'
+    | '/settings'
   fileRoutesById: FileRoutesById
 }
 
@@ -163,6 +196,7 @@ export interface RootRouteChildren {
   BroadcastLazyRoute: typeof BroadcastLazyRoute
   DetailsLazyRoute: typeof DetailsLazyRoute
   EmployeeLazyRoute: typeof EmployeeLazyRoute
+  SettingsLazyRoute: typeof SettingsLazyRoute
 }
 
 const rootRouteChildren: RootRouteChildren = {
@@ -172,6 +206,7 @@ const rootRouteChildren: RootRouteChildren = {
   BroadcastLazyRoute: BroadcastLazyRoute,
   DetailsLazyRoute: DetailsLazyRoute,
   EmployeeLazyRoute: EmployeeLazyRoute,
+  SettingsLazyRoute: SettingsLazyRoute,
 }
 
 export const routeTree = rootRoute
@@ -189,7 +224,8 @@ export const routeTree = rootRoute
         "/bot",
         "/broadcast",
         "/details",
-        "/employee"
+        "/employee",
+        "/settings"
       ]
     },
     "/": {
@@ -209,6 +245,9 @@ export const routeTree = rootRoute
     },
     "/employee": {
       "filePath": "employee.lazy.tsx"
+    },
+    "/settings": {
+      "filePath": "settings.lazy.tsx"
     }
   }
 }
