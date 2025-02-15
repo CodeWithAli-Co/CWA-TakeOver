@@ -160,24 +160,25 @@ export const SignUpPage = () => {
             <br />
             <form.Field
               name="position"
-              children={(field) => {
-                return (
-                  <>
-                    <select
-                      name={field.name}
-                      className="form-select"
-                      onChange={(e) => field.handleChange(e.target.value)}
-                    >
-                      <option value="Employee" className="form-option">
-                        Employee
-                      </option>
-                      <option value="Intern" className="form-option">
-                        Intern
-                      </option>
-                    </select>
-                  </>
-                );
-              }}
+              children={(field) => (
+                <div className="flex justify-center w-full">
+                  <select
+                    name={field.name}
+                    className="w-full p-2 text-amber-50 bg-transparent border-b border-amber-50
+                             focus:outline-none focus:bg-gray-600 focus:rounded-lg 
+                             hover:bg-gray-600 hover:rounded-lg hover:border-none
+                             transition-all duration-300 cursor-pointer appearance-none"
+                    onChange={(e) => field.handleChange(e.target.value)}
+                  >
+                    <option value="Employee" className="bg-gray-800 text-amber-50">
+                      Employee
+                    </option>
+                    <option value="Intern" className="bg-gray-800 text-amber-50">
+                      Intern
+                    </option>
+                  </select>
+                </div>
+              )}
             />
             <br />
           </div>
