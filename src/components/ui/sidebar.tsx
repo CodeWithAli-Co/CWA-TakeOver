@@ -196,7 +196,7 @@ const Sidebar = React.forwardRef<
           <SheetContent
             data-sidebar="sidebar"
             data-mobile="true"
-            className="w-[--sidebar-width] bg-sidebar p-0 text-sidebar-foreground [&>button]:hidden"
+            className="w-[--sidebar-width] bg-black p-0 text-white-foreground [&>button]:hidden"
             style={
               {
                 "--sidebar-width": SIDEBAR_WIDTH_MOBILE,
@@ -243,6 +243,8 @@ const Sidebar = React.forwardRef<
             className
           )}
           {...props}
+          
+          // This is where you can change the color of the background of the sidebar itself, the color of the text, and the color of the border of the sidebar.
         >
           <div
             data-sidebar="sidebar"
@@ -402,6 +404,7 @@ const SidebarContent = React.forwardRef<
       ref={ref}
       data-sidebar="content"
       className={cn(
+        // most of the text are white, however the list and titles also needs to be changed ( i got to find it for the desktop)
         "flex min-h-0 flex-1 flex-col gap-2 overflow-auto group-data-[collapsible=icon]:overflow-hidden",
         className
       )}
