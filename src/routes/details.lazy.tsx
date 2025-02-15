@@ -95,7 +95,7 @@ interface Credential {
 }
 
 function Details() {
-  const { setDialog, dialog, setDisplayer, displayer, resetDisplayer } = useAppStore();
+  const { setDialog, setDisplayer, displayer, resetDisplayer } = useAppStore();
   const dialogRef = useRef<HTMLDialogElement | null>(null);
   // Track expanded state for each card
   const [expandedCards, setExpandedCards] = useState<number[]>([]);
@@ -278,7 +278,7 @@ function Details() {
           X
         </Button>
         {displayer === "editDialog" ? (
-          <EditData rowID={cwaCreds[0]?.id} />
+          <EditData rowID={cwaCreds![0].id} />
         ) : displayer === "addDialog" ? (
           <AddData />
         ) : (

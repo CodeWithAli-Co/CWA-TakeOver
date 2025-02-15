@@ -26,7 +26,6 @@ const IndexLazyImport = createFileRoute('/')()
 const ChatsGeneralLazyImport = createFileRoute('/chats/general')()
 const ChatsDmLazyImport = createFileRoute('/chats/dm')()
 
-
 // Create/Update Routes
 
 const SettingsLazyRoute = SettingsLazyImport.update({
@@ -129,6 +128,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof EmployeeLazyImport
       parentRoute: typeof rootRoute
     }
+    '/settings': {
+      id: '/settings'
+      path: '/settings'
+      fullPath: '/settings'
+      preLoaderRoute: typeof SettingsLazyImport
+      parentRoute: typeof rootRoute
+    }
     '/chats/dm': {
       id: '/chats/dm'
       path: '/chats/dm'
@@ -155,6 +161,7 @@ export interface FileRoutesByFullPath {
   '/broadcast': typeof BroadcastLazyRoute
   '/details': typeof DetailsLazyRoute
   '/employee': typeof EmployeeLazyRoute
+  '/settings': typeof SettingsLazyRoute
   '/chats/dm': typeof ChatsDmLazyRoute
   '/chats/general': typeof ChatsGeneralLazyRoute
 }
@@ -166,6 +173,7 @@ export interface FileRoutesByTo {
   '/broadcast': typeof BroadcastLazyRoute
   '/details': typeof DetailsLazyRoute
   '/employee': typeof EmployeeLazyRoute
+  '/settings': typeof SettingsLazyRoute
   '/chats/dm': typeof ChatsDmLazyRoute
   '/chats/general': typeof ChatsGeneralLazyRoute
 }
@@ -178,6 +186,7 @@ export interface FileRoutesById {
   '/broadcast': typeof BroadcastLazyRoute
   '/details': typeof DetailsLazyRoute
   '/employee': typeof EmployeeLazyRoute
+  '/settings': typeof SettingsLazyRoute
   '/chats/dm': typeof ChatsDmLazyRoute
   '/chats/general': typeof ChatsGeneralLazyRoute
 }
@@ -191,6 +200,7 @@ export interface FileRouteTypes {
     | '/broadcast'
     | '/details'
     | '/employee'
+    | '/settings'
     | '/chats/dm'
     | '/chats/general'
   fileRoutesByTo: FileRoutesByTo
@@ -201,6 +211,7 @@ export interface FileRouteTypes {
     | '/broadcast'
     | '/details'
     | '/employee'
+    | '/settings'
     | '/chats/dm'
     | '/chats/general'
   id:
@@ -211,6 +222,7 @@ export interface FileRouteTypes {
     | '/broadcast'
     | '/details'
     | '/employee'
+    | '/settings'
     | '/chats/dm'
     | '/chats/general'
   fileRoutesById: FileRoutesById
@@ -223,6 +235,7 @@ export interface RootRouteChildren {
   BroadcastLazyRoute: typeof BroadcastLazyRoute
   DetailsLazyRoute: typeof DetailsLazyRoute
   EmployeeLazyRoute: typeof EmployeeLazyRoute
+  SettingsLazyRoute: typeof SettingsLazyRoute
   ChatsDmLazyRoute: typeof ChatsDmLazyRoute
   ChatsGeneralLazyRoute: typeof ChatsGeneralLazyRoute
 }
@@ -234,6 +247,7 @@ const rootRouteChildren: RootRouteChildren = {
   BroadcastLazyRoute: BroadcastLazyRoute,
   DetailsLazyRoute: DetailsLazyRoute,
   EmployeeLazyRoute: EmployeeLazyRoute,
+  SettingsLazyRoute: SettingsLazyRoute,
   ChatsDmLazyRoute: ChatsDmLazyRoute,
   ChatsGeneralLazyRoute: ChatsGeneralLazyRoute,
 }
@@ -254,6 +268,7 @@ export const routeTree = rootRoute
         "/broadcast",
         "/details",
         "/employee",
+        "/settings",
         "/chats/dm",
         "/chats/general"
       ]
@@ -275,6 +290,9 @@ export const routeTree = rootRoute
     },
     "/employee": {
       "filePath": "employee.lazy.tsx"
+    },
+    "/settings": {
+      "filePath": "settings.lazy.tsx"
     },
     "/chats/dm": {
       "filePath": "chats/dm.lazy.tsx"
