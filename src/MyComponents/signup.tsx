@@ -82,7 +82,7 @@ export const SignUpPage = () => {
           }}
         >
         
-          <div className="w-full space-y-4">
+          <div className="w-[300px] space-y-4">
             {/* Email Field */}
             <form.Field
               name="email"
@@ -181,14 +181,15 @@ export const SignUpPage = () => {
             />
             <br />
           </div>
-          <form.Subscribe
-            selector={(state) => [state.canSubmit]}
-            children={([canSubmit]) => (
-              <button type="submit" className="neonbtn" disabled={!canSubmit}>
-                Submit
-              </button>
-            )}
-/>
+          <div className="flex flex-col items-center w-full space-y-4">
+            <form.Subscribe
+              selector={(state) => [state.canSubmit]}
+              children={([canSubmit]) => (
+                <button type="submit" className="neonbtn" disabled={!canSubmit}>
+                  Submit
+                </button>
+              )}
+            />
          
              {/* Sign Up Button */}
         <div className="mt-4 text-center">
@@ -202,6 +203,7 @@ export const SignUpPage = () => {
         </button>
       </div>
           
+      </div>
         </form>
       </div>
     </div>

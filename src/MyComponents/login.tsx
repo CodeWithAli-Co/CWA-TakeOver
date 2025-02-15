@@ -4,6 +4,7 @@ import { useAppStore } from "../stores/store";
 import { useRouter } from "@tanstack/react-router"; // Correct usage
 import supabase from "./supabase";
 import { SignUpPage } from "@/MyComponents/signup";
+import cwa_logo_full from "../assets/codewithali_logo.png"; // Add this line to import the logo
 
 export const LoginPage = () => {
   const { setIsLoggedIn } = useAppStore();
@@ -46,8 +47,9 @@ export const LoginPage = () => {
 
   return (
     <div className="min-h-screen w-full flex justify-center items-center bg-red-550">
-      <div className="w-96 p-8 bg-gradient-to-b to-red-950 rounded-lg flex flex-col items-center border-2 border-white">
+      <div className="w-96 p-8 bg-gradient-to-b to-red-950 rounded-lg flex flex-col items-center border border-gray-600">
         <h3 className="text-2xl text-amber-50 mb-12">Login</h3>
+        {/* <img src={cwa_logo_full} alt="CodeWithAli Logo Full" id='cwa-logo-full' draggable={false} /> */}
 
         <form
           className="w-full flex flex-col items-center"
