@@ -1,112 +1,113 @@
-import React from 'react';
-import { motion } from 'framer-motion';
-import { cn } from "@/lib/utils";
-import { 
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle 
-} from "@/components/ui/card";
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import { 
-  Settings2,
-  Users,
-  CreditCard,
-  GaugeCircle
-} from "lucide-react";
-import { Separator } from "@/components/ui/separator";
-import { 
-  Form,
-  FormControl,
-  FormDescription,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage
-} from "@/components/ui/form";
-import { Input } from "@/components/ui/input";
-import { Switch } from "@/components/ui/switch";
-import { useForm } from "react-hook-form";
+"use client"
 
-const SettingsPage = () => {
-  const form = useForm({
+import React from "react"
+import { motion, AnimatePresence } from "framer-motion"
+import { UserCircle, ClipboardList, Users2, Bell, Shield, Save, Undo2, Moon } from "lucide-react"
+import { Button } from "@/components/ui/button"
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form"
+import { Input } from "@/components/ui/input"
+import { Switch } from "@/components/ui/switch"
+import { Separator } from "@/components/ui/separator"
+import { useForm } from "react-hook-form"
+import { zodResolver } from "@hookform/resolvers/zod"
+import * as z from "zod"
+
+const formSchema = z.object({
+  name: z.string().min(2).max(50),
+  emailNotifications: z.boolean(),
+  darkMode: z.boolean(),
+})
+
+const settingsTabs = [
+  {
+    value: "profile",
+    label: "Profile Settings",
+    icon: UserCircle,
+  },
+  {
+    value: "tasks",
+    label: "My Tasks",
+    icon: ClipboardList,
+  },
+  {
+    value: "teams",
+    label: "Manage Teams",
+    icon: Users2,
+  },
+  {
+    value: "notifications",
+    label: "Notifications",
+    icon: Bell,
+  },
+  {
+    value: "security",
+    label: "Security & Access Logs",
+    icon: Shield,
+  },
+]
+
+export default function SettingsPage() {
+  const [activeTab, setActiveTab] = React.useState("profile")
+  const [isSaving, setIsSaving] = React.useState(false)
+
+  const form = useForm<z.infer<typeof formSchema>>({
+    resolver: zodResolver(formSchema),
     defaultValues: {
-      workspaceName: "CodeWithAli Co.",
+      name: "Ali",
       emailNotifications: true,
-      darkMode: false,
-    }
-  });
-
-  const settingsTabs = [
-    {
-      value: "general",
-      label: "General",
-      icon: Settings2
+      darkMode: true,
     },
-    {
-      value: "team",
-      label: "Team",
-      icon: Users
-    },
-    {
-      value: "billing",
-      label: "Billing",
-      icon: CreditCard
-    },
-    {
-      value: "limits",
-      label: "Limits",
-      icon: GaugeCircle
-    }
-  ];
+  })
 
-  const containerVariants = {
-    hidden: { opacity: 0, y: 20 },
-    visible: {
-      opacity: 1,
-      y: 0,
-      transition: {
-        duration: 0.4,
-        staggerChildren: 0.1
-      }
-    }
-  };
+  const onSubmit = async (data: z.infer<typeof formSchema>) => {
+    setIsSaving(true)
+    await new Promise((resolve) => setTimeout(resolve, 1000))
+    console.log(data)
+    setIsSaving(false)
+  }
 
-  const itemVariants = {
-    hidden: { opacity: 0, x: -20 },
-    visible: { opacity: 1, x: 0 }
-  };
-
-interface FormValues {
-    workspaceName: string;
-    emailNotifications: boolean;
-    darkMode: boolean;
-}
-
-const onSubmit = (data: FormValues) => {
-    console.log(data);
-    // Handle form submission
-};
+  const handleReset = () => {
+    form.reset()
+  }
 
   return (
-    <motion.div
-      className="h-full w-full p-6"
-      initial="hidden"
-      animate="visible"
-      variants={containerVariants}
-    >
-      <div className="flex flex-col space-y-8 max-w-5xl mx-auto">
-        <div className="flex justify-between items-center">
+    <div className="min-h-screen bg-background flex justify-center pl-[160px]">
+      <div className="w-full px-4 py-8">
+        <div className="flex justify-between items-center mb-8">
           <div>
             <h2 className="text-3xl font-bold tracking-tight">Settings</h2>
-            <p className="text-muted-foreground">
-              Manage your account settings and preferences.
-            </p>
+            <p className="text-muted-foreground">Manage your account settings and preferences.</p>
+          </div>
+          <div className="flex gap-2">
+            <Button variant="outline" onClick={handleReset} disabled={isSaving}>
+              <Undo2 className="mr-2 h-4 w-4" />
+              Reset
+            </Button>
+            <Button onClick={form.handleSubmit(onSubmit)} disabled={isSaving}>
+              {isSaving ? (
+                <>
+                  <motion.div
+                    animate={{ rotate: 360 }}
+                    transition={{ duration: 1, repeat: Number.POSITIVE_INFINITY, ease: "linear" }}
+                    className="mr-2 h-4 w-4"
+                  >
+                    <Save className="h-4 w-4" />
+                  </motion.div>
+                  Saving...
+                </>
+              ) : (
+                <>
+                  <Save className="mr-2 h-4 w-4" />
+                  Save Changes
+                </>
+              )}
+            </Button>
           </div>
         </div>
 
-        <Tabs defaultValue="general" className="space-y-6">
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-8">
           <TabsList className="h-12 w-full justify-start space-x-2 bg-muted p-1 text-muted-foreground">
             {settingsTabs.map((tab) => (
               <TabsTrigger
@@ -120,88 +121,131 @@ const onSubmit = (data: FormValues) => {
             ))}
           </TabsList>
 
-          <TabsContent value="general">
-            <motion.div variants={itemVariants}>
-              <Card>
-                <CardHeader>
-                  <CardTitle>General Settings</CardTitle>
-                  <CardDescription>
-                    Configure your general account preferences.
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-6">
-                  <Form {...form}>
-                    <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-                      <FormField
-                        control={form.control}
-                        name="workspaceName"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Workspace Name</FormLabel>
-                            <FormControl>
-                              <Input placeholder="CodeWithAli Co." {...field} />
-                            </FormControl>
-                            <FormDescription>
-                              This is your workspace's visible name.
-                            </FormDescription>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={activeTab}
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -20 }}
+              transition={{ duration: 0.2 }}
+            >
+              <TabsContent value="profile" className="space-y-4">
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Profile Settings</CardTitle>
+                    <CardDescription>Manage your profile information and preferences.</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <Form {...form}>
+                      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+                        <FormField
+                          control={form.control}
+                          name="name"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>
+                                <UserCircle className="h-4 w-4 inline mr-2" />
+                                Name
+                              </FormLabel>
+                              <FormControl>
+                                <Input {...field} />
+                              </FormControl>
+                              <FormDescription>This is your public display name.</FormDescription>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
 
-                      <Separator />
+                        <Separator />
 
-                      <FormField
-                        control={form.control}
-                        name="emailNotifications"
-                        render={({ field }) => (
-                          <FormItem className="flex justify-between items-center">
-                            <div>
-                              <FormLabel>Email Notifications</FormLabel>
-                              <FormDescription>
-                                Receive email notifications about account activity.
-                              </FormDescription>
-                            </div>
-                            <FormControl>
-                              <Switch
-                                checked={field.value}
-                                onCheckedChange={field.onChange}
-                              />
-                            </FormControl>
-                          </FormItem>
-                        )}
-                      />
+                        <FormField
+                          control={form.control}
+                          name="emailNotifications"
+                          render={({ field }) => (
+                            <FormItem className="flex justify-between items-center space-y-0">
+                              <div>
+                                <FormLabel>
+                                  <Bell className="h-4 w-4 inline mr-2" />
+                                  Email Notifications
+                                </FormLabel>
+                                <FormDescription>Receive email notifications about account activity.</FormDescription>
+                              </div>
+                              <FormControl>
+                                <Switch checked={field.value} onCheckedChange={field.onChange} />
+                              </FormControl>
+                            </FormItem>
+                          )}
+                        />
 
-                      <FormField
-                        control={form.control}
-                        name="darkMode"
-                        render={({ field }) => (
-                          <FormItem className="flex justify-between items-center">
-                            <div>
-                              <FormLabel>Dark Mode</FormLabel>
-                              <FormDescription>
-                                Toggle between light and dark mode.
-                              </FormDescription>
-                            </div>
-                            <FormControl>
-                              <Switch
-                                checked={field.value}
-                                onCheckedChange={field.onChange}
-                              />
-                            </FormControl>
-                          </FormItem>
-                        )}
-                      />
-                    </form>
-                  </Form>
-                </CardContent>
-              </Card>
+                        <FormField
+                          control={form.control}
+                          name="darkMode"
+                          render={({ field }) => (
+                            <FormItem className="flex justify-between items-center space-y-0">
+                              <div>
+                                <FormLabel>
+                                  <Moon className="h-4 w-4 inline mr-2" />
+                                  Dark Mode
+                                </FormLabel>
+                                <FormDescription>Toggle between light and dark mode.</FormDescription>
+                              </div>
+                              <FormControl>
+                                <Switch checked={field.value} onCheckedChange={field.onChange} />
+                              </FormControl>
+                            </FormItem>
+                          )}
+                        />
+                      </form>
+                    </Form>
+                  </CardContent>
+                </Card>
+              </TabsContent>
+
+              {/* Add other tab contents with similar structure */}
+              <TabsContent value="tasks">
+                <Card>
+                  <CardHeader>
+                    <CardTitle>My Tasks</CardTitle>
+                    <CardDescription>View and manage your tasks.</CardDescription>
+                  </CardHeader>
+                  <CardContent>{/* Add task management content */}</CardContent>
+                </Card>
+              </TabsContent>
+
+              <TabsContent value="teams">
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Team Management</CardTitle>
+                    <CardDescription>Manage your team members and roles.</CardDescription>
+                  </CardHeader>
+                  <CardContent>{/* Add team management content */}</CardContent>
+                </Card>
+              </TabsContent>
+
+              <TabsContent value="notifications">
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Notification Preferences</CardTitle>
+                    <CardDescription>Customize your notification settings.</CardDescription>
+                  </CardHeader>
+                  <CardContent>{/* Add notification settings content */}</CardContent>
+                </Card>
+              </TabsContent>
+
+              <TabsContent value="security">
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Security Settings</CardTitle>
+                    <CardDescription>Manage your security preferences and view access logs.</CardDescription>
+                  </CardHeader>
+                  <CardContent>{/* Add security settings content */}</CardContent>
+                </Card>
+              </TabsContent>
             </motion.div>
-          </TabsContent>
+          </AnimatePresence>
         </Tabs>
       </div>
-    </motion.div>
-  );
-};
+    </div>
+  )
+}
 
-export default SettingsPage;

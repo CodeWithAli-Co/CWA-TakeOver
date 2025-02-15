@@ -97,22 +97,26 @@ export function NavUser({userData}: NavUserProps) {
             <DropdownMenuGroup>
               <DropdownMenuItem>
                 <Sparkles />
-                Upgrade to Pro
+                Profile Settings
               </DropdownMenuItem>
             </DropdownMenuGroup>
             <DropdownMenuSeparator />
             <DropdownMenuGroup>
               <DropdownMenuItem>
                 <BadgeCheck />
-                Account
+                My Tasks
               </DropdownMenuItem>
               <DropdownMenuItem>
                 <CreditCard />
-                Billing
+                Manage Teams
               </DropdownMenuItem>
               <DropdownMenuItem>
                 <Bell />
                 Notifications
+              </DropdownMenuItem>
+              <DropdownMenuItem>
+                <Bell />
+                Security & Access Logs
               </DropdownMenuItem>
             </DropdownMenuGroup>
             <DropdownMenuSeparator />
