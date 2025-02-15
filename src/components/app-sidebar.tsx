@@ -19,6 +19,7 @@ import { NavMain } from "./ui/Dashboard/nav-main"
 import { NavProjects } from "./ui/Dashboard/nav-project"
 import { NavUser } from "./ui/Dashboard/nav-user"
 
+
 // This is sample data.
 const data = {
   user: {
@@ -52,25 +53,25 @@ const data = {
       items: [
         {
           title: "Email Broadcast",
-          url: "#",
+          url: "/broadcast",
         },
         {
           title: "Account Management",
-          url: "#",
+          url: "/details",
+        },
+        {
+          title: "Users",
+          url: "/employee",
         },
         {
           title: "Settings",
           url: "#",
         },
-        {
-          title: "Users",
-          url: "#",
-        }
       ],
     },
     {
       title: "Bot Management",
-      url: "#",
+      url: "/bot",
       icon: Bot,
       items: [
         {
@@ -165,8 +166,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
         <NavProjects projects={data.projects} />
       </SidebarContent>
       <SidebarFooter>
-        {/* need to check this out later */}
-        <NavUser user={data.user} />
+        <NavUser userData={data.user} />
       </SidebarFooter>
       <SidebarRail />
     </Sidebar>

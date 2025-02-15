@@ -8,13 +8,12 @@ import cwa_logo_full from "../assets/codewithali_logo.png"; // Add this line to 
 
 export const LoginPage = () => {
   const { setIsLoggedIn } = useAppStore();
-  const router = useRouter(); // Initialize router
+  // const router = useRouter(); // Initialize router
 
   // Check if user is logged in 
   // without this the redirect wont work
   const handleSignUp = () => {
     setIsLoggedIn("makeAcc"); // Indicate that user is signing up
-    
   };
 
   const form = useForm({

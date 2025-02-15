@@ -15,7 +15,16 @@ import { SidebarMenu, SidebarMenuButton, SidebarMenuItem, useSidebar } from "@/c
 import supabase from "@/MyComponents/supabase"; // Import Supabase
 import { ActiveUser } from "@/stores/query"; // Fetch Active User Data
 
-export function NavUser() {
+interface NavUserProps {
+  userData : {
+    name: string
+    email: string
+    avatar: string
+  }
+}
+
+
+export function NavUser({userData}: NavUserProps) {
   const { isMobile } = useSidebar();
   const { data: activeuser } = ActiveUser();
 

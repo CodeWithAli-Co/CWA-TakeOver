@@ -14,7 +14,6 @@ export const SignUpPage = () => {
 
   const handleLogIn = () => {
     setIsLoggedIn("false"); // Indicate that user should go back to login
-  
   };
 
   const form = useForm({
