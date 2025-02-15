@@ -16,6 +16,7 @@ import { Route as rootRoute } from './routes/__root'
 
 // Create Virtual Routes
 
+const SettingsLazyImport = createFileRoute('/settings')()
 const EmployeeLazyImport = createFileRoute('/employee')()
 const DetailsLazyImport = createFileRoute('/details')()
 const BroadcastLazyImport = createFileRoute('/broadcast')()
@@ -25,7 +26,14 @@ const IndexLazyImport = createFileRoute('/')()
 const ChatsGeneralLazyImport = createFileRoute('/chats/general')()
 const ChatsDmLazyImport = createFileRoute('/chats/dm')()
 
+
 // Create/Update Routes
+
+const SettingsLazyRoute = SettingsLazyImport.update({
+  id: '/settings',
+  path: '/settings',
+  getParentRoute: () => rootRoute,
+} as any).lazy(() => import('./routes/settings.lazy').then((d) => d.Route))
 
 const EmployeeLazyRoute = EmployeeLazyImport.update({
   id: '/employee',

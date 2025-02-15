@@ -70,7 +70,7 @@ export const SignUpPage = () => {
   return (
     
       <div className="min-h-screen w-full flex justify-center items-center bg-red-550">
-      <div className="w-[400px]  p-8 bg-gradient-to-b to-red-950 rounded-lg flex flex-col items-center border-2 border-white">
+      <div className="w-[400px]  p-8 bg-gradient-to-b to-red-950 rounded-lg flex flex-col items-center border border-white">
         <h3 className="text-2xl text-amber-50 mb-12">Sign Up</h3>
 
         <form

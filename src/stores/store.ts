@@ -1,6 +1,8 @@
 import { create } from "zustand";
 
-// App Store
+type DialogState = "shown" | "closed";
+type DialogDisplayer = "addDialog" | "editDialog" | null;
+
 interface AppState {
   broadcastID: string
   setBroadcastID: (broadcastID: string) => void
@@ -19,16 +21,21 @@ interface AppState {
 }
 
 export const useAppStore = create<AppState>()((set) => ({
+  // Broadcast state
   broadcastID: '',
   setBroadcastID: (broadcastID: string) => set({ broadcastID }),
   resetBroadcastID: () => set({ broadcastID: '' }),
+
+  // Auth state
   pinCheck: 'false',
   setPinCheck: (pinCheck: string) => set({ pinCheck }),
   isLoggedIn: 'false',
   setIsLoggedIn: (isLoggedIn: string) => set({ isLoggedIn }),
-  displayer: 'Employees',
-  setDisplayer: (displayer: string) => set({ displayer }),
-  resetDisplayer: () => set({ displayer: 'Employees' }),
+
+  // Dialog and Display state - combined implementation
+  displayer: null,
+  setDisplayer: (displayer: DialogDisplayer) => set({ displayer }),
+  resetDisplayer: () => set({ displayer: null }),
   dialog: 'closed',
   setDialog: (dialog: string) => set({ dialog }),
   DMGroupName: '',

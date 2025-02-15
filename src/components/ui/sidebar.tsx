@@ -248,7 +248,7 @@ const Sidebar = React.forwardRef<
         >
           <div
             data-sidebar="sidebar"
-            className="flex h-full w-full flex-col bg-sidebar group-data-[variant=floating]:rounded-lg group-data-[variant=floating]:border group-data-[variant=floating]:border-sidebar-border group-data-[variant=floating]:shadow"
+            className="flex h-full w-full flex-col bg-black group-data-[variant=floating]:rounded-lg group-data-[variant=floating]:border group-data-[variant=floating]:border-sidebar-border group-data-[variant=floating]:shadow"
           >
             {children}
           </div>
@@ -373,7 +373,7 @@ const SidebarFooter = React.forwardRef<
     <div
       ref={ref}
       data-sidebar="footer"
-      className={cn("flex flex-col gap-2 p-2", className)}
+      className={cn("flex flex-col gap-2 p-2 text-white", className)}
       {...props}
     />
   )
@@ -399,17 +399,17 @@ const SidebarContent = React.forwardRef<
   HTMLDivElement,
   React.ComponentProps<"div">
 >(({ className, ...props }, ref) => {
-  return (
-    <div
-      ref={ref}
-      data-sidebar="content"
-      className={cn(
-        // most of the text are white, however the list and titles also needs to be changed ( i got to find it for the desktop)
-        "flex min-h-0 flex-1 flex-col gap-2 overflow-auto group-data-[collapsible=icon]:overflow-hidden",
-        className
-      )}
-      {...props}
-    />
+ return (
+      <div
+        ref={ref}
+        data-sidebar="content"
+        className={cn(
+          // This changes the main text to white, excluding the drop down categories and headers
+          "flex min-h-0 flex-1 flex-col gap-2 overflow-auto text-white group-data-[collapsible=icon]:overflow-hidden",
+          className
+        )}
+        {...props}
+      />
   )
 })
 SidebarContent.displayName = "SidebarContent"
@@ -440,7 +440,8 @@ const SidebarGroupLabel = React.forwardRef<
       ref={ref}
       data-sidebar="group-label"
       className={cn(
-        "flex h-8 shrink-0 items-center rounded-md px-2 text-xs font-medium text-sidebar-foreground/70 outline-none ring-sidebar-ring transition-[margin,opa] duration-200 ease-linear focus-visible:ring-2 [&>svg]:size-4 [&>svg]:shrink-0",
+        // this is where i changed the headers/labels to white
+        "flex h-8 shrink-0 items-center rounded-md px-2 text-xs font-medium text-white outline-none ring-sidebar-ring transition-[margin,opacity] duration-200 ease-linear focus-visible:ring-2 [&>svg]:size-4 [&>svg]:shrink-0",
         "group-data-[collapsible=icon]:-mt-8 group-data-[collapsible=icon]:opacity-0",
         className
       )}
@@ -493,7 +494,7 @@ const SidebarMenu = React.forwardRef<
   <ul
     ref={ref}
     data-sidebar="menu"
-    className={cn("flex w-full min-w-0 flex-col gap-1 list-none p-0 m-0", className)}
+    className={cn("flex w-full min-w-0 flex-col gap-1 list-none p-0 m-0 text-white", className)}
     {...props}
   />
 ))
@@ -507,7 +508,7 @@ const SidebarMenuItem = React.forwardRef<
     ref={ref}
     data-sidebar="menu-item"
     // added pl-0
-    className={cn("group/menu-item relative list-none pl-0", className)}
+    className={cn("group/menu-item relative list-none pl-0 ", className)}
     {...props}
   />
 ))
@@ -693,7 +694,7 @@ const SidebarMenuSub = React.forwardRef<
     data-sidebar="menu-sub"
     className={cn(
       // added list-none and mx-2.5 instead of 3.5
-      "mx-2.5 flex min-w-0 translate-x-px flex-col gap-1 border-l border-sidebar-border px-2.5 py-0.5 list-none",
+      "mx-3 flex min-w-0 translate-x-px flex-col gap-1 border-l border-sidebar-border px-2.5 py-0.5 list-none",
       "group-data-[collapsible=icon]:hidden",
       className
     )}
@@ -725,7 +726,8 @@ const SidebarMenuSubButton = React.forwardRef<
       data-size={size}
       data-active={isActive}
       className={cn(
-        "flex h-7 min-w-0 -translate-x-px items-center gap-2 overflow-hidden rounded-md px-2 text-sidebar-foreground outline-none ring-sidebar-ring hover:bg-sidebar-accent hover:text-sidebar-accent-foreground focus-visible:ring-2 active:bg-sidebar-accent active:text-sidebar-accent-foreground disabled:pointer-events-none disabled:opacity-50 aria-disabled:pointer-events-none aria-disabled:opacity-50 [&>span:last-child]:truncate [&>svg]:size-4 [&>svg]:shrink-0 [&>svg]:text-sidebar-accent-foreground",
+        // this is where I changed the drop down list to white
+        "flex h-7 min-w-0 -translate-x-px items-center gap-2 overflow-hidden rounded-md px-2 text-white-foreground outline-none ring-sidebar-ring hover:bg-sidebar-accent hover:text-sidebar-accent-foreground focus-visible:ring-2 active:bg-sidebar-accent active:text-sidebar-accent-foreground disabled:pointer-events-none disabled:opacity-50 aria-disabled:pointer-events-none aria-disabled:opacity-50 [&>span:last-child]:truncate [&>svg]:size-4 [&>svg]:shrink-0 [&>svg]:text-sidebar-accent-foreground",
         "data-[active=true]:bg-sidebar-accent data-[active=true]:text-sidebar-accent-foreground",
         size === "sm" && "text-xs",
         size === "md" && "text-sm",
