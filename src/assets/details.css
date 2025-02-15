@@ -8,7 +8,7 @@
 .dialog {
   view-transition-name: dialog;
   position: relative;
-  background: rgb(10, 10, 10);
+  background: rgb(200, 16, 16);
   padding: 5px;
   width: 30rem;
   height: 30rem;
