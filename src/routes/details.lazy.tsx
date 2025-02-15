@@ -1,4 +1,5 @@
 import { createLazyFileRoute } from "@tanstack/react-router";
+import { JSX } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
@@ -38,6 +39,48 @@ const platformIcons: { [key: string]: React.ComponentType<any> } = {
   dev: FileCode2,
   default: Globe
 };
+const platformStyles: Record<string, {
+  color: string;
+  gradient: string;
+  shadowColor: string;
+}> = {
+  github: {
+    color: '#000000',
+    gradient: 'from-[#238636] to-[#2EA043]',
+    shadowColor: '#000000'
+  },
+  twitter: {
+    color: '#1DA1F2',
+    gradient: 'from-[#1A8CD8] to-[#1DA1F2]',
+    shadowColor: 'rgba(29, 161, 242, 0.5)'
+  },
+  linkedin: {
+    color: '#0A66C2',
+    gradient: 'from-[#0077B5] to-[#0A66C2]',
+    shadowColor: 'rgba(10, 102, 194, 0.5)'
+  },
+  facebook: {
+    color: '#4267B2',
+    gradient: 'from-[#385898] to-[#4267B2]',
+    shadowColor: 'rgba(53, 90, 166, 0.5)'
+  },
+  gmail: {
+    color: '#EA4335',
+    gradient: 'from-[#DB4437] to-[#EA4335]',
+    shadowColor: 'rgba(234, 67, 53, 0.5)'
+  },
+  upwork: {
+    color: '#14A800',
+    gradient: 'from-[#108A00] to-[#14A800]',
+    shadowColor: 'rgba(20, 168, 0, 0.5)'
+  },
+  default: {
+    color: '#7C3AED',
+    gradient: 'from-[#6D28D9] to-[#7C3AED]',
+    shadowColor: 'rgba(124, 58, 237, 0.5)'
+  }
+};
+
 
 
 // Type definitions
@@ -64,10 +107,12 @@ function Details() {
         : [...prev, id]
     );
   };
-  const getPlatformIcon = (platformName: string) => {
+  const getPlatformIcon = (platformName: string): JSX.Element => {
     const lowerPlatform = platformName.toLowerCase();
     const IconComponent = platformIcons[lowerPlatform] || platformIcons.default;
-    return <IconComponent size={24} />;
+    const style = platformStyles[lowerPlatform] || platformStyles.default;
+
+    return <IconComponent style={{ color: style.color }} />;
   };
 
   const showModal = (dialogDisplay: "addDialog" | "editDialog") => {
