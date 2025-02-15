@@ -46,7 +46,7 @@ export const LoginPage = () => {
 
   return (
     <div className="min-h-screen w-full flex justify-center items-center bg-red-550">
-      <div className="w-96 p-8 bg-gradient-to-b to-red-950 rounded-lg flex flex-col items-center border border-gray-600">
+      <div className="w-96 p-8 bg-gradient-to-b to-red-950 rounded-lg flex flex-col items-center border border-white-600">
         <h3 className="text-2xl text-amber-50 mb-12">Login</h3>
         {/* <img src={cwa_logo_full} alt="CodeWithAli Logo Full" id='cwa-logo-full' draggable={false} /> */}
 
