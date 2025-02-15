@@ -22,6 +22,8 @@ const BroadcastLazyImport = createFileRoute('/broadcast')()
 const BotLazyImport = createFileRoute('/bot')()
 const AboutLazyImport = createFileRoute('/about')()
 const IndexLazyImport = createFileRoute('/')()
+const ChatsGeneralLazyImport = createFileRoute('/chats/general')()
+const ChatsDmLazyImport = createFileRoute('/chats/dm')()
 
 // Create/Update Routes
 
@@ -60,6 +62,18 @@ const IndexLazyRoute = IndexLazyImport.update({
   path: '/',
   getParentRoute: () => rootRoute,
 } as any).lazy(() => import('./routes/index.lazy').then((d) => d.Route))
+
+const ChatsGeneralLazyRoute = ChatsGeneralLazyImport.update({
+  id: '/chats/general',
+  path: '/chats/general',
+  getParentRoute: () => rootRoute,
+} as any).lazy(() => import('./routes/chats/general.lazy').then((d) => d.Route))
+
+const ChatsDmLazyRoute = ChatsDmLazyImport.update({
+  id: '/chats/dm',
+  path: '/chats/dm',
+  getParentRoute: () => rootRoute,
+} as any).lazy(() => import('./routes/chats/dm.lazy').then((d) => d.Route))
 
 // Populate the FileRoutesByPath interface
 
@@ -107,6 +121,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof EmployeeLazyImport
       parentRoute: typeof rootRoute
     }
+    '/chats/dm': {
+      id: '/chats/dm'
+      path: '/chats/dm'
+      fullPath: '/chats/dm'
+      preLoaderRoute: typeof ChatsDmLazyImport
+      parentRoute: typeof rootRoute
+    }
+    '/chats/general': {
+      id: '/chats/general'
+      path: '/chats/general'
+      fullPath: '/chats/general'
+      preLoaderRoute: typeof ChatsGeneralLazyImport
+      parentRoute: typeof rootRoute
+    }
   }
 }
 
@@ -119,6 +147,8 @@ export interface FileRoutesByFullPath {
   '/broadcast': typeof BroadcastLazyRoute
   '/details': typeof DetailsLazyRoute
   '/employee': typeof EmployeeLazyRoute
+  '/chats/dm': typeof ChatsDmLazyRoute
+  '/chats/general': typeof ChatsGeneralLazyRoute
 }
 
 export interface FileRoutesByTo {
@@ -128,6 +158,8 @@ export interface FileRoutesByTo {
   '/broadcast': typeof BroadcastLazyRoute
   '/details': typeof DetailsLazyRoute
   '/employee': typeof EmployeeLazyRoute
+  '/chats/dm': typeof ChatsDmLazyRoute
+  '/chats/general': typeof ChatsGeneralLazyRoute
 }
 
 export interface FileRoutesById {
@@ -138,13 +170,31 @@ export interface FileRoutesById {
   '/broadcast': typeof BroadcastLazyRoute
   '/details': typeof DetailsLazyRoute
   '/employee': typeof EmployeeLazyRoute
+  '/chats/dm': typeof ChatsDmLazyRoute
+  '/chats/general': typeof ChatsGeneralLazyRoute
 }
 
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/about' | '/bot' | '/broadcast' | '/details' | '/employee'
+  fullPaths:
+    | '/'
+    | '/about'
+    | '/bot'
+    | '/broadcast'
+    | '/details'
+    | '/employee'
+    | '/chats/dm'
+    | '/chats/general'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/about' | '/bot' | '/broadcast' | '/details' | '/employee'
+  to:
+    | '/'
+    | '/about'
+    | '/bot'
+    | '/broadcast'
+    | '/details'
+    | '/employee'
+    | '/chats/dm'
+    | '/chats/general'
   id:
     | '__root__'
     | '/'
@@ -153,6 +203,8 @@ export interface FileRouteTypes {
     | '/broadcast'
     | '/details'
     | '/employee'
+    | '/chats/dm'
+    | '/chats/general'
   fileRoutesById: FileRoutesById
 }
 
@@ -163,6 +215,8 @@ export interface RootRouteChildren {
   BroadcastLazyRoute: typeof BroadcastLazyRoute
   DetailsLazyRoute: typeof DetailsLazyRoute
   EmployeeLazyRoute: typeof EmployeeLazyRoute
+  ChatsDmLazyRoute: typeof ChatsDmLazyRoute
+  ChatsGeneralLazyRoute: typeof ChatsGeneralLazyRoute
 }
 
 const rootRouteChildren: RootRouteChildren = {
@@ -172,6 +226,8 @@ const rootRouteChildren: RootRouteChildren = {
   BroadcastLazyRoute: BroadcastLazyRoute,
   DetailsLazyRoute: DetailsLazyRoute,
   EmployeeLazyRoute: EmployeeLazyRoute,
+  ChatsDmLazyRoute: ChatsDmLazyRoute,
+  ChatsGeneralLazyRoute: ChatsGeneralLazyRoute,
 }
 
 export const routeTree = rootRoute
@@ -189,7 +245,9 @@ export const routeTree = rootRoute
         "/bot",
         "/broadcast",
         "/details",
-        "/employee"
+        "/employee",
+        "/chats/dm",
+        "/chats/general"
       ]
     },
     "/": {
@@ -209,6 +267,12 @@ export const routeTree = rootRoute
     },
     "/employee": {
       "filePath": "employee.lazy.tsx"
+    },
+    "/chats/dm": {
+      "filePath": "chats/dm.lazy.tsx"
+    },
+    "/chats/general": {
+      "filePath": "chats/general.lazy.tsx"
     }
   }
 }

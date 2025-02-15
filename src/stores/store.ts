@@ -14,6 +14,8 @@ interface AppState {
   resetDisplayer: () => void
   dialog: string
   setDialog: (dialog: string) => void
+  DMGroupName: string
+  setDMGroupName: (DMGroupName: string) => void
 }
 
 export const useAppStore = create<AppState>()((set) => ({
@@ -28,5 +30,18 @@ export const useAppStore = create<AppState>()((set) => ({
   setDisplayer: (displayer: string) => set({ displayer }),
   resetDisplayer: () => set({ displayer: 'Employees' }),
   dialog: 'closed',
-  setDialog: (dialog: string) => set({ dialog })
+  setDialog: (dialog: string) => set({ dialog }),
+  DMGroupName: '',
+  setDMGroupName: (DMGroupName: string) => set({ DMGroupName })
+}))
+
+// Chat Store
+interface ChatState {
+  optionValue: any
+  setOptionValue: (optionValue: any) => void
+}
+
+export const useChatStore = create<ChatState>()((set) => ({
+  optionValue: [''],
+  setOptionValue: (optionValue: any) => set({ optionValue })
 }))

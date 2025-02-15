@@ -11,6 +11,7 @@ import { LoginPage } from "@/MyComponents/login";
 import { SignUpPage } from "@/MyComponents/signup";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/app-sidebar";
+import supabase from "@/MyComponents/supabase";
 // import { AppSidebar } from "@/MyComponents/Dashboard/app-sidebar";
 
 // Import Sidebar Components
@@ -20,6 +21,10 @@ import { AppSidebar } from "@/components/app-sidebar";
 export const Route = createRootRoute({
   component: () => {
     const { pinCheck, isLoggedIn } = useAppStore();
+    // Listens to chat updates no matter where user is in the App
+    supabase.channel('general').on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'cwa_chat' }, (payload) => console.log(payload)).subscribe();
+    supabase.channel('dms').on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'cwa_dm_chat' }, (payload) => console.log(payload)).subscribe();
+    // Add global pressence if possible
 
     return (
       <>
@@ -54,6 +59,23 @@ export const Route = createRootRoute({
       <>
         <h3>
           <strong>Error</strong>
+        </h3>
+        <button type="button" onClick={goBack}>
+          Back
+        </button>
+      </>
+    );
+  },
+  notFoundComponent: () => {
+    const navigate = useNavigate();
+
+    const goBack = () => {
+      navigate({ to: ".." });
+    };
+    return (
+      <>
+        <h3>
+          <strong>Not Found</strong>
         </h3>
         <button type="button" onClick={goBack}>
           Back

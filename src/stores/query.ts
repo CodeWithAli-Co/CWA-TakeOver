@@ -70,7 +70,7 @@ export const Employees = () => {
 
 
 // Fetch All CWA Interns
-const fetchInterns= async () => {
+const fetchInterns = async () => {
   const { data } = await supabase.from("interns").select("*");
   return data;
 };
@@ -79,5 +79,58 @@ export const Interns = () => {
     queryKey: ["interns"],
     queryFn: fetchInterns,
     refetchInterval: 5000,
+  });
+};
+
+
+// Fetch CWA Chat Messages
+const fetchMessages = async () => {
+  const { data } = await supabase.from("cwa_chat").select("*").order('msg_id', { ascending: false }).limit(10);
+  return data?.reverse();
+};
+export const Messages = () => {
+  return useQuery({
+    queryKey: ["generalchat"],
+    queryFn: fetchMessages,
+    refetchInterval: 1000,
+    refetchIntervalInBackground: true
+  });
+};
+
+
+// Fetch DM Groups
+const fetchDMGroups = async (user: string) => {
+  const { data, error: nameError } = await supabase.from("dm_groups").select("*").contains('subscribers', [user])
+  if (nameError) {
+    console.log("NameError:", nameError)
+  }
+  return data;
+};
+export const DMGroups = (user: string) => {
+  return useQuery({
+    queryKey: ["dmgroups"],
+    queryFn: () => fetchDMGroups(user),
+    refetchInterval: 1000,
+    refetchIntervalInBackground: true
+  });
+};
+
+
+// Fetch DM Chat Messages
+const fetchDMs = async (groupName: string ) => {
+  switch(groupName) {
+    case '':
+      return [{message: 'Please Select a Group DM'}]
+    default:
+      const { data } = await supabase.from("cwa_dm_chat").select("*").eq('dm_group', groupName).order('msg_id', { ascending: false }).limit(10);
+      return data?.reverse();    
+  }
+};
+export const DMs = (groupName: string) => {
+  return useQuery({
+    queryKey: ["dms"],
+    queryFn: () => fetchDMs(groupName),
+    refetchInterval: 1000,
+    refetchIntervalInBackground: true
   });
 };

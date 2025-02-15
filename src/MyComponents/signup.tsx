@@ -18,7 +18,7 @@ export const SignUpPage = () => {
 
   const form = useForm({
     defaultValues: {
-      username: "",
+      username: "-",
       email: "",
       password: "",
       retypepassword: "",

@@ -10,6 +10,7 @@ import {
   PieChart,
   Settings2,
   SquareTerminal,
+  MessageCircle
 } from "lucide-react"
 
 
@@ -111,6 +112,22 @@ const data = {
           url: "#",
         },
       ],
+    },
+    {
+      title: "Chat",
+      url: "#",
+      isActive: false,
+      icon: MessageCircle,
+      items: [
+        {
+          title: "General",
+          url: "/chats/general"
+        },
+        {
+          title: "DM's",
+          url: "/chats/dm"
+        },
+      ]
     },
     {
       title: "Settings",
