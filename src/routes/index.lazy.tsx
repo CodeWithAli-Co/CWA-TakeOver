@@ -2,6 +2,11 @@ import { createLazyFileRoute } from "@tanstack/react-router";
 import "../assets/index.css";
 import { ActiveUser } from "../stores/query";
 import supabase from "@/MyComponents/supabase";
+import {
+  isPermissionGranted,
+  requestPermission,
+} from "@tauri-apps/plugin-notification";
+import { useEffect } from "react";
 
 // Assets in public directory cannot be imported from JavaScript.
 // If you intend to import that asset, put the file in the src directory, and use /src/codewithali_logo.png instead of /public/codewithali_logo.png.
@@ -18,14 +23,35 @@ import supabase from "@/MyComponents/supabase";
 // }
 
 const Index = () => {
+  useEffect(() => {
+    async function GenerateNotification() {
+      // when using `"withGlobalTauri": true`, you may use
+      // const { isPermissionGranted, requestPermission, sendNotification, } = window.__TAURI__.notification;
+
+      // Do you have permission to send a notification?
+      let permissionGranted = await isPermissionGranted();
+
+      // If not we need to request it
+      if (!permissionGranted) {
+        const permission = await requestPermission();
+        permissionGranted = permission === "granted";
+      }
+
+      // Once permission has been granted we can send the notification
+      if (permissionGranted) {
+        console.log('Notification Permission Granted!')
+      }
+    }
+
+    GenerateNotification();
+  }, []);
   return (
     <>
-     
-       <br />
+      <br />
       <h3 className="ml-1">Welcome to Home Page</h3>
     </>
   );
-}
+};
 
 export const Route = createLazyFileRoute("/")({
   component: Index,

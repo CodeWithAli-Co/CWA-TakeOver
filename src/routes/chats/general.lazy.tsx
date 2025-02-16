@@ -1,6 +1,7 @@
 import { ChatInputBox } from "@/MyComponents/chatInput";
 import { ActiveUser, Messages } from "@/stores/query";
 import { createLazyFileRoute } from "@tanstack/react-router";
+import '../../assets/chats/general.css';
 
 interface Msg {
   msg_id: number;
@@ -20,9 +21,9 @@ function General() {
   return (
     <>
       <div className="chat-page">
-        <h3>General Channel</h3>
+        <h3 className="Chat-Titles">General Channel</h3>
         {data?.map((msg: Msg) => (
-          <div key={msg.msg_id}>
+          <div key={msg.msg_id} className="chat-msgs">
             <p>{msg.message}</p>
             <p>Sent By: {msg.sent_by}</p>
           </div>

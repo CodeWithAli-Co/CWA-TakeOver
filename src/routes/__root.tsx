@@ -5,6 +5,7 @@ import bot_icon from "/bot_icon.svg";
 import employee_icon from "/employee_icon.svg";
 import broadcast_icon from "/broadcast_icon.svg";
 import "../assets/sidebar.css";
+import { sendNotification } from "@tauri-apps/plugin-notification";
 import { useAppStore } from "../stores/store";
 import PinPage from "@/MyComponents/pinPage";
 import { LoginPage } from "@/MyComponents/login";
@@ -22,8 +23,9 @@ export const Route = createRootRoute({
   component: () => {
     const { pinCheck, isLoggedIn } = useAppStore();
     // Listens to chat updates no matter where user is in the App
-    supabase.channel('general').on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'cwa_chat' }, (payload) => console.log(payload)).subscribe();
-    supabase.channel('dms').on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'cwa_dm_chat' }, (payload) => console.log(payload)).subscribe();
+    supabase.channel('general').on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'cwa_chat' }, (payload) => sendNotification({ title: 'New Message in General', body: `${payload.new.sent_by}: "${payload.new.message}"` })).subscribe();
+    // Need to work on DM notifitcation
+    supabase.channel('dms').on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'cwa_dm_chat' }, (payload) => sendNotification({ title: 'New DM Message', body: `${payload.new.sent_by}: "${payload.new.message}"` })).subscribe();
     // Add global pressence if possible
 
     return (

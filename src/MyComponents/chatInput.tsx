@@ -52,7 +52,7 @@ export const ChatInputBox = (props: Props) => {
           <form.Subscribe
             selector={(state) => [state.canSubmit]}
             children={([canSubmit]) => (
-              <button type='submit' disabled={!canSubmit}>
+              <button type='submit' style={{ display: 'none' }} disabled={!canSubmit}>
                 Submit
               </button>
             )}
