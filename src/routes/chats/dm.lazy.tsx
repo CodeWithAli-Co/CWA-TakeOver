@@ -288,7 +288,7 @@ function DMChannels() {
                           <Plus className="h-5 w-5" />
                         </Button>
                         <ChatInputBox
-                          activeUser={user[0].username}
+                          activeUser={user![0].username}
                           table="cwa_dm_chat"
                           DmGroup={DMGroupName}
                           className="flex-1 bg-transparent border-none text-gray-200 placeholder:text-gray-400 focus:ring-0 px-2"

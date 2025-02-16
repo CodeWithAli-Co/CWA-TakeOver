@@ -14,7 +14,7 @@ import {
 } from "lucide-react"
 
 
-import { Sidebar, SidebarContent, SidebarFooter, SidebarHeader, SidebarRail } from "@/components/ui/sidebar"
+import { Sidebar, SidebarContent, SidebarFooter, SidebarHeader, SidebarRail, SidebarTrigger } from "@/components/ui/sidebar"
 import { TeamSwitcher } from "./ui/Dashboard/team-switch"
 import { NavMain } from "./ui/Dashboard/nav-main"
 import { NavProjects } from "./ui/Dashboard/nav-project"
@@ -178,6 +178,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
     <Sidebar collapsible="icon" {...props}>
       <SidebarHeader>
         <TeamSwitcher teams={data.teams} />
+        <SidebarTrigger />
       </SidebarHeader>
       <SidebarContent>
         <NavMain items={data.navMain} />

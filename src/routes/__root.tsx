@@ -41,7 +41,6 @@ export const Route = createRootRoute({
             {/* // root.tsx layout section */}
             <AppSidebar />
             <section id="main-section">
-              <SidebarTrigger />
               <Outlet />
             </section>
           </SidebarProvider>
