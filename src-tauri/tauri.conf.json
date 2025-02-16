@@ -13,8 +13,8 @@
     "windows": [
       {
         "title": "CWA Manager",
-        "width": 1250,
-        "height": 850
+        "width": 1500,
+        "height": 875
       }
     ],
     "security": {
