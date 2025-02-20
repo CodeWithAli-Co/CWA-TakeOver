@@ -7,12 +7,13 @@ import {
   Search, Gift, Smile, Plus, FileImage, 
   Settings, MessageSquare, Headphones, Mic,
   ChevronDown, Hash, Bot, Book, Users,
+  UsersRound,
   VideoIcon, PhoneCall, UserPlus
 } from "lucide-react";
 import { ChatInputBox } from "@/MyComponents/chatInput";
 import { ActiveUser, DMGroups, DMs, Employees } from "@/stores/query";
 import { useAppStore } from "@/stores/store";
-import { createLazyFileRoute } from "@tanstack/react-router";
+import { createLazyFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import {
   Dialog,
   DialogContent,
@@ -28,25 +29,17 @@ import { cn } from "@/lib/utils";
 // Navigation sections configuration
 const sections = [
   {
-    id: 'platform',
-    icon: Bot,
-    label: 'Platform'
-  },
-  {
-    id: 'chat',
+    id: 'general',
     icon: MessageSquare,
-    label: 'Chat'
+    label: 'General',
+    url: '/chats/general'
   },
   {
-    id: 'documentation',
-    icon: Book,
-    label: 'Documentation'
+    id: 'dm',
+    icon: UsersRound,
+    label: 'DM',
+    url: '/chats/dm'
   },
-  {
-    id: 'settings',
-    icon: Settings,
-    label: 'Settings'
-  }
 ];
 
 // Helper function for date formatting
@@ -61,13 +54,15 @@ const formatMessageDate = (dateString: string) => {
 };
 
 function DMChannels() {
+  const navigate = useNavigate();
+
   const { DMGroupName, setDMGroupName, dialog } = useAppStore();
-  const [activeSection, setActiveSection] = useState('chat');
+  const [activeSection, setActiveSection] = useState('dm');
   const [isRightSidebarOpen, setIsRightSidebarOpen] = useState(true);
 
   const { data: AllEmployees, error: AllEmpError, isLoading: loadingEmployees } = Employees();
   const { data: user, error: userError, isLoading: loadingUser } = ActiveUser();
-  const { data: DmGroups, error: groupsError, isLoading: loadingGroups } = DMGroups(user?.[0]?.username);
+  const { data: DmGroups, error: groupsError, isLoading: loadingGroups } = DMGroups(user![0].username);
   const { data: DM, error: DMError, isPending: loadingMsg } = DMs(DMGroupName);
 
   if (loadingEmployees || loadingUser || loadingGroups || loadingMsg) {
@@ -103,7 +98,7 @@ function DMChannels() {
         {sections.map((section) => (
           <button
             key={section.id}
-            onClick={() => setActiveSection(section.id)}
+            onClick={() => { setActiveSection(section.id); navigate({ to:section.url }); }}
             className={cn(
               "w-12 h-12 rounded-full flex items-center justify-center group relative",
               activeSection === section.id ? "bg-[#5865f2] text-white" : "bg-[#313338] text-gray-400 hover:bg-[#5865f2] hover:text-white"
@@ -118,7 +113,7 @@ function DMChannels() {
       </div>
 
       {/* Section Content */}
-      {activeSection === 'chat' && (
+      {activeSection === 'dm' && (
         <>
           {/* DM List Sidebar */}
           <div className="w-60 bg-[#2b2d31] flex flex-col">
@@ -288,7 +283,7 @@ function DMChannels() {
                           <Plus className="h-5 w-5" />
                         </Button>
                         <ChatInputBox
-                          activeUser={user![0].username}
+                          activeUser={user![0].username as string}
                           table="cwa_dm_chat"
                           DmGroup={DMGroupName}
                           className="flex-1 bg-transparent border-none text-gray-200 placeholder:text-gray-400 focus:ring-0 px-2"

@@ -84,6 +84,7 @@ function General() {
         <ChatInputBox 
           activeUser={user![0].username} 
           table="cwa_chat"
+          className='bg-transparent text-white'
         />
       </div>
     </div>

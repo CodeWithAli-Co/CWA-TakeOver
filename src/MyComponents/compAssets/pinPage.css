@@ -3,7 +3,7 @@
   height: 100%;
   display: grid;
   grid-template-columns: 0.5fr 1fr 0.5fr;
-  grid-template-rows: 1fr 1fr 1fr;
+  grid-template-rows: repeat(3, 1fr);
   grid-column-gap: 0px;
   grid-row-gap: 0px;
   place-items: center;
@@ -46,14 +46,14 @@
 #cwa-logo-full {
   grid-column: 2/2;
   grid-row: 2/2;
-  width: 500px;
-  height: 500px;
+  width: 450px;
+  height: auto;
   z-index: -1;
 }
 
 
 #pin-form {
-  position: relative;
+  /* position: relative; */
   grid-column: 2/2;
   grid-row: 3/3;
   bottom: 150px;

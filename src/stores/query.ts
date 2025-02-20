@@ -92,7 +92,7 @@ export const Messages = () => {
   return useQuery({
     queryKey: ["generalchat"],
     queryFn: fetchMessages,
-    refetchInterval: 1000,
+    refetchInterval: 500,
     refetchIntervalInBackground: true
   });
 };
@@ -130,7 +130,7 @@ export const DMs = (groupName: string) => {
   return useQuery({
     queryKey: ["dms"],
     queryFn: () => fetchDMs(groupName),
-    refetchInterval: 1000,
+    refetchInterval: 500,
     refetchIntervalInBackground: true
   });
 };
