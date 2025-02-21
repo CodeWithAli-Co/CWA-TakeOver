@@ -52,31 +52,140 @@ function Broadcast() {
     resetBroadcastID();
   };
   return (
-    <>
-      <h3>Broadcast Page</h3>
-      <section>
-        <AddResendContact />
-      </section>
-      {/* Need to work on Fetching Contacts function API */}
+    <div className="min-h-screen w-full bg-black/95 p-8 ">
+      {/* Header Section */}
+      <div className="max-w-4xl mx-auto ">
+        <h3 className="text-3xl text-amber-50 mb-8 text-center">Broadcast Management</h3>
+        
+        {/* Main Content Container */}
+        <div className="bg-gradient-to-b from-red-900 to-black rounded-lg border border-red-900/30">
+          
+          {/* Add Contact Section */}
+          <div className="p-8">
+            <h4 className="text-xl text-amber-50 mb-6">Add New Contact</h4>
+            <div className="bg-black/80 rounded-lg p-6 border border-red-900/20">
+              <form className="space-y-6">
+                {/* Email Input */}
+                <div className="w-full">
+                  <label className="text-amber-50 block mb-2">Email:</label>
+                  <input
+                    type="email"
+                    className="w-full p-2 bg-transparent text-amber-50 border-b border-amber-50 
+                             focus:outline-none focus:bg-red-950 focus:rounded-lg transition-all duration-300
+                             hover:bg-red-900 hover:rounded-lg"
+                  />
+                </div>
 
-      <button className="neonbtn" type="button" onClick={() => createMail()}>
-        Create Mail
-      </button>
-      <button className="neonbtn" type="button" onClick={() => sendMail()}>
-        Send Mail
-      </button>
-      <button className="neonbtn" type="button" onClick={() => showModal()}>
-        Edit
-      </button>
-      <button className="neonbtn" type="button" onClick={() => DelContact('aalibrahimi0@gmail.com')}>Delete</button>
-      {/* Might need to insert dynamic id number in forms so each btn has unique id 'submit${number}' so DOM doesnt complain */}
-      <dialog ref={dialogRef} className="dialog">
-        <button type="button" id="dialog-close4" onClick={() => closeModal()}>
-          X
-        </button>
-        <EditResendContact />
+                {/* First Name Input */}
+                <div className="w-full">
+                  <label className="text-amber-50 block mb-2">First Name:</label>
+                  <input
+                    type="text"
+                    className="w-full p-2 bg-transparent text-amber-50 border-b border-amber-50 
+                             focus:outline-none focus:bg-red-950  focus:rounded-lg transition-all duration-300
+                             hover:bg-red-900 hover:rounded-lg"
+                  />
+                </div>
+
+                {/* Last Name Input */}
+                <div className="w-full">
+                  <label className="text-amber-50 block mb-2">Last Name:</label>
+                  <input
+                    type="text"
+                    className="w-full p-2 bg-transparent text-amber-50 border-b border-amber-50 
+                             focus:outline-none focus:bg-red-950 focus:rounded-lg transition-all duration-300
+                             hover:bg-red-900 hover:rounded-lg"
+                  />
+                </div>
+
+                {/* Status Dropdown */}
+                <div className="w-full">
+                  <label className="text-amber-50 block mb-2">Status:</label>
+                  <select
+                    className="w-full p-2 bg-transparent text-amber-50 border-b border-amber-50 
+                             focus:outline-none focus:bg-red-950  focus:rounded-lg transition-all duration-300
+                             hover:bg-red-900 hover:rounded-lg"
+                  >
+                    <option value="false" className="bg-white-900">False</option>
+                    <option value="true" className="bg-white-900">True</option>
+                  </select>
+                </div>
+
+                {/* Add Button */}
+                <button
+                  type="submit"
+                  className="w-full mt-6 p-2 bg-red-900 text-amber-50 rounded-lg 
+                           hover:bg-red-800 transition-colors duration-300 
+                           border border-red-700 neonbtn"
+                >
+                  Add Contact
+                </button>
+              </form>
+            </div>
+          </div>
+
+          {/* Action Buttons */}
+          <div className="px-8 py-4 bg-black/40 grid grid-cols-4 gap-4">
+            <button 
+              onClick={createMail}
+              className="p-2 bg-red-900 text-amber-50 rounded-lg hover:bg-red-800 
+                       transition-colors duration-300 border border-red-700 neonbtn"
+            >
+              Create Mail
+            </button>
+            
+            <button 
+              onClick={sendMail}
+              className="p-2 bg-red-900 text-amber-50 rounded-lg hover:bg-red-800 
+                       transition-colors duration-300 border border-red-700 neonbtn"
+            >
+              Send Mail
+            </button>
+            
+            <button 
+              onClick={showModal}
+              className="p-2 bg-red-900 text-amber-50 rounded-lg hover:bg-red-800 
+                       transition-colors duration-300 border border-red-700 neonbtn"
+            >
+              Edit Contact
+            </button>
+            
+            <button 
+              onClick={() => DelContact('aalibrahimi0@gmail.com')}
+              className="p-2 bg-red-900 text-amber-50 rounded-lg hover:bg-red-800 
+                       transition-colors duration-300 border border-red-700 neonbtn"
+            >
+              Delete Contact
+            </button>
+          </div>
+
+          {/* Contact List Section */}
+          <div className="p-8">
+            <h4 className="text-xl text-amber-50 mb-6">Contact List</h4>
+            <div className="bg-black/80 rounded-lg p-6 border border-red-900/20 min-h-[200px]">
+              {/* Add your contact list here */}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Edit Dialog */}
+      <dialog 
+        ref={dialogRef} 
+        className="bg-black/95 text-amber-50 rounded-lg p-8 backdrop:bg-black/50"
+      >
+        <div className="relative">
+          <button 
+            onClick={closeModal}
+            className="absolute -top-6 -right-6 text-amber-50 hover:text-red-400 
+                     transition-colors duration-300 text-xl"
+          >
+            ×
+          </button>
+          <EditResendContact />
+        </div>
       </dialog>
-    </>
+    </div>
   );
 }
 
