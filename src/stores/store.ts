@@ -32,10 +32,9 @@ export const useAppStore = create<AppState>()((set) => ({
   isLoggedIn: 'false',
   setIsLoggedIn: (isLoggedIn: string) => set({ isLoggedIn }),
 
-  // Dialog and Display state - combined implementation
-  displayer: null,
-  setDisplayer: (displayer: DialogDisplayer) => set({ displayer }),
-  resetDisplayer: () => set({ displayer: null }),
+  displayer: 'Employees',
+  setDisplayer: (displayer: string) => set({ displayer }),
+  resetDisplayer: () => set({ displayer: '' }),
   dialog: 'closed',
   setDialog: (dialog: string) => set({ dialog }),
   DMGroupName: '',

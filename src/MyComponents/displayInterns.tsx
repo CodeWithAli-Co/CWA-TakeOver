@@ -39,12 +39,7 @@ function DisplayInterns() {
   // Display Data
   // use isPending instead of isLoading for when state is fetching data
   // Can also use react's Suspense
-  const { data: interns, isPending, error } = Interns();
-
-  // Need to fix visibily of Shadcn
-  if (isPending)
-    return <Skeleton className="w-[100px] h-[20px] rounded-full" />;
-  if (error) return <p>Error Fetching Interns</p>;
+  const { data: interns } = Interns();
 
   // Delete Intern
   const DelIntern = async (rowID: number) => {

@@ -38,7 +38,7 @@ export const Route = createRootRoute({
       // *But need to add a way to still get notified from OTHER Dm chats
       if (location.pathname !== "/chats/dm") {
         supabase
-          .channel("dms")
+          .channel("dm")
           .on(
             "postgres_changes",
             { event: "INSERT", schema: "public", table: "cwa_dm_chat" },
@@ -53,9 +53,9 @@ export const Route = createRootRoute({
       } else {
         const channels = supabase.getChannels();
         channels.map((channel) =>
-          channel.topic === "realtime:dms"
+          channel.topic === "realtime:dm"
             ? supabase.removeChannel(channel)
-            : "No Such Realtime DM channel"
+            : console.log("No Such Realtime DM channel")
         );
         console.log("on DMS!");
       }
@@ -86,7 +86,7 @@ export const Route = createRootRoute({
         channels.map((channel) =>
           channel.topic === "realtime:general"
             ? supabase.removeChannel(channel)
-            : "No Such Realtime General channel"
+            : console.log("No Such Realtime General channel")
         );
         console.log("on General chat!");
       }
