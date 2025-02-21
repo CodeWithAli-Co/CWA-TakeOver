@@ -48,6 +48,18 @@ html, body {
   @apply bg-gradient-to-b from-[#8B0000] via-[#600000] to-[#B22222] text-white;
 }
 
+.backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.4); /* Adjust transparency */
+  backdrop-filter: blur(10px); /* Creates the blurred effect */
+}
+
+.modal-content {
+  background: rgba(30, 30, 30, 0.85); /* Dark but slightly transparent */
+  border: 1px solid rgba(255, 0, 0, 0.3); /* Red glowing border */
+  box-shadow: 0 0 10px rgba(255, 0, 0, 0.5); /* Soft red glow */
+}
 
 body {
   width: 100vw;
