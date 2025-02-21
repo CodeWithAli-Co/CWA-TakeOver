@@ -38,16 +38,19 @@ const customSelectStyles = {
   }),
   multiValue: (provided: any) => ({
     ...provided,
+    // this is the background color of the selected subscriber in the droplist
     backgroundColor: 'rgba(185, 28, 28, 0.8)',
     borderRadius: '0.25rem',
   }),
   multiValueLabel: (provided: any) => ({
     ...provided,
-    color: '#fbbf24',
+    // this is the text color when you select the subscriber
+    color: '#FFFFFF',
   }),
   multiValueRemove: (provided: any) => ({
     ...provided,
-    color: '#fbbf24',
+    // this is the x button remove and color
+    color: '#FFFFFF',
     '&:hover': {
       backgroundColor: '#B91C1C',
       color: 'white',

@@ -42,6 +42,13 @@ html, body {
   }
 }
 
+/* using this for the dm.lazy for now */
+
+.bg-gradient-messages {
+  @apply bg-gradient-to-b from-[#8B0000] via-[#600000] to-[#B22222] text-white;
+}
+
+
 body {
   width: 100vw;
   height: 100vh;

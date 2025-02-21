@@ -265,7 +265,7 @@ function DMChannels() {
             >
               <div className="text-center space-y-6 max-w-md mx-auto">
                 <motion.div
-                  className="w-24 h-24 bg-gradient-to-br from-red-500 to-purple-600 rounded-3xl mx-auto flex items-center justify-center"
+                  className="w-24 h-24 bg-gradient-messages shadow-lg rounded-3xl mx-auto flex items-center justify-center"
                   animate={{
                     rotate: [0, 10, -10, 0],
                     scale: [1, 1.1, 1],
@@ -278,13 +278,13 @@ function DMChannels() {
                 >
                   <MessageSquare className="h-12 w-12 text-white" />
                 </motion.div>
-                <h3 className="text-2xl font-bold text-white">Welcome to Messages</h3>
+                <h3 className="text-2xl font-bold text-white  ">Welcome to Messages</h3>
                 <p className="text-zinc-400 max-w-sm mx-auto">
                   Choose a conversation from the sidebar or start a new one to begin messaging
                 </p>
                 <Dialog>
                   <DialogTrigger asChild>
-                    <Button className="bg-gradient-to-r from-red-500 to-purple-600 text-white hover:opacity-90">
+                    <Button className="bg-gradient-to-r from-red-800 to-red-900 text-amber-50  hover:opacity-90">
                       Start New Conversation
                     </Button>
                   </DialogTrigger>
@@ -348,14 +348,14 @@ function ChatSidebar({
     <div className="flex flex-col h-full">
       <div className="p-4 border-b border-white/10">
         <div className="flex items-center justify-between mb-4">
-          <h1 className="text-xl font-bold bg-gradient-to-r from-red-500 to-purple-600 bg-clip-text text-transparent">
+          <h1 className="text-xl font-bold bg-gradient-to-r from-red-500 to-red-900 bg-clip-text text-transparent">
             Messages
           </h1>
           <Dialog>
             <DialogTrigger asChild>
               <Button
                 size="icon"
-                className="rounded-full bg-gradient-to-r from-red-500 to-purple-600 text-white hover:opacity-90"
+                className="rounded-full bg-gradient-to-r from-red-500 to-red-900 text-white hover:opacity-90"
               >
                 <Plus className="h-4 w-4" />
               </Button>
