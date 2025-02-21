@@ -4,6 +4,7 @@ type DialogState = "shown" | "closed";
 type DialogDisplayer = "addDialog" | "editDialog" | null;
 
 interface AppState {
+  DM: any;
   broadcastID: string
   setBroadcastID: (broadcastID: string) => void
   resetBroadcastID: () => void

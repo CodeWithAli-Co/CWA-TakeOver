@@ -268,7 +268,7 @@ function Details() {
         })}
       </div>
 
-      <dialog ref={dialogRef} className="dialog">
+      <dialog ref={dialogRef} >
         <Button
           variant="ghost"
           size="sm"
