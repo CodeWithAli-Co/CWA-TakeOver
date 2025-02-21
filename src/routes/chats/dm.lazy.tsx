@@ -52,6 +52,8 @@ const formatMessageDate = (dateString: string) => {
   }
 }
 
+
+
 function DMChannels() {
   const { DMGroupName, setDMGroupName } = useAppStore()
   const [isSearchOpen, setIsSearchOpen] = useState(false)
@@ -177,10 +179,12 @@ function DMChannels() {
                 </div>
               </div>
 
+
+            {/* Added a scroll bar for chat, now i want to implement code so that if i get a new message, it'll automatically send me down */}
               {/* Messages Area */}
-              <ScrollArea className="flex-1 px-6">
+              <ScrollArea className="flex-1 px-6 overflow-y-auto max-h-[calc(100vh-8rem)]">
                 <motion.div
-                  className="py-6 space-y-6"
+                  className="py-6 space-y-6 "
                   initial="hidden"
                   animate="visible"
                   variants={{
@@ -202,7 +206,8 @@ function DMChannels() {
                       }}
                       className="group"
                     >
-                      <Card className="bg-white/5 border-0 hover:bg-white/10 transition-colors">
+                      {/* this is the background of each message along with avatar */}
+                      <Card className=" border-0 hover:bg-white/10 transition-colors">
                         <CardContent className="p-4">
                           <div className="flex items-start space-x-4">
                             <Avatar className="h-10 w-10 ring-2 ring-red-500/20">
