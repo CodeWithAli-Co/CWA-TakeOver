@@ -27,7 +27,7 @@ function Employee() {
       {/* Header */}
       <div className="bg-gradient-to-r from-red-950 via-red-900 to-red-950 border-b border-red-900/20">
         <div className="max-w-7xl mx-auto px-6 py-4">
-          <h3 className="text-2xl text-amber-50 font-light">Account Management</h3>
+          <h3 className="text-2xl text-amber-50 font-light">Users</h3>
         </div>
       </div>
 

@@ -64,10 +64,7 @@ const data = {
           title: "Users",
           url: "/employee",
         },
-        {
-          title: "Settings",
-          url: "#",
-        },
+    
       ],
     },
     {
