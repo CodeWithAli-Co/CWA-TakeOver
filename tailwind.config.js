@@ -1,4 +1,5 @@
 /** @type {import('tailwindcss').Config} */
+import { violet } from "tailwindcss/colors"
 export default {
     darkMode: ["class"],
     content: ["./index.html", "./src/**/*.{ts,tsx,js,jsx}"],

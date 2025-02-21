@@ -1,386 +1,489 @@
-import React, { useState } from 'react';
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { Button } from "@/components/ui/button";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Input } from "@/components/ui/input";
-import { 
-  Search, Gift, Smile, Plus, FileImage, 
-  Settings, MessageSquare, Headphones, Mic,
-  ChevronDown, Hash, Bot, Book, Users,
-  UsersRound,
-  VideoIcon, PhoneCall, UserPlus
-} from "lucide-react";
-import { ChatInputBox } from "@/MyComponents/chatInput";
-import { ActiveUser, DMGroups, DMs, Employees } from "@/stores/query";
-import { useAppStore } from "@/stores/store";
-import { createLazyFileRoute, Link, useNavigate } from "@tanstack/react-router";
+"use client"
+
+import { useState } from "react"
+import { motion, AnimatePresence } from "framer-motion"
+import { ScrollArea } from "@/components/ui/scroll-area"
+import { Button } from "@/components/ui/button"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { Input } from "@/components/ui/input"
+import { Badge } from "@/components/ui/badge"
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { Card, CardContent } from "@/components/ui/card"
+import { Sheet, SheetContent } from "@/components/ui/sheet"
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogTitle,
-  DialogTrigger,
-  DialogClose,
-} from "@/components/ui/dialog";
-import { AddDMGroup } from "@/MyComponents/subForms/addDMGroup";
-import { formatDistanceToNow, isValid } from 'date-fns';
-import { cn } from "@/lib/utils";
+  CommandDialog,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@/components/ui/command"
+import {
+  Search,
+  MessageSquare,
+  Settings,
+  Menu,
+  Plus,
+  FileImage,
+  Smile,
+  Send,
+  MoreVertical,
+  ChevronLeft,
+  Pin,
+  Archive,
+  Inbox,
+} from "lucide-react"
+import { ChatInputBox } from "@/MyComponents/chatInput"
+import { ActiveUser, DMGroups, DMs, Employees } from "@/stores/query"
+import { useAppStore } from "@/stores/store"
+import { createLazyFileRoute } from "@tanstack/react-router"
+import { Dialog, DialogContent, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
+import { AddDMGroup } from "@/MyComponents/subForms/addDMGroup"
+import { formatDistanceToNow, isValid } from "date-fns"
+import { cn } from "@/lib/utils"
 
-// Navigation sections configuration
-const sections = [
-  {
-    id: 'general',
-    icon: MessageSquare,
-    label: 'General',
-    url: '/chats/general'
-  },
-  {
-    id: 'dm',
-    icon: UsersRound,
-    label: 'DM',
-    url: '/chats/dm'
-  },
-];
-
-// Helper function for date formatting
 const formatMessageDate = (dateString: string) => {
   try {
-    const date = new Date(dateString);
-    if (!isValid(date)) return 'Invalid date';
-    return formatDistanceToNow(date, { addSuffix: true });
+    const date = new Date(dateString)
+    if (!isValid(date)) return "Invalid date"
+    return formatDistanceToNow(date, { addSuffix: true })
   } catch (error) {
-    return 'Date unavailable';
+    return "Date unavailable"
   }
-};
+}
 
 function DMChannels() {
-  const navigate = useNavigate();
+  const { DMGroupName, setDMGroupName } = useAppStore()
+  const [isSearchOpen, setIsSearchOpen] = useState(false)
+  const [currentView, setCurrentView] = useState<"inbox" | "pinned" | "archived">("inbox")
+  const [showMobileMenu, setShowMobileMenu] = useState(false)
 
-  const { DMGroupName, setDMGroupName, dialog } = useAppStore();
-  const [activeSection, setActiveSection] = useState('dm');
-  const [isRightSidebarOpen, setIsRightSidebarOpen] = useState(true);
-
-  const { data: AllEmployees, error: AllEmpError, isLoading: loadingEmployees } = Employees();
-  const { data: user, error: userError, isLoading: loadingUser } = ActiveUser();
-  const { data: DmGroups, error: groupsError, isLoading: loadingGroups } = DMGroups(user![0].username);
-  const { data: DM, error: DMError, isPending: loadingMsg } = DMs(DMGroupName);
+  const { data: AllEmployees = [], error: AllEmpError, isLoading: loadingEmployees } = Employees()
+  const { data: user, error: userError, isLoading: loadingUser } = ActiveUser()
+  const { data: DmGroups, error: groupsError, isLoading: loadingGroups } = DMGroups(user![0].username)
+  const { data: DM, error: DMError, isPending: loadingMsg } = DMs(DMGroupName)
 
   if (loadingEmployees || loadingUser || loadingGroups || loadingMsg) {
     return (
-      <div className="flex h-screen items-center justify-center bg-[#1e1f22]">
-        <div className="text-gray-300">Loading...</div>
+      <div className="flex h-screen items-center justify-center bg-black">
+        <motion.div
+          animate={{ rotate: 360 }}
+          transition={{ duration: 1, repeat: Number.POSITIVE_INFINITY, ease: "linear" }}
+          className="w-8 h-8 border-4 border-red-500 border-t-transparent rounded-full"
+        />
       </div>
-    );
+    )
   }
 
   if (userError || AllEmpError || groupsError || DMError) {
     return (
-      <div className="flex h-screen items-center justify-center bg-[#1e1f22]">
-        <div className="text-red-400">
+      <div className="flex h-screen items-center justify-center bg-black">
+        <div className="text-red-500">
           Error: {userError?.message || AllEmpError?.message || groupsError?.message || DMError?.message}
         </div>
       </div>
-    );
+    )
   }
 
   return (
-    <div className="flex h-screen">
-      {/* Slim Navigation Bar */}
-      <div className="w-16 bg-[#1e1f22] flex flex-col items-center py-3 space-y-2">
-        {/* Company Logo */}
-        <div className="mb-2 w-12 h-12 rounded-2xl bg-[#313338] flex items-center justify-center text-white hover:bg-[#5865f2] transition-colors cursor-pointer">
-          CWA
-        </div>
-        
-        <div className="w-8 h-px bg-[#35373c] my-2" />
-        
-        {/* Main Navigation */}
-        {sections.map((section) => (
-          <button
-            key={section.id}
-            onClick={() => { setActiveSection(section.id); navigate({ to:section.url }); }}
-            className={cn(
-              "w-12 h-12 rounded-full flex items-center justify-center group relative",
-              activeSection === section.id ? "bg-[#5865f2] text-white" : "bg-[#313338] text-gray-400 hover:bg-[#5865f2] hover:text-white"
-            )}
-          >
-            <section.icon className="h-5 w-5" />
-            {activeSection !== section.id && (
-              <div className="absolute left-0 w-1 h-8 bg-white rounded-r transform scale-0 group-hover:scale-100 transition-transform origin-left" />
-            )}
-          </button>
-        ))}
+    <div className="flex h-screen bg-gradient-to-br from-zinc-900 via-black to-zinc-900">
+      {/* Mobile Menu Button */}
+      <Button
+        variant="ghost"
+        size="icon"
+        className="fixed top-4 left-4 z-50 md:hidden text-white"
+        onClick={() => setShowMobileMenu(true)}
+      >
+        <Menu className="h-6 w-6" />
+      </Button>
+
+      {/* Left Sidebar - Chat List */}
+      <Sheet open={showMobileMenu} onOpenChange={setShowMobileMenu}>
+        <SheetContent side="left" className="w-80 p-0 bg-black/95 backdrop-blur-xl border-r border-white/10">
+          <ChatSidebar
+            user={user![0]}
+            groups={DmGroups || []}
+            currentDM={DMGroupName}
+            onSelectDM={setDMGroupName}
+            currentView={currentView}
+            setCurrentView={setCurrentView}
+            employees={AllEmployees || []}
+          />
+        </SheetContent>
+      </Sheet>
+
+      {/* Desktop Sidebar */}
+      <div className="hidden md:flex w-80 border-r border-white/10 bg-black/95 backdrop-blur-xl">
+        <ChatSidebar
+          user={user![0]}
+          groups={DmGroups || []}
+          currentDM={DMGroupName}
+          onSelectDM={setDMGroupName}
+          currentView={currentView}
+          setCurrentView={setCurrentView}
+          employees={AllEmployees || []}
+        />
       </div>
 
-      {/* Section Content */}
-      {activeSection === 'dm' && (
-        <>
-          {/* DM List Sidebar */}
-          <div className="w-60 bg-[#2b2d31] flex flex-col">
-            <div className="p-3 border-b border-[#1e1f22]">
-              <h1 className="text-white font-semibold px-2 mb-4">CodeWithAli Co.</h1>
-              <div className="space-y-2">
-                <div className="relative">
-                  <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-gray-400" />
-                  <Input 
-                    placeholder="Find conversation"
-                    className="pl-8 bg-[#1e1f22] border-none text-gray-300 h-9 text-sm placeholder:text-gray-400"
-                  />
-                </div>
-                <Dialog>
-                  <DialogTrigger asChild>
-                    <Button className="w-full bg-[#5865f2] hover:bg-[#4752c4] text-white text-sm h-9">
-                      Create New DM
-                    </Button>
-                  </DialogTrigger>
-                  <DialogContent className="bg-[#313338] text-gray-100 border-none">
-                    <DialogTitle>Create New DM Group</DialogTitle>
-                    <DialogDescription className="text-gray-400">
-                      Select at least one person to message
-                    </DialogDescription>
-                    <AddDMGroup Users={AllEmployees || []} />
-                    <DialogClose>
-                      <div id="dialog-close-shadcn"></div>
-                    </DialogClose>
-                  </DialogContent>
-                </Dialog>
-              </div>
-            </div>
-
-            <ScrollArea className="flex-1">
-              <div className="p-2">
-                {/* Direct Messages Section */}
-                <div className="px-2 py-3">
-                  <button className="flex items-center justify-between w-full text-gray-400 hover:text-gray-200 mb-1">
-                    <span className="text-xs font-semibold">DIRECT MESSAGES</span>
-                    <Plus className="h-4 w-4" />
-                  </button>
-                  <div className="space-y-[2px]">
-                    {DmGroups?.map((group) => (
-                      <button
-                        key={group.id}
-                        onClick={() => setDMGroupName(group.name)}
-                        className={cn(
-                          "w-full flex items-center space-x-3 p-2 rounded hover:bg-[#35373c] transition-colors",
-                          DMGroupName === group.name ? 'bg-[#35373c]' : ''
-                        )}
-                      >
-                        <div className="relative">
-                          <Avatar className="h-8 w-8">
-                            <AvatarImage src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${group.name}`} />
-                            <AvatarFallback>{group.name?.slice(0, 2)?.toUpperCase() || 'DM'}</AvatarFallback>
-                          </Avatar>
-                          <span className="absolute bottom-0 right-0 w-3 h-3 bg-green-500 rounded-full border-2 border-[#2b2d31]" />
-                        </div>
-                        <span className="text-gray-300 text-sm font-medium truncate">{group.name}</span>
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              </div>
-            </ScrollArea>
-
-            {/* User Controls */}
-            <div className="p-2 mt-auto bg-[#232428] flex items-center justify-between">
-              <div className="flex items-center space-x-2">
-                <div className="relative">
-                  <Avatar className="h-8 w-8">
-                    <AvatarImage src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${user?.[0]?.username}`} />
-                    <AvatarFallback>{user?.[0]?.username?.slice(0, 2)?.toUpperCase()}</AvatarFallback>
+      {/* Main Chat Area */}
+      <div className="flex-1 flex flex-col">
+        <AnimatePresence mode="wait">
+          {DMGroupName ? (
+            <motion.div
+              key="chat"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -20 }}
+              className="flex-1 flex flex-col"
+            >
+              {/* Chat Header */}
+              <div className="h-16 flex items-center justify-between px-6 bg-black/50 backdrop-blur-xl border-b border-white/10">
+                <div className="flex items-center space-x-4">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="md:hidden text-white"
+                    onClick={() => setDMGroupName("")}
+                  >
+                    <ChevronLeft className="h-5 w-5" />
+                  </Button>
+                  <Avatar className="h-8 w-8 ring-2 ring-red-500/50">
+                    <AvatarImage src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${DMGroupName}`} />
+                    <AvatarFallback>{DMGroupName?.slice(0, 2)?.toUpperCase()}</AvatarFallback>
                   </Avatar>
-                  <span className="absolute bottom-0 right-0 w-3 h-3 bg-green-500 rounded-full border-2 border-[#232428]" />
-                </div>
-                <div className="text-sm">
-                  <div className="text-gray-200 font-medium">{user?.[0]?.username}</div>
-                  <div className="text-gray-400 text-xs">Online</div>
-                </div>
-              </div>
-              <div className="flex space-x-1">
-                <Button variant="ghost" size="icon" className="h-8 w-8">
-                  <Mic className="h-4 w-4 text-gray-400" />
-                </Button>
-                <Button variant="ghost" size="icon" className="h-8 w-8">
-                  <Headphones className="h-4 w-4 text-gray-400" />
-                </Button>
-                <Button variant="ghost" size="icon" className="h-8 w-8">
-                  <Settings className="h-4 w-4 text-gray-400" />
-                </Button>
-              </div>
-            </div>
-          </div>
-
-          {/* Chat Area */}
-          <div className="flex-1 flex flex-col bg-[#313338]">
-            {DMGroupName ? (
-              <>
-                {/* Chat Header */}
-                <div className="h-12 flex items-center justify-between px-4 border-b border-[#1e1f22]">
-                  <div className="flex items-center space-x-4">
-                    <div className="flex items-center">
-                      <Avatar className="h-6 w-6 mr-2">
-                        <AvatarImage src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${DMGroupName}`} />
-                        <AvatarFallback>{DMGroupName?.slice(0, 2)?.toUpperCase()}</AvatarFallback>
-                      </Avatar>
-                      <h3 className="text-gray-100 font-medium">{DMGroupName}</h3>
-                    </div>
+                  <div>
+                    <h2 className="text-white font-semibold">{DMGroupName}</h2>
+                    <p className="text-xs text-zinc-400">Active now</p>
                   </div>
-                  
-                  <div className="flex items-center space-x-2">
-                    <Button variant="ghost" size="icon" className="h-8 w-8">
-                      <VideoIcon className="h-4 w-4 text-gray-400" />
-                    </Button>
-                    <Button variant="ghost" size="icon" className="h-8 w-8">
-                      <PhoneCall className="h-4 w-4 text-gray-400" />
-                    </Button>
-                    <Button variant="ghost" size="icon" className="h-8 w-8">
-                      <UserPlus className="h-4 w-4 text-gray-400" />
-                    </Button>
-                    <div className="h-4 w-px bg-gray-700" />
-                    <Search className="h-4 w-4 text-gray-400" />
-                    <Input 
-                      placeholder="Search"
-                      className="w-40 h-8 bg-[#1e1f22] border-none text-gray-300 text-sm"
-                    />
-                    <Button 
-                      variant="ghost" 
-                      size="icon" 
-                      className="h-8 w-8"
-                      onClick={() => setIsRightSidebarOpen(!isRightSidebarOpen)}
+                </div>
+                <div className="flex items-center space-x-2">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="text-white hover:bg-white/10"
+                    onClick={() => setIsSearchOpen(true)}
+                  >
+                    <Search className="h-5 w-5" />
+                  </Button>
+                  <Button variant="ghost" size="icon" className="text-white hover:bg-white/10">
+                    <Pin className="h-5 w-5" />
+                  </Button>
+                  <Button variant="ghost" size="icon" className="text-white hover:bg-white/10">
+                    <MoreVertical className="h-5 w-5" />
+                  </Button>
+                </div>
+              </div>
+
+              {/* Messages Area */}
+              <ScrollArea className="flex-1 px-6">
+                <motion.div
+                  className="py-6 space-y-6"
+                  initial="hidden"
+                  animate="visible"
+                  variants={{
+                    hidden: { opacity: 0 },
+                    visible: {
+                      opacity: 1,
+                      transition: {
+                        staggerChildren: 0.1,
+                      },
+                    },
+                  }}
+                >
+                  {DM?.map((dm) => (
+                    <motion.div
+                      key={dm.msg_id}
+                      variants={{
+                        hidden: { opacity: 0, y: 20 },
+                        visible: { opacity: 1, y: 0 },
+                      }}
+                      className="group"
                     >
-                      <Users className="h-4 w-4 text-gray-400" />
-                    </Button>
-                  </div>
-                </div>
-
-                {/* Messages Area */}
-                <div className="flex-1 flex">
-                  <div className="flex-1 flex flex-col">
-                    <ScrollArea className="flex-1 px-4">
-                      <div className="space-y-4 py-4">
-                        {DM?.map((dm) => (
-                          <div key={dm.msg_id} className="group flex items-start space-x-4 hover:bg-[#2e3035] px-2 py-1 rounded-lg">
-                            <Avatar className="h-10 w-10 mt-0.5">
+                      <Card className="bg-white/5 border-0 hover:bg-white/10 transition-colors">
+                        <CardContent className="p-4">
+                          <div className="flex items-start space-x-4">
+                            <Avatar className="h-10 w-10 ring-2 ring-red-500/20">
                               <AvatarImage src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${dm.sent_by}`} />
                               <AvatarFallback>{dm.sent_by?.slice(0, 2)?.toUpperCase()}</AvatarFallback>
                             </Avatar>
                             <div className="flex-1 min-w-0">
                               <div className="flex items-center space-x-2">
-                                <span className="text-gray-100 font-medium">{dm.sent_by}</span>
-                                <span className="text-gray-400 text-xs">
-                                  {formatMessageDate(dm.created_at)}
-                                </span>
+                                <span className="text-red-400 font-medium">{dm.sent_by}</span>
+                                <span className="text-zinc-500 text-sm">{formatMessageDate(dm.created_at)}</span>
                               </div>
-                              <p className="text-gray-300 mt-0.5 break-words">{dm.message}</p>
+                              <p className="text-white mt-1">{dm.message}</p>
                             </div>
                           </div>
-                        ))}
-                      </div>
-                    </ScrollArea>
-{/* Chat Input */}
-<div className="px-4 pb-6 pt-2">
-                      <div className="relative flex items-center bg-[#383a40] rounded-lg p-0.5">
-                        <Button variant="ghost" className="h-10 w-10 p-2 text-gray-400 hover:text-gray-300">
-                          <Plus className="h-5 w-5" />
+                        </CardContent>
+                      </Card>
+                    </motion.div>
+                  ))}
+                </motion.div>
+              </ScrollArea>
+
+              {/* Chat Input */}
+              <div className="p-4 bg-black/50 backdrop-blur-xl border-t border-white/10">
+                <div className="max-w-4xl mx-auto">
+                  <div className="relative flex items-center space-x-2">
+                    <Button variant="ghost" size="icon" className="text-white hover:bg-white/10">
+                      <Plus className="h-5 w-5" />
+                    </Button>
+                    <div className="flex-1 relative">
+                      <ChatInputBox
+                        activeUser={user![0].username as string}
+                        table="cwa_dm_chat"
+                        DmGroup={DMGroupName}
+                        className="w-full bg-white/5 border-0 focus:ring-1 focus:ring-red-500 text-white placeholder:text-zinc-500 rounded-full py-6"
+                        placeholder={`Message ${DMGroupName}`}
+                      />
+                      <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center space-x-2">
+                        <Button variant="ghost" size="icon" className="text-zinc-400 hover:text-white">
+                          <FileImage className="h-5 w-5" />
                         </Button>
-                        <ChatInputBox
-                          activeUser={user![0].username as string}
-                          table="cwa_dm_chat"
-                          DmGroup={DMGroupName}
-                          className="flex-1 bg-transparent border-none text-gray-200 placeholder:text-gray-400 focus:ring-0 px-2"
-                          placeholder={`Message ${DMGroupName}`}
-                        />
-                        <div className="flex items-center space-x-1 px-2">
-                          <Button variant="ghost" className="h-10 w-10 p-2 text-gray-400 hover:text-gray-300">
-                            <Gift className="h-5 w-5" />
-                          </Button>
-                          <Button variant="ghost" className="h-10 w-10 p-2 text-gray-400 hover:text-gray-300">
-                            <FileImage className="h-5 w-5" />
-                          </Button>
-                          <Button variant="ghost" className="h-10 w-10 p-2 text-gray-400 hover:text-gray-300">
-                            <Smile className="h-5 w-5" />
-                          </Button>
-                        </div>
+                        <Button variant="ghost" size="icon" className="text-zinc-400 hover:text-white">
+                          <Smile className="h-5 w-5" />
+                        </Button>
+                        <Button size="icon" className="bg-red-500 hover:bg-red-600 text-white rounded-full">
+                          <Send className="h-4 w-4" />
+                        </Button>
                       </div>
                     </div>
                   </div>
-
-                  {/* Right Sidebar - Member List */}
-                  {isRightSidebarOpen && (
-                    <div className="w-60 border-l border-[#1e1f22] bg-[#2b2d31] flex flex-col">
-                      <div className="p-4 border-b border-[#1e1f22]">
-                        <h3 className="text-gray-300 font-semibold text-xs uppercase tracking-wider">Members</h3>
-                      </div>
-                      <ScrollArea className="flex-1">
-                        <div className="p-4 space-y-4">
-                          {/* Online Members Section */}
-                          <div>
-                            <h4 className="text-gray-400 text-xs font-semibold mb-2">ONLINE — 3</h4>
-                            <div className="space-y-2">
-                              {[DMGroupName, user?.[0]?.username].map((member) => (
-                                <div key={member} className="flex items-center space-x-3 p-2 rounded hover:bg-[#35373c] group">
-                                  <div className="relative">
-                                    <Avatar className="h-8 w-8">
-                                      <AvatarImage src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${member}`} />
-                                      <AvatarFallback>{member?.slice(0, 2)?.toUpperCase()}</AvatarFallback>
-                                    </Avatar>
-                                    <span className="absolute bottom-0 right-0 w-3 h-3 bg-green-500 rounded-full border-2 border-[#2b2d31]" />
-                                  </div>
-                                  <div>
-                                    <span className="text-gray-200 text-sm font-medium">{member}</span>
-                                    <p className="text-gray-400 text-xs">Working on something cool</p>
-                                  </div>
-                                </div>
-                              ))}
-                            </div>
-                          </div>
-
-                          {/* Offline Members Section */}
-                          <div>
-                            <h4 className="text-gray-400 text-xs font-semibold mb-2">OFFLINE — 2</h4>
-                            <div className="space-y-2">
-                              {['Member 3', 'Member 4'].map((member) => (
-                                <div key={member} className="flex items-center space-x-3 p-2 rounded hover:bg-[#35373c] group">
-                                  <div className="relative">
-                                    <Avatar className="h-8 w-8">
-                                      <AvatarImage src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${member}`} />
-                                      <AvatarFallback>{member?.slice(0, 2)?.toUpperCase()}</AvatarFallback>
-                                    </Avatar>
-                                    <span className="absolute bottom-0 right-0 w-3 h-3 bg-gray-500 rounded-full border-2 border-[#2b2d31]" />
-                                  </div>
-                                  <div>
-                                    <span className="text-gray-400 text-sm font-medium">{member}</span>
-                                  </div>
-                                </div>
-                              ))}
-                            </div>
-                          </div>
-                        </div>
-                      </ScrollArea>
-                    </div>
-                  )}
-                </div>
-              </>
-            ) : (
-              // Welcome Screen when no chat is selected
-              <div className="flex-1 flex items-center justify-center">
-                <div className="text-center space-y-3">
-                  <div className="w-16 h-16 mx-auto bg-[#5865f2] rounded-full flex items-center justify-center">
-                    <MessageSquare className="h-8 w-8 text-white" />
-                  </div>
-                  <h3 className="text-xl font-semibold text-gray-200">Welcome to Messages!</h3>
-                  <p className="text-gray-400 max-w-md">Select a conversation from the sidebar or start a new one.</p>
                 </div>
               </div>
-            )}
-          </div>
-        </>
-      )}
+            </motion.div>
+          ) : (
+            <motion.div
+              key="empty"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="flex-1 flex items-center justify-center p-4"
+            >
+              <div className="text-center space-y-6 max-w-md mx-auto">
+                <motion.div
+                  className="w-24 h-24 bg-gradient-to-br from-red-500 to-purple-600 rounded-3xl mx-auto flex items-center justify-center"
+                  animate={{
+                    rotate: [0, 10, -10, 0],
+                    scale: [1, 1.1, 1],
+                  }}
+                  transition={{
+                    duration: 4,
+                    repeat: Number.POSITIVE_INFINITY,
+                    ease: "easeInOut",
+                  }}
+                >
+                  <MessageSquare className="h-12 w-12 text-white" />
+                </motion.div>
+                <h3 className="text-2xl font-bold text-white">Welcome to Messages</h3>
+                <p className="text-zinc-400 max-w-sm mx-auto">
+                  Choose a conversation from the sidebar or start a new one to begin messaging
+                </p>
+                <Dialog>
+                  <DialogTrigger asChild>
+                    <Button className="bg-gradient-to-r from-red-500 to-purple-600 text-white hover:opacity-90">
+                      Start New Conversation
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent className="bg-black/95 backdrop-blur-xl border border-white/10">
+                    <DialogTitle>New Conversation</DialogTitle>
+                    <AddDMGroup Users={AllEmployees || []} />
+                  </DialogContent>
+                </Dialog>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        {/* Search Dialog */}
+        <CommandDialog open={isSearchOpen} onOpenChange={setIsSearchOpen}>
+          <CommandInput placeholder="Search messages..." />
+          <CommandList>
+            <CommandEmpty>No results found.</CommandEmpty>
+            <CommandGroup heading="Suggestions">
+              {DmGroups?.map((group) => (
+                <CommandItem
+                  key={group.id}
+                  onSelect={() => {
+                    setDMGroupName(group.name)
+                    setIsSearchOpen(false)
+                  }}
+                >
+                  <Avatar className="h-6 w-6 mr-2">
+                    <AvatarImage src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${group.name}`} />
+                    <AvatarFallback>{group.name?.slice(0, 2)?.toUpperCase()}</AvatarFallback>
+                  </Avatar>
+                  {group.name}
+                </CommandItem>
+              ))}
+            </CommandGroup>
+          </CommandList>
+        </CommandDialog>
+      </div>
     </div>
-  );
+  )
+}
+
+function ChatSidebar({
+  user,
+  groups,
+  currentDM,
+  onSelectDM,
+  currentView,
+  setCurrentView,
+  employees,
+}: {
+  user: any
+  groups: any[]
+  currentDM: string
+  onSelectDM: (name: string) => void
+  currentView: "inbox" | "pinned" | "archived"
+  setCurrentView: (view: "inbox" | "pinned" | "archived") => void
+  employees: any[]
+}) {
+  return (
+    <div className="flex flex-col h-full">
+      <div className="p-4 border-b border-white/10">
+        <div className="flex items-center justify-between mb-4">
+          <h1 className="text-xl font-bold bg-gradient-to-r from-red-500 to-purple-600 bg-clip-text text-transparent">
+            Messages
+          </h1>
+          <Dialog>
+            <DialogTrigger asChild>
+              <Button
+                size="icon"
+                className="rounded-full bg-gradient-to-r from-red-500 to-purple-600 text-white hover:opacity-90"
+              >
+                <Plus className="h-4 w-4" />
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="bg-black/95 backdrop-blur-xl border border-white/10">
+              <DialogTitle>New Conversation</DialogTitle>
+              <AddDMGroup Users={employees || []} />
+            </DialogContent>
+          </Dialog>
+        </div>
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-zinc-400" />
+          <Input
+            placeholder="Search conversations"
+            className="w-full bg-white/5 border-0 pl-9 text-white placeholder:text-zinc-500"
+          />
+        </div>
+      </div>
+
+      <Tabs defaultValue="inbox" className="flex-1 flex flex-col">
+        <TabsList className="w-full justify-start px-2 h-12 bg-transparent border-b border-white/10">
+          <TabsTrigger
+            value="inbox"
+            className="data-[state=active]:bg-white/10 data-[state=active]:text-white"
+            onClick={() => setCurrentView("inbox")}
+          >
+            <Inbox className="h-4 w-4 mr-2" />
+            Inbox
+          </TabsTrigger>
+          <TabsTrigger
+            value="pinned"
+            className="data-[state=active]:bg-white/10 data-[state=active]:text-white"
+            onClick={() => setCurrentView("pinned")}
+          >
+            <Pin className="h-4 w-4 mr-2" />
+            Pinned
+          </TabsTrigger>
+          <TabsTrigger
+            value="archived"
+            className="data-[state=active]:bg-white/10 data-[state=active]:text-white"
+            onClick={() => setCurrentView("archived")}
+          >
+            <Archive className="h-4 w-4 mr-2" />
+            Archived
+          </TabsTrigger>
+        </TabsList>
+
+        <ScrollArea className="flex-1 px-2">
+          <motion.div
+            className="py-4 space-y-2"
+            initial="hidden"
+            animate="visible"
+            variants={{
+              hidden: { opacity: 0 },
+              visible: {
+                opacity: 1,
+                transition: {
+                  staggerChildren: 0.05,
+                },
+              },
+            }}
+          >
+            {groups?.map((group) => (
+              <motion.div
+                key={group.id}
+                variants={{
+                  hidden: { opacity: 0, x: -20 },
+                  visible: { opacity: 1, x: 0 },
+                }}
+              >
+                <Button
+                  variant="ghost"
+                  onClick={() => onSelectDM(group.name)}
+                  className={cn(
+                    "w-full justify-start px-3 py-6 space-x-3 group relative",
+                    currentDM === group.name
+                      ? "bg-white/10 text-white"
+                      : "text-zinc-400 hover:text-white hover:bg-white/5",
+                  )}
+                >
+                  <div className="relative">
+                    <Avatar className="h-10 w-10 ring-2 ring-red-500/20">
+                      <AvatarImage src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${group.name}`} />
+                      <AvatarFallback>{group.name?.slice(0, 2)?.toUpperCase()}</AvatarFallback>
+                    </Avatar>
+                    <span className="absolute bottom-0 right-0 w-3 h-3 bg-green-500 rounded-full ring-2 ring-black" />
+                  </div>
+                  <div className="flex-1 min-w-0 text-left">
+                    <div className="flex items-center justify-between">
+                      <span className="font-medium truncate">{group.name}</span>
+                      <span className="text-xs text-zinc-500">12m</span>
+                    </div>
+                    <p className="text-xs text-zinc-500 truncate">Latest message preview...</p>
+                  </div>
+                  <motion.div
+                    initial={false}
+                    animate={{ scale: currentDM === group.name ? 1 : 0 }}
+                    className="absolute left-0 w-1 h-full bg-red-500 rounded-r"
+                  />
+                </Button>
+              </motion.div>
+            ))}
+          </motion.div>
+        </ScrollArea>
+      </Tabs>
+
+      {/* User Profile */}
+      <div className="p-4 border-t border-white/10">
+        <div className="flex items-center space-x-3">
+          <Avatar className="h-10 w-10 ring-2 ring-red-500/20">
+            <AvatarImage src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${user?.username}`} />
+            <AvatarFallback>{user?.username?.slice(0, 2)?.toUpperCase()}</AvatarFallback>
+          </Avatar>
+          <div className="flex-1 min-w-0">
+            <p className="text-white font-medium truncate">{user?.username}</p>
+            <Badge variant="outline" className="mt-1 text-xs text-zinc-400 bg-white/5">
+              Admin
+            </Badge>
+          </div>
+          <Button variant="ghost" size="icon" className="text-zinc-400 hover:text-white">
+            <Settings className="h-5 w-5" />
+          </Button>
+        </div>
+      </div>
+    </div>
+  )
 }
 
 export const Route = createLazyFileRoute("/chats/dm")({
   component: DMChannels,
-});
+})
 
-export default DMChannels;
+export default DMChannels
+
