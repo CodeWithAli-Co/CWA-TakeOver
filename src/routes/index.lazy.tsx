@@ -1,7 +1,5 @@
 import { createLazyFileRoute } from "@tanstack/react-router";
 import "../assets/index.css";
-import { ActiveUser } from "../stores/query";
-import supabase from "@/MyComponents/supabase";
 import {
   isPermissionGranted,
   requestPermission,
@@ -23,6 +21,7 @@ import { useEffect } from "react";
 // }
 
 const Index = () => {
+
   useEffect(() => {
     async function GenerateNotification() {
       // when using `"withGlobalTauri": true`, you may use
@@ -39,7 +38,7 @@ const Index = () => {
 
       // Once permission has been granted we can send the notification
       if (permissionGranted) {
-        console.log('Notification Permission Granted!')
+        console.log("Notification Permission Granted!");
       }
     }
 

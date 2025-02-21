@@ -1,5 +1,5 @@
 import supabase from "@/MyComponents/supabase";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useSuspenseQuery } from "@tanstack/react-query";
 
 // Fetch Active User with Avatar
 const fetchActiveUser = async () => {
@@ -50,7 +50,7 @@ export const CWACreds = () => {
   return useQuery({
     queryKey: ["creds"],
     queryFn: fetchCreds,
-    refetchInterval: 5000,
+    refetchInterval: 500,
   });
 };
 
@@ -92,7 +92,7 @@ export const Messages = () => {
   return useQuery({
     queryKey: ["generalchat"],
     queryFn: fetchMessages,
-    refetchInterval: 1000,
+    refetchInterval: 500,
     refetchIntervalInBackground: true
   });
 };
@@ -127,10 +127,10 @@ const fetchDMs = async (groupName: string ) => {
   }
 };
 export const DMs = (groupName: string) => {
-  return useQuery({
+  return useSuspenseQuery({
     queryKey: ["dms"],
     queryFn: () => fetchDMs(groupName),
-    refetchInterval: 1000,
+    refetchInterval: 500,
     refetchIntervalInBackground: true
   });
 };

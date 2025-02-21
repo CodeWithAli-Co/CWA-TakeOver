@@ -5,6 +5,8 @@ interface Props {
   table: string
   activeUser: string
   DmGroup?: string
+  className?: string
+  placeholder?: string
 }
 
 export const ChatInputBox = (props: Props) => {
@@ -39,7 +41,10 @@ export const ChatInputBox = (props: Props) => {
                   <>
                     <input
                       name={field.name}
-                      placeholder='enter message'
+                      autoFocus
+                      autoComplete='off'
+                      className={`${props.className}`}
+                      placeholder={`${props.placeholder || 'Enter Message'}`}
                       value={field.state.value}
                       onChange={(e) => field.handleChange(e.target.value)}
                     />
