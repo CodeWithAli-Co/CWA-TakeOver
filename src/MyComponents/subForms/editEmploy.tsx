@@ -65,6 +65,7 @@ export const EditEmployee = (props: Props) => {
                     <input
                       name={field.name}
                       type="text"
+                      autoComplete="off"
                       className="form-input"
                       value={field.state.value}
                       onChange={(e) => field.handleChange(e.target.value)}
@@ -83,6 +84,7 @@ export const EditEmployee = (props: Props) => {
                     <input
                       name={field.name}
                       type="email"
+                      autoComplete="off"
                       className="form-input"
                       value={field.state.value}
                       onChange={(e) => field.handleChange(e.target.value)}

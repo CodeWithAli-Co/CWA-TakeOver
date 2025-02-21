@@ -6,6 +6,7 @@ import { formatDistanceToNow } from 'date-fns';
 import { ChatInputBox } from "@/MyComponents/chatInput";
 import { ActiveUser, Messages } from "@/stores/query";
 import { createLazyFileRoute } from "@tanstack/react-router";
+import supabase from '@/MyComponents/supabase';
 
 interface Msg {
   msg_id: number;
@@ -15,8 +16,18 @@ interface Msg {
 }
 
 function General() {
-  const { data, error } = Messages();
+  const { data, error, refetch } = Messages();
   if (error) return "Error Loading Messages...";
+  supabase
+  .channel("general-msgs")
+  .on(
+    "postgres_changes",
+    { event: "*", schema: "public", table: "cwa_chat" },
+    () =>
+      refetch()
+  )
+  .subscribe();
+
 
   const { data: user, error: userError } = ActiveUser();
   if (userError)

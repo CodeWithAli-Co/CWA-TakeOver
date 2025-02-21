@@ -1,5 +1,5 @@
 import supabase from "@/MyComponents/supabase";
-import { useQuery, useSuspenseQuery } from "@tanstack/react-query";
+import { useSuspenseQuery } from "@tanstack/react-query";
 
 // Fetch Active User with Avatar
 const fetchActiveUser = async () => {
@@ -34,7 +34,7 @@ const fetchActiveUser = async () => {
   ];
 };
 export const ActiveUser = () => {
-  return useQuery({
+  return useSuspenseQuery({
     queryKey: ["activeuser"],
     queryFn: fetchActiveUser,
   });
@@ -47,10 +47,9 @@ const fetchCreds = async () => {
   return data;
 };
 export const CWACreds = () => {
-  return useQuery({
+  return useSuspenseQuery({
     queryKey: ["creds"],
     queryFn: fetchCreds,
-    refetchInterval: 500,
   });
 };
 
@@ -61,10 +60,9 @@ const fetchEmployees = async () => {
   return data;
 };
 export const Employees = () => {
-  return useQuery({
+  return useSuspenseQuery({
     queryKey: ["employees"],
     queryFn: fetchEmployees,
-    refetchInterval: 5000,
   });
 };
 
@@ -75,10 +73,9 @@ const fetchInterns = async () => {
   return data;
 };
 export const Interns = () => {
-  return useQuery({
+  return useSuspenseQuery({
     queryKey: ["interns"],
     queryFn: fetchInterns,
-    refetchInterval: 5000,
   });
 };
 
@@ -89,11 +86,9 @@ const fetchMessages = async () => {
   return data?.reverse();
 };
 export const Messages = () => {
-  return useQuery({
+  return useSuspenseQuery({
     queryKey: ["generalchat"],
     queryFn: fetchMessages,
-    refetchInterval: 500,
-    refetchIntervalInBackground: true
   });
 };
 
@@ -107,11 +102,9 @@ const fetchDMGroups = async (user: string) => {
   return data;
 };
 export const DMGroups = (user: string) => {
-  return useQuery({
+  return useSuspenseQuery({
     queryKey: ["dmgroups"],
     queryFn: () => fetchDMGroups(user),
-    refetchInterval: 1000,
-    refetchIntervalInBackground: true
   });
 };
 
@@ -130,7 +123,5 @@ export const DMs = (groupName: string) => {
   return useSuspenseQuery({
     queryKey: ["dms"],
     queryFn: () => fetchDMs(groupName),
-    refetchInterval: 500,
-    refetchIntervalInBackground: true
   });
 };

@@ -125,6 +125,11 @@ const data = {
         },
       ],
     },
+    {
+      title: "Home",
+      url: "/",
+      isActive: false,
+    }
   ],
   projects: [
     {

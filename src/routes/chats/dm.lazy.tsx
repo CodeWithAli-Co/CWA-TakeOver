@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react"
+
 import { motion, AnimatePresence } from "framer-motion";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Button } from "@/components/ui/button";
@@ -32,20 +33,16 @@ import {
   Pin,
   Archive,
   Inbox,
-} from "lucide-react";
-import { ChatInputBox } from "@/MyComponents/chatInput";
-import { ActiveUser, DMGroups, DMs, Employees } from "@/stores/query";
-import { useAppStore } from "@/stores/store";
-import { createLazyFileRoute } from "@tanstack/react-router";
-import {
-  Dialog,
-  DialogContent,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
-import { AddDMGroup } from "@/MyComponents/subForms/addDMGroup";
-import { formatDistanceToNow, isValid } from "date-fns";
-import { cn } from "@/lib/utils";
+} from "lucide-react"
+import { ChatInputBox } from "@/MyComponents/chatInput"
+import { ActiveUser, DMGroups, DMs, Employees } from "@/stores/query"
+import { useAppStore } from "@/stores/store"
+import { createLazyFileRoute } from "@tanstack/react-router"
+import { Dialog, DialogContent, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
+import { AddDMGroup } from "@/MyComponents/subForms/addDMGroup"
+import { formatDistanceToNow, isValid } from "date-fns"
+import { cn } from "@/lib/utils"
+import supabase from "@/MyComponents/supabase"
 
 const formatMessageDate = (dateString: string) => {
   try {
@@ -59,44 +56,32 @@ const formatMessageDate = (dateString: string) => {
 
 function DMChannels() {
   const { DMGroupName, setDMGroupName } = useAppStore();
-  const [isSearchOpen, setIsSearchOpen] = useState(false);
-  const [currentView, setCurrentView] = useState<
-    "inbox" | "pinned" | "archived"
-  >("inbox");
-  const [showMobileMenu, setShowMobileMenu] = useState(false);
+  const [isSearchOpen, setIsSearchOpen] = useState(false)
+  const [currentView, setCurrentView] = useState<"inbox" | "pinned" | "archived">("inbox")
+  const [showMobileMenu, setShowMobileMenu] = useState(false)
 
-  const [activeSection, setActiveSection] = useState("dm");
-  const [isRightSidebarOpen, setIsRightSidebarOpen] = useState(true);
+  // const [activeSection, setActiveSection] = useState('dm');
+  // const [isRightSidebarOpen, setIsRightSidebarOpen] = useState(true);
 
-  const {
-    data: AllEmployees,
-    error: AllEmpError,
-    isLoading: loadingEmployees,
-  } = Employees();
-  const { data: user, error: userError, isLoading: loadingUser } = ActiveUser();
-  const {
-    data: DmGroups,
-    error: groupsError,
-    isLoading: loadingGroups,
-  } = DMGroups(user![0].username);
-  const { data: DM } = DMs(DMGroupName);
+  const { data: AllEmployees, error: AllEmpError } = Employees();
+  const { data: user, error: userError } = ActiveUser();
+  const { data: DmGroups, error: groupsError, refetch: refetchDMGroups } = DMGroups(user![0].username);
+  const { data: DM, refetch: refetchDMs } = DMs(DMGroupName);
 
-  if (loadingEmployees || loadingUser || loadingGroups) {
-    return (
-      <div className="flex h-screen items-center justify-center bg-black">
-        <motion.div
-          animate={{ rotate: 360 }}
-          transition={{
-            duration: 1,
-            repeat: Number.POSITIVE_INFINITY,
-            ease: "linear",
-          }}
-          className="w-8 h-8 border-4 border-red-500 border-t-transparent rounded-full"
-        />
-      </div>
-    );
-  }
+  // Since using SuspenseQuery, this has no effect
+  // if (loadingEmployees || loadingUser || loadingGroups) {
+  //   return (
+  //     <div className="flex h-screen items-center justify-center bg-black">
+  //       <motion.div
+  //         animate={{ rotate: 360 }}
+  //         transition={{ duration: 1, repeat: Number.POSITIVE_INFINITY, ease: "linear" }}
+  //         className="w-8 h-8 border-4 border-red-500 border-t-transparent rounded-full"
+  //       />
+  //     </div>
+  //   )
+  // }
 
+  // With SuspenseQuery i dont think this has effect either, but leaving this here for now
   if (userError || AllEmpError || groupsError) {
     return (
       <div className="flex h-screen items-center justify-center bg-[#1e1f22]">
@@ -107,6 +92,21 @@ function DMChannels() {
       </div>
     );
   }
+
+  // Realtime channel
+  supabase
+  .channel("all-dms")
+  .on(
+    "postgres_changes",
+    { event: "*", schema: "public", table: "cwa_dm_chat" },
+    () => refetchDMs()
+  )
+  .on(
+    "postgres_changes",
+    { event: "*", schema: "public", table: "dm_groups" },
+    () => refetchDMGroups()
+  )
+  .subscribe();
 
   return (
     <div className="flex h-[100dvh] w-full bg-gradient-to-br from-zinc-900 via-black to-zinc-900">
@@ -135,10 +135,6 @@ function DMChannels() {
               ...(DmGroups || [])
             ]}
             currentDM={DMGroupName}
-            onSelectDM={(name) => {
-              setDMGroupName(name);
-              setShowMobileMenu(false);
-            }}
             currentView={currentView}
             setCurrentView={setCurrentView}
             employees={AllEmployees || []}
@@ -160,7 +156,6 @@ function DMChannels() {
             ...(DmGroups || [])
           ]}
           currentDM={DMGroupName}
-          onSelectDM={setDMGroupName}
           currentView={currentView}
           setCurrentView={setCurrentView}
           employees={AllEmployees || []}
@@ -184,8 +179,7 @@ function DMChannels() {
                   <Button
                     variant="ghost"
                     size="icon"
-                    className="lg:hidden text-white"
-                    onClick={() => setDMGroupName("")}
+                    className="md:hidden text-white"
                   >
                     <ChevronLeft className="h-5 w-5" />
                   </Button>
@@ -377,19 +371,25 @@ function ChatSidebar({
   user,
   groups,
   currentDM,
-  onSelectDM,
   currentView,
   setCurrentView,
   employees,
 }: {
-  user: any;
-  groups: any[];
-  currentDM: string;
-  onSelectDM: (name: string) => void;
-  currentView: "inbox" | "pinned" | "archived";
-  setCurrentView: (view: "inbox" | "pinned" | "archived") => void;
-  employees: any[];
+  user: any
+  groups: any[]
+  currentDM: string
+  currentView: "inbox" | "pinned" | "archived"
+  setCurrentView: (view: "inbox" | "pinned" | "archived") => void
+  employees: any[]
 }) {
+  const { DMGroupName, setDMGroupName } = useAppStore();
+  const { refetch: refetchDMs } = DMs(DMGroupName);
+  // Fetch after updating the state
+  useEffect(() => {
+    if (DMGroupName) {
+      refetchDMs();
+    }
+  }, [DMGroupName]);
   return (
     <div className="flex h-[100dvh] w-full flex-col">
       <div className="p-4 border-b border-white/10">
@@ -474,7 +474,7 @@ function ChatSidebar({
               >
                 <Button
                   variant="ghost"
-                  onClick={() => onSelectDM(group.name)}
+                  onClick={() => setDMGroupName(group.name)}
                   className={cn(
                     "w-full justify-start px-5 py-6 space-x-1 group relative",
                     group.type === "general"
