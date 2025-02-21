@@ -101,7 +101,7 @@ function Bot() {
     }
   }
   return (
-    <div className="flex-1 ml-64 min-h-screen bg-background flex items-center justify-center">
+    <div className="flex-1 ml-64 mr-64 min-h-screen bg-background flex items-center justify-center">
       <Card className="w-full max-md neonbtn  to-red-95">
         <CardHeader className="space-y-2 pb-6">
           <CardTitle className="text-2xl font-bold text-center text-white">Bot Manager</CardTitle>
