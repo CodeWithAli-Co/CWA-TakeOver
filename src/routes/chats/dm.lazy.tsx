@@ -58,12 +58,15 @@ function DMChannels() {
   const [currentView, setCurrentView] = useState<"inbox" | "pinned" | "archived">("inbox")
   const [showMobileMenu, setShowMobileMenu] = useState(false)
 
-  const { data: AllEmployees = [], error: AllEmpError, isLoading: loadingEmployees } = Employees()
-  const { data: user, error: userError, isLoading: loadingUser } = ActiveUser()
-  const { data: DmGroups, error: groupsError, isLoading: loadingGroups } = DMGroups(user![0].username)
-  const { data: DM, error: DMError, isPending: loadingMsg } = DMs(DMGroupName)
+  const [activeSection, setActiveSection] = useState('dm');
+  const [isRightSidebarOpen, setIsRightSidebarOpen] = useState(true);
 
-  if (loadingEmployees || loadingUser || loadingGroups || loadingMsg) {
+  const { data: AllEmployees, error: AllEmpError, isLoading: loadingEmployees } = Employees();
+  const { data: user, error: userError, isLoading: loadingUser } = ActiveUser();
+  const { data: DmGroups, error: groupsError, isLoading: loadingGroups } = DMGroups(user![0].username);
+  const { data: DM } = DMs(DMGroupName);
+
+  if (loadingEmployees || loadingUser || loadingGroups) {
     return (
       <div className="flex h-screen items-center justify-center bg-black">
         <motion.div
@@ -75,11 +78,11 @@ function DMChannels() {
     )
   }
 
-  if (userError || AllEmpError || groupsError || DMError) {
+  if (userError || AllEmpError || groupsError) {
     return (
-      <div className="flex h-screen items-center justify-center bg-black">
-        <div className="text-red-500">
-          Error: {userError?.message || AllEmpError?.message || groupsError?.message || DMError?.message}
+      <div className="flex h-screen items-center justify-center bg-[#1e1f22]">
+        <div className="text-red-400">
+          Error: {userError?.message || AllEmpError?.message || groupsError?.message}
         </div>
       </div>
     )

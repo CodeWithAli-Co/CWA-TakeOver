@@ -13,6 +13,7 @@ import { Separator } from "@/components/ui/separator"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import * as z from "zod"
+import { ActiveUser } from "@/stores/query"
 
 const formSchema = z.object({
   name: z.string().min(2).max(50),
@@ -51,11 +52,12 @@ const settingsTabs = [
 export default function SettingsPage() {
   const [activeTab, setActiveTab] = React.useState("profile")
   const [isSaving, setIsSaving] = React.useState(false)
+  const { data: user } = ActiveUser();
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      name: "Ali",
+      name: user![0].username,
       emailNotifications: true,
       darkMode: true,
     },

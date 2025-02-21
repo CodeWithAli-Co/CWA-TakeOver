@@ -48,7 +48,7 @@ const data = {
   navMain: [
     {
       title: "Admin Permissions",
-      url: "#",
+      url: "/details",
       icon: SquareTerminal,
       isActive: true,
       items: [
@@ -72,7 +72,7 @@ const data = {
     },
     {
       title: "Bot Management",
-      url: "#",
+      url: "/bot",
       icon: Bot,
       items: [
         {
@@ -115,7 +115,7 @@ const data = {
     },
     {
       title: "Chat",
-      url: "#",
+      url: "/chats/dm",
       isActive: false,
       icon: MessageCircle,
       items: [
