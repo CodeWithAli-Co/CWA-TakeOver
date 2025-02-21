@@ -35,6 +35,9 @@ export function NavMain({
       <SidebarGroupLabel>Platform</SidebarGroupLabel>
       <SidebarMenu>
         {items.map((item) => (
+          // this statement will check if a dropdown has sub items hehe
+          // this surrounds all the sidebar menu, we want this to check if the item has sub items or not, if it does, it will render the collapsible component
+          item.items && item.items.length > 0 ? (
           <Collapsible key={item.title} asChild defaultOpen={item.isActive} className="group/collapsible">
             <SidebarMenuItem>
               <CollapsibleTrigger asChild>
@@ -59,6 +62,16 @@ export function NavMain({
               </CollapsibleContent>
             </SidebarMenuItem>
           </Collapsible>
+        ) : (
+          // this is basically an else statement, if the item does not have sub items, it will render this
+          /* Make Bot Management & Chat a direct link instead of dropdown */
+          <SidebarMenuItem key={item.title}>
+            <SidebarMenuButton tooltip={item.title} onClick={() => navigate({ to: item.url })}>
+              {item.icon && <item.icon />}
+              <span>{item.title}</span>
+            </SidebarMenuButton>
+          </SidebarMenuItem>
+        )
         ))}
       </SidebarMenu>
     </SidebarGroup>

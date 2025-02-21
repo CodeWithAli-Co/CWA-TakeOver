@@ -74,60 +74,35 @@ const data = {
       title: "Bot Management",
       url: "/bot",
       icon: Bot,
-      items: [
-        {
-          title: "Discord",
-          url: "/bot",
-        },
-        {
-          title: "Explorer",
-          url: "#",
-        },
-        {
-          title: "Quantum",
-          url: "#",
-        },
-        
-      ],
     },
-    {
-      title: "Documentation",
-      url: "#",
-      icon: BookOpen,
-      items: [
-        {
-          title: "Introduction",
-          url: "#",
-        },
-        {
-          title: "Get Started",
-          url: "#",
-        },
-        {
-          title: "Tutorials",
-          url: "#",
-        },
-        {
-          title: "Changelog",
-          url: "#",
-        },
-      ],
-    },
+    // {
+    //   title: "Documentation",
+    //   url: "#",
+    //   icon: BookOpen,
+    //   items: [
+    //     {
+    //       title: "Introduction",
+    //       url: "#",
+    //     },
+    //     {
+    //       title: "Get Started",
+    //       url: "#",
+    //     },
+    //     {
+    //       title: "Tutorials",
+    //       url: "#",
+    //     },
+    //     {
+    //       title: "Changelog",
+    //       url: "#",
+    //     },
+    //   ],
+    // },
     {
       title: "Chat",
       url: "/chats/dm",
       isActive: false,
       icon: MessageCircle,
-      items: [
-        {
-          title: "General",
-          url: "/chats/general"
-        },
-        {
-          title: "DM's",
-          url: "/chats/dm"
-        },
-      ]
     },
     {
       title: "Settings",
