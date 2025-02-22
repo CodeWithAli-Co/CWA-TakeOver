@@ -247,8 +247,8 @@ const Index = () => {
               <Bell className="h-4 w-4" />
               <span className="absolute -top-1 -right-1 w-2 h-2 bg-red-500 rounded-full" />
             </Button>
-            <Avatar className="h-8 w-8">
-              <AvatarFallback className="bg-red-900/20 text-amber-50">AD</AvatarFallback>
+            <Avatar className="h-11 w-11">
+              <AvatarFallback className="bg-red-900 text-amber-50">CEO</AvatarFallback>
             </Avatar>
           </div>
         </div>
