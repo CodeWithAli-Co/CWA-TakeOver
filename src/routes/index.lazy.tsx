@@ -5,12 +5,15 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
+import { PerformanceGraph } from "@/MyComponents/graphy";
+import { StorageUsageChart } from "@/MyComponents/storage";
 import { Calendar } from "@/components/ui/calendar";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { 
   Activity, Bot, MessageSquare, Users, CreditCard, Settings, Search,
-  ChevronRight, Bell, Folder, LineChart, Lock, FileText, Globe, AlertCircle,
+  ChevronRight, Bell, Folder, Lock, FileText, Globe, AlertCircle,
   CalendarDays, Shield, Boxes, BarChart3, CircleDollarSign, Webhook
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
@@ -22,6 +25,7 @@ const NavItem = ({ icon: Icon, text }: { icon: React.ComponentType<{ className?:
     {text}
   </Button>
 );
+
 
 // Enhanced Task Priority Badge with animation
 const TaskPriorityBadge = ({ priority }: { priority: TaskPriority }) => {
@@ -328,8 +332,7 @@ const Index = () => {
   </CardContent>
 </Card>
 
-         
-          
+      
 
           {/* API Health & Webhooks */}
 <Card className="bg-black/40 border-red-900/30 lg:col-span-2">
@@ -450,6 +453,7 @@ const Index = () => {
   
           {/* Tasks */}
           <TasksComponent />
+          
 
          
   
@@ -515,6 +519,8 @@ const Index = () => {
             </CardContent>
           </Card>
 
+          
+
           {/* Alert Thresholds */}
 <Card className="bg-black/40 border-red-900/30">
   <CardHeader>
@@ -558,6 +564,8 @@ const Index = () => {
   </CardContent>
 </Card>
 
+   {/* graph */}
+   < StorageUsageChart />
   
           {/* Security Overview */}
           <Card className="bg-black/40 border-red-900/30 lg:col-span-2">
