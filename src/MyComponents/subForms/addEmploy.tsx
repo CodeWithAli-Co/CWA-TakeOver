@@ -24,113 +24,119 @@ export const AddEmployee = () => {
   });
 
   return (
-    <>
-      <Card className="bg-red-950/10 border-red-900/20 mb-8">
-        <CardContent className="pt-6">
-          <form
-            onSubmit={(e) => {
-              e.preventDefault();
-              e.stopPropagation();
-              form.handleSubmit();
-            }}
-          >
-            <div className="grid grid-cols-3 gap-6">
-              <form.Field
-                name="Username"
-                children={(field) => {
-                  return (
-                    <div className="space-y-2">
-                      <label className="text-amber-50/70" htmlFor={field.name}>
-                        Username
-                      </label>
-                      <input
-                        name={field.name}
-                        type="text"
-                        id="username"
-                        autoComplete="off"
-                        placeholder="Enter username"
-                        className="bg-black/40 border-red-900/30 text-amber-50 rounded-lg
-                                   focus:border-red-500 hover:bg-black/60 transition-colors"
-                        required
-                        value={field.state.value}
-                        onChange={(e) => field.handleChange(e.target.value)}
-                      />
-                    </div>
-                  );
-                }}
-              />
-              <form.Field
-                name="Email"
-                children={(field) => {
-                  return (
-                    <div className="space-y-2">
-                      <label className="text-amber-50/70" htmlFor={field.name}>
-                        Email
-                      </label>
-                      <input
-                        name={field.name}
-                        type="email"
-                        id="email"
-                        autoComplete="off"
-                        placeholder="Enter email"
-                        className="bg-black/40 border-red-900/30 text-amber-50 rounded-lg
-                                   focus:border-red-500 hover:bg-black/60 transition-colors"
-                        required
-                        value={field.state.value}
-                        onChange={(e) => field.handleChange(e.target.value)}
-                      />
-                    </div>
-                  );
-                }}
-              />
-              <form.Field
-                name="Role"
-                children={(field) => {
-                  return (
-                    <div className="space-y-2">
-                      <label htmlFor={field.name} className="text-amber-50/70">
-                        Role
-                      </label>
-                      <select
-                        name={field.name}
-                        className="bg-black/40 border-red-900/30 text-amber-50 rounded-lg
-                                                  focus:border-red-500 hover:bg-black/60 transition-colors"
-                        onChange={(e) => field.handleChange(e.target.value)}
-                      >
-                        <option
-                          value="member"
-                          className="bg-black text-amber-50 border-red-900/20"
-                        >
-                          Member
-                        </option>
-                        <option
-                          value="admin"
-                          className="bg-black text-amber-50 border-red-900/20"
-                        >
-                          Admin
-                        </option>
-                      </select>
-                    </div>
-                  );
-                }}
-              />
-            </div>
-            <form.Subscribe
-              selector={(state) => [state.canSubmit]}
-              children={([canSubmit]) => (
-                <button
-                  type="submit"
-                  className="mt-6 bg-red-900 hover:bg-red-800 text-amber-50"
-                  disabled={!canSubmit}
-                >
-                  <UserPlus className="w-4 h-4 mr-2" />
-                  Add Employee
-                </button>
+    <Card className="bg-red-950/10 border-red-900/20 mb-8">
+      <CardContent className="pt-6">
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            form.handleSubmit();
+          }}
+        >
+          <div className="grid grid-cols-3 gap-8">
+            <form.Field
+              name="Username"
+              children={(field) => (
+                <div className="flex flex-col space-y-2">
+                  <label 
+                    className="text-amber-50/70 text-sm font-medium" 
+                    htmlFor={field.name}
+                  >
+                    Username
+                  </label>
+                  <input
+                    name={field.name}
+                    type="text"
+                    id="username"
+                    autoComplete="off"
+                    placeholder="Enter username"
+                    className="w-full px-3 py-2 bg-black/40 border border-red-900/30 text-amber-50 rounded-lg
+                             focus:border-red-500 focus:outline-none hover:bg-black/60 transition-colors"
+                    required
+                    value={field.state.value}
+                    onChange={(e) => field.handleChange(e.target.value)}
+                  />
+                </div>
               )}
             />
-          </form>
-        </CardContent>
-      </Card>
-    </>
+
+            <form.Field
+              name="Email"
+              children={(field) => (
+                <div className="flex flex-col space-y-2">
+                  <label 
+                    className="text-amber-50/70 text-sm font-medium" 
+                    htmlFor={field.name}
+                  >
+                    Email
+                  </label>
+                  <input
+                    name={field.name}
+                    type="email"
+                    id="email"
+                    autoComplete="off"
+                    placeholder="Enter email"
+                    className="w-full px-3 py-2 bg-black/40 border border-red-900/30 text-amber-50 rounded-lg
+                             focus:border-red-500 focus:outline-none hover:bg-black/60 transition-colors"
+                    required
+                    value={field.state.value}
+                    onChange={(e) => field.handleChange(e.target.value)}
+                  />
+                </div>
+              )}
+            />
+
+            <form.Field
+              name="Role"
+              children={(field) => (
+                <div className="flex flex-col space-y-2">
+                  <label 
+                    className="text-amber-50/70 text-sm font-medium" 
+                    htmlFor={field.name}
+                  >
+                    Role
+                  </label>
+                  <select
+                    name={field.name}
+                    className="w-full px-3 py-2 bg-black/40 border border-red-900/30 text-amber-50 rounded-lg
+                             focus:border-red-500 focus:outline-none hover:bg-black/60 transition-colors"
+                    onChange={(e) => field.handleChange(e.target.value)}
+                  >
+                    <option
+                      value="member"
+                      className="bg-black text-amber-50 border-red-900/20"
+                    >
+                      Member
+                    </option>
+                    <option
+                      value="admin"
+                      className="bg-black text-amber-50 border-red-900/20"
+                    >
+                      Admin
+                    </option>
+                  </select>
+                </div>
+              )}
+            />
+          </div>
+
+          <form.Subscribe
+            selector={(state) => [state.canSubmit]}
+            children={([canSubmit]) => (
+              <button
+                type="submit"
+                className="mt-8 px-4 py-2 flex items-center bg-red-900 hover:bg-red-800 text-amber-50 rounded-lg transition-colors"
+                disabled={!canSubmit}
+              >
+                <UserPlus className="w-4 h-4 mr-2" />
+                Add Employee
+              </button>
+            )}
+          />
+        </form>
+      </CardContent>
+    </Card>
   );
 };
+
+export default AddEmployee;
