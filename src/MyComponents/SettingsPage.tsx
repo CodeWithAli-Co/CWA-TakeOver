@@ -28,6 +28,7 @@ import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import * as z from "zod"
 import { ActiveUser } from "@/stores/query"
+import UploadAvatar from "./uploadAvatar"
 
 const formSchema = z.object({
   name: z.string().min(2).max(50),
@@ -269,6 +270,9 @@ export default function SettingsPage() {
                         />
                       </form>
                     </Form>
+
+                    <UploadAvatar className="text-white" />
+                    
                   </CardContent>
                 </Card>
               </TabsContent>

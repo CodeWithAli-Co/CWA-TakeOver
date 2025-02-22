@@ -59,6 +59,7 @@ function Broadcast() {
     await invoke("send_broadcast", { broadcastId: broadcastID });
     resetBroadcastID();
   };
+
   return (
     <div className="min-h-screen w-full bg-black/95 p-2 sm:p-4 md:p-8">
       {/* Header Section - Adjusted padding */}

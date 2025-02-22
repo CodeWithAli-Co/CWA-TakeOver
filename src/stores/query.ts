@@ -20,8 +20,9 @@ const fetchActiveUser = async () => {
   if (error) {
     console.error("Error fetching active user:", error.message);
     return [];
-    
   }
+
+  const { data: AvatarUrl } = supabase.storage.from('avatars').getPublicUrl(data.avatar)
 
   // Return user data or default values
   return [
@@ -29,7 +30,7 @@ const fetchActiveUser = async () => {
       supa_id: data.supa_id,
       username: data.username,
       role: data.role,
-      avatar: data.avatar || "/codewithali_logo.png", // Default avatar
+      avatar: AvatarUrl.publicUrl
     },
   ];
 };
@@ -122,6 +123,6 @@ const fetchDMs = async (groupName: string ) => {
 export const DMs = (groupName: string) => {
   return useSuspenseQuery({
     queryKey: ["dms"],
-    queryFn: () => fetchDMs(groupName),
+    queryFn: () => fetchDMs(groupName)
   });
 };

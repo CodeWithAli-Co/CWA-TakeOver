@@ -44,7 +44,7 @@ export function NavUser({userData}: NavUserProps) {
     username: "Unknown",
     email: "unknown@example.com",
     avatar: "/public/codewithali_logo.png",
-    role: "guest",
+    role: "member",
   };
 
   return (
@@ -58,7 +58,7 @@ export function NavUser({userData}: NavUserProps) {
             >
               <Avatar className="h-8 w-8 rounded-lg">
                 <AvatarImage src={user.avatar} alt={user.username} />
-                <AvatarFallback className="rounded-lg">CN</AvatarFallback>
+                <AvatarFallback className="rounded-lg">CWA</AvatarFallback>
               </Avatar>
               <div className="grid flex-1 text-left text-sm leading-tight">
                 <span className="truncate font-semibold">{user.username}</span>

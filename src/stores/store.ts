@@ -4,7 +4,6 @@ type DialogState = "shown" | "closed";
 type DialogDisplayer = "addDialog" | "editDialog" | null;
 
 interface AppState {
-  DM: any;
   broadcastID: string
   setBroadcastID: (broadcastID: string) => void
   resetBroadcastID: () => void
@@ -39,7 +38,7 @@ export const useAppStore = create<AppState>()((set) => ({
   dialog: 'closed',
   setDialog: (dialog: string) => set({ dialog }),
   DMGroupName: '',
-  setDMGroupName: (DMGroupName: string) => set({ DMGroupName })
+  setDMGroupName: (DMGroupName: string) => set({ DMGroupName }),
 }))
 
 // Chat Store
