@@ -270,7 +270,9 @@ export default function SettingsPage() {
                         />
                       </form>
                     </Form>
-
+                    
+                    {/* You can also wrap it with anything */}
+                    {/* ADD STYLING HERE! NOT INSIDE THE COMPONENT */}
                     <UploadAvatar className="text-white" />
                     
                   </CardContent>

@@ -95,7 +95,10 @@ function UploadAvatar(style: Styles) {
 
     // Close file and reset form
     await icon.close();
-    refetchUser();
+
+    setTimeout(() => {
+      refetchUser();
+    }, 2000);
   }
   return (
     <>
