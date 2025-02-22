@@ -10,8 +10,8 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { 
   Activity, Bot, MessageSquare, Users, CreditCard, Settings, Search,
-  ChevronRight, Bell, Folder, LineChart, Lock, FileText, Globe,
-  CalendarDays, Shield, Boxes, BarChart3, CircleDollarSign
+  ChevronRight, Bell, Folder, LineChart, Lock, FileText, Globe, AlertCircle,
+  CalendarDays, Shield, Boxes, BarChart3, CircleDollarSign, Webhook
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useState } from "react";
@@ -161,7 +161,8 @@ const TasksComponent = () => {
   const filteredTasks = tasks.filter(task => getTaskStatus(task) === selectedTab);
 
   return (
-    <Card className="bg-black/40 border-red-900/30 lg:col-span-2">
+   
+    <Card className="bg-black/40 border-red-900/30 lg:col-span-2 ">
       <CardHeader className="flex flex-row items-center justify-between">
         <div>
           <CardTitle className="text-amber-50">Tasks</CardTitle>
@@ -228,7 +229,7 @@ const TasksComponent = () => {
 
 const Index = () => {
   return (
-    <div className="min-h-screen bg-black">
+    <div className="min-h-screen bg-black overflow-y-auto">
       {/* Navigation Bar */}
       <nav className="border-b border-red-900/30 bg-black/40 sticky top-0 z-50">
         <div className="flex items-center justify-between h-14 px-6">
@@ -252,6 +253,8 @@ const Index = () => {
           </div>
         </div>
       </nav>
+
+      
   
       <motion.div 
         initial={{ opacity: 0 }}
@@ -286,32 +289,169 @@ const Index = () => {
             </CardContent>
           </Card>
   
-          {/* Calendar - Smaller Size */}
-          <Card className="bg-black/40 border-red-900/30">
-            <CardHeader className="flex flex-row items-center justify-between">
-              <CardTitle className="text-amber-50">Schedule</CardTitle>
-              <Button variant="ghost" size="sm" className="text-amber-50/70 hover:text-amber-50">
-                <CalendarDays className="h-2 w-0" />
-              </Button>
-            </CardHeader>
-            <CardContent>
-              <Calendar 
-              
-                className="text-amber-50 pr-0 mr-0 border border-red-900/30 " 
-                classNames={{
-                  day_selected: "bg-red-900 text-amber-50 hover:bg-red-800",
-                  day_today: "bg-red-900/20 text-amber-50 hover:bg-red-800/50",
-                  day: "text-amber-50 hover:bg-red-900/20 text-sm p-1.5",
-                  head_cell: "text-amber-50/70 text-sm p-1.5",
-                  nav_button: "hover:bg-red-900/20 text-amber-50",
-                  caption: "text-amber-50"
-                }}
-              />
-            </CardContent>
-          </Card>
+  {/* Upcoming Meetings */}
+<Card className="bg-black/40 border-red-900/30 ">
+  <CardHeader>
+    <CardTitle className="text-amber-50">Upcoming Meetings</CardTitle>
+  </CardHeader>
+  <CardContent>
+    <ScrollArea className="h-[200px]">
+      <div className="space-y-3">
+        {[
+          { title: 'Indeed Integration Review', time: '2:00 PM', date: 'Today', attendees: 4 },
+          { title: 'LinkedIn API Discussion', time: '10:00 AM', date: 'Tomorrow', attendees: 6 },
+          { title: 'Bot Performance Review', time: '3:30 PM', date: 'Feb 24', attendees: 3 },
+          // Add more meetings...
+        ].map((meeting, i) => (
+          <motion.div
+            whileHover={{ scale: 1.02 }}
+            key={i}
+            className="p-3 rounded-lg bg-black/60 border border-red-900/30"
+          >
+            <div className="flex items-center justify-between">
+              <h3 className="text-sm font-medium text-amber-50">{meeting.title}</h3>
+              <Badge variant="outline" className="bg-red-900/20 text-red-400">
+                {meeting.time}
+              </Badge>
+            </div>
+            <div className="flex items-center justify-between mt-2">
+              <p className="text-xs text-amber-50/70">{meeting.date}</p>
+              <div className="flex items-center gap-1">
+                <Users className="h-3 w-3 text-amber-50/70" />
+                <span className="text-xs text-amber-50/70">{meeting.attendees}</span>
+              </div>
+            </div>
+          </motion.div>
+        ))}
+      </div>
+    </ScrollArea>
+  </CardContent>
+</Card>
+
+         
+          
+
+          {/* API Health & Webhooks */}
+<Card className="bg-black/40 border-red-900/30 lg:col-span-2">
+  <CardHeader>
+    <CardTitle className="text-amber-50">API & Webhook Status</CardTitle>
+  </CardHeader>
+  <CardContent>
+    <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+      <motion.div 
+        whileHover={{ scale: 1.02 }}
+        className="p-4 rounded-lg bg-black/60 border border-red-900/30"
+      >
+        <div className="flex items-center justify-between">
+          <div className="p-2 rounded-lg bg-emerald-500/20">
+            <Globe className="h-4 w-4 text-emerald-500" />
+          </div>
+          <Badge variant="outline" className="bg-emerald-500/20 text-emerald-400">
+            Healthy
+          </Badge>
+        </div>
+        <h3 className="text-sm font-medium text-amber-50 mt-2">Indeed API</h3>
+        <p className="text-xs text-amber-50/70 mt-1">98.5% uptime</p>
+      </motion.div>
+
+      <motion.div 
+        whileHover={{ scale: 1.02 }}
+        className="p-4 rounded-lg bg-black/60 border border-red-900/30"
+      >
+        <div className="flex items-center justify-between">
+          <div className="p-2 rounded-lg bg-red-500/20">
+            <AlertCircle className="h-4 w-4 text-red-500" />
+          </div>
+          <Badge variant="outline" className="bg-red-500/20 text-red-400">
+            Issues
+          </Badge>
+        </div>
+        <h3 className="text-sm font-medium text-amber-50 mt-2">LinkedIn API</h3>
+        <p className="text-xs text-amber-50/70 mt-1">Rate limit reached</p>
+      </motion.div>
+
+      <motion.div 
+        whileHover={{ scale: 1.02 }}
+        className="p-4 rounded-lg bg-black/60 border border-red-900/30"
+      >
+        <div className="flex items-center justify-between">
+          <div className="p-2 rounded-lg bg-amber-500/20">
+            <Bot className="h-4 w-4 text-amber-500" />
+          </div>
+          <Badge variant="outline" className="bg-amber-500/20 text-amber-400">
+            Processing
+          </Badge>
+        </div>
+        <h3 className="text-sm font-medium text-amber-50 mt-2">Bot Performance</h3>
+        <p className="text-xs text-amber-50/70 mt-1">85% success rate</p>
+      </motion.div>
+
+      <motion.div 
+        whileHover={{ scale: 1.02 }}
+        className="p-4 rounded-lg bg-black/60 border border-red-900/30"
+      >
+        <div className="flex items-center justify-between">
+          <div className="p-2 rounded-lg bg-emerald-500/20">
+            <Webhook className="h-4 w-4 text-emerald-500" />
+          </div>
+          <Badge variant="outline" className="bg-emerald-500/20 text-emerald-400">
+            Connected
+          </Badge>
+        </div>
+        <h3 className="text-sm font-medium text-amber-50 mt-2">Webhooks</h3>
+        <p className="text-xs text-amber-50/70 mt-1">All endpoints active</p>
+      </motion.div>
+    </div>
+  </CardContent>
+</Card>
+       
+        {/* Recent Activity */}
+<Card className="bg-black/40 border-red-900/30">
+  <CardHeader>
+    <CardTitle className="text-amber-50">Recent Activity</CardTitle>
+  </CardHeader>
+  <CardContent>
+    <ScrollArea className="h-[300px]">
+      <div className="space-y-4">
+        {[
+          { type: 'webhook', title: 'Indeed Webhook Triggered', time: '2 mins ago', status: 'success' },
+          { type: 'api', title: 'LinkedIn API Rate Limit', time: '5 mins ago', status: 'error' },
+          { type: 'bot', title: 'Bot Task Completed', time: '15 mins ago', status: 'success' },
+          { type: 'alert', title: 'High Memory Usage', time: '30 mins ago', status: 'warning' },
+          // Add more activities...
+        ].map((activity, i) => (
+          <motion.div
+            initial={{ opacity: 0, x: -20 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ delay: i * 0.1 }}
+            key={i}
+            className="flex items-center gap-3 p-2 rounded-lg hover:bg-red-900/10"
+          >
+            <div className={`p-2 rounded-lg ${
+              activity.status === 'success' ? 'bg-emerald-500/20' :
+              activity.status === 'error' ? 'bg-red-500/20' :
+              'bg-amber-500/20'
+            }`}>
+              {activity.type === 'webhook' && <Webhook className="h-4 w-4 text-current" />}
+              {activity.type === 'api' && <Globe className="h-4 w-4 text-current" />}
+              {activity.type === 'bot' && <Bot className="h-4 w-4 text-current" />}
+              {activity.type === 'alert' && <AlertCircle className="h-4 w-4 text-current" />}
+            </div>
+            <div>
+              <p className="text-sm text-amber-50">{activity.title}</p>
+              <p className="text-xs text-amber-50/70">{activity.time}</p>
+            </div>
+          </motion.div>
+        ))}
+      </div>
+    </ScrollArea>
+  </CardContent>
+</Card>
   
           {/* Tasks */}
           <TasksComponent />
+
+         
   
           {/* System Health */}
           <Card className="bg-black/40 border-red-900/30">
@@ -374,6 +514,50 @@ const Index = () => {
               </div>
             </CardContent>
           </Card>
+
+          {/* Alert Thresholds */}
+<Card className="bg-black/40 border-red-900/30">
+  <CardHeader>
+    <CardTitle className="text-amber-50">Alert Thresholds</CardTitle>
+  </CardHeader>
+  <CardContent>
+    <div className="space-y-4">
+      {[
+        { name: 'API Rate Limit', current: 85, threshold: 90, unit: '%' },
+        { name: 'Bot Error Rate', current: 15, threshold: 20, unit: '%' },
+        { name: 'Memory Usage', current: 72, threshold: 80, unit: '%' },
+        { name: 'Failed Webhooks', current: 5, threshold: 10, unit: '/hr' }
+      ].map((metric, i) => (
+        <div key={i} className="space-y-2">
+          <div className="flex justify-between text-sm">
+            <span className="text-amber-50/70">{metric.name}</span>
+            <span className="text-amber-50">
+              {metric.current}{metric.unit} / {metric.threshold}{metric.unit}
+            </span>
+          </div>
+          <motion.div 
+            className="h-2 rounded-full bg-red-900/20"
+            whileHover={{ scale: 1.01 }}
+          >
+            <motion.div 
+              initial={{ width: 0 }}
+              animate={{ width: `${(metric.current / metric.threshold) * 100}%` }}
+              transition={{ duration: 1 }}
+              className={`h-full rounded-full ${
+                (metric.current / metric.threshold) > 0.9 
+                  ? 'bg-gradient-to-r from-red-900 to-red-700' 
+                  : (metric.current / metric.threshold) > 0.7
+                    ? 'bg-gradient-to-r from-amber-900 to-amber-700'
+                    : 'bg-gradient-to-r from-emerald-900 to-emerald-700'
+              }`}
+            />
+          </motion.div>
+        </div>
+      ))}
+    </div>
+  </CardContent>
+</Card>
+
   
           {/* Security Overview */}
           <Card className="bg-black/40 border-red-900/30 lg:col-span-2">
@@ -414,6 +598,7 @@ const Index = () => {
         </div>
       </motion.div>
     </div>
+   
   );
 };
   export const Route = createLazyFileRoute("/")({
