@@ -36,6 +36,14 @@ function Broadcast() {
     }
   }, [dialog]);
 
+  // Fetch all Contacts
+  // useEffect(() => {
+  //   async function getContacts() {
+  //     await invoke('list_contacts').then((res) => console.log('Listed Contacts', res))
+  //   }
+  //   getContacts();
+  // }, [])
+
   // Delete Contact
   const DelContact = async(Email: string) => {
     await invoke('del_contact', { email: Email }).then((res) => console.log('Deleted Contact:', res))
