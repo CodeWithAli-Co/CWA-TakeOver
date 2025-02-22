@@ -10,7 +10,8 @@ import {
   PieChart,
   Settings2,
   SquareTerminal,
-  MessageCircle
+  MessageCircle,
+  Home
 } from "lucide-react"
 
 
@@ -129,6 +130,7 @@ const data = {
       title: "Home",
       url: "/",
       isActive: false,
+      icon: Home,
     }
   ],
   projects: [
