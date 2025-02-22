@@ -234,7 +234,7 @@ const Index = () => {
       <nav className="border-b border-red-900/30 bg-black/40 sticky top-0 z-50">
         <div className="flex items-center justify-between h-14 px-6">
           <div className="flex items-center space-x-4">
-            <h1 className="text-red-500 font-bold">Dashboard</h1>
+            <h1 className="bg-gradient-to-r from-red-500 to-red-900 bg-clip-text text-transparent font-bold">Dashboard</h1>
             <div className="flex items-center space-x-2">
               <NavItem icon={FileText} text="Reports" />
               <NavItem icon={Users} text="Teams" />
