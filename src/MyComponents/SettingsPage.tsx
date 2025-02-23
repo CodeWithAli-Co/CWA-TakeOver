@@ -28,6 +28,8 @@ import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import * as z from "zod"
 import { ActiveUser } from "@/stores/query"
+import { DeveloperResourceHub } from "@/MyComponents/HomeDashboard/ResourceHub";
+import { IntegrationsSettings } from "@/MyComponents/SettingNavComponents/integrations";
 import UploadAvatar from "./uploadAvatar"
 
 const formSchema = z.object({
@@ -340,7 +342,7 @@ export default function SettingsPage() {
                   <CardHeader>
                     <CardTitle className="text-white">Resources</CardTitle>
                     <CardDescription className="text-red-200/60">
-                      Access and manage company resources.
+                    < DeveloperResourceHub />
                     </CardDescription>
                   </CardHeader>
                   <CardContent>
@@ -359,6 +361,7 @@ export default function SettingsPage() {
                   </CardHeader>
                   <CardContent>
                     {/* Add integrations content */}
+                    <IntegrationsSettings />
                   </CardContent>
                 </Card>
               </TabsContent>
