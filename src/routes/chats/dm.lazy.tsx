@@ -269,6 +269,7 @@ function DMChannels() {
                     <div className="flex-1 relative">
                       <ChatInputBox
                         activeUser={user![0].username as string}
+                        UserAvatar={user![0].avatarName as string}
                         table="cwa_dm_chat"
                         DmGroup={DMGroupName}
                         className="w-full h-5 bg-white/5 border-0 focus:ring-1 focus:ring-red-500 text-white placeholder:text-zinc-500 pl-5 rounded-full py-4 sm:py-5"
@@ -549,7 +550,7 @@ function ChatSidebar({
         <div className="flex items-center space-x-3">
           <Avatar className="h-10 w-10 ring-2 ring-red-500/20">
             <AvatarImage
-              src={user?.avatar} style={{ borderRadius: 50 }}
+              src={user?.avatarURL} style={{ borderRadius: 50 }}
             />
             <AvatarFallback>
               {user?.username?.slice(0, 2)?.toUpperCase()}

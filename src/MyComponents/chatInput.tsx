@@ -1,9 +1,11 @@
 import { useForm } from '@tanstack/react-form';
 import supabase from './supabase';
+import { message } from '@tauri-apps/plugin-dialog';
 
 interface Props {
   table: string
   activeUser: string
+  UserAvatar: string
   DmGroup?: string
   className?: string
   placeholder?: string
@@ -16,8 +18,11 @@ export const ChatInputBox = (props: Props) => {
     },
     onSubmit: async ({ value }) => {
       console.log(value);
-      const { error } = await supabase.from(props.table).insert({ dm_group: props.DmGroup, sent_by: props.activeUser, message: value.Message });
-      if (error) return console.log(`Error sending Message at ${props.table}:`, error.message);
+      console.log('User Avatar: ', props.UserAvatar)
+      const { error } = await supabase.from(props.table).insert({ dm_group: props.DmGroup, sent_by: props.activeUser, message: value.Message, userAvatar: props.UserAvatar });
+      if (error) {
+        return await message(error.message, { title: `Error sending Message at ${props.table}` });
+      }
       
       form.reset();
     }

@@ -93,7 +93,8 @@ function General() {
       {/* Input Area */}
       <div className="p-4 border-t border-gray-800">
         <ChatInputBox 
-          activeUser={user![0].username} 
+          activeUser={user![0].username as string}
+          UserAvatar={user![0].avatarName as string}
           table="cwa_chat"
           className='bg-transparent text-white'
         />

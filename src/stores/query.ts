@@ -30,7 +30,8 @@ const fetchActiveUser = async () => {
       supa_id: data.supa_id,
       username: data.username,
       role: data.role,
-      avatar: AvatarUrl.publicUrl
+      avatarURL: AvatarUrl.publicUrl || 'default_avatar.png',
+      avatarName: data.avatar || 'default_avatar.png'
     },
   ];
 };
