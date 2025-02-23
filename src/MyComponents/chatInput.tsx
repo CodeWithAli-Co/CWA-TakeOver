@@ -6,7 +6,7 @@ interface Props {
   table: string
   activeUser: string
   UserAvatar: string
-  DmGroup?: string
+  Group: string
   className?: string
   placeholder?: string
 }
@@ -17,11 +17,16 @@ export const ChatInputBox = (props: Props) => {
       Message: '',
     },
     onSubmit: async ({ value }) => {
-      console.log(value);
-      console.log('User Avatar: ', props.UserAvatar)
-      const { error } = await supabase.from(props.table).insert({ dm_group: props.DmGroup, sent_by: props.activeUser, message: value.Message, userAvatar: props.UserAvatar });
-      if (error) {
-        return await message(error.message, { title: `Error sending Message at ${props.table}` });
+      if (props.Group === 'General') {
+        const { error } = await supabase.from('cwa_chat').insert({ sent_by: props.activeUser, message: value.Message, userAvatar: props.UserAvatar });
+        if (error) {
+          return await message(error.message, { title: `Error sending Message in General Chat` });
+        }  
+      } else {
+        const { error } = await supabase.from(props.table).insert({ dm_group: props.Group, sent_by: props.activeUser, message: value.Message, userAvatar: props.UserAvatar });
+        if (error) {
+          return await message(error.message, { title: `Error sending Message in ${props.Group}` });
+        }  
       }
       
       form.reset();
@@ -48,6 +53,7 @@ export const ChatInputBox = (props: Props) => {
                       name={field.name}
                       autoFocus
                       autoComplete='off'
+                      required
                       className={`${props.className}`}
                       placeholder={`${props.placeholder || 'Enter Message'}`}
                       value={field.state.value}

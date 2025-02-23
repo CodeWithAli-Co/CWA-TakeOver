@@ -35,7 +35,7 @@ import {
   Inbox,
 } from "lucide-react"
 import { ChatInputBox } from "@/MyComponents/chatInput"
-import { ActiveUser, DMGroups, DMs, Employees } from "@/stores/query"
+import { ActiveUser, DMGroups, Employees, MessageInterface, Messages } from "@/stores/query"
 import { useAppStore } from "@/stores/store"
 import { createLazyFileRoute } from "@tanstack/react-router"
 import { Dialog, DialogContent, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
@@ -54,8 +54,8 @@ const formatMessageDate = (dateString: string) => {
   }
 };
 
-function DMChannels() {
-  const { DMGroupName, setDMGroupName } = useAppStore();
+function GroupChats() {
+  const { GroupName, setGroupName } = useAppStore();
   const [isSearchOpen, setIsSearchOpen] = useState(false)
   const [currentView, setCurrentView] = useState<"inbox" | "pinned" | "archived">("inbox")
   const [showMobileMenu, setShowMobileMenu] = useState(false)
@@ -66,7 +66,7 @@ function DMChannels() {
   const { data: AllEmployees, error: AllEmpError } = Employees();
   const { data: user, error: userError } = ActiveUser();
   const { data: DmGroups, error: groupsError, refetch: refetchDMGroups } = DMGroups(user![0].username);
-  const { data: DM, refetch: refetchDMs } = DMs(DMGroupName);
+  const { data: Message, refetch: refetchMessages } = Messages(GroupName);
 
   // Since using SuspenseQuery, this has no effect
   // if (loadingEmployees || loadingUser || loadingGroups) {
@@ -95,16 +95,22 @@ function DMChannels() {
 
   // Realtime channel
   supabase
-  .channel("all-dms")
+  .channel("all-messages")
   .on(
     "postgres_changes",
     { event: "*", schema: "public", table: "cwa_dm_chat" },
-    () => refetchDMs()
+    () => refetchMessages()
   )
   .on(
     "postgres_changes",
     { event: "*", schema: "public", table: "dm_groups" },
     () => refetchDMGroups()
+  )
+  .on(
+    "postgres_changes",
+    { event: "*", schema: "public", table: "cwa_chat" },
+    () =>
+      refetchMessages()
   )
   .subscribe();
 
@@ -128,13 +134,12 @@ function DMChannels() {
             groups={[
               {
                 id: 'general',
-                name: 'General Chat',
+                name: 'General',
                 type: 'general',
-                url: "#/chats/general",
               },
               ...(DmGroups || [])
             ]}
-            currentDM={DMGroupName}
+            currentDM={GroupName}
             currentView={currentView}
             setCurrentView={setCurrentView}
             employees={AllEmployees || []}
@@ -149,13 +154,12 @@ function DMChannels() {
           groups={[
             {
               id: 'general',
-              name: 'General Chat',
+              name: 'General',
               type: 'general',
-              url: "#/chats/general",
             },
             ...(DmGroups || [])
           ]}
-          currentDM={DMGroupName}
+          currentDM={GroupName}
           currentView={currentView}
           setCurrentView={setCurrentView}
           employees={AllEmployees || []}
@@ -165,7 +169,7 @@ function DMChannels() {
       {/* Main Chat Area - Improved responsiveness */}
       <div className="flex-1 flex flex-col min-w-0">
         <AnimatePresence mode="wait">
-          {DMGroupName ? (
+          {GroupName ? (
             <motion.div
               key="chat"
               initial={{ opacity: 0, y: 20 }}
@@ -184,11 +188,11 @@ function DMChannels() {
                     <ChevronLeft className="h-5 w-5" />
                   </Button>
                   <Avatar className="h-8 w-8 ring-2 ring-red-800/90">
-                    <AvatarImage src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${DMGroupName}`} />
-                    <AvatarFallback>{DMGroupName?.slice(0, 2)?.toUpperCase()}</AvatarFallback>
+                    <AvatarImage src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${GroupName}`} />
+                    <AvatarFallback>{GroupName?.slice(0, 2)?.toUpperCase()}</AvatarFallback>
                   </Avatar>
                   <div className="min-w-0">
-                    <h2 className="text-white font-semibold truncate">{DMGroupName}</h2>
+                    <h2 className="text-white font-semibold truncate">{GroupName}</h2>
                     <p className="text-xs text-zinc-400">Active now</p>
                   </div>
                 </div>
@@ -227,9 +231,9 @@ function DMChannels() {
                     },
                   }}
                 >
-                  {DM?.map((dm) => (
+                  {Message?.map((msg: MessageInterface) => (
                     <motion.div
-                      key={dm.msg_id}
+                      key={msg.msg_id}
                       variants={{
                         hidden: { opacity: 0, y: 20 },
                         visible: { opacity: 1, y: 0 },
@@ -240,15 +244,15 @@ function DMChannels() {
                         <CardContent className="p-3 sm:p-4">
                           <div className="flex items-start space-x-3 sm:space-x-4">
                             <Avatar className="h-8 w-8 sm:h-10 sm:w-10 ring-2 ring-red-700/90">
-                              <AvatarImage src={`https://tqaytmvihogvhhvwgbwm.supabase.co/storage/v1/object/public/avatars//${dm.userAvatar}`} style={{ borderRadius: 50 }} />
-                              <AvatarFallback className="text-red-500">{dm.sent_by?.slice(0, 2)?.toUpperCase()}</AvatarFallback>
+                              <AvatarImage src={`https://tqaytmvihogvhhvwgbwm.supabase.co/storage/v1/object/public/avatars//${msg.userAvatar}`} style={{ borderRadius: 50 }} />
+                              <AvatarFallback className="text-red-500">{msg.sent_by?.slice(0, 2)?.toUpperCase()}</AvatarFallback>
                             </Avatar>
                             <div className="flex-1 min-w-0">
                               <div className="flex items-center space-x-2">
-                                <span className="text-red-400 font-medium truncate">{dm.sent_by}</span>
-                                <span className="text-zinc-500 text-xs sm:text-sm">{formatMessageDate(dm.created_at)}</span>
+                                <span className="text-red-400 font-medium truncate">{msg.sent_by}</span>
+                                <span className="text-zinc-500 text-xs sm:text-sm">{formatMessageDate(msg.created_at)}</span>
                               </div>
-                              <p className="text-white mt-1 break-words">{dm.message}</p>
+                              <p className="text-white mt-1 break-words">{msg.message}</p>
                             </div>
                           </div>
                         </CardContent>
@@ -271,9 +275,9 @@ function DMChannels() {
                         activeUser={user![0].username as string}
                         UserAvatar={user![0].avatarName as string}
                         table="cwa_dm_chat"
-                        DmGroup={DMGroupName}
+                        Group={GroupName}
                         className="w-full h-5 bg-white/5 border-0 focus:ring-1 focus:ring-red-500 text-white placeholder:text-zinc-500 pl-5 rounded-full py-4 sm:py-5"
-                        placeholder={`Message ${DMGroupName}`}
+                        placeholder={`Message ${GroupName}`}
                       />
                       <div className="absolute right-2 sm:right-3 top-1/2 -translate-y-1/2 flex items-center space-x-1 sm:space-x-2">
                         <Button variant="ghost" size="icon" className="text-zinc-400 hover:text-white hidden sm:flex">
@@ -345,7 +349,7 @@ function DMChannels() {
                 <CommandItem
                   key={group.id}
                   onSelect={() => {
-                    setDMGroupName(group.name);
+                    setGroupName(group.name);
                     setIsSearchOpen(false);
                   }}
                 >
@@ -383,14 +387,14 @@ function ChatSidebar({
   setCurrentView: (view: "inbox" | "pinned" | "archived") => void
   employees: any[]
 }) {
-  const { DMGroupName, setDMGroupName } = useAppStore();
-  const { refetch: refetchDMs } = DMs(DMGroupName);
+  const { GroupName, setGroupName } = useAppStore();
+  const { refetch: refetchMgs } = Messages(GroupName);
   // Fetch after updating the state
   useEffect(() => {
-    if (DMGroupName) {
-      refetchDMs();
+    if (GroupName) {
+      refetchMgs();
     }
-  }, [DMGroupName]);
+  }, [GroupName]);
   return (
     <div className="flex h-[100dvh] w-full flex-col">
       <div className="p-4 border-b border-white/10">
@@ -475,7 +479,7 @@ function ChatSidebar({
               >
                 <Button
                   variant="ghost"
-                  onClick={() => setDMGroupName(group.name)}
+                  onClick={() => setGroupName(group.name)}
                   className={cn(
                     "w-full justify-start px-5 py-6 space-x-1 group relative",
                     group.type === "general"
@@ -578,8 +582,8 @@ function ChatSidebar({
   );
 }
 
-export const Route = createLazyFileRoute("/chats/dm")({
-  component: DMChannels,
+export const Route = createLazyFileRoute("/chat")({
+  component: GroupChats,
 });
 
-export default DMChannels;
+export default GroupChats;

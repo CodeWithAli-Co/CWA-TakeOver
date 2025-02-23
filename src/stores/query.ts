@@ -82,19 +82,6 @@ export const Interns = () => {
 };
 
 
-// Fetch CWA Chat Messages
-const fetchMessages = async () => {
-  const { data } = await supabase.from("cwa_chat").select("*").order('msg_id', { ascending: false }).limit(10);
-  return data?.reverse();
-};
-export const Messages = () => {
-  return useSuspenseQuery({
-    queryKey: ["generalchat"],
-    queryFn: fetchMessages,
-  });
-};
-
-
 // Fetch DM Groups
 const fetchDMGroups = async (user: string) => {
   const { data, error: nameError } = await supabase.from("dm_groups").select("*").contains('subscribers', [user])
@@ -111,19 +98,30 @@ export const DMGroups = (user: string) => {
 };
 
 
-// Fetch DM Chat Messages
-const fetchDMs = async (groupName: string ) => {
+// Fetch Chat Messages
+export interface MessageInterface {
+  msg_id: number
+  sent_by: string
+  created_at: string
+  message: string
+  userAvatar: string
+  dm_group?: string
+}
+const fetchMessages = async (groupName: string ) => {
   switch(groupName) {
     case '':
       return [{message: 'Please Select a Group DM'}]
+    case 'General':
+      const { data: general } = await supabase.from("cwa_chat").select("*").order('msg_id', { ascending: false }).limit(10);
+      return general?.reverse();
     default:
-      const { data } = await supabase.from("cwa_dm_chat").select("*").eq('dm_group', groupName).order('msg_id', { ascending: false }).limit(10);
-      return data?.reverse();    
+      const { data: DM } = await supabase.from("cwa_dm_chat").select("*").eq('dm_group', groupName).order('msg_id', { ascending: false }).limit(10);
+      return DM?.reverse();    
   }
 };
-export const DMs = (groupName: string) => {
+export const Messages = (groupName: string) => {
   return useSuspenseQuery({
-    queryKey: ["dms"],
-    queryFn: () => fetchDMs(groupName)
+    queryKey: ["messages"],
+    queryFn: () => fetchMessages(groupName)
   });
 };

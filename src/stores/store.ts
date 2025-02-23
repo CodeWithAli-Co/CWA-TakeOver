@@ -1,8 +1,5 @@
 import { create } from "zustand";
 
-type DialogState = "shown" | "closed";
-type DialogDisplayer = "addDialog" | "editDialog" | null;
-
 interface AppState {
   broadcastID: string
   setBroadcastID: (broadcastID: string) => void
@@ -16,8 +13,8 @@ interface AppState {
   resetDisplayer: () => void
   dialog: string
   setDialog: (dialog: string) => void
-  DMGroupName: string
-  setDMGroupName: (DMGroupName: string) => void
+  GroupName: string
+  setGroupName: (GroupName: string) => void
 }
 
 export const useAppStore = create<AppState>()((set) => ({
@@ -37,8 +34,10 @@ export const useAppStore = create<AppState>()((set) => ({
   resetDisplayer: () => set({ displayer: '' }),
   dialog: 'closed',
   setDialog: (dialog: string) => set({ dialog }),
-  DMGroupName: '',
-  setDMGroupName: (DMGroupName: string) => set({ DMGroupName }),
+
+  // Group Chat State
+  GroupName: 'General',
+  setGroupName: (GroupName: string) => set({ GroupName }),
 }))
 
 // Chat Store
