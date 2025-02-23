@@ -183,7 +183,6 @@ function Employee() {
                     </Button>
                   </CardContent>
                 </Card> */}
-                <AddEmployee />
 
                 {/* Employee List */}
                 <Card className="bg-red-950/10 border-red-900/20">

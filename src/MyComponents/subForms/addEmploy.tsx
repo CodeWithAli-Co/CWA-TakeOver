@@ -2,13 +2,14 @@ import { useForm } from "@tanstack/react-form";
 import supabase from "../supabase";
 import { UserPlus } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
+import { message } from "@tauri-apps/plugin-dialog";
 
 export const AddEmployee = () => {
   const form = useForm({
     defaultValues: {
       Username: "",
       Email: "",
-      Role: "member",
+      Role: "Member",
     },
     onSubmit: async ({ value }) => {
       console.log(value);
@@ -17,8 +18,9 @@ export const AddEmployee = () => {
         email: value.Email,
         role: value.Role,
       });
-      if (error) return console.log(error.message);
-
+      if (error) {
+        return await message(error.message, { title: 'Error Adding' });
+      }
       form.reset();
     },
   });
@@ -103,16 +105,34 @@ export const AddEmployee = () => {
                     onChange={(e) => field.handleChange(e.target.value)}
                   >
                     <option
-                      value="member"
+                      value="Intern"
+                      className="bg-black text-amber-50 border-red-900/20"
+                    >
+                      Intern
+                    </option>
+                    <option
+                      value="Member"
                       className="bg-black text-amber-50 border-red-900/20"
                     >
                       Member
                     </option>
                     <option
-                      value="admin"
+                      value="Marketing Specialist"
+                      className="bg-black text-amber-50 border-red-900/20"
+                    >
+                      Marketing Specialist
+                    </option>
+                    <option
+                      value="Admin"
                       className="bg-black text-amber-50 border-red-900/20"
                     >
                       Admin
+                    </option>
+                    <option
+                      value="Project Manager"
+                      className="bg-black text-amber-50 border-red-900/20"
+                    >
+                      Project Manager
                     </option>
                   </select>
                 </div>
