@@ -31,6 +31,7 @@ import { ActiveUser } from "@/stores/query"
 import { DeveloperResourceHub } from "@/MyComponents/HomeDashboard/ResourceHub";
 import { IntegrationsSettings } from "@/MyComponents/SettingNavComponents/integrations";
 import { NotificationSettings } from "@/MyComponents/SettingNavComponents/notification";
+import { CompanySettings } from "@/MyComponents/SettingNavComponents/company";
 import UploadAvatar from "./uploadAvatar"
 
 const formSchema = z.object({
@@ -310,18 +311,13 @@ export default function SettingsPage() {
                 </Card>
               </TabsContent>
 
-              <TabsContent value="company" className="space-y-4">
-                <Card className="bg-black/60 border-red-950/30 backdrop-blur-sm">
-                  <CardHeader>
-                    <CardTitle className="text-white">Company Settings</CardTitle>
-                    <CardDescription className="text-red-200/60">
-                      Manage company-wide settings and configurations.
-                    </CardDescription>
-                  </CardHeader>
+              <TabsContent value="company" className="space-y-4 ">
+              
                   <CardContent>
                     {/* Add company settings content */}
+                    <CompanySettings />
                   </CardContent>
-                </Card>
+           
               </TabsContent>
 
               <TabsContent value="reports" className="space-y-4">
@@ -377,6 +373,42 @@ export default function SettingsPage() {
                   </CardHeader>
                   <CardContent>
                     {/* Add billing content */}
+
+                    {/*  <Card className="bg-black/40 border-red-900/30 lg:col-span-3">
+            <CardHeader>
+              <CardTitle className="text-amber-50">Billing Overview</CardTitle>
+              <CardDescription className="text-amber-50/70">
+                Current plan and billing information
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div className="p-4 rounded-lg bg-black/60 border border-red-900/30">
+                  <div className="flex items-center justify-between">
+                    <h3 className="text-sm text-amber-50/70">Current Plan</h3>
+                    <Badge variant="outline" className="bg-red-900/20 text-amber-50">
+                      Enterprise
+                    </Badge>
+                  </div>
+                  <p className="text-2xl font-bold text-amber-50 mt-2">$499/mo</p>
+                </div>
+                <div className="p-4 rounded-lg bg-black/60 border border-red-900/30">
+                  <div className="flex items-center justify-between">
+                    <h3 className="text-sm text-amber-50/70">Next Payment</h3>
+                    <Clock className="h-4 w-4 text-red-500" />
+                  </div>
+                  <p className="text-2xl font-bold text-amber-50 mt-2">15 Days</p>
+                </div>
+                <div className="p-4 rounded-lg bg-black/60 border border-red-900/30">
+                  <div className="flex items-center justify-between">
+                    <h3 className="text-sm text-amber-50/70">Team Size</h3>
+                    <Users className="h-4 w-4 text-red-500" />
+                  </div>
+                  <p className="text-2xl font-bold text-amber-50 mt-2">30 Users</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card> */}
                   </CardContent>
                 </Card>
               </TabsContent>
