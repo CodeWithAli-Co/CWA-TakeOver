@@ -15,6 +15,8 @@ interface AppState {
   setDialog: (dialog: string) => void
   GroupName: string
   setGroupName: (GroupName: string) => void
+  DBUsed: number
+  setDBSize: (DBUsed: number) => void
 }
 
 export const useAppStore = create<AppState>()((set) => ({
@@ -38,6 +40,10 @@ export const useAppStore = create<AppState>()((set) => ({
   // Group Chat State
   GroupName: 'General',
   setGroupName: (GroupName: string) => set({ GroupName }),
+
+  // DBUsed
+  DBUsed: 0,
+  setDBSize: (DBUsed: number) => set({ DBUsed })
 }))
 
 // Chat Store
