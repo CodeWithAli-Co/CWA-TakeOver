@@ -455,7 +455,7 @@ const Index = () => {
           {/* Tasks */}
           <TasksComponent />
           
-         < DeveloperResourceHub />
+         {/* < DeveloperResourceHub /> */}
          
   
           {/* System Health */}
