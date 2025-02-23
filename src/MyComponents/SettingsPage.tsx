@@ -30,6 +30,7 @@ import * as z from "zod"
 import { ActiveUser } from "@/stores/query"
 import { DeveloperResourceHub } from "@/MyComponents/HomeDashboard/ResourceHub";
 import { IntegrationsSettings } from "@/MyComponents/SettingNavComponents/integrations";
+import { NotificationSettings } from "@/MyComponents/SettingNavComponents/notification";
 import UploadAvatar from "./uploadAvatar"
 
 const formSchema = z.object({
@@ -390,6 +391,7 @@ export default function SettingsPage() {
                   </CardHeader>
                   <CardContent>
                     {/* Add notification settings content */}
+                    <NotificationSettings />
                   </CardContent>
                 </Card>
               </TabsContent>
