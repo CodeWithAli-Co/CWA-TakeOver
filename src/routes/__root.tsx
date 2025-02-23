@@ -27,16 +27,16 @@ import { useEffect } from "react";
 
 export const Route = createRootRoute({
   component: () => {
-    const { pinCheck, isLoggedIn } = useAppStore();
-    // Gets current active path/route
-    const location = useRouterState({ select: (s) => s.location });
+    const { pinCheck, isLoggedIn, GroupName } = useAppStore();
 
-    // Checks if user is on DMChat path or not. Using useEffect to prevent multiple rerenders
+    // Checks if user is on DMChat or not. Using useEffect to prevent multiple rerenders
     useEffect(() => {
       // If user's on DMChat, remove realtime channel so they wont receive notification while in chat
       // While not on DMChat, they will get notifications
       // *But need to add a way to still get notified from OTHER Dm chats
-      if (location.pathname !== "/chats/dm") {
+
+      // If user's on GeneralChat, remove realtime channel so they wont receive notification while in chat
+      if (GroupName === "General") {
         supabase
           .channel("dm")
           .on(
@@ -50,23 +50,16 @@ export const Route = createRootRoute({
           )
           .subscribe();
         console.log("Not on DMS");
-      } else {
+
+        // While not on GeneralChat, they will get notifications
         const channels = supabase.getChannels();
         channels.map((channel) =>
-          channel.topic === "realtime:dm"
+          channel.topic === "realtime:general"
             ? supabase.removeChannel(channel)
-            : console.log("No Such Realtime DM channel")
+            : console.log("No Such Realtime General channel")
         );
-        console.log("on DMS!");
-      }
-    }, [location.pathname]);
-
-    
-    // Checks if user is on GeneralChat path or not. Using useEffect to prevent multiple rerenders
-    useEffect(() => {
-      // If user's on GeneralChat, remove realtime channel so they wont receive notification while in chat
-      // While not on GeneralChat, they will get notifications
-      if (location.pathname !== "/chats/general") {
+        console.log("on General chat!");
+      } else {
         // Listens to the general chat updates no matter where user is in the App
         supabase
           .channel("general")
@@ -81,16 +74,17 @@ export const Route = createRootRoute({
           )
           .subscribe();
         console.log("Not on General chat");
-      } else {
+
         const channels = supabase.getChannels();
         channels.map((channel) =>
-          channel.topic === "realtime:general"
+          channel.topic === "realtime:dm"
             ? supabase.removeChannel(channel)
-            : console.log("No Such Realtime General channel")
+            : console.log("No Such Realtime DM channel")
         );
-        console.log("on General chat!");
+        console.log("on DMS!");
       }
-    }, [location.pathname]);
+    }, [GroupName]);
+
     // Add global pressence if possible
 
     return (

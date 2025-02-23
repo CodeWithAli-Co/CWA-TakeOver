@@ -98,7 +98,7 @@ const data = {
     // },
     {
       title: "Chat",
-      url: "/chats/dm",
+      url: "/chat",
       isActive: false,
       icon: MessageCircle,
     },
