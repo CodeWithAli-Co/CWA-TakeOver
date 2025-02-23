@@ -88,6 +88,18 @@ function UploadAvatar(style: Styles) {
         });
       }
 
+      // Write file name to DM user's avatar row
+      const { error: DMUpdateError } = await supabase
+        .from("cwa_dm_chat")
+        .update({ userAvatar: `${fileName}.png` })
+        .eq("sent_by", user[0].username);
+      if (DMUpdateError) {
+        return await message(DMUpdateError.message, {
+          title: "Adding Avatar to DM Error",
+          kind: "error",
+        });
+      }
+
       sendNotification({
         title: "Avatar Uploaded!"
       });

@@ -240,8 +240,8 @@ function DMChannels() {
                         <CardContent className="p-3 sm:p-4">
                           <div className="flex items-start space-x-3 sm:space-x-4">
                             <Avatar className="h-8 w-8 sm:h-10 sm:w-10 ring-2 ring-red-700/90">
-                              <AvatarImage src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${dm.sent_by}`} />
-                              <AvatarFallback>{dm.sent_by?.slice(0, 2)?.toUpperCase()}</AvatarFallback>
+                              <AvatarImage src={`https://tqaytmvihogvhhvwgbwm.supabase.co/storage/v1/object/public/avatars//${dm.userAvatar}`} style={{ borderRadius: 50 }} />
+                              <AvatarFallback className="text-red-500">{dm.sent_by?.slice(0, 2)?.toUpperCase()}</AvatarFallback>
                             </Avatar>
                             <div className="flex-1 min-w-0">
                               <div className="flex items-center space-x-2">
@@ -495,7 +495,7 @@ function ChatSidebar({
                             : `https://api.dicebear.com/7.x/avataaars/svg?seed=${group.name}`
                         }
                       />
-                      <AvatarFallback>
+                      <AvatarFallback className="text-red-500">
                         {group.type === "general"
                           ? "GC"
                           : group.name?.slice(0, 2)?.toUpperCase()}
@@ -549,7 +549,7 @@ function ChatSidebar({
         <div className="flex items-center space-x-3">
           <Avatar className="h-10 w-10 ring-2 ring-red-500/20">
             <AvatarImage
-              src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${user?.username}`}
+              src={user?.avatar} style={{ borderRadius: 50 }}
             />
             <AvatarFallback>
               {user?.username?.slice(0, 2)?.toUpperCase()}
@@ -561,7 +561,7 @@ function ChatSidebar({
               variant="outline"
               className="mt-1 text-xs text-zinc-400 bg-white/5"
             >
-              Admin
+              {user?.role}
             </Badge>
           </div>
           <Button
