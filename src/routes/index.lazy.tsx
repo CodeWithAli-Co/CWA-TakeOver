@@ -18,6 +18,7 @@ import {
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useState } from "react";
+import { DeveloperResourceHub } from "@/MyComponents/HomeDashboard/ResourceHub";
 
 const NavItem = ({ icon: Icon, text }: { icon: React.ComponentType<{ className?: string }>, text: string }) => (
   <Button variant="ghost" className="text-amber-50/70 hover:text-amber-50 hover:bg-red-900/20 gap-2">
@@ -454,7 +455,7 @@ const Index = () => {
           {/* Tasks */}
           <TasksComponent />
           
-
+         < DeveloperResourceHub />
          
   
           {/* System Health */}
