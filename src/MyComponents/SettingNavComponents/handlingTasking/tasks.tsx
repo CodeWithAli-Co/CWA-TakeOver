@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
+// import {CreateTaskModal } "@/MyComponents/handlingTasking/CreateTaskModal"
 import { motion, AnimatePresence } from "framer-motion";
 import { 
   Activity, Calendar, Clock, AlertCircle, CheckCircle, 
@@ -15,6 +16,7 @@ import {
   Task, TaskBlocker, TaskDependency, TaskPriority, 
   TaskStatus, tasks 
 } from './taskTypes';
+import CreateTaskModal from './CreateTaskModal';
 
 // Component for displaying task blockers
 const TaskBlockerItem: React.FC<{ blocker: TaskBlocker }> = ({ blocker }) => (
@@ -265,10 +267,13 @@ const TaskItem: React.FC<{ task: Task }> = ({ task }) => {
 
 // Main TaskSettings Component
 const TaskSettings: React.FC = () => {
+  const [localTasks, setLocalTasks] = useState<Task[]>(tasks); //format for how the task would fill out
   const [selectedTab, setSelectedTab] = useState<TaskStatus>('todo');
   const [searchQuery, setSearchQuery] = useState('');
 
-  const filteredTasks = tasks.filter(task => {
+
+  //updated it so thaat it filters using localtask rather than just normal task
+  const filteredTasks = localTasks.filter(task => {
     const matchesSearch = task.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
                          task.description.toLowerCase().includes(searchQuery.toLowerCase());
     const matchesStatus = task.status === selectedTab;
@@ -276,12 +281,18 @@ const TaskSettings: React.FC = () => {
   });
 
   const getTaskStats = () => {
-    const total = tasks.length;
-    const completed = tasks.filter(t => t.status === 'done').length;
-    const inProgress = tasks.filter(t => t.status === 'inProgress').length;
-    const todo = tasks.filter(t => t.status === 'todo').length;
+    const total = localTasks.length;
+    const completed = localTasks.filter(t => t.status === 'done').length;
+    const inProgress = localTasks.filter(t => t.status === 'inProgress').length;
+    const todo = localTasks.filter(t => t.status === 'todo').length;
     return { total, completed, inProgress, todo };
   };
+
+  const handleTaskCreated = (newTask: Task) => {
+    setLocalTasks(prev => [...prev, newTask]);
+  };
+
+
 
   const stats = getTaskStats();
 
@@ -291,7 +302,7 @@ const TaskSettings: React.FC = () => {
         <h2 className="text-3xl font-bold tracking-tight text-red-200">Tasks</h2>
         <p className="text-red-200/60">{stats.total} total tasks</p>
       </div>
-
+      <CreateTaskModal onTaskCreated={handleTaskCreated} />
       {/* Stats Overview */}
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-4 mb-6">
         <Card className="bg-black/40 border-red-950/20">
