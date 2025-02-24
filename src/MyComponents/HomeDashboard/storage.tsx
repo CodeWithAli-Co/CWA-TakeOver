@@ -4,9 +4,13 @@ import { Badge } from "@/components/ui/badge";
 import { useEffect } from "react";
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import { useAppStore } from "@/stores/store";
+import supabase from "../supabase";
 
-// Free tier limit is 1GB = 1024 MB
-const STORAGE_LIMIT = 1024;
+// Free tier limit is 500MB
+const STORAGE_LIMIT = 500;
+// Tier of Supabase
+const TIER = 'Free';
 
 interface StorageData {
   used: number;
@@ -16,25 +20,70 @@ interface StorageData {
 
 // Mock data - replace with actual Supabase data
 export const StorageUsageChart = () => {
+  const { DBUsed, setDBSize } = useAppStore();
+  useEffect(() => {
+    async function getDBUsage() {
+      const { data, error } = await supabase.rpc('get_dbsize')
+      if (error) {
+        console.log('Error getting DB Size: ', error.message)
+      }
+      let size: string = data.toString()
+      if (size.includes(' MB')) {
+        size = size.replace(' MB', '').trim();
+      } else if (size.includes(' GB')) {
+        size = size.replace(' GB', '').trim();
+      }
+      let newSize = Number(size)
+      setDBSize(newSize)
+    }
+
+    // async function getDiskUsage() {
+    //   const { data, error } = await supabase.rpc('get_disksize')
+    //   if (error) {
+    //     console.log('Error getting Disk Size: ', error.message)
+    //   }
+    //   let diskSize: string = data
+    //   // if (diskSize.includes(' MB')) {
+    //   //   diskSize = diskSize.replace(' MB', '').trim();
+    //   // } else if (diskSize.includes(' GB')) {
+    //   //   diskSize = diskSize.replace(' GB', '').trim();
+    //   // }
+
+    //   console.log('Disk Size', diskSize)
+    // }
+
+    getDBUsage();
+    // getDiskUsage();
+  }, [])
+
     const [width, setWidth] = useState(0);
     const storageData: StorageData = {
-      used: 512, // Example value, replace with actual data
+      used: DBUsed, // Example value, replace with actual data
       limit: STORAGE_LIMIT,
-      percentage: (512 / STORAGE_LIMIT) * 100, // Example calculation
+      percentage: (DBUsed / STORAGE_LIMIT) * 100, // Example calculation
     };
   
     // Format to show appropriate units (MB/GB)
     const formatStorage = (value: number) => {
-      if (value >= 1024) {
-        return `${(value / 1024).toFixed(1)}GB`;
+      if (value >= STORAGE_LIMIT) {
+        return `${(value / STORAGE_LIMIT).toFixed(1)}GB`;
       }
       return `${Math.round(value)}MB`;
     };
-  
-    useEffect(() => {
-      // Animate the width from 0 to the actual percentage
+
+    // Format to show appropriate units (MB/GB) for Limit
+    const formatStorageLimit = (limit: number) => {
+      if (limit >= 1000) {
+        return `${(limit / 1000).toFixed(1)}GB`;
+      }
+      return `${Math.round(limit)}MB`;
+    };
+    
+    // Using setTimeout so states are up-to-date
+    setTimeout(() => {
+        // Animate the width from 0 to the actual percentage
       setWidth(storageData.percentage);
-    }, []);
+    }, 500);
 // animation for the bar loadidng
 
 
@@ -57,7 +106,7 @@ export const StorageUsageChart = () => {
           {/* Usage Display */}
           <div className="flex justify-between text-sm">
             <span className="text-amber-50/70">
-              {formatStorage(storageData.used)} of {formatStorage(storageData.limit)}
+              {formatStorage(storageData.used)} of {formatStorageLimit(storageData.limit)}
             </span>
             <span className="text-amber-50/70">
               {formatStorage(STORAGE_LIMIT - storageData.used)} remaining
@@ -101,18 +150,18 @@ export const StorageUsageChart = () => {
             <div className="flex items-center gap-6">
               <div className="flex items-center gap-2">
                 <div className="h-1.5 w-1.5 rounded-full bg-red-900" />
-                <span className="text-amber-50/50">0%</span>
+                <span className="text-amber-50/50">DB Storage</span>
               </div>
-              <div className="flex items-center gap-2">
+              {/* <div className="flex items-center gap-2">
                 <div className="h-1.5 w-1.5 rounded-full bg-red-800" />
                 <span className="text-amber-50/50">50%</span>
               </div>
               <div className="flex items-center gap-2">
                 <div className="h-1.5 w-1.5 rounded-full bg-red-700" />
                 <span className="text-amber-50/50">100%</span>
-              </div>
+              </div> */}
             </div>
-            <span className="text-amber-50/50">Free Tier Limit</span>
+            <span className="text-amber-50/50">{`${TIER} Tier Limit`}</span>
           </div>
         </div>
       </CardContent>

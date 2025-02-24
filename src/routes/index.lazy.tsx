@@ -17,8 +17,10 @@ import {
   CalendarDays, Shield, Boxes, BarChart3, CircleDollarSign, Webhook
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { DeveloperResourceHub } from "@/MyComponents/HomeDashboard/ResourceHub";
+import supabase from "@/MyComponents/supabase";
+import { useAppStore } from "@/stores/store";
 
 const NavItem = ({ icon: Icon, text }: { icon: React.ComponentType<{ className?: string }>, text: string }) => (
   <Button variant="ghost" className="text-amber-50/70 hover:text-amber-50 hover:bg-red-900/20 gap-2">
