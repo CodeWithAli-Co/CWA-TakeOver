@@ -38,13 +38,17 @@ export const AddTodo = (props: Users) => {
       status: "to-do",
       priority: "low",
       assignee: "",
-      deadline: "-",
+      deadline: "",
     },
     onSubmit: async ({ value }) => {
       console.log(value);
-      console.log(newOption)
-      console.log(newOption[0])
-      if (newOption[0] === "" || newOption[0] === null || newOption[0] === undefined) {
+      console.log(newOption);
+      console.log(newOption[0]);
+      if (
+        newOption[0] === "" ||
+        newOption[0] === null ||
+        newOption[0] === undefined
+      ) {
         await message(
           "Please Select atleast 1 person to assign task to. ( Could be yourself as well )",
           { title: "Error Adding Todo", kind: "error" }
@@ -318,10 +322,14 @@ export const AddTodo = (props: Users) => {
                       </label>
                       <input
                         name={field.name}
-                        type="date"
-                        className="bg-gray-500/10 border-red-950/30 text-red-200"
+                        type="text"
+                        autoComplete="off"
+                        placeholder="Deadline (e.g. 3 days)"
+                        className="bg-black/40 border-red-950/30 text-red-200"
                         value={field.state.value}
-                        onChange={(e) => field.handleChange(e.target.value)}
+                        onChange={(e) =>
+                          field.handleChange(Capitalize(e.target.value))
+                        }
                       />
                     </div>
                   );
