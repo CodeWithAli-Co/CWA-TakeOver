@@ -10,7 +10,8 @@ import {
   PieChart,
   Settings2,
   SquareTerminal,
-  MessageCircle
+  MessageCircle,
+  Home, ClipboardList
 } from "lucide-react"
 
 
@@ -19,6 +20,8 @@ import { TeamSwitcher } from "./ui/Dashboard/team-switch"
 import { NavMain } from "./ui/Dashboard/nav-main"
 import { NavProjects } from "./ui/Dashboard/nav-project"
 import { NavUser } from "./ui/Dashboard/nav-user"
+// import { tasks } from "@/MyComponents/SettingNavComponents/taskTypes"
+// import SettingsPage from 
 
 
 // This is sample data.
@@ -64,71 +67,34 @@ const data = {
           title: "Users",
           url: "/employee",
         },
-        {
-          title: "Settings",
-          url: "#",
-        },
+    
       ],
     },
     {
       title: "Bot Management",
       url: "/bot",
       icon: Bot,
-      items: [
-        {
-          title: "Discord",
-          url: "/bot",
-        },
-        {
-          title: "Explorer",
-          url: "#",
-        },
-        {
-          title: "Quantum",
-          url: "#",
-        },
-        
-      ],
     },
-    {
-      title: "Documentation",
-      url: "#",
-      icon: BookOpen,
-      items: [
-        {
-          title: "Introduction",
-          url: "#",
-        },
-        {
-          title: "Get Started",
-          url: "#",
-        },
-        {
-          title: "Tutorials",
-          url: "#",
-        },
-        {
-          title: "Changelog",
-          url: "#",
-        },
-      ],
-    },
+
     {
       title: "Chat",
-      url: "/chats/dm",
+      url: "/chat",
       isActive: false,
       icon: MessageCircle,
-      items: [
-        {
-          title: "General",
-          url: "/chats/general"
-        },
-        {
-          title: "DM's",
-          url: "/chats/dm"
-        },
-      ]
     },
+   
+    {
+      title: "Task",
+      url: "/task",
+      isActive: false,
+      icon: ClipboardList,
+    },
+    {
+      title: "Home",
+      url: "/",
+      isActive: false,
+      icon: Home,
+    }, 
     {
       title: "Settings",
       url: "/settings",
@@ -141,15 +107,19 @@ const data = {
         },
         {
           title: "Team",
-          url: "#",
+          url: "/settings?tab=teams",
         },
         {
-          title: "Billing",
-          url: "#",
+          title: "Tasks",
+          url: "/settings?tab=tasks",
         },
         {
-          title: "Limits",
-          url: "#",
+          title: "Company",
+          url: "/settings?tab=company",
+        },
+        {
+          title: "Notification",
+          url: "/settings?tab=notification",
         },
       ],
     },

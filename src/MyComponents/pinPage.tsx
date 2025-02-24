@@ -1,29 +1,28 @@
-import { useForm } from '@tanstack/react-form';
-import './compAssets/pinPage.css';
-import { useAppStore } from '../stores/store';
-import cwa_logo_full from '/codewithali-removebg-preview.png';
-import { useEffect } from 'react';
+import { useForm } from "@tanstack/react-form";
+import "./compAssets/pinPage.css";
+import { useAppStore } from "../stores/store";
+import cwa_logo_full from "/codewithali-removebg-preview.png";
+import { useEffect } from "react";
 
 export default function PinPage() {
   const { setPinCheck, setIsLoggedIn } = useAppStore();
   useEffect(() => {
-    const checkLogin = localStorage.getItem('isLoggedIn');
-    if (checkLogin === 'true') {
-      setIsLoggedIn('true');
+    const checkLogin = localStorage.getItem("isLoggedIn");
+    if (checkLogin === "true") {
+      setIsLoggedIn("true");
     }
-  }, [])
-  
+  }, []);
 
   const form = useForm({
     defaultValues: {
-      pin: ''
+      pin: "",
     },
     onSubmit: async ({ value }) => {
       console.log(value);
       document.startViewTransition(() => {
-        setPinCheck('true');
-      })
-  
+        setPinCheck("true");
+      });
+
       // // Checks if User's Input only contains numbers
       // const regex = /^\d+$/;
       // if (!regex.test(value.pin)) {
@@ -36,7 +35,7 @@ export default function PinPage() {
       //   const res = await window.api.checkPin(userPIN.data['PIN'], value.pin);
       //   if (res === true) {
       //     console.log('Pin Successful!')
-          
+
       //     document.startViewTransition(() => {
       //       setIsLoggedIn(true)
       //     });
@@ -47,20 +46,25 @@ export default function PinPage() {
       //     value.pin = ''
       //   }
       // }
-    }
-  })
+    },
+  });
 
   return (
     <>
-      <div id='pin-div'>
-        <h1 id='big-title'>Welcome</h1>
-        <img src={cwa_logo_full} alt="CodeWithAli Logo Full" id='cwa-logo-full' draggable={false} />
+      <div id="pin-div">
+        <h1 id="big-title">TakeOver</h1>
+        <img
+          src={cwa_logo_full}
+          alt="CodeWithAli Logo Full"
+          id="cwa-logo-full"
+          draggable={false}
+        />
         <form
-          id='pin-form'
+          id="pin-form"
           onSubmit={(e) => {
-            e.preventDefault()
-            e.stopPropagation()
-            form.handleSubmit()
+            e.preventDefault();
+            e.stopPropagation();
+            form.handleSubmit();
           }}
         >
           <div>
@@ -69,21 +73,23 @@ export default function PinPage() {
               children={(field) => (
                 <input
                   name={field.name}
-                  id='pin-input'
-                  type='password'
+                  id="pin-input"
+                  type="password"
                   minLength={4}
                   maxLength={4}
                   autoFocus
-                  placeholder='Enter 4-digit PIN'
+                  placeholder="Enter 4-digit PIN"
                   value={field.state.value}
                   onChange={(e) => field.handleChange(e.target.value)}
                 />
               )}
             />
           </div>
-          <button type="submit" id='pin-submit' style={{ display: 'none' }}>Submit</button>
+          <button type="submit" id="pin-submit" style={{ display: "none" }}>
+            Submit
+          </button>
         </form>
       </div>
     </>
-  )
+  );
 }

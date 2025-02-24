@@ -1,12 +1,12 @@
 [package]
-name = "cwa-manager"
+name = "cwa-takeover"
 version = "0.1.0"
-description = "A Tauri App"
-authors = ["you"]
+description = "The CWA Manager App"
+authors = ["blazehp", "Ali Alibrahimi"]
 edition = "2021"
 
 [lib]
-name = "cwa_manager_lib"
+name = "cwa_takeover_lib"
 crate-type = ["staticlib", "cdylib", "rlib"]
 
 [build-dependencies]
@@ -29,6 +29,8 @@ hex = "0.4.3"
 resend-rs = "0.11.2"
 tokio = { version = "1.43.0", features = ["macros", "rt-multi-thread"] }
 tauri-plugin-notification = "2"
+tauri-plugin-dialog = "2"
+tauri-plugin-fs = "2"
 
 [target.x86_64-pc-windows-msvc]
 rustflags = [

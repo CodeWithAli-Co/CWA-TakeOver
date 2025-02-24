@@ -10,6 +10,16 @@
     "opener:default",
     "sql:default",
     "sql:allow-execute",
-    "notification:default"
+    "notification:default",
+    "dialog:default",
+    "fs:default",
+    {
+      "identifier": "fs:allow-app-read-recursive",
+      "allow": [
+        {
+          "path": "$APPDATA/*"
+        }
+      ]
+    }
   ]
 }

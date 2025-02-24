@@ -1,6 +1,12 @@
 import { createLazyFileRoute } from "@tanstack/react-router";
-import { JSX } from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { JSX } from "react";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { useAppStore } from "@/stores/store";
@@ -10,20 +16,20 @@ import { useRef, useState } from "react";
 import supabase from "@/MyComponents/supabase";
 import { AddData } from "@/MyComponents/subForms/addForm";
 import { EditData } from "@/MyComponents/subForms/editForm";
-import { 
-  Eye, 
-  EyeOff, 
-  Edit2, 
-  Trash2, 
+import {
+  Eye,
+  EyeOff,
+  Edit2,
+  Trash2,
   Plus,
-  Github, 
+  Github,
   Globe,
   Twitter,
   Linkedin,
   Facebook,
   Mail,
   Store,
-  FileCode2
+  FileCode2,
 } from "lucide-react";
 
 // Platform icon mapping
@@ -37,51 +43,52 @@ const platformIcons: { [key: string]: React.ComponentType<any> } = {
   fiverr: Store,
   patreon: Store,
   dev: FileCode2,
-  default: Globe
+  default: Globe,
 };
-const platformStyles: Record<string, {
-  color: string;
-  gradient: string;
-  shadowColor: string;
-}> = {
+const platformStyles: Record<
+  string,
+  {
+    color: string;
+    gradient: string;
+    shadowColor: string;
+  }
+> = {
   github: {
-    color: '#000000',
-    gradient: 'from-[#238636] to-[#2EA043]',
-    shadowColor: '#000000'
+    color: "#000000",
+    gradient: "from-[#238636] to-[#2EA043]",
+    shadowColor: "#000000",
   },
   twitter: {
-    color: '#1DA1F2',
-    gradient: 'from-[#1A8CD8] to-[#1DA1F2]',
-    shadowColor: 'rgba(29, 161, 242, 0.5)'
+    color: "#1DA1F2",
+    gradient: "from-[#1A8CD8] to-[#1DA1F2]",
+    shadowColor: "rgba(29, 161, 242, 0.5)",
   },
   linkedin: {
-    color: '#0A66C2',
-    gradient: 'from-[#0077B5] to-[#0A66C2]',
-    shadowColor: 'rgba(10, 102, 194, 0.5)'
+    color: "#0A66C2",
+    gradient: "from-[#0077B5] to-[#0A66C2]",
+    shadowColor: "rgba(10, 102, 194, 0.5)",
   },
   facebook: {
-    color: '#4267B2',
-    gradient: 'from-[#385898] to-[#4267B2]',
-    shadowColor: 'rgba(53, 90, 166, 0.5)'
+    color: "#4267B2",
+    gradient: "from-[#385898] to-[#4267B2]",
+    shadowColor: "rgba(53, 90, 166, 0.5)",
   },
   gmail: {
-    color: '#EA4335',
-    gradient: 'from-[#DB4437] to-[#EA4335]',
-    shadowColor: 'rgba(234, 67, 53, 0.5)'
+    color: "#EA4335",
+    gradient: "from-[#DB4437] to-[#EA4335]",
+    shadowColor: "rgba(234, 67, 53, 0.5)",
   },
   upwork: {
-    color: '#14A800',
-    gradient: 'from-[#108A00] to-[#14A800]',
-    shadowColor: 'rgba(20, 168, 0, 0.5)'
+    color: "#14A800",
+    gradient: "from-[#108A00] to-[#14A800]",
+    shadowColor: "rgba(20, 168, 0, 0.5)",
   },
   default: {
-    color: '#7C3AED',
-    gradient: 'from-[#6D28D9] to-[#7C3AED]',
-    shadowColor: 'rgba(124, 58, 237, 0.5)'
-  }
+    color: "#7C3AED",
+    gradient: "from-[#6D28D9] to-[#7C3AED]",
+    shadowColor: "rgba(124, 58, 237, 0.5)",
+  },
 };
-
-
 
 // Type definitions
 interface Credential {
@@ -101,10 +108,8 @@ function Details() {
   const [expandedCards, setExpandedCards] = useState<number[]>([]);
 
   const toggleCard = (id: number) => {
-    setExpandedCards(prev => 
-      prev.includes(id) 
-        ? prev.filter(cardId => cardId !== id)
-        : [...prev, id]
+    setExpandedCards((prev) =>
+      prev.includes(id) ? prev.filter((cardId) => cardId !== id) : [...prev, id]
     );
   };
   const getPlatformIcon = (platformName: string): JSX.Element => {
@@ -137,7 +142,7 @@ function Details() {
       .from("cwa_creds")
       .select("id, acc_enc_password")
       .eq("id", credID);
-      
+
     if (data && data[0]) {
       const decPassword = await invoke("decrypt", {
         keyStr: import.meta.env.VITE_ENCRYPTION_KEY,
@@ -154,7 +159,7 @@ function Details() {
       .delete()
       .eq("id", rowID)
       .select();
-      
+
     if (error) {
       console.log("Error: ", error.message);
       return;
@@ -163,7 +168,12 @@ function Details() {
   };
 
   // Display Table
-  const { data: cwaCreds, isPending, error } = CWACreds();
+  const {
+    data: cwaCreds,
+    isPending,
+    error,
+    refetch: refetchCreds,
+  } = CWACreds();
 
   if (isPending) return <div className="p-6">Loading...</div>;
   if (error) {
@@ -171,12 +181,22 @@ function Details() {
     return <div className="p-6">Error loading data</div>;
   }
 
+  // Realtime channel
+  supabase
+    .channel("CWACreds")
+    .on(
+      "postgres_changes",
+      { event: "*", schema: "public", table: "cwa_creds" },
+      () => refetchCreds()
+    )
+    .subscribe();
+
   return (
     <div className="p-6">
       <div className="flex justify-between items-center mb-8">
         <h2 className="text-3xl font-bold">Accounts</h2>
-        <Button 
-          variant="default" 
+        <Button
+          variant="default"
           className="bg-white text-black hover:bg-gray-100"
           onClick={() => showModal("addDialog")}
         >
@@ -187,12 +207,12 @@ function Details() {
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
         {cwaCreds?.map((cred: Credential) => {
           const isExpanded = expandedCards.includes(cred.id);
-          
+
           return (
-            <Card 
-              key={cred.id} 
+            <Card
+              key={cred.id}
               className={`bg-zinc-950 border-zinc-800 transition-all duration-300 ${
-                isExpanded ? 'min-h-[300px]' : 'min-h-[180px]'
+                isExpanded ? "min-h-[300px]" : "min-h-[180px]"
               }`}
             >
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -209,9 +229,13 @@ function Details() {
                     Username: {cred.acc_username}
                   </CardDescription>
 
-                  <div className={`space-y-2 overflow-hidden transition-all duration-300 ${
-                    isExpanded ? 'max-h-[500px] opacity-100' : 'max-h-0 opacity-0'
-                  }`}>
+                  <div
+                    className={`space-y-2 overflow-hidden transition-all duration-300 ${
+                      isExpanded
+                        ? "max-h-[500px] opacity-100"
+                        : "max-h-0 opacity-0"
+                    }`}
+                  >
                     <CardDescription className="text-sm text-zinc-400">
                       Email: {cred.acc_email}
                     </CardDescription>
@@ -224,11 +248,11 @@ function Details() {
                       </CardDescription>
                     )}
                   </div>
-                  
+
                   <div className="flex items-center justify-between pt-4">
                     <div className="flex space-x-2">
-                      <Button 
-                        variant="outline" 
+                      <Button
+                        variant="outline"
                         size="sm"
                         className="text-zinc-400 border-zinc-800 hover:bg-zinc-800"
                         onClick={() => {
@@ -236,10 +260,16 @@ function Details() {
                           if (!isExpanded) getPassword(cred.id);
                         }}
                       >
-                        {isExpanded ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                        <span className="ml-2">{isExpanded ? 'Hide' : 'Reveal'}</span>
+                        {isExpanded ? (
+                          <EyeOff className="w-4 h-4" />
+                        ) : (
+                          <Eye className="w-4 h-4" />
+                        )}
+                        <span className="ml-2">
+                          {isExpanded ? "Hide" : "Reveal"}
+                        </span>
                       </Button>
-                      <Button 
+                      <Button
                         variant="outline"
                         size="sm"
                         className="text-zinc-400 border-zinc-800 hover:bg-zinc-800"
@@ -247,7 +277,7 @@ function Details() {
                       >
                         <Edit2 className="w-4 h-4" />
                       </Button>
-                      <Button 
+                      <Button
                         variant="outline"
                         size="sm"
                         className="text-zinc-400 border-zinc-800 hover:bg-zinc-800"
@@ -268,7 +298,7 @@ function Details() {
         })}
       </div>
 
-      <dialog ref={dialogRef} className="dialog">
+      <dialog ref={dialogRef}>
         <Button
           variant="ghost"
           size="sm"
@@ -289,6 +319,6 @@ function Details() {
   );
 }
 
-export const Route = createLazyFileRoute('/details')({
-  component: Details
+export const Route = createLazyFileRoute("/details")({
+  component: Details,
 });

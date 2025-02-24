@@ -1,10 +1,12 @@
 import { useForm } from '@tanstack/react-form';
 import supabase from './supabase';
+import { message } from '@tauri-apps/plugin-dialog';
 
 interface Props {
   table: string
   activeUser: string
-  DmGroup?: string
+  UserAvatar: string
+  Group: string
   className?: string
   placeholder?: string
 }
@@ -15,9 +17,17 @@ export const ChatInputBox = (props: Props) => {
       Message: '',
     },
     onSubmit: async ({ value }) => {
-      console.log(value);
-      const { error } = await supabase.from(props.table).insert({ dm_group: props.DmGroup, sent_by: props.activeUser, message: value.Message });
-      if (error) return console.log(`Error sending Message at ${props.table}:`, error.message);
+      if (props.Group === 'General') {
+        const { error } = await supabase.from('cwa_chat').insert({ sent_by: props.activeUser, message: value.Message, userAvatar: props.UserAvatar });
+        if (error) {
+          return await message(error.message, { title: `Error sending Message in General Chat` });
+        }  
+      } else {
+        const { error } = await supabase.from(props.table).insert({ dm_group: props.Group, sent_by: props.activeUser, message: value.Message, userAvatar: props.UserAvatar });
+        if (error) {
+          return await message(error.message, { title: `Error sending Message in ${props.Group}` });
+        }  
+      }
       
       form.reset();
     }
@@ -43,6 +53,7 @@ export const ChatInputBox = (props: Props) => {
                       name={field.name}
                       autoFocus
                       autoComplete='off'
+                      required
                       className={`${props.className}`}
                       placeholder={`${props.placeholder || 'Enter Message'}`}
                       value={field.state.value}

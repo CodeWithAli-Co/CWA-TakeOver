@@ -1,8 +1,8 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
-  "productName": "cwa-manager",
+  "productName": "cwa-takeover",
   "version": "0.1.0",
-  "identifier": "com.cwa-manager.app",
+  "identifier": "com.cwa-takeover.app",
   "build": {
     "beforeDevCommand": "bun run dev",
     "devUrl": "http://localhost:1420",
@@ -12,9 +12,15 @@
   "app": {
     "windows": [
       {
-        "title": "CWA Manager",
+        "title": "TakeOver",
         "width": 1500,
-        "height": 875
+        "minWidth": 450,
+        "height": 875,
+        "minHeight": 750,
+        "decorations": true,
+        "transparent": false,
+        "theme": "Dark",
+        "backgroundColor": "#0F0000"  
       }
     ],
     "security": {

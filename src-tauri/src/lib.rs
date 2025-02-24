@@ -9,6 +9,14 @@ use resend_rs::{
     types::{ContactChanges, ContactData, CreateBroadcastOptions, SendBroadcastOptions},
     Resend, Result,
 };
+// use serde::{Deserialize, Serialize};
+
+// // Define the structures to match the API response
+// #[derive(Debug, Serialize, Deserialize)]
+// pub struct ContactsResponse {
+//     pub object: String,
+//     pub data: Vec<Contact>,
+// }
 
 #[tauri::command]
 fn greet(name: &str) -> String {
@@ -45,6 +53,23 @@ fn decrypt(key_str: String, encrypted_data: String) -> String {
         .expect("failed to decrypt data");
     String::from_utf8(plaintext).expect("failed to convert vector of bytes to string")
 }
+
+// #[tauri::command(async)]
+// async fn list_contacts() -> Result<ContactsResponse, String> {
+//     let _env = dotenv().unwrap();
+//     let resend = Resend::default();
+
+//     let contacts = resend
+//         .contacts
+//         .list("fa2d33ed-9f00-4b51-ad6c-a6e858c7f1bf")
+//         .await
+//         .map_err(|e| e.to_string())?;
+
+//     Ok(ContactsResponse {
+//         object: String::from("list"),
+//         data: contacts,
+//     })
+// }
 
 #[tauri::command(async)]
 async fn add_contact(email: &str, f_name: &str, l_name: &str, status: bool) -> Result<(), String> {
@@ -102,8 +127,8 @@ async fn create_broadcast() -> Result<String, String> {
 
     let audience_id = "fa2d33ed-9f00-4b51-ad6c-a6e858c7f1bf";
     let from = "CodeWithAli unfold@codewithali.com";
-    let subject = "Welcome to CWA Manager Test";
-    let html = "Hi {{{FIRST_NAME|there}}}, Welcome to CWA Manager. You can unsubscribe here: {{{RESEND_UNSUBSCRIBE_URL}}}";
+    let subject = "Welcome to CWA TakeOver Test";
+    let html = "Hi {{{FIRST_NAME|there}}}, Welcome to CWA TakeOver. You can unsubscribe here: {{{RESEND_UNSUBSCRIBE_URL}}}";
 
     let opts = CreateBroadcastOptions::new(audience_id, from, subject).with_html(html);
 
@@ -132,6 +157,8 @@ async fn send_broadcast(broadcast_id: &str) -> Result<(), ()> {
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
+        .plugin(tauri_plugin_fs::init())
+        .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_notification::init())
         .plugin(tauri_plugin_sql::Builder::new().build())
         .plugin(tauri_plugin_opener::init())
@@ -141,6 +168,7 @@ pub fn run() {
             decrypt,
             create_broadcast,
             send_broadcast,
+            // list_contacts,
             add_contact,
             edit_contact,
             del_contact,
