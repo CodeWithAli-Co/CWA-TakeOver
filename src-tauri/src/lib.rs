@@ -127,8 +127,8 @@ async fn create_broadcast() -> Result<String, String> {
 
     let audience_id = "fa2d33ed-9f00-4b51-ad6c-a6e858c7f1bf";
     let from = "CodeWithAli unfold@codewithali.com";
-    let subject = "Welcome to CWA Manager Test";
-    let html = "Hi {{{FIRST_NAME|there}}}, Welcome to CWA Manager. You can unsubscribe here: {{{RESEND_UNSUBSCRIBE_URL}}}";
+    let subject = "Welcome to CWA TakeOver Test";
+    let html = "Hi {{{FIRST_NAME|there}}}, Welcome to CWA TakeOver. You can unsubscribe here: {{{RESEND_UNSUBSCRIBE_URL}}}";
 
     let opts = CreateBroadcastOptions::new(audience_id, from, subject).with_html(html);
 

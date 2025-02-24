@@ -818,7 +818,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "cwa-manager"
+name = "cwa-takeover"
 version = "0.1.0"
 dependencies = [
  "aes-gcm",

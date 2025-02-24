@@ -1,12 +1,12 @@
 [package]
-name = "cwa-manager"
+name = "cwa-takeover"
 version = "0.1.0"
-description = "A Tauri App"
-authors = ["you"]
+description = "The CWA Manager App"
+authors = ["blazehp", "Ali Alibrahimi"]
 edition = "2021"
 
 [lib]
-name = "cwa_manager_lib"
+name = "cwa_takeover_lib"
 crate-type = ["staticlib", "cdylib", "rlib"]
 
 [build-dependencies]
