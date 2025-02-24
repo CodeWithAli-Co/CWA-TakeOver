@@ -33,6 +33,9 @@ import { IntegrationsSettings } from "@/MyComponents/SettingNavComponents/integr
 import { NotificationSettings } from "@/MyComponents/SettingNavComponents/notification";
 import { CompanySettings } from "@/MyComponents/SettingNavComponents/company";
 import UploadAvatar from "./uploadAvatar"
+// import { useLocation } from 'react-router-dom';
+// Replace the URL parameter handling code with:
+import { createLazyFileRoute } from '@tanstack/react-router'
 
 const formSchema = z.object({
   name: z.string().min(2).max(50),
@@ -41,60 +44,47 @@ const formSchema = z.object({
 })
 
 const settingsTabs = [
-  {
-    value: "profile",
-    label: "Profile Settings",
-    icon: UserCircle,
-  },
-  {
-    value: "tasks",
-    label: "My Tasks",
-    icon: ClipboardList,
-  },
-  {
-    value: "teams",
-    label: "Teams & Projects",
-    icon: Users2,
-  },
-  {
-    value: "company",
-    label: "Company",
-    icon: Building2,
-  },
-  {
-    value: "reports",
-    label: "Reports",
-    icon: LineChart,
-  },
-  {
-    value: "resources",
-    label: "Resources",
-    icon: Database,
-  },
-  {
-    value: "integrations",
-    label: "Integrations",
-    icon: Plug,
-  },
-  {
-    value: "billing",
-    label: "Billing",
-    icon: CreditCard,
-  },
-  {
-    value: "notifications",
-    label: "Notifications",
-    icon: Bell,
-  },
-  {
-    value: "security",
-    label: "Security & Access Logs",
-    icon: Shield,
-  },
-]
+
+
+  { value: "profile", label: "Profile Settings", icon: UserCircle },
+  { value: "tasks", label: "My Tasks", icon: ClipboardList },
+  { value: "teams", label: "Teams & Projects", icon: Users2 },
+  { value: "company", label: "Company", icon: Building2 },
+  { value: "reports", label: "Reports", icon: LineChart },
+  { value: "resources", label: "Resources", icon: Database },
+  { value: "integrations", label: "Integrations", icon: Plug },
+  { value: "billing", label: "Billing", icon: CreditCard },
+  { value: "notifications", label: "Notifications", icon: Bell },
+  { value: "security", label: "Security & Access Logs", icon: Shield },
+];
+
+export const Route = createLazyFileRoute('/settings')({
+  component: SettingsPage
+})
 
 export default function SettingsPage() {
-  const [activeTab, setActiveTab] = React.useState("profile")
+
+    // tab reading from sidebar
+
+ // Replace the URL handling code block with:
+ const searchParams = new URLSearchParams(window.location.search)
+ const [activeTab, setActiveTab] = React.useState(searchParams.get('tab') ?? 'profile')
+ const navigate = Route.useNavigate()
+ 
+ // Use URL tab or default to "profile"
+//  const [activeTab, setActiveTab] = React.useState(tabFromUrl || "profile");
+
+ // Update URL when tab changes
+ const handleTabChange = (value: string) => {
+  setActiveTab(value)
+  navigate({ 
+    to: '/settings',
+    search: { tab: value }
+  })
+}
+  // 
+
+  // const [activeTab, setActiveTab] = React.useState("profile")
   const [isSaving, setIsSaving] = React.useState(false)
   const { data: user } = ActiveUser()
 
@@ -163,7 +153,7 @@ export default function SettingsPage() {
           </div>
         </div>
 
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-8">
+        <Tabs value={activeTab} onValueChange={handleTabChange} className="space-y-8">
           <TabsList className="h-12 w-full justify-start space-x-2 bg-black/40 p-1 text-red-200/60 border border-red-950/20">
             {settingsTabs.map((tab) => (
               <TabsTrigger

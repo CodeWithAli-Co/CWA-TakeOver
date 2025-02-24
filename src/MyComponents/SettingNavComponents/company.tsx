@@ -10,7 +10,7 @@ import { motion } from "framer-motion";
 import { 
   Building2, Users, CreditCard, FileText, 
   Globe, Shield, Settings2, Upload, 
-  Clock, Briefcase, FileImage, Linkedin, Twitter, Facebook, Instagram, Mail 
+  Clock, Briefcase, FileImage, Linkedin, X, Facebook, Instagram, Mail 
 } from "lucide-react";
 
 
@@ -23,9 +23,9 @@ const SOCIAL_MEDIA = [
       color: "text-[#0A66C2]" // LinkedIn brand color
     },
     {
-      platform: "Twitter",
+      platform: "X",
       url: "https://twitter.com/codewithali",
-      icon: Twitter,
+      icon: () => <img src="/public/logo-white.png" alt="Twitter X" className="h-4 w-4" />,
       color: "text-[#1DA1F2]" // Twitter brand color
     },
     {
@@ -64,48 +64,40 @@ export const CompanySettings = () => {
             <CardHeader>
               <CardTitle className="text-amber-50">Company Profile</CardTitle>
               <CardDescription className="text-amber-50/70">
-                Update your company information
+                Company information
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
               <div className="flex items-center gap-4">
-                <div className="w-24 h-24 rounded-lg bg-red-900/20 border-2 border-dashed border-red-900/30 flex items-center justify-center">
-                  <FileImage className="h-8 w-8 text-red-500/70" />
+                <div className="h-24 w-24 rounded-lg bg-red-900/20 border-2 border-dashed border-red-900/30 flex items-center justify-center">
+                  <img src="/public/codewithali_logo_full.png" alt="Company Logo" className="h-22 w-22 text-red-500/70" />
                 </div>
-                <div>
-                  <Button 
-                    variant="outline" 
-                    className="border-red-900/30 text-amber-50 hover:bg-red-900/20"
-                  >
-                    <Upload className="h-4 w-4 mr-2" />
-                    Upload Logo
-                  </Button>
-                  <p className="text-xs text-amber-50/70 mt-2">
-                    Recommended: 256x256px PNG or JPG
-                  </p>
-                </div>
+               
               </div>
 
               <div className="grid gap-4">
                 <div className="grid gap-2">
                   <label className="text-sm text-amber-50/70">Company Name</label>
-                  <Input 
-                    className="bg-black/40 border-red-900/30 text-amber-50"
-                    placeholder="Enter company name"
-                  />
+                  <div className="bg-black/40 border-red-900/30 text-amber-50 p-2 rounded-md select-none hover:border-red-900">
+                     CodeWithAli Co.
+                 </div>
                 </div>
                 <div className="grid gap-2">
-                  <label className="text-sm text-amber-50/70">Website</label>
-                  <Input 
-                    className="bg-black/40 border-red-900/30 text-amber-50"
-                    placeholder="https://"
-                  />
-                </div>
+        <label className="text-sm text-amber-50/70">Website</label>
+        <Input 
+          className="bg-black/40 border-red-900/30 text-white hover:border-red-900  disabled:opacity-100"
+        //   placeholder="https://"
+          defaultValue="https://codewithali.com"
+          disabled
+        />
+      </div>
                 <div className="grid gap-2">
                   <label className="text-sm text-amber-50/70">Description</label>
                   <Textarea 
-                    className="bg-black/40 border-red-900/30 text-amber-50 min-h-[100px]"
+                     className="bg-black/40 border-red-900/30  min-h-[100px] hover:border-red-900 cursor-not-allowed disabled:white  disabled:opacity-100"
                     placeholder="Brief company description"
+                    defaultValue="We are to ensure everyone has a good time and we dedicte firstly to helping people reach the spotlight and showcase their hobbies"
+                    disabled
                   />
                 </div>
               </div>
@@ -116,36 +108,44 @@ export const CompanySettings = () => {
           <Card className="bg-black/40 border-red-900/30">
             <CardHeader>
               <div className="flex items-center justify-between">
-                <CardTitle className="text-amber-50">Business Hours</CardTitle>
+                <CardTitle className="text-amber-50 ">Business Hours</CardTitle>
                 <Badge variant="outline" className="bg-emerald-500/20 text-emerald-400">
                   Active
                 </Badge>
               </div>
             </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                {['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'].map((day) => (
-                  <div key={day} className="flex items-center justify-between">
-                    <span className="text-sm text-amber-50">{day}</span>
-                    <div className="flex items-center gap-2">
-                      <Input 
-                        className="w-20 bg-black/40 border-red-900/30 text-amber-50"
-                        defaultValue="9:00"
-                      />
-                      <span className="text-amber-50/70">to</span>
-                      <Input 
-                        className="w-20 bg-black/40 border-red-900/30 text-amber-50"
-                        defaultValue="17:00"
-                      />
-                    </div>
-                  </div>
-                ))}
+    <CardContent>
+        <div className="space-y-3">
+          {['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'].map((day) => (
+            <div key={day} className="flex items-center justify-between py-2 border-b border-gray-800">
+              <span className="text-sm font-medium text-gray-300">{day}</span>
+              <div className="flex items-center space-x-2">
+                <div className="flex items-center">
+                  <span className="bg-black/40 px-3 py-1 rounded-l border border-gray-700 text-gray-200 hover:border-green-800">
+                    9:00
+                  </span>
+                  <span className="bg-emerald-500/20 text-emerald-400 px-2 py-1 text-sm font-medium rounded-r border-y border-r border-gray-700 hover:border-amber-50/70">
+                    AM
+                  </span>
+                </div>
+                <span className="text-gray-500">to</span>
+                <div className="flex items-center">
+                  <span className="bg-black/40 px-3 py-1 rounded-l border border-gray-700 text-gray-200 hover:border-red-900 ">
+                    20:00
+                  </span>
+                  <span className="bg-red-500/20 text-red-400 px-2 py-1 text-sm font-medium rounded-r border-y border-r border-gray-700 hover:border-amber-50/70">
+                    PM
+                  </span>
+                </div>
               </div>
-            </CardContent>
+            </div>
+          ))}
+        </div>
+      </CardContent>
           </Card>
 
           {/* Team Management */}
-          <Card className="bg-black/40 border-red-900/30 lg:col-span-2">
+          <Card className="bg-black/40 border-red-900/30 lg:col-span-2 ">
             <CardHeader>
               <CardTitle className="text-amber-50">Team Management</CardTitle>
               <CardDescription className="text-amber-50/70">
@@ -167,7 +167,7 @@ export const CompanySettings = () => {
                       initial={{ opacity: 0, y: 10 }}
                       animate={{ opacity: 1, y: 0 }}
                       transition={{ delay: i * 0.1 }}
-                      className="flex items-center justify-between p-3 rounded-lg bg-black/60 border border-red-900/30"
+                      className="flex items-center justify-between p-3 rounded-lg bg-black/60 border border-red-900/30 hover:border-red-900"
                     >
                       <div className="flex items-center gap-3">
                         <div className="p-2 rounded-lg bg-red-900/20">
@@ -243,16 +243,17 @@ export const CompanySettings = () => {
   <div className="grid gap-2">
     <label className="text-sm text-amber-50/70">Company Tagline</label>
     <Textarea 
-      className="bg-black/40 border-red-900/30 text-amber-50"
+      className="bg-black/40 border-red-900/30 text-amber-50  hover:border-red-900"
       placeholder="Beyond existence, we forge excellence."
       defaultValue="Where innovation meets ambition - We don't just exist, we excel."
+      disabled
     />
   </div>
 
   <div className="grid gap-2">
     <label className="text-sm text-amber-50/70">Mission Statement</label>
     <Textarea 
-      className="bg-black/40 border-red-900/30 text-amber-50 min-h-[100px]"
+      className="bg-black/40 border-red-900/30 text-amber-50 min-h-[100px]  hover:border-red-900"
       defaultValue="To revolutionize software development through innovative solutions that empower businesses to thrive in the digital age, while maintaining the highest standards of quality and security."
     />
   </div>
@@ -267,18 +268,18 @@ export const CompanySettings = () => {
     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
       <div>
         <h3 className="text-sm text-amber-50 mb-2">Location Status</h3>
-        <div className="p-3 rounded-lg bg-black/60 border border-red-900/30">
+        <div className="p-3 rounded-lg bg-black/60 border border-red-900/30  hover:border-red-900">
           <div className="flex items-center gap-2 mb-2">
             <Globe className="h-4 w-4 text-red-500" />
             <span className="text-amber-50">Remote Operations</span>
           </div>
-          <p className="text-xs text-amber-50/70">Global team with flexible work arrangements</p>
+          <p className="text-xs text-amber-50/70 ">Global team with flexible work arrangements</p>
         </div>
       </div>
       <div>
-        <h3 className="text-sm text-amber-50 mb-2">Employee Count</h3>
+        <h3 className="text-sm text-amber-50 mb-2 ">Employee Count</h3>
 
-<div className="p-3 rounded-lg bg-black/60 border border-red-900/30">
+<div className="p-3 rounded-lg bg-black/60 border border-red-900/30   hover:border-red-900">
   <div className="flex items-center gap-2">
     <Users className="h-4 w-4 text-red-500" />
     <span className="text-amber-50">{EMPLOYEE_COUNT} Employees</span>
@@ -287,8 +288,8 @@ export const CompanySettings = () => {
 
       </div>
       <div>
-        <h3 className="text-sm text-amber-50 mb-2">Hiring Status</h3>
-        <Badge variant="outline" className="bg-emerald-500/20 text-emerald-400">
+        <h3 className="text-sm text-amber-50 mb-2 ">Hiring Status</h3>
+        <Badge variant="outline" className="bg-emerald-500/20 text-emerald-400  hover:border-red-900 hover:bg-red-900 hover:text-white">
           Actively Hiring
         </Badge>
       </div>
@@ -348,7 +349,7 @@ export const CompanySettings = () => {
           <Input 
             value={url}
             disabled
-            className="bg-black/40 border-red-900/30 text-amber-50"
+            className="bg-black/40 border-red-900/30 text-amber-50 hover:border-red-900"
           />
           <Button
             variant="outline"
