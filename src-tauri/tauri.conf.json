@@ -7,14 +7,18 @@
     "beforeDevCommand": "bun run dev",
     "devUrl": "http://localhost:1420",
     "beforeBuildCommand": "bun run build",
-    "frontendDist": "../dist"
+    "frontendDist": "../src/dist"
   },
   "app": {
     "windows": [
       {
         "title": "CWA Manager",
         "width": 1500,
-        "height": 875
+        "height": 875,
+        "decorations": true,
+        "transparent": false,
+        "theme": "Dark",
+        "backgroundColor": "#0F0000"  
       }
     ],
     "security": {
