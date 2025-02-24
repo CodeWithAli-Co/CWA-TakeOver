@@ -33,6 +33,7 @@ import { IntegrationsSettings } from "@/MyComponents/SettingNavComponents/integr
 import { NotificationSetting } from "@/MyComponents/SettingNavComponents/notification";
 import { CompanySettings } from "@/MyComponents/SettingNavComponents/company";
 
+
 import UploadAvatar from "./uploadAvatar"
 // import { useLocation } from 'react-router-dom';
 // Replace the URL parameter handling code with:

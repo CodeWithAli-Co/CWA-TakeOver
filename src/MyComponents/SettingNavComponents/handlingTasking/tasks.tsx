@@ -10,7 +10,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { 
   Activity, Calendar, Clock, AlertCircle, CheckCircle, 
   ChevronDown, ChevronUp, MessageSquare, History,
-  Users, GitBranch, Link, CheckCircle2, AlertTriangle
+  Users, GitBranch, Link, CheckCircle2, AlertTriangle, Clipboard
 } from 'lucide-react';
 import { 
   Task, TaskBlocker, TaskDependency, TaskPriority, 
@@ -282,13 +282,18 @@ const TaskSettings: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState('');
 
 
+  // Get the stats from the first todo item (it contains all counts)
+// make sure to check if todos exists before accessing the first element:
+const stats = todos && todos.length > 0 ? todos[0] : { allCount: 0, todoCount: 0, inProgressCount: 0, doneCount: 0 };
+
   //updated it so thaat it filters using localtask rather than just normal task
-  const filteredTasks = todos.filter(task => {
+  // make it handle empy data even though I know we do have data
+  const filteredTasks = todos.length > 0? todos.filter(task => {
     const matchesSearch = task.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
                          task.description.toLowerCase().includes(searchQuery.toLowerCase());
     const matchesStatus = task.status === selectedTab;
     return matchesSearch && matchesStatus;
-  });
+  }) : [];
 
   const getTaskStats = () => {
     const total = localTasks.length;
@@ -304,7 +309,7 @@ const TaskSettings: React.FC = () => {
 
 
 
-  const stats = getTaskStats();
+  // const stats = getTaskStats();
   useEffect(() => {
     setTimeout(() => {
       refetchTodos();
@@ -313,7 +318,8 @@ const TaskSettings: React.FC = () => {
 
   return (
     <>
-    {todos.map((Todo) => (
+    {/* adding a check in my render logic so thaat it cn handle empty todos */}
+    {todos.length > 0 ? todos.map((Todo) => (
           <div key={Todo.todo_id} className="min-h-screen bg-black/95 py-6 px-8">
           <div className="mb-6">
             <h2 className="text-3xl font-bold tracking-tight text-red-200">Tasks</h2>
@@ -416,9 +422,24 @@ const TaskSettings: React.FC = () => {
             </CardContent>
           </Card>
         </div>    
-    ))}
-    </>
-  );
-};
-
+     )) : (
+      <div className="min-h-screen bg-black/95 py-6 px-8">
+        <div className="mb-6">
+          <h2 className="text-3xl font-bold tracking-tight text-red-200">Tasks</h2>
+          <p className="text-red-200/60">0 total tasks</p>
+        </div>
+        <CreateTaskModal onTaskCreated={handleTaskCreated} />
+        {/* Empty state UI */}
+        <Card className="bg-black/40 border-red-950/20">
+          <CardContent className="p-8 flex flex-col items-center justify-center">
+            <Clipboard className="h-12 w-12 text-red-400 mb-4" />
+            <h3 className="text-xl font-medium text-red-200 mb-2">No tasks found</h3>
+            <p className="text-red-200/60 mb-4 text-center">You don't have any tasks assigned to you yet.</p>
+          </CardContent>
+        </Card>
+      </div>
+    )}
+  </>
+);
+}
 export default TaskSettings;

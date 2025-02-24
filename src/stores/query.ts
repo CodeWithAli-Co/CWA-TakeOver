@@ -144,34 +144,111 @@ export interface TodosInterface {
   deadline: string
 }
 const fetchTodos = async (user: string) => {
+  
+  console.log("Fetching todos for user:", user); // Debug log
 
-  const { data, error: todosError } = await supabase.from('cwa_todos').select('*').contains('assignee', [user]).order('priority', { ascending: false })
-  const { count: allTodoCount, error: allCountError } = await supabase.from('cwa_todos').select('todo_id', { count: 'exact', head: true }).contains('assignee', [user])
-  const { count: todoCount, error: todoCountError } = await supabase.from('cwa_todos').select('todo_id', { count: 'exact', head: true }).contains('assignee', [user]).eq('status', 'to-do')
-  const { count: inProgressTodoCount, error: inProgressCountError } = await supabase.from('cwa_todos').select('todo_id', { count: 'exact', head: true }).contains('assignee', [user]).eq('status', 'in-progress')
-  const { count: doneTodoCount, error: doneCountError } = await supabase.from('cwa_todos').select('todo_id', { count: 'exact', head: true }).contains('assignee', [user]).eq('status', 'done')
-  if (todosError || allCountError || todoCountError || inProgressCountError || doneCountError) {
-    console.log('Error with Todos Query: ', todosError?.message || allCountError?.message || todoCountError?.message || inProgressCountError?.message || doneCountError?.message)
+  // const { data } = await supabase.from('cwa_todos').select('*').contains('assignee', [user]).order('priority', { ascending: false })
+
+
+
+  // Get counts with error handling
+  const { count: allTodoCount, error: allCountError } = await supabase
+    .from('cwa_todos')
+    .select('*');
+    // .contains('assignee', [user]);
+    
+  const { count: todoCount, error: todoCountError } = await supabase
+    .from('cwa_todos')
+    .select('*');
+    // .contains('assignee', [user])
+    // .eq('status', 'to-do');
+    
+  const { count: inProgressTodoCount, error: inProgressCountError } = await supabase
+    .from('cwa_todos')
+    .select('*');
+    // .contains('assignee', [user])
+    // .eq('status', 'in-progress');
+    
+  const { count: doneTodoCount, error: doneCountError } = await supabase
+    .from('cwa_todos')
+    .select('*');
+    // .contains('assignee', [user])
+    // .eq('status', 'done');
+  
+  // Log any count errors
+  if (allCountError || todoCountError || inProgressCountError || doneCountError) {
+    console.warn('Some count queries had errors:', {
+      allCountError, todoCountError, inProgressCountError, doneCountError
+    });
   }
 
-  const returnData: TodosInterface[] = [
-    {
-      todo_id: data![0].todo_id,
-      created_at: data![0].created_at,
-      title: data![0].title,
-      description: data![0].description,
-      label: data![0].label,
-      status: data![0].status,
+    // Now try your filtered query
+const { data, error: todosError } = await supabase
+.from('cwa_todos')
+.select('*')
+.contains('assignee', [user]);
+
+
+
+   // Check if data is empty or undefined
+   if ( todosError != null) {
+    // Return a default TodosInterface with empty/zero values
+    console.error('Error with Todos Query:', todosError.message);
+    return [{
+      todo_id: 0,
+      created_at: '',
+      title: 'No tasks found',
+      description: todosError.message ,
+      label: '',
+      status: 'to-do',
       allCount: allTodoCount || 0,
       todoCount: todoCount || 0,
       inProgressCount: inProgressTodoCount || 0,
       doneCount: doneTodoCount || 0,
-      priority: data![0].priority,
-      assignee: data![0].assignee,
-      deadline: data![0].deadline,
-    }
-  ]
-  return returnData
+      priority: 'medium',
+      assignee: [user],
+      deadline: ''
+    }];
+  }
+  
+
+  // Check if data is empty
+  if (!data || data.length === 0) {
+    console.warn('No tasks found for user:', user);
+    return [{
+      todo_id: 0,
+      created_at: '',
+      title: 'No tasks found',
+      description: 'Create a new task to get started',
+      label: '',
+      status: 'to-do',
+      allCount: 0,
+      todoCount: 0,
+      inProgressCount: 0,
+      doneCount: 0,
+      priority: 'medium',
+      assignee: [user],
+      deadline: ''
+    }];
+  }
+
+
+// Return all tasks, not just the first one
+return data.map(task => ({
+  todo_id: task.todo_id,
+  created_at: task.created_at,
+  title: task.title,
+  description: task.description || '',
+  label: task.label || '',
+  status: task.status,
+  allCount: allTodoCount || data.length,
+  todoCount: todoCount || 0,
+  inProgressCount: inProgressTodoCount || 0,
+  doneCount: doneTodoCount || 0,
+  priority: task.priority,
+  assignee: task.assignee,
+  deadline: task.deadline || ''
+}));
 }
 export const Todos = (user: string) => {
   return useSuspenseQuery({
