@@ -42,77 +42,86 @@ export const AddTodo = (props: Users) => {
     },
     onSubmit: async ({ value }) => {
       console.log(value);
-      if (value.priority === "low") {
-        const { error } = await supabase.from("cwa_todos").insert({
-          title: value.title,
-          description: value.description,
-          label: value.label,
-          status: value.status,
-          priority: value.priority,
-          priorityOrder: 1,
-          assignee: newOption,
-          deadline: value.deadline,
-        });
-        if (error) {
-          await message(error.message, {
-            title: "Error Adding Task",
-            kind: "error",
+      console.log(newOption)
+      console.log(newOption[0])
+      if (newOption[0] === "" || newOption[0] === null || newOption[0] === undefined) {
+        await message(
+          "Please Select atleast 1 person to assign task to. ( Could be yourself as well )",
+          { title: "Error Adding Todo", kind: "error" }
+        );
+      } else {
+        if (value.priority === "low") {
+          const { error } = await supabase.from("cwa_todos").insert({
+            title: value.title,
+            description: value.description,
+            label: value.label,
+            status: value.status,
+            priority: value.priority,
+            priorityOrder: 1,
+            assignee: newOption,
+            deadline: value.deadline,
           });
-        } else {
-          setOpen(false);
-          form.reset();
-          await message("Adding Todo was Successful!", {
-            title: "Todo Added",
-            kind: "info",
+          if (error) {
+            await message(error.message, {
+              title: "Error Adding Task",
+              kind: "error",
+            });
+          } else {
+            setOpen(false);
+            form.reset();
+            await message("Adding Todo was Successful!", {
+              title: "Todo Added",
+              kind: "info",
+            });
+          }
+        } else if (value.priority === "medium") {
+          const { error } = await supabase.from("cwa_todos").insert({
+            title: value.title,
+            description: value.description,
+            label: value.label,
+            status: value.status,
+            priority: value.priority,
+            priorityOrder: 2,
+            assignee: newOption,
+            deadline: value.deadline,
           });
-        }
-      } else if (value.priority === "medium") {
-        const { error } = await supabase.from("cwa_todos").insert({
-          title: value.title,
-          description: value.description,
-          label: value.label,
-          status: value.status,
-          priority: value.priority,
-          priorityOrder: 2,
-          assignee: newOption,
-          deadline: value.deadline,
-        });
-        if (error) {
-          await message(error.message, {
-            title: "Error Adding Task",
-            kind: "error",
+          if (error) {
+            await message(error.message, {
+              title: "Error Adding Task",
+              kind: "error",
+            });
+          } else {
+            setOpen(false);
+            form.reset();
+            await message("Adding Todo was Successful!", {
+              title: "Todo Added",
+              kind: "info",
+            });
+          }
+        } else if (value.priority === "high") {
+          const { error } = await supabase.from("cwa_todos").insert({
+            title: value.title,
+            description: value.description,
+            label: value.label,
+            status: value.status,
+            priority: value.priority,
+            priorityOrder: 3,
+            assignee: newOption,
+            deadline: value.deadline,
           });
-        } else {
-          setOpen(false);
-          form.reset();
-          await message("Adding Todo was Successful!", {
-            title: "Todo Added",
-            kind: "info",
-          });
-        }
-      } else if (value.priority === "high") {
-        const { error } = await supabase.from("cwa_todos").insert({
-          title: value.title,
-          description: value.description,
-          label: value.label,
-          status: value.status,
-          priority: value.priority,
-          priorityOrder: 3,
-          assignee: newOption,
-          deadline: value.deadline,
-        });
-        if (error) {
-          await message(error.message, {
-            title: "Error Adding Task",
-            kind: "error",
-          });
-        } else {
-          setOpen(false);
-          form.reset();
-          await message("Adding Todo was Successful!", {
-            title: "Todo Added",
-            kind: "info",
-          });
+          if (error) {
+            await message(error.message, {
+              title: "Error Adding Task",
+              kind: "error",
+            });
+          } else {
+            setOpen(false);
+            form.reset();
+            await message("Adding Todo was Successful!", {
+              title: "Todo Added",
+              kind: "info",
+            });
+          }
         }
       }
     },
