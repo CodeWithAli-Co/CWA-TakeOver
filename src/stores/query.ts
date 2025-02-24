@@ -105,7 +105,7 @@ export interface MessageInterface {
   created_at: string
   message: string
   userAvatar: string
-  dm_group?: string
+  dm_group: string
 }
 const fetchMessages = async (groupName: string ) => {
   switch(groupName) {
@@ -125,3 +125,57 @@ export const Messages = (groupName: string) => {
     queryFn: () => fetchMessages(groupName)
   });
 };
+
+
+// Fetch Todos
+export interface TodosInterface {
+  todo_id: number
+  created_at: string
+  title: string
+  description: string
+  label: string
+  status: string
+  allCount: number
+  todoCount: number
+  inProgressCount: number
+  doneCount: number
+  priority: 'high' | 'medium' | 'low'
+  assignee: string[]
+  deadline: string
+}
+const fetchTodos = async (user: string) => {
+
+  const { data, error: todosError } = await supabase.from('cwa_todos').select('*').contains('assignee', [user]).order('priority', { ascending: false })
+  const { count: allTodoCount, error: allCountError } = await supabase.from('cwa_todos').select('todo_id', { count: 'exact', head: true }).contains('assignee', [user])
+  const { count: todoCount, error: todoCountError } = await supabase.from('cwa_todos').select('todo_id', { count: 'exact', head: true }).contains('assignee', [user]).eq('status', 'to-do')
+  const { count: inProgressTodoCount, error: inProgressCountError } = await supabase.from('cwa_todos').select('todo_id', { count: 'exact', head: true }).contains('assignee', [user]).eq('status', 'in-progress')
+  const { count: doneTodoCount, error: doneCountError } = await supabase.from('cwa_todos').select('todo_id', { count: 'exact', head: true }).contains('assignee', [user]).eq('status', 'done')
+  if (todosError || allCountError || todoCountError || inProgressCountError || doneCountError) {
+    console.log('Error with Todos Query: ', todosError?.message || allCountError?.message || todoCountError?.message || inProgressCountError?.message || doneCountError?.message)
+  }
+
+  const returnData: TodosInterface[] = [
+    {
+      todo_id: data![0].todo_id,
+      created_at: data![0].created_at,
+      title: data![0].title,
+      description: data![0].description,
+      label: data![0].label,
+      status: data![0].status,
+      allCount: allTodoCount || 0,
+      todoCount: todoCount || 0,
+      inProgressCount: inProgressTodoCount || 0,
+      doneCount: doneTodoCount || 0,
+      priority: data![0].priority,
+      assignee: data![0].assignee,
+      deadline: data![0].deadline,
+    }
+  ]
+  return returnData
+}
+export const Todos = (user: string) => {
+  return useSuspenseQuery({
+    queryKey: ['todos'],
+    queryFn: () => fetchTodos(user)
+  })
+}

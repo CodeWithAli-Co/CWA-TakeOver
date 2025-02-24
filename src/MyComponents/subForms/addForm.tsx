@@ -239,7 +239,7 @@ export const AddData = () => {
                     )}
                   />
                 </div>
-d
+
                 {/* Submit Button */}
                 <form.Subscribe
                   selector={(state) => [state.canSubmit]}
