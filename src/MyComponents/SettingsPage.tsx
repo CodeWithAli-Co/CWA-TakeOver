@@ -32,12 +32,11 @@ import { DeveloperResourceHub } from "@/MyComponents/HomeDashboard/ResourceHub";
 import { IntegrationsSettings } from "@/MyComponents/SettingNavComponents/integrations";
 import { NotificationSetting } from "@/MyComponents/SettingNavComponents/notification";
 import { CompanySettings } from "@/MyComponents/SettingNavComponents/company";
-// import { TaskSettings } from "@/MyComponents/SettingNavComponents/tasks";
+
 import UploadAvatar from "./uploadAvatar"
 // import { useLocation } from 'react-router-dom';
 // Replace the URL parameter handling code with:
 import { createLazyFileRoute } from '@tanstack/react-router'
-import TaskSettings from "@/MyComponents/SettingNavComponents/tasks"
 
 const formSchema = z.object({
   name: z.string().min(2).max(50),
@@ -49,7 +48,6 @@ const settingsTabs = [
 
 
   { value: "profile", label: "Profile Settings", icon: UserCircle },
-  { value: "tasks", label: "My Tasks", icon: ClipboardList },
   { value: "teams", label: "Teams & Projects", icon: Users2 },
   { value: "company", label: "Company", icon: Building2 },
   { value: "reports", label: "Reports", icon: LineChart },
@@ -271,21 +269,6 @@ export default function SettingsPage() {
                     {/* ADD STYLING HERE! NOT INSIDE THE COMPONENT */}
                     <UploadAvatar className="text-white" />
                     
-                  </CardContent>
-                </Card>
-              </TabsContent>
-
-              <TabsContent value="tasks" className="space-y-4">
-                <Card className="bg-black/60 border-red-950/30 backdrop-blur-sm">
-                  <CardHeader>
-                    <CardTitle className="text-white">My Tasks</CardTitle>
-                    <CardDescription className="text-red-200/60">
-                      View and manage your assigned tasks.
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    {/* Add task management content */}
-                    <TaskSettings />
                   </CardContent>
                 </Card>
               </TabsContent>

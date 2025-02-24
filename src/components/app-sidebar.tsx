@@ -11,7 +11,7 @@ import {
   Settings2,
   SquareTerminal,
   MessageCircle,
-  Home
+  Home, ClipboardList
 } from "lucide-react"
 
 
@@ -20,6 +20,7 @@ import { TeamSwitcher } from "./ui/Dashboard/team-switch"
 import { NavMain } from "./ui/Dashboard/nav-main"
 import { NavProjects } from "./ui/Dashboard/nav-project"
 import { NavUser } from "./ui/Dashboard/nav-user"
+// import { tasks } from "@/MyComponents/SettingNavComponents/taskTypes"
 // import SettingsPage from 
 
 
@@ -74,35 +75,26 @@ const data = {
       url: "/bot",
       icon: Bot,
     },
-    // {
-    //   title: "Documentation",
-    //   url: "#",
-    //   icon: BookOpen,
-    //   items: [
-    //     {
-    //       title: "Introduction",
-    //       url: "#",
-    //     },
-    //     {
-    //       title: "Get Started",
-    //       url: "#",
-    //     },
-    //     {
-    //       title: "Tutorials",
-    //       url: "#",
-    //     },
-    //     {
-    //       title: "Changelog",
-    //       url: "#",
-    //     },
-    //   ],
-    // },
+
     {
       title: "Chat",
       url: "/chat",
       isActive: false,
       icon: MessageCircle,
     },
+   
+    {
+      title: "Task",
+      url: "/task",
+      isActive: false,
+      icon: ClipboardList,
+    },
+    {
+      title: "Home",
+      url: "/",
+      isActive: false,
+      icon: Home,
+    }, 
     {
       title: "Settings",
       url: "/settings",
@@ -131,12 +123,6 @@ const data = {
         },
       ],
     },
-    {
-      title: "Home",
-      url: "/",
-      isActive: false,
-      icon: Home,
-    }
   ],
   projects: [
     {
