@@ -1,7 +1,7 @@
 // types/taskTypes.ts
 
 export type TaskPriority = 'high' | 'medium' | 'low';
-export type TaskStatus = 'todo' | 'inProgress' | 'done';
+export type TaskStatus = 'to-do' | 'in-progress' | 'done';
 
 export interface TaskComment {
   id: number;
@@ -57,7 +57,7 @@ export const tasks: Task[] = [
     detailedDescription: 'Complete implementation of Clerk authentication including OAuth providers and role-based access control.',
     vision: 'Create a secure and seamless authentication experience',
     assignee: 'Ali',
-    status: 'todo',
+    status: 'to-do',
     progress: 20,
     comments: [
       { id: 1, user: 'Ali', content: 'Started working on OAuth implementation', timestamp: '2024-02-23 10:30 AM' }
@@ -83,7 +83,7 @@ export const tasks: Task[] = [
     detailedDescription: 'Investigate and resolve issues with savings goal calculations in the financial planning module',
     vision: 'Ensure accurate financial projections for users',
     assignee: 'Team',
-    status: 'inProgress',
+    status: 'in-progress',
     progress: 60,
     comments: [
       { id: 2, user: 'Team', content: 'Found the calculation bug, working on fix', timestamp: '2024-02-23 11:45 AM' }
@@ -124,7 +124,7 @@ export const tasks: Task[] = [
     detailedDescription: 'Create a new authentication flow with improved security and user experience',
     vision: 'Streamline the login process while maintaining security',
     assignee: 'Team',
-    status: 'todo',
+    status: 'to-do',
     progress: 0,
     comments: [],
     blockers: [
@@ -146,7 +146,7 @@ export const tasks: Task[] = [
     dueDate: '2023-10-10',
     description: 'Update API documentation for users',
     assignee: 'Ali',
-    status: 'inProgress',
+    status: 'in-progress',
     progress: 45,
     comments: [],
     blockers: [],
