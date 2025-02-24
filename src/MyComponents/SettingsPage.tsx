@@ -30,12 +30,14 @@ import * as z from "zod"
 import { ActiveUser } from "@/stores/query"
 import { DeveloperResourceHub } from "@/MyComponents/HomeDashboard/ResourceHub";
 import { IntegrationsSettings } from "@/MyComponents/SettingNavComponents/integrations";
-import { NotificationSettings } from "@/MyComponents/SettingNavComponents/notification";
+import { NotificationSetting } from "@/MyComponents/SettingNavComponents/notification";
 import { CompanySettings } from "@/MyComponents/SettingNavComponents/company";
+// import { TaskSettings } from "@/MyComponents/SettingNavComponents/tasks";
 import UploadAvatar from "./uploadAvatar"
 // import { useLocation } from 'react-router-dom';
 // Replace the URL parameter handling code with:
 import { createLazyFileRoute } from '@tanstack/react-router'
+import TaskSettings from "@/MyComponents/SettingNavComponents/tasks"
 
 const formSchema = z.object({
   name: z.string().min(2).max(50),
@@ -283,6 +285,7 @@ export default function SettingsPage() {
                   </CardHeader>
                   <CardContent>
                     {/* Add task management content */}
+                    <TaskSettings />
                   </CardContent>
                 </Card>
               </TabsContent>
@@ -413,7 +416,7 @@ export default function SettingsPage() {
                   </CardHeader>
                   <CardContent>
                     {/* Add notification settings content */}
-                    <NotificationSettings />
+                    <NotificationSetting />
                   </CardContent>
                 </Card>
               </TabsContent>

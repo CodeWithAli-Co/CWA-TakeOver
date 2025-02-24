@@ -20,6 +20,7 @@ import { TeamSwitcher } from "./ui/Dashboard/team-switch"
 import { NavMain } from "./ui/Dashboard/nav-main"
 import { NavProjects } from "./ui/Dashboard/nav-project"
 import { NavUser } from "./ui/Dashboard/nav-user"
+// import SettingsPage from 
 
 
 // This is sample data.
@@ -114,15 +115,19 @@ const data = {
         },
         {
           title: "Team",
-          url: "#",
+          url: "/settings?tab=teams",
         },
         {
-          title: "Billing",
-          url: "#",
+          title: "Tasks",
+          url: "/settings?tab=tasks",
         },
         {
-          title: "Limits",
-          url: "#",
+          title: "Company",
+          url: "/settings?tab=company",
+        },
+        {
+          title: "Notification",
+          url: "/settings?tab=notification",
         },
       ],
     },
