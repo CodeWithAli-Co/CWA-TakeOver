@@ -423,40 +423,60 @@ const OrionAnimation: React.FC<OrionAnimationProps> = ({ onAnimationComplete }) 
       "shooting-star+=0.08",
     )
 
-    // Logo animations - Option 2: Hexagon Logo
+    // Logo animations - Hexagon Logo
     if (document.getElementById("hexLogo")) {
-      // All the hexagon lines and nodes
-      const hexElements = svg.querySelectorAll("#hexLogo line, #hexLogo circle")
+      const hexLogo = svg.querySelector('#hexLogo');
 
-      tl.from(
-        hexElements,
-        {
-          opacity: 0,
-          scale: 0,
-          transformOrigin: "center center",
-          stagger: 0.1,
-          duration: 0.3,
-          ease: "back.out(1.7)",
-        },
-        "shooting-star+=0.5",
-      )
+      // Initial scale and fade in
+      tl.from(hexLogo, {
+        opacity: 0,
+        scale: 0,
+        transformOrigin: 'center center',
+        duration: 1,
+        ease: 'back.out(1.7)',
+      }, 'shooting-star+=0.5');
 
-      // Node highlight animation
-      const mainNode = svg.querySelector("#mainNode")
-      if (mainNode) {
-        tl.to(
-          mainNode,
-          {
-            fill: "#ff3333",
-            scale: 1.2,
-            transformOrigin: "center center",
-            duration: 0.3,
-            ease: "power2.out",
-          },
-          "shooting-star+=1.8",
-        )
-      }
+      // Rotation animation
+      tl.to(hexLogo, {
+        rotation: 360,
+        transformOrigin: 'center center',
+        duration: 2.5,
+        ease: 'power2.inOut'
+      }, 'shooting-star+=1.5');
+
+      // Glow effect
+      tl.to(hexLogo, {
+        filter: 'drop-shadow(0 0 15px rgba(255,80,78,0.8))',
+        duration: 0.5,
+      }, 'shooting-star+=2');
+
+      // Single pulse animation (not repeating)
+      tl.to(hexLogo, {
+        scale: 1.05,
+        duration: 0.75,
+        ease: 'power1.inOut'
+      }, 'shooting-star+=3');
+      
+      tl.to(hexLogo, {
+        scale: 1,
+        duration: 0.75,
+        ease: 'power1.inOut'
+      }, 'shooting-star+=3.75');
+      
+      // Final glow burst before ending
+      tl.to(hexLogo, {
+        filter: 'drop-shadow(0 0 25px rgba(255,80,78,0.9))',
+        duration: 0.3,
+      }, 'shooting-star+=4.5');
+      
+      tl.to(hexLogo, {
+        filter: 'drop-shadow(0 0 15px rgba(255,80,78,0.8))',
+        duration: 0.5,
+      }, 'shooting-star+=4.8');
     }
+
+    // Set a final delay before ending the animation
+    tl.to({}, { duration: 1 }, 'shooting-star+=5.5');
 
     // Add all timelines to the main one
     tl.add(tlOutlines, 0)
@@ -494,38 +514,51 @@ const OrionAnimation: React.FC<OrionAnimationProps> = ({ onAnimationComplete }) 
           <clipPath id="innerClip">
             <rect x="993.16" y="514.63" width="572.71" height="572.71" />
           </clipPath>
+          <filter id="glow" x="-50%" y="-50%" width="200%" height="200%">
+            <feGaussianBlur stdDeviation="10" result="blur" />
+            <feComposite in="SourceGraphic" in2="blur" operator="over" />
+          </filter>
         </defs>
 
         <g className="Scene">
-          {/* Option 2: Hexagon Network Logo (from second image) */}
-          <g id="hexLogo" transform="translate(1180, 700)" style={{ display: "block" }}>
-            {/* Nodes */}
-            <circle cx="0" cy="-120" r="10" fill="#ff6666" />
-            <circle id="mainNode" cx="104" cy="-60" r="15" fill="#ff6666" />
-            <circle cx="104" cy="60" r="10" fill="#ff6666" />
-            <circle cx="0" cy="120" r="10" fill="#ff6666" />
-            <circle cx="-104" cy="60" r="10" fill="#ff6666" />
-            <circle cx="-104" cy="-60" r="15" fill="#ff6666" />
-            <circle cx="0" cy="0" r="8" fill="#cc6666" />
-
-            {/* Connecting lines */}
-            <line x1="0" y1="-120" x2="104" y2="-60" stroke="#ff6666" strokeWidth="2" />
-            <line x1="104" y1="-60" x2="104" y2="60" stroke="#ff6666" strokeWidth="2" />
-            <line x1="104" y1="60" x2="0" y2="120" stroke="#ff6666" strokeWidth="2" />
-            <line x1="0" y1="120" x2="-104" y2="60" stroke="#ff6666" strokeWidth="2" />
-            <line x1="-104" y1="60" x2="-104" y2="-60" stroke="#ff6666" strokeWidth="2" />
-            <line x1="-104" y1="-60" x2="0" y2="-120" stroke="#ff6666" strokeWidth="2" />
-
-            {/* Internal lines */}
-            <line x1="0" y1="-120" x2="0" y2="0" stroke="#cc6666" strokeWidth="1.5" />
-            <line x1="104" y1="-60" x2="0" y2="0" stroke="#ff6666" strokeWidth="2" />
-            <line x1="104" y1="60" x2="0" y2="0" stroke="#cc6666" strokeWidth="1.5" />
-            <line x1="0" y1="120" x2="0" y2="0" stroke="#cc6666" strokeWidth="1.5" />
-            <line x1="-104" y1="60" x2="0" y2="0" stroke="#cc6666" strokeWidth="1.5" />
-            <line x1="-104" y1="-60" x2="0" y2="0" stroke="#cc6666" strokeWidth="1.5" />
-            <line x1="-104" y1="-60" x2="104" y2="-60" stroke="#cc6666" strokeWidth="1.5" />
+          {/* True Hexagon Logo */}
+          <g id="hexLogo" transform="translate(1280, 800) scale(2)" style={{ transformOrigin: 'center' }}>
+            <defs>
+              <linearGradient id="redGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" stopColor="#ff6666" />
+                <stop offset="100%" stopColor="#ff3333" />
+              </linearGradient>
+            </defs>
+            
+            {/* Proper Hexagon with 6 sides */}
+            <polygon 
+              points="0,-100 86.6,-50 86.6,50 0,100 -86.6,50 -86.6,-50" 
+              fill="none" 
+              stroke="url(#redGradient)" 
+              strokeWidth="3"
+              filter="url(#glow)"
+            />
+            
+            {/* Nodes - properly positioned for a hexagon */}
+            <circle cx="0" cy="-100" r="15" fill="#ff5555" filter="url(#glow)" />
+            <circle cx="86.6" cy="-50" r="15" fill="#ff5555" filter="url(#glow)" />
+            <circle cx="86.6" cy="50" r="15" fill="#ff5555" filter="url(#glow)" />
+            <circle cx="0" cy="100" r="15" fill="#ff5555" filter="url(#glow)" />
+            <circle cx="-86.6" cy="50" r="15" fill="#ff5555" filter="url(#glow)" />
+            <circle cx="-86.6" cy="-50" r="15" fill="#ff5555" filter="url(#glow)" />
+            
+            {/* Internal connections */}
+            <line x1="0" y1="-100" x2="0" y2="0" stroke="#ff3333" strokeWidth="2" />
+            <line x1="86.6" y1="-50" x2="0" y2="0" stroke="#ff3333" strokeWidth="2" />
+            <line x1="86.6" y1="50" x2="0" y2="0" stroke="#ff3333" strokeWidth="2" />
+            <line x1="0" y1="100" x2="0" y2="0" stroke="#ff3333" strokeWidth="2" />
+            <line x1="-86.6" y1="50" x2="0" y2="0" stroke="#ff3333" strokeWidth="2" />
+            <line x1="-86.6" y1="-50" x2="0" y2="0" stroke="#ff3333" strokeWidth="2" />
+            
+            {/* Optional center node */}
+            <circle cx="0" cy="0" r="8" fill="#ff3333" filter="url(#glow)" />
           </g>
-
+          
           {/* Grid and guides */}
           <g id="Grid" fill="none" stroke="#7eced6" strokeWidth="2">
             <line x1="990.17" y1="464.52" x2="990.17" y2="1138.95" />
@@ -545,9 +578,9 @@ const OrionAnimation: React.FC<OrionAnimationProps> = ({ onAnimationComplete }) 
               <line x1="1086.87" y1="1087.34" x2="1086.87" y2="514.63" />
             </g>
           </g>
-
+          
           {/* Particles group - using type assertion to avoid TypeScript errors */}
-          <g id="Particles" fill="#fff" {...({} as any)}>
+          <g id="Particles" fill="#fff" {...{} as any}>
             <circle cx="990.17" cy="511.63" r="2.62" x0="0" y0="0" start="1.44" />
             <circle cx="1086.87" cy="511.63" r="2.62" x0="4" y0="0" start="0.8" />
             <circle cx="1183.57" cy="511.63" r="2.62" x0="0" y0="0" start="1.76" />
@@ -604,41 +637,17 @@ const OrionAnimation: React.FC<OrionAnimationProps> = ({ onAnimationComplete }) 
             <circle cx="1473.67" cy="1091.84" r="2.62" x0="0" y0="0" start="0" />
             <circle cx="1570.37" cy="1091.84" r="2.62" x0="0" y0="0" start="0" />
           </g>
-
+          
           <g id="ShootingStar">
-            <line
-              id="ShootingStarTrail2"
-              x1="1476.29"
-              y1="995.13"
-              x2="1516.79"
-              y2="955.83"
-              fill="none"
-              stroke="#878787"
-              strokeWidth="2"
-              strokeDasharray="10"
-            />
-            <line
-              id="ShootingStarTrail1"
-              x1="1476.29"
-              y1="995.13"
-              x2="1516.79"
-              y2="955.83"
-              fill="none"
-              stroke="#878787"
-              strokeWidth="3"
-            />
+            <line id="ShootingStarTrail2" x1="1476.29" y1="995.13" x2="1516.79" y2="955.83" fill="none" stroke="#878787" strokeWidth="2" strokeDasharray="10" />
+            <line id="ShootingStarTrail1" x1="1476.29" y1="995.13" x2="1516.79" y2="955.83" fill="none" stroke="#878787" strokeWidth="3" />
             <line x1="1476.29" y1="995.13" x2="1516.79" y2="955.83" fill="none" stroke="#fff" strokeWidth="5" />
           </g>
-          <path
-            id="Blink"
-            d="M1453,974.13s14.43,10.31,22.16,10.82,24.23-12.37,24.23-12.37-10.82,10.31-10.57,22.55,10.57,26.67,10.57,26.67-13.41-13.4-23.72-13.4-23.72,11.85-23.72,11.85,6.18-12.37,6.7-22.93S1453,974.13,1453,974.13Z"
-            fill="#fff"
-          />
+          <path id="Blink" d="M1453,974.13s14.43,10.31,22.16,10.82,24.23-12.37,24.23-12.37-10.82,10.31-10.57,22.55,10.57,26.67,10.57,26.67-13.41-13.4-23.72-13.4-23.72,11.85-23.72,11.85,6.18-12.37,6.7-22.93S1453,974.13,1453,974.13Z" fill="#fff"/>
         </g>
       </svg>
     </div>
-  )
-}
+  );
+};
 
-export default OrionAnimation
-
+export default OrionAnimation;
