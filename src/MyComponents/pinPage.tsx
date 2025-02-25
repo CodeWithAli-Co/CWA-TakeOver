@@ -1,5 +1,7 @@
 import { useForm } from '@tanstack/react-form';
 import './compAssets/pinPage.css';
+import React from 'react';
+
 import { useAppStore } from '../stores/store';
 import cwa_logo_full from '/codewithali-removebg-preview.png';
 import { useEffect, useState } from 'react';
@@ -14,7 +16,7 @@ export default function PinPage() {
     if (checkLogin === "true") {
       setIsLoggedIn("true");
     }
-  }, [setIsLoggedIn]);
+  }, []);
   
   const handleAnimationComplete = () => {
     console.log("Animation completed, showing content");
@@ -41,17 +43,27 @@ export default function PinPage() {
   return (
     <>
        {/* Animation component - will show before content */}
-       <OrionAnimation onAnimationComplete={handleAnimationComplete} />
+       {/* <OrionAnimation onAnimationComplete={handleAnimationComplete} /> */}
       
       {/* Content will only be displayed after animation is complete */}
-      <div 
+      {/* <div 
         id='pin-div' 
         style={{ 
           opacity: showContent ? 1 : 0,
           visibility: showContent ? 'visible' : 'hidden',
           transition: 'opacity 0.5s ease-in-out, visibility 0.5s ease-in-out'
         }}
-      >
+      > */}
+
+        {/* this is the normal version */}
+        <div id="pin-div">
+        <h1 id="big-title">TakeOver</h1>
+        <img
+          src={cwa_logo_full}
+          alt="CodeWithAli Logo Full"
+          id="cwa-logo-full"
+          draggable={false}
+        />
         <h1 id='big-title'>TakeOver</h1>
         <img 
           src={cwa_logo_full} 
