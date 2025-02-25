@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import gsap from 'gsap';
 
 // Define props interface
@@ -17,12 +17,24 @@ interface CustomCircleProps extends React.SVGProps<SVGCircleElement> {
 const OrionAnimation: React.FC<OrionAnimationProps> = ({ onAnimationComplete }) => {
   const svgRef = useRef<SVGSVGElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+  const [isMounted, setIsMounted] = useState(false);
   console.log("orionAnimation mounted! hehe");
 
+  // Initial mounting effect
   useEffect(() => {
-    console.log("🔵 OrionAnimation: Starting GSAP animations...");
-    if (!svgRef.current) return;
+    // Set a small delay to ensure DOM is fully rendered
+    const timer = setTimeout(() => {
+      setIsMounted(true);
+    }, 100);
+    
+    return () => clearTimeout(timer);
+  }, []);
 
+  // Main animation effect
+  useEffect(() => {
+    if (!isMounted || !svgRef.current) return;
+
+    console.log("🔵 OrionAnimation: Starting GSAP animations...");
     const svg = svgRef.current;
     const tl = gsap.timeline({
       onComplete: () => {
@@ -46,6 +58,24 @@ const OrionAnimation: React.FC<OrionAnimationProps> = ({ onAnimationComplete }) 
         }
       }
     });
+    
+    // Helper function for getting SVG element lengths safely
+    const getElementLength = (element: SVGGeometryElement): number => {
+      try {
+        if (element && typeof element.getTotalLength === 'function') {
+          // Add a check to make sure the element is properly rendered
+          const box = element.getBBox();
+          if (box.width === 0 && box.height === 0) {
+            console.warn('Element has zero dimensions, using fallback length');
+            return 100; // Fallback length
+          }
+          return element.getTotalLength();
+        }
+      } catch (error) {
+        console.warn('Error getting element length:', error);
+      }
+      return 100; // Fallback length if everything fails
+    };
     
     // Make sure the animation is visible immediately - fixes black screen issue
     tl.set(svg, { opacity: 1 });
@@ -206,40 +236,28 @@ const OrionAnimation: React.FC<OrionAnimationProps> = ({ onAnimationComplete }) 
         trail.setAttribute('y2', (cy + y0 * 96.7).toString());
         
         svg.appendChild(trail);
-        const length = trail.getTotalLength();
-        
-        trail.setAttribute('stroke-dasharray', `${length * 0.5} ${length}`);
-        trail.setAttribute('stroke-dashoffset', (length * 0.5).toString());
-        
-        tlParticles.to(trail, {
-          strokeDashoffset: (length * 0.5 + length),
-          duration: 1,
-          ease: 'power2.inOut'
-        }, start + 0.1);
-        
-        tlParticles.to(trail, {
-          strokeDashoffset: (length * 0.5 * 2) + length,
-          duration: 0.8,
-          ease: 'power1.inOut'
-        }, start + 0.9);
+        try {
+          const length = trail.getTotalLength();
+          
+          trail.setAttribute('stroke-dasharray', `${length * 0.5} ${length}`);
+          trail.setAttribute('stroke-dashoffset', (length * 0.5).toString());
+          
+          tlParticles.to(trail, {
+            strokeDashoffset: (length * 0.5 + length),
+            duration: 1,
+            ease: 'power2.inOut'
+          }, start + 0.1);
+          
+          tlParticles.to(trail, {
+            strokeDashoffset: (length * 0.5 * 2) + length,
+            duration: 0.8,
+            ease: 'power1.inOut'
+          }, start + 0.9);
+        } catch (error) {
+          console.warn('Error animating trail:', error);
+        }
       }
-      // When handling SVG paths, add more robust error handling:
- const getElementLength = (element: SVGGeometryElement): number => {
-  try {
-    if (element && typeof element.getTotalLength === 'function') {
-      // Add a check to make sure the element is properly rendered
-      const box = element.getBBox();
-      if (box.width === 0 && box.height === 0) {
-        console.warn('Element has zero dimensions, using fallback length');
-        return 100; // Fallback length
-      }
-      return element.getTotalLength();
-    }
-  } catch (error) {
-    console.warn('Error getting element length:', error);
-  }
-  return 100; // Fallback length if everything fails
-};
+      
       // Explosion animation
       const x = gsap.utils.random(300, 1500) * (Math.random() > 0.5 ? 1 : -1);
       const y = gsap.utils.random(300, 1500) * (Math.random() > 0.5 ? 1 : -1);
@@ -295,79 +313,51 @@ const OrionAnimation: React.FC<OrionAnimationProps> = ({ onAnimationComplete }) 
     }, 'shooting-star+=0.08');
 
     // Circle animations
-   // Example for outCircle1:
-   const outCircle1 = svg.querySelector('#outCircle1') as SVGPathElement;
-
-   // When handling SVG paths, add more robust error handling:
- const getElementLength = (element: SVGGeometryElement): number => {
-  try {
-    if (element && typeof element.getTotalLength === 'function') {
-      // Add a check to make sure the element is properly rendered
-      const box = element.getBBox();
-      if (box.width === 0 && box.height === 0) {
-        console.warn('Element has zero dimensions, using fallback length');
-        return 100; // Fallback length
-      }
-      return element.getTotalLength();
+    const outCircle1 = svg.querySelector('#outCircle1') as SVGPathElement;
+    if (outCircle1) {
+      const length = getElementLength(outCircle1);
+      tl.set(outCircle1, {
+        strokeDasharray: length,
+        strokeDashoffset: length
+      }, 0);
+      
+      tl.to(outCircle1, {
+        strokeDashoffset: 0,
+        duration: 2,
+        ease: 'power3.out'
+      }, 'shooting-star');
     }
-  } catch (error) {
-    console.warn('Error getting element length:', error);
-  }
-  return 100; // Fallback length if everything fails
-};
-   if (outCircle1) {
-     const length = getElementLength(outCircle1);
-     tl.set(outCircle1, {
-       strokeDasharray: length,
-       strokeDashoffset: length
-     }, 0);
-     
-     tl.to(outCircle1, {
-       strokeDashoffset: 0,
-       duration: 2,
-       ease: 'power3.out'
-     }, 'shooting-star');
-   }
     
     const outCircle2 = svg.querySelector('#outCircle2') as SVGPathElement;
-    if (outCircle2 && outCircle2.getTotalLength) {
-      try {
-        const length = getElementLength(outCircle2);
-        tl.set(outCircle2, {
-          strokeDasharray: length,
-          strokeDashoffset: length
-        }, 0);
-        
-        tl.to(outCircle2, {
-          strokeDashoffset: 0,
-          duration: 2,
-          ease: 'power3.out'
-        }, 'shooting-star+=0.5');
-      } catch (error) {
-        console.warn('Error animating outCircle2:', error);
-      }
+    if (outCircle2) {
+      const length = getElementLength(outCircle2);
+      tl.set(outCircle2, {
+        strokeDasharray: length,
+        strokeDashoffset: length
+      }, 0);
+      
+      tl.to(outCircle2, {
+        strokeDashoffset: 0,
+        duration: 2,
+        ease: 'power3.out'
+      }, 'shooting-star+=0.5');
     }
     
     const outCircle3 = svg.querySelector('#outCircle3') as SVGPathElement;
-    if (outCircle3 && outCircle3.getTotalLength) {
-      try {
-        const length = getElementLength(outCircle3);
-        tl.set(outCircle3, {
-          strokeDasharray: length,
-          strokeDashoffset: length
-        }, 0);
-        
-        tl.to(outCircle3, {
-          strokeDashoffset: 0,
-          duration: 2,
-          ease: 'power3.out'
-        }, 'shooting-star+=0.8');
-      } catch (error) {
-        console.warn('Error animating outCircle3:', error);
-      }
+    if (outCircle3) {
+      const length = getElementLength(outCircle3);
+      tl.set(outCircle3, {
+        strokeDasharray: length,
+        strokeDashoffset: length
+      }, 0);
+      
+      tl.to(outCircle3, {
+        strokeDashoffset: 0,
+        duration: 2,
+        ease: 'power3.out'
+      }, 'shooting-star+=0.8');
     }
     
-
     const fillCircle1 = svg.querySelector('#fillCircle1') as SVGCircleElement;
     if (fillCircle1 && typeof fillCircle1.getTotalLength === 'function') {
       try {
@@ -449,7 +439,7 @@ const OrionAnimation: React.FC<OrionAnimationProps> = ({ onAnimationComplete }) 
     
     // Cleanup function
     return () => tl.kill();
-  }, [onAnimationComplete]);
+  }, [isMounted, onAnimationComplete]);
 
   return (
     <div 
@@ -459,17 +449,23 @@ const OrionAnimation: React.FC<OrionAnimationProps> = ({ onAnimationComplete }) 
         position: "fixed",
         top: "0",
         left: "0",
-        width: "100%",
-        height: "100%",
+        width: "100vw", // Use viewport width instead of percentage
+        height: "100vh", // Use viewport height instead of percentage
         display: "flex",
         justifyContent: "center",
         alignItems: "center",
-        zIndex: 1000, // Higher z-index to ensure it's on top
-        background: "#000", // Dark background
-        opacity: 1, // Start fully visible
+        zIndex: 1000,
+        background: "#000",
+        margin: 0, // Ensure no margin
+        padding: 0, // Ensure no padding
+        overflow: "hidden", // Prevent scrollbars
+        opacity: 1,
         transition: "opacity 0.5s ease-in-out"
       }}
     >
+
+
+      
       <svg ref={svgRef} className="space" viewBox="0 0 2560 1600" style={{ width: "100%", height: "100%" }}>
         <defs>
           <mask id="ringMask">
@@ -605,5 +601,11 @@ const OrionAnimation: React.FC<OrionAnimationProps> = ({ onAnimationComplete }) 
 };
 
 export default OrionAnimation;
+
+function setIsMounted(arg0: boolean) {
+  throw new Error('Function not implemented.');
+}
+
+
 // At the end of the file
 // module.exports = OrionAnimation;

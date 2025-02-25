@@ -103,19 +103,3 @@
 
 
 /* orion */
-.orion-container {
-  position: absolute;
-  width: 250px;  /* Adjust width */
-  height: 250px; /* Adjust height */
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  top: 40%;  /* Adjust to be below Welcome text */
-  left: 50%;
-  transform: translate(-50%, -50%);
-  z-index: 10;
-}
-.orion-animation {
-  max-width: 200px;
-  max-height: 200px;
-}
