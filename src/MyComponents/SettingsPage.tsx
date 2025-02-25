@@ -36,6 +36,8 @@ import UploadAvatar from "./uploadAvatar"
 // Replace the URL parameter handling code with:
 import { createLazyFileRoute } from '@tanstack/react-router'
 import TeamsAndProjects from "./SettingNavComponents/TeamProject"
+import SecurityDashboard from "./SettingNavComponents/security"
+import ReportSettings from "./SettingNavComponents/reports"
 
 const formSchema = z.object({
   name: z.string().min(2).max(50),
@@ -287,17 +289,7 @@ export default function SettingsPage() {
               </TabsContent>
 
               <TabsContent value="reports" className="space-y-4">
-                <Card className="bg-black/60 border-red-950/30 backdrop-blur-sm">
-                  <CardHeader>
-                    <CardTitle className="text-white">Reports</CardTitle>
-                    <CardDescription className="text-red-200/60">
-                      Generate and view analytical reports.
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    {/* Add reports content */}
-                  </CardContent>
-                </Card>
+                          <ReportSettings/>
               </TabsContent>
 
               <TabsContent value="resources" className="space-y-4">
@@ -404,6 +396,7 @@ export default function SettingsPage() {
                   </CardHeader>
                   <CardContent>
                     {/* Add security settings content */}
+                    {/* <SecurityDashboard/> */}
                   </CardContent>
                 </Card>
               </TabsContent>
