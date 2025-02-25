@@ -1,4 +1,5 @@
-import type * as React from "react"
+//  was import type * as React from "react"
+import * as React from "react"
 import {
   AudioWaveform,
   BookOpen,

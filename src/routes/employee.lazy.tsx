@@ -1,3 +1,4 @@
+import React from "react";
 import { createLazyFileRoute } from "@tanstack/react-router";
 import { useAppStore } from "../stores/store";
 import { motion, AnimatePresence } from "framer-motion";

@@ -1,6 +1,5 @@
-"use client"
-
-import type React from "react"
+// was ' import type React from "react" '
+import React from "react"
 import { useEffect, useRef, useState } from "react"
 import gsap from "gsap"
 

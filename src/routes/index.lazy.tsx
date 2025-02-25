@@ -1,4 +1,4 @@
-// "use client";
+import React from "react";
 import { createLazyFileRoute } from "@tanstack/react-router";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";

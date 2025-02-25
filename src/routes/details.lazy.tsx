@@ -1,3 +1,4 @@
+import React from "react";
 import { createLazyFileRoute } from "@tanstack/react-router";
 import { JSX } from "react";
 import {

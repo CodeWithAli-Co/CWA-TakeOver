@@ -1,5 +1,4 @@
-"use client";
-
+import React from "react";
 import { BadgeCheck, Bell, ChevronsUpDown, CreditCard, LogOut, Sparkles } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
@@ -40,11 +39,12 @@ export function NavUser({userData}: NavUserProps) {
   };
 
   // Get first (active) user
-  const user = activeuser?.[0] || {
+  const user = activeuser[0] || {
     username: "Unknown",
     email: "unknown@example.com",
     avatar: "/public/codewithali_logo.png",
     role: "member",
+    avatarURL: '' // remove this if gives error
   };
 
   return (

@@ -1,3 +1,4 @@
+import React from "react";
 import { open, BaseDirectory } from "@tauri-apps/plugin-fs";
 import { open as openDialog } from "@tauri-apps/plugin-dialog";
 import { sendNotification } from "@tauri-apps/plugin-notification";

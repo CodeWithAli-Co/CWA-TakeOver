@@ -1,5 +1,3 @@
-"use client"
-
 import React from "react"
 import { motion, AnimatePresence } from "framer-motion"
 import { 
@@ -79,7 +77,7 @@ export default function SettingsPage() {
   setActiveTab(value)
   navigate({ 
     to: '/settings',
-    search: { tab: value }
+    // search: {  } // Need to work on this
   })
 }
   // 

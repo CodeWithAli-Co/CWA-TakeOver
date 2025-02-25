@@ -1,3 +1,4 @@
+import React from "react";
 import { useAppStore } from "@/stores/store";
 import "./compAssets/dispInterns.css";
 import { useEffect, useRef } from "react";
