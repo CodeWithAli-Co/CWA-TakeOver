@@ -11,6 +11,8 @@ import { StorageUsageChart } from "@/MyComponents/HomeDashboard/storage";
 import { Calendar } from "@/components/ui/calendar";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
+
+import { ActiveUser, Todos } from "@/stores/query";
 import { 
   Activity, Bot, MessageSquare, Users, CreditCard, Settings, Search,
   ChevronRight, Bell, Folder, Lock, FileText, Globe, AlertCircle,
@@ -31,7 +33,7 @@ const NavItem = ({ icon: Icon, text }: { icon: React.ComponentType<{ className?:
 
 
 // Enhanced Task Priority Badge with animation
-const TaskPriorityBadge = ({ priority }: { priority: TaskPriority }) => {
+const TaskPriorityBadge = ({ priority }) => {
   const colors = {
     high: "bg-red-500/20 text-red-400 border-red-500/30",
     medium: "bg-amber-500/20 text-amber-400 border-amber-500/30",
@@ -101,7 +103,7 @@ const QuickActionCard = ({ title, icon: Icon, count }: { title: string, icon: Re
 );
 
 // Task Item Component with animations
-const TaskItem = ({ task }: { task: (typeof tasks)[0] }) => (
+const TaskItem = ({ task }) => (
   <motion.div
     initial={{ opacity: 0, y: 10 }}
     animate={{ opacity: 1, y: 0 }}
@@ -122,7 +124,7 @@ const TaskItem = ({ task }: { task: (typeof tasks)[0] }) => (
           <span className="text-sm font-medium text-amber-50">{task.title}</span>
           <TaskPriorityBadge priority={task.priority} />
         </div>
-        <span className="text-xs text-amber-50/70">{task.dueDate}</span>
+        <span className="text-xs text-amber-50/70">{task.deadline}</span>
       </div>
     </div>
     <motion.button 
@@ -136,36 +138,86 @@ const TaskItem = ({ task }: { task: (typeof tasks)[0] }) => (
 );
 
 
-type TaskPriority = 'high' | 'medium' | 'low';
-type TaskStatus = 'todo' | 'inProgress' | 'done';
+// type TaskPriority = 'high' | 'medium' | 'low';
+// type TaskStatus = 'todo' | 'inProgress' | 'done';
 
 
-const tasks: { id: number, title: string, priority: TaskPriority, dueDate: string }[] = [
-  { id: 1, title: 'work on clerk auth 1', priority: 'high', dueDate: '2023-10-01' },
-  { id: 2, title: 'fix the budgetary savings goal', priority: 'medium', dueDate: '2023-10-05' },
-  { id: 3, title: 'fix the navigation bar', priority: 'low', dueDate: '2023-10-10' },
-  { id: 4, title: 'implement new auth flow', priority: 'high', dueDate: '2023-10-10' },
-  { id: 5, title: 'upddaate user document', priority: 'medium', dueDate: '2023-10-10' },
-  { id: 6, title: 'setup monitoring alerts', priority: 'low', dueDate: '2023-10-10' },
-  { id: 7, title: 'optimize data queries', priority: 'low', dueDate: '2023-10-10' },
-  { id: 8, title: 'work on fixing the general chat to reroute with blaze', priority: 'low', dueDate: '2023-10-10' },
-  { id: 9, title: 'change some mobile tweaks so the menu opens up', priority: 'low', dueDate: '2023-10-10' },
-  { id: 10, title: 'fix the bot management style by addding maxwidth', priority: 'high', dueDate: '2023-10-10' },
-  { id: 11, title: 'blaze gotta work on backendd logic for dashboardd', priority: 'low', dueDate: '2023-10-10' },
-];
+// const tasks: { id: number, title: string, priority, dueDate: string }[] = [
+//   { id: 1, title: 'work on clerk auth 1', priority: 'high', dueDate: '2023-10-01' },
+//   { id: 2, title: 'fix the budgetary savings goal', priority: 'medium', dueDate: '2023-10-05' },
+//   { id: 3, title: 'fix the navigation bar', priority: 'low', dueDate: '2023-10-10' },
+//   { id: 4, title: 'implement new auth flow', priority: 'high', dueDate: '2023-10-10' },
+//   { id: 5, title: 'upddaate user document', priority: 'medium', dueDate: '2023-10-10' },
+//   { id: 6, title: 'setup monitoring alerts', priority: 'low', dueDate: '2023-10-10' },
+//   { id: 7, title: 'optimize data queries', priority: 'low', dueDate: '2023-10-10' },
+//   { id: 8, title: 'work on fixing the general chat to reroute with blaze', priority: 'low', dueDate: '2023-10-10' },
+//   { id: 9, title: 'change some mobile tweaks so the menu opens up', priority: 'low', dueDate: '2023-10-10' },
+//   { id: 10, title: 'fix the bot management style by addding maxwidth', priority: 'high', dueDate: '2023-10-10' },
+//   { id: 11, title: 'blaze gotta work on backendd logic for dashboardd', priority: 'low', dueDate: '2023-10-10' },
+// ];
+
+
+
 
 // Enhanced Tasks Component with Tabs
 const TasksComponent = () => {
-  const [selectedTab, setSelectedTab] = useState<TaskStatus>('todo');
+  const [selectedTab, setSelectedTab] = useState("to-do");
+  const [searchQuery, setSearchQuery] = useState("");
   
-  // Simulate task status for demonstration
-  const getTaskStatus = (task: (typeof tasks)[0]): TaskStatus => {
-    if (task.priority === 'high') return 'todo';
-    if (task.priority === 'medium') return 'inProgress';
-    return 'done';
-  };
+  // Get the active user
+  const { data: user, error: activeUserError } = ActiveUser();
+  if (activeUserError) {
+    console.log("Error fetching Active User for Tasks", activeUserError.message);
+  }
 
-  const filteredTasks = tasks.filter(task => getTaskStatus(task) === selectedTab);
+  // Fetch todos for the active user
+  const {
+    data: todos,
+    error: TodoError,
+    refetch: refetchTodos,
+  } = Todos(user?.[0]?.username);
+  
+  if (TodoError) {
+    console.log("Error fetching Todos Data:", TodoError.message);
+  }
+
+  // Set up real-time subscription
+  useEffect(() => {
+    const subscription = supabase
+      .channel("all-todos")
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "cwa_todos" },
+        () => refetchTodos()
+      )
+      .subscribe();
+      
+    return () => {
+      subscription.unsubscribe();
+    };
+  }, [refetchTodos]);
+
+  // Fetch todos when tab changes
+  useEffect(() => {
+    if (user && user.length > 0) {
+      refetchTodos();
+    }
+  }, [selectedTab, user]);
+
+  // Filter tasks based on selected tab and search query
+  const filteredTasks = todos?.filter((task) => {
+    const matchesSearch =
+      task.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (task.description && task.description.toLowerCase().includes(searchQuery.toLowerCase()));
+    const matchesStatus = task.status === selectedTab;
+    return matchesSearch && matchesStatus;
+  }) || [];
+
+  // Count tasks by status
+  const todoCount = todos?.filter(task => task.status === "to-do").length || 0;
+  const inProgressCount = todos?.filter(task => task.status === "in-progress").length || 0;
+  const doneCount = todos?.filter(task => task.status === "done").length || 0;
+  const totalTasks = todos?.length || 0;
 
   return (
    
@@ -173,11 +225,13 @@ const TasksComponent = () => {
       <CardHeader className="flex flex-row items-center justify-between">
         <div>
           <CardTitle className="text-amber-50">Tasks</CardTitle>
-          <p className="text-sm text-amber-50/70 mt-1">{tasks.length} total tasks</p>
+          <p className="text-sm text-amber-50/70 mt-1">{totalTasks} total tasks</p>
         </div>
         <div className="flex items-center gap-2">
           <Input 
             placeholder="Search tasks..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
             className="w-[200px] bg-black/40 border-red-900/30 text-amber-50"
           />
           <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
@@ -188,28 +242,28 @@ const TasksComponent = () => {
         </div>
       </CardHeader>
       <CardContent>
-        <Tabs defaultValue="todo" className="mb-4">
+        <Tabs defaultValue="to-do" className="mb-4">
           <TabsList className="bg-black/40 border border-red-900/30">
             <TabsTrigger 
               value="todo"
-              onClick={() => setSelectedTab('todo')}
+              onClick={() => setSelectedTab('to-do')}
               className="data-[state=active]:bg-red-900/20"
             >
-              To Do
+              To Do ({todoCount})
             </TabsTrigger>
             <TabsTrigger 
-              value="inProgress"
-              onClick={() => setSelectedTab('inProgress')}
+              value="in-Progress"
+              onClick={() => setSelectedTab('in-Progress')}
               className="data-[state=active]:bg-red-900/20"
             >
-              In Progress
+              In Progress ({inProgressCount})
             </TabsTrigger>
             <TabsTrigger 
               value="done"
               onClick={() => setSelectedTab('done')}
               className="data-[state=active]:bg-red-900/20"
             >
-              Done
+              Done ({doneCount})
             </TabsTrigger>
           </TabsList>
         </Tabs>
@@ -223,7 +277,7 @@ const TasksComponent = () => {
               className="space-y-3"
             >
               {filteredTasks.map((task) => (
-                <TaskItem key={task.id} task={task} />
+                <TaskItem key={task.todo_id} task={task} />
               ))}
             </motion.div>
           </AnimatePresence>
