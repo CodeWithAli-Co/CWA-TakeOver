@@ -39,6 +39,12 @@ const OrionAnimation: React.FC<OrionAnimationProps> = ({ onAnimationComplete }) 
 
     console.log("🔵 OrionAnimation: Starting GSAP animations...")
     const svg = svgRef.current
+
+    // Set initial state - completely hidden SVG
+  // gsap.set(svg, { opacity: 0 })
+  
+
+
     const tl = gsap.timeline({
       onComplete: () => {
         console.log("✅ OrionAnimation: GSAP finished all animations")
@@ -47,7 +53,9 @@ const OrionAnimation: React.FC<OrionAnimationProps> = ({ onAnimationComplete }) 
         if (containerRef.current) {
           gsap.to(containerRef.current, {
             opacity: 0,
-            duration: 0.5,
+            // IMPORTANT
+            // this determined when to transition into the pinpage
+            duration: 0.1,
             onComplete: () => {
               // After fading out, hide it completely
               if (containerRef.current) {
