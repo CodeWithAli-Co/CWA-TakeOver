@@ -227,6 +227,45 @@ export const AddTodo = (props: Users) => {
                 )}
               />
 
+                {/* status */}
+                <form.Field
+                    name="status"
+                    children={(field) => (
+                      <div className="grid gap-2">
+                        <Label htmlFor={field.name} className="text-red-200">
+                          Status
+                        </Label>
+                        <Select
+                          value={field.state.value}
+                          onValueChange={(value) => field.handleChange(value)}
+                        >
+                          <SelectTrigger 
+                            className="bg-black/40 border-red-950/30 
+                            text-red-200 focus:border-red-700 
+                            focus:ring-2 focus:ring-red-900/50"
+                          >
+                            <SelectValue placeholder="Select status" />
+                          </SelectTrigger>
+                          <SelectContent 
+                            className="bg-black/95 border-red-950/30 
+                            text-red-200"
+                          >
+                            {["to-do", "in-progress", "done"].map((status) => (
+                              <SelectItem 
+                                key={status} 
+                                value={status} 
+                                className="text-red-200 
+                                hover:bg-red-950/30 focus:bg-red-950/40"
+                              >
+                                {status === "to-do" ? "To Do" : 
+                                status === "in-progress" ? "In Progress" : "Done"}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    )}
+                  />
               <form.Field
                 name="priority"
                 children={(field) => (

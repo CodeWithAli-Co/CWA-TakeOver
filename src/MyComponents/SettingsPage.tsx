@@ -35,6 +35,7 @@ import UploadAvatar from "./uploadAvatar"
 // import { useLocation } from 'react-router-dom';
 // Replace the URL parameter handling code with:
 import { createLazyFileRoute } from '@tanstack/react-router'
+import TeamsAndProjects from "./SettingNavComponents/TeamProject"
 
 const formSchema = z.object({
   name: z.string().min(2).max(50),
@@ -272,17 +273,8 @@ export default function SettingsPage() {
               </TabsContent>
 
               <TabsContent value="teams" className="space-y-4">
-                <Card className="bg-black/60 border-red-950/30 backdrop-blur-sm">
-                  <CardHeader>
-                    <CardTitle className="text-white">Teams & Projects</CardTitle>
-                    <CardDescription className="text-red-200/60">
-                      Manage your team members and project assignments.
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    {/* Add team management content */}
-                  </CardContent>
-                </Card>
+                {/* Team and Project setting content here */}
+                 <TeamsAndProjects/>
               </TabsContent>
 
               <TabsContent value="company" className="space-y-4 ">
