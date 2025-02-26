@@ -18,6 +18,7 @@ import { Route as rootRoute } from './routes/__root'
 
 const TaskLazyImport = createFileRoute('/task')()
 const SettingsLazyImport = createFileRoute('/settings')()
+const ScheduleLazyImport = createFileRoute('/schedule')()
 const EmployeeLazyImport = createFileRoute('/employee')()
 const DetailsLazyImport = createFileRoute('/details')()
 const ChatLazyImport = createFileRoute('/chat')()
@@ -39,6 +40,12 @@ const SettingsLazyRoute = SettingsLazyImport.update({
   path: '/settings',
   getParentRoute: () => rootRoute,
 } as any).lazy(() => import('./routes/settings.lazy').then((d) => d.Route))
+
+const ScheduleLazyRoute = ScheduleLazyImport.update({
+  id: '/schedule',
+  path: '/schedule',
+  getParentRoute: () => rootRoute,
+} as any).lazy(() => import('./routes/schedule.lazy').then((d) => d.Route))
 
 const EmployeeLazyRoute = EmployeeLazyImport.update({
   id: '/employee',
@@ -135,6 +142,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof EmployeeLazyImport
       parentRoute: typeof rootRoute
     }
+    '/schedule': {
+      id: '/schedule'
+      path: '/schedule'
+      fullPath: '/schedule'
+      preLoaderRoute: typeof ScheduleLazyImport
+      parentRoute: typeof rootRoute
+    }
     '/settings': {
       id: '/settings'
       path: '/settings'
@@ -162,6 +176,7 @@ export interface FileRoutesByFullPath {
   '/chat': typeof ChatLazyRoute
   '/details': typeof DetailsLazyRoute
   '/employee': typeof EmployeeLazyRoute
+  '/schedule': typeof ScheduleLazyRoute
   '/settings': typeof SettingsLazyRoute
   '/task': typeof TaskLazyRoute
 }
@@ -174,6 +189,7 @@ export interface FileRoutesByTo {
   '/chat': typeof ChatLazyRoute
   '/details': typeof DetailsLazyRoute
   '/employee': typeof EmployeeLazyRoute
+  '/schedule': typeof ScheduleLazyRoute
   '/settings': typeof SettingsLazyRoute
   '/task': typeof TaskLazyRoute
 }
@@ -187,6 +203,7 @@ export interface FileRoutesById {
   '/chat': typeof ChatLazyRoute
   '/details': typeof DetailsLazyRoute
   '/employee': typeof EmployeeLazyRoute
+  '/schedule': typeof ScheduleLazyRoute
   '/settings': typeof SettingsLazyRoute
   '/task': typeof TaskLazyRoute
 }
@@ -201,6 +218,7 @@ export interface FileRouteTypes {
     | '/chat'
     | '/details'
     | '/employee'
+    | '/schedule'
     | '/settings'
     | '/task'
   fileRoutesByTo: FileRoutesByTo
@@ -212,6 +230,7 @@ export interface FileRouteTypes {
     | '/chat'
     | '/details'
     | '/employee'
+    | '/schedule'
     | '/settings'
     | '/task'
   id:
@@ -223,6 +242,7 @@ export interface FileRouteTypes {
     | '/chat'
     | '/details'
     | '/employee'
+    | '/schedule'
     | '/settings'
     | '/task'
   fileRoutesById: FileRoutesById
@@ -236,6 +256,7 @@ export interface RootRouteChildren {
   ChatLazyRoute: typeof ChatLazyRoute
   DetailsLazyRoute: typeof DetailsLazyRoute
   EmployeeLazyRoute: typeof EmployeeLazyRoute
+  ScheduleLazyRoute: typeof ScheduleLazyRoute
   SettingsLazyRoute: typeof SettingsLazyRoute
   TaskLazyRoute: typeof TaskLazyRoute
 }
@@ -248,6 +269,7 @@ const rootRouteChildren: RootRouteChildren = {
   ChatLazyRoute: ChatLazyRoute,
   DetailsLazyRoute: DetailsLazyRoute,
   EmployeeLazyRoute: EmployeeLazyRoute,
+  ScheduleLazyRoute: ScheduleLazyRoute,
   SettingsLazyRoute: SettingsLazyRoute,
   TaskLazyRoute: TaskLazyRoute,
 }
@@ -269,6 +291,7 @@ export const routeTree = rootRoute
         "/chat",
         "/details",
         "/employee",
+        "/schedule",
         "/settings",
         "/task"
       ]
@@ -293,6 +316,9 @@ export const routeTree = rootRoute
     },
     "/employee": {
       "filePath": "employee.lazy.tsx"
+    },
+    "/schedule": {
+      "filePath": "schedule.lazy.tsx"
     },
     "/settings": {
       "filePath": "settings.lazy.tsx"

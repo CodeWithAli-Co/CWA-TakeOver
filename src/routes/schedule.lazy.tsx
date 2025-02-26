@@ -1,4 +1,4 @@
-import TaskSettings from '@/MyComponents/SettingNavComponents/handlingTasking/tasks'
+import EmployeeSchedule from '@/MyComponents/schedule'
 import { createLazyFileRoute } from '@tanstack/react-router'
 import React from 'react'
 
@@ -6,11 +6,11 @@ import React from 'react'
 function About() {
   return (
     <>
-      <TaskSettings />
+      <EmployeeSchedule />
     </>
   )
 }
 
-export const Route = createLazyFileRoute('/task')({
+export const Route = createLazyFileRoute('/schedule')({
   component: About,
 })
