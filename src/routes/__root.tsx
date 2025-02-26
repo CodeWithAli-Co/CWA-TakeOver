@@ -16,7 +16,10 @@ import { useAppStore } from "../stores/store";
 import PinPage from "@/MyComponents/pinPage";
 import { LoginPage } from "@/MyComponents/login";
 import { SignUpPage } from "@/MyComponents/signup";
-import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
+import {
+  SidebarProvider,
+  SidebarTrigger,
+} from "@/components/ui/shadcnComponents/sidebar";
 import { AppSidebar } from "@/components/app-sidebar";
 import supabase from "@/MyComponents/supabase";
 import { useEffect } from "react";

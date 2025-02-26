@@ -1,7 +1,12 @@
 import React from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Progress } from "@/components/ui/progress";
-import { Badge } from "@/components/ui/badge";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/shadcnComponents/card";
+import { Progress } from "@/components/ui/shadcnComponents/progress";
+import { Badge } from "@/components/ui/shadcnComponents/badge";
 import { useEffect } from "react";
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
@@ -11,7 +16,7 @@ import supabase from "../supabase";
 // Free tier limit is 500MB
 const STORAGE_LIMIT = 500;
 // Tier of Supabase
-const TIER = 'Free';
+const TIER = "Free";
 
 interface StorageData {
   used: number;
@@ -24,18 +29,18 @@ export const StorageUsageChart = () => {
   const { DBUsed, setDBSize } = useAppStore();
   useEffect(() => {
     async function getDBUsage() {
-      const { data, error } = await supabase.rpc('get_dbsize')
+      const { data, error } = await supabase.rpc("get_dbsize");
       if (error) {
-        console.log('Error getting DB Size: ', error.message)
+        console.log("Error getting DB Size: ", error.message);
       }
-      let size: string = data.toString()
-      if (size.includes(' MB')) {
-        size = size.replace(' MB', '').trim();
-      } else if (size.includes(' GB')) {
-        size = size.replace(' GB', '').trim();
+      let size: string = data.toString();
+      if (size.includes(" MB")) {
+        size = size.replace(" MB", "").trim();
+      } else if (size.includes(" GB")) {
+        size = size.replace(" GB", "").trim();
       }
-      let newSize = Number(size)
-      setDBSize(newSize)
+      let newSize = Number(size);
+      setDBSize(newSize);
     }
 
     // async function getDiskUsage() {
@@ -55,47 +60,45 @@ export const StorageUsageChart = () => {
 
     getDBUsage();
     // getDiskUsage();
-  }, [])
+  }, []);
 
-    const [width, setWidth] = useState(0);
-    const storageData: StorageData = {
-      used: DBUsed, // Example value, replace with actual data
-      limit: STORAGE_LIMIT,
-      percentage: (DBUsed / STORAGE_LIMIT) * 100, // Example calculation
-    };
-  
-    // Format to show appropriate units (MB/GB)
-    const formatStorage = (value: number) => {
-      if (value >= STORAGE_LIMIT) {
-        return `${(value / STORAGE_LIMIT).toFixed(1)}GB`;
-      }
-      return `${Math.round(value)}MB`;
-    };
+  const [width, setWidth] = useState(0);
+  const storageData: StorageData = {
+    used: DBUsed, // Example value, replace with actual data
+    limit: STORAGE_LIMIT,
+    percentage: (DBUsed / STORAGE_LIMIT) * 100, // Example calculation
+  };
 
-    // Format to show appropriate units (MB/GB) for Limit
-    const formatStorageLimit = (limit: number) => {
-      if (limit >= 1000) {
-        return `${(limit / 1000).toFixed(1)}GB`;
-      }
-      return `${Math.round(limit)}MB`;
-    };
-    
-    // Using setTimeout so states are up-to-date
-    setTimeout(() => {
-        // Animate the width from 0 to the actual percentage
-      setWidth(storageData.percentage);
-    }, 500);
-// animation for the bar loadidng
+  // Format to show appropriate units (MB/GB)
+  const formatStorage = (value: number) => {
+    if (value >= STORAGE_LIMIT) {
+      return `${(value / STORAGE_LIMIT).toFixed(1)}GB`;
+    }
+    return `${Math.round(value)}MB`;
+  };
 
+  // Format to show appropriate units (MB/GB) for Limit
+  const formatStorageLimit = (limit: number) => {
+    if (limit >= 1000) {
+      return `${(limit / 1000).toFixed(1)}GB`;
+    }
+    return `${Math.round(limit)}MB`;
+  };
+
+  // Using setTimeout so states are up-to-date
+  setTimeout(() => {
+    // Animate the width from 0 to the actual percentage
+    setWidth(storageData.percentage);
+  }, 500);
+  // animation for the bar loadidng
 
   return (
-    
     <Card className="bg-black/40 border-red-900/30">
       <CardHeader>
         <div className="flex items-center justify-between">
           <CardTitle className="text-amber-50">Storage Usage</CardTitle>
-          <Badge 
-            variant="outline" 
+          <Badge
+            variant="outline"
             className="bg-red-950/50 text-red-400 border-red-900/50"
           >
             {storageData.percentage.toFixed(1)}% Used
@@ -107,23 +110,23 @@ export const StorageUsageChart = () => {
           {/* Usage Display */}
           <div className="flex justify-between text-sm">
             <span className="text-amber-50/70">
-              {formatStorage(storageData.used)} of {formatStorageLimit(storageData.limit)}
+              {formatStorage(storageData.used)} of{" "}
+              {formatStorageLimit(storageData.limit)}
             </span>
             <span className="text-amber-50/70">
               {formatStorage(STORAGE_LIMIT - storageData.used)} remaining
             </span>
           </div>
 
-        
           {/* Animated Progress Bar */}
           <div className="h-8 w-full bg-black/60 rounded-lg border border-red-900/30 p-1">
             <motion.div
               initial={{ width: "0%" }}
               animate={{ width: `${width}%` }}
-              transition={{ 
+              transition={{
                 duration: 1.5,
                 ease: "easeOut",
-                delay: 0.2
+                delay: 0.2,
               }}
               className="h-full bg-gradient-to-r from-red-900 to-red-800 rounded relative overflow-hidden"
             >
@@ -136,7 +139,7 @@ export const StorageUsageChart = () => {
                   ease: "easeInOut",
                   delay: 1,
                   repeat: Infinity,
-                  repeatDelay: 5
+                  repeatDelay: 5,
                 }}
                 className="absolute inset-0 w-1/3 bg-gradient-to-r from-transparent via-white/5 to-transparent transform -skew-x-12"
               />
@@ -144,7 +147,6 @@ export const StorageUsageChart = () => {
               <div className="absolute inset-0 bg-gradient-to-b from-white/5 to-transparent" />
             </motion.div>
           </div>
-
 
           {/* Threshold Indicators */}
           <div className="flex items-center justify-between text-xs">

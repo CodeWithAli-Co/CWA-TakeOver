@@ -7,9 +7,9 @@ import {
   CardDescription,
   CardHeader,
   CardTitle,
-} from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Switch } from "@/components/ui/switch";
+} from "@/components/ui/shadcnComponents/card";
+import { Button } from "@/components/ui/shadcnComponents/button";
+import { Switch } from "@/components/ui/shadcnComponents/switch";
 import { useAppStore } from "@/stores/store";
 import { CWACreds } from "../stores/query";
 import { invoke } from "@tauri-apps/api/core";

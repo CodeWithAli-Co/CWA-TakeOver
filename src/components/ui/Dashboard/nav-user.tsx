@@ -1,6 +1,17 @@
 import React from "react";
-import { BadgeCheck, Bell, ChevronsUpDown, CreditCard, LogOut, Sparkles } from "lucide-react";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import {
+  BadgeCheck,
+  Bell,
+  ChevronsUpDown,
+  CreditCard,
+  LogOut,
+  Sparkles,
+} from "lucide-react";
+import {
+  Avatar,
+  AvatarFallback,
+  AvatarImage,
+} from "@/components/ui/shadcnComponents/avatar";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -9,21 +20,25 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import { SidebarMenu, SidebarMenuButton, SidebarMenuItem, useSidebar } from "@/components/ui/sidebar";
+} from "@/components/ui/shadcnComponents/dropdown-menu";
+import {
+  SidebarMenu,
+  SidebarMenuButton,
+  SidebarMenuItem,
+  useSidebar,
+} from "@/components/ui/shadcnComponents/sidebar";
 import supabase from "@/MyComponents/supabase"; // Import Supabase
 import { ActiveUser } from "@/stores/query"; // Fetch Active User Data
 
 interface NavUserProps {
-  userData : {
-    name: string
-    email: string
-    avatar: string
-  }
+  userData: {
+    name: string;
+    email: string;
+    avatar: string;
+  };
 }
 
-
-export function NavUser({userData}: NavUserProps) {
+export function NavUser({ userData }: NavUserProps) {
   const { isMobile } = useSidebar();
   const { data: activeuser } = ActiveUser();
 
@@ -44,7 +59,7 @@ export function NavUser({userData}: NavUserProps) {
     email: "unknown@example.com",
     avatar: "/public/codewithali_logo.png",
     role: "member",
-    avatarURL: '' // remove this if gives error
+    avatarURL: "", // remove this if gives error
   };
 
   return (
@@ -57,13 +72,19 @@ export function NavUser({userData}: NavUserProps) {
               className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
             >
               <Avatar className="h-8 w-8 rounded-lg">
-                <AvatarImage src={user.avatarURL} alt={user.username} style={{ borderRadius: 50 }} />
+                <AvatarImage
+                  src={user.avatarURL}
+                  alt={user.username}
+                  style={{ borderRadius: 50 }}
+                />
                 <AvatarFallback className="rounded-lg">CWA</AvatarFallback>
               </Avatar>
               <div className="grid flex-1 text-left text-sm leading-tight">
                 <span className="truncate font-semibold">{user.username}</span>
                 <span className="truncate text-xs">
-                  <span className={`roleTag ${user.role === "admin" ? "admin-role" : user.role === "member" ? "member-role" : ""}`}>
+                  <span
+                    className={`roleTag ${user.role === "admin" ? "admin-role" : user.role === "member" ? "member-role" : ""}`}
+                  >
                     {user.role}
                   </span>
                 </span>
@@ -84,9 +105,13 @@ export function NavUser({userData}: NavUserProps) {
                   <AvatarFallback className="rounded-lg">CN</AvatarFallback>
                 </Avatar>
                 <div className="grid flex-1 text-left text-sm leading-tight">
-                  <span className="truncate font-semibold">{user.username}</span>
+                  <span className="truncate font-semibold">
+                    {user.username}
+                  </span>
                   <span className="truncate text-xs">
-                    <span className={`roleTag ${user.role === "admin" ? "admin-role" : user.role === "member" ? "member-role" : ""}`}>
+                    <span
+                      className={`roleTag ${user.role === "admin" ? "admin-role" : user.role === "member" ? "member-role" : ""}`}
+                    >
                       {user.role}
                     </span>
                   </span>

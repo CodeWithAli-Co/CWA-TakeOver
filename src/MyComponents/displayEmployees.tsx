@@ -1,6 +1,6 @@
 import React from "react";
 import { Employees } from "../stores/query";
-import { Skeleton } from "@/components/ui/skeleton";
+import { Skeleton } from "@/components/ui/shadcnComponents/skeleton";
 import "./compAssets/dispEmployees.css";
 import { AddEmployee } from "./subForms/addEmploy";
 import { useEffect, useRef } from "react";

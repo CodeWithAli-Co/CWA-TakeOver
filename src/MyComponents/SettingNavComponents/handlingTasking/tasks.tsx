@@ -1,10 +1,19 @@
 import React, { useEffect, useState } from "react";
-import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { Input } from "@/components/ui/input";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Badge } from "@/components/ui/badge";
-import { Textarea } from "@/components/ui/textarea";
+import {
+  Card,
+  CardHeader,
+  CardTitle,
+  CardContent,
+} from "@/components/ui/shadcnComponents/card";
+import { ScrollArea } from "@/components/ui/shadcnComponents/scroll-area";
+import { Input } from "@/components/ui/shadcnComponents/input";
+import {
+  Tabs,
+  TabsList,
+  TabsTrigger,
+} from "@/components/ui/shadcnComponents/tabs";
+import { Badge } from "@/components/ui/shadcnComponents/badge";
+import { Textarea } from "@/components/ui/shadcnComponents/textarea";
 // import {CreateTaskModal } "@/MyComponents/handlingTasking/CreateTaskModal"
 import { motion, AnimatePresence } from "framer-motion";
 import {

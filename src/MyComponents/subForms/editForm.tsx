@@ -4,12 +4,20 @@ import { invoke } from "@tauri-apps/api/core";
 import { useAppStore } from "@/stores/store";
 import supabase from "../supabase";
 import { AnimatePresence, motion } from "framer-motion";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/shadcnComponents/input";
+import { Label } from "@/components/ui/shadcnComponents/label";
+import { Button } from "@/components/ui/shadcnComponents/button";
 import { X } from "lucide-react";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  RadioGroup,
+  RadioGroupItem,
+} from "@/components/ui/shadcnComponents/radio-group";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/shadcnComponents/card";
 interface Props {
   rowID: number;
 }
@@ -88,17 +96,16 @@ export const EditData = (props: Props) => {
       setDialog("closed");
       form.reset();
     },
-
   });
 
   const handleClose = () => {
     setDialog("closed");
     form.reset();
   };
-  
+
   return (
     <AnimatePresence mode="wait">
-      <motion.div 
+      <motion.div
         className="fixed inset-0 flex items-center justify-center backdrop-blur-sm"
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
@@ -262,8 +269,8 @@ export const EditData = (props: Props) => {
                           className="flex space-x-4"
                         >
                           <div className="flex items-center space-x-2">
-                            <RadioGroupItem 
-                              value="true" 
+                            <RadioGroupItem
+                              value="true"
                               id="active"
                               className="text-red-500 border-red-950/30"
                             />
@@ -272,8 +279,8 @@ export const EditData = (props: Props) => {
                             </Label>
                           </div>
                           <div className="flex items-center space-x-2">
-                            <RadioGroupItem 
-                              value="false" 
+                            <RadioGroupItem
+                              value="false"
                               id="inactive"
                               className="text-red-500 border-red-950/30"
                             />
@@ -286,8 +293,7 @@ export const EditData = (props: Props) => {
                     )}
                   />
                 </div>
-d
-                {/* Submit Button */}
+                d{/* Submit Button */}
                 <form.Subscribe
                   selector={(state) => [state.canSubmit]}
                   children={([canSubmit]) => (

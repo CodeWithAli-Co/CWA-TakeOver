@@ -2,17 +2,22 @@ import React from "react";
 import { createLazyFileRoute } from "@tanstack/react-router";
 import { useAppStore } from "../stores/store";
 import { motion, AnimatePresence } from "framer-motion";
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import { Card, CardContent } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+import {
+  Tabs,
+  TabsList,
+  TabsTrigger,
+  TabsContent,
+} from "@/components/ui/shadcnComponents/tabs";
+import { Card, CardContent } from "@/components/ui/shadcnComponents/card";
+import { Input } from "@/components/ui/shadcnComponents/input";
+import { Label } from "@/components/ui/shadcnComponents/label";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select";
+} from "@/components/ui/shadcnComponents/select";
 import {
   Table,
   TableBody,
@@ -20,9 +25,9 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from "@/components/ui/table";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+} from "@/components/ui/shadcnComponents/table";
+import { Badge } from "@/components/ui/shadcnComponents/badge";
+import { Button } from "@/components/ui/shadcnComponents/button";
 import { Edit2, Trash2, UserPlus } from "lucide-react";
 import { Employees, Interns } from "@/stores/query";
 import supabase from "@/MyComponents/supabase";
@@ -94,10 +99,10 @@ function Employee() {
     <div className="min-h-screen w-full bg-black">
       {/* Header */}
       <div className="bg-gradient-to-r from-red-950 via-red-900 to-red-950 border-b border-red-900/20">
-      <h3 className="text-3xl bg-gradient-to-r from red text-amber-50 font-light pl-10 p-5 pb-0">Users</h3>
-        <div className="max-w-7xl mx-auto px-6 py-4">
-          
-        </div>
+        <h3 className="text-3xl bg-gradient-to-r from red text-amber-50 font-light pl-10 p-5 pb-0">
+          Users
+        </h3>
+        <div className="max-w-7xl mx-auto px-6 py-4"></div>
       </div>
 
       {/* Main Content */}
@@ -250,16 +255,16 @@ function Employee() {
                               >
                                 <Trash2 className="w-4 h-4" />
                               </Button>
-                            <dialog ref={dialogRef}>
-                              <button
-                                type="button"
-                                id="dialog-close2"
-                                onClick={() => closeModal()}
-                              >
-                                X
-                              </button>
-                              <EditEmployee rowID={employee.id} />
-                            </dialog>
+                              <dialog ref={dialogRef}>
+                                <button
+                                  type="button"
+                                  id="dialog-close2"
+                                  onClick={() => closeModal()}
+                                >
+                                  X
+                                </button>
+                                <EditEmployee rowID={employee.id} />
+                              </dialog>
                             </TableCell>
                           </TableRow>
                         ))}

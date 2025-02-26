@@ -1,5 +1,5 @@
 //  was import type * as React from "react"
-import * as React from "react"
+import * as React from "react";
 import {
   AudioWaveform,
   BookOpen,
@@ -12,18 +12,25 @@ import {
   Settings2,
   SquareTerminal,
   MessageCircle,
-  Home, ClipboardList, CalendarDays 
-} from "lucide-react"
+  Home,
+  ClipboardList,
+  CalendarDays,
+} from "lucide-react";
 
-
-import { Sidebar, SidebarContent, SidebarFooter, SidebarHeader, SidebarRail, SidebarTrigger } from "@/components/ui/sidebar"
-import { TeamSwitcher } from "./ui/Dashboard/team-switch"
-import { NavMain } from "./ui/Dashboard/nav-main"
-import { NavProjects } from "./ui/Dashboard/nav-project"
-import { NavUser } from "./ui/Dashboard/nav-user"
+import {
+  Sidebar,
+  SidebarContent,
+  SidebarFooter,
+  SidebarHeader,
+  SidebarRail,
+  SidebarTrigger,
+} from "@/components/ui/shadcnComponents/sidebar";
+import { TeamSwitcher } from "./ui/Dashboard/team-switch";
+import { NavMain } from "./ui/Dashboard/nav-main";
+import { NavProjects } from "./ui/Dashboard/nav-project";
+import { NavUser } from "./ui/Dashboard/nav-user";
 // import { tasks } from "@/MyComponents/SettingNavComponents/taskTypes"
-// import SettingsPage from 
-
+// import SettingsPage from
 
 // This is sample data.
 const data = {
@@ -68,7 +75,6 @@ const data = {
           title: "Users",
           url: "/employee",
         },
-    
       ],
     },
     {
@@ -83,7 +89,7 @@ const data = {
       isActive: false,
       icon: MessageCircle,
     },
-   
+
     {
       title: "Task",
       url: "/task",
@@ -95,12 +101,12 @@ const data = {
       url: "/",
       isActive: false,
       icon: Home,
-    }, 
+    },
     {
       title: "Schedule",
       url: "/schedule",
       isActive: false,
-      icon: CalendarDays ,
+      icon: CalendarDays,
     },
     {
       title: "Settings",
@@ -148,7 +154,7 @@ const data = {
       icon: Map,
     },
   ],
-}
+};
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   return (
@@ -166,5 +172,5 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       </SidebarFooter>
       <SidebarRail />
     </Sidebar>
-  )
+  );
 }

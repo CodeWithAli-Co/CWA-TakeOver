@@ -1,53 +1,70 @@
-import React from "react"
-import { motion, AnimatePresence } from "framer-motion"
-import { 
-  UserCircle, 
-  ClipboardList, 
-  Users2, 
-  Bell, 
-  Shield, 
-  Save, 
-  Undo2, 
+import React from "react";
+import { motion, AnimatePresence } from "framer-motion";
+import {
+  UserCircle,
+  ClipboardList,
+  Users2,
+  Bell,
+  Shield,
+  Save,
+  Undo2,
   Moon,
   Building2,
   LineChart,
   Database,
   Plug,
-  CreditCard
-} from "lucide-react"
-import { Button } from "@/components/ui/button"
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form"
-import { Input } from "@/components/ui/input"
-import { Switch } from "@/components/ui/switch"
-import { Separator } from "@/components/ui/separator"
-import { useForm } from "react-hook-form"
-import { zodResolver } from "@hookform/resolvers/zod"
-import * as z from "zod"
-import { ActiveUser } from "@/stores/query"
+  CreditCard,
+} from "lucide-react";
+import { Button } from "@/components/ui/shadcnComponents/button";
+import {
+  Tabs,
+  TabsList,
+  TabsTrigger,
+  TabsContent,
+} from "@/components/ui/shadcnComponents/tabs";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/shadcnComponents/card";
+import {
+  Form,
+  FormControl,
+  FormDescription,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/shadcnComponents/form";
+import { Input } from "@/components/ui/shadcnComponents/input";
+import { Switch } from "@/components/ui/shadcnComponents/switch";
+import { Separator } from "@/components/ui/shadcnComponents/separator";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import * as z from "zod";
+import { ActiveUser } from "@/stores/query";
 import { DeveloperResourceHub } from "@/MyComponents/HomeDashboard/ResourceHub";
 import { IntegrationsSettings } from "@/MyComponents/SettingNavComponents/integrations";
 import { NotificationSetting } from "@/MyComponents/SettingNavComponents/notification";
 import { CompanySettings } from "@/MyComponents/SettingNavComponents/company";
 
-import UploadAvatar from "./uploadAvatar"
+import UploadAvatar from "./uploadAvatar";
 // import { useLocation } from 'react-router-dom';
 // Replace the URL parameter handling code with:
-import { createLazyFileRoute } from '@tanstack/react-router'
-import TeamsAndProjects from "./SettingNavComponents/TeamProject"
-import SecurityDashboard from "./SettingNavComponents/security"
-import ReportSettings from "./SettingNavComponents/reports"
+import { createLazyFileRoute } from "@tanstack/react-router";
+import TeamsAndProjects from "./SettingNavComponents/TeamProject";
+import SecurityDashboard from "./SettingNavComponents/security";
+import ReportSettings from "./SettingNavComponents/reports";
 
 const formSchema = z.object({
   name: z.string().min(2).max(50),
   emailNotifications: z.boolean(),
   darkMode: z.boolean(),
-})
+});
 
 const settingsTabs = [
-
-
   { value: "profile", label: "Profile Settings", icon: UserCircle },
   { value: "teams", label: "Teams & Projects", icon: Users2 },
   { value: "company", label: "Company", icon: Building2 },
@@ -59,35 +76,36 @@ const settingsTabs = [
   { value: "security", label: "Security & Access Logs", icon: Shield },
 ];
 
-export const Route = createLazyFileRoute('/settings')({
-  component: SettingsPage
-})
+export const Route = createLazyFileRoute("/settings")({
+  component: SettingsPage,
+});
 
 export default function SettingsPage() {
+  // tab reading from sidebar
 
-    // tab reading from sidebar
+  // Replace the URL handling code block with:
+  const searchParams = new URLSearchParams(window.location.search);
+  const [activeTab, setActiveTab] = React.useState(
+    searchParams.get("tab") ?? "profile"
+  );
+  const navigate = Route.useNavigate();
 
- // Replace the URL handling code block with:
- const searchParams = new URLSearchParams(window.location.search)
- const [activeTab, setActiveTab] = React.useState(searchParams.get('tab') ?? 'profile')
- const navigate = Route.useNavigate()
- 
- // Use URL tab or default to "profile"
-//  const [activeTab, setActiveTab] = React.useState(tabFromUrl || "profile");
+  // Use URL tab or default to "profile"
+  //  const [activeTab, setActiveTab] = React.useState(tabFromUrl || "profile");
 
- // Update URL when tab changes
- const handleTabChange = (value: string) => {
-  setActiveTab(value)
-  navigate({ 
-    to: '/settings',
-    // search: {  } // Need to work on this
-  })
-}
-  // 
+  // Update URL when tab changes
+  const handleTabChange = (value: string) => {
+    setActiveTab(value);
+    navigate({
+      to: "/settings",
+      // search: {  } // Need to work on this
+    });
+  };
+  //
 
   // const [activeTab, setActiveTab] = React.useState("profile")
-  const [isSaving, setIsSaving] = React.useState(false)
-  const { data: user } = ActiveUser()
+  const [isSaving, setIsSaving] = React.useState(false);
+  const { data: user } = ActiveUser();
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -96,39 +114,43 @@ export default function SettingsPage() {
       emailNotifications: true,
       darkMode: true,
     },
-  })
+  });
 
   const onSubmit = async (data: z.infer<typeof formSchema>) => {
-    setIsSaving(true)
-    await new Promise((resolve) => setTimeout(resolve, 1000))
-    console.log(data)
-    setIsSaving(false)
-  }
+    setIsSaving(true);
+    await new Promise((resolve) => setTimeout(resolve, 1000));
+    console.log(data);
+    setIsSaving(false);
+  };
 
   const handleReset = () => {
-    form.reset()
-  }
+    form.reset();
+  };
 
   return (
     <div className="min-h-screen bg-black/95 flex justify-center pl-[160px]">
       <div className="w-full px-4 py-8">
         <div className="flex justify-between items-center mb-8">
           <div>
-            <h2 className="text-3xl font-bold tracking-tight text-white">Settings</h2>
-            <p className="text-red-200/60">Manage your account settings and preferences.</p>
+            <h2 className="text-3xl font-bold tracking-tight text-white">
+              Settings
+            </h2>
+            <p className="text-red-200/60">
+              Manage your account settings and preferences.
+            </p>
           </div>
           <div className="flex gap-2">
-            <Button 
-              variant="outline" 
-              onClick={handleReset} 
+            <Button
+              variant="outline"
+              onClick={handleReset}
               disabled={isSaving}
               className="border-red-800/30 text-red-200 hover:bg-red-950/20 hover:text-red-100"
             >
               <Undo2 className="mr-2 h-4 w-4" />
               Reset
             </Button>
-            <Button 
-              onClick={form.handleSubmit(onSubmit)} 
+            <Button
+              onClick={form.handleSubmit(onSubmit)}
               disabled={isSaving}
               className="bg-gradient-to-r from-red-950 to-red-900 hover:from-red-900 hover:to-red-800
                        text-white border border-red-800/30 shadow-lg shadow-red-950/20"
@@ -137,7 +159,11 @@ export default function SettingsPage() {
                 <>
                   <motion.div
                     animate={{ rotate: 360 }}
-                    transition={{ duration: 1, repeat: Number.POSITIVE_INFINITY, ease: "linear" }}
+                    transition={{
+                      duration: 1,
+                      repeat: Number.POSITIVE_INFINITY,
+                      ease: "linear",
+                    }}
                     className="mr-2 h-4 w-4"
                   >
                     <Save className="h-4 w-4" />
@@ -154,7 +180,11 @@ export default function SettingsPage() {
           </div>
         </div>
 
-        <Tabs value={activeTab} onValueChange={handleTabChange} className="space-y-8">
+        <Tabs
+          value={activeTab}
+          onValueChange={handleTabChange}
+          className="space-y-8"
+        >
           <TabsList className="h-12 w-full justify-start space-x-2 bg-black/40 p-1 text-red-200/60 border border-red-950/20">
             {settingsTabs.map((tab) => (
               <TabsTrigger
@@ -180,14 +210,19 @@ export default function SettingsPage() {
               <TabsContent value="profile" className="space-y-4">
                 <Card className="bg-black/60 border-red-950/30 backdrop-blur-sm">
                   <CardHeader>
-                    <CardTitle className="text-white">Profile Settings</CardTitle>
+                    <CardTitle className="text-white">
+                      Profile Settings
+                    </CardTitle>
                     <CardDescription className="text-red-200/60">
                       Manage your profile information and preferences.
                     </CardDescription>
                   </CardHeader>
                   <CardContent>
                     <Form {...form}>
-                      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+                      <form
+                        onSubmit={form.handleSubmit(onSubmit)}
+                        className="space-y-6"
+                      >
                         <FormField
                           control={form.control}
                           name="name"
@@ -198,8 +233,8 @@ export default function SettingsPage() {
                                 Name
                               </FormLabel>
                               <FormControl>
-                                <Input 
-                                  {...field} 
+                                <Input
+                                  {...field}
                                   className="bg-black/40 border-red-950/30 text-white 
                                            focus:border-red-500 focus:ring-red-500/20"
                                 />
@@ -225,12 +260,13 @@ export default function SettingsPage() {
                                   Email Notifications
                                 </FormLabel>
                                 <FormDescription className="text-red-200/60">
-                                  Receive email notifications about account activity.
+                                  Receive email notifications about account
+                                  activity.
                                 </FormDescription>
                               </div>
                               <FormControl>
-                                <Switch 
-                                  checked={field.value} 
+                                <Switch
+                                  checked={field.value}
                                   onCheckedChange={field.onChange}
                                   className="data-[state=checked]:bg-red-900"
                                 />
@@ -254,8 +290,8 @@ export default function SettingsPage() {
                                 </FormDescription>
                               </div>
                               <FormControl>
-                                <Switch 
-                                  checked={field.value} 
+                                <Switch
+                                  checked={field.value}
                                   onCheckedChange={field.onChange}
                                   className="data-[state=checked]:bg-red-900"
                                 />
@@ -265,31 +301,28 @@ export default function SettingsPage() {
                         />
                       </form>
                     </Form>
-                    
+
                     {/* You can also wrap it with anything */}
                     {/* ADD STYLING HERE! NOT INSIDE THE COMPONENT */}
                     <UploadAvatar className="text-white" />
-                    
                   </CardContent>
                 </Card>
               </TabsContent>
 
               <TabsContent value="teams" className="space-y-4">
                 {/* Team and Project setting content here */}
-                 <TeamsAndProjects/>
+                <TeamsAndProjects />
               </TabsContent>
 
               <TabsContent value="company" className="space-y-4 ">
-              
-                  <CardContent>
-                    {/* Add company settings content */}
-                    <CompanySettings />
-                  </CardContent>
-           
+                <CardContent>
+                  {/* Add company settings content */}
+                  <CompanySettings />
+                </CardContent>
               </TabsContent>
 
               <TabsContent value="reports" className="space-y-4">
-                          <ReportSettings/>
+                <ReportSettings />
               </TabsContent>
 
               <TabsContent value="resources" className="space-y-4">
@@ -297,12 +330,10 @@ export default function SettingsPage() {
                   <CardHeader>
                     <CardTitle className="text-white">Resources</CardTitle>
                     <CardDescription className="text-red-200/60">
-                    < DeveloperResourceHub />
+                      <DeveloperResourceHub />
                     </CardDescription>
                   </CardHeader>
-                  <CardContent>
-                    {/* Add resources content */}
-                  </CardContent>
+                  <CardContent>{/* Add resources content */}</CardContent>
                 </Card>
               </TabsContent>
 
@@ -324,7 +355,9 @@ export default function SettingsPage() {
               <TabsContent value="billing" className="space-y-4">
                 <Card className="bg-black/60 border-red-950/30 backdrop-blur-sm">
                   <CardHeader>
-                    <CardTitle className="text-white">Billing & Subscription</CardTitle>
+                    <CardTitle className="text-white">
+                      Billing & Subscription
+                    </CardTitle>
                     <CardDescription className="text-red-200/60">
                       Manage billing information and subscription details.
                     </CardDescription>
@@ -374,7 +407,9 @@ export default function SettingsPage() {
               <TabsContent value="notifications" className="space-y-4">
                 <Card className="bg-black/60 border-red-950/30 backdrop-blur-sm">
                   <CardHeader>
-                    <CardTitle className="text-white">Notification Settings</CardTitle>
+                    <CardTitle className="text-white">
+                      Notification Settings
+                    </CardTitle>
                     <CardDescription className="text-red-200/60">
                       Customize your notification preferences.
                     </CardDescription>
@@ -389,7 +424,9 @@ export default function SettingsPage() {
               <TabsContent value="security" className="space-y-4">
                 <Card className="bg-black/60 border-red-950/30 backdrop-blur-sm">
                   <CardHeader>
-                    <CardTitle className="text-white">Security & Access Logs</CardTitle>
+                    <CardTitle className="text-white">
+                      Security & Access Logs
+                    </CardTitle>
                     <CardDescription className="text-red-200/60">
                       Manage security settings and view access history.
                     </CardDescription>
@@ -405,5 +442,5 @@ export default function SettingsPage() {
         </Tabs>
       </div>
     </div>
-  )
+  );
 }

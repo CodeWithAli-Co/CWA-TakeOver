@@ -2,7 +2,7 @@ import React from "react";
 import { useForm } from "@tanstack/react-form";
 import supabase from "../supabase";
 import { UserPlus } from "lucide-react";
-import { Card, CardContent } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/shadcnComponents/card";
 import { message } from "@tauri-apps/plugin-dialog";
 
 export const AddEmployee = () => {
@@ -20,7 +20,7 @@ export const AddEmployee = () => {
         role: value.Role,
       });
       if (error) {
-        return await message(error.message, { title: 'Error Adding' });
+        return await message(error.message, { title: "Error Adding" });
       }
       form.reset();
     },
@@ -41,8 +41,8 @@ export const AddEmployee = () => {
               name="Username"
               children={(field) => (
                 <div className="flex flex-col space-y-2">
-                  <label 
-                    className="text-amber-50/70 text-sm font-medium" 
+                  <label
+                    className="text-amber-50/70 text-sm font-medium"
                     htmlFor={field.name}
                   >
                     Username
@@ -67,8 +67,8 @@ export const AddEmployee = () => {
               name="Email"
               children={(field) => (
                 <div className="flex flex-col space-y-2">
-                  <label 
-                    className="text-amber-50/70 text-sm font-medium" 
+                  <label
+                    className="text-amber-50/70 text-sm font-medium"
                     htmlFor={field.name}
                   >
                     Email
@@ -93,8 +93,8 @@ export const AddEmployee = () => {
               name="Role"
               children={(field) => (
                 <div className="flex flex-col space-y-2">
-                  <label 
-                    className="text-amber-50/70 text-sm font-medium" 
+                  <label
+                    className="text-amber-50/70 text-sm font-medium"
                     htmlFor={field.name}
                   >
                     Role

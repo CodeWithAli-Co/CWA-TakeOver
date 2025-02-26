@@ -16,21 +16,36 @@ import {
   Trash,
   Plus,
 } from "lucide-react";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Input } from "@/components/ui/input";
-import { Badge } from "@/components/ui/badge";
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import { 
-  Dialog, 
-  DialogContent, 
-  DialogDescription, 
-  DialogFooter, 
-  DialogHeader, 
-  DialogTitle, 
-  DialogTrigger 
-} from "@/components/ui/dialog";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+} from "@/components/ui/shadcnComponents/card";
+import { Button } from "@/components/ui/shadcnComponents/button";
+import {
+  Avatar,
+  AvatarFallback,
+  AvatarImage,
+} from "@/components/ui/shadcnComponents/avatar";
+import { Input } from "@/components/ui/shadcnComponents/input";
+import { Badge } from "@/components/ui/shadcnComponents/badge";
+import {
+  Tabs,
+  TabsList,
+  TabsTrigger,
+  TabsContent,
+} from "@/components/ui/shadcnComponents/tabs";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/shadcnComponents/dialog";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -38,9 +53,9 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { Separator } from "@/components/ui/separator";
+} from "@/components/ui/shadcnComponents/dropdown-menu";
+import { ScrollArea } from "@/components/ui/shadcnComponents/scroll-area";
+import { Separator } from "@/components/ui/shadcnComponents/separator";
 
 // Sample data - replace with real data from your database
 const teams = [
@@ -131,19 +146,19 @@ const StatusBadge = ({ status }) => {
   const variants = {
     "to-do": "bg-blue-500/20 text-blue-400 border-blue-500/30",
     "in-progress": "bg-amber-500/20 text-amber-400 border-amber-500/30",
-    "done": "bg-emerald-500/20 text-emerald-400 border-emerald-500/30",
+    done: "bg-emerald-500/20 text-emerald-400 border-emerald-500/30",
   };
 
   const icons = {
     "to-do": <Clock className="h-3 w-3 mr-1" />,
     "in-progress": <AlertCircle className="h-3 w-3 mr-1" />,
-    "done": <CheckCircle className="h-3 w-3 mr-1" />,
+    done: <CheckCircle className="h-3 w-3 mr-1" />,
   };
 
   const labels = {
     "to-do": "To Do",
     "in-progress": "In Progress",
-    "done": "Completed",
+    done: "Completed",
   };
 
   return (
@@ -192,7 +207,11 @@ const TeamCard = ({ team }) => (
         <h3 className="text-lg font-semibold text-red-200">{team.name}</h3>
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button variant="ghost" size="icon" className="text-red-200/60 hover:text-red-200 hover:bg-red-950/20">
+            <Button
+              variant="ghost"
+              size="icon"
+              className="text-red-200/60 hover:text-red-200 hover:bg-red-950/20"
+            >
               <MoreHorizontal className="h-4 w-4" />
             </Button>
           </DropdownMenuTrigger>
@@ -245,13 +264,15 @@ const ProjectCard = ({ project }) => {
           <StatusBadge status={project.status} />
         </div>
         <p className="text-red-200/60 text-sm mb-4">{project.description}</p>
-        
+
         <div className="space-y-3">
           <div className="flex justify-between text-sm mb-1">
             <span className="text-red-200/70">Team: {project.team}</span>
-            <span className="text-red-200/70">Deadline: {project.deadline}</span>
+            <span className="text-red-200/70">
+              Deadline: {project.deadline}
+            </span>
           </div>
-          
+
           <div>
             <div className="flex justify-between text-sm mb-1">
               <span className="text-red-200/70">Completion</span>
@@ -266,8 +287,8 @@ const ProjectCard = ({ project }) => {
                   project.status === "done"
                     ? "bg-emerald-500/70"
                     : project.completion > 50
-                    ? "bg-amber-500/70"
-                    : "bg-red-500/70"
+                      ? "bg-amber-500/70"
+                      : "bg-red-500/70"
                 }`}
               />
             </div>
@@ -298,7 +319,9 @@ const CreateTeamDialog = () => {
       </DialogTrigger>
       <DialogContent className="bg-black/95 border-red-950/30 text-red-200">
         <DialogHeader>
-          <DialogTitle className="text-red-200 text-xl">Create New Team</DialogTitle>
+          <DialogTitle className="text-red-200 text-xl">
+            Create New Team
+          </DialogTitle>
           <DialogDescription className="text-red-200/60">
             Create a new team and add members to collaborate on projects.
           </DialogDescription>
@@ -306,19 +329,28 @@ const CreateTeamDialog = () => {
         <div className="grid gap-4 py-4">
           <div className="grid gap-2">
             <label className="text-sm text-red-200">Team Name</label>
-            <Input className="bg-black/40 border-red-950/30 text-red-200" placeholder="Enter team name..." />
+            <Input
+              className="bg-black/40 border-red-950/30 text-red-200"
+              placeholder="Enter team name..."
+            />
           </div>
           <div className="grid gap-2">
             <label className="text-sm text-red-200">Description</label>
-            <Input className="bg-black/40 border-red-950/30 text-red-200" placeholder="Team description..." />
+            <Input
+              className="bg-black/40 border-red-950/30 text-red-200"
+              placeholder="Team description..."
+            />
           </div>
           <div className="grid gap-2">
             <label className="text-sm text-red-200">Initial Members</label>
             <div className="flex items-center gap-2">
-              <Input className="bg-black/40 border-red-950/30 text-red-200" placeholder="Search members..." />
-              <Button 
-                size="icon" 
-                variant="outline" 
+              <Input
+                className="bg-black/40 border-red-950/30 text-red-200"
+                placeholder="Search members..."
+              />
+              <Button
+                size="icon"
+                variant="outline"
                 className="border-red-950/30 text-red-200 hover:bg-red-950/20"
               >
                 <Plus className="h-4 w-4" />
@@ -367,7 +399,9 @@ const CreateProjectDialog = () => {
       </DialogTrigger>
       <DialogContent className="bg-black/95 border-red-950/30 text-red-200">
         <DialogHeader>
-          <DialogTitle className="text-red-200 text-xl">Create New Project</DialogTitle>
+          <DialogTitle className="text-red-200 text-xl">
+            Create New Project
+          </DialogTitle>
           <DialogDescription className="text-red-200/60">
             Add a new project and assign it to a team.
           </DialogDescription>
@@ -375,19 +409,31 @@ const CreateProjectDialog = () => {
         <div className="grid gap-4 py-4">
           <div className="grid gap-2">
             <label className="text-sm text-red-200">Project Name</label>
-            <Input className="bg-black/40 border-red-950/30 text-red-200" placeholder="Enter project name..." />
+            <Input
+              className="bg-black/40 border-red-950/30 text-red-200"
+              placeholder="Enter project name..."
+            />
           </div>
           <div className="grid gap-2">
             <label className="text-sm text-red-200">Description</label>
-            <Input className="bg-black/40 border-red-950/30 text-red-200" placeholder="Project description..." />
+            <Input
+              className="bg-black/40 border-red-950/30 text-red-200"
+              placeholder="Project description..."
+            />
           </div>
           <div className="grid gap-2">
             <label className="text-sm text-red-200">Assign Team</label>
-            <Input className="bg-black/40 border-red-950/30 text-red-200" placeholder="Select team..." />
+            <Input
+              className="bg-black/40 border-red-950/30 text-red-200"
+              placeholder="Select team..."
+            />
           </div>
           <div className="grid gap-2">
             <label className="text-sm text-red-200">Deadline</label>
-            <Input className="bg-black/40 border-red-950/30 text-red-200" type="date" />
+            <Input
+              className="bg-black/40 border-red-950/30 text-red-200"
+              type="date"
+            />
           </div>
         </div>
         <DialogFooter>
@@ -430,12 +476,20 @@ const TeamsAndProjects = () => {
               </CardDescription>
             </div>
             <div className="flex items-center gap-2">
-              {activeTab === "teams" ? <CreateTeamDialog /> : <CreateProjectDialog />}
+              {activeTab === "teams" ? (
+                <CreateTeamDialog />
+              ) : (
+                <CreateProjectDialog />
+              )}
             </div>
           </div>
         </CardHeader>
         <CardContent>
-          <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
+          <Tabs
+            value={activeTab}
+            onValueChange={setActiveTab}
+            className="space-y-6"
+          >
             <div className="flex justify-between items-center">
               <TabsList className="bg-black/40 border border-red-950/20">
                 <TabsTrigger

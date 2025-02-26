@@ -2,7 +2,7 @@ import React from "react";
 import { useForm } from "@tanstack/react-form";
 import supabase from "../supabase";
 import { useAppStore } from "@/stores/store";
-import { Card, CardContent } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/shadcnComponents/card";
 import { UserPlus } from "lucide-react";
 
 interface Props {
@@ -43,7 +43,7 @@ export const EditEmployee = (props: Props) => {
         if (error) return console.log("Role Error:", error.message);
       }
 
-      setDialog('closed');
+      setDialog("closed");
       form.reset();
     },
   });
@@ -63,8 +63,8 @@ export const EditEmployee = (props: Props) => {
               name="Username"
               children={(field) => (
                 <div className="flex flex-col space-y-2">
-                  <label 
-                    className="text-amber-50/70 text-sm font-medium" 
+                  <label
+                    className="text-amber-50/70 text-sm font-medium"
                     htmlFor={field.name}
                   >
                     Username
@@ -89,8 +89,8 @@ export const EditEmployee = (props: Props) => {
               name="Email"
               children={(field) => (
                 <div className="flex flex-col space-y-2">
-                  <label 
-                    className="text-amber-50/70 text-sm font-medium" 
+                  <label
+                    className="text-amber-50/70 text-sm font-medium"
                     htmlFor={field.name}
                   >
                     Email
@@ -115,15 +115,15 @@ export const EditEmployee = (props: Props) => {
               name="Role"
               children={(field) => (
                 <div className="flex flex-col space-y-2">
-                  <label 
-                    className="text-amber-50/70 text-sm font-medium" 
+                  <label
+                    className="text-amber-50/70 text-sm font-medium"
                     htmlFor={field.name}
                   >
                     Role
                   </label>
                   <select
                     name={field.name}
-                    defaultValue={'Member'}
+                    defaultValue={"Member"}
                     className="w-full px-3 py-2 bg-black/40 border border-red-900/30 text-amber-50 rounded-lg
                              focus:border-red-500 focus:outline-none hover:bg-black/60 transition-colors"
                     onChange={(e) => field.handleChange(e.target.value)}

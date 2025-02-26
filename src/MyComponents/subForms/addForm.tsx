@@ -5,15 +5,23 @@ import { invoke } from "@tauri-apps/api/core";
 import { useAppStore } from "@/stores/store";
 import { motion, AnimatePresence } from "framer-motion";
 import { X } from "lucide-react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Button } from "@/components/ui/button";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/shadcnComponents/card";
+import { Input } from "@/components/ui/shadcnComponents/input";
+import { Label } from "@/components/ui/shadcnComponents/label";
+import { Button } from "@/components/ui/shadcnComponents/button";
+import {
+  RadioGroup,
+  RadioGroupItem,
+} from "@/components/ui/shadcnComponents/radio-group";
 
 export const AddData = () => {
   const { setDialog } = useAppStore();
-  
+
   const form = useForm({
     defaultValues: {
       platformName: "",
@@ -40,7 +48,7 @@ export const AddData = () => {
         });
         if (error) return console.log(error.message);
       });
-  
+
       handleClose();
     },
   });
@@ -52,7 +60,7 @@ export const AddData = () => {
 
   return (
     <AnimatePresence mode="wait">
-      <motion.div 
+      <motion.div
         className="fixed inset-0 flex items-center justify-center backdrop-blur-sm"
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
@@ -216,8 +224,8 @@ export const AddData = () => {
                           className="flex space-x-4"
                         >
                           <div className="flex items-center space-x-2">
-                            <RadioGroupItem 
-                              value="true" 
+                            <RadioGroupItem
+                              value="true"
                               id="active"
                               className="text-red-500 border-red-950/30"
                             />
@@ -226,8 +234,8 @@ export const AddData = () => {
                             </Label>
                           </div>
                           <div className="flex items-center space-x-2">
-                            <RadioGroupItem 
-                              value="false" 
+                            <RadioGroupItem
+                              value="false"
                               id="inactive"
                               className="text-red-500 border-red-950/30"
                             />

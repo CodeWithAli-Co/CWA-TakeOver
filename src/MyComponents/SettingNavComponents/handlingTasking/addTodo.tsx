@@ -1,4 +1,4 @@
-import { Button } from "@/components/ui/button";
+import { Button } from "@/components/ui/shadcnComponents/button";
 import {
   Dialog,
   DialogContent,
@@ -7,17 +7,17 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
-} from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+} from "@/components/ui/shadcnComponents/dialog";
+import { Input } from "@/components/ui/shadcnComponents/input";
+import { Label } from "@/components/ui/shadcnComponents/label";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select";
-import { Textarea } from "@/components/ui/textarea";
+} from "@/components/ui/shadcnComponents/select";
+import { Textarea } from "@/components/ui/shadcnComponents/textarea";
 import Capitalize from "@/MyComponents/capitalize";
 import { MultiSelectField, Option } from "@/MyComponents/multiselectField";
 import supabase from "@/MyComponents/supabase";
@@ -67,7 +67,7 @@ export const AddTodo = (props: Users) => {
       const priorityOrderMap = {
         low: 1,
         medium: 2,
-        high: 3
+        high: 3,
       };
 
       try {
@@ -77,7 +77,8 @@ export const AddTodo = (props: Users) => {
           label: value.label,
           status: value.status,
           priority: value.priority,
-          priorityOrder: priorityOrderMap[value.priority as keyof typeof priorityOrderMap],
+          priorityOrder:
+            priorityOrderMap[value.priority as keyof typeof priorityOrderMap],
           assignee: newOption,
           deadline: value.deadline,
         });
@@ -118,7 +119,7 @@ export const AddTodo = (props: Users) => {
           Create Task
         </Button>
       </DialogTrigger>
-      <DialogContent 
+      <DialogContent
         className="sm:max-w-[600px] bg-black/95 border-red-950/30 
         shadow-2xl shadow-red-950/40 rounded-xl overflow-hidden"
       >
@@ -145,7 +146,10 @@ export const AddTodo = (props: Users) => {
               name="title"
               children={(field) => (
                 <div className="grid gap-2">
-                  <Label htmlFor={field.name} className="text-red-200 flex items-center gap-2">
+                  <Label
+                    htmlFor={field.name}
+                    className="text-red-200 flex items-center gap-2"
+                  >
                     <Tags className="w-4 h-4 text-red-400" />
                     Title
                   </Label>
@@ -199,22 +203,30 @@ export const AddTodo = (props: Users) => {
                       value={field.state.value}
                       onValueChange={(value) => field.handleChange(value)}
                     >
-                      <SelectTrigger 
+                      <SelectTrigger
                         className="bg-black/40 border-red-950/30 
                         text-red-200 focus:border-red-700 
                         focus:ring-2 focus:ring-red-900/50"
                       >
                         <SelectValue placeholder="Select label" />
                       </SelectTrigger>
-                      <SelectContent 
+                      <SelectContent
                         className="bg-black/95 border-red-950/30 
                         text-red-200"
                       >
-                        {["Personal", "Global", "Intern", "Marketing Specialist", 
-                          "Admin", "Project Manager", "COO", "CEO"].map((label) => (
-                          <SelectItem 
-                            key={label} 
-                            value={label} 
+                        {[
+                          "Personal",
+                          "Global",
+                          "Intern",
+                          "Marketing Specialist",
+                          "Admin",
+                          "Project Manager",
+                          "COO",
+                          "CEO",
+                        ].map((label) => (
+                          <SelectItem
+                            key={label}
+                            value={label}
                             className="text-red-200 
                             hover:bg-red-950/30 focus:bg-red-950/40"
                           >
@@ -227,45 +239,48 @@ export const AddTodo = (props: Users) => {
                 )}
               />
 
-                {/* status */}
-                <form.Field
-                    name="status"
-                    children={(field) => (
-                      <div className="grid gap-2">
-                        <Label htmlFor={field.name} className="text-red-200">
-                          Status
-                        </Label>
-                        <Select
-                          value={field.state.value}
-                          onValueChange={(value) => field.handleChange(value)}
-                        >
-                          <SelectTrigger 
-                            className="bg-black/40 border-red-950/30 
+              {/* status */}
+              <form.Field
+                name="status"
+                children={(field) => (
+                  <div className="grid gap-2">
+                    <Label htmlFor={field.name} className="text-red-200">
+                      Status
+                    </Label>
+                    <Select
+                      value={field.state.value}
+                      onValueChange={(value) => field.handleChange(value)}
+                    >
+                      <SelectTrigger
+                        className="bg-black/40 border-red-950/30 
                             text-red-200 focus:border-red-700 
                             focus:ring-2 focus:ring-red-900/50"
-                          >
-                            <SelectValue placeholder="Select status" />
-                          </SelectTrigger>
-                          <SelectContent 
-                            className="bg-black/95 border-red-950/30 
+                      >
+                        <SelectValue placeholder="Select status" />
+                      </SelectTrigger>
+                      <SelectContent
+                        className="bg-black/95 border-red-950/30 
                             text-red-200"
-                          >
-                            {["to-do", "in-progress", "done"].map((status) => (
-                              <SelectItem 
-                                key={status} 
-                                value={status} 
-                                className="text-red-200 
+                      >
+                        {["to-do", "in-progress", "done"].map((status) => (
+                          <SelectItem
+                            key={status}
+                            value={status}
+                            className="text-red-200 
                                 hover:bg-red-950/30 focus:bg-red-950/40"
-                              >
-                                {status === "to-do" ? "To Do" : 
-                                status === "in-progress" ? "In Progress" : "Done"}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
-                    )}
-                  />
+                          >
+                            {status === "to-do"
+                              ? "To Do"
+                              : status === "in-progress"
+                                ? "In Progress"
+                                : "Done"}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
+              />
               <form.Field
                 name="priority"
                 children={(field) => (
@@ -277,25 +292,26 @@ export const AddTodo = (props: Users) => {
                       value={field.state.value}
                       onValueChange={(value) => field.handleChange(value)}
                     >
-                      <SelectTrigger 
+                      <SelectTrigger
                         className="bg-black/40 border-red-950/30 
                         text-red-200 focus:border-red-700 
                         focus:ring-2 focus:ring-red-900/50"
                       >
                         <SelectValue placeholder="Select priority" />
                       </SelectTrigger>
-                      <SelectContent 
+                      <SelectContent
                         className="bg-black/95 border-red-950/30 
                         text-red-200"
                       >
                         {["low", "medium", "high"].map((priority) => (
-                          <SelectItem 
-                            key={priority} 
-                            value={priority} 
+                          <SelectItem
+                            key={priority}
+                            value={priority}
                             className="text-red-200 
                             hover:bg-red-950/30 focus:bg-red-950/40"
                           >
-                            {priority.charAt(0).toUpperCase() + priority.slice(1)}
+                            {priority.charAt(0).toUpperCase() +
+                              priority.slice(1)}
                           </SelectItem>
                         ))}
                       </SelectContent>
