@@ -1,8 +1,9 @@
 import React from "react";
 import { useForm } from "@tanstack/react-form";
-import { useAppStore } from "../stores/store";
-import supabase from "./supabase";
+
 import { useState } from "react";
+import { useAppStore } from "@/stores/store";
+import supabase from "../supabase";
 
 export const SignUpPage = () => {
   const { setIsLoggedIn } = useAppStore();

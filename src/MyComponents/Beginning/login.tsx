@@ -1,10 +1,11 @@
 import React from "react";
 import { useForm } from "@tanstack/react-form";
-import { useAppStore } from "../stores/store";
+
 import { useRouter } from "@tanstack/react-router"; // Correct usage
-import supabase from "./supabase";
-import { SignUpPage } from "@/MyComponents/signup";
+
 import cwa_logo_full from "../assets/codewithali_logo.png"; // Add this line to import the logo
+import { useAppStore } from "@/stores/store";
+import supabase from "../supabase";
 
 export const LoginPage = () => {
   const { setIsLoggedIn } = useAppStore();

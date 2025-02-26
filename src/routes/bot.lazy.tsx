@@ -1,8 +1,8 @@
 import React from "react";
-import api from "@/MyComponents/botApi";
+import api from "@/Api/botApi";
 import { createLazyFileRoute } from "@tanstack/react-router";
 import { create } from "zustand";
-import "../assets/bot.css";
+// import "../assets/bot.css";
 import {
   Card,
   CardHeader,

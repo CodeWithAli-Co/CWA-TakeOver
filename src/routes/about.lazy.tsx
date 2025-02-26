@@ -1,5 +1,5 @@
 import React from "react";
-import Welcome from '@/MyComponents/welcome'
+import Welcome from '@/MyComponents/Beginning/welcome'
 import { createLazyFileRoute } from '@tanstack/react-router'
 
 

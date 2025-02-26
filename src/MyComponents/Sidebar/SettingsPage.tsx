@@ -49,14 +49,11 @@ import { DeveloperResourceHub } from "@/MyComponents/HomeDashboard/ResourceHub";
 import { IntegrationsSettings } from "@/MyComponents/SettingNavComponents/integrations";
 import { NotificationSetting } from "@/MyComponents/SettingNavComponents/notification";
 import { CompanySettings } from "@/MyComponents/SettingNavComponents/company";
-
-import UploadAvatar from "./uploadAvatar";
-// import { useLocation } from 'react-router-dom';
-// Replace the URL parameter handling code with:
 import { createLazyFileRoute } from "@tanstack/react-router";
-import TeamsAndProjects from "./SettingNavComponents/TeamProject";
-import SecurityDashboard from "./SettingNavComponents/security";
-import ReportSettings from "./SettingNavComponents/reports";
+import UploadAvatar from "../Reusables/uploadAvatar";
+import ReportSettings from "../SettingNavComponents/reports";
+import TeamsAndProjects from "../SettingNavComponents/TeamProject";
+
 
 const formSchema = z.object({
   name: z.string().min(2).max(50),

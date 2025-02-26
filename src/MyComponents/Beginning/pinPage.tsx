@@ -1,11 +1,12 @@
 import { useForm } from '@tanstack/react-form';
-import './compAssets/pinPage.css';
+import '../compAssets/pinPage.css';
 import React from 'react';
 
-import { useAppStore } from '../stores/store';
 import cwa_logo_full from '/codewithali-removebg-preview.png';
 import { useEffect, useState } from 'react';
-import OrionAnimation from '../MyComponents/OrionAnimation'; // Make sure path is correct
+import { useAppStore } from '@/stores/store';
+import OrionAnimation from './OrionAnimation';
+
 
 export default function PinPage() {
   const { setPinCheck, setIsLoggedIn } = useAppStore();

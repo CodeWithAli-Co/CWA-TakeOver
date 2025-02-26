@@ -42,7 +42,7 @@ import {
   Archive,
   Inbox,
 } from "lucide-react";
-import { ChatInputBox } from "@/MyComponents/chatInput";
+import { ChatInputBox } from "@/MyComponents/Reusables/chatInput";
 import {
   ActiveUser,
   DMGroups,

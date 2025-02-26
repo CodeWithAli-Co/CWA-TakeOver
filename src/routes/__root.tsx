@@ -13,9 +13,7 @@ import broadcast_icon from "/broadcast_icon.svg";
 import "../assets/sidebar.css";
 import { sendNotification } from "@tauri-apps/plugin-notification";
 import { useAppStore } from "../stores/store";
-import PinPage from "@/MyComponents/pinPage";
-import { LoginPage } from "@/MyComponents/login";
-import { SignUpPage } from "@/MyComponents/signup";
+
 import {
   SidebarProvider,
   SidebarTrigger,
@@ -23,6 +21,9 @@ import {
 import { AppSidebar } from "@/components/app-sidebar";
 import supabase from "@/MyComponents/supabase";
 import { useEffect } from "react";
+import LoginPage from "@/MyComponents/Beginning/login";
+import PinPage from "@/MyComponents/Beginning/pinPage";
+import { SignUpPage } from "@/MyComponents/Beginning/signup";
 // import { AppSidebar } from "@/MyComponents/Dashboard/app-sidebar";
 
 // Import Sidebar Components

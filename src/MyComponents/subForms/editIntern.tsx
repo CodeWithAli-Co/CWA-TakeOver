@@ -41,7 +41,7 @@ export const EditIntern = (props: Props) => {
         if (error) return console.log("Role Error:", error.message);
       }
 
-      setDialog('closed');
+      setDialog("closed");
       form.reset();
     },
   });
@@ -62,7 +62,9 @@ export const EditIntern = (props: Props) => {
               children={(field) => {
                 return (
                   <>
-                    <label className="form-label" htmlFor={field.name}>Username:</label>
+                    <label className="form-label" htmlFor={field.name}>
+                      Username:
+                    </label>
                     <input
                       name={field.name}
                       type="text"
@@ -80,7 +82,9 @@ export const EditIntern = (props: Props) => {
               children={(field) => {
                 return (
                   <>
-                    <label className="form-label" htmlFor={field.name}>Email:</label>
+                    <label className="form-label" htmlFor={field.name}>
+                      Email:
+                    </label>
                     <input
                       name={field.name}
                       type="email"
@@ -98,9 +102,17 @@ export const EditIntern = (props: Props) => {
               children={(field) => {
                 return (
                   <>
-                    <select name={field.name} className="form-select" onChange={(e) => field.handleChange(e.target.value)}>
-                      <option value="member" className="form-option">Member</option>
-                      <option value="admin" className="form-option">Admin</option>
+                    <select
+                      name={field.name}
+                      className="form-select"
+                      onChange={(e) => field.handleChange(e.target.value)}
+                    >
+                      <option value="member" className="form-option">
+                        Member
+                      </option>
+                      <option value="admin" className="form-option">
+                        Admin
+                      </option>
                     </select>
                   </>
                 );

@@ -18,8 +18,11 @@ import {
   SelectValue,
 } from "@/components/ui/shadcnComponents/select";
 import { Textarea } from "@/components/ui/shadcnComponents/textarea";
-import Capitalize from "@/MyComponents/capitalize";
-import { MultiSelectField, Option } from "@/MyComponents/multiselectField";
+import Capitalize from "@/MyComponents/Reusables/capitalize";
+import {
+  MultiSelectField,
+  Option,
+} from "@/MyComponents/Reusables/multiselectField";
 import supabase from "@/MyComponents/supabase";
 import { useMultiSelectStore } from "@/stores/store";
 import { useForm } from "@tanstack/react-form";

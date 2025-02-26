@@ -1,4 +1,4 @@
-import EmployeeSchedule from '@/MyComponents/schedule'
+import EmployeeSchedule from '@/MyComponents/Sidebar/schedule'
 import { createLazyFileRoute } from '@tanstack/react-router'
 import React from 'react'
 
