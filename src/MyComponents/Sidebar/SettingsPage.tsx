@@ -14,6 +14,7 @@ import {
   Database,
   Plug,
   CreditCard,
+  Menu,
 } from "lucide-react";
 import { Button } from "@/components/ui/shadcnComponents/button";
 import {
@@ -41,6 +42,12 @@ import {
 import { Input } from "@/components/ui/shadcnComponents/input";
 import { Switch } from "@/components/ui/shadcnComponents/switch";
 import { Separator } from "@/components/ui/shadcnComponents/separator";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/shadcnComponents/dropdown-menu";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -53,7 +60,6 @@ import { createLazyFileRoute } from "@tanstack/react-router";
 import UploadAvatar from "../Reusables/uploadAvatar";
 import ReportSettings from "../SettingNavComponents/reports";
 import TeamsAndProjects from "../SettingNavComponents/TeamProject";
-
 
 const formSchema = z.object({
   name: z.string().min(2).max(50),
@@ -78,42 +84,58 @@ export const Route = createLazyFileRoute("/settings")({
 });
 
 export default function SettingsPage() {
-  // tab reading from sidebar
-
-  // Replace the URL handling code block with:
   const searchParams = new URLSearchParams(window.location.search);
   const [activeTab, setActiveTab] = React.useState(
     searchParams.get("tab") ?? "profile"
   );
   const navigate = Route.useNavigate();
+  const [isSaving, setIsSaving] = React.useState(false);
+  const { data: user } = ActiveUser();
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = React.useState(false);
 
-  // Use URL tab or default to "profile"
-  //  const [activeTab, setActiveTab] = React.useState(tabFromUrl || "profile");
+  // Handle screen width for responsive design
+  const [windowWidth, setWindowWidth] = React.useState(
+    typeof window !== "undefined" ? window.innerWidth : 0
+  );
+
+  React.useEffect(() => {
+    const handleResize = () => {
+      setWindowWidth(window.innerWidth);
+    };
+
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
+
+  const isMobile = windowWidth < 768;
+  const isTablet = windowWidth >= 768 && windowWidth < 1024;
+  const isDesktop = windowWidth >= 1024;
+  const is4K = windowWidth >= 2560;
 
   // Update URL when tab changes
-  const handleTabChange = (value: string) => {
+  const handleTabChange = (value) => {
     setActiveTab(value);
     navigate({
       to: "/settings",
-      // search: {  } // Need to work on this
+      // search: { tab: value } // Uncomment to add tab to URL
     });
+    
+    // Close mobile menu after selection on mobile
+    if (isMobile) {
+      setIsMobileMenuOpen(false);
+    }
   };
-  //
 
-  // const [activeTab, setActiveTab] = React.useState("profile")
-  const [isSaving, setIsSaving] = React.useState(false);
-  const { data: user } = ActiveUser();
-
-  const form = useForm<z.infer<typeof formSchema>>({
+  const form = useForm({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      name: user![0].username,
+      name: user ? user[0].username : "",
       emailNotifications: true,
       darkMode: true,
     },
   });
 
-  const onSubmit = async (data: z.infer<typeof formSchema>) => {
+  const onSubmit = async (data) => {
     setIsSaving(true);
     await new Promise((resolve) => setTimeout(resolve, 1000));
     console.log(data);
@@ -125,318 +147,350 @@ export default function SettingsPage() {
   };
 
   return (
-    <div className="min-h-screen bg-black/95 flex justify-center pl-[160px]">
-      <div className="w-full px-4 py-8">
-        <div className="flex justify-between items-center mb-8">
-          <div>
-            <h2 className="text-3xl font-bold tracking-tight text-white">
-              Settings
-            </h2>
-            <p className="text-red-200/60">
-              Manage your account settings and preferences.
-            </p>
-          </div>
-          <div className="flex gap-2">
-            <Button
-              variant="outline"
-              onClick={handleReset}
-              disabled={isSaving}
-              className="border-red-800/30 text-red-200 hover:bg-red-950/20 hover:text-red-100"
-            >
-              <Undo2 className="mr-2 h-4 w-4" />
-              Reset
-            </Button>
-            <Button
-              onClick={form.handleSubmit(onSubmit)}
-              disabled={isSaving}
-              className="bg-gradient-to-r from-red-950 to-red-900 hover:from-red-900 hover:to-red-800
-                       text-white border border-red-800/30 shadow-lg shadow-red-950/20"
-            >
-              {isSaving ? (
-                <>
-                  <motion.div
-                    animate={{ rotate: 360 }}
-                    transition={{
-                      duration: 1,
-                      repeat: Number.POSITIVE_INFINITY,
-                      ease: "linear",
-                    }}
-                    className="mr-2 h-4 w-4"
-                  >
-                    <Save className="h-4 w-4" />
-                  </motion.div>
-                  Saving...
-                </>
-              ) : (
-                <>
-                  <Save className="mr-2 h-4 w-4" />
-                  Save Changes
-                </>
-              )}
-            </Button>
-          </div>
-        </div>
-
-        <Tabs
-          value={activeTab}
-          onValueChange={handleTabChange}
-          className="space-y-8"
-        >
-          <TabsList className="h-12 w-full justify-start space-x-2 bg-black/40 p-1 text-red-200/60 border border-red-950/20">
-            {settingsTabs.map((tab) => (
-              <TabsTrigger
-                key={tab.value}
-                value={tab.value}
-                className="data-[state=active]:bg-red-950/20 data-[state=active]:text-red-200 
-                         hover:text-red-200 transition-colors duration-200 flex items-center space-x-2 px-3 py-2"
+    // Main container - no padding or position adjustments to respect app layout
+    <div className="min-h-screen bg-black/95 flex">
+      {/* Content container - full width with overflow control */}
+      <div className="w-full max-w-full overflow-x-hidden">
+        <div className="w-full px-4 py-4">
+          {/* Header with title and action buttons */}
+          <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
+            <div>
+              <h2 className="text-2xl md:text-3xl font-bold tracking-tight text-white">
+                Settings
+              </h2>
+              <p className="text-red-200/60 text-sm md:text-base">
+                Manage your account settings and preferences.
+              </p>
+            </div>
+            <div className="flex gap-2 w-full md:w-auto justify-end">
+              <Button
+                variant="outline"
+                onClick={handleReset}
+                disabled={isSaving}
+                size={isMobile ? "sm" : "default"}
+                className="border-red-800/30 text-red-200 hover:bg-red-950/20 hover:text-red-100"
               >
-                <tab.icon className="h-4 w-4" />
-                <span>{tab.label}</span>
-              </TabsTrigger>
-            ))}
-          </TabsList>
+                <Undo2 className="mr-2 h-4 w-4" />
+                {!isMobile && "Reset"}
+              </Button>
+              <Button
+                onClick={form.handleSubmit(onSubmit)}
+                disabled={isSaving}
+                size={isMobile ? "sm" : "default"}
+                className="bg-gradient-to-r from-red-950 to-red-900 hover:from-red-900 hover:to-red-800
+                       text-white border border-red-800/30 shadow-lg shadow-red-950/20"
+              >
+                {isSaving ? (
+                  <>
+                    <motion.div
+                      animate={{ rotate: 360 }}
+                      transition={{
+                        duration: 1,
+                        repeat: Number.POSITIVE_INFINITY,
+                        ease: "linear",
+                      }}
+                      className="mr-2 h-4 w-4"
+                    >
+                      <Save className="h-4 w-4" />
+                    </motion.div>
+                    {!isMobile && "Saving..."}
+                  </>
+                ) : (
+                  <>
+                    <Save className="mr-2 h-4 w-4" />
+                    {!isMobile ? "Save Changes" : "Save"}
+                  </>
+                )}
+              </Button>
+            </div>
+          </div>
 
-          <AnimatePresence mode="wait">
-            <motion.div
-              key={activeTab}
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -20 }}
-              transition={{ duration: 0.2 }}
-            >
-              <TabsContent value="profile" className="space-y-4">
-                <Card className="bg-black/60 border-red-950/30 backdrop-blur-sm">
-                  <CardHeader>
-                    <CardTitle className="text-white">
-                      Profile Settings
-                    </CardTitle>
-                    <CardDescription className="text-red-200/60">
-                      Manage your profile information and preferences.
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <Form {...form}>
-                      <form
-                        onSubmit={form.handleSubmit(onSubmit)}
-                        className="space-y-6"
+          {/* Tabs container */}
+          <Tabs
+            value={activeTab}
+            onValueChange={handleTabChange}
+            className="space-y-4 md:space-y-6"
+          >
+            {/* Mobile dropdown for tabs */}
+            {isMobile && (
+              <div className="w-full mb-4">
+                <DropdownMenu open={isMobileMenuOpen} onOpenChange={setIsMobileMenuOpen}>
+                  <DropdownMenuTrigger asChild>
+                    <Button 
+                      variant="outline" 
+                      className="w-full justify-between bg-black/40 text-red-200/60 border border-red-950/20"
+                    >
+                      <div className="flex items-center">
+                        {(() => {
+                          const activeTabInfo = settingsTabs.find(tab => tab.value === activeTab);
+                          if (activeTabInfo?.icon) {
+                            const IconComponent = activeTabInfo.icon;
+                            return <IconComponent className="mr-2 h-4 w-4" />;
+                          }
+                          return null;
+                        })()}
+                        <span>{settingsTabs.find(tab => tab.value === activeTab)?.label || "Settings"}</span>
+                      </div>
+                      <Menu className="h-4 w-4 ml-2" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent className="w-[94vw] max-w-md bg-black/90 border-red-950/30 text-red-200">
+                    {settingsTabs.map((tab) => (
+                      <DropdownMenuItem 
+                        key={tab.value}
+                        onClick={() => handleTabChange(tab.value)}
+                        className="flex items-center py-2 px-3 hover:bg-red-950/20 cursor-pointer"
                       >
-                        <FormField
-                          control={form.control}
-                          name="name"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel className="text-red-200">
-                                <UserCircle className="h-4 w-4 inline mr-2" />
-                                Name
-                              </FormLabel>
-                              <FormControl>
-                                <Input
-                                  {...field}
-                                  className="bg-black/40 border-red-950/30 text-white 
-                                           focus:border-red-500 focus:ring-red-500/20"
-                                />
-                              </FormControl>
-                              <FormDescription className="text-red-200/60">
-                                This is your public display name.
-                              </FormDescription>
-                              <FormMessage className="text-red-500" />
-                            </FormItem>
-                          )}
-                        />
-
-                        <Separator className="border-red-950/20" />
-
-                        <FormField
-                          control={form.control}
-                          name="emailNotifications"
-                          render={({ field }) => (
-                            <FormItem className="flex justify-between items-center space-y-0">
-                              <div>
-                                <FormLabel className="text-red-200">
-                                  <Bell className="h-4 w-4 inline mr-2" />
-                                  Email Notifications
-                                </FormLabel>
-                                <FormDescription className="text-red-200/60">
-                                  Receive email notifications about account
-                                  activity.
-                                </FormDescription>
-                              </div>
-                              <FormControl>
-                                <Switch
-                                  checked={field.value}
-                                  onCheckedChange={field.onChange}
-                                  className="data-[state=checked]:bg-red-900"
-                                />
-                              </FormControl>
-                            </FormItem>
-                          )}
-                        />
-
-                        <FormField
-                          control={form.control}
-                          name="darkMode"
-                          render={({ field }) => (
-                            <FormItem className="flex justify-between items-center space-y-0">
-                              <div>
-                                <FormLabel className="text-red-200">
-                                  <Moon className="h-4 w-4 inline mr-2" />
-                                  Dark Mode
-                                </FormLabel>
-                                <FormDescription className="text-red-200/60">
-                                  Toggle between light and dark mode.
-                                </FormDescription>
-                              </div>
-                              <FormControl>
-                                <Switch
-                                  checked={field.value}
-                                  onCheckedChange={field.onChange}
-                                  className="data-[state=checked]:bg-red-900"
-                                />
-                              </FormControl>
-                            </FormItem>
-                          )}
-                        />
-                      </form>
-                    </Form>
-
-                    {/* You can also wrap it with anything */}
-                    {/* ADD STYLING HERE! NOT INSIDE THE COMPONENT */}
-                    <UploadAvatar className="text-white" />
-                  </CardContent>
-                </Card>
-              </TabsContent>
-
-              <TabsContent value="teams" className="space-y-4">
-                {/* Team and Project setting content here */}
-                <TeamsAndProjects />
-              </TabsContent>
-
-              <TabsContent value="company" className="space-y-4 ">
-                <CardContent>
-                  {/* Add company settings content */}
-                  <CompanySettings />
-                </CardContent>
-              </TabsContent>
-
-              <TabsContent value="reports" className="space-y-4">
-                <ReportSettings />
-              </TabsContent>
-
-              <TabsContent value="resources" className="space-y-4">
-                <Card className="bg-black/60 border-red-950/30 backdrop-blur-sm">
-                  <CardHeader>
-                    <CardTitle className="text-white">Resources</CardTitle>
-                    <CardDescription className="text-red-200/60">
-                      <DeveloperResourceHub />
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent>{/* Add resources content */}</CardContent>
-                </Card>
-              </TabsContent>
-
-              <TabsContent value="integrations" className="space-y-4">
-                <Card className="bg-black/60 border-red-950/30 backdrop-blur-sm">
-                  <CardHeader>
-                    <CardTitle className="text-white">Integrations</CardTitle>
-                    <CardDescription className="text-red-200/60">
-                      Configure and manage third-party integrations.
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    {/* Add integrations content */}
-                    <IntegrationsSettings />
-                  </CardContent>
-                </Card>
-              </TabsContent>
-
-              <TabsContent value="billing" className="space-y-4">
-                <Card className="bg-black/60 border-red-950/30 backdrop-blur-sm">
-                  <CardHeader>
-                    <CardTitle className="text-white">
-                      Billing & Subscription
-                    </CardTitle>
-                    <CardDescription className="text-red-200/60">
-                      Manage billing information and subscription details.
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    {/* Add billing content */}
-
-                    {/*  <Card className="bg-black/40 border-red-900/30 lg:col-span-3">
-            <CardHeader>
-              <CardTitle className="text-amber-50">Billing Overview</CardTitle>
-              <CardDescription className="text-amber-50/70">
-                Current plan and billing information
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <div className="p-4 rounded-lg bg-black/60 border border-red-900/30">
-                  <div className="flex items-center justify-between">
-                    <h3 className="text-sm text-amber-50/70">Current Plan</h3>
-                    <Badge variant="outline" className="bg-red-900/20 text-amber-50">
-                      Enterprise
-                    </Badge>
-                  </div>
-                  <p className="text-2xl font-bold text-amber-50 mt-2">$499/mo</p>
-                </div>
-                <div className="p-4 rounded-lg bg-black/60 border border-red-900/30">
-                  <div className="flex items-center justify-between">
-                    <h3 className="text-sm text-amber-50/70">Next Payment</h3>
-                    <Clock className="h-4 w-4 text-red-500" />
-                  </div>
-                  <p className="text-2xl font-bold text-amber-50 mt-2">15 Days</p>
-                </div>
-                <div className="p-4 rounded-lg bg-black/60 border border-red-900/30">
-                  <div className="flex items-center justify-between">
-                    <h3 className="text-sm text-amber-50/70">Team Size</h3>
-                    <Users className="h-4 w-4 text-red-500" />
-                  </div>
-                  <p className="text-2xl font-bold text-amber-50 mt-2">30 Users</p>
-                </div>
+                        <tab.icon className="mr-2 h-4 w-4" />
+                        <span>{tab.label}</span>
+                      </DropdownMenuItem>
+                    ))}
+                  </DropdownMenuContent>
+                </DropdownMenu>
               </div>
-            </CardContent>
-          </Card> */}
-                  </CardContent>
-                </Card>
-              </TabsContent>
+            )}
 
-              <TabsContent value="notifications" className="space-y-4">
-                <Card className="bg-black/60 border-red-950/30 backdrop-blur-sm">
-                  <CardHeader>
-                    <CardTitle className="text-white">
-                      Notification Settings
-                    </CardTitle>
-                    <CardDescription className="text-red-200/60">
-                      Customize your notification preferences.
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    {/* Add notification settings content */}
-                    <NotificationSetting />
-                  </CardContent>
-                </Card>
-              </TabsContent>
+            {/* Tablet & desktop horizontal tabs with scroll capability */}
+            {!isMobile && (
+              <div className="overflow-x-auto">
+                <TabsList 
+                  className="h-12 w-full justify-start space-x-2 bg-black/40 p-1 text-red-200/60 border border-red-950/20 flex-nowrap"
+                >
+                  {settingsTabs.map((tab) => (
+                    <TabsTrigger
+                      key={tab.value}
+                      value={tab.value}
+                      className="data-[state=active]:bg-red-950/20 data-[state=active]:text-red-200 
+                              hover:text-red-200 transition-colors duration-200 flex items-center space-x-2 px-3 py-2 whitespace-nowrap"
+                    >
+                      <tab.icon className="h-4 w-4" />
+                      <span className={isTablet ? "hidden lg:inline" : ""}>{tab.label}</span>
+                    </TabsTrigger>
+                  ))}
+                </TabsList>
+              </div>
+            )}
 
-              <TabsContent value="security" className="space-y-4">
-                <Card className="bg-black/60 border-red-950/30 backdrop-blur-sm">
-                  <CardHeader>
-                    <CardTitle className="text-white">
-                      Security & Access Logs
-                    </CardTitle>
-                    <CardDescription className="text-red-200/60">
-                      Manage security settings and view access history.
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    {/* Add security settings content */}
-                    {/* <SecurityDashboard/> */}
-                  </CardContent>
-                </Card>
-              </TabsContent>
-            </motion.div>
-          </AnimatePresence>
-        </Tabs>
+            <AnimatePresence mode="wait">
+              <motion.div
+                key={activeTab}
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -20 }}
+                transition={{ duration: 0.2 }}
+              >
+                {/* Profile Settings Tab */}
+                <TabsContent value="profile" className="space-y-4">
+                  <Card className="bg-black/60 border-red-950/30 backdrop-blur-sm">
+                    <CardHeader className="p-4 sm:p-6">
+                      <CardTitle className="text-xl md:text-2xl text-white">
+                        Profile Settings
+                      </CardTitle>
+                      <CardDescription className="text-xs md:text-sm text-red-200/60">
+                        Manage your profile information and preferences.
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent className="p-4 sm:p-6">
+                      <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
+                        <div className="xl:col-span-2">
+                          <Form {...form}>
+                            <form
+                              onSubmit={form.handleSubmit(onSubmit)}
+                              className="space-y-6"
+                            >
+                              <FormField
+                                control={form.control}
+                                name="name"
+                                render={({ field }) => (
+                                  <FormItem>
+                                    <FormLabel className="text-red-200">
+                                      <UserCircle className="h-4 w-4 inline mr-2" />
+                                      Name
+                                    </FormLabel>
+                                    <FormControl>
+                                      <Input
+                                        {...field}
+                                        className="bg-black/40 border-red-950/30 text-white 
+                                                focus:border-red-500 focus:ring-red-500/20"
+                                      />
+                                    </FormControl>
+                                    <FormDescription className="text-xs sm:text-sm text-red-200/60">
+                                      This is your public display name.
+                                    </FormDescription>
+                                    <FormMessage className="text-red-500" />
+                                  </FormItem>
+                                )}
+                              />
+
+                              <Separator className="border-red-950/20" />
+
+                              <FormField
+                                control={form.control}
+                                name="emailNotifications"
+                                render={({ field }) => (
+                                  <FormItem className="flex flex-col sm:flex-row justify-between sm:items-center space-y-2 sm:space-y-0">
+                                    <div>
+                                      <FormLabel className="text-red-200">
+                                        <Bell className="h-4 w-4 inline mr-2" />
+                                        Email Notifications
+                                      </FormLabel>
+                                      <FormDescription className="text-xs sm:text-sm text-red-200/60">
+                                        Receive email notifications about account
+                                        activity.
+                                      </FormDescription>
+                                    </div>
+                                    <FormControl>
+                                      <Switch
+                                        checked={field.value}
+                                        onCheckedChange={field.onChange}
+                                        className="data-[state=checked]:bg-red-900"
+                                      />
+                                    </FormControl>
+                                  </FormItem>
+                                )}
+                              />
+
+                              <FormField
+                                control={form.control}
+                                name="darkMode"
+                                render={({ field }) => (
+                                  <FormItem className="flex flex-col sm:flex-row justify-between sm:items-center space-y-2 sm:space-y-0">
+                                    <div>
+                                      <FormLabel className="text-red-200">
+                                        <Moon className="h-4 w-4 inline mr-2" />
+                                        Dark Mode
+                                      </FormLabel>
+                                      <FormDescription className="text-xs sm:text-sm text-red-200/60">
+                                        Toggle between light and dark mode.
+                                      </FormDescription>
+                                    </div>
+                                    <FormControl>
+                                      <Switch
+                                        checked={field.value}
+                                        onCheckedChange={field.onChange}
+                                        className="data-[state=checked]:bg-red-900"
+                                      />
+                                    </FormControl>
+                                  </FormItem>
+                                )}
+                              />
+                            </form>
+                          </Form>
+                        </div>
+                        
+                        <div className="xl:col-span-1 flex flex-col items-center justify-start">
+                          <UploadAvatar className="text-white" />
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </TabsContent>
+
+                {/* Teams & Projects Tab */}
+                <TabsContent value="teams" className="space-y-4">
+                  <Card className="bg-black/60 border-red-950/30 backdrop-blur-sm p-4 sm:p-6">
+                    <TeamsAndProjects />
+                  </Card>
+                </TabsContent>
+
+                {/* Company Tab */}
+                <TabsContent value="company" className="space-y-4">
+                  <Card className="bg-black/60 border-red-950/30 backdrop-blur-sm p-4 sm:p-6">
+                    <CompanySettings />
+                  </Card>
+                </TabsContent>
+
+                {/* Reports Tab */}
+                <TabsContent value="reports" className="space-y-4">
+                  <Card className="bg-black/60 border-red-950/30 backdrop-blur-sm p-4 sm:p-6">
+                    <ReportSettings />
+                  </Card>
+                </TabsContent>
+
+                {/* Resources Tab */}
+                <TabsContent value="resources" className="space-y-4">
+                  <Card className="bg-black/60 border-red-950/30 backdrop-blur-sm">
+                    <CardHeader className="p-4 sm:p-6">
+                      <CardTitle className="text-xl md:text-2xl text-white">Resources</CardTitle>
+                      <CardDescription className="text-xs md:text-sm text-red-200/60">
+                        Developer resources and documentation.
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent className="p-4 sm:p-6">
+                      <DeveloperResourceHub />
+                    </CardContent>
+                  </Card>
+                </TabsContent>
+
+                {/* Integrations Tab */}
+                <TabsContent value="integrations" className="space-y-4">
+                  <Card className="bg-black/60 border-red-950/30 backdrop-blur-sm">
+                    <CardHeader className="p-4 sm:p-6">
+                      <CardTitle className="text-xl md:text-2xl text-white">Integrations</CardTitle>
+                      <CardDescription className="text-xs md:text-sm text-red-200/60">
+                        Configure and manage third-party integrations.
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent className="p-4 sm:p-6">
+                      <IntegrationsSettings />
+                    </CardContent>
+                  </Card>
+                </TabsContent>
+
+                {/* Billing Tab */}
+                <TabsContent value="billing" className="space-y-4">
+                  <Card className="bg-black/60 border-red-950/30 backdrop-blur-sm">
+                    <CardHeader className="p-4 sm:p-6">
+                      <CardTitle className="text-xl md:text-2xl text-white">
+                        Billing & Subscription
+                      </CardTitle>
+                      <CardDescription className="text-xs md:text-sm text-red-200/60">
+                        Manage billing information and subscription details.
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent className="p-4 sm:p-6">
+                      {/* Billing content goes here */}
+                    </CardContent>
+                  </Card>
+                </TabsContent>
+
+                {/* Notifications Tab */}
+                <TabsContent value="notifications" className="space-y-4">
+                  <Card className="bg-black/60 border-red-950/30 backdrop-blur-sm">
+                    <CardHeader className="p-4 sm:p-6">
+                      <CardTitle className="text-xl md:text-2xl text-white">
+                        Notification Settings
+                      </CardTitle>
+                      <CardDescription className="text-xs md:text-sm text-red-200/60">
+                        Customize your notification preferences.
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent className="p-4 sm:p-6">
+                      <NotificationSetting />
+                    </CardContent>
+                  </Card>
+                </TabsContent>
+
+                {/* Security Tab */}
+                <TabsContent value="security" className="space-y-4">
+                  <Card className="bg-black/60 border-red-950/30 backdrop-blur-sm">
+                    <CardHeader className="p-4 sm:p-6">
+                      <CardTitle className="text-xl md:text-2xl text-white">
+                        Security & Access Logs
+                      </CardTitle>
+                      <CardDescription className="text-xs md:text-sm text-red-200/60">
+                        Manage security settings and view access history.
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent className="p-4 sm:p-6">
+                      {/* Security content goes here */}
+                    </CardContent>
+                  </Card>
+                </TabsContent>
+              </motion.div>
+            </AnimatePresence>
+          </Tabs>
+        </div>
       </div>
     </div>
   );

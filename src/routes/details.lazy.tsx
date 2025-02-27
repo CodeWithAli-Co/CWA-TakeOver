@@ -28,9 +28,12 @@ import {
   Twitter,
   Linkedin,
   Facebook,
+  Instagram,
+  MoveUpIcon,
+  ArrowBigUp,
   Mail,
   Store,
-  FileCode2,
+  FileCode2, Cloud, Heading, 
 } from "lucide-react";
 
 // Platform icon mapping
@@ -40,11 +43,13 @@ const platformIcons: { [key: string]: React.ComponentType<any> } = {
   linkedin: Linkedin,
   facebook: Facebook,
   gmail: Mail,
-  upwork: Globe,
+  upwork: ArrowBigUp,
   fiverr: Store,
   patreon: Store,
   dev: FileCode2,
   default: Globe,
+  hostinger: Heading,
+  hostingerEmail: Mail,
 };
 const platformStyles: Record<
   string,
@@ -58,6 +63,16 @@ const platformStyles: Record<
     color: "#000000",
     gradient: "from-[#238636] to-[#2EA043]",
     shadowColor: "#000000",
+  },
+  hostinger: {
+    color: "#000000",
+    gradient: "from-[#258836] to-[#1EB043]",
+    shadowColor: "rgba(10, 102, 194, 0.5)",
+  },
+  hostingerMail: {
+    color: "#000000",
+    gradient: "from-[#258836] to-[#1EB043]",
+    shadowColor: "rgba(96, 47, 246, 0.5)",
   },
   twitter: {
     color: "#1DA1F2",
@@ -82,7 +97,7 @@ const platformStyles: Record<
   upwork: {
     color: "#14A800",
     gradient: "from-[#108A00] to-[#14A800]",
-    shadowColor: "rgba(20, 168, 0, 0.5)",
+    shadowColor: "rgba(39, 103, 240, 0.5)",
   },
   default: {
     color: "#7C3AED",
