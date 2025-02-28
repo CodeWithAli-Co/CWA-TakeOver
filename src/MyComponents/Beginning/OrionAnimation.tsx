@@ -1,4 +1,3 @@
-// was ' import type React from "react" '
 import React from "react"
 import { useEffect, useRef, useState } from "react"
 import gsap from "gsap"
@@ -24,10 +23,21 @@ const OrionAnimation: React.FC<OrionAnimationProps> = ({ onAnimationComplete }) 
 
   // Initial mounting effect
   useEffect(() => {
+    // Set initial state - make sure container is visible with black background first
+    if (containerRef.current) {
+      containerRef.current.style.opacity = "1"
+      containerRef.current.style.background = "#000"
+    }
+    
+    // Hide SVG initially to prevent flash
+    if (svgRef.current) {
+      svgRef.current.style.opacity = "0"
+    }
+
     // Set a small delay to ensure DOM is fully rendered
     const timer = setTimeout(() => {
       setIsMounted(true)
-    }, 100)
+    }, 300) // Slightly longer delay to ensure black screen is visible first
 
     return () => clearTimeout(timer)
   }, [])
@@ -40,9 +50,7 @@ const OrionAnimation: React.FC<OrionAnimationProps> = ({ onAnimationComplete }) 
     const svg = svgRef.current
 
     // Set initial state - completely hidden SVG
-  // gsap.set(svg, { opacity: 0 })
-  
-
+    gsap.set(svg, { opacity: 0 })
 
     const tl = gsap.timeline({
       onComplete: () => {
@@ -87,16 +95,13 @@ const OrionAnimation: React.FC<OrionAnimationProps> = ({ onAnimationComplete }) 
       return 100 // Fallback length if everything fails
     }
 
-    // Make sure the animation is visible immediately - fixes black screen issue
-    tl.set(svg, { opacity: 1 })
-
-    // Fade-in animation for the entire SVG
-    tl.from(svg, {
-      opacity: 0,
-      y: -50,
-      duration: 1.5,
-      ease: "power2.out",
-      onComplete: () => console.log("✅ OrionAnimation: GSAP finished first animation"),
+    // Make sure the animation is visible after a delay but not immediately
+    tl.to(svg, { 
+      opacity: 1, 
+      duration: 0.8,
+      delay: 0.2, // Add delay to make sure black background is seen first
+      ease: "power1.inOut",
+      onComplete: () => console.log("✅ OrionAnimation: SVG now visible") 
     })
 
     // Time stamps
