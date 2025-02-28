@@ -332,7 +332,8 @@ const TaskSettings: React.FC = () => {
     data: todos,
     error: TodoError,
     refetch: refetchTodos,
-  } = Todos(user[0].username);
+  } = Todos(user[0]?.username);   
+  // changed Todos(user[0].username); 
   if (TodoError) {
     console.log("Error fetching Todos Data:", TodoError.message);
   }
@@ -340,12 +341,21 @@ const TaskSettings: React.FC = () => {
   const [selectedTab, setSelectedTab] = useState<TaskStatus>("to-do");
   const [searchQuery, setSearchQuery] = useState("");
 
+
+    // Add null checks and defaults
+    const todosList = todos || [];
+    const todoCount = todosList.length > 0 ? todosList[0]?.todoCount || 0 : 0;
+    const inProgressCount = todosList.length > 0 ? todosList[0]?.inProgressCount || 0 : 0;
+    const doneCount = todosList.length > 0 ? todosList[0]?.doneCount || 0 : 0;
+    const allCount = todosList.length > 0 ? todosList[0]?.allCount || 0 : 0;
+
+
   //updated it so thaat it filters using localtask rather than just normal task
   const filteredTasks = todos!.filter((task) => {
     const matchesSearch =
-      task.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      task.description.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesStatus = task.status === selectedTab;
+      task?.title?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      task?.description?.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesStatus = task?.status === selectedTab;
     return matchesSearch && matchesStatus;
   });
 
@@ -363,12 +373,13 @@ const TaskSettings: React.FC = () => {
   }, [selectedTab]);
 
   return (
-    <div key={todos![0].todo_id} className="min-h-screen bg-black/95 py-6 px-8">
+// removed todos![0]. before each keyword since now its not definite
+    <div className="min-h-screen bg-black/95 py-6 px-8">
       <div className="mb-6">
         <h2 className="text-3xl font-bold tracking-tight text-red-200">
           Tasks
         </h2>
-        <p className="text-red-200/60">{todos![0].allCount} total tasks</p>
+        <p className="text-red-200/60">{allCount} total tasks</p>
       </div>
       <AddTodo Users={AllEmployees || []} />
       {/* Stats Overview */}
@@ -380,7 +391,7 @@ const TaskSettings: React.FC = () => {
               <span className="text-sm">Completed</span>
             </div>
             <p className="text-2xl font-bold text-red-200 mt-2">
-              {todos![0].doneCount}
+              {doneCount}
             </p>
           </CardContent>
         </Card>
@@ -391,7 +402,7 @@ const TaskSettings: React.FC = () => {
               <span className="text-sm">In Progress</span>
             </div>
             <p className="text-2xl font-bold text-red-200 mt-2">
-              {todos![0].inProgressCount}
+              {inProgressCount}
             </p>
           </CardContent>
         </Card>
@@ -402,7 +413,7 @@ const TaskSettings: React.FC = () => {
               <span className="text-sm">To Do</span>
             </div>
             <p className="text-2xl font-bold text-red-200 mt-2">
-              {todos![0].todoCount}
+              {todoCount}
             </p>
           </CardContent>
         </Card>
@@ -413,7 +424,7 @@ const TaskSettings: React.FC = () => {
               <span className="text-sm">Total Tasks</span>
             </div>
             <p className="text-2xl font-bold text-red-200 mt-2">
-              {todos![0].allCount}
+              {allCount}
             </p>
           </CardContent>
         </Card>
@@ -439,21 +450,21 @@ const TaskSettings: React.FC = () => {
                 onClick={() => setSelectedTab("to-do")}
                 className="data-[state=active]:bg-red-900/20 data-[state=active]:text-red-200"
               >
-                To Do ({todos![0].todoCount})
+                To Do ({todoCount})
               </TabsTrigger>
               <TabsTrigger
                 value="in-progress"
                 onClick={() => setSelectedTab("in-progress")}
                 className="data-[state=active]:bg-red-900/20 data-[state=active]:text-red-200"
               >
-                In Progress ({todos![0].inProgressCount})
+                In Progress ({inProgressCount})
               </TabsTrigger>
               <TabsTrigger
                 value="done"
                 onClick={() => setSelectedTab("done")}
                 className="data-[state=active]:bg-red-900/20 data-[state=active]:text-red-200"
               >
-                Done ({todos![0].doneCount})
+                Done ({doneCount})
               </TabsTrigger>
             </TabsList>
           </Tabs>
@@ -466,9 +477,22 @@ const TaskSettings: React.FC = () => {
                 exit={{ opacity: 0, y: -20 }}
                 className="space-y-4"
               >
-                {filteredTasks.map((task) => (
-                  <TaskItem key={task.todo_id} task={task} />
-                ))}
+                {filteredTasks.length > 0 ? (
+                  filteredTasks.map((task) => (
+                    <TaskItem key={task.todo_id} task={task} />
+                    
+                  ))
+                ) : (
+                    <div className="flex flex-col items-center justify center py-10">
+                      <AlertCircle className="h-12 w-12 text-red-400/50 mb-4"/>
+                      <h3 className="text-lg font-medium text-red-200"> No tasks found</h3>
+                      <p className="text-sm text-redd-200/60 mt-2">
+                        {searchQuery ? "Try a different search term" : "Add a new task to get started"}
+                      </p>
+
+                    </div>
+
+                )}
               </motion.div>
             </AnimatePresence>
           </ScrollArea>

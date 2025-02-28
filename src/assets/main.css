@@ -275,8 +275,8 @@ button {
 
 
 ::selection {
-  background-color: #490202;
-  color: rgb(0, 0, 0);
+  background-color: #000000;
+  color: rgb(94, 5, 5);
 }
 /* admin tag */
 
