@@ -12,7 +12,7 @@ import {
   Settings2,
   SquareTerminal,
   MessageCircle,
-  Home,
+  Home,Cat,
   ClipboardList,
   CalendarDays,
 } from "lucide-react";
@@ -108,6 +108,13 @@ const data = {
       isActive: false,
       icon: CalendarDays,
     },
+    {
+      title: "BioTech",
+      url: "/bio",
+      isActive: false,
+      icon: Cat,
+    },
+
     {
       title: "Settings",
       url: "/settings",

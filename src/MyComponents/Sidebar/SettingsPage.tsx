@@ -1,52 +1,20 @@
 import React from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
-  UserCircle,
-  ClipboardList,
-  Users2,
-  Bell,
-  Shield,
-  Save,
-  Undo2,
-  Moon,
-  Building2,
-  LineChart,
-  Database,
-  Plug,
-  CreditCard,
-  Menu,
+  UserCircle, ClipboardList,Users2,Bell,Shield,Save,Undo2,Moon,Building2,LineChart,Database,Plug,CreditCard,Menu,
 } from "lucide-react";
 import { Button } from "@/components/ui/shadcnComponents/button";
-import {
-  Tabs,
-  TabsList,
-  TabsTrigger,
-  TabsContent,
+import {Tabs,TabsList,TabsTrigger,TabsContent,
 } from "@/components/ui/shadcnComponents/tabs";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
+import { Card,CardContent,CardDescription,CardHeader,CardTitle,
 } from "@/components/ui/shadcnComponents/card";
 import {
-  Form,
-  FormControl,
-  FormDescription,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
+  Form,FormControl,FormDescription, FormField,FormItem, FormLabel,FormMessage,
 } from "@/components/ui/shadcnComponents/form";
 import { Input } from "@/components/ui/shadcnComponents/input";
 import { Switch } from "@/components/ui/shadcnComponents/switch";
 import { Separator } from "@/components/ui/shadcnComponents/separator";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
+import { DropdownMenu,DropdownMenuContent,DropdownMenuItem, DropdownMenuTrigger,
 } from "@/components/ui/shadcnComponents/dropdown-menu";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -150,7 +118,7 @@ export default function SettingsPage() {
     // Main container - no padding or position adjustments to respect app layout
     <div className="min-h-screen bg-black/95 flex">
       {/* Content container - full width with overflow control */}
-      <div className="w-full max-w-full overflow-x-hidden">
+      <div className="w-full max-w-[1400px] overflow-x-auto">
         <div className="w-full px-4 py-4">
           {/* Header with title and action buttons */}
           <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">

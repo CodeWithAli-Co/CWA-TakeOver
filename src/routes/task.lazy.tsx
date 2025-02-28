@@ -3,7 +3,7 @@ import { createLazyFileRoute } from '@tanstack/react-router'
 import React from 'react'
 
 
-function About() {
+function tasking() {
   return (
     <>
       <TaskSettings />
@@ -12,5 +12,5 @@ function About() {
 }
 
 export const Route = createLazyFileRoute('/task')({
-  component: About,
+  component: tasking,
 })
