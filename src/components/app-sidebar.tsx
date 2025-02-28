@@ -75,6 +75,11 @@ const data = {
           title: "Users",
           url: "/employee",
         },
+        {
+          title: "Mod logs",
+          url: "/mod_logs",
+        },
+    
       ],
     },
     {
@@ -108,12 +113,12 @@ const data = {
       isActive: false,
       icon: CalendarDays,
     },
-    {
-      title: "BioTech",
-      url: "/bio",
-      isActive: false,
-      icon: Cat,
-    },
+    // {
+    //   title: "BioTech",
+    //   url: "/bio",
+    //   isActive: false,
+    //   icon: Cat,
+    // },
 
     {
       title: "Settings",
