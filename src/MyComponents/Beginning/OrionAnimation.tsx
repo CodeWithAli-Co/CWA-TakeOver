@@ -311,7 +311,9 @@ const OrionAnimation: React.FC<OrionAnimationProps> = ({ onAnimationComplete }) 
         trail.setAttribute("stroke", "white")
 
         if (particle.getAttribute("trail")) {
-          trail.setAttribute("stroke", "#386364")
+          trail.setAttribute("stroke", "#8B0000") 
+          // color of 2 of the trails
+          
         }
 
         const cx = Number.parseFloat(particle.getAttribute("cx") || "0")
@@ -555,12 +557,13 @@ const OrionAnimation: React.FC<OrionAnimationProps> = ({ onAnimationComplete }) 
           </g>
           
           {/* Grid and guides */}
-          <g id="Grid" fill="none" stroke="#7eced6" strokeWidth="2">
+          {/* changed gridd from wwhite to dark red color here */}
+          <g id="Grid" fill="none" stroke="#8B0000" strokeWidth="2">
             <line x1="990.17" y1="464.52" x2="990.17" y2="1138.95" />
             <line x1="1570.37" y1="464.52" x2="1570.37" y2="1138.95" />
             <line x1="1617.49" y1="511.63" x2="943.05" y2="511.63" />
             <line x1="1617.49" y1="1091.83" x2="943.05" y2="1091.83" />
-            <g id="Inner" fill="none" stroke="#7eced6" strokeDasharray="3" clipPath="url(#innerClip)">
+            <g id="Inner" fill="none" stroke="#8B0000" strokeDasharray="3" clipPath="url(#innerClip)">
               <line x1="1565.88" y1="608.33" x2="993.16" y2="608.33" />
               <line x1="1565.88" y1="705.03" x2="993.16" y2="705.03" />
               <line x1="1565.88" y1="801.73" x2="993.16" y2="801.73" />
@@ -575,7 +578,8 @@ const OrionAnimation: React.FC<OrionAnimationProps> = ({ onAnimationComplete }) 
           </g>
           
           {/* Particles group - using type assertion to avoid TypeScript errors */}
-          <g id="Particles" fill="#fff" {...{} as any}>
+          {/* color of the cirlces holding up the grid and the stars from exploding */}
+          <g id="Particles" stroke="#8B0000" fill="#8B0000" {...{} as any}>
             <circle cx="990.17" cy="511.63" r="2.62" x0="0" y0="0" start="1.44" />
             <circle cx="1086.87" cy="511.63" r="2.62" x0="4" y0="0" start="0.8" />
             <circle cx="1183.57" cy="511.63" r="2.62" x0="0" y0="0" start="1.76" />
@@ -634,9 +638,9 @@ const OrionAnimation: React.FC<OrionAnimationProps> = ({ onAnimationComplete }) 
           </g>
           
           <g id="ShootingStar">
-            <line id="ShootingStarTrail2" x1="1476.29" y1="995.13" x2="1516.79" y2="955.83" fill="none" stroke="#878787" strokeWidth="2" strokeDasharray="10" />
-            <line id="ShootingStarTrail1" x1="1476.29" y1="995.13" x2="1516.79" y2="955.83" fill="none" stroke="#878787" strokeWidth="3" />
-            <line x1="1476.29" y1="995.13" x2="1516.79" y2="955.83" fill="none" stroke="#fff" strokeWidth="5" />
+            <line id="ShootingStarTrail2" x1="1476.29" y1="995.13" x2="1516.79" y2="955.83" fill="none" stroke="#7eced6" strokeWidth="2" strokeDasharray="10" />
+            <line id="ShootingStarTrail1" x1="1476.29" y1="995.13" x2="1516.79" y2="955.83" fill="none" stroke="#7eced6" strokeWidth="3" />
+            <line x1="1476.29" y1="995.13" x2="1516.79" y2="955.83" fill="none" stroke="#8B0000" strokeWidth="5" />
           </g>
           <path id="Blink" d="M1453,974.13s14.43,10.31,22.16,10.82,24.23-12.37,24.23-12.37-10.82,10.31-10.57,22.55,10.57,26.67,10.57,26.67-13.41-13.4-23.72-13.4-23.72,11.85-23.72,11.85,6.18-12.37,6.7-22.93S1453,974.13,1453,974.13Z" fill="#fff"/>
         </g>
