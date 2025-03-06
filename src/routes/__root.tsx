@@ -31,7 +31,7 @@ export const Route = createRootRoute({
     }
     const {
       refetch: refetchDMGroups
-    } = DMGroups(user![0].username);
+    } = DMGroups(user[0]?.username);
     const { refetch: refetchMessages } = Messages(GroupName);
     
     // Messaging Realtime channel

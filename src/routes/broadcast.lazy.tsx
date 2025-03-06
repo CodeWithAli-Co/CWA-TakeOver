@@ -52,15 +52,6 @@ interface NewContact {
   firstName: string;
   lastName: string;
 }
-// console bug caatching for the contaacts
-try {
-  console.log("Fetching contacts...");
-  const result = await invoke("list_contacts");
-  console.log("Contacts fetched:", result);
-  // setContacts(result as Contact[]);
-} catch (error) {
-  console.error("Error fetching contacts:", error);
-}
 
 interface FormEvent extends React.FormEvent<HTMLFormElement> {
   preventDefault: () => void;
@@ -68,10 +59,19 @@ interface FormEvent extends React.FormEvent<HTMLFormElement> {
 
 // Mock data for demonstration
 
-function BroadcastManagement() {
+async function BroadcastManagement() {
   const { broadcastID, setBroadcastID, resetBroadcastID, setDialog, dialog } =
-    useAppStore();
+  useAppStore();
   const dialogRef = useRef<HTMLDialogElement | null>(null);
+  // console bug caatching for the contaacts
+  try {
+    console.log("Fetching contacts...");
+    const result = await invoke("list_contacts");
+    console.log("Contacts fetched:", result);
+    // setContacts(result as Contact[]);
+  } catch (error) {
+    console.error("Error fetching contacts:", error);
+  }
 
   // Show dialog
   const showModal = () => {
