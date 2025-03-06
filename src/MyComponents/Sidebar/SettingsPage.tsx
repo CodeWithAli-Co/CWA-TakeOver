@@ -1,20 +1,52 @@
 import React from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
-  UserCircle, ClipboardList,Users2,Bell,Shield,Save,Undo2,Moon,Building2,LineChart,Database,Plug,CreditCard,Menu,
+  UserCircle,
+  ClipboardList,
+  Users2,
+  Bell,
+  Shield,
+  Save,
+  Undo2,
+  Moon,
+  Building2,
+  LineChart,
+  Database,
+  Plug,
+  CreditCard,
+  Menu,
 } from "lucide-react";
 import { Button } from "@/components/ui/shadcnComponents/button";
-import {Tabs,TabsList,TabsTrigger,TabsContent,
+import {
+  Tabs,
+  TabsList,
+  TabsTrigger,
+  TabsContent,
 } from "@/components/ui/shadcnComponents/tabs";
-import { Card,CardContent,CardDescription,CardHeader,CardTitle,
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
 } from "@/components/ui/shadcnComponents/card";
 import {
-  Form,FormControl,FormDescription, FormField,FormItem, FormLabel,FormMessage,
+  Form,
+  FormControl,
+  FormDescription,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
 } from "@/components/ui/shadcnComponents/form";
 import { Input } from "@/components/ui/shadcnComponents/input";
 import { Switch } from "@/components/ui/shadcnComponents/switch";
 import { Separator } from "@/components/ui/shadcnComponents/separator";
-import { DropdownMenu,DropdownMenuContent,DropdownMenuItem, DropdownMenuTrigger,
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
 } from "@/components/ui/shadcnComponents/dropdown-menu";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -37,14 +69,6 @@ const formSchema = z.object({
 
 const settingsTabs = [
   { value: "profile", label: "Profile Settings", icon: UserCircle },
-  { value: "teams", label: "Teams & Projects", icon: Users2 },
-  { value: "company", label: "Company", icon: Building2 },
-  { value: "reports", label: "Reports", icon: LineChart },
-  { value: "resources", label: "Resources", icon: Database },
-  { value: "integrations", label: "Integrations", icon: Plug },
-  { value: "billing", label: "Billing", icon: CreditCard },
-  { value: "notifications", label: "Notifications", icon: Bell },
-  { value: "security", label: "Security & Access Logs", icon: Shield },
 ];
 
 export const Route = createLazyFileRoute("/settings")({
@@ -87,7 +111,7 @@ export default function SettingsPage() {
       to: "/settings",
       // search: { tab: value } // Uncomment to add tab to URL
     });
-    
+
     // Close mobile menu after selection on mobile
     if (isMobile) {
       setIsMobileMenuOpen(false);
@@ -103,7 +127,7 @@ export default function SettingsPage() {
     },
   });
 
-  const onSubmit = async (data) => {
+  const onSubmit = async (data: any) => {
     setIsSaving(true);
     await new Promise((resolve) => setTimeout(resolve, 1000));
     console.log(data);
@@ -130,47 +154,6 @@ export default function SettingsPage() {
                 Manage your account settings and preferences.
               </p>
             </div>
-            <div className="flex gap-2 w-full md:w-auto justify-end">
-              <Button
-                variant="outline"
-                onClick={handleReset}
-                disabled={isSaving}
-                size={isMobile ? "sm" : "default"}
-                className="border-red-800/30 text-red-200 hover:bg-red-950/20 hover:text-red-100"
-              >
-                <Undo2 className="mr-2 h-4 w-4" />
-                {!isMobile && "Reset"}
-              </Button>
-              <Button
-                onClick={form.handleSubmit(onSubmit)}
-                disabled={isSaving}
-                size={isMobile ? "sm" : "default"}
-                className="bg-gradient-to-r from-red-950 to-red-900 hover:from-red-900 hover:to-red-800
-                       text-white border border-red-800/30 shadow-lg shadow-red-950/20"
-              >
-                {isSaving ? (
-                  <>
-                    <motion.div
-                      animate={{ rotate: 360 }}
-                      transition={{
-                        duration: 1,
-                        repeat: Number.POSITIVE_INFINITY,
-                        ease: "linear",
-                      }}
-                      className="mr-2 h-4 w-4"
-                    >
-                      <Save className="h-4 w-4" />
-                    </motion.div>
-                    {!isMobile && "Saving..."}
-                  </>
-                ) : (
-                  <>
-                    <Save className="mr-2 h-4 w-4" />
-                    {!isMobile ? "Save Changes" : "Save"}
-                  </>
-                )}
-              </Button>
-            </div>
           </div>
 
           {/* Tabs container */}
@@ -182,29 +165,37 @@ export default function SettingsPage() {
             {/* Mobile dropdown for tabs */}
             {isMobile && (
               <div className="w-full mb-4">
-                <DropdownMenu open={isMobileMenuOpen} onOpenChange={setIsMobileMenuOpen}>
+                <DropdownMenu
+                  open={isMobileMenuOpen}
+                  onOpenChange={setIsMobileMenuOpen}
+                >
                   <DropdownMenuTrigger asChild>
-                    <Button 
-                      variant="outline" 
+                    <Button
+                      variant="outline"
                       className="w-full justify-between bg-black/40 text-red-200/60 border border-red-950/20"
                     >
                       <div className="flex items-center">
                         {(() => {
-                          const activeTabInfo = settingsTabs.find(tab => tab.value === activeTab);
+                          const activeTabInfo = settingsTabs.find(
+                            (tab) => tab.value === activeTab
+                          );
                           if (activeTabInfo?.icon) {
                             const IconComponent = activeTabInfo.icon;
                             return <IconComponent className="mr-2 h-4 w-4" />;
                           }
                           return null;
                         })()}
-                        <span>{settingsTabs.find(tab => tab.value === activeTab)?.label || "Settings"}</span>
+                        <span>
+                          {settingsTabs.find((tab) => tab.value === activeTab)
+                            ?.label || "Settings"}
+                        </span>
                       </div>
                       <Menu className="h-4 w-4 ml-2" />
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent className="w-[94vw] max-w-md bg-black/90 border-red-950/30 text-red-200">
                     {settingsTabs.map((tab) => (
-                      <DropdownMenuItem 
+                      <DropdownMenuItem
                         key={tab.value}
                         onClick={() => handleTabChange(tab.value)}
                         className="flex items-center py-2 px-3 hover:bg-red-950/20 cursor-pointer"
@@ -221,9 +212,7 @@ export default function SettingsPage() {
             {/* Tablet & desktop horizontal tabs with scroll capability */}
             {!isMobile && (
               <div className="overflow-x-auto">
-                <TabsList 
-                  className="h-12 w-full justify-start space-x-2 bg-black/40 p-1 text-red-200/60 border border-red-950/20 flex-nowrap"
-                >
+                <TabsList className="h-12 w-full justify-start space-x-2 bg-black/40 p-1 text-red-200/60 border border-red-950/20 flex-nowrap">
                   {settingsTabs.map((tab) => (
                     <TabsTrigger
                       key={tab.value}
@@ -232,7 +221,9 @@ export default function SettingsPage() {
                               hover:text-red-200 transition-colors duration-200 flex items-center space-x-2 px-3 py-2 whitespace-nowrap"
                     >
                       <tab.icon className="h-4 w-4" />
-                      <span className={isTablet ? "hidden lg:inline" : ""}>{tab.label}</span>
+                      <span className={isTablet ? "hidden lg:inline" : ""}>
+                        {tab.label}
+                      </span>
                     </TabsTrigger>
                   ))}
                 </TabsList>
@@ -289,169 +280,17 @@ export default function SettingsPage() {
                                   </FormItem>
                                 )}
                               />
-
-                              <Separator className="border-red-950/20" />
-
-                              <FormField
-                                control={form.control}
-                                name="emailNotifications"
-                                render={({ field }) => (
-                                  <FormItem className="flex flex-col sm:flex-row justify-between sm:items-center space-y-2 sm:space-y-0">
-                                    <div>
-                                      <FormLabel className="text-red-200">
-                                        <Bell className="h-4 w-4 inline mr-2" />
-                                        Email Notifications
-                                      </FormLabel>
-                                      <FormDescription className="text-xs sm:text-sm text-red-200/60">
-                                        Receive email notifications about account
-                                        activity.
-                                      </FormDescription>
-                                    </div>
-                                    <FormControl>
-                                      <Switch
-                                        checked={field.value}
-                                        onCheckedChange={field.onChange}
-                                        className="data-[state=checked]:bg-red-900"
-                                      />
-                                    </FormControl>
-                                  </FormItem>
-                                )}
-                              />
-
-                              <FormField
-                                control={form.control}
-                                name="darkMode"
-                                render={({ field }) => (
-                                  <FormItem className="flex flex-col sm:flex-row justify-between sm:items-center space-y-2 sm:space-y-0">
-                                    <div>
-                                      <FormLabel className="text-red-200">
-                                        <Moon className="h-4 w-4 inline mr-2" />
-                                        Dark Mode
-                                      </FormLabel>
-                                      <FormDescription className="text-xs sm:text-sm text-red-200/60">
-                                        Toggle between light and dark mode.
-                                      </FormDescription>
-                                    </div>
-                                    <FormControl>
-                                      <Switch
-                                        checked={field.value}
-                                        onCheckedChange={field.onChange}
-                                        className="data-[state=checked]:bg-red-900"
-                                      />
-                                    </FormControl>
-                                  </FormItem>
-                                )}
-                              />
                             </form>
                           </Form>
                         </div>
-                        
+
                         <div className="xl:col-span-1 flex flex-col items-center justify-start">
-                          <UploadAvatar className="text-white" />
+                          <UploadAvatar
+                            className="bg-gradient-to-r from-red-950 to-red-900 hover:from-red-900 hover:to-red-800
+                       text-white border border-red-800/30 shadow-lg shadow-red-950/20 p-2"
+                          />
                         </div>
                       </div>
-                    </CardContent>
-                  </Card>
-                </TabsContent>
-
-                {/* Teams & Projects Tab */}
-                <TabsContent value="teams" className="space-y-4">
-                  <Card className="bg-black/60 border-red-950/30 backdrop-blur-sm p-4 sm:p-6">
-                    <TeamsAndProjects />
-                  </Card>
-                </TabsContent>
-
-                {/* Company Tab */}
-                <TabsContent value="company" className="space-y-4">
-                  <Card className="bg-black/60 border-red-950/30 backdrop-blur-sm p-4 sm:p-6">
-                    <CompanySettings />
-                  </Card>
-                </TabsContent>
-
-                {/* Reports Tab */}
-                <TabsContent value="reports" className="space-y-4">
-                  <Card className="bg-black/60 border-red-950/30 backdrop-blur-sm p-4 sm:p-6">
-                    <ReportSettings />
-                  </Card>
-                </TabsContent>
-
-                {/* Resources Tab */}
-                <TabsContent value="resources" className="space-y-4">
-                  <Card className="bg-black/60 border-red-950/30 backdrop-blur-sm">
-                    <CardHeader className="p-4 sm:p-6">
-                      <CardTitle className="text-xl md:text-2xl text-white">Resources</CardTitle>
-                      <CardDescription className="text-xs md:text-sm text-red-200/60">
-                        Developer resources and documentation.
-                      </CardDescription>
-                    </CardHeader>
-                    <CardContent className="p-4 sm:p-6">
-                      <DeveloperResourceHub />
-                    </CardContent>
-                  </Card>
-                </TabsContent>
-
-                {/* Integrations Tab */}
-                <TabsContent value="integrations" className="space-y-4">
-                  <Card className="bg-black/60 border-red-950/30 backdrop-blur-sm">
-                    <CardHeader className="p-4 sm:p-6">
-                      <CardTitle className="text-xl md:text-2xl text-white">Integrations</CardTitle>
-                      <CardDescription className="text-xs md:text-sm text-red-200/60">
-                        Configure and manage third-party integrations.
-                      </CardDescription>
-                    </CardHeader>
-                    <CardContent className="p-4 sm:p-6">
-                      <IntegrationsSettings />
-                    </CardContent>
-                  </Card>
-                </TabsContent>
-
-                {/* Billing Tab */}
-                <TabsContent value="billing" className="space-y-4">
-                  <Card className="bg-black/60 border-red-950/30 backdrop-blur-sm">
-                    <CardHeader className="p-4 sm:p-6">
-                      <CardTitle className="text-xl md:text-2xl text-white">
-                        Billing & Subscription
-                      </CardTitle>
-                      <CardDescription className="text-xs md:text-sm text-red-200/60">
-                        Manage billing information and subscription details.
-                      </CardDescription>
-                    </CardHeader>
-                    <CardContent className="p-4 sm:p-6">
-                      {/* Billing content goes here */}
-                    </CardContent>
-                  </Card>
-                </TabsContent>
-
-                {/* Notifications Tab */}
-                <TabsContent value="notifications" className="space-y-4">
-                  <Card className="bg-black/60 border-red-950/30 backdrop-blur-sm">
-                    <CardHeader className="p-4 sm:p-6">
-                      <CardTitle className="text-xl md:text-2xl text-white">
-                        Notification Settings
-                      </CardTitle>
-                      <CardDescription className="text-xs md:text-sm text-red-200/60">
-                        Customize your notification preferences.
-                      </CardDescription>
-                    </CardHeader>
-                    <CardContent className="p-4 sm:p-6">
-                      <NotificationSetting />
-                    </CardContent>
-                  </Card>
-                </TabsContent>
-
-                {/* Security Tab */}
-                <TabsContent value="security" className="space-y-4">
-                  <Card className="bg-black/60 border-red-950/30 backdrop-blur-sm">
-                    <CardHeader className="p-4 sm:p-6">
-                      <CardTitle className="text-xl md:text-2xl text-white">
-                        Security & Access Logs
-                      </CardTitle>
-                      <CardDescription className="text-xs md:text-sm text-red-200/60">
-                        Manage security settings and view access history.
-                      </CardDescription>
-                    </CardHeader>
-                    <CardContent className="p-4 sm:p-6">
-                      {/* Security content goes here */}
                     </CardContent>
                   </Card>
                 </TabsContent>

@@ -9,15 +9,6 @@ import {
   TabsContent,
 } from "@/components/ui/shadcnComponents/tabs";
 import { Card, CardContent } from "@/components/ui/shadcnComponents/card";
-import { Input } from "@/components/ui/shadcnComponents/input";
-import { Label } from "@/components/ui/shadcnComponents/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/shadcnComponents/select";
 import {
   Table,
   TableBody,
@@ -33,7 +24,6 @@ import { Employees, Interns } from "@/stores/query";
 import supabase from "@/MyComponents/supabase";
 import { useEffect, useRef } from "react";
 import { EditEmployee } from "@/MyComponents/subForms/editEmploy";
-import { AddEmployee } from "@/MyComponents/subForms/addEmploy";
 
 function Employee() {
   const { setDialog, dialog } = useAppStore();
@@ -120,13 +110,6 @@ function Employee() {
             >
               Employees
             </TabsTrigger>
-            <TabsTrigger
-              value="Interns"
-              className="rounded-full px-6 py-2 data-[state=active]:bg-red-900 
-                       data-[state=active]:text-amber-50 transition-all duration-300"
-            >
-              Interns
-            </TabsTrigger>
           </TabsList>
 
           <AnimatePresence mode="wait">
@@ -138,57 +121,6 @@ function Employee() {
               className="mt-8"
             >
               <TabsContent value="Employees">
-                {/* Add New Employee Form */}
-                {/* <Card className="bg-red-950/10 border-red-900/20 mb-8">
-                  <CardContent className="pt-6">
-                    <div className="grid grid-cols-3 gap-6">
-                      <div className="space-y-2">
-                        <Label htmlFor="username" className="text-amber-50/70">
-                          Username
-                        </Label>
-                        <Input
-                          id="username"
-                          className="bg-black/40 border-red-900/30 text-amber-50 rounded-lg
-                                   focus:border-red-500 hover:bg-black/60 transition-colors"
-                          placeholder="Enter username"
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="email" className="text-amber-50/70">
-                          Email
-                        </Label>
-                        <Input
-                          id="email"
-                          type="email"
-                          className="bg-black/40 border-red-900/30 text-amber-50 rounded-lg
-                                   focus:border-red-500 hover:bg-black/60 transition-colors"
-                          placeholder="Enter email"
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="role" className="text-amber-50/70">
-                          Role
-                        </Label>
-                        <Select>
-                          <SelectTrigger
-                            className="bg-black/40 border-red-900/30 text-amber-50 rounded-lg
-                                                  focus:border-red-500 hover:bg-black/60 transition-colors"
-                          >
-                            <SelectValue placeholder="Select role" />
-                          </SelectTrigger>
-                          <SelectContent className="bg-black text-amber-50 border-red-900/20">
-                            <SelectItem value="admin">Admin</SelectItem>
-                            <SelectItem value="member">Member</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-                    </div>
-                    <Button className="mt-6 bg-red-900 hover:bg-red-800 text-amber-50">
-                      <UserPlus className="w-4 h-4 mr-2" />
-                      Add Employee
-                    </Button>
-                  </CardContent>
-                </Card> */}
 
                 {/* Employee List */}
                 <Card className="bg-red-950/10 border-red-900/20">
@@ -272,10 +204,6 @@ function Employee() {
                     </Table>
                   </CardContent>
                 </Card>
-              </TabsContent>
-
-              <TabsContent value="Interns">
-                {/* Similar structure for Interns */}
               </TabsContent>
             </motion.div>
           </AnimatePresence>

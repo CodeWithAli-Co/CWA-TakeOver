@@ -13,8 +13,6 @@ import {
   TabsTrigger,
 } from "@/components/ui/shadcnComponents/tabs";
 import { Badge } from "@/components/ui/shadcnComponents/badge";
-import { Textarea } from "@/components/ui/shadcnComponents/textarea";
-// import {CreateTaskModal } "@/MyComponents/handlingTasking/CreateTaskModal"
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Activity,
@@ -24,11 +22,7 @@ import {
   CheckCircle,
   ChevronDown,
   ChevronUp,
-  MessageSquare,
-  History,
-  Users,
   GitBranch,
-  Link,
   CheckCircle2,
   AlertTriangle,
 } from "lucide-react";
@@ -38,7 +32,6 @@ import {
   TaskDependency,
   TaskPriority,
   TaskStatus,
-  tasks,
 } from "./taskTypes";
 import { ActiveUser, Employees, Todos, TodosInterface } from "@/stores/query";
 import { AddTodo } from "./addTodo";
@@ -146,9 +139,6 @@ const TaskItem: React.FC<{ task: TodosInterface }> = ({ task }) => {
                 <TaskPriorityBadge priority={task.priority} />
               </div>
               <div className="flex items-center gap-3">
-                {/* <Badge variant="outline" className="bg-red-900/20 text-red-400">
-                  {task.progress}%
-                </Badge> */}
                 {isExpanded ? (
                   <ChevronUp className="h-4 w-4 text-red-400" />
                 ) : (
@@ -193,121 +183,9 @@ const TaskItem: React.FC<{ task: TodosInterface }> = ({ task }) => {
                   Description
                 </h4>
                 <p className="text-sm text-red-200/60">{task.description}</p>
-                {/* {task.detailedDescription && (
-                  <div className="mt-2">
-                    <h5 className="text-sm font-medium text-red-200">Detailed Notes</h5>
-                    <p className="text-sm text-red-200/60">{task.detailedDescription}</p>
-                  </div>
-                )} */}
               </div>
-              {/* {task.vision && (
-                <div className="space-y-2">
-                  <h4 className="text-sm font-medium text-red-200">Vision & Goals</h4>
-                  <p className="text-sm text-red-200/60">{task.vision}</p>
-                </div>
-              )} */}
             </div>
 
-            {/* Progress and Time */}
-            {/* <div className="grid grid-cols-2 gap-4">
-              <div>
-                <h4 className="text-sm font-medium text-red-200 mb-2">Progress</h4>
-                <div className="h-2 bg-red-950/20 rounded-full overflow-hidden">
-                  <motion.div 
-                    initial={{ width: 0 }}
-                    animate={{ width: `${task.progress}%` }}
-                    transition={{ duration: 0.5 }}
-                    className="h-full bg-gradient-to-r from-red-900 to-red-700"
-                  />
-                </div>
-                <div className="flex justify-between mt-1 text-xs text-red-200/60">
-                  <span>Est: {task.estimatedTime || 'N/A'}</span>
-                  <span>Spent: {task.timeSpent || 'N/A'}</span>
-                </div>
-              </div>
-              <div className="flex items-center gap-4">
-                <div className="flex items-center gap-2">
-                  <History className="h-4 w-4 text-red-400" />
-                  <span className="text-xs text-red-200/60">Last updated: {task.lastUpdated}</span>
-                </div>
-              </div>
-            </div> */}
-
-            {/* Blockers */}
-            {/* {task.blockers.length > 0 && (
-              <div>
-                <h4 className="text-sm font-medium text-red-200 mb-2">Blockers & Issues</h4>
-                <div className="space-y-2">
-                  {task.blockers.map(blocker => (
-                    <TaskBlockerItem key={blocker.id} blocker={blocker} />
-                  ))}
-                </div>
-              </div>
-            )} */}
-
-            {/* Dependencies */}
-            {/* {task.dependencies.length > 0 && (
-              <div>
-                <h4 className="text-sm font-medium text-red-200 mb-2">Dependencies</h4>
-                <div className="grid grid-cols-2 gap-2">
-                  {task.dependencies.map(dependency => (
-                    <TaskDependencyItem key={dependency.id} dependency={dependency} />
-                  ))}
-                </div>
-              </div>
-            )} */}
-
-            {/* Comments */}
-            {/* <div>
-              <h4 className="text-sm font-medium text-red-200 mb-2">Discussion</h4>
-              <div className="space-y-3">
-                {task.comments.map(comment => (
-                  <div key={comment.id} className="p-3 rounded-lg bg-black/40 border border-red-950/20">
-                    <div className="flex items-center gap-2 mb-1">
-                      <div className="w-6 h-6 rounded-full bg-red-900/30 flex items-center justify-center text-xs">
-                        {comment.user[0]}
-                      </div>
-                      <span className="text-sm text-red-200">{comment.user}</span>
-                      <span className="text-xs text-red-200/60">{comment.timestamp}</span>
-                    </div>
-                    <p className="text-sm text-red-200/80">{comment.content}</p>
-                  </div>
-                ))}
-                <div className="mt-2">
-                  <Textarea 
-                    placeholder="Add a comment..."
-                    className="bg-black/40 border-red-950/20 text-red-200 min-h-[80px]"
-                  />
-                </div>
-              </div>
-            </div> */}
-
-            {/* Watchers */}
-            {/* {task.watchers.length > 0 && (
-              <div>
-                <h4 className="text-sm font-medium text-red-200 mb-2">Watchers</h4>
-                <div className="flex items-center gap-2">
-                  {task.watchers.map((watcher, index) => (
-                    <div key={index} className="flex items-center gap-1 text-xs text-red-200/60">
-                      <div className="w-6 h-6 rounded-full bg-red-900/30 flex items-center justify-center">
-                        {watcher[0]}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )} */}
-
-            {/* Tags */}
-            {/* {task.tags.length > 0 && (
-              <div className="flex items-center gap-2">
-                {task.tags.map((tag, index) => (
-                  <Badge key={index} variant="outline" className="bg-red-900/20 text-red-400">
-                    {tag}
-                  </Badge>
-                ))}
-              </div>
-            )} */}
           </motion.div>
         )}
       </AnimatePresence>
@@ -333,7 +211,6 @@ const TaskSettings: React.FC = () => {
     error: TodoError,
     refetch: refetchTodos,
   } = Todos(user[0]?.username);   
-  // changed Todos(user[0].username); 
   if (TodoError) {
     console.log("Error fetching Todos Data:", TodoError.message);
   }
@@ -373,7 +250,6 @@ const TaskSettings: React.FC = () => {
   }, [selectedTab]);
 
   return (
-// removed todos![0]. before each keyword since now its not definite
     <div className="min-h-screen bg-black/95 py-6 px-8">
       <div className="mb-6">
         <h2 className="text-3xl font-bold tracking-tight text-red-200">
@@ -489,7 +365,6 @@ const TaskSettings: React.FC = () => {
                       <p className="text-sm text-redd-200/60 mt-2">
                         {searchQuery ? "Try a different search term" : "Add a new task to get started"}
                       </p>
-
                     </div>
 
                 )}

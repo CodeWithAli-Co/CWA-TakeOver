@@ -35,7 +35,6 @@ export function NavMain({
   const navigate = useNavigate();
   return (
     <SidebarGroup>
-      <SidebarGroupLabel>Platform</SidebarGroupLabel>
       <SidebarMenu>
         {items.map((item) =>
           // this statement will check if a dropdown has sub items hehe

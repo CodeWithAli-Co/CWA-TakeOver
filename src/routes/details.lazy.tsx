@@ -33,7 +33,9 @@ import {
   ArrowBigUp,
   Mail,
   Store,
-  FileCode2, Cloud, Heading, 
+  FileCode2,
+  Cloud,
+  Heading,
 } from "lucide-react";
 
 // Platform icon mapping
@@ -122,8 +124,10 @@ function Details() {
   const dialogRef = useRef<HTMLDialogElement | null>(null);
   // Track expanded state for each card
   const [expandedCards, setExpandedCards] = useState<number[]>([]);
+  const [showDecPass, setShowDecPass] = useState("");
 
   const toggleCard = (id: number) => {
+    // setExpandedCards([0]);
     setExpandedCards((prev) =>
       prev.includes(id) ? prev.filter((cardId) => cardId !== id) : [...prev, id]
     );
@@ -164,7 +168,7 @@ function Details() {
         keyStr: import.meta.env.VITE_ENCRYPTION_KEY,
         encryptedData: data[0].acc_enc_password,
       });
-      console.log(decPassword);
+      setShowDecPass(decPassword as string);
     }
   };
 
@@ -255,9 +259,11 @@ function Details() {
                     <CardDescription className="text-sm text-zinc-400">
                       Email: {cred.acc_email}
                     </CardDescription>
-                    <CardDescription className="text-sm text-zinc-400">
-                      Password: {cred.acc_enc_password}
-                    </CardDescription>
+                    {showDecPass !== "" && (
+                      <CardDescription className="text-sm text-zinc-400">
+                        Password: {showDecPass || cred.acc_enc_password}
+                      </CardDescription>
+                    )}
                     {cred.acc_addinfo && (
                       <CardDescription className="text-sm text-zinc-400">
                         Additional Info: {cred.acc_addinfo}
@@ -272,8 +278,12 @@ function Details() {
                         size="sm"
                         className="text-zinc-400 border-zinc-800 hover:bg-zinc-800"
                         onClick={() => {
+                          setShowDecPass("");
+                          setExpandedCards([0]);
                           toggleCard(cred.id);
                           if (!isExpanded) getPassword(cred.id);
+                          if (expandedCards.includes(cred.id))
+                            setExpandedCards([0]); // If array contains the same ID as before, hide it
                         }}
                       >
                         {isExpanded ? (
@@ -302,10 +312,6 @@ function Details() {
                         <Trash2 className="w-4 h-4" />
                       </Button>
                     </div>
-                    <Switch
-                      checked={cred.active}
-                      className="data-[state=checked]:bg-zinc-700"
-                    />
                   </div>
                 </div>
               </CardContent>
