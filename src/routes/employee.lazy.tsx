@@ -24,6 +24,7 @@ import { Employees, Interns } from "@/stores/query";
 import supabase from "@/MyComponents/supabase";
 import { useEffect, useRef } from "react";
 import { EditEmployee } from "@/MyComponents/subForms/editEmploy";
+import { message } from "@tauri-apps/plugin-dialog";
 
 function Employee() {
   const { setDialog, dialog } = useAppStore();
@@ -56,8 +57,6 @@ function Employee() {
 
   const { displayer, setDisplayer } = useAppStore();
   const { data: employees, refetch: refetchEmployees } = Employees();
-  // Added this already for Ali
-  const { data: interns, refetch: refetchInterns } = Interns();
 
   // Realtime channel
   supabase
@@ -66,11 +65,6 @@ function Employee() {
       "postgres_changes",
       { event: "*", schema: "public", table: "app_users" },
       () => refetchEmployees()
-    )
-    .on(
-      "postgres_changes",
-      { event: "*", schema: "public", table: "interns" },
-      () => refetchInterns()
     )
     .subscribe();
 
@@ -82,7 +76,12 @@ function Employee() {
       .eq("id", rowID)
       .select();
     console.log(result);
-    if (error) return console.log("Error: ", error.message);
+    if (error) {
+      await message(error.message, {
+        title: 'Error Deleting User',
+        kind: 'error'
+      })
+    }
   };
 
   return (
@@ -145,7 +144,7 @@ function Employee() {
                       <TableBody>
                         {employees!.map((employee) => (
                           <TableRow
-                            key={employee.username}
+                            key={employee.id}
                             className="border-red-900/20 hover:bg-red-950/30 transition-colors"
                           >
                             <TableCell className="font-medium text-amber-50">
@@ -171,14 +170,15 @@ function Employee() {
                               </Badge>
                             </TableCell>
                             <TableCell className="text-right space-x-2">
-                              <Button
+                              {/* Enable again when edit form is fixed */}
+                              {/* <Button
                                 variant="outline"
                                 size="sm"
                                 className="border-red-900/30 hover:bg-red-900/20 text-amber-50"
                                 onClick={showModal}
                               >
                                 <Edit2 className="w-4 h-4" />
-                              </Button>
+                              </Button> */}
                               <Button
                                 variant="outline"
                                 size="sm"
@@ -187,7 +187,7 @@ function Employee() {
                               >
                                 <Trash2 className="w-4 h-4" />
                               </Button>
-                              <dialog ref={dialogRef}>
+                              {/* <dialog ref={dialogRef}>
                                 <button
                                   type="button"
                                   id="dialog-close2"
@@ -196,7 +196,7 @@ function Employee() {
                                   X
                                 </button>
                                 <EditEmployee rowID={employee.id} />
-                              </dialog>
+                              </dialog> */}
                             </TableCell>
                           </TableRow>
                         ))}

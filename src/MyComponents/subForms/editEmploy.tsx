@@ -18,7 +18,6 @@ export const EditEmployee = (props: Props) => {
       Role: "",
     },
     onSubmit: async ({ value }) => {
-      console.log(value);
       if (value.Username !== "") {
         const { error } = await supabase
           .from("app_users")
@@ -103,7 +102,6 @@ export const EditEmployee = (props: Props) => {
                     placeholder="Enter email"
                     className="w-full px-3 py-2 bg-black/40 border border-red-900/30 text-amber-50 rounded-lg
                              focus:border-red-500 focus:outline-none hover:bg-black/60 transition-colors"
-                    required
                     value={field.state.value}
                     onChange={(e) => field.handleChange(e.target.value)}
                   />

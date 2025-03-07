@@ -118,6 +118,10 @@ input {
   background: whitesmoke;
 }
 
+label {
+  user-select: none;
+}
+
 select, option {
   color: black;
 }

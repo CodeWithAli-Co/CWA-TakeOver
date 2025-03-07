@@ -18,6 +18,8 @@ import {
   RadioGroup,
   RadioGroupItem,
 } from "@/components/ui/shadcnComponents/radio-group";
+import { message } from "@tauri-apps/plugin-dialog";
+import { emitKeypressEvents } from "node:readline";
 
 export const AddData = () => {
   const { setDialog } = useAppStore();
@@ -46,7 +48,12 @@ export const AddData = () => {
           acc_addinfo: value.AddInfo,
           active: value.Active,
         });
-        if (error) return console.log(error.message);
+        if (error) {
+          await message(error.message, {
+            title: "Error Adding Account",
+            kind: "error"
+          })
+        }
       });
 
       handleClose();
@@ -67,6 +74,7 @@ export const AddData = () => {
         exit={{ opacity: 0 }}
         onClick={handleClose}
       >
+        {/* Need to work on close function */}
         <motion.div
           initial={{ opacity: 0, scale: 0.95 }}
           animate={{ opacity: 1, scale: 1 }}
@@ -75,18 +83,18 @@ export const AddData = () => {
           className="w-full max-w-md mx-4"
           onClick={(e) => e.stopPropagation()}
         >
-          <Card className="bg-black/20 border-red-800/30  shadow-xl shadow-red-800/20">
+          <Card className="bg-black border-red-800/30  shadow-xl shadow-red-800/20">
             <CardHeader className="relative border-b border-red-950/20">
               <motion.button
                 whileHover={{ scale: 1.1 }}
                 whileTap={{ scale: 0.9 }}
                 onClick={handleClose}
                 className="absolute right-4 top-4 p-1 rounded-full text-red-500 
-                         hover:text-red-400 hover:bg-red-950/20 transition-colors"
+                         hover:text-red-400 hover:bg-red-950/20 transition-colors z-50"
               >
-                <X size={20} />
+                <X size={20} id="closeAdd" />
               </motion.button>
-              <CardTitle className="text-2xl font-semibold text-white text-center">
+              <CardTitle className="text-2xl font-semibold text-white text-center" style={{ userSelect: 'none' }}>
                 Add Platform
               </CardTitle>
             </CardHeader>
@@ -263,6 +271,7 @@ export const AddData = () => {
                         className="w-full bg-gradient-to-r from-red-950 to-black hover:from-red-900 
                                  hover:to-red-950 text-white border border-red-900/30
                                  shadow-lg shadow-red-950/20 disabled:opacity-50"
+                        style={{ userSelect: 'none' }}
                       >
                         Add Platform
                       </Button>

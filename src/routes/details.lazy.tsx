@@ -245,10 +245,11 @@ function Details() {
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
-                  <CardDescription className="text-sm text-zinc-400">
-                    Username: {cred.acc_username}
-                  </CardDescription>
-
+                  {cred.acc_username !== "" && (
+                    <CardDescription className="text-sm text-zinc-400">
+                      Username: {cred.acc_username}
+                    </CardDescription>
+                  )}
                   <div
                     className={`space-y-2 overflow-hidden transition-all duration-300 ${
                       isExpanded
@@ -295,14 +296,15 @@ function Details() {
                           {isExpanded ? "Hide" : "Reveal"}
                         </span>
                       </Button>
-                      <Button
+                      {/* Enable when Edit form is fixed */}
+                      {/* <Button
                         variant="outline"
                         size="sm"
                         className="text-zinc-400 border-zinc-800 hover:bg-zinc-800"
                         onClick={() => showModal("editDialog")}
                       >
                         <Edit2 className="w-4 h-4" />
-                      </Button>
+                      </Button> */}
                       <Button
                         variant="outline"
                         size="sm"
