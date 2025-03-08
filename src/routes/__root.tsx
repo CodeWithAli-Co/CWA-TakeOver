@@ -117,6 +117,7 @@ export const Route = createRootRoute({
           let downloaded = 0;
           let contentLength = 0;
           // alternatively we could also call update.download() and update.install() separately
+          // test commit
           await update.downloadAndInstall((event) => {
             switch (event.event) {
               case "Started":
