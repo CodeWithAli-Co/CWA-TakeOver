@@ -38,6 +38,7 @@ import {
   Search,
   RefreshCw,
 } from "lucide-react";
+import GradientText from "@/MyComponents/Reusables/gradientText";
 
 interface Contact {
   email: string;
@@ -197,7 +198,9 @@ function BroadcastManagement() {
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-2xl font-bold text-amber-50">
-              Broadcast Management
+              <GradientText>
+                Broadcast Management
+              </GradientText>
             </h1>
             <p className="text-amber-50/70">
               Manage your contact list and broadcast messages.
