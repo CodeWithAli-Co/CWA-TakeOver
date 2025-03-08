@@ -2,23 +2,25 @@ import React, { useEffect, useState } from "react";
 import { Github, UserCircle } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/shadcnComponents/card";
 import { Badge } from "@/components/ui/shadcnComponents/badge";
+import { invoke } from "@tauri-apps/api/core";
 
-// Type definitions for GitHub webhook payload
-interface GitHubCommitDetail {
+// Type definitions for GitHub webhook payload (matching Rust structs)
+interface GitHubWebhookCommit {
   id: string;
   message: string;
   author: string;
   timestamp: string;
 }
 
-interface GitHubCommitGroup {
+interface GitHubWebhookEvent {
   id: string;
+  event_type: string;
   repo: string;
   branch: string;
   author: string;
-  authorAvatar?: string;
+  author_avatar: string;
   timestamp: string;
-  commits: GitHubCommitDetail[];
+  commits: GitHubWebhookCommit[];
 }
 
 interface GitHubWebhookComponentProps {
@@ -26,7 +28,7 @@ interface GitHubWebhookComponentProps {
   repoFilter?: string[];
 }
 
-const CommitDetail: React.FC<GitHubCommitDetail> = ({ id, message, author }) => {
+const CommitDetail: React.FC<GitHubWebhookCommit> = ({ id, message, author }) => {
   return (
     <div className="flex items-start space-x-2 py-1 text-sm">
       <div className="flex-shrink-0 w-16 font-mono text-red-300">{id.substring(0, 7)}</div>
@@ -41,29 +43,23 @@ const CommitDetail: React.FC<GitHubCommitDetail> = ({ id, message, author }) => 
 };
 
 const GitHubWebhookComponent: React.FC<GitHubWebhookComponentProps> = ({ repoFilter }) => {
-  const [webhookData, setWebhookData] = useState<GitHubCommitGroup[]>([]);
+  const [webhookData, setWebhookData] = useState<GitHubWebhookEvent[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    // Function to fetch GitHub webhook data from your backend
+    // Function to fetch GitHub webhook data from your Tauri backend
     const fetchGitHubWebhooks = async () => {
       try {
         setLoading(true);
         
-        // Replace with your actual API endpoint
-        const response = await fetch('/api/webhooks/github');
-        
-        if (!response.ok) {
-          throw new Error(`Error fetching webhook data: ${response.status}`);
-        }
-        
-        const data = await response.json();
+        // Call the Tauri command to get GitHub webhooks
+        const data = await invoke<GitHubWebhookEvent[]>("get_github_webhooks");
         
         // Filter by repo if specified
         const filteredData = repoFilter 
-          ? data.filter((group: GitHubCommitGroup) => 
-              repoFilter.some(repo => group.repo.includes(repo)))
+          ? data.filter((event) => 
+              repoFilter.some(repo => event.repo.includes(repo)))
           : data;
         
         setWebhookData(filteredData);
@@ -97,8 +93,8 @@ const GitHubWebhookComponent: React.FC<GitHubWebhookComponentProps> = ({ repoFil
 
   return (
     <>
-      {webhookData.map((group) => (
-        <Card key={group.id} className="mb-4 bg-black/60 border-red-950/30 overflow-hidden backdrop-blur-sm">
+      {webhookData.map((event) => (
+        <Card key={event.id} className="mb-4 bg-black/60 border-red-950/30 overflow-hidden backdrop-blur-sm">
           <CardHeader className="p-4 flex flex-row items-center space-x-2">
             <div className="h-10 w-10 rounded-full overflow-hidden flex-shrink-0 bg-gray-800">
               <Github className="h-full w-full p-2 text-white" />
@@ -107,7 +103,9 @@ const GitHubWebhookComponent: React.FC<GitHubWebhookComponentProps> = ({ repoFil
               <CardTitle className="text-lg flex items-center">
                 GitHub
                 <Badge className="ml-2 bg-blue-600 hover:bg-blue-700 text-xs">APP</Badge>
-                <span className="text-xs text-red-300 ml-auto">{group.timestamp}</span>
+                <span className="text-xs text-red-300 ml-auto">
+                  {new Date(event.timestamp).toLocaleString()}
+                </span>
               </CardTitle>
             </div>
           </CardHeader>
@@ -116,21 +114,21 @@ const GitHubWebhookComponent: React.FC<GitHubWebhookComponentProps> = ({ repoFil
             <div className="border-t border-red-950/30 p-4">
               <div className="flex items-center mb-2">
                 <div className="h-8 w-8 rounded-full overflow-hidden flex-shrink-0 bg-gray-800 mr-2">
-                  {group.authorAvatar ? (
-                    <img src={group.authorAvatar} alt={group.author} className="h-full w-full object-cover" />
+                  {event.author_avatar ? (
+                    <img src={event.author_avatar} alt={event.author} className="h-full w-full object-cover" />
                   ) : (
                     <UserCircle className="h-full w-full p-1 text-gray-400" />
                   )}
                 </div>
-                <div className="font-medium text-white">{group.author}</div>
+                <div className="font-medium text-white">{event.author}</div>
               </div>
               
               <div className="pl-10">
                 <div className="text-blue-400 hover:underline mb-2">
-                  [{group.repo}:{group.branch}] {group.commits.length} new {group.commits.length === 1 ? 'commit' : 'commits'}
+                  [{event.repo}:{event.branch}] {event.commits.length} new {event.commits.length === 1 ? 'commit' : 'commits'}
                 </div>
                 
-                {group.commits.map((commit, idx) => (
+                {event.commits.map((commit, idx) => (
                   <CommitDetail 
                     key={idx} 
                     id={commit.id} 

@@ -1,210 +1,64 @@
 import React, { useState } from "react";
 import { motion } from "framer-motion";
 import {
-  UserCircle,
-  Github,
   GitCommit,
-  GitBranch,
-  Calendar,
-  Clock,
-  MessageSquare,
-  Info,
-  Briefcase,
-  CalendarIcon,
-  Globe,
+  Github,
   Linkedin,
-
-  MenuIcon,
+  CalendarIcon,
+  Briefcase,
   Network,
+  Globe,
+  AlertCircle
 } from "lucide-react";
 
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/shadcnComponents/card";
-import { Separator } from "@/components/ui/shadcnComponents/separator";
 import { Badge } from "@/components/ui/shadcnComponents/badge";
-import { Button } from "@/components/ui/shadcnComponents/button";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/shadcnComponents/tabs";
-import { createLazyFileRoute } from "@tanstack/react-router";
+import { Card } from "@/components/ui/shadcnComponents/card";
+import { invoke } from "@tauri-apps/api/tauri";
+import GitHubWebhookComponent from "../Webhooks/GithubHook";
 
-// Mock data to match the Discord webhook format - replace with your API call
-const mockCommitData = [
-  {
-    id: "github_1",
-    type: "GitHub",
-    appBadge: true,
-    timestamp: "Yesterday at 7:27 AM",
-    commits: [
-      {
-        author: "blazehp",
-        authorAvatar: "/avatars/blazehp.png",
-        repo: "Budgetary:blaze",
-        commitCount: 1,
-        commitId: "8a45495",
-        message: "Added Neon DB to Project",
-      }
-    ]
-  },
-  {
-    id: "github_2",
-    type: "GitHub",
-    appBadge: true,
-    timestamp: "Yesterday at 7:27 AM",
-    commits: [
-      {
-        author: "blazehp",
-        authorAvatar: "/avatars/blazehp.png",
-        repo: "Budgetary:pre-release",
-        commitCount: 11,
-        commitDetails: [
-          { commitId: "7448a5a", message: "Add notification task", author: "NnaHill" },
-          { commitId: "ea2b892", message: "test commit", author: "blazehp" },
-          { commitId: "0d1b427", message: "test commit 2", author: "blazehp" },
-          { commitId: "96ada2f", message: "Added old version of expenses.lazy file", author: "blazehp" },
-          { commitId: "32c7b7d", message: "commit test", author: "blazehp" },
-        ]
-      }
-    ]
-  },
-  {
-    id: "github_3",
-    type: "GitHub",
-    appBadge: true,
-    timestamp: "Yesterday at 7:27 AM",
-    commits: [
-      {
-        author: "blazehp",
-        authorAvatar: "/avatars/blazehp.png",
-        repo: "Budgetary:Baraa",
-        commitCount: 14,
-        commitDetails: [
-          { commitId: "4dfd329", message: "Fixed Budgetplanner date error (#61)", author: "blazehp" },
-          { commitId: "0cf1ee5", message: "Tweak Saving Goal Setting - 56", author: "hammoudryan" },
-          { commitId: "1843945", message: "Tweak Saving Goal Setting (#63)", author: "blazehp" },
-          { commitId: "7448a5a", message: "Add notification task", author: "NnaHill" },
-          { commitId: "ea2b892", message: "test commit", author: "blazehp" },
-        ]
-      }
-    ]
-  },
-  {
-    id: "github_4",
-    type: "GitHub",
-    appBadge: true,
-    timestamp: "Yesterday at 9:13 AM",
-    commits: [
-      {
-        author: "aalibrahimi", 
-        authorAvatar: "/avatars/aalibrahimi.png",
-        repo: "Budgetary:Ali",
-        commitCount: 1,
-        commitId: "15710c9",
-        message: "revamping the home to be a dashboard rather tha...",
-      }
-    ]
-  },
-  {
-    id: "github_5",
-    type: "GitHub",
-    appBadge: true,
-    timestamp: "Yesterday at 9:13 AM",
-    commits: [
-      {
-        author: "aalibrahimi",
-        authorAvatar: "/avatars/aalibrahimi.png", 
-        repo: "Budgetary:Ali",
-        commitCount: 1,
-        commitId: "11bd544",
-        message: "the correct home dashboard components",
-      }
-    ]
-  }
-];
-
-interface CommitDetailProps {
-  commitId: string;
-  message: string;
-  author?: string;
-}
-
-const CommitDetail: React.FC<CommitDetailProps> = ({ commitId, message, author }) => {
-  return (
-    <div className="flex items-start space-x-2 py-1 text-sm">
-      <div className="flex-shrink-0 w-16 font-mono text-red-300">{commitId.substring(0, 7)}</div>
-      <div className="flex-grow">
-        <span className="text-white">{message}</span>
-        {author && author !== "blazehp" && (
-          <span className="text-red-400 ml-2">- {author}</span>
-        )}
-      </div>
-    </div>
-  );
-};
-
-interface CommitGroupProps {
-  data: typeof mockCommitData[0];
-}
-
-const CommitGroup: React.FC<CommitGroupProps> = ({ data }) => {
-  return (
-    <Card className="mb-4 bg-black/60 border-red-950/30 overflow-hidden backdrop-blur-sm">
-      <CardHeader className="p-4 flex flex-row items-center space-x-2">
-        <div className="h-10 w-10 rounded-full overflow-hidden flex-shrink-0 bg-gray-800">
-          <Github className="h-full w-full p-2 text-white" />
-        </div>
-        <div className="flex-grow">
-          <CardTitle className="text-lg flex items-center">
-            {data.type}
-            {data.appBadge && (
-              <Badge className="ml-2 bg-blue-600 hover:bg-blue-700 text-xs">APP</Badge>
-            )}
-            <span className="text-xs text-red-300 ml-auto">{data.timestamp}</span>
-          </CardTitle>
-        </div>
-      </CardHeader>
-
-      <CardContent className="p-0">
-        {data.commits.map((commit, i) => (
-          <div key={i} className="border-t border-red-950/30 p-4">
-            <div className="flex items-center mb-2">
-              <div className="h-8 w-8 rounded-full overflow-hidden flex-shrink-0 bg-gray-800 mr-2">
-                {commit.authorAvatar ? (
-                  <img src={commit.authorAvatar} alt={commit.author} className="h-full w-full object-cover" />
-                ) : (
-                  <UserCircle className="h-full w-full p-1 text-gray-400" />
-                )}
-              </div>
-              <div className="font-medium text-white">{commit.author}</div>
-            </div>
-            
-            <div className="pl-10">
-              <div className="text-blue-400 hover:underline mb-2">
-                [{commit.repo}] {commit.commitCount} new {commit.commitCount === 1 ? 'commit' : 'commits'}
-              </div>
-              
-              {/* Single commit */}
-              {commit.commitId && (
-                <CommitDetail commitId={commit.commitId} message={commit.message} />
-              )}
-              
-              {/* Multiple commits */}
-              {commit.commitDetails && commit.commitDetails.map((detail, idx) => (
-                <CommitDetail 
-                  key={idx} 
-                  commitId={detail.commitId} 
-                  message={detail.message}
-                  author={detail.author}
-                />
-              ))}
-            </div>
-          </div>
-        ))}
-      </CardContent>
-    </Card>
-  );
-};
-
+// Import webhook components
+// import GitHubWebhookComponent from "./webhooks/GitHubWebhookComponent";
 
 function ModLogsPage() {
   const [activeTab, setActiveTab] = useState("github");
+  const [webhookStatus, setWebhookStatus] = useState({
+    connected: false,
+    serverUrl: "",
+  });
+
+  // Set up webhook server URL
+  const setupWebhookServer = async () => {
+    try {
+      const url = await invoke<string>("get_webhook_server_url");
+      setWebhookStatus({
+        connected: true,
+        serverUrl: url,
+      });
+    } catch (err) {
+      console.error("Failed to get webhook server URL:", err);
+    }
+  };
+
+  // Render the appropriate component based on active tab
+  const renderActiveComponent = () => {
+    switch (activeTab) {
+      case "github":
+        return <GitHubWebhookComponent />;
+      case "linkedin":
+        return <div className="text-white text-center py-8">LinkedIn webhook component coming soon</div>;
+      case "calendly":
+        return <div className="text-white text-center py-8">Calendly webhook component coming soon</div>;
+      case "upwork":
+        return <div className="text-white text-center py-8">Upwork webhook component coming soon</div>;
+      case "indeed":
+        return <div className="text-white text-center py-8">Indeed webhook component coming soon</div>;
+      case "hostinger":
+        return <div className="text-white text-center py-8">Hostinger webhook component coming soon</div>;
+      default:
+        return <div className="text-white text-center py-8">Select a service to view webhook data</div>;
+    }
+  };
 
   return (
     <div className="min-h-screen bg-black/95">
@@ -217,8 +71,24 @@ function ModLogsPage() {
               <h1 className="text-xl font-bold text-white">Mod Logs</h1>
               <Badge className="ml-3 bg-red-900/60 border border-red-800 text-red-100">Admin Only</Badge>
             </div>
-       
-         
+            
+            {/* Webhook Status Indicator */}
+            <div className="flex items-center">
+              {webhookStatus.connected ? (
+                <Badge className="bg-green-800/60 border border-green-700 text-green-100 flex items-center">
+                  <span className="w-2 h-2 rounded-full bg-green-400 mr-2 animate-pulse"></span>
+                  Webhook Server Connected
+                </Badge>
+              ) : (
+                <Badge 
+                  className="bg-red-900/60 border border-red-800 text-red-100 flex items-center cursor-pointer"
+                  onClick={setupWebhookServer}
+                >
+                  <AlertCircle className="w-4 h-4 mr-1" />
+                  Webhook Server Disconnected
+                </Badge>
+              )}
+            </div>
           </div>
         </div>
       </nav>
@@ -280,11 +150,31 @@ function ModLogsPage() {
               </TabsTrigger>
             </TabsList>
           </Tabs>
-        
 
-          {mockCommitData.map((group) => (
-            <CommitGroup key={group.id} data={group} />
-          ))}
+          {/* Display webhook setup instructions if not connected */}
+          {!webhookStatus.connected && (
+            <Card className="mb-4 p-4 bg-black/60 border-red-950/30">
+              <div className="text-white">
+                <h3 className="text-lg font-medium mb-2">Webhook Setup Required</h3>
+                <p className="mb-4">To receive live updates from GitHub, you need to set up a webhook server:</p>
+                <ol className="list-decimal pl-6 space-y-2">
+                  <li>Install webhook server dependencies: <code className="bg-gray-800 px-2 py-1 rounded">npm install express body-parser cors</code></li>
+                  <li>Start the webhook server: <code className="bg-gray-800 px-2 py-1 rounded">node webhook-server.js</code></li>
+                  <li>Use ngrok to expose your server: <code className="bg-gray-800 px-2 py-1 rounded">ngrok http 3000</code></li>
+                  <li>Configure GitHub webhooks with the ngrok URL</li>
+                </ol>
+                <button 
+                  className="mt-4 bg-red-900 hover:bg-red-800 text-white px-4 py-2 rounded"
+                  onClick={setupWebhookServer}
+                >
+                  Connect to Webhook Server
+                </button>
+              </div>
+            </Card>
+          )}
+
+          {/* Render the active webhook component */}
+          {renderActiveComponent()}
         </motion.div>
       </div>
     </div>
@@ -292,4 +182,3 @@ function ModLogsPage() {
 }
 
 export default ModLogsPage;
-
