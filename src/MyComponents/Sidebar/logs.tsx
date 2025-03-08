@@ -1,184 +1,240 @@
-import React, { useState } from "react";
-import { motion } from "framer-motion";
-import {
-  GitCommit,
-  Github,
-  Linkedin,
-  CalendarIcon,
-  Briefcase,
-  Network,
-  Globe,
-  AlertCircle
-} from "lucide-react";
-
+import React, { useEffect, useState } from "react";
+import { Github, UserCircle } from "lucide-react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/shadcnComponents/card";
 import { Badge } from "@/components/ui/shadcnComponents/badge";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/shadcnComponents/tabs";
-import { Card } from "@/components/ui/shadcnComponents/card";
-import { invoke } from "@tauri-apps/api/tauri";
-import GitHubWebhookComponent from "../Webhooks/GithubHook";
+import { Button } from "@/components/ui/shadcnComponents/button";
 
-// Import webhook components
-// import GitHubWebhookComponent from "./webhooks/GitHubWebhookComponent";
+// Type definitions for GitHub webhook payload
+interface GitHubCommitDetail {
+  id: string;
+  message: string;
+  author: string;
+  timestamp: string;
+}
 
-function ModLogsPage() {
-  const [activeTab, setActiveTab] = useState("github");
-  const [webhookStatus, setWebhookStatus] = useState({
-    connected: false,
-    serverUrl: "",
-  });
+interface GitHubCommitGroup {
+  id: string;
+  event_type: string;
+  repo: string;
+  branch: string;
+  author: string;
+  author_avatar: string;
+  timestamp: string;
+  commits: GitHubCommitDetail[];
+}
 
-  // Set up webhook server URL
-  const setupWebhookServer = async () => {
-    try {
-      const url = await invoke<string>("get_webhook_server_url");
-      setWebhookStatus({
-        connected: true,
-        serverUrl: url,
-      });
-    } catch (err) {
-      console.error("Failed to get webhook server URL:", err);
-    }
-  };
+interface GitHubWebhookComponentProps {
+  // If you want to filter by specific repos
+  repoFilter?: string[];
+}
 
-  // Render the appropriate component based on active tab
-  const renderActiveComponent = () => {
-    switch (activeTab) {
-      case "github":
-        return <GitHubWebhookComponent />;
-      case "linkedin":
-        return <div className="text-white text-center py-8">LinkedIn webhook component coming soon</div>;
-      case "calendly":
-        return <div className="text-white text-center py-8">Calendly webhook component coming soon</div>;
-      case "upwork":
-        return <div className="text-white text-center py-8">Upwork webhook component coming soon</div>;
-      case "indeed":
-        return <div className="text-white text-center py-8">Indeed webhook component coming soon</div>;
-      case "hostinger":
-        return <div className="text-white text-center py-8">Hostinger webhook component coming soon</div>;
-      default:
-        return <div className="text-white text-center py-8">Select a service to view webhook data</div>;
-    }
-  };
-
+const CommitDetail: React.FC<GitHubCommitDetail> = ({ id, message, author }) => {
   return (
-    <div className="min-h-screen bg-black/95">
-      {/* Navigation Bar */}
-      <nav className="fixed top-0 left-0 right-0 bg-black/80 backdrop-blur-md border-b border-red-950/40 z-50">
-        <div className="container mx-auto px-4 py-2">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center">
-              <GitCommit className="h-6 w-6 mr-2 text-red-500" />
-              <h1 className="text-xl font-bold text-white">Mod Logs</h1>
-              <Badge className="ml-3 bg-red-900/60 border border-red-800 text-red-100">Admin Only</Badge>
-            </div>
-            
-            {/* Webhook Status Indicator */}
-            <div className="flex items-center">
-              {webhookStatus.connected ? (
-                <Badge className="bg-green-800/60 border border-green-700 text-green-100 flex items-center">
-                  <span className="w-2 h-2 rounded-full bg-green-400 mr-2 animate-pulse"></span>
-                  Webhook Server Connected
-                </Badge>
-              ) : (
-                <Badge 
-                  className="bg-red-900/60 border border-red-800 text-red-100 flex items-center cursor-pointer"
-                  onClick={setupWebhookServer}
-                >
-                  <AlertCircle className="w-4 h-4 mr-1" />
-                  Webhook Server Disconnected
-                </Badge>
-              )}
-            </div>
-          </div>
-        </div>
-      </nav>
-
-      <div className="container mx-auto px-4 py-8 max-w-5xl pt-20">
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.3 }}
-        >
-          {/* Service Selector Tabs */}
-          <Tabs 
-            value={activeTab} 
-            onValueChange={setActiveTab}
-            className="mb-6"
-          >
-            <TabsList className="h-12 bg-black/40 p-1 text-red-200/60 border border-red-950/20 flex-nowrap overflow-x-auto">
-              <TabsTrigger 
-                value="github" 
-                className="data-[state=active]:bg-red-950/20 data-[state=active]:text-red-200 hover:text-red-200 transition-colors duration-200 flex items-center gap-2"
-              >
-                <Github className="h-4 w-4" />
-                <span>GitHub</span>
-              </TabsTrigger>
-              <TabsTrigger 
-                value="linkedin" 
-                className="data-[state=active]:bg-red-950/20 data-[state=active]:text-red-200 hover:text-red-200 transition-colors duration-200 flex items-center gap-2"
-              >
-                <Linkedin className="h-4 w-4" />
-                <span>LinkedIn</span>
-              </TabsTrigger>
-              <TabsTrigger 
-                value="calendly" 
-                className="data-[state=active]:bg-red-950/20 data-[state=active]:text-red-200 hover:text-red-200 transition-colors duration-200 flex items-center gap-2"
-              >
-                <CalendarIcon className="h-4 w-4" />
-                <span>Calendly</span>
-              </TabsTrigger>
-              <TabsTrigger 
-                value="upwork" 
-                className="data-[state=active]:bg-red-950/20 data-[state=active]:text-red-200 hover:text-red-200 transition-colors duration-200 flex items-center gap-2"
-              >
-                <Briefcase className="h-4 w-4" />
-                <span>Upwork</span>
-              </TabsTrigger>
-              <TabsTrigger 
-                value="indeed" 
-                className="data-[state=active]:bg-red-950/20 data-[state=active]:text-red-200 hover:text-red-200 transition-colors duration-200 flex items-center gap-2"
-              >
-                <Network className="h-4 w-4" />
-                <span>Indeed</span>
-              </TabsTrigger>
-              <TabsTrigger 
-                value="hostinger" 
-                className="data-[state=active]:bg-red-950/20 data-[state=active]:text-red-200 hover:text-red-200 transition-colors duration-200 flex items-center gap-2"
-              >
-                <Globe className="h-4 w-4" />
-                <span>Hostinger</span>
-              </TabsTrigger>
-            </TabsList>
-          </Tabs>
-
-          {/* Display webhook setup instructions if not connected */}
-          {!webhookStatus.connected && (
-            <Card className="mb-4 p-4 bg-black/60 border-red-950/30">
-              <div className="text-white">
-                <h3 className="text-lg font-medium mb-2">Webhook Setup Required</h3>
-                <p className="mb-4">To receive live updates from GitHub, you need to set up a webhook server:</p>
-                <ol className="list-decimal pl-6 space-y-2">
-                  <li>Install webhook server dependencies: <code className="bg-gray-800 px-2 py-1 rounded">npm install express body-parser cors</code></li>
-                  <li>Start the webhook server: <code className="bg-gray-800 px-2 py-1 rounded">node webhook-server.js</code></li>
-                  <li>Use ngrok to expose your server: <code className="bg-gray-800 px-2 py-1 rounded">ngrok http 3000</code></li>
-                  <li>Configure GitHub webhooks with the ngrok URL</li>
-                </ol>
-                <button 
-                  className="mt-4 bg-red-900 hover:bg-red-800 text-white px-4 py-2 rounded"
-                  onClick={setupWebhookServer}
-                >
-                  Connect to Webhook Server
-                </button>
-              </div>
-            </Card>
-          )}
-
-          {/* Render the active webhook component */}
-          {renderActiveComponent()}
-        </motion.div>
+    <div className="flex items-start space-x-2 py-1 text-sm">
+      <div className="flex-shrink-0 w-16 font-mono text-red-300">{id.substring(0, 7)}</div>
+      <div className="flex-grow">
+        <span className="text-white">{message}</span>
+        {author && (
+          <span className="text-red-400 ml-2">- {author}</span>
+        )}
       </div>
     </div>
   );
-}
+};
 
-export default ModLogsPage;
+const GitHubWebhookComponent: React.FC<GitHubWebhookComponentProps> = ({ repoFilter }) => {
+  const [webhookData, setWebhookData] = useState<GitHubCommitGroup[]>([]);
+  const [loading, setLoading] = useState<boolean>(true);
+  const [error, setError] = useState<string | null>(null);
+
+  // Function to fetch webhook data from the API
+  const fetchWebhooks = async () => {
+    try {
+      setLoading(true);
+      
+      // Call the API endpoint to get GitHub webhooks
+      const response = await fetch('/api/webhooks/github');
+      
+      if (!response.ok) {
+        throw new Error(`Error fetching webhook data: ${response.status}`);
+      }
+      
+      const data = await response.json();
+      console.log('Fetched webhook data:', data);
+      
+      // Filter by repo if specified
+      const filteredData = repoFilter 
+        ? data.filter((event: GitHubCommitGroup) => 
+            repoFilter.some(repo => event.repo.includes(repo)))
+        : data;
+      
+      setWebhookData(filteredData);
+      setError(null);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'An unknown error occurred');
+      console.error('Error fetching GitHub webhook data:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Test the webhook endpoint
+  const testWebhook = async () => {
+    try {
+      setLoading(true);
+      
+      const response = await fetch('/webhooks/github', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-GitHub-Event': 'ping',
+          'X-GitHub-Delivery': `test-${Date.now()}`
+        },
+        body: JSON.stringify({
+          zen: 'Test ping from app',
+          repository: {
+            full_name: 'test/repo'
+          }
+        })
+      });
+      
+      if (response.ok) {
+        console.log('Webhook test successful');
+        // Fetch the latest webhooks after test
+        fetchWebhooks();
+      } else {
+        setError(`Webhook test failed: ${response.status}`);
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'An unknown error occurred');
+      console.error('Error testing webhook:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    // Fetch webhook data on component mount
+    fetchWebhooks();
+    
+    // Set up a polling interval to fetch new webhook data every 10 seconds
+    const intervalId = setInterval(fetchWebhooks, 10000);
+    
+    return () => clearInterval(intervalId);
+  }, [repoFilter]);
+
+  if (loading && webhookData.length === 0) {
+    return <div className="text-white text-center py-8">Loading GitHub webhook data...</div>;
+  }
+
+  if (error && webhookData.length === 0) {
+    return (
+      <div className="text-red-400 text-center py-8">
+        <div>Error: {error}</div>
+        <Button 
+          onClick={fetchWebhooks} 
+          className="mt-4 bg-red-900 hover:bg-red-800"
+        >
+          Try Again
+        </Button>
+        <Button 
+          onClick={testWebhook} 
+          className="mt-4 ml-2 bg-red-900 hover:bg-red-800"
+        >
+          Test Webhook
+        </Button>
+      </div>
+    );
+  }
+
+  if (webhookData.length === 0) {
+    return (
+      <div className="text-gray-400 text-center py-8">
+        <div>No GitHub webhook data available</div>
+        <Button 
+          onClick={testWebhook} 
+          className="mt-4 bg-red-900 hover:bg-red-800"
+        >
+          Test Webhook
+        </Button>
+        <Button 
+          onClick={fetchWebhooks} 
+          className="mt-4 ml-2 bg-red-900 hover:bg-red-800"
+        >
+          Refresh
+        </Button>
+      </div>
+    );
+  }
+
+  return (
+    <>
+      <div className="flex justify-end mb-4">
+        <Button 
+          onClick={fetchWebhooks}
+          className="bg-red-900 hover:bg-red-800 mr-2"
+        >
+          Refresh Data
+        </Button>
+        <Button 
+          onClick={testWebhook}
+          className="bg-red-900 hover:bg-red-800"
+        >
+          Test Webhook
+        </Button>
+      </div>
+
+      {webhookData.map((event) => (
+        <Card key={event.id} className="mb-4 bg-black/60 border-red-950/30 overflow-hidden backdrop-blur-sm">
+          <CardHeader className="p-4 flex flex-row items-center space-x-2">
+            <div className="h-10 w-10 rounded-full overflow-hidden flex-shrink-0 bg-gray-800">
+              <Github className="h-full w-full p-2 text-white" />
+            </div>
+            <div className="flex-grow">
+              <CardTitle className="text-lg flex items-center">
+                GitHub
+                <Badge className="ml-2 bg-blue-600 hover:bg-blue-700 text-xs">APP</Badge>
+                <span className="text-xs text-red-300 ml-auto">
+                  {new Date(event.timestamp).toLocaleString()}
+                </span>
+              </CardTitle>
+            </div>
+          </CardHeader>
+
+          <CardContent className="p-0">
+            <div className="border-t border-red-950/30 p-4">
+              <div className="flex items-center mb-2">
+                <div className="h-8 w-8 rounded-full overflow-hidden flex-shrink-0 bg-gray-800 mr-2">
+                  {event.author_avatar ? (
+                    <img src={event.author_avatar} alt={event.author} className="h-full w-full object-cover" />
+                  ) : (
+                    <UserCircle className="h-full w-full p-1 text-gray-400" />
+                  )}
+                </div>
+                <div className="font-medium text-white">{event.author}</div>
+              </div>
+              
+              <div className="pl-10">
+                <div className="text-blue-400 hover:underline mb-2">
+                  [{event.repo}:{event.branch}] {event.commits.length} new {event.commits.length === 1 ? 'commit' : 'commits'}
+                </div>
+                
+                {event.commits.map((commit, idx) => (
+                  <CommitDetail 
+                    key={idx} 
+                    id={commit.id} 
+                    message={commit.message}
+                    author={commit.author}
+                    timestamp={commit.timestamp}
+                  />
+                ))}
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      ))}
+    </>
+  );
+};
+
+export default GitHubWebhookComponent;

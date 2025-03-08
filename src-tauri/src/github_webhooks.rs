@@ -93,14 +93,14 @@ impl WebhookState {
 }
 
 // Command to get GitHub webhook events
-#[command]
+#[tauri::command]
 pub fn get_github_webhooks(state: State<WebhookState>) -> Vec<GitHubWebhookEvent> {
     let events = state.github_events.lock().unwrap();
     events.clone()
 }
 
 // Handle incoming GitHub webhook
-#[command]
+#[tauri::command]
 pub fn handle_github_webhook(
     state: State<WebhookState>,
     payload: String,

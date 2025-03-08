@@ -93,6 +93,9 @@ const GitHubWebhookComponent: React.FC<GitHubWebhookComponentProps> = ({ repoFil
 
   return (
     <>
+    <button onClick={() => fetch('/api/webhooks/github').then(r => r.json()).then(console.log)}>
+  Debug Webhooks
+</button>
       {webhookData.map((event) => (
         <Card key={event.id} className="mb-4 bg-black/60 border-red-950/30 overflow-hidden backdrop-blur-sm">
           <CardHeader className="p-4 flex flex-row items-center space-x-2">
