@@ -16,5 +16,5 @@
     },
     "types": ["gsap"]  // Add GSAP types
   },
-  "include": ["vite.config.ts", "src"]
+  "include": ["vite.config.ts"] // the 'src' here is an issue when building
 }

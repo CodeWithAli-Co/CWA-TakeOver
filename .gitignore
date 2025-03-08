@@ -24,3 +24,7 @@ dist-ssr
 *.sw?
 
 .env
+# Contains Tauri Keys
+~
+# For Releases
+release.json

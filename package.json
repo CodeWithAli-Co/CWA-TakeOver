@@ -1,7 +1,7 @@
 {
   "name": "cwa-takeover",
   "private": true,
-  "version": "0.2.0",
+  "version": "0.3.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -38,7 +38,9 @@
     "@tauri-apps/plugin-fs": "~2.2.0",
     "@tauri-apps/plugin-notification": "~2.2.1",
     "@tauri-apps/plugin-opener": "^2.2.6",
+    "@tauri-apps/plugin-process": "~2",
     "@tauri-apps/plugin-sql": "~2.2.0",
+    "@tauri-apps/plugin-updater": "~2",
     "@types/date-fns": "^2.6.3",
     "accordion": "^3.0.2",
     "class-variance-authority": "^0.7.1",

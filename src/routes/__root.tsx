@@ -1,16 +1,11 @@
-import React from "react";
-import {
-  createRootRoute,
-  Outlet,
-  useNavigate,
-} from "@tanstack/react-router";
+import { check } from "@tauri-apps/plugin-updater";
+import { relaunch } from "@tauri-apps/plugin-process";
+import { createRootRoute, Outlet, useNavigate } from "@tanstack/react-router";
 import "../assets/sidebar.css";
 import { sendNotification } from "@tauri-apps/plugin-notification";
 import { useAppStore } from "../stores/store";
 
-import {
-  SidebarProvider,
-} from "@/components/ui/shadcnComponents/sidebar";
+import { SidebarProvider } from "@/components/ui/shadcnComponents/sidebar";
 import { AppSidebar } from "@/components/app-sidebar";
 import supabase from "@/MyComponents/supabase";
 import { useEffect } from "react";
@@ -25,35 +20,32 @@ export const Route = createRootRoute({
     const { data: user, error: userError } = ActiveUser();
     if (userError) {
       sendNotification({
-        title: 'Error with Active User',
-        body: 'Error Fetching Active User on Start up!'
-      })
+        title: "Error with Active User",
+        body: "Error Fetching Active User on Start up!",
+      });
     }
-    const {
-      refetch: refetchDMGroups
-    } = DMGroups(user[0]?.username);
+    const { refetch: refetchDMGroups } = DMGroups(user[0]?.username);
     const { refetch: refetchMessages } = Messages(GroupName);
-    
+
     // Messaging Realtime channel
     supabase
-    .channel("all-messages")
-    .on(
-      "postgres_changes",
-      { event: "*", schema: "public", table: "cwa_dm_chat" },
-      () => refetchMessages()
-    )
-    .on(
-      "postgres_changes",
-      { event: "*", schema: "public", table: "dm_groups" },
-      () => refetchDMGroups()
-    )
-    .on(
-      "postgres_changes",
-      { event: "*", schema: "public", table: "cwa_chat" },
-      () => refetchMessages()
-    )
-    .subscribe();
-
+      .channel("all-messages")
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "cwa_dm_chat" },
+        () => refetchMessages()
+      )
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "dm_groups" },
+        () => refetchDMGroups()
+      )
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "cwa_chat" },
+        () => refetchMessages()
+      )
+      .subscribe();
 
     // Checks if user is on DMChat or not. Using useEffect to prevent multiple rerenders
     useEffect(() => {
@@ -113,6 +105,43 @@ export const Route = createRootRoute({
     }, [GroupName]);
 
     // Add global pressence if possible
+
+    useEffect(() => {
+      async function RunUpdater() {
+        const update = await check();
+        if (update) {
+          sendNotification({
+            title: 'New Update Available!',
+            body: `Found update ${update.version} from ${update.date} with notes: ${update.body}`
+          })
+          let downloaded = 0;
+          let contentLength = 0;
+          // alternatively we could also call update.download() and update.install() separately
+          await update.downloadAndInstall((event) => {
+            switch (event.event) {
+              case "Started":
+                contentLength = event.data.contentLength!;
+                console.log(
+                  `started downloading ${event.data.contentLength} bytes`
+                );
+                break;
+              case "Progress":
+                downloaded += event.data.chunkLength;
+                console.log(`downloaded ${downloaded} from ${contentLength}`);
+                break;
+              case "Finished":
+                console.log("download finished");
+                break;
+            }
+          });
+
+          console.log("update installed");
+          await relaunch();
+        }
+      }
+
+      RunUpdater();
+    }, []);
 
     return (
       <>

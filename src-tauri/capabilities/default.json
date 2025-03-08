@@ -11,6 +11,8 @@
     "sql:default",
     "sql:allow-execute",
     "notification:default",
+    "process:default",
+    "updater:default",
     "dialog:default",
     "fs:default",
     {
