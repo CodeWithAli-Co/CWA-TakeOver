@@ -120,12 +120,12 @@ const GitHubWebhookComponent: React.FC<GitHubWebhookComponentProps> = ({
         const dataWithTimeStamps = filteredData.map(item => ({
           ...item, 
           timestamp: item.timestamp || new Date().toISOString(),
-          recieved_at: new Date().toISOString() // add when recieved
+          received_at: new Date().toISOString() // add when recieved
         }))
 
         // Combine existing data with new data
         const existingIds = new Set(prevData.map(item => item.id));
-        const newItems = filteredData.filter(item => !existingIds.has(item.id));
+        const newItems = dataWithTimeStamps.filter(item => !existingIds.has(item.id));
         
           // Ensure we don't exceed maxStoredEvents
       const combinedData = [...newItems, ...prevData];
