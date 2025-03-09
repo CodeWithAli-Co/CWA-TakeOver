@@ -4,6 +4,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/shadcn
 import { Badge } from "@/components/ui/shadcnComponents/badge";
 import { Button } from "@/components/ui/shadcnComponents/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/shadcnComponents/tabs";
+import supabase from "../supabase";
+
 
 // Type definitions for GitHub webhook payload
 interface GitHubCommitDetail {
@@ -22,6 +24,7 @@ interface GitHubCommitGroup {
   author_avatar: string;
   timestamp: string;
   commits: GitHubCommitDetail[];
+  received_at?: string;
 }
 
 interface GitHubWebhookComponentProps {
@@ -58,32 +61,55 @@ const GitHubWebhookComponent: React.FC<GitHubWebhookComponentProps> = ({
   const [activeTab, setActiveTab] = useState<string>("recent");
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
 
-  // Load stored webhooks from localStorage on component mount
+  // Load stored webhooks from Supabase on component mount
   useEffect(() => {
-    try {
-      const storedWebhooks = localStorage.getItem('github-webhooks');
-      if (storedWebhooks) {
-        const parsedData = JSON.parse(storedWebhooks);
-        setAllWebhookData(parsedData);
-      }
-    } catch (err) {
-      console.error('Error loading stored webhooks:', err);
-      // If there's an error reading from localStorage, just start fresh
-    }
+    fetchStoredWebhooks();
   }, []);
 
-  // Save webhooks to localStorage whenever allWebhookData changes
-  useEffect(() => {
-    if (allWebhookData.length > 0) {
-      try {
-        localStorage.setItem('github-webhooks', JSON.stringify(allWebhookData));
-      } catch (err) {
-        console.error('Error saving webhooks to localStorage:', err);
-      }
-    }
-  }, [allWebhookData]);
+  // Function to fetch stored webhooks from Supabase
+  const fetchStoredWebhooks = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('github_webhooks')
+        .select('*')
+        .order('timestamp', { ascending: false })
+        .limit(maxStoredEvents);
 
-   // Need to make sure commits are being savedd (l'll do it through local storage then replace it to supabase in a sec)
+      if (error) {
+        throw error;
+      }
+
+      if (data) {
+        console.log('Fetched webhooks from Supabase:', data);
+        setAllWebhookData(data);
+      }
+    } catch (err) {
+      console.error('Error loading stored webhooks from Supabase:', err);
+    }
+  };
+
+  // Function to save new webhooks to Supabase
+  const saveWebhooksToSupabase = async (webhooks: GitHubCommitGroup[]) => {
+    try {
+      if (webhooks.length === 0) return;
+
+      const { data, error } = await supabase
+        .from('github_webhooks')
+        .upsert(webhooks, { 
+          onConflict: 'id',
+          ignoreDuplicates: true
+        });
+
+      if (error) {
+        console.error('Error saving webhooks to Supabase:', error);
+      } else {
+        console.log('Successfully saved webhooks to Supabase:', data);
+      }
+    } catch (err) {
+      console.error('Error in saveWebhooksToSupabase:', err);
+    }
+  };
+
   // Function to fetch webhook data from the API
   const fetchWebhooks = async () => {
     try {
@@ -97,44 +123,39 @@ const GitHubWebhookComponent: React.FC<GitHubWebhookComponentProps> = ({
       }
       
       const data = await response.json();
-      console.log('Fetched webhook data:', data);
+      console.log('Fetched webhook data from API:', data);
       
       // Filter by repo if specified
-      // const filteredData = repoFilter 
-      //   ? data.filter((event: GitHubCommitGroup) => 
-      //       repoFilter.some(repo => event.repo.includes(repo)))
-      //   : data;
-        // Filter by repo if specified
-    const filteredData = repoFilter 
-    ? data.filter((event) => repoFilter.some(repo => event.repo.includes(repo)))
-    : data;
+      const filteredData = repoFilter 
+        ? data.filter((event: GitHubCommitGroup) => repoFilter.some(repo => event.repo.includes(repo)))
+        : data;
       
       // Set the recent webhooks
       setRecentWebhookData(filteredData);
       
-      // Update the all webhooks data, preserving history
-      setAllWebhookData(prevData => {
-        console.log('previous stored data:', prevData)
+      // Process the new webhook data
+      const dataWithTimestamps = filteredData.map((item: GitHubCommitGroup) => ({
+        ...item, 
+        timestamp: item.timestamp || new Date().toISOString(),
+        received_at: new Date().toISOString()
+      }));
 
-        // each event needs to have a timestamp if missing 
-        const dataWithTimeStamps = filteredData.map(item => ({
-          ...item, 
-          timestamp: item.timestamp || new Date().toISOString(),
-          recved_at: new Date().toISOString() // add when recieved
-        }))
-
-        // Combine existing data with new data
-        const existingIds = new Set(prevData.map(item => item.id));
-        const newItems = dataWithTimeStamps.filter(item => !existingIds.has(item.id));
-        
-          // Ensure we don't exceed maxStoredEvents
-      const combinedData = [...newItems, ...prevData];
-      const limitedData = combinedData.length > maxStoredEvents 
-        ? combinedData.slice(0, maxStoredEvents) 
-        : combinedData;
+      // Filter out webhooks we already have in allWebhookData
+      const existingIds = new Set(allWebhookData.map(item => item.id));
+      const newItems = dataWithTimestamps.filter(item => !existingIds.has(item.id));
       
-      return limitedData;
-    });
+      if (newItems.length > 0) {
+        // Save new items to Supabase
+        await saveWebhooksToSupabase(newItems);
+        
+        // Update state with combined data
+        const combinedData = [...newItems, ...allWebhookData];
+        const limitedData = combinedData.length > maxStoredEvents 
+          ? combinedData.slice(0, maxStoredEvents) 
+          : combinedData;
+        
+        setAllWebhookData(limitedData);
+      }
       
       setLastUpdated(new Date());
       setError(null);
@@ -182,10 +203,26 @@ const GitHubWebhookComponent: React.FC<GitHubWebhookComponentProps> = ({
   };
 
   // Clear stored webhook history
-  const clearHistory = () => {
+  const clearHistory = async () => {
     if (window.confirm('Are you sure you want to clear the webhook history?')) {
-      setAllWebhookData([]);
-      localStorage.removeItem('github-webhooks');
+      try {
+        // Delete all records from Supabase
+        const { error } = await supabase
+          .from('github_webhooks')
+          .delete()
+          .not('id', 'is', null); // Safety check to avoid deleting all rows if something goes wrong
+        
+        if (error) {
+          throw error;
+        }
+        
+        // Clear the state
+        setAllWebhookData([]);
+        console.log('Webhook history cleared successfully');
+      } catch (err) {
+        console.error('Error clearing webhook history:', err);
+        alert('Failed to clear webhook history');
+      }
     }
   };
 
