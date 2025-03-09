@@ -112,7 +112,7 @@ export const Route = createRootRoute({
         if (update) {
           sendNotification({
             title: 'New Update Available!',
-            body: `Found update ${update.version} from ${update.date} with notes: ${update.body}`
+            body: `Found update v${update.version}`
           })
           let downloaded = 0;
           let contentLength = 0;
