@@ -1,5 +1,5 @@
 import React from "react";
-import { createLazyFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { createLazyFileRoute, Link } from "@tanstack/react-router";
 import {
   Card,
   CardContent,
@@ -7,7 +7,6 @@ import {
   CardTitle,
 } from "@/components/ui/shadcnComponents/card";
 import { ScrollArea } from "@/components/ui/shadcnComponents/scroll-area";
-import { Button } from "@/components/ui/shadcnComponents/button";
 import {
   Tabs,
   TabsList,
@@ -29,9 +28,11 @@ import { motion, AnimatePresence } from "framer-motion";
 import { useEffect, useState } from "react";
 import supabase from "@/MyComponents/supabase";
 import { AddTodo } from "@/MyComponents/SettingNavComponents/handlingTasking/addTodo";
+import UserView from "@/MyComponents/Reusables/userView";
+import { message } from "@tauri-apps/plugin-dialog";
 
 // Enhanced Task Priority Badge with animation
-const TaskPriorityBadge = ({ priority }) => {
+const TaskPriorityBadge = ({ priority }: { priority: any }) => {
   const colors = {
     high: "bg-red-500/20 text-red-400 border-red-500/30",
     medium: "bg-amber-500/20 text-amber-400 border-amber-500/30",
@@ -87,52 +88,83 @@ const QuickActionCard = ({
 );
 
 // Task Item Component with animations
-const TaskItem = ({ task }) => (
-  <motion.div
-    initial={{ opacity: 0, y: 10 }}
-    animate={{ opacity: 1, y: 0 }}
-    exit={{ opacity: 0, y: -10 }}
-    whileHover={{ scale: 1.01 }}
-    className="flex items-center justify-between p-3 rounded-lg hover:bg-red-900/10 
+const TaskItem = ({ task }: { task: any }) => {
+  async function EditTask(todoStatus: string, todoID: number) {
+    const { error } = await supabase
+      .from("cwa_todos")
+      .update({ status: todoStatus })
+      .eq("todo_id", todoID);
+    if (error) {
+      await message(error.message, {
+        title: "Error Editing Todo Status",
+        kind: "error",
+      });
+    }
+  }
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 10 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, y: -10 }}
+      whileHover={{ scale: 1.01 }}
+      className="flex items-center justify-between p-3 rounded-lg hover:bg-red-900/10 
               transition-colors border border-transparent hover:border-red-900/30"
-  >
-    <div className="flex items-center gap-3">
-      <motion.div
-        whileHover={{ scale: 1.1 }}
-        className="p-2 rounded-lg bg-red-900/20"
-      >
-        <Activity className="h-4 w-4 text-red-500" />
-      </motion.div>
-      <div>
-        <div className="flex items-center">
-          <span className="text-sm font-medium text-amber-50">
-            {task.title}
-          </span>
-          <TaskPriorityBadge priority={task.priority} />
-        </div>
-        <span className="text-xs text-amber-50/70">{task.deadline}</span>
-      </div>
-    </div>
-    <motion.button
-      whileHover={{ scale: 1.05 }}
-      whileTap={{ scale: 0.95 }}
-      className="text-amber-50/70 hover:text-amber-50 hover:bg-red-900/20 px-3 py-1 rounded"
     >
-      View
-    </motion.button>
-  </motion.div>
-);
+      <div className="flex items-center gap-3">
+        <motion.div
+          whileHover={{ scale: 1.1 }}
+          className="p-2 rounded-lg bg-red-900/20"
+        >
+          <Activity className="h-4 w-4 text-red-500" />
+        </motion.div>
+        <div>
+          <div className="flex items-center">
+            <span className="text-sm font-medium text-amber-50">
+              {task.title}
+            </span>
+            <TaskPriorityBadge priority={task.priority} />
+          </div>
+          <span className="text-xs text-amber-50/70">{task.deadline}</span>
+        </div>
+      </div>
+      {task.status === "to-do" && (
+        <motion.button
+          whileHover={{ scale: 1.05 }}
+          whileTap={{ scale: 0.95 }}
+          className="text-amber-50/70 hover:text-amber-50 hover:bg-red-900/20 px-3 py-1 rounded"
+          onClick={() => EditTask("in-progress", task.todo_id)}
+        >
+          Start
+        </motion.button>
+      )}
+
+      {task.status === "in-progress" && (
+        <motion.button
+          whileHover={{ scale: 1.05 }}
+          whileTap={{ scale: 0.95 }}
+          className="text-amber-50/70 hover:text-amber-50 hover:bg-red-900/20 px-3 py-1 rounded"
+          onClick={() => EditTask("done", task.todo_id)}
+        >
+          Finish
+        </motion.button>
+      )}
+    </motion.div>
+  );
+};
 
 // Enhanced Tasks Component with Tabs
 const TasksComponent = () => {
   const [selectedTab, setSelectedTab] = useState("to-do");
   const [searchQuery, setSearchQuery] = useState("");
 
-    const { data: AllEmployees, error: EmployeesError } = Employees();
-    if (EmployeesError) {
-      console.log("Error fetching Employees for ToDo in Home", EmployeesError.message);
-    }
-  
+  const { data: AllEmployees, error: EmployeesError } = Employees();
+  if (EmployeesError) {
+    console.log(
+      "Error fetching Employees for ToDo in Home",
+      EmployeesError.message
+    );
+  }
 
   // Get the active user
   const { data: user, error: activeUserError } = ActiveUser();
@@ -309,7 +341,9 @@ const Index = () => {
           <TasksComponent />
 
           {/* storage graph */}
-          <StorageUsageChart />
+          <UserView userRole="admin">
+            <StorageUsageChart />
+          </UserView>
         </div>
       </motion.div>
     </div>

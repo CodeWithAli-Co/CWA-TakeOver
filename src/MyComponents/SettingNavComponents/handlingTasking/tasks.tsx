@@ -36,6 +36,7 @@ import {
 import { ActiveUser, Employees, Todos, TodosInterface } from "@/stores/query";
 import { AddTodo } from "./addTodo";
 import supabase from "@/MyComponents/supabase";
+import { message } from "@tauri-apps/plugin-dialog";
 
 // Component for displaying task blockers
 const TaskBlockerItem: React.FC<{ blocker: TaskBlocker }> = ({ blocker }) => (
@@ -111,6 +112,18 @@ const TaskPriorityBadge: React.FC<{ priority: TaskPriority }> = ({
 // Task Item Component
 const TaskItem: React.FC<{ task: TodosInterface }> = ({ task }) => {
   const [isExpanded, setIsExpanded] = useState(false);
+  async function EditTask(todoStatus: string, todoID: number) {
+    const { error } = await supabase
+      .from("cwa_todos")
+      .update({ status: todoStatus })
+      .eq("todo_id", todoID);
+    if (error) {
+      await message(error.message, {
+        title: "Error Editing Todo Status",
+        kind: "error",
+      });
+    }
+  }
 
   return (
     <motion.div
@@ -122,10 +135,7 @@ const TaskItem: React.FC<{ task: TodosInterface }> = ({ task }) => {
                  hover:bg-red-950/10 hover:border-red-900/30 transition-all duration-200"
     >
       {/* Task Header */}
-      <div
-        className="p-4 cursor-pointer"
-        onClick={() => setIsExpanded(!isExpanded)}
-      >
+      <div className="p-4 cursor-pointer">
         <div className="flex items-start gap-4 w-full">
           <div className="p-2 rounded-lg bg-red-900/20 mt-1">
             <Activity className="h-4 w-4 text-red-500" />
@@ -133,12 +143,37 @@ const TaskItem: React.FC<{ task: TodosInterface }> = ({ task }) => {
           <div className="flex-1">
             <div className="flex items-center justify-between">
               <div className="flex items-center">
-                <span className="text-sm font-medium text-red-200">
+                <span
+                  className="text-sm font-medium text-red-200"
+                  onClick={() => setIsExpanded(!isExpanded)}
+                >
                   {task.title}
                 </span>
                 <TaskPriorityBadge priority={task.priority} />
               </div>
               <div className="flex items-center gap-3">
+                {task.status === "to-do" && (
+                  <motion.button
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
+                    className="text-amber-50/70 hover:text-amber-50 hover:bg-red-900/20 px-3 py-1 rounded"
+                    onClick={() => EditTask("in-progress", task.todo_id)}
+                  >
+                    Start
+                  </motion.button>
+                )}
+
+                {task.status === "in-progress" && (
+                  <motion.button
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
+                    className="text-amber-50/70 hover:text-amber-50 hover:bg-red-900/20 px-3 py-1 rounded"
+                    onClick={() => EditTask("done", task.todo_id)}
+                  >
+                    Finish
+                  </motion.button>
+                )}
+
                 {isExpanded ? (
                   <ChevronUp className="h-4 w-4 text-red-400" />
                 ) : (
@@ -185,7 +220,6 @@ const TaskItem: React.FC<{ task: TodosInterface }> = ({ task }) => {
                 <p className="text-sm text-red-200/60">{task.description}</p>
               </div>
             </div>
-
           </motion.div>
         )}
       </AnimatePresence>
@@ -197,7 +231,7 @@ const TaskItem: React.FC<{ task: TodosInterface }> = ({ task }) => {
 const TaskSettings: React.FC = () => {
   const { data: AllEmployees, error: EmployeesError } = Employees();
   if (EmployeesError) {
-    console.log("Erro fetching Employees for ToDo", EmployeesError.message);
+    console.log("Error fetching Employees for ToDo", EmployeesError.message);
   }
   const { data: user, error: activeUserError } = ActiveUser();
   if (activeUserError) {
@@ -210,7 +244,7 @@ const TaskSettings: React.FC = () => {
     data: todos,
     error: TodoError,
     refetch: refetchTodos,
-  } = Todos(user[0]?.username);   
+  } = Todos(user[0]?.username);
   if (TodoError) {
     console.log("Error fetching Todos Data:", TodoError.message);
   }
@@ -218,14 +252,13 @@ const TaskSettings: React.FC = () => {
   const [selectedTab, setSelectedTab] = useState<TaskStatus>("to-do");
   const [searchQuery, setSearchQuery] = useState("");
 
-
-    // Add null checks and defaults
-    const todosList = todos || [];
-    const todoCount = todosList.length > 0 ? todosList[0]?.todoCount || 0 : 0;
-    const inProgressCount = todosList.length > 0 ? todosList[0]?.inProgressCount || 0 : 0;
-    const doneCount = todosList.length > 0 ? todosList[0]?.doneCount || 0 : 0;
-    const allCount = todosList.length > 0 ? todosList[0]?.allCount || 0 : 0;
-
+  // Add null checks and defaults
+  const todosList = todos || [];
+  const todoCount = todosList.length > 0 ? todosList[0]?.todoCount || 0 : 0;
+  const inProgressCount =
+    todosList.length > 0 ? todosList[0]?.inProgressCount || 0 : 0;
+  const doneCount = todosList.length > 0 ? todosList[0]?.doneCount || 0 : 0;
+  const allCount = todosList.length > 0 ? todosList[0]?.allCount || 0 : 0;
 
   //updated it so thaat it filters using localtask rather than just normal task
   const filteredTasks = todos!.filter((task) => {
@@ -266,9 +299,7 @@ const TaskSettings: React.FC = () => {
               <CheckCircle className="h-4 w-4" />
               <span className="text-sm">Completed</span>
             </div>
-            <p className="text-2xl font-bold text-red-200 mt-2">
-              {doneCount}
-            </p>
+            <p className="text-2xl font-bold text-red-200 mt-2">{doneCount}</p>
           </CardContent>
         </Card>
         <Card className="bg-black/40 border-red-950/20">
@@ -288,9 +319,7 @@ const TaskSettings: React.FC = () => {
               <AlertCircle className="h-4 w-4" />
               <span className="text-sm">To Do</span>
             </div>
-            <p className="text-2xl font-bold text-red-200 mt-2">
-              {todoCount}
-            </p>
+            <p className="text-2xl font-bold text-red-200 mt-2">{todoCount}</p>
           </CardContent>
         </Card>
         <Card className="bg-black/40 border-red-950/20">
@@ -299,9 +328,7 @@ const TaskSettings: React.FC = () => {
               <Activity className="h-4 w-4" />
               <span className="text-sm">Total Tasks</span>
             </div>
-            <p className="text-2xl font-bold text-red-200 mt-2">
-              {allCount}
-            </p>
+            <p className="text-2xl font-bold text-red-200 mt-2">{allCount}</p>
           </CardContent>
         </Card>
       </div>
@@ -356,17 +383,20 @@ const TaskSettings: React.FC = () => {
                 {filteredTasks.length > 0 ? (
                   filteredTasks.map((task) => (
                     <TaskItem key={task.todo_id} task={task} />
-                    
                   ))
                 ) : (
-                    <div className="flex flex-col items-center justify center py-10">
-                      <AlertCircle className="h-12 w-12 text-red-400/50 mb-4"/>
-                      <h3 className="text-lg font-medium text-red-200"> No tasks found</h3>
-                      <p className="text-sm text-redd-200/60 mt-2">
-                        {searchQuery ? "Try a different search term" : "Add a new task to get started"}
-                      </p>
-                    </div>
-
+                  <div className="flex flex-col items-center justify center py-10">
+                    <AlertCircle className="h-12 w-12 text-red-400/50 mb-4" />
+                    <h3 className="text-lg font-medium text-red-200">
+                      {" "}
+                      No tasks found
+                    </h3>
+                    <p className="text-sm text-redd-200/60 mt-2">
+                      {searchQuery
+                        ? "Try a different search term"
+                        : "Add a new task to get started"}
+                    </p>
+                  </div>
                 )}
               </motion.div>
             </AnimatePresence>

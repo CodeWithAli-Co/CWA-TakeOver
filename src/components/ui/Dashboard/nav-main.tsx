@@ -48,6 +48,7 @@ export function NavMain({
             >
               <SidebarMenuItem>
                 <CollapsibleTrigger asChild>
+                  {/* Sidebar Items that are dropdowns */}
                   <SidebarMenuButton
                     tooltip={item.title}
                     onClick={() => navigate({ to: item.url })}
@@ -74,8 +75,8 @@ export function NavMain({
             </Collapsible>
           ) : (
             // this is basically an else statement, if the item does not have sub items, it will render this
-            /* Make Bot Management & Chat a direct link instead of dropdown */
             <SidebarMenuItem key={item.title}>
+              {/* Sidebar Items that arent dropdowns */}
               <SidebarMenuButton
                 tooltip={item.title}
                 onClick={() => navigate({ to: item.url })}

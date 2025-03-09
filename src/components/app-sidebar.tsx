@@ -1,17 +1,5 @@
 //  was import type * as React from "react"
 import * as React from "react";
-import {
-  Bot,
-  Frame,
-  Map,
-  PieChart,
-  Settings2,
-  SquareTerminal,
-  MessageCircle,
-  Home,
-  ClipboardList,
-  CalendarDays,
-} from "lucide-react";
 
 import {
   Sidebar,
@@ -24,58 +12,18 @@ import {
 import { NavMain } from "./ui/Dashboard/nav-main";
 import { NavProjects } from "./ui/Dashboard/nav-project";
 import { NavUser } from "./ui/Dashboard/nav-user";
+import {
+  adminData,
+  ceoData,
+  cooData,
+  internData,
+  marketingData,
+  memberData,
+  projectManagerData,
+} from "./ui/Dashboard/role-datas";
+import UserView from "@/MyComponents/Reusables/userView";
 // import { tasks } from "@/MyComponents/SettingNavComponents/taskTypes"
 // import SettingsPage from
-
-// This is sample data.
-const data = {
-  user: {
-    name: "CodeWithAli",
-    email: "unfold@codewithali.com",
-    avatar: "/public/codewithali_logo.png",
-  },
-  navMain: [
-    {
-      title: "Home",
-      url: "/",
-      isActive: false,
-      icon: Home,
-    },
-    {
-      title: "Admin Permissions",
-      url: "#",
-      icon: SquareTerminal,
-      isActive: true,
-      items: [
-        {
-          title: "Account Management",
-          url: "/details",
-        },
-        {
-          title: "Users",
-          url: "/employee",
-        },
-      ],
-    },
-    {
-      title: "Chat",
-      url: "/chat",
-      isActive: false,
-      icon: MessageCircle,
-    },
-    {
-      title: "Task",
-      url: "/task",
-      isActive: false,
-      icon: ClipboardList,
-    },
-    {
-      title: "Settings",
-      url: "/settings",
-      icon: Settings2,
-    },
-  ],
-};
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   return (
@@ -84,10 +32,44 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
         <SidebarTrigger />
       </SidebarHeader>
       <SidebarContent>
-        <NavMain items={data.navMain} />
+        {/* Intern View */}
+        <UserView userRole="intern">
+          <NavMain items={internData.navMain} />
+        </UserView>
+
+        {/* Member View */}
+        <UserView userRole="member">
+          <NavMain items={memberData.navMain} />
+        </UserView>
+
+        {/* Marketing Specialist View */}
+        <UserView userRole="marketing specialist">
+          <NavMain items={marketingData.navMain} />
+        </UserView>
+
+        {/* Admin View */}
+        <UserView userRole="admin">
+          <NavMain items={adminData.navMain} />
+        </UserView>
+
+        {/* Project Manager View */}
+        <UserView userRole="project manager">
+          <NavMain items={projectManagerData.navMain} />
+        </UserView>
+
+        {/* COO View */}
+        <UserView userRole="coo">
+          <NavMain items={cooData.navMain} />
+        </UserView>
+
+        {/* CEO View */}
+        <UserView userRole="ceo">
+          <NavMain items={ceoData.navMain} />
+        </UserView>
       </SidebarContent>
       <SidebarFooter>
-        <NavUser userData={data.user} />
+        {/* Using InternData here bc it's default role, so everyone has access to it */}
+        <NavUser userData={internData.user} />
       </SidebarFooter>
       <SidebarRail />
     </Sidebar>
