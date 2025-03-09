@@ -1,43 +1,95 @@
-import React, { useEffect, useState } from "react";
-import { Github, UserCircle, RefreshCw, Send } from "lucide-react";
+import React, { useState } from "react";
+import { motion } from "framer-motion";
+import {
+  UserCircle,
+  Github,
+  GitCommit,
+  GitBranch,
+  Calendar,
+  Clock,
+  MessageSquare,
+  Info,
+  Briefcase,
+  CalendarIcon,
+  Globe,
+  Linkedin,
+  MenuIcon,
+  Network,
+} from "lucide-react";
+
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/shadcnComponents/card";
+import { Separator } from "@/components/ui/shadcnComponents/separator";
 import { Badge } from "@/components/ui/shadcnComponents/badge";
 import { Button } from "@/components/ui/shadcnComponents/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/shadcnComponents/tabs";
+import GitHubWebhookComponent from "../Webhooks/GithubHook";
+// In ModLogsPage component, import the GitHubWebhookComponent
 
-// Type definitions for GitHub webhook payload
-interface GitHubCommitDetail {
-  id: string;
+
+// Mock data to match the Discord webhook format - replace with your API call
+const mockCommitData = [
+  {
+    id: "github_1",
+    type: "GitHub",
+    appBadge: true,
+    timestamp: "Yesterday at 7:27 AM",
+    commits: [
+      {
+        author: "blazehp",
+        authorAvatar: "/avatars/blazehp.png",
+        repo: "Budgetary:blaze",
+        commitCount: 1,
+        commitId: "8a45495",
+        message: "Added Neon DB to Project",
+      }
+    ]
+  },
+  // ... other mock data items
+];
+
+// Mock data for other service types
+const mockLinkedInData = [
+  {
+    id: "linkedin_1",
+    type: "LinkedIn",
+    appBadge: true,
+    timestamp: "Today at 10:15 AM",
+    activity: {
+      type: "Connection",
+      user: "John Developer",
+      details: "New connection request"
+    }
+  }
+];
+
+const mockCalendlyData = [
+  {
+    id: "calendly_1",
+    type: "Calendly",
+    appBadge: true,
+    timestamp: "Today at 9:30 AM",
+    event: {
+      type: "Meeting Scheduled",
+      with: "Jane Client",
+      time: "Tomorrow at 2:00 PM",
+      duration: "30 minutes"
+    }
+  }
+];
+
+interface CommitDetailProps {
+  commitId: string;
   message: string;
-  author: string;
-  timestamp: string;
+  author?: string;
 }
 
-interface GitHubCommitGroup {
-  id: string;
-  event_type: string;
-  repo: string;
-  branch: string;
-  author: string;
-  author_avatar: string;
-  timestamp: string;
-  commits: GitHubCommitDetail[];
-}
-
-interface GitHubWebhookComponentProps {
-  // If you want to filter by specific repos
-  repoFilter?: string[];
-  // Max number of stored historical events
-  maxStoredEvents?: number;
-}
-
-const CommitDetail: React.FC<GitHubCommitDetail> = ({ id, message, author }) => {
+const CommitDetail: React.FC<CommitDetailProps> = ({ commitId, message, author }) => {
   return (
     <div className="flex items-start space-x-2 py-1 text-sm">
-      <div className="flex-shrink-0 w-16 font-mono text-red-300">{id.substring(0, 7)}</div>
+      <div className="flex-shrink-0 w-16 font-mono text-red-300">{commitId.substring(0, 7)}</div>
       <div className="flex-grow">
         <span className="text-white">{message}</span>
-        {author && (
+        {author && author !== "blazehp" && (
           <span className="text-red-400 ml-2">- {author}</span>
         )}
       </div>
@@ -45,363 +97,294 @@ const CommitDetail: React.FC<GitHubCommitDetail> = ({ id, message, author }) => 
   );
 };
 
-const GitHubWebhookComponent: React.FC<GitHubWebhookComponentProps> = ({ 
-  repoFilter,
-  maxStoredEvents = 200 // Default to storing 200 events
-}) => {
-  // Store all webhooks data, both current and historical
-  const [allWebhookData, setAllWebhookData] = useState<GitHubCommitGroup[]>([]);
-  // Track recently received webhooks separately
-  const [recentWebhookData, setRecentWebhookData] = useState<GitHubCommitGroup[]>([]);
-  const [loading, setLoading] = useState<boolean>(true);
-  const [error, setError] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<string>("recent");
-  const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
+interface CommitGroupProps {
+  data: typeof mockCommitData[0];
+}
 
-  // Load stored webhooks from localStorage on component mount
-  useEffect(() => {
-    try {
-      const storedWebhooks = localStorage.getItem('github-webhooks');
-      if (storedWebhooks) {
-        const parsedData = JSON.parse(storedWebhooks);
-        setAllWebhookData(parsedData);
-      }
-    } catch (err) {
-      console.error('Error loading stored webhooks:', err);
-      // If there's an error reading from localStorage, just start fresh
-    }
-  }, []);
-
-  // Save webhooks to localStorage whenever allWebhookData changes
-  useEffect(() => {
-    if (allWebhookData.length > 0) {
-      try {
-        localStorage.setItem('github-webhooks', JSON.stringify(allWebhookData));
-      } catch (err) {
-        console.error('Error saving webhooks to localStorage:', err);
-      }
-    }
-  }, [allWebhookData]);
-
-   // Need to make sure commits are being savedd (l'll do it through local storage then replace it to supabase in a sec)
-  // Function to fetch webhook data from the API
-  const fetchWebhooks = async () => {
-    try {
-      setLoading(true);
-      
-      // Call the API endpoint to get GitHub webhooks
-      const response = await fetch('/api/webhooks/github');
-      
-      if (!response.ok) {
-        throw new Error(`Error fetching webhook data: ${response.status}`);
-      }
-      
-      const data = await response.json();
-      console.log('Fetched webhook data:', data);
-      
-      // Filter by repo if specified
-      // const filteredData = repoFilter 
-      //   ? data.filter((event: GitHubCommitGroup) => 
-      //       repoFilter.some(repo => event.repo.includes(repo)))
-      //   : data;
-        // Filter by repo if specified
-    const filteredData = repoFilter 
-    ? data.filter((event) => repoFilter.some(repo => event.repo.includes(repo)))
-    : data;
-      
-      // Set the recent webhooks
-      setRecentWebhookData(filteredData);
-      
-      // Update the all webhooks data, preserving history
-      setAllWebhookData(prevData => {
-        console.log('previous stored data:', prevData)
-
-        // each event needs to have a timestamp if missing 
-        const dataWithTimeStamps = filteredData.map(item => ({
-          ...item, 
-          timestamp: item.timestamp || new Date().toISOString(),
-          received_at: new Date().toISOString() // add when recieved
-        }))
-
-        // Combine existing data with new data
-        const existingIds = new Set(prevData.map(item => item.id));
-        const newItems = dataWithTimeStamps.filter(item => !existingIds.has(item.id));
-        
-          // Ensure we don't exceed maxStoredEvents
-      const combinedData = [...newItems, ...prevData];
-      const limitedData = combinedData.length > maxStoredEvents 
-        ? combinedData.slice(0, maxStoredEvents) 
-        : combinedData;
-      
-      return limitedData;
-    });
-      
-      setLastUpdated(new Date());
-      setError(null);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'An unknown error occurred');
-      console.error('Error fetching GitHub webhook data:', err);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // Test the webhook endpoint
-  const testWebhook = async () => {
-    try {
-      setLoading(true);
-      
-      const response = await fetch('/webhooks/github', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'X-GitHub-Event': 'ping',
-          'X-GitHub-Delivery': `test-${Date.now()}`
-        },
-        body: JSON.stringify({
-          zen: 'Test ping from app',
-          repository: {
-            full_name: 'test/repo'
-          }
-        })
-      });
-      
-      if (response.ok) {
-        console.log('Webhook test successful');
-        // Fetch the latest webhooks after test
-        fetchWebhooks();
-      } else {
-        setError(`Webhook test failed: ${response.status}`);
-      }
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'An unknown error occurred');
-      console.error('Error testing webhook:', err);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // Clear stored webhook history
-  const clearHistory = () => {
-    if (window.confirm('Are you sure you want to clear the webhook history?')) {
-      setAllWebhookData([]);
-      localStorage.removeItem('github-webhooks');
-    }
-  };
-
-  useEffect(() => {
-    // Fetch webhook data on component mount
-    fetchWebhooks();
-    
-    // Set up a polling interval to fetch new webhook data every 10 seconds
-    const intervalId = setInterval(fetchWebhooks, 10000);
-    
-    return () => clearInterval(intervalId);
-  }, [repoFilter]);
-
-  // Choose which data to display based on the active tab
-  const displayData = activeTab === "recent" ? recentWebhookData : allWebhookData;
-
-  if (loading && displayData.length === 0) {
-    return <div className="text-white text-center py-8">Loading GitHub webhook data...</div>;
-  }
-
-  if (error && displayData.length === 0) {
-    return (
-      <div className="text-red-400 text-center py-8">
-        <div>Error: {error}</div>
-        <Button 
-          onClick={fetchWebhooks} 
-          className="mt-4 bg-red-900 hover:bg-red-800"
-        >
-          Try Again
-        </Button>
-        <Button 
-          onClick={testWebhook} 
-          className="mt-4 ml-2 bg-red-900 hover:bg-red-800"
-        >
-          Test Webhook
-        </Button>
-      </div>
-    );
-  }
-
-  if (displayData.length === 0) {
-    return (
-      <div className="text-gray-400 text-center py-8">
-        <div>No GitHub webhook data available</div>
-        <Button 
-          onClick={testWebhook} 
-          className="mt-4 bg-red-900 hover:bg-red-800"
-        >
-          Test Webhook
-        </Button>
-        <Button 
-          onClick={fetchWebhooks} 
-          className="mt-4 ml-2 bg-red-900 hover:bg-red-800"
-        >
-          Refresh
-        </Button>
-      </div>
-    );
-  }
-
+const CommitGroup: React.FC<CommitGroupProps> = ({ data }) => {
   return (
-    <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center">
-          <Github className="h-6 w-6 mr-2 text-red-300" />
-          <h2 className="text-xl font-semibold text-white">GitHub Webhooks</h2>
-          {lastUpdated && (
-            <div className="text-xs text-gray-400 ml-4">
-              Last updated: {lastUpdated.toLocaleString()}
+    <Card className="mb-4 bg-black/60 border-red-950/30 overflow-hidden backdrop-blur-sm">
+      <CardHeader className="p-4 flex flex-row items-center space-x-2">
+        <div className="h-10 w-10 rounded-full overflow-hidden flex-shrink-0 bg-gray-800">
+          <Github className="h-full w-full p-2 text-white" />
+        </div>
+        <div className="flex-grow">
+          <CardTitle className="text-lg flex items-center">
+            {data.type}
+            {data.appBadge && (
+              <Badge className="ml-2 bg-blue-600 hover:bg-blue-700 text-xs">APP</Badge>
+            )}
+            <span className="text-xs text-red-300 ml-auto">{data.timestamp}</span>
+          </CardTitle>
+        </div>
+      </CardHeader>
+
+      <CardContent className="p-0">
+        {data.commits.map((commit, i) => (
+          <div key={i} className="border-t border-red-950/30 p-4">
+            <div className="flex items-center mb-2">
+              <div className="h-8 w-8 rounded-full overflow-hidden flex-shrink-0 bg-gray-800 mr-2">
+                {commit.authorAvatar ? (
+                  <img src={commit.authorAvatar} alt={commit.author} className="h-full w-full object-cover" />
+                ) : (
+                  <UserCircle className="h-full w-full p-1 text-gray-400" />
+                )}
+              </div>
+              <div className="font-medium text-white">{commit.author}</div>
             </div>
-          )}
-        </div>
-        <div className="flex space-x-2">
-          <Button 
-            onClick={fetchWebhooks}
-            className="bg-red-900 hover:bg-red-800 text-sm"
-            size="sm"
-          >
-            <RefreshCw className="h-4 w-4 mr-1" /> Refresh
-          </Button>
-          <Button 
-            onClick={testWebhook}
-            className="bg-red-900 hover:bg-red-800 text-sm"
-            size="sm"
-          >
-            <Send className="h-4 w-4 mr-1" /> Test
-          </Button>
-          {allWebhookData.length > 0 && (
-            <Button 
-              onClick={clearHistory}
-              variant="destructive"
-              className="text-sm"
-              size="sm"
-            >
-              Clear History
-            </Button>
-          )}
-        </div>
-      </div>
-
-      <Tabs defaultValue="recent" value={activeTab} onValueChange={setActiveTab}>
-        <div className="border-b border-red-950/30">
-          <TabsList className="bg-transparent">
-            <TabsTrigger 
-              value="recent" 
-              className="data-[state=active]:bg-red-950/30 data-[state=active]:text-white data-[state=active]:shadow-none"
-            >
-              Recent ({recentWebhookData.length})
-            </TabsTrigger>
-            <TabsTrigger 
-              value="all" 
-              className="data-[state=active]:bg-red-950/30 data-[state=active]:text-white data-[state=active]:shadow-none"
-            >
-              All History ({allWebhookData.length})
-            </TabsTrigger>
-          </TabsList>
-        </div>
-
-        <TabsContent value="recent">
-          <CommitsList webhookData={recentWebhookData} />
-        </TabsContent>
-        
-        <TabsContent value="all">
-          <CommitsList webhookData={allWebhookData} />
-        </TabsContent>
-      </Tabs>
-    </div>
+            
+            <div className="pl-10">
+              <div className="text-blue-400 hover:underline mb-2">
+                [{commit.repo}] {commit.commitCount} new {commit.commitCount === 1 ? 'commit' : 'commits'}
+              </div>
+              
+              {/* Single commit */}
+              {commit.commitId && (
+                <CommitDetail commitId={commit.commitId} message={commit.message} />
+              )}
+              
+              {/* Multiple commits */}
+              {commit.commitDetails && commit.commitDetails.map((detail, idx) => (
+                <CommitDetail 
+                  key={idx} 
+                  commitId={detail.commitId} 
+                  message={detail.message}
+                  author={detail.author}
+                />
+              ))}
+            </div>
+          </div>
+        ))}
+      </CardContent>
+    </Card>
   );
 };
 
-// Extracted CommitsList component for reuse between tabs
-const CommitsList = ({ webhookData }: { webhookData: GitHubCommitGroup[] }) => {
-  // Group commits by date
-  const groupedByDate = webhookData.reduce((groups, event) => {
-    const date = new Date(event.timestamp).toLocaleDateString();
-    if (!groups[date]) {
-      groups[date] = [];
-    }
-    groups[date].push(event);
-    return groups;
-  }, {} as Record<string, GitHubCommitGroup[]>);
+// LinkedIn Activity Component
+const LinkedInActivity = ({ data }) => {
+  return (
+    <Card className="mb-4 bg-black/60 border-red-950/30 overflow-hidden backdrop-blur-sm">
+      <CardHeader className="p-4 flex flex-row items-center space-x-2">
+        <div className="h-10 w-10 rounded-full overflow-hidden flex-shrink-0 bg-gray-800">
+          <Linkedin className="h-full w-full p-2 text-white" />
+        </div>
+        <div className="flex-grow">
+          <CardTitle className="text-lg flex items-center">
+            {data.type}
+            {data.appBadge && (
+              <Badge className="ml-2 bg-blue-600 hover:bg-blue-700 text-xs">APP</Badge>
+            )}
+            <span className="text-xs text-red-300 ml-auto">{data.timestamp}</span>
+          </CardTitle>
+        </div>
+      </CardHeader>
 
-  // Sort dates in descending order (newest first)
-  const sortedDates = Object.keys(groupedByDate).sort((a, b) => 
-    new Date(b).getTime() - new Date(a).getTime()
+      <CardContent className="p-4">
+        <div className="text-white">
+          <div className="font-medium">{data.activity.type}</div>
+          <div className="text-gray-300 mt-1">{data.activity.user}</div>
+          <div className="text-gray-400 mt-2">{data.activity.details}</div>
+        </div>
+      </CardContent>
+    </Card>
   );
+};
+
+// Calendly Event Component
+const CalendlyEvent = ({ data }) => {
+  return (
+    <Card className="mb-4 bg-black/60 border-red-950/30 overflow-hidden backdrop-blur-sm">
+      <CardHeader className="p-4 flex flex-row items-center space-x-2">
+        <div className="h-10 w-10 rounded-full overflow-hidden flex-shrink-0 bg-gray-800">
+          <CalendarIcon className="h-full w-full p-2 text-white" />
+        </div>
+        <div className="flex-grow">
+          <CardTitle className="text-lg flex items-center">
+            {data.type}
+            {data.appBadge && (
+              <Badge className="ml-2 bg-blue-600 hover:bg-blue-700 text-xs">APP</Badge>
+            )}
+            <span className="text-xs text-red-300 ml-auto">{data.timestamp}</span>
+          </CardTitle>
+        </div>
+      </CardHeader>
+
+      <CardContent className="p-4">
+        <div className="text-white">
+          <div className="font-medium">{data.event.type}</div>
+          <div className="text-gray-300 mt-1">With: {data.event.with}</div>
+          <div className="text-gray-400 mt-2">
+            <div>{data.event.time}</div>
+            <div>{data.event.duration}</div>
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  );
+};
+
+function ModLogsPage() {
+  const [activeTab, setActiveTab] = useState("github");
 
   return (
-    <div className="space-y-6">
-      {sortedDates.map(date => (
-        <div key={date} className="space-y-4">
-          <div className="sticky top-0 bg-black/80 backdrop-blur-sm py-2 border-b border-red-950/30 z-10">
-            <h3 className="text-white font-medium">
-              {date === new Date().toLocaleDateString() ? "Today" : date}
-            </h3>
-          </div>
-          
-          <div className="space-y-4">
-            {groupedByDate[date]
-              .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
-              .map((event) => (
-                <Card key={event.id} className="bg-black/60 border-red-950/30 overflow-hidden backdrop-blur-sm">
-                  <CardHeader className="p-4 flex flex-row items-center space-x-2">
-                    <div className="h-10 w-10 rounded-full overflow-hidden flex-shrink-0 bg-gray-800">
-                      <Github className="h-full w-full p-2 text-white" />
-                    </div>
-                    <div className="flex-grow">
-                      <CardTitle className="text-lg flex items-center">
-                        <span className="text-white truncate max-w-xs">{event.repo}</span>
-                        <Badge className="ml-2 bg-blue-600 hover:bg-blue-700 text-xs">
-                          {event.branch}
-                        </Badge>
-                        <span className="text-xs text-red-300 ml-auto">
-                          {new Date(event.timestamp).toLocaleTimeString()}
-                        </span>
-                      </CardTitle>
-                    </div>
-                  </CardHeader>
-
-                  <CardContent className="p-0">
-                    <div className="border-t border-red-950/30 p-4">
-                      <div className="flex items-center mb-2">
-                        <div className="h-8 w-8 rounded-full overflow-hidden flex-shrink-0 bg-gray-800 mr-2">
-                          {event.author_avatar ? (
-                            <img src={event.author_avatar} alt={event.author} className="h-full w-full object-cover" />
-                          ) : (
-                            <UserCircle className="h-full w-full p-1 text-gray-400" />
-                          )}
-                        </div>
-                        <div className="font-medium text-white">{event.author}</div>
-                      </div>
-                      
-                      <div className="pl-10">
-                        <div className="text-blue-400 mb-2">
-                          {event.commits.length} new {event.commits.length === 1 ? 'commit' : 'commits'}
-                        </div>
-                        
-                        {event.commits.map((commit, idx) => (
-                          <CommitDetail 
-                            key={idx} 
-                            id={commit.id} 
-                            message={commit.message}
-                            author={commit.author}
-                            timestamp={commit.timestamp}
-                          />
-                        ))}
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
+    <div className="min-h-screen bg-black/95">
+      {/* Navigation Bar */}
+      <nav className="fixed top-0 left-0 right-0 bg-black/80 backdrop-blur-md border-b border-red-950/40 z-50">
+        <div className="container mx-auto px-4 py-2">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center">
+              <GitCommit className="h-6 w-6 mr-2 text-red-500" />
+              <h1 className="text-xl font-bold text-white">Mod Logs</h1>
+              <Badge className="ml-3 bg-red-900/60 border border-red-800 text-red-100">Admin Only</Badge>
+            </div>
           </div>
         </div>
-      ))}
+      </nav>
+
+      <div className="container mx-auto px-4 py-8 max-w-5xl pt-20">
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.3 }}
+        >
+          {/* Service Selector Tabs */}
+          <Tabs 
+            value={activeTab} 
+            onValueChange={setActiveTab}
+            className="mb-6"
+          >
+            <TabsList className="h-12 bg-black/40 p-1 text-red-200/60 border border-red-950/20 flex-nowrap overflow-x-auto">
+              <TabsTrigger 
+                value="github" 
+                className="data-[state=active]:bg-red-950/20 data-[state=active]:text-red-200 hover:text-red-200 transition-colors duration-200 flex items-center gap-2"
+              >
+                <Github className="h-4 w-4" />
+                <span>GitHub</span>
+              </TabsTrigger>
+              <TabsTrigger 
+                value="linkedin" 
+                className="data-[state=active]:bg-red-950/20 data-[state=active]:text-red-200 hover:text-red-200 transition-colors duration-200 flex items-center gap-2"
+              >
+                <Linkedin className="h-4 w-4" />
+                <span>LinkedIn</span>
+              </TabsTrigger>
+              <TabsTrigger 
+                value="calendly" 
+                className="data-[state=active]:bg-red-950/20 data-[state=active]:text-red-200 hover:text-red-200 transition-colors duration-200 flex items-center gap-2"
+              >
+                <CalendarIcon className="h-4 w-4" />
+                <span>Calendly</span>
+              </TabsTrigger>
+              <TabsTrigger 
+                value="upwork" 
+                className="data-[state=active]:bg-red-950/20 data-[state=active]:text-red-200 hover:text-red-200 transition-colors duration-200 flex items-center gap-2"
+              >
+                <Briefcase className="h-4 w-4" />
+                <span>Upwork</span>
+              </TabsTrigger>
+              <TabsTrigger 
+                value="indeed" 
+                className="data-[state=active]:bg-red-950/20 data-[state=active]:text-red-200 hover:text-red-200 transition-colors duration-200 flex items-center gap-2"
+              >
+                <Network className="h-4 w-4" />
+                <span>Indeed</span>
+              </TabsTrigger>
+              <TabsTrigger 
+                value="hostinger" 
+                className="data-[state=active]:bg-red-950/20 data-[state=active]:text-red-200 hover:text-red-200 transition-colors duration-200 flex items-center gap-2"
+              >
+                <Globe className="h-4 w-4" />
+                <span>Hostinger</span>
+              </TabsTrigger>
+            </TabsList>
+
+            {/* Tab Content */}
+            <TabsContent value="github" className="mt-4">
+              <div className="flex justify-between items-center mb-4">
+                <div className="flex items-center">
+                  <Github className="h-6 w-6 mr-2 text-red-300" />
+                  <h2 className="text-xl font-semibold text-white">GitHub Activity</h2>
+                </div>
+                <Button 
+                  className="bg-red-900 hover:bg-red-800 text-sm"
+                  size="sm"
+                >
+                  Refresh
+                </Button>
+              </div>
+              <GitHubWebhookComponent />
+            </TabsContent>
+
+            <TabsContent value="linkedin" className="mt-4">
+              <div className="flex justify-between items-center mb-4">
+                <div className="flex items-center">
+                  <Linkedin className="h-6 w-6 mr-2 text-red-300" />
+                  <h2 className="text-xl font-semibold text-white">LinkedIn Activity</h2>
+                </div>
+                <Button 
+                  className="bg-red-900 hover:bg-red-800 text-sm"
+                  size="sm"
+                >
+                  Refresh
+                </Button>
+              </div>
+              {mockLinkedInData.length > 0 ? (
+                mockLinkedInData.map((item) => (
+                  <LinkedInActivity key={item.id} data={item} />
+                ))
+              ) : (
+                <div className="text-gray-400 text-center py-8">
+                  No LinkedIn activity available
+                </div>
+              )}
+            </TabsContent>
+
+            <TabsContent value="calendly" className="mt-4">
+              <div className="flex justify-between items-center mb-4">
+                <div className="flex items-center">
+                  <CalendarIcon className="h-6 w-6 mr-2 text-red-300" />
+                  <h2 className="text-xl font-semibold text-white">Calendly Events</h2>
+                </div>
+                <Button 
+                  className="bg-red-900 hover:bg-red-800 text-sm"
+                  size="sm"
+                >
+                  Refresh
+                </Button>
+              </div>
+              {mockCalendlyData.length > 0 ? (
+                mockCalendlyData.map((item) => (
+                  <CalendlyEvent key={item.id} data={item} />
+                ))
+              ) : (
+                <div className="text-gray-400 text-center py-8">
+                  No Calendly events available
+                </div>
+              )}
+            </TabsContent>
+            
+            <TabsContent value="upwork" className="mt-4">
+              <div className="text-gray-400 text-center py-8">
+                No Upwork activity available
+              </div>
+            </TabsContent>
+            
+            <TabsContent value="indeed" className="mt-4">
+              <div className="text-gray-400 text-center py-8">
+                No Indeed activity available
+              </div>
+            </TabsContent>
+            
+            <TabsContent value="hostinger" className="mt-4">
+              <div className="text-gray-400 text-center py-8">
+                No Hostinger activity available
+              </div>
+            </TabsContent>
+          </Tabs>
+        </motion.div>
+      </div>
     </div>
   );
-};
+}
 
-export default GitHubWebhookComponent;
+export default ModLogsPage;
