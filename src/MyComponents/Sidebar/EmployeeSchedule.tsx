@@ -295,14 +295,7 @@ if (!scheduleData || selectedDay === null) return <LoadingState />;
             )}
           </div>
 
-          {/* "Today" quick-jump button */}
-          <button
-            className="fixed bottom-4 right-4 bg-red-700 text-white rounded-full p-2 shadow-lg"
-            onClick={goToToday}
-            aria-label="Jump to today"
-          >
-            <CalendarCheck size={20} />
-          </button>
+       
         </div>
         <Sidebar 
 
@@ -328,7 +321,14 @@ if (!scheduleData || selectedDay === null) return <LoadingState />;
       {showAddShiftModal && <AddShiftModal />}
 
       {/* Sidebar */}
-
+   {/* "Today" quick-jump button */}
+   <button
+            className="fixed top-2 right-40 bg-red-700 text-white rounded-full p-2 shadow-lg"
+            onClick={goToToday}
+            aria-label="Jump to today"
+          >
+            <CalendarCheck size={20} />
+          </button>
     </div>
   );
 };
