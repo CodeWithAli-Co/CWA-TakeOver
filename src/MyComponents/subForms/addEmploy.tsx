@@ -27,6 +27,7 @@ export const AddEmployee = () => {
   });
 
   return (
+    // Work on this later to make it so only invited people can use the app
     <Card className="bg-red-950/10 border-red-900/20 mb-8">
       <CardContent className="pt-6">
         <form

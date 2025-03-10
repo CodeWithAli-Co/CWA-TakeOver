@@ -75,7 +75,7 @@ export const AddData = () => {
           className="w-full max-w-md mx-4"
           onClick={(e) => e.stopPropagation()}
         >
-          <Card className="bg-black/20 border-red-800/30  shadow-xl shadow-red-800/20">
+          <Card className="bg-black border-red-800/30  shadow-xl shadow-red-800/20">
             <CardHeader className="relative border-b border-red-950/20">
               <motion.button
                 whileHover={{ scale: 1.1 }}
@@ -113,6 +113,7 @@ export const AddData = () => {
                           name={field.name}
                           type="text"
                           required
+                          autoComplete="off"
                           value={field.state.value}
                           onChange={(e) => field.handleChange(e.target.value)}
                           className="bg-black/40 border-red-950/30 text-white 
@@ -135,6 +136,7 @@ export const AddData = () => {
                         <Input
                           name={field.name}
                           type="text"
+                          autoComplete="off"
                           value={field.state.value}
                           onChange={(e) => field.handleChange(e.target.value)}
                           className="bg-black/40 border-red-950/30 text-white 
@@ -157,6 +159,7 @@ export const AddData = () => {
                         <Input
                           name={field.name}
                           type="email"
+                          autoComplete="off"
                           value={field.state.value}
                           onChange={(e) => field.handleChange(e.target.value)}
                           className="bg-black/40 border-red-950/30 text-white 
@@ -179,6 +182,7 @@ export const AddData = () => {
                         <Input
                           name={field.name}
                           type="password"
+                          autoComplete="off"
                           value={field.state.value}
                           onChange={(e) => field.handleChange(e.target.value)}
                           className="bg-black/40 border-red-950/30 text-white 
@@ -201,6 +205,7 @@ export const AddData = () => {
                         <Input
                           name={field.name}
                           type="text"
+                          autoComplete="off"
                           value={field.state.value}
                           onChange={(e) => field.handleChange(e.target.value)}
                           className="bg-black/40 border-red-950/30 text-white 

@@ -24,6 +24,11 @@ interface Props {
 
 export const EditData = (props: Props) => {
   const { setDialog } = useAppStore();
+  const handleClose = () => {
+    setDialog("closed");
+    form.reset();
+  };
+
 
   const form = useForm({
     defaultValues: {
@@ -93,15 +98,10 @@ export const EditData = (props: Props) => {
         if (error) return console.log("Active Status Error:", error.message);
       }
 
-      setDialog("closed");
-      form.reset();
+      handleClose();
     },
   });
 
-  const handleClose = () => {
-    setDialog("closed");
-    form.reset();
-  };
 
   return (
     <AnimatePresence mode="wait">
@@ -120,7 +120,7 @@ export const EditData = (props: Props) => {
           className="w-full max-w-md mx-4"
           onClick={(e) => e.stopPropagation()}
         >
-          <Card className="bg-black/20 border-red-800/30  shadow-xl shadow-red-800/20">
+          <Card className="bg-black border-red-800/30  shadow-xl shadow-red-800/20">
             <CardHeader className="relative border-b border-red-950/20">
               <motion.button
                 whileHover={{ scale: 1.1 }}
@@ -132,7 +132,7 @@ export const EditData = (props: Props) => {
                 <X size={20} />
               </motion.button>
               <CardTitle className="text-2xl font-semibold text-white text-center">
-                Add Platform
+                Edit Platform
               </CardTitle>
             </CardHeader>
 
@@ -157,7 +157,7 @@ export const EditData = (props: Props) => {
                         <Input
                           name={field.name}
                           type="text"
-                          required
+                          autoComplete="off"
                           value={field.state.value}
                           onChange={(e) => field.handleChange(e.target.value)}
                           className="bg-black/40 border-red-950/30 text-white 
@@ -180,6 +180,7 @@ export const EditData = (props: Props) => {
                         <Input
                           name={field.name}
                           type="text"
+                          autoComplete="off"
                           value={field.state.value}
                           onChange={(e) => field.handleChange(e.target.value)}
                           className="bg-black/40 border-red-950/30 text-white 
@@ -202,6 +203,7 @@ export const EditData = (props: Props) => {
                         <Input
                           name={field.name}
                           type="email"
+                          autoComplete="off"
                           value={field.state.value}
                           onChange={(e) => field.handleChange(e.target.value)}
                           className="bg-black/40 border-red-950/30 text-white 
@@ -224,6 +226,7 @@ export const EditData = (props: Props) => {
                         <Input
                           name={field.name}
                           type="password"
+                          autoComplete="off"
                           value={field.state.value}
                           onChange={(e) => field.handleChange(e.target.value)}
                           className="bg-black/40 border-red-950/30 text-white 
@@ -246,6 +249,7 @@ export const EditData = (props: Props) => {
                         <Input
                           name={field.name}
                           type="text"
+                          autoComplete="off"
                           value={field.state.value}
                           onChange={(e) => field.handleChange(e.target.value)}
                           className="bg-black/40 border-red-950/30 text-white 
@@ -293,7 +297,7 @@ export const EditData = (props: Props) => {
                     )}
                   />
                 </div>
-                d{/* Submit Button */}
+                {/* Submit Button */}
                 <form.Subscribe
                   selector={(state) => [state.canSubmit]}
                   children={([canSubmit]) => (
@@ -308,7 +312,7 @@ export const EditData = (props: Props) => {
                                  hover:to-red-950 text-white border border-red-900/30
                                  shadow-lg shadow-red-950/20 disabled:opacity-50"
                       >
-                        Add Platform
+                        Edit
                       </Button>
                     </motion.div>
                   )}
