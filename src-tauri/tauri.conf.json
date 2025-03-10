@@ -13,9 +13,9 @@
     "windows": [
       {
         "title": "TakeOver",
-        "width": 1500,
+        "width": 1775,
         "minWidth": 450,
-        "height": 875,
+        "height": 950,
         "minHeight": 750,
         "decorations": true,
         "transparent": false,
