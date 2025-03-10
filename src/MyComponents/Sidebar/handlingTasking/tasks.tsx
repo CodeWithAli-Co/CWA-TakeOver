@@ -32,17 +32,60 @@ import {
   CheckCircle2,
   AlertTriangle,
 } from "lucide-react";
-import {
-  Task,
-  TaskBlocker,
-  TaskDependency,
-  TaskPriority,
-  TaskStatus,
-  tasks,
-} from "./taskTypes";
+
 import { ActiveUser, Employees, Todos, TodosInterface } from "@/stores/query";
 import { AddTodo } from "./addTodo";
 import supabase from "@/MyComponents/supabase";
+
+//task types.ts
+
+
+export type TaskPriority = 'high' | 'medium' | 'low';
+export type TaskStatus = 'to-do' | 'in-progress' | 'done';
+
+export interface TaskComment {
+  id: number;
+  user: string;
+  content: string;
+  timestamp: string;
+}
+
+export interface TaskBlocker {
+  id: number;
+  description: string;
+  severity: 'critical' | 'moderate' | 'minor';
+  status: 'active' | 'resolved';
+}
+
+export interface TaskDependency {
+  id: number;
+  taskId: number;
+  taskTitle: string;
+  type: 'blocks' | 'blocked-by' | 'related';
+}
+
+export interface Task {
+  id: number;
+  title: string;
+  priority: TaskPriority;
+  dueDate: string;
+  description: string;
+  detailedDescription?: string;
+  vision?: string;
+  assignee: string;
+  status: TaskStatus;
+  progress: number;
+  comments: TaskComment[];
+  blockers: TaskBlocker[];
+  dependencies: TaskDependency[];
+  technicalNotes?: string;
+  lastUpdated: string;
+  watchers: string[];
+  tags: string[];
+  estimatedTime?: string;
+  timeSpent?: string;
+}
+
 
 // Component for displaying task blockers
 const TaskBlockerItem: React.FC<{ blocker: TaskBlocker }> = ({ blocker }) => (

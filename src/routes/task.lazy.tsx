@@ -1,4 +1,4 @@
-import TaskSettings from '@/MyComponents/SettingNavComponents/handlingTasking/tasks'
+import TaskSettings from '@/MyComponents/Sidebar/handlingTasking/tasks'
 import { createLazyFileRoute } from '@tanstack/react-router'
 import React from 'react'
 
