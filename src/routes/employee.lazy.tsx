@@ -293,6 +293,7 @@ function Employee() {
 
               <TabsContent value="Interns">
                 {/* Similar structure for Interns */}
+                <h3><i>Coming Soon...</i></h3>
               </TabsContent>
             </motion.div>
           </AnimatePresence>
