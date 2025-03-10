@@ -76,50 +76,21 @@ const EmployeeSchedule: React.FC = () => {
     employees,
   } = useSchedule();
 
-  // Handle window resize for responsive layout
-  useEffect(() => {
-    const handleResize = () => {
-      if (window.innerWidth < 768) {
-        setIsSidebarOpen(false);
-      } else {
-        setIsSidebarOpen(true);
-      }
-    };
-
-    // Set initial state
-    handleResize();
-
-    // Add event listener
-    window.addEventListener("resize", handleResize);
-    return () => window.removeEventListener("resize", handleResize);
-  }, [setIsSidebarOpen]);
-
-  // Use consistent data instead of random data
-  useEffect(() => {
-    const data = generateScheduleData(weekOffset);
-    setScheduleData(data);
-    
-    // Set selected day if not set
-    if (selectedDay === null) {
-      const todayIndex = data.week.findIndex(day => day.isToday);
-      setSelectedDay(todayIndex >= 0 ? todayIndex : 0);
-    }
-  }, [weekOffset, setScheduleData, selectedDay, setSelectedDay]);
-
-  // Loading state
-  if (isLoading) {
-    return <LoadingState />;
+// Load schedule data
+useEffect(() => {
+  const data = generateScheduleData(weekOffset);
+  setScheduleData(data);
+  
+  if (selectedDay === null) {
+    const todayIndex = data.week.findIndex(day => day.isToday);
+    setSelectedDay(todayIndex >= 0 ? todayIndex : 0);
   }
+}, [weekOffset, setScheduleData, selectedDay, setSelectedDay]);
 
-  // Error state
-  if (isError) {
-    return <ErrorState retry={goToCurrentWeek} />;
-  }
-
-  // If data is not loaded yet
-  if (!scheduleData || selectedDay === null) {
-    return <LoadingState />;
-  }
+// Loading and error states
+if (isLoading) return <LoadingState />;
+if (isError) return <ErrorState retry={() => setScheduleData(generateScheduleData(weekOffset))} />;
+if (!scheduleData || selectedDay === null) return <LoadingState />;
 
   return (
     <div className="flex flex-col h-screen bg-black">
@@ -333,10 +304,31 @@ const EmployeeSchedule: React.FC = () => {
             <CalendarCheck size={20} />
           </button>
         </div>
+        <Sidebar 
+
+  isSidebarOpen={isSidebarOpen}
+  sidebarView={sidebarView}
+  setSidebarView={setSidebarView}
+  setIsSidebarOpen={setIsSidebarOpen}
+  isAdminMode={isAdminMode}
+  setIsAdminMode={setIsAdminMode}
+  goToToday={goToToday}
+  scheduleStats={{
+    hoursThisWeek: scheduleData.stats.hoursThisWeek,
+    totalShifts: scheduleData.stats.totalShifts,
+    upcomingBreaks: scheduleData.stats.upcomingBreaks
+  }}
+  employees={employees}
+  selectedEmployees={selectedEmployees}
+  setShowAddShiftModal={setShowAddShiftModal}
+/>
       </div>
 
       {/* Add Shift Modal */}
       {showAddShiftModal && <AddShiftModal />}
+
+      {/* Sidebar */}
+
     </div>
   );
 };
@@ -355,4 +347,5 @@ import { ScheduleProvider, useSchedule } from "../Scheduling/ScheduleComponents"
 
 import { AddShiftModal} from "../Scheduling/addShiftModal";
 import { generateScheduleData } from "../Scheduling/ScheduleData";import { LoadingState, ErrorState, StatCard } from "../Scheduling/UtilityComponents";
+import { Sidebar } from "../Scheduling/sidebar";
 
