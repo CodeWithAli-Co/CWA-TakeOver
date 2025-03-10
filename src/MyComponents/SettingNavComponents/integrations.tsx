@@ -10,7 +10,7 @@ import {
 import { Badge } from "@/components/ui/shadcnComponents/badge";
 import { Button } from "@/components/ui/shadcnComponents/button";
 import { Input } from "@/components/ui/shadcnComponents/input";
-import { Switch } from "@/components/ui/shadcnComponents/switch";
+
 import { ScrollArea } from "@/components/ui/shadcnComponents/scroll-area";
 import {
   Collapsible,
@@ -31,6 +31,7 @@ import {
   Linkedin,
   Globe,
 } from "lucide-react";
+import ToggleSwitch from "../Reusables/switchUI";
 
 const IntegrationCard = ({
   title,
@@ -65,12 +66,13 @@ const IntegrationCard = ({
               </CardDescription>
             </div>
           </div>
+          {/* ToggleStylingLater */}
           <div className="flex items-center gap-3">
-            <Switch
-              checked={isEnabled}
-              onCheckedChange={setIsEnabled}
-              className="data-[state=checked]:bg-red-900"
+            <ToggleSwitch
+              checked={true}
+              onChange={(checked) => console.log("Switch toggled:", checked)}
             />
+
             <Badge
               variant="outline"
               className={`${

@@ -6,7 +6,6 @@ import {
   CardDescription,
 } from "@/components/ui/shadcnComponents/card";
 import { Badge } from "@/components/ui/shadcnComponents/badge";
-import { Switch } from "@/components/ui/shadcnComponents/switch";
 import { Button } from "@/components/ui/shadcnComponents/button";
 import { ScrollArea } from "@/components/ui/shadcnComponents/scroll-area";
 import { motion } from "framer-motion";
@@ -18,11 +17,11 @@ import {
   AlertCircle,
   Shield,
   Settings2,
-  CheckCircle,
   Folder,
   Coffee,
   Briefcase,
 } from "lucide-react";
+import ToggleSwitch from "../Reusables/switchUI";
 
 export const NotificationSetting = () => {
   return (
@@ -104,10 +103,14 @@ export const NotificationSetting = () => {
                       </p>
                     </div>
                   </div>
-                  <Switch
-                    className="data-[state=checked]:bg-red-900"
-                    defaultChecked
-                  />
+                 
+                    <ToggleSwitch
+                      checked={true}
+                      onChange={(checked) =>
+                        console.log("Switch toggled:", checked)
+                      }
+                    />
+                 
                 </motion.div>
               ))}
             </div>
@@ -176,10 +179,12 @@ export const NotificationSetting = () => {
                       </p>
                     </div>
                   </div>
-                  <Switch
-                    className="data-[state=checked]:bg-red-900"
-                    defaultChecked
-                  />
+                  <ToggleSwitch
+                      checked={true}
+                      onChange={(checked) =>
+                        console.log("Switch toggled:", checked)
+                      }
+                    />
                 </motion.div>
               ))}
             </div>

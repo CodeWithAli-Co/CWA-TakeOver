@@ -16,8 +16,11 @@ import supabase from "@/MyComponents/supabase";
 import { AddData } from "@/MyComponents/subForms/addForm";
 import { EditData } from "@/MyComponents/subForms/editForm";
 import { Eye, EyeOff, Edit2, Trash2 } from "lucide-react";
-import { getPlatformIcon, platformStyles } from "@/MyComponents/Reusables/PlatformIcons";
-
+import {
+  getPlatformIcon,
+  platformStyles,
+} from "@/MyComponents/Reusables/PlatformIcons";
+import ToggleSwitch from "@/MyComponents/Reusables/switchUI";
 
 // Type definitions
 interface Credential {
@@ -144,7 +147,7 @@ function Details() {
                 <CardTitle className="text-xl font-semibold">
                   {cred.platform_name}
                 </CardTitle>
-                <div 
+                <div
                   className={`h-12 w-12 rounded-full overflow-hidden flex items-center justify-center text-white bg-gradient-to-br ${style.gradient}`}
                   style={{ boxShadow: `0 0 10px ${style.shadowColor}` }}
                 >
@@ -214,9 +217,11 @@ function Details() {
                         <Trash2 className="w-4 h-4" />
                       </Button>
                     </div>
-                    <Switch
-                      checked={cred.active}
-                      className="data-[state=checked]:bg-zinc-700"
+                    <ToggleSwitch
+                      checked={true}
+                      onChange={(checked) =>
+                        console.log("Switch toggled:", checked)
+                      }
                     />
                   </div>
                 </div>

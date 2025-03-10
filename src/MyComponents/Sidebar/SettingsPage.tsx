@@ -1,20 +1,51 @@
 import React from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
-  UserCircle, ClipboardList,Users2,Bell,Shield,Save,Undo2,Moon,Building2,LineChart,Database,Plug,CreditCard,Menu,
+  UserCircle,
+  ClipboardList,
+  Users2,
+  Bell,
+  Shield,
+  Save,
+  Undo2,
+  Moon,
+  Building2,
+  LineChart,
+  Database,
+  Plug,
+  CreditCard,
+  Menu,
 } from "lucide-react";
 import { Button } from "@/components/ui/shadcnComponents/button";
-import {Tabs,TabsList,TabsTrigger,TabsContent,
+import {
+  Tabs,
+  TabsList,
+  TabsTrigger,
+  TabsContent,
 } from "@/components/ui/shadcnComponents/tabs";
-import { Card,CardContent,CardDescription,CardHeader,CardTitle,
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
 } from "@/components/ui/shadcnComponents/card";
 import {
-  Form,FormControl,FormDescription, FormField,FormItem, FormLabel,FormMessage,
+  Form,
+  FormControl,
+  FormDescription,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
 } from "@/components/ui/shadcnComponents/form";
 import { Input } from "@/components/ui/shadcnComponents/input";
-import { Switch } from "@/components/ui/shadcnComponents/switch";
 import { Separator } from "@/components/ui/shadcnComponents/separator";
-import { DropdownMenu,DropdownMenuContent,DropdownMenuItem, DropdownMenuTrigger,
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
 } from "@/components/ui/shadcnComponents/dropdown-menu";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -28,6 +59,7 @@ import { createLazyFileRoute } from "@tanstack/react-router";
 import UploadAvatar from "../Reusables/uploadAvatar";
 import ReportSettings from "../SettingNavComponents/reports";
 import TeamsAndProjects from "../SettingNavComponents/TeamProject";
+import ToggleSwitch from "../Reusables/switchUI";
 
 const formSchema = z.object({
   name: z.string().min(2).max(50),
@@ -87,7 +119,7 @@ export default function SettingsPage() {
       to: "/settings",
       // search: { tab: value } // Uncomment to add tab to URL
     });
-    
+
     // Close mobile menu after selection on mobile
     if (isMobile) {
       setIsMobileMenuOpen(false);
@@ -182,29 +214,37 @@ export default function SettingsPage() {
             {/* Mobile dropdown for tabs */}
             {isMobile && (
               <div className="w-full mb-4">
-                <DropdownMenu open={isMobileMenuOpen} onOpenChange={setIsMobileMenuOpen}>
+                <DropdownMenu
+                  open={isMobileMenuOpen}
+                  onOpenChange={setIsMobileMenuOpen}
+                >
                   <DropdownMenuTrigger asChild>
-                    <Button 
-                      variant="outline" 
+                    <Button
+                      variant="outline"
                       className="w-full justify-between bg-black/40 text-red-200/60 border border-red-950/20"
                     >
                       <div className="flex items-center">
                         {(() => {
-                          const activeTabInfo = settingsTabs.find(tab => tab.value === activeTab);
+                          const activeTabInfo = settingsTabs.find(
+                            (tab) => tab.value === activeTab
+                          );
                           if (activeTabInfo?.icon) {
                             const IconComponent = activeTabInfo.icon;
                             return <IconComponent className="mr-2 h-4 w-4" />;
                           }
                           return null;
                         })()}
-                        <span>{settingsTabs.find(tab => tab.value === activeTab)?.label || "Settings"}</span>
+                        <span>
+                          {settingsTabs.find((tab) => tab.value === activeTab)
+                            ?.label || "Settings"}
+                        </span>
                       </div>
                       <Menu className="h-4 w-4 ml-2" />
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent className="w-[94vw] max-w-md bg-black/90 border-red-950/30 text-red-200">
                     {settingsTabs.map((tab) => (
-                      <DropdownMenuItem 
+                      <DropdownMenuItem
                         key={tab.value}
                         onClick={() => handleTabChange(tab.value)}
                         className="flex items-center py-2 px-3 hover:bg-red-950/20 cursor-pointer"
@@ -221,9 +261,7 @@ export default function SettingsPage() {
             {/* Tablet & desktop horizontal tabs with scroll capability */}
             {!isMobile && (
               <div className="overflow-x-auto">
-                <TabsList 
-                  className="h-12 w-full justify-start space-x-2 bg-black/40 p-1 text-red-200/60 border border-red-950/20 flex-nowrap"
-                >
+                <TabsList className="h-12 w-full justify-start space-x-2 bg-black/40 p-1 text-red-200/60 border border-red-950/20 flex-nowrap">
                   {settingsTabs.map((tab) => (
                     <TabsTrigger
                       key={tab.value}
@@ -232,7 +270,9 @@ export default function SettingsPage() {
                               hover:text-red-200 transition-colors duration-200 flex items-center space-x-2 px-3 py-2 whitespace-nowrap"
                     >
                       <tab.icon className="h-4 w-4" />
-                      <span className={isTablet ? "hidden lg:inline" : ""}>{tab.label}</span>
+                      <span className={isTablet ? "hidden lg:inline" : ""}>
+                        {tab.label}
+                      </span>
                     </TabsTrigger>
                   ))}
                 </TabsList>
@@ -303,15 +343,19 @@ export default function SettingsPage() {
                                         Email Notifications
                                       </FormLabel>
                                       <FormDescription className="text-xs sm:text-sm text-red-200/60">
-                                        Receive email notifications about account
-                                        activity.
+                                        Receive email notifications about
+                                        account activity.
                                       </FormDescription>
                                     </div>
                                     <FormControl>
-                                      <Switch
-                                        checked={field.value}
-                                        onCheckedChange={field.onChange}
-                                        className="data-[state=checked]:bg-red-900"
+                                      <ToggleSwitch
+                                        checked={true}
+                                        onChange={(checked) =>
+                                          console.log(
+                                            "Switch toggled:",
+                                            checked
+                                          )
+                                        }
                                       />
                                     </FormControl>
                                   </FormItem>
@@ -333,10 +377,14 @@ export default function SettingsPage() {
                                       </FormDescription>
                                     </div>
                                     <FormControl>
-                                      <Switch
-                                        checked={field.value}
-                                        onCheckedChange={field.onChange}
-                                        className="data-[state=checked]:bg-red-900"
+                                      <ToggleSwitch
+                                        checked={true}
+                                        onChange={(checked) =>
+                                          console.log(
+                                            "Switch toggled:",
+                                            checked
+                                          )
+                                        }
                                       />
                                     </FormControl>
                                   </FormItem>
@@ -345,7 +393,7 @@ export default function SettingsPage() {
                             </form>
                           </Form>
                         </div>
-                        
+
                         <div className="xl:col-span-1 flex flex-col items-center justify-start">
                           <UploadAvatar className="text-white" />
                         </div>
@@ -379,7 +427,9 @@ export default function SettingsPage() {
                 <TabsContent value="resources" className="space-y-4">
                   <Card className="bg-black/60 border-red-950/30 backdrop-blur-sm">
                     <CardHeader className="p-4 sm:p-6">
-                      <CardTitle className="text-xl md:text-2xl text-white">Resources</CardTitle>
+                      <CardTitle className="text-xl md:text-2xl text-white">
+                        Resources
+                      </CardTitle>
                       <CardDescription className="text-xs md:text-sm text-red-200/60">
                         Developer resources and documentation.
                       </CardDescription>
@@ -394,7 +444,9 @@ export default function SettingsPage() {
                 <TabsContent value="integrations" className="space-y-4">
                   <Card className="bg-black/60 border-red-950/30 backdrop-blur-sm">
                     <CardHeader className="p-4 sm:p-6">
-                      <CardTitle className="text-xl md:text-2xl text-white">Integrations</CardTitle>
+                      <CardTitle className="text-xl md:text-2xl text-white">
+                        Integrations
+                      </CardTitle>
                       <CardDescription className="text-xs md:text-sm text-red-200/60">
                         Configure and manage third-party integrations.
                       </CardDescription>
