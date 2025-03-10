@@ -2,7 +2,6 @@ import React, { useEffect } from "react";
 import { CalendarCheck } from "lucide-react";
 // Import the new AdminModeComponent
 
-
 // Header component - updated to use AdminModeToggle
 const Header = ({ isSidebarOpen, setIsSidebarOpen, isAdminMode, setIsAdminMode, currentView, setCurrentView }) => {
   return (
@@ -146,6 +145,7 @@ if (!scheduleData || selectedDay === null) return <LoadingState />;
         setShowAddShiftModal={setShowAddShiftModal}
         employees={employees}
         selectedEmployees={selectedEmployees}
+        scheduleData={scheduleData}
       />
 
       <div className="flex flex-1 overflow-hidden">
@@ -208,23 +208,33 @@ if (!scheduleData || selectedDay === null) return <LoadingState />;
                                 event.type === 'shift' ? 'bg-red-900/40 text-white' : 
                                 event.type === 'training' ? 'bg-emerald-900/40 text-white' :
                                 event.type === 'break' ? 'bg-blue-900/40 text-white' :
+                                event.type === 'meeting' ? 'bg-blue-900/40 text-white' :
                                 'bg-gray-800/40 text-gray-300'
                               }`}
                             >
                               <div className="font-medium truncate flex items-center">
                                 {isAdminMode ? (event.employeeName || "Unassigned") : event.title}
-                                {event.title.includes("Morning") && (
-                                  <span className="ml-2 px-2 py-0.5 text-xs bg-green-700 text-white rounded">low</span>
-                                )}
-                                {event.title.includes("Afternoon") && (
-                                  <span className="ml-2 px-2 py-0.5 text-xs bg-yellow-600 text-white rounded">medium</span>
-                                )}
-                                {event.title.includes("Evening") && (
-                                  <span className="ml-2 px-2 py-0.5 text-xs bg-red-700 text-white rounded">high</span>
-                                )}
+                                {event.title.includes("Morning")}
+                                {event.title.includes("Afternoon")}
+                                {event.title.includes("Evening")}
                               </div>
                               <div className="flex justify-between text-xs mt-1">
                                 <span>{event.timeRange}</span>
+                                {isAdminMode && (
+                                  <button 
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      // Access the editShift function from context
+                                      if (window.editShift) {
+                                        window.editShift({...event, dayIndex: index});
+                                      }
+                                    }}
+                                    className="ml-1 px-1 bg-red-800/60 hover:bg-red-800 rounded text-xs"
+                                    title="Edit"
+                                  >
+                                    Edit
+                                  </button>
+                                )}
                               </div>
                             </div>
                           </div>
@@ -288,8 +298,10 @@ if (!scheduleData || selectedDay === null) return <LoadingState />;
         />
       </div>
 
-      {/* Add Shift Modal - render conditionally */}
+      {/* Add/Edit Shift Modal - render conditionally */}
       {showAddShiftModal && <AddShiftModal />}
+      
+      
 
       {/* "Today" quick-jump button */}
       <button
@@ -319,3 +331,11 @@ import { generateScheduleData } from "../Scheduling/ScheduleData";
 import { LoadingState, ErrorState, StatCard } from "../Scheduling/UtilityComponents";
 import { Sidebar } from "../Scheduling/sidebar";
 import AdminModeComponent, { AdminModeToggle, filterEventsByAdminMode } from "../Scheduling/AdminMode";
+
+// Declare global window interface to support our global functions
+declare global {
+  interface Window {
+    editShift?: (event: any) => void;
+    setShowAddShiftModal?: (value: boolean) => void;
+  }
+}
