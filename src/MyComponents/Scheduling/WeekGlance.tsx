@@ -1,5 +1,5 @@
 import React from "react";
-import { DayData } from "./ScheduleComponents";
+import { DayData, EventType, useSchedule } from "./ScheduleComponents";
 import { EventCard } from "./ScheduleContext";
 
 interface WeekGlanceProps {
@@ -9,14 +9,16 @@ interface WeekGlanceProps {
 
 // Week Glance Component - Shows upcoming activities for the week
 export const WeekGlance: React.FC<WeekGlanceProps> = ({ days, selectedDay }) => {
+  // Get admin mode from context
+  const { isAdminMode } = useSchedule();
+  
   // Get upcoming events for the week
   const upcomingEvents = React.useMemo(() => {
-    const upcoming: { day: DayData; event: DayData["events"][0]; employeeName?: string }[] = [];
+    const upcoming: { day: DayData; event: EventType; employeeName?: string }[] = [];
     
     days.forEach((day, index) => {
       // In admin mode, show all events including the selected day
       // For employee mode, skip the currently selected day
-      const { isAdminMode } = useSchedule();
       if (!isAdminMode && index === selectedDay) return;
       
       // Add events for days
@@ -25,20 +27,18 @@ export const WeekGlance: React.FC<WeekGlanceProps> = ({ days, selectedDay }) => 
         upcoming.push({ 
           day, 
           event,
-          employeeName: event.employeeName || undefined
+          employeeName: event.employeeName
         });
       });
     });
     
     // Sort by date (days are already in order)
     return upcoming;
-  }, [days, selectedDay]);
+  }, [days, selectedDay, isAdminMode]);
   
   if (upcomingEvents.length === 0) {
     return null;
   }
-  
-  const { isAdminMode } = useSchedule();
   
   return (
     <div className="mt-8">
@@ -61,7 +61,3 @@ export const WeekGlance: React.FC<WeekGlanceProps> = ({ days, selectedDay }) => 
     </div>
   );
 };
-
-function useSchedule(): { isAdminMode: any; } {
-    throw new Error("Function not implemented.");
-}

@@ -2,13 +2,13 @@ import React, { createContext, useContext, useState, useEffect, useTransition } 
 
 // Types
 export interface EventType {
-  [x: string]: undefined;
   id: string;
   type: 'shift' | 'training' | 'break' | 'off';
   title: string;
   timeRange: string;
   location?: string | null;
 }
+
 
 export interface DayData {
   date: string;

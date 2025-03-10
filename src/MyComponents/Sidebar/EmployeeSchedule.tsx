@@ -15,6 +15,11 @@ import {
   Info,
   Plus,
   User,
+  Clock,
+  Briefcase,
+  Coffee,
+  Home,
+  Clipboard,
 } from "lucide-react";
 
 import { useSchedule } from "../Scheduling/ScheduleComponents";
@@ -71,6 +76,30 @@ const EmployeeSchedule: React.FC = () => {
     window.addEventListener("resize", handleResize);
     return () => window.removeEventListener("resize", handleResize);
   }, [setIsSidebarOpen]);
+
+  // Get shift priority color
+  const getShiftPriorityLabel = (timeOfDay) => {
+    if (timeOfDay.includes("Morning")) {
+      return (
+        <span className="ml-2 px-2 py-0.5 text-xs bg-green-700 text-white rounded">
+          low
+        </span>
+      );
+    } else if (timeOfDay.includes("Afternoon")) {
+      return (
+        <span className="ml-2 px-2 py-0.5 text-xs bg-yellow-600 text-white rounded">
+          medium
+        </span>
+      );
+    } else if (timeOfDay.includes("Evening")) {
+      return (
+        <span className="ml-2 px-2 py-0.5 text-xs bg-red-700 text-white rounded">
+          high
+        </span>
+      );
+    }
+    return null;
+  };
 
   // Loading state
   if (isLoading) {
@@ -332,6 +361,69 @@ const EmployeeSchedule: React.FC = () => {
               />
             </div>
 
+            {/* Calendar View for Admin Mode */}
+            {isAdminMode && currentView === "week" && (
+              <div className="mt-6 border border-red-900/30 rounded-lg overflow-hidden mb-6">
+                <div className="bg-red-900/20 border-b border-red-900/30 px-4 py-2">
+                  <h3 className="text-white font-medium">Weekly Schedule Overview</h3>
+                </div>
+                <div className="grid grid-cols-7 border-b border-red-900/30">
+                  {scheduleData.week.map((day, index) => (
+                    <div 
+                      key={index} 
+                      className={`text-center py-2 ${day.isToday ? 'bg-red-900/30' : ''} ${index < 6 ? 'border-r border-red-900/30' : ''}`}
+                    >
+                      <div className="text-red-400 text-sm">{day.shortName}</div>
+                      <div className="text-white font-medium">{day.date}</div>
+                    </div>
+                  ))}
+                </div>
+                <div className="grid grid-cols-7 min-h-[300px]">
+                  {scheduleData.week.map((day, index) => (
+                    <div 
+                      key={index} 
+                      className={`p-2 ${index < 6 ? 'border-r border-red-900/30' : ''} ${day.isToday ? 'bg-red-900/10' : ''} overflow-y-auto max-h-[300px] scrollbar-thin scrollbar-thumb-red-900`}
+                    >
+                      {day.events.length > 0 ? (
+                        day.events.map((event, eventIndex) => (
+                          <div key={eventIndex} className="mb-2">
+                            <div 
+                              className={`px-2 py-1 text-xs rounded ${
+                                event.type === 'shift' ? 'bg-red-900/40 text-white' : 
+                                event.type === 'training' ? 'bg-emerald-900/40 text-white' :
+                                event.type === 'break' ? 'bg-blue-900/40 text-white' :
+                                'bg-gray-800/40 text-gray-300'
+                              }`}
+                            >
+                              <div className="font-medium truncate flex items-center">
+                                {event.employeeName || "Unassigned"}
+                                {event.title.includes("Morning") && (
+                                  <span className="ml-2 px-2 py-0.5 text-xs bg-green-700 text-white rounded">low</span>
+                                )}
+                                {event.title.includes("Afternoon") && (
+                                  <span className="ml-2 px-2 py-0.5 text-xs bg-yellow-600 text-white rounded">medium</span>
+                                )}
+                                {event.title.includes("Evening") && (
+                                  <span className="ml-2 px-2 py-0.5 text-xs bg-red-700 text-white rounded">high</span>
+                                )}
+                              </div>
+                              <div className="flex justify-between text-xs mt-1">
+                                <span>{event.timeRange}</span>
+                              </div>
+                            </div>
+                          </div>
+                        ))
+                      ) : (
+                        <div className="text-center py-6 text-red-400/50 text-xs">
+                          No shifts
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
             {/* Selected Day Header */}
             <div className="mb-4">
               <h2 className="text-xl font-bold text-red-100">
@@ -349,7 +441,51 @@ const EmployeeSchedule: React.FC = () => {
             <div className="space-y-1">
               {scheduleData.week[selectedDay].events.length > 0 ? (
                 scheduleData.week[selectedDay].events.map((event) => (
-                  <EventCard key={event.id} event={event} />
+                  <div 
+                    key={event.id}
+                    className={`bg-gradient-to-r from-red-900/40 to-red-950/50 border-l-4 border-red-600 rounded-md shadow-sm p-3 mb-2 transition-all hover:shadow-md max-w-md transform hover:translate-y-px`}
+                  >
+                    <div className="flex">
+                      <div className="mr-2 mt-0.5">
+                        {event.type === "shift" ? (
+                          <Briefcase className="text-red-500" size={16} />
+                        ) : event.type === "training" ? (
+                          <Clipboard className="text-emerald-500" size={16} />
+                        ) : event.type === "break" ? (
+                          <Coffee className="text-blue-500" size={16} />
+                        ) : (
+                          <Home className="text-gray-500" size={16} />
+                        )}
+                      </div>
+                      <div className="flex-1">
+                        <div className="font-medium text-white flex justify-between">
+                          {isAdminMode ? (
+                            <div className="flex items-center">
+                              <span>{event.employeeName || "Unassigned"}</span>
+                              {getShiftPriorityLabel(event.title)}
+                            </div>
+                          ) : (
+                            <span>{event.title}</span>
+                          )}
+                          <div className="flex items-center">
+                            <span className="text-xs bg-red-900/40 px-2 py-0.5 rounded-full flex items-center">
+                              {isAdminMode ? event.title : ""}
+                            </span>
+                          </div>
+                        </div>
+                        <div className="text-xs text-red-300/80 flex items-center gap-1 flex-wrap">
+                          <Clock size={12} />
+                          {event.timeRange}
+                          {event.location && (
+                            <>
+                              <span className="mx-1">•</span>
+                              {event.location}
+                            </>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
                 ))
               ) : (
                 <div className="p-8 rounded-lg border border-red-900/20 bg-black/50 flex flex-col items-center justify-center text-center">
@@ -534,7 +670,7 @@ const EmployeeSchedule: React.FC = () => {
                 setIsSidebarOpen(true);
               }}
             >
-              <CalendarDays size={20} />
+           <CalendarDays size={20} />
               <span className="text-xs mt-1">Schedule</span>
             </button>
             <button
