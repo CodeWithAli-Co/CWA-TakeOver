@@ -318,7 +318,7 @@ export const platformStyles: Record<string, PlatformStyle> = {
     shadowColor: "rgba(0, 199, 183, 0.5)",
   },
   vercel: {
-    color: "#000000",
+    color: "#919191",
     gradient: "from-[#000000] to-[#333333]",
     shadowColor: "rgba(0, 0, 0, 0.5)",
   },
@@ -434,9 +434,9 @@ export const platformStyles: Record<string, PlatformStyle> = {
   },
   
   default: {
-    color: "#7C3AED",
-    gradient: "from-[#6D28D9] to-[#7C3AED]",
-    shadowColor: "rgba(124, 58, 237, 0.5)",
+    color: "#000000",
+    gradient: "from-[#ffffff] to-[#7C3AED]",
+    shadowColor: "rgba(156, 36, 174, 1)",
   },
 };
 
