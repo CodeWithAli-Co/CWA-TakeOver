@@ -1,14 +1,12 @@
 import React, { useEffect } from "react";
-import { CalendarCheck, Plus } from "lucide-react";
-// Add this to your exports
-// export { AddShiftModal } from '../Scheduling/AddShiftModal';
+import { CalendarCheck } from "lucide-react";
+// Import the new AdminModeComponent
 
-// Header component
+
+// Header component - updated to use AdminModeToggle
 const Header = ({ isSidebarOpen, setIsSidebarOpen, isAdminMode, setIsAdminMode, currentView, setCurrentView }) => {
-  // Header implementation from Header.tsx
   return (
     <header className="bg-black border-b border-red-900/40 py-2 px-4">
-      {/* Header content */}
       <div className="flex items-center justify-between">
         <h1 className="text-xl font-bold bg-gradient-to-r from-red-400 to-red-600 bg-clip-text text-transparent">
           {isAdminMode ? "Admin: Schedule Management" : "Employee Schedule"}
@@ -35,13 +33,11 @@ const Header = ({ isSidebarOpen, setIsSidebarOpen, isAdminMode, setIsAdminMode, 
           </button>
         </div>
 
-        <button
-          onClick={() => setIsAdminMode(!isAdminMode)}
-          className={`px-3 py-1 text-xs rounded-md ${isAdminMode ? "bg-green-800 text-white" : "bg-gray-800 text-gray-300"}`}
-          aria-label={isAdminMode ? "Switch to employee mode" : "Switch to admin mode"}
-        >
-          {isAdminMode ? "Admin Mode" : "Employee Mode"}
-        </button>
+        {/* Use the extracted AdminModeToggle component */}
+        <AdminModeToggle 
+          isAdminMode={isAdminMode} 
+          setIsAdminMode={setIsAdminMode} 
+        />
       </div>
     </header>
   );
@@ -142,34 +138,15 @@ if (!scheduleData || selectedDay === null) return <LoadingState />;
         </button>
       </div>
 
-      {/* Admin Mode - Employee selector (only visible in admin mode) */}
-      {isAdminMode && (
-        <div className="bg-red-900/30 border-b border-red-700/40 px-4 py-3">
-          <div className="flex flex-wrap items-center gap-3">
-            <label className="text-white text-sm">Select Employee:</label>
-            <select
-              className="bg-red-950 border border-red-700 rounded-md text-white text-sm px-3 py-1.5"
-              aria-label="Select an employee"
-            >
-              <option value="">Select Employee</option>
-              {employees.map((employee) => (
-                <option key={employee.id} value={employee.id}>
-                  {employee.name}
-                </option>
-              ))}
-            </select>
-
-            <button
-              onClick={() => setShowAddShiftModal(true)}
-              className="px-3 py-1.5 bg-red-700 hover:bg-red-600 text-white text-sm rounded-md ml-auto flex items-center gap-1"
-              aria-label="Add shift"
-            >
-              <Plus size={16} />
-              Add Shift
-            </button>
-          </div>
-        </div>
-      )}
+      {/* Use the AdminModeComponent */}
+      <AdminModeComponent
+        isAdminMode={isAdminMode}
+        setIsAdminMode={setIsAdminMode}
+        showAddShiftModal={showAddShiftModal}
+        setShowAddShiftModal={setShowAddShiftModal}
+        employees={employees}
+        selectedEmployees={selectedEmployees}
+      />
 
       <div className="flex flex-1 overflow-hidden">
         {/* Main Content Area */}
@@ -214,7 +191,7 @@ if (!scheduleData || selectedDay === null) return <LoadingState />;
                 ))}
               </div>
               
-              {/* Calendar Body */}
+              {/* Calendar Body - using the filterEventsByAdminMode helper */}
               <div className="grid grid-cols-7 min-h-[300px]">
                 {scheduleData.week.map((day, index) => (
                   <div 
@@ -223,9 +200,7 @@ if (!scheduleData || selectedDay === null) return <LoadingState />;
                     onClick={() => setSelectedDay(index)}
                   >
                     {day.events.length > 0 ? (
-                      day.events
-                        // In employee mode, filter to show only current user's events
-                        .filter(event => isAdminMode || event.employeeId === 0)
+                      filterEventsByAdminMode(day.events, isAdminMode)
                         .map((event, eventIndex) => (
                           <div key={eventIndex} className="mb-2">
                             <div 
@@ -264,7 +239,7 @@ if (!scheduleData || selectedDay === null) return <LoadingState />;
               </div>
             </div>
 
-            {/* Selected Day Details */}
+            {/* Selected Day Details - using the filterEventsByAdminMode helper */}
             {selectedDay !== null && (
               <div className="mb-4">
                 <h2 className="text-xl font-bold text-red-100">
@@ -272,9 +247,7 @@ if (!scheduleData || selectedDay === null) return <LoadingState />;
                 </h2>
                 
                 <div className="space-y-1 mt-3">
-                  {/* Display filtered events based on mode */}
-                  {scheduleData.week[selectedDay].events
-                    .filter(event => isAdminMode || event.employeeId === 0)
+                  {filterEventsByAdminMode(scheduleData.week[selectedDay].events, isAdminMode)
                     .map((event) => (
                       <div 
                         key={event.id}
@@ -294,41 +267,38 @@ if (!scheduleData || selectedDay === null) return <LoadingState />;
               </div>
             )}
           </div>
-
-       
         </div>
+        
         <Sidebar 
-
-  isSidebarOpen={isSidebarOpen}
-  sidebarView={sidebarView}
-  setSidebarView={setSidebarView}
-  setIsSidebarOpen={setIsSidebarOpen}
-  isAdminMode={isAdminMode}
-  setIsAdminMode={setIsAdminMode}
-  goToToday={goToToday}
-  scheduleStats={{
-    hoursThisWeek: scheduleData.stats.hoursThisWeek,
-    totalShifts: scheduleData.stats.totalShifts,
-    upcomingBreaks: scheduleData.stats.upcomingBreaks
-  }}
-  employees={employees}
-  selectedEmployees={selectedEmployees}
-  setShowAddShiftModal={setShowAddShiftModal}
-/>
+          isSidebarOpen={isSidebarOpen}
+          sidebarView={sidebarView}
+          setSidebarView={setSidebarView}
+          setIsSidebarOpen={setIsSidebarOpen}
+          isAdminMode={isAdminMode}
+          setIsAdminMode={setIsAdminMode}
+          goToToday={goToToday}
+          scheduleStats={{
+            hoursThisWeek: scheduleData.stats.hoursThisWeek,
+            totalShifts: scheduleData.stats.totalShifts,
+            upcomingBreaks: scheduleData.stats.upcomingBreaks
+          }}
+          employees={employees}
+          selectedEmployees={selectedEmployees}
+          setShowAddShiftModal={setShowAddShiftModal}
+        />
       </div>
 
-      {/* Add Shift Modal */}
+      {/* Add Shift Modal - render conditionally */}
       {showAddShiftModal && <AddShiftModal />}
 
-      {/* Sidebar */}
-   {/* "Today" quick-jump button */}
-   <button
-            className="fixed top-2 right-40 bg-red-700 text-white rounded-full p-2 shadow-lg"
-            onClick={goToToday}
-            aria-label="Jump to today"
-          >
-            <CalendarCheck size={20} />
-          </button>
+      {/* "Today" quick-jump button */}
+      <button
+        className="fixed top-2 right-40 bg-red-700 text-white rounded-full p-2 shadow-lg"
+        onClick={goToToday}
+        aria-label="Jump to today"
+      >
+        <CalendarCheck size={20} />
+      </button>
     </div>
   );
 };
@@ -344,8 +314,8 @@ export default function ScheduleApp() {
 
 // Import here to avoid circular dependency
 import { ScheduleProvider, useSchedule } from "../Scheduling/ScheduleComponents";
-
-import { AddShiftModal} from "../Scheduling/addShiftModal";
-import { generateScheduleData } from "../Scheduling/ScheduleData";import { LoadingState, ErrorState, StatCard } from "../Scheduling/UtilityComponents";
+import { AddShiftModal } from "../Scheduling/addShiftModal";
+import { generateScheduleData } from "../Scheduling/ScheduleData";
+import { LoadingState, ErrorState, StatCard } from "../Scheduling/UtilityComponents";
 import { Sidebar } from "../Scheduling/sidebar";
-
+import AdminModeComponent, { AdminModeToggle, filterEventsByAdminMode } from "../Scheduling/AdminMode";
