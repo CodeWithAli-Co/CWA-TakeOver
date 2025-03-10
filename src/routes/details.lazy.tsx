@@ -1,6 +1,5 @@
-import React from "react";
+import React, { useRef, useState } from "react";
 import { createLazyFileRoute } from "@tanstack/react-router";
-import { JSX } from "react";
 import {
   Card,
   CardContent,
@@ -13,98 +12,12 @@ import { Switch } from "@/components/ui/shadcnComponents/switch";
 import { useAppStore } from "@/stores/store";
 import { CWACreds } from "../stores/query";
 import { invoke } from "@tauri-apps/api/core";
-import { useRef, useState } from "react";
 import supabase from "@/MyComponents/supabase";
 import { AddData } from "@/MyComponents/subForms/addForm";
 import { EditData } from "@/MyComponents/subForms/editForm";
-import {
-  Eye,
-  EyeOff,
-  Edit2,
-  Trash2,
-  Plus,
-  Github,
-  Globe,
-  Twitter,
-  Linkedin,
-  Facebook,
-  Instagram,
-  MoveUpIcon,
-  ArrowBigUp,
-  Mail,
-  Store,
-  FileCode2, Cloud, Heading, 
-} from "lucide-react";
+import { Eye, EyeOff, Edit2, Trash2 } from "lucide-react";
+import { getPlatformIcon, platformStyles } from "@/MyComponents/Reusables/PlatformIcons";
 
-// Platform icon mapping
-const platformIcons: { [key: string]: React.ComponentType<any> } = {
-  github: Github,
-  twitter: Twitter,
-  linkedin: Linkedin,
-  facebook: Facebook,
-  gmail: Mail,
-  upwork: ArrowBigUp,
-  fiverr: Store,
-  patreon: Store,
-  dev: FileCode2,
-  default: Globe,
-  hostinger: Heading,
-  hostingerEmail: Mail,
-};
-const platformStyles: Record<
-  string,
-  {
-    color: string;
-    gradient: string;
-    shadowColor: string;
-  }
-> = {
-  github: {
-    color: "#000000",
-    gradient: "from-[#238636] to-[#2EA043]",
-    shadowColor: "#000000",
-  },
-  hostinger: {
-    color: "#000000",
-    gradient: "from-[#258836] to-[#1EB043]",
-    shadowColor: "rgba(10, 102, 194, 0.5)",
-  },
-  hostingerMail: {
-    color: "#000000",
-    gradient: "from-[#258836] to-[#1EB043]",
-    shadowColor: "rgba(96, 47, 246, 0.5)",
-  },
-  twitter: {
-    color: "#1DA1F2",
-    gradient: "from-[#1A8CD8] to-[#1DA1F2]",
-    shadowColor: "rgba(29, 161, 242, 0.5)",
-  },
-  linkedin: {
-    color: "#0A66C2",
-    gradient: "from-[#0077B5] to-[#0A66C2]",
-    shadowColor: "rgba(10, 102, 194, 0.5)",
-  },
-  facebook: {
-    color: "#4267B2",
-    gradient: "from-[#385898] to-[#4267B2]",
-    shadowColor: "rgba(53, 90, 166, 0.5)",
-  },
-  gmail: {
-    color: "#EA4335",
-    gradient: "from-[#DB4437] to-[#EA4335]",
-    shadowColor: "rgba(234, 67, 53, 0.5)",
-  },
-  upwork: {
-    color: "#14A800",
-    gradient: "from-[#108A00] to-[#14A800]",
-    shadowColor: "rgba(39, 103, 240, 0.5)",
-  },
-  default: {
-    color: "#7C3AED",
-    gradient: "from-[#6D28D9] to-[#7C3AED]",
-    shadowColor: "rgba(124, 58, 237, 0.5)",
-  },
-};
 
 // Type definitions
 interface Credential {
@@ -127,13 +40,6 @@ function Details() {
     setExpandedCards((prev) =>
       prev.includes(id) ? prev.filter((cardId) => cardId !== id) : [...prev, id]
     );
-  };
-  const getPlatformIcon = (platformName: string): JSX.Element => {
-    const lowerPlatform = platformName.toLowerCase();
-    const IconComponent = platformIcons[lowerPlatform] || platformIcons.default;
-    const style = platformStyles[lowerPlatform] || platformStyles.default;
-
-    return <IconComponent style={{ color: style.color }} />;
   };
 
   const showModal = (dialogDisplay: "addDialog" | "editDialog") => {
@@ -223,6 +129,8 @@ function Details() {
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
         {cwaCreds?.map((cred: Credential) => {
           const isExpanded = expandedCards.includes(cred.id);
+          const lowerPlatform = cred.platform_name.toLowerCase();
+          const style = platformStyles[lowerPlatform] || platformStyles.default;
 
           return (
             <Card
@@ -235,7 +143,10 @@ function Details() {
                 <CardTitle className="text-xl font-semibold">
                   {cred.platform_name}
                 </CardTitle>
-                <div className="h-12 w-12 rounded-full overflow-hidden bg-zinc-800 flex items-center justify-center text-white">
+                <div 
+                  className={`h-12 w-12 rounded-full overflow-hidden flex items-center justify-center text-white bg-gradient-to-br ${style.gradient}`}
+                  style={{ boxShadow: `0 0 10px ${style.shadowColor}` }}
+                >
                   {getPlatformIcon(cred.platform_name)}
                 </div>
               </CardHeader>
