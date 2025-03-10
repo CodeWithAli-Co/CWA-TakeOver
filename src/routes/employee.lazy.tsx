@@ -177,8 +177,8 @@ function Employee() {
                             <SelectValue placeholder="Select role" />
                           </SelectTrigger>
                           <SelectContent className="bg-black text-amber-50 border-red-900/20">
-                            <SelectItem value="admin">Admin</SelectItem>
-                            <SelectItem value="member">Member</SelectItem>
+                            <SelectItem value="Admin">Admin</SelectItem>
+                            <SelectItem value="Member">Member</SelectItem>
                           </SelectContent>
                         </Select>
                       </div>
@@ -225,12 +225,12 @@ function Employee() {
                             <TableCell>
                               <Badge
                                 variant={
-                                  employee.role === "admin"
+                                  employee.role === "Admin"
                                     ? "default"
                                     : "secondary"
                                 }
                                 className={
-                                  employee.role === "admin"
+                                  employee.role === "Admin"
                                     ? "bg-red-900 text-amber-50"
                                     : "bg-gray-800 text-amber-50/70"
                                 }

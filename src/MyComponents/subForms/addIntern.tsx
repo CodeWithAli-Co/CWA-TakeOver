@@ -7,7 +7,7 @@ export const AddIntern = () => {
     defaultValues: {
       Username: "",
       Email: "",
-      Role: "member",
+      Role: "Member",
     },
     onSubmit: async ({ value }) => {
       console.log(value);
@@ -88,7 +88,7 @@ export const AddIntern = () => {
                       <option value="member" className="form-option">
                         Member
                       </option>
-                      <option value="admin" className="form-option">
+                      <option value="Admin" className="form-option">
                         Admin
                       </option>
                     </select>

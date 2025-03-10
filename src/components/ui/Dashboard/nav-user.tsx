@@ -58,7 +58,7 @@ export function NavUser({ userData }: NavUserProps) {
     username: "Unknown",
     email: "unknown@example.com",
     avatar: "/public/codewithali_logo.png",
-    role: "member",
+    role: "Member",
     avatarURL: "", // remove this if gives error
   };
 
@@ -83,7 +83,7 @@ export function NavUser({ userData }: NavUserProps) {
                 <span className="truncate font-semibold">{user.username}</span>
                 <span className="truncate text-xs">
                   <span
-                    className={`roleTag ${user.role === "admin" ? "admin-role" : user.role === "member" ? "member-role" : ""}`}
+                    className={`roleTag ${user.role === "Admin" ? "admin-role" : user.role === "Member" ? "member-role" : ""}`}
                   >
                     {user.role}
                   </span>
@@ -110,7 +110,7 @@ export function NavUser({ userData }: NavUserProps) {
                   </span>
                   <span className="truncate text-xs">
                     <span
-                      className={`roleTag ${user.role === "admin" ? "admin-role" : user.role === "member" ? "member-role" : ""}`}
+                      className={`roleTag ${user.role === "Admin" ? "admin-role" : user.role === "Member" ? "member-role" : ""}`}
                     >
                       {user.role}
                     </span>

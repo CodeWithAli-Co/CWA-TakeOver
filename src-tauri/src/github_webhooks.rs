@@ -1,4 +1,4 @@
-use tauri::{command, State, Manager};
+use tauri::{State, Manager};
 use serde::{Deserialize, Serialize};
 use std::sync::Mutex;
 use chrono::Utc;

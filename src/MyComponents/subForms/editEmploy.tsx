@@ -49,6 +49,7 @@ export const EditEmployee = (props: Props) => {
   });
 
   return (
+    // Make it so other fields only show when needed
     <Card className="bg-red-950/10 border-red-900/20 mb-8">
       <CardContent className="pt-6">
         <form

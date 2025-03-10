@@ -107,10 +107,10 @@ export const EditIntern = (props: Props) => {
                       className="form-select"
                       onChange={(e) => field.handleChange(e.target.value)}
                     >
-                      <option value="member" className="form-option">
+                      <option value="Member" className="form-option">
                         Member
                       </option>
-                      <option value="admin" className="form-option">
+                      <option value="Admin" className="form-option">
                         Admin
                       </option>
                     </select>
