@@ -122,6 +122,7 @@ function Details() {
   const dialogRef = useRef<HTMLDialogElement | null>(null);
   // Track expanded state for each card
   const [expandedCards, setExpandedCards] = useState<number[]>([]);
+  const [credID, setCredID] = useState(0);
 
   const toggleCard = (id: number) => {
     setExpandedCards((prev) =>
@@ -289,7 +290,7 @@ function Details() {
                         variant="outline"
                         size="sm"
                         className="text-zinc-400 border-zinc-800 hover:bg-zinc-800"
-                        onClick={() => showModal("editDialog")}
+                        onClick={() => {showModal("editDialog"); setCredID(cred.id)}}
                       >
                         <Edit2 className="w-4 h-4" />
                       </Button>
@@ -324,7 +325,7 @@ function Details() {
           X
         </Button>
         {displayer === "editDialog" ? (
-          <EditData rowID={cwaCreds![0].id} />
+          <EditData rowID={credID} />
         ) : displayer === "addDialog" ? (
           <AddData />
         ) : (

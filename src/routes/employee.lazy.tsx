@@ -1,6 +1,6 @@
-import React from "react";
+import React, { useState } from "react";
 import { createLazyFileRoute } from "@tanstack/react-router";
-import { useAppStore } from "../stores/store";
+import { useAppStore, useSubMenuStore } from "../stores/store";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Tabs,
@@ -34,6 +34,7 @@ import supabase from "@/MyComponents/supabase";
 import { useEffect, useRef } from "react";
 import { EditEmployee } from "@/MyComponents/subForms/editEmploy";
 import { AddEmployee } from "@/MyComponents/subForms/addEmploy";
+import { PromoteUser } from "@/MyComponents/subForms/promoteUser";
 
 function Employee() {
   const { setDialog, dialog } = useAppStore();
@@ -68,7 +69,8 @@ function Employee() {
   const { data: employees, refetch: refetchEmployees } = Employees();
   // Added this already for Ali
   const { data: interns, refetch: refetchInterns } = Interns();
-
+  const [EmpID, setEmpID] = useState(0);
+  const { showPromote, setShowPromote } = useSubMenuStore();
   // Realtime channel
   supabase
     .channel("employees-interns")
@@ -177,8 +179,8 @@ function Employee() {
                             <SelectValue placeholder="Select role" />
                           </SelectTrigger>
                           <SelectContent className="bg-black text-amber-50 border-red-900/20">
-                            <SelectItem value="Admin">Admin</SelectItem>
-                            <SelectItem value="Member">Member</SelectItem>
+                            <SelectItem value="admin">Admin</SelectItem>
+                            <SelectItem value="member">Member</SelectItem>
                           </SelectContent>
                         </Select>
                       </div>
@@ -191,6 +193,8 @@ function Employee() {
                 </Card> */}
 
                 {/* Employee List */}
+                {/* Promote Form */}
+                {showPromote === "show" && <PromoteUser userID={EmpID} />}
                 <Card className="bg-red-950/10 border-red-900/20">
                   <CardContent className="pt-6">
                     <Table>
@@ -238,12 +242,25 @@ function Employee() {
                                 {employee.role}
                               </Badge>
                             </TableCell>
+                            <TableCell>
+                              <Button
+                                onClick={() => {
+                                  setEmpID(employee.id);
+                                  setShowPromote("show");
+                                }}
+                              >
+                                Promote/Demote
+                              </Button>
+                            </TableCell>
                             <TableCell className="text-right space-x-2">
                               <Button
                                 variant="outline"
                                 size="sm"
                                 className="border-red-900/30 hover:bg-red-900/20 text-amber-50"
-                                onClick={showModal}
+                                onClick={() => {
+                                  showModal();
+                                  setEmpID(employee.id);
+                                }}
                               >
                                 <Edit2 className="w-4 h-4" />
                               </Button>
@@ -255,19 +272,19 @@ function Employee() {
                               >
                                 <Trash2 className="w-4 h-4" />
                               </Button>
-                              <dialog ref={dialogRef}>
-                                <button
-                                  type="button"
-                                  id="dialog-close2"
-                                  onClick={() => closeModal()}
-                                >
-                                  X
-                                </button>
-                                <EditEmployee rowID={employee.id} />
-                              </dialog>
                             </TableCell>
                           </TableRow>
                         ))}
+                        <dialog ref={dialogRef}>
+                          <button
+                            type="button"
+                            id="dialog-close2"
+                            onClick={() => closeModal()}
+                          >
+                            X
+                          </button>
+                          <EditEmployee rowID={EmpID} />
+                        </dialog>
                       </TableBody>
                     </Table>
                   </CardContent>
