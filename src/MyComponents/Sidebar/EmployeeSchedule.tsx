@@ -1,6 +1,7 @@
 import React, { useEffect } from "react";
 import { CalendarCheck, Plus } from "lucide-react";
-
+// Add this to your exports
+// export { AddShiftModal } from '../Scheduling/AddShiftModal';
 
 // Header component
 const Header = ({ isSidebarOpen, setIsSidebarOpen, isAdminMode, setIsAdminMode, currentView, setCurrentView }) => {
@@ -351,5 +352,7 @@ export default function ScheduleApp() {
 
 // Import here to avoid circular dependency
 import { ScheduleProvider, useSchedule } from "../Scheduling/ScheduleComponents";
-import { LoadingState, ErrorState, StatCard, AddShiftModal } from "../Scheduling/ScheduleContext";
-import { generateScheduleData } from "../Scheduling/ScheduleData";
+
+import { AddShiftModal} from "../Scheduling/addShiftModal";
+import { generateScheduleData } from "../Scheduling/ScheduleData";import { LoadingState, ErrorState, StatCard } from "../Scheduling/UtilityComponents";
+

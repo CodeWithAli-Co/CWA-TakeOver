@@ -28,7 +28,14 @@ export interface StatsType {
   totalShifts: number;
   upcomingBreaks: number;
 }
-
+export type DayDataType = {
+  date: string;
+  month: number;
+  dayName: string;
+  shortName: string;
+  isToday: boolean;
+  events: EventType[];
+};
 export interface WeekRangeType {
   start: {
     date: number;
@@ -46,6 +53,7 @@ export interface ScheduleDataType {
   weekRange: WeekRangeType;
   weekOffset: number;
 }
+
 
 export interface EmployeeType {
   id: number;
