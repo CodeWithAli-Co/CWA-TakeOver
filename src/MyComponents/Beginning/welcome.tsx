@@ -1,5 +1,4 @@
 import React from "react";
-import "./compAssets/welcome.css";
 import cwa_logo_full from "/codewithali_logo_full.png";
 
 export default function Welcome() {

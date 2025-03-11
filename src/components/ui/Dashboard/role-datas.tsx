@@ -9,9 +9,12 @@ import {
   Home,
   ClipboardList,
   CalendarDays,
+<<<<<<< HEAD
   GalleryVerticalEnd,
   AudioWaveform,
   Command,
+=======
+>>>>>>> 5970929fa658a4e5bcdee9b714796ffc2f583366
 } from "lucide-react";
 
 // Intern Data set (What Interns can see)
@@ -123,6 +126,7 @@ export const adminData = {
     email: "unfold@codewithali.com",
     avatar: "/public/codewithali_logo.png",
   },
+<<<<<<< HEAD
   teams: [
     {
       name: "CodeWithAli Co.",
@@ -140,6 +144,8 @@ export const adminData = {
       plan: "Free",
     },
   ],
+=======
+>>>>>>> 5970929fa658a4e5bcdee9b714796ffc2f583366
   navMain: [
     {
       title: "Home",
@@ -153,10 +159,13 @@ export const adminData = {
       icon: SquareTerminal,
       isActive: true,
       items: [
+<<<<<<< HEAD
         // {
         //   title: "Email Broadcast",
         //   url: "/broadcast",
         // },
+=======
+>>>>>>> 5970929fa658a4e5bcdee9b714796ffc2f583366
         {
           title: "Account Management",
           url: "/details",
@@ -165,6 +174,7 @@ export const adminData = {
           title: "Users",
           url: "/employee",
         },
+<<<<<<< HEAD
         {
           title: "Mod logs",
           url: "/mod_logs",
@@ -178,19 +188,27 @@ export const adminData = {
     //   icon: Bot,
     // },
 
+=======
+      ],
+    },
+>>>>>>> 5970929fa658a4e5bcdee9b714796ffc2f583366
     {
       title: "Chat",
       url: "/chat",
       isActive: false,
       icon: MessageCircle,
     },
+<<<<<<< HEAD
 
+=======
+>>>>>>> 5970929fa658a4e5bcdee9b714796ffc2f583366
     {
       title: "Task",
       url: "/task",
       isActive: false,
       icon: ClipboardList,
     },
+<<<<<<< HEAD
     // {
     //   title: "Schedule",
     //   url: "/schedule",
@@ -204,10 +222,13 @@ export const adminData = {
     //   icon: Cat,
     // },
 
+=======
+>>>>>>> 5970929fa658a4e5bcdee9b714796ffc2f583366
     {
       title: "Settings",
       url: "/settings",
       icon: Settings2,
+<<<<<<< HEAD
       // items: [
       //   {
       //     // // In your sidebar navigation <Link to="/settings">Settings</Link>
@@ -238,6 +259,8 @@ export const adminData = {
       name: "Budgetary",
       url: "/budgetary",
       icon: Frame,
+=======
+>>>>>>> 5970929fa658a4e5bcdee9b714796ffc2f583366
     },
   ],
 };
@@ -249,6 +272,7 @@ export const projectManagerData = {
     email: "unfold@codewithali.com",
     avatar: "/public/codewithali_logo.png",
   },
+<<<<<<< HEAD
   teams: [
     {
       name: "CodeWithAli Co.",
@@ -266,6 +290,8 @@ export const projectManagerData = {
       plan: "Free",
     },
   ],
+=======
+>>>>>>> 5970929fa658a4e5bcdee9b714796ffc2f583366
   navMain: [
     {
       title: "Home",
@@ -274,6 +300,7 @@ export const projectManagerData = {
       icon: Home,
     },
     {
+<<<<<<< HEAD
       title: "Admin Permissions",
       url: "/details",
       icon: SquareTerminal,
@@ -305,18 +332,24 @@ export const projectManagerData = {
     // },
 
     {
+=======
+>>>>>>> 5970929fa658a4e5bcdee9b714796ffc2f583366
       title: "Chat",
       url: "/chat",
       isActive: false,
       icon: MessageCircle,
     },
+<<<<<<< HEAD
 
+=======
+>>>>>>> 5970929fa658a4e5bcdee9b714796ffc2f583366
     {
       title: "Task",
       url: "/task",
       isActive: false,
       icon: ClipboardList,
     },
+<<<<<<< HEAD
     // {
     //   title: "Schedule",
     //   url: "/schedule",
@@ -330,10 +363,13 @@ export const projectManagerData = {
     //   icon: Cat,
     // },
 
+=======
+>>>>>>> 5970929fa658a4e5bcdee9b714796ffc2f583366
     {
       title: "Settings",
       url: "/settings",
       icon: Settings2,
+<<<<<<< HEAD
       // items: [
       //   {
       //     // // In your sidebar navigation <Link to="/settings">Settings</Link>
@@ -364,6 +400,8 @@ export const projectManagerData = {
       name: "Budgetary",
       url: "/budgetary",
       icon: Frame,
+=======
+>>>>>>> 5970929fa658a4e5bcdee9b714796ffc2f583366
     },
   ],
 };
@@ -375,6 +413,7 @@ export const cooData = {
     email: "unfold@codewithali.com",
     avatar: "/public/codewithali_logo.png",
   },
+<<<<<<< HEAD
   teams: [
     {
       name: "CodeWithAli Co.",
@@ -392,6 +431,8 @@ export const cooData = {
       plan: "Free",
     },
   ],
+=======
+>>>>>>> 5970929fa658a4e5bcdee9b714796ffc2f583366
   navMain: [
     {
       title: "Home",
@@ -405,10 +446,13 @@ export const cooData = {
       icon: SquareTerminal,
       isActive: true,
       items: [
+<<<<<<< HEAD
         // {
         //   title: "Email Broadcast",
         //   url: "/broadcast",
         // },
+=======
+>>>>>>> 5970929fa658a4e5bcdee9b714796ffc2f583366
         {
           title: "Account Management",
           url: "/details",
@@ -417,6 +461,7 @@ export const cooData = {
           title: "Users",
           url: "/employee",
         },
+<<<<<<< HEAD
         {
           title: "Mod logs",
           url: "/mod_logs",
@@ -430,19 +475,27 @@ export const cooData = {
     //   icon: Bot,
     // },
 
+=======
+      ],
+    },
+>>>>>>> 5970929fa658a4e5bcdee9b714796ffc2f583366
     {
       title: "Chat",
       url: "/chat",
       isActive: false,
       icon: MessageCircle,
     },
+<<<<<<< HEAD
 
+=======
+>>>>>>> 5970929fa658a4e5bcdee9b714796ffc2f583366
     {
       title: "Task",
       url: "/task",
       isActive: false,
       icon: ClipboardList,
     },
+<<<<<<< HEAD
     // {
     //   title: "Schedule",
     //   url: "/schedule",
@@ -456,10 +509,13 @@ export const cooData = {
     //   icon: Cat,
     // },
 
+=======
+>>>>>>> 5970929fa658a4e5bcdee9b714796ffc2f583366
     {
       title: "Settings",
       url: "/settings",
       icon: Settings2,
+<<<<<<< HEAD
       // items: [
       //   {
       //     // // In your sidebar navigation <Link to="/settings">Settings</Link>
@@ -490,6 +546,8 @@ export const cooData = {
       name: "Budgetary",
       url: "/budgetary",
       icon: Frame,
+=======
+>>>>>>> 5970929fa658a4e5bcdee9b714796ffc2f583366
     },
   ],
 };
@@ -501,6 +559,7 @@ export const ceoData = {
     email: "unfold@codewithali.com",
     avatar: "/public/codewithali_logo.png",
   },
+<<<<<<< HEAD
   teams: [
     {
       name: "CodeWithAli Co.",
@@ -518,6 +577,8 @@ export const ceoData = {
       plan: "Free",
     },
   ],
+=======
+>>>>>>> 5970929fa658a4e5bcdee9b714796ffc2f583366
   navMain: [
     {
       title: "Home",
@@ -531,10 +592,6 @@ export const ceoData = {
       icon: SquareTerminal,
       isActive: true,
       items: [
-        // {
-        //   title: "Email Broadcast",
-        //   url: "/broadcast",
-        // },
         {
           title: "Account Management",
           url: "/details",
@@ -562,26 +619,12 @@ export const ceoData = {
       isActive: false,
       icon: MessageCircle,
     },
-
     {
       title: "Task",
       url: "/task",
       isActive: false,
       icon: ClipboardList,
     },
-    // {
-    //   title: "Schedule",
-    //   url: "/schedule",
-    //   isActive: false,
-    //   icon: CalendarDays,
-    // },
-    // {
-    //   title: "BioTech",
-    //   url: "/bio",
-    //   isActive: false,
-    //   icon: Cat,
-    // },
-
     {
       title: "Settings",
       url: "/settings",

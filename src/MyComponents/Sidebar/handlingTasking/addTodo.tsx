@@ -124,7 +124,7 @@ export const AddTodo = (props: Users) => {
       </DialogTrigger>
       <DialogContent
         className="sm:max-w-[600px] bg-black/95 border-red-950/30 
-        shadow-2xl shadow-red-950/40 rounded-xl overflow-hidden"
+        shadow-2xl shadow-red-950/40 rounded-xl"
       >
         <DialogHeader>
           <DialogTitle className="text-red-200 flex items-center gap-2">

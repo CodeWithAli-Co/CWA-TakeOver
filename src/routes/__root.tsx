@@ -1,38 +1,51 @@
-import React from "react";
-import {
-  createRootRoute,
-  Outlet,
-  useNavigate,
-  useRouterState,
-} from "@tanstack/react-router";
-import cwa_logo from "/codewithali_logo.png";
-import book_icon from "/book_icon.svg";
-import bot_icon from "/bot_icon.svg";
-import employee_icon from "/employee_icon.svg";
-import broadcast_icon from "/broadcast_icon.svg";
+import { check } from "@tauri-apps/plugin-updater";
+import { relaunch } from "@tauri-apps/plugin-process";
+import { createRootRoute, Outlet, useNavigate } from "@tanstack/react-router";
 import "../assets/sidebar.css";
 import { sendNotification } from "@tauri-apps/plugin-notification";
 import { useAppStore } from "../stores/store";
 
-import {
-  SidebarProvider,
-  SidebarTrigger,
-} from "@/components/ui/shadcnComponents/sidebar";
+import { SidebarProvider } from "@/components/ui/shadcnComponents/sidebar";
 import { AppSidebar } from "@/components/app-sidebar";
 import supabase from "@/MyComponents/supabase";
 import { useEffect } from "react";
 import LoginPage from "@/MyComponents/Beginning/login";
 import PinPage from "@/MyComponents/Beginning/pinPage";
 import { SignUpPage } from "@/MyComponents/Beginning/signup";
-// import { AppSidebar } from "@/MyComponents/Dashboard/app-sidebar";
-
-// Import Sidebar Components
-// import { SidebarProvider, SidebarTrigger } from "../components/ui/sidebar";
-// import { AppSidebar } from "../ui/components/app-sidebar";
+import { ActiveUser, DMGroups, Messages } from "@/stores/query";
 
 export const Route = createRootRoute({
   component: () => {
     const { pinCheck, isLoggedIn, GroupName } = useAppStore();
+    const { data: user, error: userError } = ActiveUser();
+    if (userError) {
+      sendNotification({
+        title: "Error with Active User",
+        body: "Error Fetching Active User on Start up!",
+      });
+    }
+    const { refetch: refetchDMGroups } = DMGroups(user[0]?.username);
+    const { refetch: refetchMessages } = Messages(GroupName);
+
+    // Messaging Realtime channel
+    supabase
+      .channel("all-messages")
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "cwa_dm_chat" },
+        () => refetchMessages()
+      )
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "dm_groups" },
+        () => refetchDMGroups()
+      )
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "cwa_chat" },
+        () => refetchMessages()
+      )
+      .subscribe();
 
     // Checks if user is on DMChat or not. Using useEffect to prevent multiple rerenders
     useEffect(() => {
@@ -41,6 +54,7 @@ export const Route = createRootRoute({
       // *But need to add a way to still get notified from OTHER Dm chats
 
       // If user's on GeneralChat, remove realtime channel so they wont receive notification while in chat
+      // Default value is General, so by default users wont receive notification from generalchat unless navigated to a DM
       if (GroupName === "General") {
         supabase
           .channel("dm")
@@ -91,6 +105,43 @@ export const Route = createRootRoute({
     }, [GroupName]);
 
     // Add global pressence if possible
+
+    useEffect(() => {
+      async function RunUpdater() {
+        const update = await check();
+        if (update) {
+          sendNotification({
+            title: 'New Update Available!',
+            body: `Found update v${update.version}`
+          })
+          let downloaded = 0;
+          let contentLength = 0;
+          // alternatively we could also call update.download() and update.install() separately
+          await update.downloadAndInstall((event) => {
+            switch (event.event) {
+              case "Started":
+                contentLength = event.data.contentLength!;
+                console.log(
+                  `started downloading ${event.data.contentLength} bytes`
+                );
+                break;
+              case "Progress":
+                downloaded += event.data.chunkLength;
+                console.log(`downloaded ${downloaded} from ${contentLength}`);
+                break;
+              case "Finished":
+                console.log("download finished");
+                break;
+            }
+          });
+
+          console.log("update installed");
+          await relaunch();
+        }
+      }
+
+      RunUpdater();
+    }, []);
 
     return (
       <>
