@@ -27,9 +27,9 @@ import {
 import { motion, AnimatePresence } from "framer-motion";
 import { useEffect, useState } from "react";
 import supabase from "@/MyComponents/supabase";
-import { AddTodo } from "@/MyComponents/SettingNavComponents/handlingTasking/addTodo";
 import UserView from "@/MyComponents/Reusables/userView";
 import { message } from "@tauri-apps/plugin-dialog";
+import { AddTodo } from "@/MyComponents/Sidebar/handlingTasking/addTodo";
 
 // Enhanced Task Priority Badge with animation
 const TaskPriorityBadge = ({ priority }: { priority: any }) => {
@@ -341,7 +341,7 @@ const Index = () => {
           <TasksComponent />
 
           {/* storage graph */}
-          <UserView userRole="admin">
+          <UserView userRole={["CEO", "COO"]}>
             <StorageUsageChart />
           </UserView>
         </div>

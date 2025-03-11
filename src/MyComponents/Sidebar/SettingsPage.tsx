@@ -95,7 +95,7 @@ export default function SettingsPage() {
   const is4K = windowWidth >= 2560;
 
   // Update URL when tab changes
-  const handleTabChange = (value) => {
+  const handleTabChange = (value: any) => {
     setActiveTab(value);
     navigate({
       to: "/settings",

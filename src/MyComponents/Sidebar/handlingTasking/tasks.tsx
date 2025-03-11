@@ -27,9 +27,9 @@ import {
   AlertTriangle,
 } from "lucide-react";
 import { ActiveUser, Employees, Todos, TodosInterface } from "@/stores/query";
-import { AddTodo } from "./addTodo";
 import supabase from "@/MyComponents/supabase";
 import { message } from "@tauri-apps/plugin-dialog";
+import { AddTodo } from "./addTodo";
 
 //task types.ts
 

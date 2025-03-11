@@ -27,6 +27,7 @@ import supabase from "@/MyComponents/supabase";
 import { useMultiSelectStore } from "@/stores/store";
 import { useForm } from "@tanstack/react-form";
 import { message } from "@tauri-apps/plugin-dialog";
+import { sendNotification } from "@tauri-apps/plugin-notification";
 import { PlusCircle, Flame, Clock, Tags } from "lucide-react";
 import { useState } from "react";
 import React from "react";
@@ -94,9 +95,9 @@ export const AddTodo = (props: Users) => {
         } else {
           setOpen(false);
           form.reset();
-          await message("Adding Todo was Successful!", {
+          sendNotification({
             title: "Todo Added",
-            kind: "info",
+            body: "Adding Todo was Successful!",
           });
         }
       } catch (err) {
