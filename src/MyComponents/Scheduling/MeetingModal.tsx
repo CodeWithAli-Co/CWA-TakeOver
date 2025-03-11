@@ -1,8 +1,8 @@
+// BLUE FILE
 import React, { useState } from "react";
 import { X, CheckSquare, Square, Users, Clock } from "lucide-react";
 import { useSchedule } from "./ScheduleComponents";
 import { generateScheduleData } from "./ScheduleData";
-
 interface MeetingModalProps {
   setShowMeetingModal: (value: boolean) => void;
 }

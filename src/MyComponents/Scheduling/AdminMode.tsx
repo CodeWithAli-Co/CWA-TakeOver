@@ -81,7 +81,7 @@ export const AdminModeComponent: React.FC<AdminModeProps> = ({
   }
 
   return (
-    <div className="bg-red-900/30 border-b border-red-700/40 px-4 py-3">
+    <div className="bg-blue-900/30 border-b border-blue-900 px-4 py-3">
       <div className="flex flex-wrap items-center gap-3 mb-3">
         <label className="text-white text-sm">Select Employee:</label>
         <select
@@ -113,7 +113,7 @@ export const AdminModeComponent: React.FC<AdminModeProps> = ({
               setEditingEvent(null); // Ensure we're creating a new shift
               setShowAddShiftModal(true);
             }}
-            className="px-3 py-1.5 bg-red-700 hover:bg-red-600 text-white text-sm rounded-md flex items-center gap-1"
+            className="px-3 py-1.5 bg-red-900/50 hover:bg-red-600 text-white text-sm rounded-md flex items-center gap-1"
             aria-label="Add shift"
           >
             <Plus size={16} />

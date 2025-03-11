@@ -1,138 +1,3 @@
-// const data = {
-//   user: {
-//     name: "CodeWithAli",
-//     email: "unfold@codewithali.com",
-//     avatar: "/public/codewithali_logo.png",
-//   },
-//   teams: [
-//     {
-//       name: "CodeWithAli Co.",
-//       logo: GalleryVerticalEnd,
-//       plan: "Enterprise",
-//     },
-//     {
-//       name: "Interns",
-//       logo: AudioWaveform,
-//       plan: "Startup",
-//     },
-//     {
-//       name: "Evil Corp.",
-//       logo: Command,
-//       plan: "Free",
-//     },
-//   ],
-//   navMain: [
-//     {
-//       title: "Admin Permissions",
-//       url: "/details",
-//       icon: SquareTerminal,
-//       isActive: true,
-//       items: [
-//         {
-//           title: "Email Broadcast",
-//           url: "/broadcast",
-//         },
-//         {
-//           title: "Account Management",
-//           url: "/details",
-//         },
-//         {
-//           title: "Users",
-//           url: "/employee",
-//         },
-//         {
-//           title: "Mod logs",
-//           url: "/mod_logs",
-//         },
-    
-//       ],
-//     },
-//     {
-//       title: "Bot Management",
-//       url: "/bot",
-//       icon: Bot,
-//     },
-
-//     {
-//       title: "Chat",
-//       url: "/chat",
-//       isActive: false,
-//       icon: MessageCircle,
-//     },
-
-//     {
-//       title: "Task",
-//       url: "/task",
-//       isActive: false,
-//       icon: ClipboardList,
-//     },
-//     {
-//       title: "Home",
-//       url: "/",
-//       isActive: false,
-//       icon: Home,
-//     },
-//     {
-//       title: "Schedule",
-//       url: "/schedule",
-//       isActive: false,
-//       icon: CalendarDays,
-//     },
-//     // {
-//     //   title: "BioTech",
-//     //   url: "/bio",
-//     //   isActive: false,
-//     //   icon: Cat,
-//     // },
-
-//     {
-//       title: "Settings",
-//       url: "/settings",
-//       icon: Settings2,
-//       items: [
-//         {
-//           // // In your sidebar navigation <Link to="/settings">Settings</Link>
-//           title: "General",
-//           url: "/settings",
-//         },
-//         {
-//           title: "Team",
-//           url: "/settings?tab=teams",
-//         },
-//         {
-//           title: "Tasks",
-//           url: "/settings?tab=tasks",
-//         },
-//         {
-//           title: "Company",
-//           url: "/settings?tab=company",
-//         },
-//         {
-//           title: "Notification",
-//           url: "/settings?tab=notification",
-//         },
-//       ],
-//     },
-//   ],
-//   projects: [
-//     {
-//       name: "Design Engineering",
-//       url: "#",
-//       icon: Frame,
-//     },
-//     {
-//       name: "Sales & Marketing",
-//       url: "#",
-//       icon: PieChart,
-//     },
-//     {
-//       name: "Travel",
-//       url: "#",
-//       icon: Map,
-//     },
-//   ],
-// };
-
 import {
   Bot,
   Frame,
@@ -270,17 +135,48 @@ export const adminData = {
       plan: "Startup",
     },
     {
-      name: "Evil Corp.",
+      name: "Members",
       logo: Command,
       plan: "Free",
     },
   ],
   navMain: [
     {
-      title: "Bot Management",
-      url: "/bot",
-      icon: Bot,
+      title: "Home",
+      url: "/",
+      isActive: false,
+      icon: Home,
     },
+    {
+      title: "Admin Permissions",
+      url: "/details",
+      icon: SquareTerminal,
+      isActive: true,
+      items: [
+        // {
+        //   title: "Email Broadcast",
+        //   url: "/broadcast",
+        // },
+        {
+          title: "Account Management",
+          url: "/details",
+        },
+        {
+          title: "Users",
+          url: "/employee",
+        },
+        {
+          title: "Mod logs",
+          url: "/mod_logs",
+        },
+    
+      ],
+    },
+    // {
+    //   title: "Bot Management",
+    //   url: "/bot",
+    //   icon: Bot,
+    // },
 
     {
       title: "Chat",
@@ -295,18 +191,12 @@ export const adminData = {
       isActive: false,
       icon: ClipboardList,
     },
-    {
-      title: "Home",
-      url: "/",
-      isActive: false,
-      icon: Home,
-    },
-    {
-      title: "Schedule",
-      url: "/schedule",
-      isActive: false,
-      icon: CalendarDays,
-    },
+    // {
+    //   title: "Schedule",
+    //   url: "/schedule",
+    //   isActive: false,
+    //   icon: CalendarDays,
+    // },
     // {
     //   title: "BioTech",
     //   url: "/bio",
@@ -318,29 +208,36 @@ export const adminData = {
       title: "Settings",
       url: "/settings",
       icon: Settings2,
-      items: [
-        {
-          // // In your sidebar navigation <Link to="/settings">Settings</Link>
-          title: "General",
-          url: "/settings",
-        },
-        {
-          title: "Team",
-          url: "/settings?tab=teams",
-        },
-        {
-          title: "Tasks",
-          url: "/settings?tab=tasks",
-        },
-        {
-          title: "Company",
-          url: "/settings?tab=company",
-        },
-        {
-          title: "Notification",
-          url: "/settings?tab=notification",
-        },
-      ],
+      // items: [
+      //   {
+      //     // // In your sidebar navigation <Link to="/settings">Settings</Link>
+      //     title: "General",
+      //     url: "/settings",
+      //   },
+      //   {
+      //     title: "Team",
+      //     url: "/settings?tab=teams",
+      //   },
+      //   {
+      //     title: "Tasks",
+      //     url: "/settings?tab=tasks",
+      //   },
+      //   {
+      //     title: "Company",
+      //     url: "/settings?tab=company",
+      //   },
+      //   {
+      //     title: "Notification",
+      //     url: "/settings?tab=notification",
+      //   },
+      // ],
+    },
+  ],
+  projects: [
+    {
+      name: "Budgetary",
+      url: "/budgetary",
+      icon: Frame,
     },
   ],
 };
@@ -364,17 +261,48 @@ export const projectManagerData = {
       plan: "Startup",
     },
     {
-      name: "Evil Corp.",
+      name: "Members",
       logo: Command,
       plan: "Free",
     },
   ],
   navMain: [
     {
-      title: "Bot Management",
-      url: "/bot",
-      icon: Bot,
+      title: "Home",
+      url: "/",
+      isActive: false,
+      icon: Home,
     },
+    {
+      title: "Admin Permissions",
+      url: "/details",
+      icon: SquareTerminal,
+      isActive: true,
+      items: [
+        // {
+        //   title: "Email Broadcast",
+        //   url: "/broadcast",
+        // },
+        {
+          title: "Account Management",
+          url: "/details",
+        },
+        {
+          title: "Users",
+          url: "/employee",
+        },
+        {
+          title: "Mod logs",
+          url: "/mod_logs",
+        },
+    
+      ],
+    },
+    // {
+    //   title: "Bot Management",
+    //   url: "/bot",
+    //   icon: Bot,
+    // },
 
     {
       title: "Chat",
@@ -389,18 +317,12 @@ export const projectManagerData = {
       isActive: false,
       icon: ClipboardList,
     },
-    {
-      title: "Home",
-      url: "/",
-      isActive: false,
-      icon: Home,
-    },
-    {
-      title: "Schedule",
-      url: "/schedule",
-      isActive: false,
-      icon: CalendarDays,
-    },
+    // {
+    //   title: "Schedule",
+    //   url: "/schedule",
+    //   isActive: false,
+    //   icon: CalendarDays,
+    // },
     // {
     //   title: "BioTech",
     //   url: "/bio",
@@ -412,46 +334,36 @@ export const projectManagerData = {
       title: "Settings",
       url: "/settings",
       icon: Settings2,
-      items: [
-        {
-          // // In your sidebar navigation <Link to="/settings">Settings</Link>
-          title: "General",
-          url: "/settings",
-        },
-        {
-          title: "Team",
-          url: "/settings?tab=teams",
-        },
-        {
-          title: "Tasks",
-          url: "/settings?tab=tasks",
-        },
-        {
-          title: "Company",
-          url: "/settings?tab=company",
-        },
-        {
-          title: "Notification",
-          url: "/settings?tab=notification",
-        },
-      ],
+      // items: [
+      //   {
+      //     // // In your sidebar navigation <Link to="/settings">Settings</Link>
+      //     title: "General",
+      //     url: "/settings",
+      //   },
+      //   {
+      //     title: "Team",
+      //     url: "/settings?tab=teams",
+      //   },
+      //   {
+      //     title: "Tasks",
+      //     url: "/settings?tab=tasks",
+      //   },
+      //   {
+      //     title: "Company",
+      //     url: "/settings?tab=company",
+      //   },
+      //   {
+      //     title: "Notification",
+      //     url: "/settings?tab=notification",
+      //   },
+      // ],
     },
   ],
   projects: [
     {
-      name: "Design Engineering",
-      url: "#",
+      name: "Budgetary",
+      url: "/budgetary",
       icon: Frame,
-    },
-    {
-      name: "Sales & Marketing",
-      url: "#",
-      icon: PieChart,
-    },
-    {
-      name: "Travel",
-      url: "#",
-      icon: Map,
     },
   ],
 };
@@ -475,22 +387,28 @@ export const cooData = {
       plan: "Startup",
     },
     {
-      name: "Evil Corp.",
+      name: "Members",
       logo: Command,
       plan: "Free",
     },
   ],
   navMain: [
     {
+      title: "Home",
+      url: "/",
+      isActive: false,
+      icon: Home,
+    },
+    {
       title: "Admin Permissions",
       url: "/details",
       icon: SquareTerminal,
       isActive: true,
       items: [
-        {
-          title: "Email Broadcast",
-          url: "/broadcast",
-        },
+        // {
+        //   title: "Email Broadcast",
+        //   url: "/broadcast",
+        // },
         {
           title: "Account Management",
           url: "/details",
@@ -506,11 +424,11 @@ export const cooData = {
     
       ],
     },
-    {
-      title: "Bot Management",
-      url: "/bot",
-      icon: Bot,
-    },
+    // {
+    //   title: "Bot Management",
+    //   url: "/bot",
+    //   icon: Bot,
+    // },
 
     {
       title: "Chat",
@@ -525,18 +443,12 @@ export const cooData = {
       isActive: false,
       icon: ClipboardList,
     },
-    {
-      title: "Home",
-      url: "/",
-      isActive: false,
-      icon: Home,
-    },
-    {
-      title: "Schedule",
-      url: "/schedule",
-      isActive: false,
-      icon: CalendarDays,
-    },
+    // {
+    //   title: "Schedule",
+    //   url: "/schedule",
+    //   isActive: false,
+    //   icon: CalendarDays,
+    // },
     // {
     //   title: "BioTech",
     //   url: "/bio",
@@ -548,46 +460,36 @@ export const cooData = {
       title: "Settings",
       url: "/settings",
       icon: Settings2,
-      items: [
-        {
-          // // In your sidebar navigation <Link to="/settings">Settings</Link>
-          title: "General",
-          url: "/settings",
-        },
-        {
-          title: "Team",
-          url: "/settings?tab=teams",
-        },
-        {
-          title: "Tasks",
-          url: "/settings?tab=tasks",
-        },
-        {
-          title: "Company",
-          url: "/settings?tab=company",
-        },
-        {
-          title: "Notification",
-          url: "/settings?tab=notification",
-        },
-      ],
+      // items: [
+      //   {
+      //     // // In your sidebar navigation <Link to="/settings">Settings</Link>
+      //     title: "General",
+      //     url: "/settings",
+      //   },
+      //   {
+      //     title: "Team",
+      //     url: "/settings?tab=teams",
+      //   },
+      //   {
+      //     title: "Tasks",
+      //     url: "/settings?tab=tasks",
+      //   },
+      //   {
+      //     title: "Company",
+      //     url: "/settings?tab=company",
+      //   },
+      //   {
+      //     title: "Notification",
+      //     url: "/settings?tab=notification",
+      //   },
+      // ],
     },
   ],
   projects: [
     {
-      name: "Design Engineering",
-      url: "#",
+      name: "Budgetary",
+      url: "/budgetary",
       icon: Frame,
-    },
-    {
-      name: "Sales & Marketing",
-      url: "#",
-      icon: PieChart,
-    },
-    {
-      name: "Travel",
-      url: "#",
-      icon: Map,
     },
   ],
 };
@@ -611,22 +513,28 @@ export const ceoData = {
       plan: "Startup",
     },
     {
-      name: "Evil Corp.",
+      name: "Members",
       logo: Command,
       plan: "Free",
     },
   ],
   navMain: [
     {
+      title: "Home",
+      url: "/",
+      isActive: false,
+      icon: Home,
+    },
+    {
       title: "Admin Permissions",
       url: "/details",
       icon: SquareTerminal,
       isActive: true,
       items: [
-        {
-          title: "Email Broadcast",
-          url: "/broadcast",
-        },
+        // {
+        //   title: "Email Broadcast",
+        //   url: "/broadcast",
+        // },
         {
           title: "Account Management",
           url: "/details",
@@ -642,11 +550,11 @@ export const ceoData = {
     
       ],
     },
-    {
-      title: "Bot Management",
-      url: "/bot",
-      icon: Bot,
-    },
+    // {
+    //   title: "Bot Management",
+    //   url: "/bot",
+    //   icon: Bot,
+    // },
 
     {
       title: "Chat",
@@ -661,18 +569,12 @@ export const ceoData = {
       isActive: false,
       icon: ClipboardList,
     },
-    {
-      title: "Home",
-      url: "/",
-      isActive: false,
-      icon: Home,
-    },
-    {
-      title: "Schedule",
-      url: "/schedule",
-      isActive: false,
-      icon: CalendarDays,
-    },
+    // {
+    //   title: "Schedule",
+    //   url: "/schedule",
+    //   isActive: false,
+    //   icon: CalendarDays,
+    // },
     // {
     //   title: "BioTech",
     //   url: "/bio",
@@ -684,46 +586,36 @@ export const ceoData = {
       title: "Settings",
       url: "/settings",
       icon: Settings2,
-      items: [
-        {
-          // // In your sidebar navigation <Link to="/settings">Settings</Link>
-          title: "General",
-          url: "/settings",
-        },
-        {
-          title: "Team",
-          url: "/settings?tab=teams",
-        },
-        {
-          title: "Tasks",
-          url: "/settings?tab=tasks",
-        },
-        {
-          title: "Company",
-          url: "/settings?tab=company",
-        },
-        {
-          title: "Notification",
-          url: "/settings?tab=notification",
-        },
-      ],
+      // items: [
+      //   {
+      //     // // In your sidebar navigation <Link to="/settings">Settings</Link>
+      //     title: "General",
+      //     url: "/settings",
+      //   },
+      //   {
+      //     title: "Team",
+      //     url: "/settings?tab=teams",
+      //   },
+      //   {
+      //     title: "Tasks",
+      //     url: "/settings?tab=tasks",
+      //   },
+      //   {
+      //     title: "Company",
+      //     url: "/settings?tab=company",
+      //   },
+      //   {
+      //     title: "Notification",
+      //     url: "/settings?tab=notification",
+      //   },
+      // ],
     },
   ],
   projects: [
     {
-      name: "Design Engineering",
-      url: "#",
+      name: "Budgetary",
+      url: "/budgetary",
       icon: Frame,
-    },
-    {
-      name: "Sales & Marketing",
-      url: "#",
-      icon: PieChart,
-    },
-    {
-      name: "Travel",
-      url: "#",
-      icon: Map,
     },
   ],
 };

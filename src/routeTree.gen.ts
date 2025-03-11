@@ -23,6 +23,7 @@ const ModlogsLazyImport = createFileRoute('/mod_logs')()
 const EmployeeLazyImport = createFileRoute('/employee')()
 const DetailsLazyImport = createFileRoute('/details')()
 const ChatLazyImport = createFileRoute('/chat')()
+const BudgetaryLazyImport = createFileRoute('/budgetary')()
 const BroadcastLazyImport = createFileRoute('/broadcast')()
 const BotLazyImport = createFileRoute('/bot')()
 const BioLazyImport = createFileRoute('/bio')()
@@ -72,6 +73,12 @@ const ChatLazyRoute = ChatLazyImport.update({
   path: '/chat',
   getParentRoute: () => rootRoute,
 } as any).lazy(() => import('./routes/chat.lazy').then((d) => d.Route))
+
+const BudgetaryLazyRoute = BudgetaryLazyImport.update({
+  id: '/budgetary',
+  path: '/budgetary',
+  getParentRoute: () => rootRoute,
+} as any).lazy(() => import('./routes/budgetary.lazy').then((d) => d.Route))
 
 const BroadcastLazyRoute = BroadcastLazyImport.update({
   id: '/broadcast',
@@ -142,6 +149,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof BroadcastLazyImport
       parentRoute: typeof rootRoute
     }
+    '/budgetary': {
+      id: '/budgetary'
+      path: '/budgetary'
+      fullPath: '/budgetary'
+      preLoaderRoute: typeof BudgetaryLazyImport
+      parentRoute: typeof rootRoute
+    }
     '/chat': {
       id: '/chat'
       path: '/chat'
@@ -202,6 +216,7 @@ export interface FileRoutesByFullPath {
   '/bio': typeof BioLazyRoute
   '/bot': typeof BotLazyRoute
   '/broadcast': typeof BroadcastLazyRoute
+  '/budgetary': typeof BudgetaryLazyRoute
   '/chat': typeof ChatLazyRoute
   '/details': typeof DetailsLazyRoute
   '/employee': typeof EmployeeLazyRoute
@@ -217,6 +232,7 @@ export interface FileRoutesByTo {
   '/bio': typeof BioLazyRoute
   '/bot': typeof BotLazyRoute
   '/broadcast': typeof BroadcastLazyRoute
+  '/budgetary': typeof BudgetaryLazyRoute
   '/chat': typeof ChatLazyRoute
   '/details': typeof DetailsLazyRoute
   '/employee': typeof EmployeeLazyRoute
@@ -233,6 +249,7 @@ export interface FileRoutesById {
   '/bio': typeof BioLazyRoute
   '/bot': typeof BotLazyRoute
   '/broadcast': typeof BroadcastLazyRoute
+  '/budgetary': typeof BudgetaryLazyRoute
   '/chat': typeof ChatLazyRoute
   '/details': typeof DetailsLazyRoute
   '/employee': typeof EmployeeLazyRoute
@@ -250,6 +267,7 @@ export interface FileRouteTypes {
     | '/bio'
     | '/bot'
     | '/broadcast'
+    | '/budgetary'
     | '/chat'
     | '/details'
     | '/employee'
@@ -264,6 +282,7 @@ export interface FileRouteTypes {
     | '/bio'
     | '/bot'
     | '/broadcast'
+    | '/budgetary'
     | '/chat'
     | '/details'
     | '/employee'
@@ -278,6 +297,7 @@ export interface FileRouteTypes {
     | '/bio'
     | '/bot'
     | '/broadcast'
+    | '/budgetary'
     | '/chat'
     | '/details'
     | '/employee'
@@ -294,6 +314,7 @@ export interface RootRouteChildren {
   BioLazyRoute: typeof BioLazyRoute
   BotLazyRoute: typeof BotLazyRoute
   BroadcastLazyRoute: typeof BroadcastLazyRoute
+  BudgetaryLazyRoute: typeof BudgetaryLazyRoute
   ChatLazyRoute: typeof ChatLazyRoute
   DetailsLazyRoute: typeof DetailsLazyRoute
   EmployeeLazyRoute: typeof EmployeeLazyRoute
@@ -309,6 +330,7 @@ const rootRouteChildren: RootRouteChildren = {
   BioLazyRoute: BioLazyRoute,
   BotLazyRoute: BotLazyRoute,
   BroadcastLazyRoute: BroadcastLazyRoute,
+  BudgetaryLazyRoute: BudgetaryLazyRoute,
   ChatLazyRoute: ChatLazyRoute,
   DetailsLazyRoute: DetailsLazyRoute,
   EmployeeLazyRoute: EmployeeLazyRoute,
@@ -333,6 +355,7 @@ export const routeTree = rootRoute
         "/bio",
         "/bot",
         "/broadcast",
+        "/budgetary",
         "/chat",
         "/details",
         "/employee",
@@ -356,6 +379,9 @@ export const routeTree = rootRoute
     },
     "/broadcast": {
       "filePath": "broadcast.lazy.tsx"
+    },
+    "/budgetary": {
+      "filePath": "budgetary.lazy.tsx"
     },
     "/chat": {
       "filePath": "chat.lazy.tsx"

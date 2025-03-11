@@ -31,24 +31,24 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
     <Sidebar collapsible="icon" {...props}>
       <SidebarHeader>
         {/* Admin View */}
-        <UserView userRole="Admin">
+        {/* <UserView userRole="Admin">
           <TeamSwitcher teams={adminData.teams} />
-        </UserView>
+        </UserView> */}
 
         {/* Project Manager View */}
-        <UserView userRole="Project Manager">
+        {/* <UserView userRole="Project Manager">
           <TeamSwitcher teams={projectManagerData.teams} />
-        </UserView>
+        </UserView> */}
 
         {/* COO View */}
-        <UserView userRole="COO">
+        {/* <UserView userRole="COO">
           <TeamSwitcher teams={cooData.teams} />
-        </UserView>
+        </UserView> */}
 
         {/* CEO View */}
-        <UserView userRole="CEO">
+        {/* <UserView userRole="CEO">
           <TeamSwitcher teams={ceoData.teams} />
-        </UserView>
+        </UserView> */}
         <SidebarTrigger />
       </SidebarHeader>
       <SidebarContent>
