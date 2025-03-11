@@ -1,4 +1,3 @@
-import React from "react";
 import { useForm } from "@tanstack/react-form";
 import supabase from "../supabase";
 import { useAppStore } from "@/stores/store";

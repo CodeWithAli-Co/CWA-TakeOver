@@ -1,6 +1,5 @@
 import { useForm } from "@tanstack/react-form";
 import "../compAssets/pinPage.css";
-import React from "react";
 
 import cwa_logo_full from "/codewithali-removebg-preview.png";
 import { useEffect, useState } from "react";

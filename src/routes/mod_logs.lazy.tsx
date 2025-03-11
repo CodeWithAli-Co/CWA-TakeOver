@@ -1,4 +1,3 @@
-import React from "react";
 import { createLazyFileRoute } from '@tanstack/react-router'
 import ModLogsPage from "@/MyComponents/Sidebar/logs";
 

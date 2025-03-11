@@ -1,4 +1,3 @@
-import React from "react";
 import {
   Card,
   CardContent,
@@ -21,7 +20,6 @@ import {
   Shield,
   Upload,
   Linkedin,
-  X,
   Facebook,
   Instagram,
   Mail,

@@ -1,4 +1,3 @@
-import React from "react";
 import { useForm } from "@tanstack/react-form";
 import supabase from "../supabase";
 import { invoke } from "@tauri-apps/api/core";
@@ -19,7 +18,6 @@ import {
   RadioGroupItem,
 } from "@/components/ui/shadcnComponents/radio-group";
 import { message } from "@tauri-apps/plugin-dialog";
-import { emitKeypressEvents } from "node:readline";
 
 export const AddData = () => {
   const { setDialog } = useAppStore();

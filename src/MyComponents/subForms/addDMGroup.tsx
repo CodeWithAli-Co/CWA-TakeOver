@@ -1,4 +1,3 @@
-import React from "react";
 import { useForm } from "@tanstack/react-form";
 import Capitalize from "../Reusables/capitalize";
 import Select from "react-select";

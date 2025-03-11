@@ -1,6 +1,4 @@
 import React from "react";
-import { AddResendContact } from "@/MyComponents/subForms/addResendContact";
-import { EditResendContact } from "@/MyComponents/subForms/editResendContact";
 import { useAppStore } from "@/stores/store";
 import { createLazyFileRoute } from "@tanstack/react-router";
 import { invoke } from "@tauri-apps/api/core";
@@ -23,7 +21,6 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from "@/components/ui/shadcnComponents/dialog";
 import { useState } from "react";
 import {
@@ -35,7 +32,6 @@ import {
   Trash2,
   CheckCircle,
   XCircle,
-  Search,
   RefreshCw,
 } from "lucide-react";
 import GradientText from "@/MyComponents/Reusables/gradientText";

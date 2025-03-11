@@ -1,4 +1,3 @@
-import React from "react";
 import { Employees } from "../stores/query";
 import { Skeleton } from "@/components/ui/shadcnComponents/skeleton";
 import "./compAssets/dispEmployees.css";

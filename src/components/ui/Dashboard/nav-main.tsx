@@ -1,4 +1,3 @@
-import React from "react";
 import { ChevronRight, type LucideIcon } from "lucide-react";
 
 import {
@@ -8,7 +7,6 @@ import {
 } from "@/components/ui/shadcnComponents/collapsible";
 import {
   SidebarGroup,
-  SidebarGroupLabel,
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,

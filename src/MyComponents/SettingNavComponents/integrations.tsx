@@ -1,4 +1,3 @@
-import React from "react";
 import { useState } from "react";
 import {
   Card,
@@ -19,7 +18,6 @@ import {
 } from "@/components/ui/shadcnComponents/collapsible";
 import { motion } from "framer-motion";
 import {
-  Search,
   Webhook,
   Plus,
   ChevronDown,

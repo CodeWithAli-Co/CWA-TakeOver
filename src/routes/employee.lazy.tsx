@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import { useState } from "react";
 import { createLazyFileRoute } from "@tanstack/react-router";
 import { useAppStore, useSubMenuStore } from "../stores/store";
 import { motion, AnimatePresence } from "framer-motion";

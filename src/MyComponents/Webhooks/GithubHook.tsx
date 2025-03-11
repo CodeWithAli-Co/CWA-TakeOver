@@ -142,7 +142,7 @@ const GitHubWebhookComponent: React.FC<GitHubWebhookComponentProps> = ({
 
       // Filter out webhooks we already have in allWebhookData
       const existingIds = new Set(allWebhookData.map(item => item.id));
-      const newItems = dataWithTimestamps.filter(item => !existingIds.has(item.id));
+      const newItems = dataWithTimestamps.filter((item: any) => !existingIds.has(item.id));
       
       if (newItems.length > 0) {
         // Save new items to Supabase

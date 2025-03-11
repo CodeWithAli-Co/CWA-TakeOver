@@ -1,17 +1,15 @@
-import React, { useState } from "react";
+import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Users2,
   UserPlus,
   Briefcase,
   FolderPlus,
-  ChevronRight,
   Search,
   MoreHorizontal,
   CheckCircle,
   Clock,
   AlertCircle,
-  X,
   Edit,
   Trash,
   Plus,
@@ -27,7 +25,6 @@ import { Button } from "@/components/ui/shadcnComponents/button";
 import {
   Avatar,
   AvatarFallback,
-  AvatarImage,
 } from "@/components/ui/shadcnComponents/avatar";
 import { Input } from "@/components/ui/shadcnComponents/input";
 import { Badge } from "@/components/ui/shadcnComponents/badge";
@@ -55,7 +52,6 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/shadcnComponents/dropdown-menu";
 import { ScrollArea } from "@/components/ui/shadcnComponents/scroll-area";
-import { Separator } from "@/components/ui/shadcnComponents/separator";
 
 // Sample data - replace with real data from your database
 const teams = [
@@ -142,7 +138,7 @@ const projects = [
 ];
 
 // Status badge component
-const StatusBadge = ({ status }) => {
+const StatusBadge = ({ status }: { status: any }) => {
   const variants = {
     "to-do": "bg-blue-500/20 text-blue-400 border-blue-500/30",
     "in-progress": "bg-amber-500/20 text-amber-400 border-amber-500/30",
@@ -173,13 +169,13 @@ const StatusBadge = ({ status }) => {
 };
 
 // Team member avatars group
-const TeamAvatars = ({ avatars, max = 4 }) => {
+const TeamAvatars = ({ avatars, max = 4 }: { avatars: any, max?: number }) => {
   const displayedAvatars = avatars.slice(0, max);
   const remaining = avatars.length - max;
 
   return (
     <div className="flex -space-x-2">
-      {displayedAvatars.map((avatar, idx) => (
+      {displayedAvatars.map((avatar: any, idx: any) => (
         <Avatar
           key={idx}
           className="h-7 w-7 border-2 border-black/40 bg-red-900 text-red-200 text-xs"
@@ -197,7 +193,7 @@ const TeamAvatars = ({ avatars, max = 4 }) => {
 };
 
 // Team Card Component
-const TeamCard = ({ team }) => (
+const TeamCard = ({ team }: { team: any }) => (
   <motion.div
     whileHover={{ scale: 1.01 }}
     className="rounded-lg bg-black/40 border border-red-900/30 overflow-hidden hover:bg-red-950/10 hover:border-red-900/50 transition-all"
@@ -250,7 +246,7 @@ const TeamCard = ({ team }) => (
 );
 
 // Project Card Component
-const ProjectCard = ({ project }) => {
+const ProjectCard = ({ project }: { project: any }) => {
   const completionBarWidth = `${project.completion}%`;
 
   return (

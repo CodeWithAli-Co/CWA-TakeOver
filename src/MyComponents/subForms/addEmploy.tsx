@@ -1,4 +1,3 @@
-import React from "react";
 import { useForm } from "@tanstack/react-form";
 import supabase from "../supabase";
 import { UserPlus } from "lucide-react";

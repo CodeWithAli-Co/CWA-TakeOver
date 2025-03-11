@@ -1,4 +1,3 @@
-import React from "react";
 import { useMultiSelectStore } from "@/stores/store";
 import Select from "react-select";
 

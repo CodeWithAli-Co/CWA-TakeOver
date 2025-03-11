@@ -1,12 +1,11 @@
-import React from "react";
 import { useAppStore } from "@/stores/store";
 import "./compAssets/dispInterns.css";
 import { useEffect, useRef } from "react";
 import { Interns } from "@/stores/query";
-import { Skeleton } from "@/components/ui/shadcnComponents/skeleton";
 import supabase from "./supabase";
 import { AddIntern } from "./subForms/addIntern";
 import { EditIntern } from "./subForms/editIntern";
+
 
 function DisplayInterns() {
   const { setDialog, dialog } = useAppStore();
