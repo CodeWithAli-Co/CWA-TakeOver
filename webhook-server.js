@@ -26,7 +26,9 @@ app.use(bodyParser.urlencoded({
 
 // Store webhooks in memory
 // JSON Dummy Data
-const webhooks = {"id": "github_1634560000000","event_type": "push","repo": "unknown","branch": "unknown","author": "unknown","author_avatar": "","timestamp": "2021-10-18T00:00:00.000Z","commits": [{"id": "unknown","message": "unknown","author": "unknown","timestamp": "2021-10-18T00:00:00.000Z"}]};
+const webhooks = [
+  {"id": "github_1634560000000","event_type": "push","repo": "aalibrahimi/cwa_takeover","branch": "main","author": "aalibrahimi","author_avatar": "https://avatars.githubusercontent.com/u/166450703?v=4","timestamp": "2025-03-12T18:30:45Z","commits":[{"id": "abcd1234","message": "Added webhook integration","author": "aalibrahimi","timestamp": "2025-03-12T18:29:30Z"}]}
+];
 
 // Save to file
 const saveWebhooks = () => {

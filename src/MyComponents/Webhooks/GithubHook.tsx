@@ -116,7 +116,7 @@ const GitHubWebhookComponent: React.FC<GitHubWebhookComponentProps> = ({
       setLoading(true);
       
       // Call the API endpoint to get GitHub webhooks
-      const response = await fetch('/webhooks/github');
+      const response = await fetch('http://localhost:1420/api/webhooks/github');
       
       if (!response.ok) {
         throw new Error(`Error fetching webhook data: ${response.status}`);
@@ -172,36 +172,34 @@ const GitHubWebhookComponent: React.FC<GitHubWebhookComponentProps> = ({
     try {
       setLoading(true);
       
-      const response = await fetch('/webhooks/github', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'X-GitHub-Event': 'ping',
-          'X-GitHub-Delivery': `test-${Date.now()}`
-        },
-        body: JSON.stringify({
-          zen: 'Test ping from app',
-          repository: {
-            full_name: 'test/repo'
-          }
-        })
-      });
-      
-      if (response.ok) {
-        console.log('Webhook test successful');
-        // Fetch the latest webhooks after test
-        fetchWebhooks();
-      } else {
-        setError(`Webhook test failed: ${response.status}`);
+       // Update the URL to match your Express server
+    const response = await fetch('http://localhost:1420/api/webhooks/github', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
       }
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'An unknown error occurred');
-      console.error('Error testing webhook:', err);
-    } finally {
-      setLoading(false);
+    });
+    
+    if (!response.ok) {
+      throw new Error(`Webhook test failed: ${response.status}`);
     }
-  };
-
+    
+    const data = await response.json();
+    console.log('Test webhook response:', data);
+    
+    if (data.success) {
+      // Fetch the latest webhooks after test
+      fetchWebhooks();
+    } else {
+      setError(`Webhook test failed: ${data.error || 'Unknown error'}`);
+    }
+  } catch (err) {
+    console.error('Error testing webhook:', err);
+    setError(err instanceof Error ? err.message : 'An unknown error occurred');
+  } finally {
+    setLoading(false);
+  }
+};
   // Clear stored webhook history
   const clearHistory = async () => {
     if (window.confirm('Are you sure you want to clear the webhook history?')) {
