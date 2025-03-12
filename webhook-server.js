@@ -25,7 +25,8 @@ app.use(bodyParser.urlencoded({
 }));
 
 // Store webhooks in memory
-const webhooks = [];
+// JSON Dummy Data
+const webhooks = {"id": "github_1634560000000","event_type": "push","repo": "unknown","branch": "unknown","author": "unknown","author_avatar": "","timestamp": "2021-10-18T00:00:00.000Z","commits": [{"id": "unknown","message": "unknown","author": "unknown","timestamp": "2021-10-18T00:00:00.000Z"}]};
 
 // Save to file
 const saveWebhooks = () => {
@@ -81,7 +82,7 @@ app.post('/webhooks/github', (req, res) => {
 });
 
 // API endpoint to get webhooks
-app.get('/api/webhooks/github', (req, res) => {
+app.get('/webhooks/github', (req, res) => {
   res.json(webhooks);
 });
 

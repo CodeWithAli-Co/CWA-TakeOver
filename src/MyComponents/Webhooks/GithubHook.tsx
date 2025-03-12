@@ -116,7 +116,7 @@ const GitHubWebhookComponent: React.FC<GitHubWebhookComponentProps> = ({
       setLoading(true);
       
       // Call the API endpoint to get GitHub webhooks
-      const response = await fetch('/api/webhooks/github');
+      const response = await fetch('/webhooks/github');
       
       if (!response.ok) {
         throw new Error(`Error fetching webhook data: ${response.status}`);
