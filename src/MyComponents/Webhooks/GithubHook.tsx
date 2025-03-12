@@ -168,20 +168,36 @@ const GitHubWebhookComponent: React.FC<GitHubWebhookComponentProps> = ({
   };
 
   // Test the webhook endpoint
-  const testWebhook = async () => {
-    try {
-      setLoading(true);
-      
-       // Update the URL to match your Express server
-    const response = await fetch('http://localhost:1420/api/webhooks/github', {
+const testWebhook = async () => {
+  try {
+    setLoading(true);
+    
+    // Call the dedicated test endpoint
+    const response = await fetch('http://localhost:1420/api/webhooks/github/test', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json'
-      }
+      },
+      body: JSON.stringify({ test: true })
     });
     
     if (!response.ok) {
-      throw new Error(`Webhook test failed: ${response.status}`);
+      let errorMessage = `Webhook test failed: ${response.status}`;
+      try {
+        // Try to get the error message from the response
+        const errorData = await response.json();
+        if (errorData.error) {
+          errorMessage += ` - ${errorData.error}`;
+        }
+      } catch (e) {
+        // If we can't parse the response as JSON, try to get the text
+        const errorText = await response.text();
+        if (errorText) {
+          errorMessage += ` - ${errorText}`;
+        }
+      }
+      
+      throw new Error(errorMessage);
     }
     
     const data = await response.json();
@@ -189,7 +205,8 @@ const GitHubWebhookComponent: React.FC<GitHubWebhookComponentProps> = ({
     
     if (data.success) {
       // Fetch the latest webhooks after test
-      fetchWebhooks();
+      await fetchWebhooks();
+      setError(null);
     } else {
       setError(`Webhook test failed: ${data.error || 'Unknown error'}`);
     }
@@ -200,6 +217,7 @@ const GitHubWebhookComponent: React.FC<GitHubWebhookComponentProps> = ({
     setLoading(false);
   }
 };
+
   // Clear stored webhook history
   const clearHistory = async () => {
     if (window.confirm('Are you sure you want to clear the webhook history?')) {
