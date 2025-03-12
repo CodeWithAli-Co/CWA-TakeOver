@@ -1,9 +1,4 @@
-import React from "react";
 import { useForm } from "@tanstack/react-form";
-
-import { useRouter } from "@tanstack/react-router"; // Correct usage
-
-import cwa_logo_full from "../assets/codewithali_logo.png"; // Add this line to import the logo
 import { useAppStore } from "@/stores/store";
 import supabase from "../supabase";
 
@@ -141,6 +136,3 @@ export const LoginPage = () => {
 };
 
 export default LoginPage;
-function setPinCheck(value: string) {
-  localStorage.setItem("pinCheck", value);
-}

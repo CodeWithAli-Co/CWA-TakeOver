@@ -2,18 +2,8 @@ import React from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   UserCircle,
-  ClipboardList,
-  Users2,
   Bell,
-  Shield,
-  Save,
-  Undo2,
   Moon,
-  Building2,
-  LineChart,
-  Database,
-  Plug,
-  CreditCard,
   Menu,
 } from "lucide-react";
 import { Button } from "@/components/ui/shadcnComponents/button";
@@ -69,14 +59,6 @@ const formSchema = z.object({
 
 const settingsTabs = [
   { value: "profile", label: "Profile Settings", icon: UserCircle },
-  { value: "teams", label: "Teams & Projects", icon: Users2 },
-  { value: "company", label: "Company", icon: Building2 },
-  { value: "reports", label: "Reports", icon: LineChart },
-  { value: "resources", label: "Resources", icon: Database },
-  { value: "integrations", label: "Integrations", icon: Plug },
-  { value: "billing", label: "Billing", icon: CreditCard },
-  { value: "notifications", label: "Notifications", icon: Bell },
-  { value: "security", label: "Security & Access Logs", icon: Shield },
 ];
 
 export const Route = createLazyFileRoute("/settings")({
@@ -113,7 +95,7 @@ export default function SettingsPage() {
   const is4K = windowWidth >= 2560;
 
   // Update URL when tab changes
-  const handleTabChange = (value) => {
+  const handleTabChange = (value: any) => {
     setActiveTab(value);
     navigate({
       to: "/settings",
@@ -135,7 +117,7 @@ export default function SettingsPage() {
     },
   });
 
-  const onSubmit = async (data) => {
+  const onSubmit = async (data: any) => {
     setIsSaving(true);
     await new Promise((resolve) => setTimeout(resolve, 1000));
     console.log(data);
@@ -161,47 +143,6 @@ export default function SettingsPage() {
               <p className="text-red-200/60 text-sm md:text-base">
                 Manage your account settings and preferences.
               </p>
-            </div>
-            <div className="flex gap-2 w-full md:w-auto justify-end">
-              <Button
-                variant="outline"
-                onClick={handleReset}
-                disabled={isSaving}
-                size={isMobile ? "sm" : "default"}
-                className="border-red-800/30 text-red-200 hover:bg-red-950/20 hover:text-red-100"
-              >
-                <Undo2 className="mr-2 h-4 w-4" />
-                {!isMobile && "Reset"}
-              </Button>
-              <Button
-                onClick={form.handleSubmit(onSubmit)}
-                disabled={isSaving}
-                size={isMobile ? "sm" : "default"}
-                className="bg-gradient-to-r from-red-950 to-red-900 hover:from-red-900 hover:to-red-800
-                       text-white border border-red-800/30 shadow-lg shadow-red-950/20"
-              >
-                {isSaving ? (
-                  <>
-                    <motion.div
-                      animate={{ rotate: 360 }}
-                      transition={{
-                        duration: 1,
-                        repeat: Number.POSITIVE_INFINITY,
-                        ease: "linear",
-                      }}
-                      className="mr-2 h-4 w-4"
-                    >
-                      <Save className="h-4 w-4" />
-                    </motion.div>
-                    {!isMobile && "Saving..."}
-                  </>
-                ) : (
-                  <>
-                    <Save className="mr-2 h-4 w-4" />
-                    {!isMobile ? "Save Changes" : "Save"}
-                  </>
-                )}
-              </Button>
             </div>
           </div>
 
@@ -395,7 +336,10 @@ export default function SettingsPage() {
                         </div>
 
                         <div className="xl:col-span-1 flex flex-col items-center justify-start">
-                          <UploadAvatar className="text-white" />
+                          <UploadAvatar
+                            className="bg-gradient-to-r from-red-950 to-red-900 hover:from-red-900 hover:to-red-800
+                       text-white border border-red-800/30 shadow-lg shadow-red-950/20 p-2"
+                          />
                         </div>
                       </div>
                     </CardContent>

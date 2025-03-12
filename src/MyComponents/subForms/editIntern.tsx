@@ -1,4 +1,3 @@
-import React from "react";
 import { useForm } from "@tanstack/react-form";
 import supabase from "../supabase";
 import { useAppStore } from "@/stores/store";
@@ -15,7 +14,7 @@ interface Props {
   rowID: number;
 }
 
-export const EditEmployee = (props: Props) => {
+export const EditIntern = (props: Props) => {
   const { setDialog } = useAppStore();
   const handleClose = () => {
     setDialog("closed");

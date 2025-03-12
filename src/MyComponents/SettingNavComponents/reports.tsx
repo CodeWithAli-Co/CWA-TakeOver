@@ -1,25 +1,16 @@
-import React, { useState } from "react";
+import { useState } from "react";
 import {
   BarChart,
   FileText,
   FileSpreadsheet,
   FilePieChart,
   Download,
-  Calendar,
-  Clock,
-  Filter,
   Plus,
   RefreshCw,
   Trash2,
-  ChevronDown,
-  Mail,
-  Timer,
   Settings,
-  Bell,
   Shield,
-  Users2,
   Activity,
-  ServerCrash,
   Search,
   Clipboard,
   LineChart,
@@ -35,7 +26,6 @@ import {
 import { Button } from "@/components/ui/shadcnComponents/button";
 import { Input } from "@/components/ui/shadcnComponents/input";
 import { Badge } from "@/components/ui/shadcnComponents/badge";
-import { ScrollArea } from "@/components/ui/shadcnComponents/scroll-area";
 import {
   Select,
   SelectContent,
@@ -58,22 +48,9 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/shadcnComponents/dialog";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/shadcnComponents/popover";
 import { Checkbox } from "@/components/ui/shadcnComponents/checkbox";
 import { Label } from "@/components/ui/shadcnComponents/label";
 import { Separator } from "@/components/ui/shadcnComponents/separator";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/shadcnComponents/table";
 import { Switch } from "@/components/ui/shadcnComponents/switch";
 import { motion, AnimatePresence } from "framer-motion";
 
@@ -194,7 +171,7 @@ const reportTemplates: ReportTemplate[] = [
 ];
 
 // Helper components
-const ReportTypeIcon = ({ type }) => {
+const ReportTypeIcon = ({ type }: { type: any }) => {
   switch (type) {
     case "security":
       return (
@@ -258,7 +235,7 @@ const ReportTypeIcon = ({ type }) => {
   }
 };
 
-const ReportFormatIcon = ({ format }) => {
+const ReportFormatIcon = ({ format }: { format: any }) => {
   switch (format) {
     case "pdf":
       return (
@@ -312,7 +289,7 @@ const ReportFormatIcon = ({ format }) => {
   }
 };
 
-const ScheduleBadge = ({ schedule }) => {
+const ScheduleBadge = ({ schedule }: { schedule: any }) => {
   switch (schedule) {
     case "manual":
       return (
@@ -363,7 +340,7 @@ const ScheduleBadge = ({ schedule }) => {
 };
 
 // New Report Dialog
-const NewReportDialog = ({ templates, onSave }) => {
+const NewReportDialog = ({ templates, onSave }: { templates: any, onSave: any }) => {
   const [selectedTemplate, setSelectedTemplate] = useState("");
   const [reportName, setReportName] = useState("");
   const [reportFormat, setReportFormat] = useState("");
@@ -371,7 +348,7 @@ const NewReportDialog = ({ templates, onSave }) => {
   const [recipients, setRecipients] = useState("");
   const [open, setOpen] = useState(false);
 
-  const selectedTemplateData = templates.find((t) => t.id === selectedTemplate);
+  const selectedTemplateData = templates.find((t: any) => t.id === selectedTemplate);
 
   const handleSave = () => {
     if (!reportName || !selectedTemplate || !reportFormat) return;
@@ -433,7 +410,7 @@ const NewReportDialog = ({ templates, onSave }) => {
                 <SelectValue placeholder="Select a report template" />
               </SelectTrigger>
               <SelectContent className="bg-black/95 border-red-950/30 text-red-200">
-                {templates.map((template) => (
+                {templates.map((template: any) => (
                   <SelectItem
                     key={template.id}
                     value={template.id}
@@ -481,7 +458,7 @@ const NewReportDialog = ({ templates, onSave }) => {
                   <SelectValue placeholder="Select format" />
                 </SelectTrigger>
                 <SelectContent className="bg-black/95 border-red-950/30 text-red-200">
-                  {selectedTemplateData.availableFormats.map((format) => (
+                  {selectedTemplateData.availableFormats.map((format: any) => (
                     <SelectItem
                       key={format}
                       value={format}
@@ -593,7 +570,7 @@ const NewReportDialog = ({ templates, onSave }) => {
 };
 
 // Report cards for different report types
-const ReportCard = ({ report, onGenerate, onDelete }) => {
+const ReportCard = ({ report, onGenerate, onDelete }: { report: any, onGenerate: any, onDelete: any }) => {
   return (
     <Card className="bg-black/40 border-red-900/30 overflow-hidden hover:border-red-900/50 transition-all duration-200">
       <CardHeader className="pb-2">

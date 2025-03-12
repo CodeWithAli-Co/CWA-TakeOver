@@ -1,14 +1,10 @@
 import {
-  Bot,
   Frame,
-  Map,
-  PieChart,
   Settings2,
   SquareTerminal,
   MessageCircle,
   Home,
   ClipboardList,
-  CalendarDays,
   GalleryVerticalEnd,
   AudioWaveform,
   Command,
@@ -184,7 +180,6 @@ export const adminData = {
       isActive: false,
       icon: MessageCircle,
     },
-
     {
       title: "Task",
       url: "/task",
@@ -310,7 +305,6 @@ export const projectManagerData = {
       isActive: false,
       icon: MessageCircle,
     },
-
     {
       title: "Task",
       url: "/task",
@@ -436,7 +430,6 @@ export const cooData = {
       isActive: false,
       icon: MessageCircle,
     },
-
     {
       title: "Task",
       url: "/task",
@@ -531,10 +524,6 @@ export const ceoData = {
       icon: SquareTerminal,
       isActive: true,
       items: [
-        // {
-        //   title: "Email Broadcast",
-        //   url: "/broadcast",
-        // },
         {
           title: "Account Management",
           url: "/details",
@@ -562,26 +551,12 @@ export const ceoData = {
       isActive: false,
       icon: MessageCircle,
     },
-
     {
       title: "Task",
       url: "/task",
       isActive: false,
       icon: ClipboardList,
     },
-    // {
-    //   title: "Schedule",
-    //   url: "/schedule",
-    //   isActive: false,
-    //   icon: CalendarDays,
-    // },
-    // {
-    //   title: "BioTech",
-    //   url: "/bio",
-    //   isActive: false,
-    //   icon: Cat,
-    // },
-
     {
       title: "Settings",
       url: "/settings",

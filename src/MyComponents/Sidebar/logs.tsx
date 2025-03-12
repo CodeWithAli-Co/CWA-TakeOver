@@ -4,21 +4,14 @@ import {
   UserCircle,
   Github,
   GitCommit,
-  GitBranch,
-  Calendar,
-  Clock,
-  MessageSquare,
-  Info,
   Briefcase,
   CalendarIcon,
   Globe,
   Linkedin,
-  MenuIcon,
   Network,
 } from "lucide-react";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/shadcnComponents/card";
-import { Separator } from "@/components/ui/shadcnComponents/separator";
 import { Badge } from "@/components/ui/shadcnComponents/badge";
 import { Button } from "@/components/ui/shadcnComponents/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/shadcnComponents/tabs";
@@ -144,7 +137,7 @@ const CommitGroup: React.FC<CommitGroupProps> = ({ data }) => {
               )}
               
               {/* Multiple commits */}
-              {commit.commitDetails && commit.commitDetails.map((detail, idx) => (
+              {commit.commitDetails && commit.commitDetails.map((detail: any, idx: any) => (
                 <CommitDetail 
                   key={idx} 
                   commitId={detail.commitId} 
@@ -161,7 +154,7 @@ const CommitGroup: React.FC<CommitGroupProps> = ({ data }) => {
 };
 
 // LinkedIn Activity Component
-const LinkedInActivity = ({ data }) => {
+const LinkedInActivity = ({ data }: {data: any}) => {
   return (
     <Card className="mb-4 bg-black/60 border-red-950/30 overflow-hidden backdrop-blur-sm">
       <CardHeader className="p-4 flex flex-row items-center space-x-2">
@@ -191,7 +184,7 @@ const LinkedInActivity = ({ data }) => {
 };
 
 // Calendly Event Component
-const CalendlyEvent = ({ data }) => {
+const CalendlyEvent = ({ data }: {data: any}) => {
   return (
     <Card className="mb-4 bg-black/60 border-red-950/30 overflow-hidden backdrop-blur-sm">
       <CardHeader className="p-4 flex flex-row items-center space-x-2">

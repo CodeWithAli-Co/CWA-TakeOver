@@ -1,4 +1,4 @@
-import React, { useRef, useState } from "react";
+import { useRef, useState } from "react";
 import { createLazyFileRoute } from "@tanstack/react-router";
 import {
   Card,
@@ -8,7 +8,6 @@ import {
   CardTitle,
 } from "@/components/ui/shadcnComponents/card";
 import { Button } from "@/components/ui/shadcnComponents/button";
-import { Switch } from "@/components/ui/shadcnComponents/switch";
 import { useAppStore } from "@/stores/store";
 import { CWACreds } from "../stores/query";
 import { invoke } from "@tauri-apps/api/core";
@@ -39,8 +38,10 @@ function Details() {
   // Track expanded state for each card
   const [expandedCards, setExpandedCards] = useState<number[]>([]);
   const [credID, setCredID] = useState(0);
+  const [showDecPass, setShowDecPass] = useState("");
 
   const toggleCard = (id: number) => {
+    // setExpandedCards([0]);
     setExpandedCards((prev) =>
       prev.includes(id) ? prev.filter((cardId) => cardId !== id) : [...prev, id]
     );
@@ -74,7 +75,7 @@ function Details() {
         keyStr: import.meta.env.VITE_ENCRYPTION_KEY,
         encryptedData: data[0].acc_enc_password,
       });
-      console.log(decPassword);
+      setShowDecPass(decPassword as string);
     }
   };
 
@@ -156,10 +157,11 @@ function Details() {
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
-                  <CardDescription className="text-sm text-zinc-400">
-                    Username: {cred.acc_username}
-                  </CardDescription>
-
+                  {cred.acc_username !== "" && (
+                    <CardDescription className="text-sm text-zinc-400">
+                      Username: {cred.acc_username}
+                    </CardDescription>
+                  )}
                   <div
                     className={`space-y-2 overflow-hidden transition-all duration-300 ${
                       isExpanded
@@ -170,9 +172,11 @@ function Details() {
                     <CardDescription className="text-sm text-zinc-400">
                       Email: {cred.acc_email}
                     </CardDescription>
-                    <CardDescription className="text-sm text-zinc-400">
-                      Password: {cred.acc_enc_password}
-                    </CardDescription>
+                    {showDecPass !== "" && (
+                      <CardDescription className="text-sm text-zinc-400">
+                        Password: {showDecPass || cred.acc_enc_password}
+                      </CardDescription>
+                    )}
                     {cred.acc_addinfo && (
                       <CardDescription className="text-sm text-zinc-400">
                         Additional Info: {cred.acc_addinfo}
@@ -187,8 +191,12 @@ function Details() {
                         size="sm"
                         className="text-zinc-400 border-zinc-800 hover:bg-zinc-800"
                         onClick={() => {
+                          setShowDecPass("");
+                          setExpandedCards([0]);
                           toggleCard(cred.id);
                           if (!isExpanded) getPassword(cred.id);
+                          if (expandedCards.includes(cred.id))
+                            setExpandedCards([0]); // If array contains the same ID as before, hide it
                         }}
                       >
                         {isExpanded ? (

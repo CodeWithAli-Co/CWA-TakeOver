@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { X, CheckSquare, Square, Edit2, Trash2, Info } from "lucide-react";
-import { useSchedule, EventType } from "./ScheduleComponents";
+import { useSchedule } from "./ScheduleComponents";
 import { generateScheduleData, employees } from "./ScheduleData";
 import { EditingEvent } from "./AdminMode";
 

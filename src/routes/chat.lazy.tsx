@@ -61,7 +61,6 @@ import {
 import { AddDMGroup } from "@/MyComponents/subForms/addDMGroup";
 import { formatDistanceToNow, isValid } from "date-fns";
 import { cn } from "@/lib/utils";
-import supabase from "@/MyComponents/supabase";
 
 const formatMessageDate = (dateString: string) => {
   try {
@@ -81,30 +80,10 @@ function GroupChats() {
   >("inbox");
   const [showMobileMenu, setShowMobileMenu] = useState(false);
 
-  // const [activeSection, setActiveSection] = useState('dm');
-  // const [isRightSidebarOpen, setIsRightSidebarOpen] = useState(true);
-
   const { data: AllEmployees, error: AllEmpError } = Employees();
   const { data: user, error: userError } = ActiveUser();
-  const {
-    data: DmGroups,
-    error: groupsError,
-    refetch: refetchDMGroups,
-  } = DMGroups(user![0].username);
-  const { data: Message, refetch: refetchMessages } = Messages(GroupName);
-
-  // Since using SuspenseQuery, this has no effect
-  // if (loadingEmployees || loadingUser || loadingGroups) {
-  //   return (
-  //     <div className="flex h-screen items-center justify-center bg-black">
-  //       <motion.div
-  //         animate={{ rotate: 360 }}
-  //         transition={{ duration: 1, repeat: Number.POSITIVE_INFINITY, ease: "linear" }}
-  //         className="w-8 h-8 border-4 border-red-500 border-t-transparent rounded-full"
-  //       />
-  //     </div>
-  //   )
-  // }
+  const { data: DmGroups, error: groupsError } = DMGroups(user![0].username);
+  const { data: Message } = Messages(GroupName);
 
   // With SuspenseQuery i dont think this has effect either, but leaving this here for now
   if (userError || AllEmpError || groupsError) {
@@ -117,26 +96,6 @@ function GroupChats() {
       </div>
     );
   }
-
-  // Realtime channel
-  supabase
-    .channel("all-messages")
-    .on(
-      "postgres_changes",
-      { event: "*", schema: "public", table: "cwa_dm_chat" },
-      () => refetchMessages()
-    )
-    .on(
-      "postgres_changes",
-      { event: "*", schema: "public", table: "dm_groups" },
-      () => refetchDMGroups()
-    )
-    .on(
-      "postgres_changes",
-      { event: "*", schema: "public", table: "cwa_chat" },
-      () => refetchMessages()
-    )
-    .subscribe();
 
   return (
     <div className="flex h-[100dvh] w-full bg-gradient-to-br from-zinc-900 via-black to-zinc-900">
@@ -167,7 +126,6 @@ function GroupChats() {
               ...(DmGroups || []),
             ]}
             currentDM={GroupName}
-            currentView={currentView}
             setCurrentView={setCurrentView}
             employees={AllEmployees || []}
           />
@@ -187,7 +145,6 @@ function GroupChats() {
             ...(DmGroups || []),
           ]}
           currentDM={GroupName}
-          currentView={currentView}
           setCurrentView={setCurrentView}
           employees={AllEmployees || []}
         />
@@ -446,14 +403,11 @@ function ChatSidebar({
   user,
   groups,
   currentDM,
-  currentView,
-  setCurrentView,
   employees,
 }: {
   user: any;
   groups: any[];
   currentDM: string;
-  currentView: "inbox" | "pinned" | "archived";
   setCurrentView: (view: "inbox" | "pinned" | "archived") => void;
   employees: any[];
 }) {
@@ -497,33 +451,6 @@ function ChatSidebar({
       </div>
 
       <Tabs defaultValue="inbox" className="flex-1 flex flex-col">
-        <TabsList className="w-full justify-start px-3 h-12 bg-transparent border-b border-white/10">
-          <TabsTrigger
-            value="inbox"
-            className="data-[state=active]:bg-white/10 data-[state=active]:text-white"
-            onClick={() => setCurrentView("inbox")}
-          >
-            <Inbox className="h-4 w-4 mr-2" />
-            Inbox
-          </TabsTrigger>
-          <TabsTrigger
-            value="pinned"
-            className="data-[state=active]:bg-white/10 data-[state=active]:text-white"
-            onClick={() => setCurrentView("pinned")}
-          >
-            <Pin className="h-4 w-4 mr-2" />
-            Pinned
-          </TabsTrigger>
-          <TabsTrigger
-            value="archived"
-            className="data-[state=active]:bg-white/10 data-[state=active]:text-white"
-            onClick={() => setCurrentView("archived")}
-          >
-            <Archive className="h-4 w-4 mr-2" />
-            Archived
-          </TabsTrigger>
-        </TabsList>
-
         <ScrollArea className="flex-1 px-2">
           <motion.div
             className="py-4 space-y-2"
@@ -618,34 +545,6 @@ function ChatSidebar({
           </motion.div>
         </ScrollArea>
       </Tabs>
-
-      {/* User Profile */}
-      <div className="p-4 border-t border-white/10">
-        <div className="flex items-center space-x-3">
-          <Avatar className="h-10 w-10 ring-2 ring-red-500/20">
-            <AvatarImage src={user?.avatarURL} style={{ borderRadius: 50 }} />
-            <AvatarFallback>
-              {user?.username?.slice(0, 2)?.toUpperCase()}
-            </AvatarFallback>
-          </Avatar>
-          <div className="flex-1 min-w-0">
-            <p className="text-white font-medium truncate">{user?.username}</p>
-            <Badge
-              variant="outline"
-              className="mt-1 text-xs text-zinc-400 bg-white/5"
-            >
-              {user?.role}
-            </Badge>
-          </div>
-          <Button
-            variant="ghost"
-            size="icon"
-            className="text-zinc-400 hover:text-white"
-          >
-            <Settings className="h-5 w-5" />
-          </Button>
-        </div>
-      </div>
     </div>
   );
 }

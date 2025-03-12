@@ -1,4 +1,3 @@
-import React from "react";
 import { useForm } from "@tanstack/react-form";
 import supabase from "../supabase";
 import { useAppStore } from "@/stores/store";
@@ -150,7 +149,7 @@ export const EditEmployee = (props: Props) => {
                       type="submit"
                       className="w-full bg-gradient-to-r from-red-950 to-black hover:from-red-900 
                       hover:to-red-950 text-white border border-red-900/30
-                      shadow-lg shadow-red-950/20 disabled:opacity-50"
+                      shadow-lg shadow-red-950/20 disabled:opacity-50 flex items-center justify-center py-2"
                       disabled={!canSubmit}
                     >
                       <UserPlus className="w-4 h-4 mr-2" />

@@ -15,7 +15,7 @@ This project uses [Bun](https://bun.sh/), [Rust](https://community.chocolatey.or
 
 1. Clone the project
 ```bash
-git clone https://github.com/blazehp/CWA-Manager.git
+git clone https://github.com/CodeWithAli-Co/CWA-TakeOver.git
 ```
 
 2. Install packages

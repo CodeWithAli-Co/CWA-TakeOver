@@ -1,4 +1,3 @@
-import React from "react";
 import api from "@/Api/botApi";
 import { createLazyFileRoute } from "@tanstack/react-router";
 import { create } from "zustand";

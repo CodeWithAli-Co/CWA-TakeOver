@@ -27,9 +27,9 @@ import supabase from "@/MyComponents/supabase";
 import { useMultiSelectStore } from "@/stores/store";
 import { useForm } from "@tanstack/react-form";
 import { message } from "@tauri-apps/plugin-dialog";
+import { sendNotification } from "@tauri-apps/plugin-notification";
 import { PlusCircle, Flame, Clock, Tags } from "lucide-react";
 import { useState } from "react";
-import React from "react";
 
 interface Users {
   Users: any;
@@ -94,9 +94,9 @@ export const AddTodo = (props: Users) => {
         } else {
           setOpen(false);
           form.reset();
-          await message("Adding Todo was Successful!", {
+          sendNotification({
             title: "Todo Added",
-            kind: "info",
+            body: "Adding Todo was Successful!",
           });
         }
       } catch (err) {
@@ -124,7 +124,7 @@ export const AddTodo = (props: Users) => {
       </DialogTrigger>
       <DialogContent
         className="sm:max-w-[600px] bg-black/95 border-red-950/30 
-        shadow-2xl shadow-red-950/40 rounded-xl overflow-hidden"
+        shadow-2xl shadow-red-950/40 rounded-xl"
       >
         <DialogHeader>
           <DialogTitle className="text-red-200 flex items-center gap-2">

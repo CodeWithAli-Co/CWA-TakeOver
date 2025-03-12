@@ -1,11 +1,9 @@
-import React from "react";
 import { open, BaseDirectory } from "@tauri-apps/plugin-fs";
 import { open as openDialog } from "@tauri-apps/plugin-dialog";
 import { sendNotification } from "@tauri-apps/plugin-notification";
 import { message } from "@tauri-apps/plugin-dialog";
 import { ActiveUser } from "@/stores/query";
 import supabase from "../supabase";
-// import supabase from "./supabase";
 
 interface Styles {
   className: string

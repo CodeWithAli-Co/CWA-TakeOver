@@ -22,9 +22,6 @@ import {
   projectManagerData,
 } from "./ui/Dashboard/role-datas";
 import UserView from "@/MyComponents/Reusables/userView";
-import { TeamSwitcher } from "./ui/Dashboard/team-switch";
-// import { tasks } from "@/MyComponents/SettingNavComponents/taskTypes"
-// import SettingsPage from
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   return (

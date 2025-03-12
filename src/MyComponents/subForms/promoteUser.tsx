@@ -1,4 +1,3 @@
-import React from "react";
 import { useForm } from "@tanstack/react-form";
 import { useSubMenuStore } from "@/stores/store";
 import supabase from "../supabase";

@@ -1,4 +1,3 @@
-import React from "react";
 import { useForm } from "@tanstack/react-form";
 import { invoke } from "@tauri-apps/api/core";
 import { useAppStore } from "@/stores/store";

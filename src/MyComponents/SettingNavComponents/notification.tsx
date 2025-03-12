@@ -9,7 +9,6 @@ import { Badge } from "@/components/ui/shadcnComponents/badge";
 import { Button } from "@/components/ui/shadcnComponents/button";
 import { ScrollArea } from "@/components/ui/shadcnComponents/scroll-area";
 import { motion } from "framer-motion";
-import React from "react";
 import {
   Bell,
   MessageSquare,

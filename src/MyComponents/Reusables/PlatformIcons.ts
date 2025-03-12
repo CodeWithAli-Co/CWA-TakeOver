@@ -18,10 +18,8 @@ import {
   BookOpen,
   Briefcase,
   Code,
-  Coffee,
   Layout,
   Server,
-  Share2,
   Youtube,
   MessageCircle,
   Image,
@@ -414,7 +412,7 @@ export const platformStyles: Record<string, PlatformStyle> = {
   },
   adobe: {
     color: "#FF0000",
-    
+    gradient: "",
     shadowColor: "rgba(255, 0, 0, 0.5)",
   },
   coinbase: {

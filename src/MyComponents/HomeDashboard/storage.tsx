@@ -1,15 +1,13 @@
-import React from "react";
 import {
   Card,
   CardContent,
   CardHeader,
   CardTitle,
 } from "@/components/ui/shadcnComponents/card";
-import { Progress } from "@/components/ui/shadcnComponents/progress";
 import { Badge } from "@/components/ui/shadcnComponents/badge";
 import { useEffect } from "react";
 import { useState } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion } from "framer-motion";
 import { useAppStore } from "@/stores/store";
 import supabase from "../supabase";
 

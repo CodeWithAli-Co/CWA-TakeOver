@@ -1,6 +1,4 @@
 import React from "react";
-import { AddResendContact } from "@/MyComponents/subForms/addResendContact";
-import { EditResendContact } from "@/MyComponents/subForms/editResendContact";
 import { useAppStore } from "@/stores/store";
 import { createLazyFileRoute } from "@tanstack/react-router";
 import { invoke } from "@tauri-apps/api/core";
@@ -23,7 +21,6 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from "@/components/ui/shadcnComponents/dialog";
 import { useState } from "react";
 import {
@@ -35,7 +32,6 @@ import {
   Trash2,
   CheckCircle,
   XCircle,
-  Search,
   RefreshCw,
 } from "lucide-react";
 import GradientText from "@/MyComponents/Reusables/gradientText";
@@ -52,15 +48,6 @@ interface NewContact {
   firstName: string;
   lastName: string;
 }
-// console bug caatching for the contaacts
-try {
-  console.log("Fetching contacts...");
-  const result = await invoke("list_contacts");
-  console.log("Contacts fetched:", result);
-  // setContacts(result as Contact[]);
-} catch (error) {
-  console.error("Error fetching contacts:", error);
-}
 
 interface FormEvent extends React.FormEvent<HTMLFormElement> {
   preventDefault: () => void;
@@ -68,10 +55,19 @@ interface FormEvent extends React.FormEvent<HTMLFormElement> {
 
 // Mock data for demonstration
 
-function BroadcastManagement() {
+async function BroadcastManagement() {
   const { broadcastID, setBroadcastID, resetBroadcastID, setDialog, dialog } =
-    useAppStore();
+  useAppStore();
   const dialogRef = useRef<HTMLDialogElement | null>(null);
+  // console bug caatching for the contaacts
+  try {
+    console.log("Fetching contacts...");
+    const result = await invoke("list_contacts");
+    console.log("Contacts fetched:", result);
+    // setContacts(result as Contact[]);
+  } catch (error) {
+    console.error("Error fetching contacts:", error);
+  }
 
   // Show dialog
   const showModal = () => {
