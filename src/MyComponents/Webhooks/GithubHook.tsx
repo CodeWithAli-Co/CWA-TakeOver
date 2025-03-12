@@ -116,7 +116,7 @@ const GitHubWebhookComponent: React.FC<GitHubWebhookComponentProps> = ({
       setLoading(true);
       
       // Call the API endpoint to get GitHub webhooks
-      const response = await fetch('http://localhost:1420/api/webhooks/github');
+      const response = await fetch('/webhooks/github');
       
       if (!response.ok) {
         throw new Error(`Error fetching webhook data: ${response.status}`);
@@ -168,55 +168,39 @@ const GitHubWebhookComponent: React.FC<GitHubWebhookComponentProps> = ({
   };
 
   // Test the webhook endpoint
-const testWebhook = async () => {
-  try {
-    setLoading(true);
-    
-    // Call the dedicated test endpoint
-    const response = await fetch('http://localhost:1420/api/webhooks/github/test', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({ test: true })
-    });
-    
-    if (!response.ok) {
-      let errorMessage = `Webhook test failed: ${response.status}`;
-      try {
-        // Try to get the error message from the response
-        const errorData = await response.json();
-        if (errorData.error) {
-          errorMessage += ` - ${errorData.error}`;
-        }
-      } catch (e) {
-        // If we can't parse the response as JSON, try to get the text
-        const errorText = await response.text();
-        if (errorText) {
-          errorMessage += ` - ${errorText}`;
-        }
-      }
+  const testWebhook = async () => {
+    try {
+      setLoading(true);
       
-      throw new Error(errorMessage);
+      const response = await fetch('/webhooks/github', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-GitHub-Event': 'ping',
+          'X-GitHub-Delivery': `test-${Date.now()}`
+        },
+        body: JSON.stringify({
+          zen: 'Test ping from app',
+          repository: {
+            full_name: 'test/repo'
+          }
+        })
+      });
+      
+      if (response.ok) {
+        console.log('Webhook test successful');
+        // Fetch the latest webhooks after test
+        fetchWebhooks();
+      } else {
+        setError(`Webhook test failed: ${response.status}`);
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'An unknown error occurred');
+      console.error('Error testing webhook:', err);
+    } finally {
+      setLoading(false);
     }
-    
-    const data = await response.json();
-    console.log('Test webhook response:', data);
-    
-    if (data.success) {
-      // Fetch the latest webhooks after test
-      await fetchWebhooks();
-      setError(null);
-    } else {
-      setError(`Webhook test failed: ${data.error || 'Unknown error'}`);
-    }
-  } catch (err) {
-    console.error('Error testing webhook:', err);
-    setError(err instanceof Error ? err.message : 'An unknown error occurred');
-  } finally {
-    setLoading(false);
-  }
-};
+  };
 
   // Clear stored webhook history
   const clearHistory = async () => {
