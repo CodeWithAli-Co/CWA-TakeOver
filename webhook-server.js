@@ -13,7 +13,7 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 // Need to work on Making this work
 // Middleware
-app.use(cors());
+app.use('*', cors());
 
 // Support both JSON and URL-encoded data
 app.use(bodyParser.json({ 
@@ -26,9 +26,7 @@ app.use(bodyParser.urlencoded({
 
 // Store webhooks in memory
 // JSON Dummy Data
-const webhooks = [
-  {"id": "github_1634560000000","event_type": "push","repo": "aalibrahimi/cwa_takeover","branch": "main","author": "aalibrahimi","author_avatar": "https://avatars.githubusercontent.com/u/166450703?v=4","timestamp": "2025-03-12T18:30:45Z","commits":[{"id": "abcd1234","message": "Added webhook integration","author": "aalibrahimi","timestamp": "2025-03-12T18:29:30Z"}]}
-];
+const webhooks = [];
 
 // Save to file
 const saveWebhooks = () => {
@@ -38,7 +36,7 @@ const saveWebhooks = () => {
 };
 
 // GitHub webhook endpoint
-app.post('/webhooks/github', (req, res) => {
+app.post('/api/webhooks/github', (req, res) => {
   try {
     const event = req.headers['x-github-event'];
     console.log(`Received GitHub ${event} event`);
@@ -48,7 +46,7 @@ app.post('/webhooks/github', (req, res) => {
     // Handle ping event
     if (event === 'ping') {
       console.log('Ping event received - webhook verified');
-      return res.status(200).send('Pong!');
+      return res.status(200).send({ pingRes: "Pong!" });
     }
     
     // Handle push event
@@ -85,7 +83,13 @@ app.post('/webhooks/github', (req, res) => {
 
 // API endpoint to get webhooks
 app.get('/webhooks/github', (req, res) => {
-  res.json(webhooks);
+  console.log('Fetched Data Server-side:', webhooks)
+  res.send(webhooks);
+});
+
+app.get('/testhook', (req, res) => {
+  console.log('Fetched Data Server-side')
+  res.send({ testHook: "bruh" });
 });
 
 // Catch-all handler

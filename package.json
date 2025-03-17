@@ -52,7 +52,6 @@
     "date-fns": "^4.1.0",
     "dotenv": "^16.4.7",
     "express": "^4.21.2",
-    "expresss": "^0.0.0",
     "fns": "^1.0.0",
     "framer-motion": "^12.4.11",
     "gsap": "^3.12.7",

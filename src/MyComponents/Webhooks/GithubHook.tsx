@@ -116,7 +116,9 @@ const GitHubWebhookComponent: React.FC<GitHubWebhookComponentProps> = ({
       setLoading(true);
       
       // Call the API endpoint to get GitHub webhooks
-      const response = await fetch('/webhooks/github');
+      const response = await fetch('http://127.0.0.1:3000/webhooks/github', {
+        method: 'GET'
+      });
       
       if (!response.ok) {
         throw new Error(`Error fetching webhook data: ${response.status}`);
@@ -172,7 +174,7 @@ const GitHubWebhookComponent: React.FC<GitHubWebhookComponentProps> = ({
     try {
       setLoading(true);
       
-      const response = await fetch('/webhooks/github', {
+      const response = await fetch('http://127.0.0.1:3000/api/webhooks/github', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -189,6 +191,8 @@ const GitHubWebhookComponent: React.FC<GitHubWebhookComponentProps> = ({
       
       if (response.ok) {
         console.log('Webhook test successful');
+        const testData = await response.json();
+        console.log('TestHook Response Data:', testData);
         // Fetch the latest webhooks after test
         fetchWebhooks();
       } else {
