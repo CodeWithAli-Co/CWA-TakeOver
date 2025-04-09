@@ -1,25 +1,28 @@
-import type * as React from "react"
+//  was import type * as React from "react"
+import * as React from "react";
+
 import {
-  AudioWaveform,
-  BookOpen,
-  Bot,
-  Command,
-  Frame,
-  GalleryVerticalEnd,
-  Map,
-  PieChart,
-  Settings2,
-  SquareTerminal,
-  MessageCircle,
-  Home, ClipboardList
-} from "lucide-react"
-
-
-import { Sidebar, SidebarContent, SidebarFooter, SidebarHeader, SidebarRail, SidebarTrigger } from "@/components/ui/sidebar"
-import { TeamSwitcher } from "./ui/Dashboard/team-switch"
-import { NavMain } from "./ui/Dashboard/nav-main"
-import { NavProjects } from "./ui/Dashboard/nav-project"
-import { NavUser } from "./ui/Dashboard/nav-user"
+  Sidebar,
+  SidebarContent,
+  SidebarFooter,
+  SidebarHeader,
+  SidebarRail,
+  SidebarTrigger,
+} from "@/components/ui/shadcnComponents/sidebar";
+import { NavMain } from "./ui/Dashboard/nav-main";
+import { NavProjects } from "./ui/Dashboard/nav-project";
+import { NavUser } from "./ui/Dashboard/nav-user";
+import {
+  adminData,
+  ceoData,
+  cooData,
+  internData,
+  marketingData,
+  memberData,
+  projectManagerData,
+} from "./ui/Dashboard/role-datas";
+import UserView from "@/MyComponents/Reusables/userView";
+import { TeamSwitcher } from "./ui/Dashboard/team-switch";
 // import { tasks } from "@/MyComponents/SettingNavComponents/taskTypes"
 // import SettingsPage from 
 
@@ -147,17 +150,71 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   return (
     <Sidebar collapsible="icon" {...props}>
       <SidebarHeader>
-        <TeamSwitcher teams={data.teams} />
+        {/* Admin View */}
+        {/* <UserView userRole="Admin">
+          <TeamSwitcher teams={adminData.teams} />
+        </UserView> */}
+
+        {/* Project Manager View */}
+        {/* <UserView userRole="Project Manager">
+          <TeamSwitcher teams={projectManagerData.teams} />
+        </UserView> */}
+
+        {/* COO View */}
+        {/* <UserView userRole="COO">
+          <TeamSwitcher teams={cooData.teams} />
+        </UserView> */}
+
+        {/* CEO View */}
+        {/* <UserView userRole="CEO">
+          <TeamSwitcher teams={ceoData.teams} />
+        </UserView> */}
         <SidebarTrigger />
       </SidebarHeader>
       <SidebarContent>
-        <NavMain items={data.navMain} />
-        <NavProjects projects={data.projects} />
+        {/* Intern View */}
+        <UserView userRole="Intern">
+          <NavMain items={internData.navMain} />
+        </UserView>
+
+        {/* Member View */}
+        <UserView userRole="Member">
+          <NavMain items={memberData.navMain} />
+        </UserView>
+
+        {/* Marketing Specialist View */}
+        <UserView userRole="Marketing Specialist">
+          <NavMain items={marketingData.navMain} />
+        </UserView>
+
+        {/* Admin View */}
+        <UserView userRole="Admin">
+          <NavMain items={adminData.navMain} />
+        </UserView>
+
+        {/* Project Manager View */}
+        <UserView userRole="Project Manager">
+          <NavMain items={projectManagerData.navMain} />
+          <NavProjects projects={projectManagerData.projects} />
+        </UserView>
+
+        {/* COO View */}
+        <UserView userRole="COO">
+          <NavMain items={cooData.navMain} />
+          <NavProjects projects={cooData.projects} />
+        </UserView>
+
+        {/* CEO View */}
+        <UserView userRole="CEO">
+          <NavMain items={ceoData.navMain} />
+          <NavProjects projects={ceoData.projects} />
+        </UserView>
       </SidebarContent>
       <SidebarFooter>
-        <NavUser userData={data.user} />
+        {/* Using InternData here bc it's default role, so everyone has access to it */}
+        <NavUser userData={internData.user} />
       </SidebarFooter>
       <SidebarRail />
     </Sidebar>
-  )
+  );
 }

@@ -1,5 +1,19 @@
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
+import React from "react";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/shadcnComponents/card";
+import {
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
+} from "recharts";
 
 const data = [
   { month: "Jan", users: 450, applications: 650, placements: 230 },
@@ -41,12 +55,12 @@ export const PerformanceGraph = () => {
           {[
             { label: "Users", color: "#ef4444" },
             { label: "Applications", color: "#f97316" },
-            { label: "Placements", color: "#d97706" }
+            { label: "Placements", color: "#d97706" },
           ].map((item) => (
             <div key={item.label} className="flex items-center gap-2">
-              <div 
-                className="h-2 w-2 rounded-full" 
-                style={{ backgroundColor: item.color }} 
+              <div
+                className="h-2 w-2 rounded-full"
+                style={{ backgroundColor: item.color }}
               />
               <span className="text-xs text-amber-50/70">{item.label}</span>
             </div>
@@ -68,41 +82,41 @@ export const PerformanceGraph = () => {
               <defs>
                 {/* Gradients for bars */}
                 <linearGradient id="users" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stopColor="#ef4444" stopOpacity={0.8}/>
-                  <stop offset="100%" stopColor="#ef4444" stopOpacity={0.3}/>
+                  <stop offset="0%" stopColor="#ef4444" stopOpacity={0.8} />
+                  <stop offset="100%" stopColor="#ef4444" stopOpacity={0.3} />
                 </linearGradient>
                 <linearGradient id="applications" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stopColor="#f97316" stopOpacity={0.8}/>
-                  <stop offset="100%" stopColor="#f97316" stopOpacity={0.3}/>
+                  <stop offset="0%" stopColor="#f97316" stopOpacity={0.8} />
+                  <stop offset="100%" stopColor="#f97316" stopOpacity={0.3} />
                 </linearGradient>
                 <linearGradient id="placements" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stopColor="#d97706" stopOpacity={0.8}/>
-                  <stop offset="100%" stopColor="#d97706" stopOpacity={0.3}/>
+                  <stop offset="0%" stopColor="#d97706" stopOpacity={0.8} />
+                  <stop offset="100%" stopColor="#d97706" stopOpacity={0.3} />
                 </linearGradient>
               </defs>
-              <CartesianGrid 
-                strokeDasharray="3 3" 
-                stroke="#991b1b" 
+              <CartesianGrid
+                strokeDasharray="3 3"
+                stroke="#991b1b"
                 opacity={0.1}
                 vertical={false}
               />
-              <XAxis 
-                dataKey="month" 
-                stroke="#b45309" 
-                tick={{ fill: '#b45309', fontSize: 12 }}
-                tickLine={{ stroke: '#b45309' }}
-                axisLine={{ stroke: '#991b1b', strokeWidth: 1 }}
-              />
-              <YAxis 
+              <XAxis
+                dataKey="month"
                 stroke="#b45309"
-                tick={{ fill: '#b45309', fontSize: 12 }}
-                tickLine={{ stroke: '#b45309' }}
-                axisLine={{ stroke: '#991b1b', strokeWidth: 1 }}
+                tick={{ fill: "#b45309", fontSize: 12 }}
+                tickLine={{ stroke: "#b45309" }}
+                axisLine={{ stroke: "#991b1b", strokeWidth: 1 }}
+              />
+              <YAxis
+                stroke="#b45309"
+                tick={{ fill: "#b45309", fontSize: 12 }}
+                tickLine={{ stroke: "#b45309" }}
+                axisLine={{ stroke: "#991b1b", strokeWidth: 1 }}
                 tickFormatter={(value) => `${value}`}
               />
-              <Tooltip 
+              <Tooltip
                 content={<CustomTooltip />}
-                cursor={{ fill: '#991b1b', opacity: 0.1 }}
+                cursor={{ fill: "#991b1b", opacity: 0.1 }}
               />
               <Bar
                 dataKey="users"

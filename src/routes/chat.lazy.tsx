@@ -1,16 +1,24 @@
-"use client";
+import React from "react";
 
-import { useEffect, useState } from "react"
+import { useEffect, useState } from "react";
 
 import { motion, AnimatePresence } from "framer-motion";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { Button } from "@/components/ui/button";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Input } from "@/components/ui/input";
-import { Badge } from "@/components/ui/badge";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Card, CardContent } from "@/components/ui/card";
-import { Sheet, SheetContent } from "@/components/ui/sheet";
+import { ScrollArea } from "@/components/ui/shadcnComponents/scroll-area";
+import { Button } from "@/components/ui/shadcnComponents/button";
+import {
+  Avatar,
+  AvatarFallback,
+  AvatarImage,
+} from "@/components/ui/shadcnComponents/avatar";
+import { Input } from "@/components/ui/shadcnComponents/input";
+import { Badge } from "@/components/ui/shadcnComponents/badge";
+import {
+  Tabs,
+  TabsList,
+  TabsTrigger,
+} from "@/components/ui/shadcnComponents/tabs";
+import { Card, CardContent } from "@/components/ui/shadcnComponents/card";
+import { Sheet, SheetContent } from "@/components/ui/shadcnComponents/sheet";
 import {
   CommandDialog,
   CommandEmpty,
@@ -18,7 +26,7 @@ import {
   CommandInput,
   CommandItem,
   CommandList,
-} from "@/components/ui/command";
+} from "@/components/ui/shadcnComponents/command";
 import {
   Search,
   MessageSquare,
@@ -33,16 +41,27 @@ import {
   Pin,
   Archive,
   Inbox,
-} from "lucide-react"
-import { ChatInputBox } from "@/MyComponents/chatInput"
-import { ActiveUser, DMGroups, Employees, MessageInterface, Messages } from "@/stores/query"
-import { useAppStore } from "@/stores/store"
-import { createLazyFileRoute } from "@tanstack/react-router"
-import { Dialog, DialogContent, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
-import { AddDMGroup } from "@/MyComponents/subForms/addDMGroup"
-import { formatDistanceToNow, isValid } from "date-fns"
-import { cn } from "@/lib/utils"
-import supabase from "@/MyComponents/supabase"
+} from "lucide-react";
+import { ChatInputBox } from "@/MyComponents/Reusables/chatInput";
+import {
+  ActiveUser,
+  DMGroups,
+  Employees,
+  MessageInterface,
+  Messages,
+} from "@/stores/query";
+import { useAppStore } from "@/stores/store";
+import { createLazyFileRoute } from "@tanstack/react-router";
+import {
+  Dialog,
+  DialogContent,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/shadcnComponents/dialog";
+import { AddDMGroup } from "@/MyComponents/subForms/addDMGroup";
+import { formatDistanceToNow, isValid } from "date-fns";
+import { cn } from "@/lib/utils";
+import supabase from "@/MyComponents/supabase";
 
 const formatMessageDate = (dateString: string) => {
   try {
@@ -56,16 +75,22 @@ const formatMessageDate = (dateString: string) => {
 
 function GroupChats() {
   const { GroupName, setGroupName } = useAppStore();
-  const [isSearchOpen, setIsSearchOpen] = useState(false)
-  const [currentView, setCurrentView] = useState<"inbox" | "pinned" | "archived">("inbox")
-  const [showMobileMenu, setShowMobileMenu] = useState(false)
+  const [isSearchOpen, setIsSearchOpen] = useState(false);
+  const [currentView, setCurrentView] = useState<
+    "inbox" | "pinned" | "archived"
+  >("inbox");
+  const [showMobileMenu, setShowMobileMenu] = useState(false);
 
   // const [activeSection, setActiveSection] = useState('dm');
   // const [isRightSidebarOpen, setIsRightSidebarOpen] = useState(true);
 
   const { data: AllEmployees, error: AllEmpError } = Employees();
   const { data: user, error: userError } = ActiveUser();
-  const { data: DmGroups, error: groupsError, refetch: refetchDMGroups } = DMGroups(user![0].username);
+  const {
+    data: DmGroups,
+    error: groupsError,
+    refetch: refetchDMGroups,
+  } = DMGroups(user![0].username);
   const { data: Message, refetch: refetchMessages } = Messages(GroupName);
 
   // Since using SuspenseQuery, this has no effect
@@ -95,24 +120,23 @@ function GroupChats() {
 
   // Realtime channel
   supabase
-  .channel("all-messages")
-  .on(
-    "postgres_changes",
-    { event: "*", schema: "public", table: "cwa_dm_chat" },
-    () => refetchMessages()
-  )
-  .on(
-    "postgres_changes",
-    { event: "*", schema: "public", table: "dm_groups" },
-    () => refetchDMGroups()
-  )
-  .on(
-    "postgres_changes",
-    { event: "*", schema: "public", table: "cwa_chat" },
-    () =>
-      refetchMessages()
-  )
-  .subscribe();
+    .channel("all-messages")
+    .on(
+      "postgres_changes",
+      { event: "*", schema: "public", table: "cwa_dm_chat" },
+      () => refetchMessages()
+    )
+    .on(
+      "postgres_changes",
+      { event: "*", schema: "public", table: "dm_groups" },
+      () => refetchDMGroups()
+    )
+    .on(
+      "postgres_changes",
+      { event: "*", schema: "public", table: "cwa_chat" },
+      () => refetchMessages()
+    )
+    .subscribe();
 
   return (
     <div className="flex h-[100dvh] w-full bg-gradient-to-br from-zinc-900 via-black to-zinc-900">
@@ -128,16 +152,19 @@ function GroupChats() {
 
       {/* Left Sidebar - Adjusted for mobile */}
       <Sheet open={showMobileMenu} onOpenChange={setShowMobileMenu}>
-        <SheetContent side="left" className="w-full sm:w-80 p-0 bg-black/95 backdrop-blur-xl border-r border-white/10">
+        <SheetContent
+          side="left"
+          className="w-full sm:w-80 p-0 bg-black/95 backdrop-blur-xl border-r border-white/10"
+        >
           <ChatSidebar
             user={user![0]}
             groups={[
               {
-                id: 'general',
-                name: 'General',
-                type: 'general',
+                id: "general",
+                name: "General",
+                type: "general",
               },
-              ...(DmGroups || [])
+              ...(DmGroups || []),
             ]}
             currentDM={GroupName}
             currentView={currentView}
@@ -153,11 +180,11 @@ function GroupChats() {
           user={user![0]}
           groups={[
             {
-              id: 'general',
-              name: 'General',
-              type: 'general',
+              id: "general",
+              name: "General",
+              type: "general",
             },
-            ...(DmGroups || [])
+            ...(DmGroups || []),
           ]}
           currentDM={GroupName}
           currentView={currentView}
@@ -188,15 +215,21 @@ function GroupChats() {
                     <ChevronLeft className="h-5 w-5" />
                   </Button>
                   <Avatar className="h-8 w-8 ring-2 ring-red-800/90">
-                    <AvatarImage src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${GroupName}`} />
-                    <AvatarFallback>{GroupName?.slice(0, 2)?.toUpperCase()}</AvatarFallback>
+                    <AvatarImage
+                      src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${GroupName}`}
+                    />
+                    <AvatarFallback>
+                      {GroupName?.slice(0, 2)?.toUpperCase()}
+                    </AvatarFallback>
                   </Avatar>
                   <div className="min-w-0">
-                    <h2 className="text-white font-semibold truncate">{GroupName}</h2>
+                    <h2 className="text-white font-semibold truncate">
+                      {GroupName}
+                    </h2>
                     <p className="text-xs text-zinc-400">Active now</p>
                   </div>
                 </div>
-                
+
                 <div className="flex items-center space-x-1 sm:space-x-2">
                   <Button
                     variant="ghost"
@@ -206,10 +239,18 @@ function GroupChats() {
                   >
                     <Search className="h-5 w-5" />
                   </Button>
-                  <Button variant="ghost" size="icon" className="text-white hover:bg-white/10">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="text-white hover:bg-white/10"
+                  >
                     <Pin className="h-5 w-5" />
                   </Button>
-                  <Button variant="ghost" size="icon" className="text-white hover:bg-white/10">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="text-white hover:bg-white/10"
+                  >
                     <MoreVertical className="h-5 w-5" />
                   </Button>
                 </div>
@@ -244,15 +285,26 @@ function GroupChats() {
                         <CardContent className="p-3 sm:p-4">
                           <div className="flex items-start space-x-3 sm:space-x-4">
                             <Avatar className="h-8 w-8 sm:h-10 sm:w-10 ring-2 ring-red-700/90">
-                              <AvatarImage src={`https://tqaytmvihogvhhvwgbwm.supabase.co/storage/v1/object/public/avatars//${msg.userAvatar}`} style={{ borderRadius: 50 }} />
-                              <AvatarFallback className="text-red-500">{msg.sent_by?.slice(0, 2)?.toUpperCase()}</AvatarFallback>
+                              <AvatarImage
+                                src={`https://tqaytmvihogvhhvwgbwm.supabase.co/storage/v1/object/public/avatars//${msg.userAvatar}`}
+                                style={{ borderRadius: 50 }}
+                              />
+                              <AvatarFallback className="text-red-500">
+                                {msg.sent_by?.slice(0, 2)?.toUpperCase()}
+                              </AvatarFallback>
                             </Avatar>
                             <div className="flex-1 min-w-0">
                               <div className="flex items-center space-x-2">
-                                <span className="text-red-400 font-medium truncate">{msg.sent_by}</span>
-                                <span className="text-zinc-500 text-xs sm:text-sm">{formatMessageDate(msg.created_at)}</span>
+                                <span className="text-red-400 font-medium truncate">
+                                  {msg.sent_by}
+                                </span>
+                                <span className="text-zinc-500 text-xs sm:text-sm">
+                                  {formatMessageDate(msg.created_at)}
+                                </span>
                               </div>
-                              <p className="text-white mt-1 break-words">{msg.message}</p>
+                              <p className="text-white mt-1 break-words">
+                                {msg.message}
+                              </p>
                             </div>
                           </div>
                         </CardContent>
@@ -266,10 +318,14 @@ function GroupChats() {
               <div className="p-2 sm:p-4 bg-black/50 backdrop-blur-xl border-t border-white/10">
                 <div className="max-w-4xl mx-auto">
                   <div className="relative flex items-center space-x-2">
-                    <Button variant="ghost" size="icon" className="text-white hover:bg-white/10">
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="text-white hover:bg-white/10"
+                    >
                       <Plus className="h-5 w-5" />
                     </Button>
-                    
+
                     <div className="flex-1 relative">
                       <ChatInputBox
                         activeUser={user![0].username as string}
@@ -280,13 +336,24 @@ function GroupChats() {
                         placeholder={`Message ${GroupName}`}
                       />
                       <div className="absolute right-2 sm:right-3 top-1/2 -translate-y-1/2 flex items-center space-x-1 sm:space-x-2">
-                        <Button variant="ghost" size="icon" className="text-zinc-400 hover:text-white hidden sm:flex">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="text-zinc-400 hover:text-white hidden sm:flex"
+                        >
                           <FileImage className="h-5 w-5" />
                         </Button>
-                        <Button variant="ghost" size="icon" className="text-zinc-400 hover:text-white hidden sm:flex">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="text-zinc-400 hover:text-white hidden sm:flex"
+                        >
                           <Smile className="h-5 w-5" />
                         </Button>
-                        <Button size="icon" className="bg-red-500 hover:bg-red-600 text-white rounded-full">
+                        <Button
+                          size="icon"
+                          className="bg-red-500 hover:bg-red-600 text-white rounded-full"
+                        >
                           <Send className="h-4 w-4" />
                         </Button>
                       </div>
@@ -319,9 +386,12 @@ function GroupChats() {
                 >
                   <MessageSquare className="h-10 w-10 sm:h-12 sm:w-12 text-white" />
                 </motion.div>
-                <h3 className="text-xl sm:text-2xl font-bold text-white">Welcome to Messages</h3>
+                <h3 className="text-xl sm:text-2xl font-bold text-white">
+                  Welcome to Messages
+                </h3>
                 <p className="text-zinc-400 text-sm sm:text-base">
-                  Choose a conversation from the sidebar or start a new one to begin messaging
+                  Choose a conversation from the sidebar or start a new one to
+                  begin messaging
                 </p>
                 <Dialog>
                   <DialogTrigger asChild>
@@ -380,12 +450,12 @@ function ChatSidebar({
   setCurrentView,
   employees,
 }: {
-  user: any
-  groups: any[]
-  currentDM: string
-  currentView: "inbox" | "pinned" | "archived"
-  setCurrentView: (view: "inbox" | "pinned" | "archived") => void
-  employees: any[]
+  user: any;
+  groups: any[];
+  currentDM: string;
+  currentView: "inbox" | "pinned" | "archived";
+  setCurrentView: (view: "inbox" | "pinned" | "archived") => void;
+  employees: any[];
 }) {
   const { GroupName, setGroupName } = useAppStore();
   const { refetch: refetchMgs } = Messages(GroupName);
@@ -553,9 +623,7 @@ function ChatSidebar({
       <div className="p-4 border-t border-white/10">
         <div className="flex items-center space-x-3">
           <Avatar className="h-10 w-10 ring-2 ring-red-500/20">
-            <AvatarImage
-              src={user?.avatarURL} style={{ borderRadius: 50 }}
-            />
+            <AvatarImage src={user?.avatarURL} style={{ borderRadius: 50 }} />
             <AvatarFallback>
               {user?.username?.slice(0, 2)?.toUpperCase()}
             </AvatarFallback>

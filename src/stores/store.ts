@@ -66,3 +66,15 @@ export const useMultiSelectStore = create<MultiselectState>()((set) => ({
   optionsValue: [""],
   setOptionsValue: (optionsValue: any) => set({ optionsValue }),
 }));
+
+// Sub Menus
+interface SubMenuState {
+  showPromote: string
+  setShowPromote: (showPromote: string) => void
+  resetPromote: () => void
+}
+export const useSubMenuStore = create<SubMenuState>()((set) => ({
+  showPromote: 'hidden',
+  setShowPromote: (showPromote: string) => set({ showPromote }),
+  resetPromote: () => set({ showPromote: 'hidden' })
+}))

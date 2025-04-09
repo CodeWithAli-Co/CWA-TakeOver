@@ -1,5 +1,6 @@
 import supabase from "@/MyComponents/supabase";
 import { useSuspenseQuery } from "@tanstack/react-query";
+import { message } from "@tauri-apps/plugin-dialog";
 
 // Fetch Active User with Avatar
 const fetchActiveUser = async () => {
@@ -13,12 +14,15 @@ const fetchActiveUser = async () => {
   const { data, error } = await supabase
     .from("app_users")
     .select("*") // Fetch everything
-    .eq("supa_id", supaID.user?.id)
+    .eq("supa_id", supaID.user.id)
     .single(); // Fetch a single user
     // console.log("Supabase User Data:", data);
 
   if (error) {
-    console.error("Error fetching active user:", error.message);
+    await message('Error Fetching Current Active User', {
+      title: 'Error Fetching User',
+      kind: 'error'
+    })
     return [];
   }
 
@@ -30,6 +34,7 @@ const fetchActiveUser = async () => {
       supa_id: data.supa_id,
       username: data.username,
       role: data.role,
+      role_rank: data.role_rank,
       avatarURL: AvatarUrl.publicUrl || 'default_avatar.png',
       avatarName: data.avatar || 'default_avatar.png'
     },

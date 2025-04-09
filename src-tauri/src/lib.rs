@@ -9,14 +9,9 @@ use resend_rs::{
     types::{ContactChanges, ContactData, CreateBroadcastOptions, SendBroadcastOptions},
     Resend, Result,
 };
-// use serde::{Deserialize, Serialize};
 
-// // Define the structures to match the API response
-// #[derive(Debug, Serialize, Deserialize)]
-// pub struct ContactsResponse {
-//     pub object: String,
-//     pub data: Vec<Contact>,
-// }
+// Add GitHub webhook module
+mod github_webhooks;
 
 #[tauri::command]
 fn greet(name: &str) -> String {
@@ -53,23 +48,6 @@ fn decrypt(key_str: String, encrypted_data: String) -> String {
         .expect("failed to decrypt data");
     String::from_utf8(plaintext).expect("failed to convert vector of bytes to string")
 }
-
-// #[tauri::command(async)]
-// async fn list_contacts() -> Result<ContactsResponse, String> {
-//     let _env = dotenv().unwrap();
-//     let resend = Resend::default();
-
-//     let contacts = resend
-//         .contacts
-//         .list("fa2d33ed-9f00-4b51-ad6c-a6e858c7f1bf")
-//         .await
-//         .map_err(|e| e.to_string())?;
-
-//     Ok(ContactsResponse {
-//         object: String::from("list"),
-//         data: contacts,
-//     })
-// }
 
 #[tauri::command(async)]
 async fn add_contact(email: &str, f_name: &str, l_name: &str, status: bool) -> Result<(), String> {
@@ -157,22 +135,31 @@ async fn send_broadcast(broadcast_id: &str) -> Result<(), ()> {
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
+        .invoke_handler(tauri::generate_handler![github_webhooks::get_github_webhooks])
+        .invoke_handler(tauri::generate_handler![github_webhooks::handle_github_webhook])
         .plugin(tauri_plugin_fs::init())
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_notification::init())
         .plugin(tauri_plugin_sql::Builder::new().build())
         .plugin(tauri_plugin_opener::init())
+        .setup(|app| {
+            // Register GitHub webhook commands and initialize state
+            github_webhooks::register_github_webhook_commands(app)?;
+            Ok(())
+        })
         .invoke_handler(tauri::generate_handler![
             greet,
             encrypt,
             decrypt,
             create_broadcast,
             send_broadcast,
-            // list_contacts,
             add_contact,
             edit_contact,
             del_contact,
+            // GitHub webhook commands
+            github_webhooks::get_github_webhooks,
+            github_webhooks::handle_github_webhook,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
-}
+}   

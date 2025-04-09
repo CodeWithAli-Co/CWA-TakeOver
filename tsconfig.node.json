@@ -3,15 +3,18 @@
     "composite": true,
     "skipLibCheck": true,
     "module": "ESNext",
+    "target": "ESNext",
     "moduleResolution": "bundler",
     "allowSyntheticDefaultImports": true,
+    "esModuleInterop": true,
+    "strictNullChecks": true,
 
+    "jsx": "react",
     "baseUrl": ".",
     "paths": {
-      "@/*": [
-        "./src/*"
-      ]
+      "@/*": ["./src/*"]
     },
+    "types": ["gsap"]  // Add GSAP types
   },
-  "include": ["vite.config.ts"]
+  "include": ["vite.config.ts", "src"]
 }

@@ -1,94 +1,26 @@
+import React, { useRef, useState } from "react";
 import { createLazyFileRoute } from "@tanstack/react-router";
-import { JSX } from "react";
 import {
   Card,
   CardContent,
   CardDescription,
   CardHeader,
   CardTitle,
-} from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Switch } from "@/components/ui/switch";
+} from "@/components/ui/shadcnComponents/card";
+import { Button } from "@/components/ui/shadcnComponents/button";
+import { Switch } from "@/components/ui/shadcnComponents/switch";
 import { useAppStore } from "@/stores/store";
 import { CWACreds } from "../stores/query";
 import { invoke } from "@tauri-apps/api/core";
-import { useRef, useState } from "react";
 import supabase from "@/MyComponents/supabase";
 import { AddData } from "@/MyComponents/subForms/addForm";
 import { EditData } from "@/MyComponents/subForms/editForm";
+import { Eye, EyeOff, Edit2, Trash2 } from "lucide-react";
 import {
-  Eye,
-  EyeOff,
-  Edit2,
-  Trash2,
-  Plus,
-  Github,
-  Globe,
-  Twitter,
-  Linkedin,
-  Facebook,
-  Mail,
-  Store,
-  FileCode2,
-} from "lucide-react";
-
-// Platform icon mapping
-const platformIcons: { [key: string]: React.ComponentType<any> } = {
-  github: Github,
-  twitter: Twitter,
-  linkedin: Linkedin,
-  facebook: Facebook,
-  gmail: Mail,
-  upwork: Globe,
-  fiverr: Store,
-  patreon: Store,
-  dev: FileCode2,
-  default: Globe,
-};
-const platformStyles: Record<
-  string,
-  {
-    color: string;
-    gradient: string;
-    shadowColor: string;
-  }
-> = {
-  github: {
-    color: "#000000",
-    gradient: "from-[#238636] to-[#2EA043]",
-    shadowColor: "#000000",
-  },
-  twitter: {
-    color: "#1DA1F2",
-    gradient: "from-[#1A8CD8] to-[#1DA1F2]",
-    shadowColor: "rgba(29, 161, 242, 0.5)",
-  },
-  linkedin: {
-    color: "#0A66C2",
-    gradient: "from-[#0077B5] to-[#0A66C2]",
-    shadowColor: "rgba(10, 102, 194, 0.5)",
-  },
-  facebook: {
-    color: "#4267B2",
-    gradient: "from-[#385898] to-[#4267B2]",
-    shadowColor: "rgba(53, 90, 166, 0.5)",
-  },
-  gmail: {
-    color: "#EA4335",
-    gradient: "from-[#DB4437] to-[#EA4335]",
-    shadowColor: "rgba(234, 67, 53, 0.5)",
-  },
-  upwork: {
-    color: "#14A800",
-    gradient: "from-[#108A00] to-[#14A800]",
-    shadowColor: "rgba(20, 168, 0, 0.5)",
-  },
-  default: {
-    color: "#7C3AED",
-    gradient: "from-[#6D28D9] to-[#7C3AED]",
-    shadowColor: "rgba(124, 58, 237, 0.5)",
-  },
-};
+  getPlatformIcon,
+  platformStyles,
+} from "@/MyComponents/Reusables/PlatformIcons";
+import ToggleSwitch from "@/MyComponents/Reusables/switchUI";
 
 // Type definitions
 interface Credential {
@@ -106,18 +38,12 @@ function Details() {
   const dialogRef = useRef<HTMLDialogElement | null>(null);
   // Track expanded state for each card
   const [expandedCards, setExpandedCards] = useState<number[]>([]);
+  const [credID, setCredID] = useState(0);
 
   const toggleCard = (id: number) => {
     setExpandedCards((prev) =>
       prev.includes(id) ? prev.filter((cardId) => cardId !== id) : [...prev, id]
     );
-  };
-  const getPlatformIcon = (platformName: string): JSX.Element => {
-    const lowerPlatform = platformName.toLowerCase();
-    const IconComponent = platformIcons[lowerPlatform] || platformIcons.default;
-    const style = platformStyles[lowerPlatform] || platformStyles.default;
-
-    return <IconComponent style={{ color: style.color }} />;
   };
 
   const showModal = (dialogDisplay: "addDialog" | "editDialog") => {
@@ -207,6 +133,8 @@ function Details() {
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
         {cwaCreds?.map((cred: Credential) => {
           const isExpanded = expandedCards.includes(cred.id);
+          const lowerPlatform = cred.platform_name.toLowerCase();
+          const style = platformStyles[lowerPlatform] || platformStyles.default;
 
           return (
             <Card
@@ -219,7 +147,10 @@ function Details() {
                 <CardTitle className="text-xl font-semibold">
                   {cred.platform_name}
                 </CardTitle>
-                <div className="h-12 w-12 rounded-full overflow-hidden bg-zinc-800 flex items-center justify-center text-white">
+                <div
+                  className={`h-12 w-12 rounded-full overflow-hidden flex items-center justify-center text-white bg-gradient-to-br ${style.gradient}`}
+                  style={{ boxShadow: `0 0 10px ${style.shadowColor}` }}
+                >
                   {getPlatformIcon(cred.platform_name)}
                 </div>
               </CardHeader>
@@ -273,7 +204,7 @@ function Details() {
                         variant="outline"
                         size="sm"
                         className="text-zinc-400 border-zinc-800 hover:bg-zinc-800"
-                        onClick={() => showModal("editDialog")}
+                        onClick={() => {showModal("editDialog"); setCredID(cred.id)}}
                       >
                         <Edit2 className="w-4 h-4" />
                       </Button>
@@ -286,9 +217,11 @@ function Details() {
                         <Trash2 className="w-4 h-4" />
                       </Button>
                     </div>
-                    <Switch
-                      checked={cred.active}
-                      className="data-[state=checked]:bg-zinc-700"
+                    <ToggleSwitch
+                      checked={true}
+                      onChange={(checked) =>
+                        console.log("Switch toggled:", checked)
+                      }
                     />
                   </div>
                 </div>
@@ -308,7 +241,7 @@ function Details() {
           X
         </Button>
         {displayer === "editDialog" ? (
-          <EditData rowID={cwaCreds![0].id} />
+          <EditData rowID={credID} />
         ) : displayer === "addDialog" ? (
           <AddData />
         ) : (

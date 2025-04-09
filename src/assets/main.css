@@ -273,6 +273,11 @@ button {
   box-shadow: none;
 }
 
+
+::selection {
+  background-color: #000000;
+  color: rgb(94, 5, 5);
+}
 /* admin tag */
 
 /* ---break---

@@ -1,18 +1,27 @@
+import React from "react";
 import { useForm } from "@tanstack/react-form";
 import supabase from "../supabase";
 import { invoke } from "@tauri-apps/api/core";
 import { useAppStore } from "@/stores/store";
 import { motion, AnimatePresence } from "framer-motion";
 import { X } from "lucide-react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Button } from "@/components/ui/button";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/shadcnComponents/card";
+import { Input } from "@/components/ui/shadcnComponents/input";
+import { Label } from "@/components/ui/shadcnComponents/label";
+import { Button } from "@/components/ui/shadcnComponents/button";
+import {
+  RadioGroup,
+  RadioGroupItem,
+} from "@/components/ui/shadcnComponents/radio-group";
 
 export const AddData = () => {
   const { setDialog } = useAppStore();
-  
+
   const form = useForm({
     defaultValues: {
       platformName: "",
@@ -39,7 +48,7 @@ export const AddData = () => {
         });
         if (error) return console.log(error.message);
       });
-  
+
       handleClose();
     },
   });
@@ -51,7 +60,7 @@ export const AddData = () => {
 
   return (
     <AnimatePresence mode="wait">
-      <motion.div 
+      <motion.div
         className="fixed inset-0 flex items-center justify-center backdrop-blur-sm"
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
@@ -66,7 +75,7 @@ export const AddData = () => {
           className="w-full max-w-md mx-4"
           onClick={(e) => e.stopPropagation()}
         >
-          <Card className="bg-black/20 border-red-800/30  shadow-xl shadow-red-800/20">
+          <Card className="bg-black border-red-800/30  shadow-xl shadow-red-800/20">
             <CardHeader className="relative border-b border-red-950/20">
               <motion.button
                 whileHover={{ scale: 1.1 }}
@@ -104,6 +113,7 @@ export const AddData = () => {
                           name={field.name}
                           type="text"
                           required
+                          autoComplete="off"
                           value={field.state.value}
                           onChange={(e) => field.handleChange(e.target.value)}
                           className="bg-black/40 border-red-950/30 text-white 
@@ -126,6 +136,7 @@ export const AddData = () => {
                         <Input
                           name={field.name}
                           type="text"
+                          autoComplete="off"
                           value={field.state.value}
                           onChange={(e) => field.handleChange(e.target.value)}
                           className="bg-black/40 border-red-950/30 text-white 
@@ -148,6 +159,7 @@ export const AddData = () => {
                         <Input
                           name={field.name}
                           type="email"
+                          autoComplete="off"
                           value={field.state.value}
                           onChange={(e) => field.handleChange(e.target.value)}
                           className="bg-black/40 border-red-950/30 text-white 
@@ -170,6 +182,7 @@ export const AddData = () => {
                         <Input
                           name={field.name}
                           type="password"
+                          autoComplete="off"
                           value={field.state.value}
                           onChange={(e) => field.handleChange(e.target.value)}
                           className="bg-black/40 border-red-950/30 text-white 
@@ -192,6 +205,7 @@ export const AddData = () => {
                         <Input
                           name={field.name}
                           type="text"
+                          autoComplete="off"
                           value={field.state.value}
                           onChange={(e) => field.handleChange(e.target.value)}
                           className="bg-black/40 border-red-950/30 text-white 
@@ -215,8 +229,8 @@ export const AddData = () => {
                           className="flex space-x-4"
                         >
                           <div className="flex items-center space-x-2">
-                            <RadioGroupItem 
-                              value="true" 
+                            <RadioGroupItem
+                              value="true"
                               id="active"
                               className="text-red-500 border-red-950/30"
                             />
@@ -225,8 +239,8 @@ export const AddData = () => {
                             </Label>
                           </div>
                           <div className="flex items-center space-x-2">
-                            <RadioGroupItem 
-                              value="false" 
+                            <RadioGroupItem
+                              value="false"
                               id="inactive"
                               className="text-red-500 border-red-950/30"
                             />

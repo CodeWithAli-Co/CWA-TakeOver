@@ -1,10 +1,17 @@
-import api from "@/MyComponents/botApi";
+import React from "react";
+import api from "@/Api/botApi";
 import { createLazyFileRoute } from "@tanstack/react-router";
 import { create } from "zustand";
-import '../assets/bot.css';
-import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card'; // Replace 'your-card-library' with the actual library or file path
-import { Button } from '@/components/ui/button'; // Replace 'your-button-library' with the actual library or file path
-import { Power, Info, Send, LogIn } from 'lucide-react'; // Replace 'lucide-react' with the actual icon library if different
+// import "../assets/bot.css";
+import {
+  Card,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+  CardContent,
+} from "@/components/ui/shadcnComponents/card"; // Replace 'your-card-library' with the actual library or file path
+import { Button } from "@/components/ui/shadcnComponents/button"; // Replace 'your-button-library' with the actual library or file path
+import { Power, Info, Send, LogIn } from "lucide-react"; // Replace 'lucide-react' with the actual icon library if different
 
 interface TokenState {
   myToken: any;
@@ -102,64 +109,66 @@ function Bot() {
   }
   return (
     <div className="min-h-screen bg-background flex items-center justify-center px-4 sm:px-8">
-     <div className="max-w-[700px] w-full">
-      <Card className="w-full max-md neonbtn  to-red-95">
-        <CardHeader className="space-y-2 pb-6">
-          <CardTitle className="text-2xl font-bold text-center text-white">Bot Manager</CardTitle>
-          <CardDescription className="text-center text-sm text-zinc-400">
-            Control and monitor your bot
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-6">
-          <div className="grid grid-cols-2 gap-6">
-            <Button 
-              onClick={() => Start()} 
-              className="bg-emerald-950 hover:bg-emerald-900 border border-emerald-700/50 text-emerald-400 shadow-lg shadow-emerald-800/20 transition-all duration-200"
-              size="lg"
-            >
-              <Power className="mr-2 h-5 w-5" />
-              Start Bot
-            </Button>
-            <Button 
-              onClick={() => stopBot()} 
-             className="bg-red-950 hover:bg-red-900 border border-red-700/50 text-red-400 shadow-lg shadow-red-800/20 transition-all duration-200"
-              size="lg"
-            >
-              <Power className="mr-2 h-5 w-5" />
-              Stop Bot
-            </Button>
-          </div>
-          <div className="grid grid-cols-3 gap-4">
-            <Button 
-              onClick={() => fetchStatus()} 
-              className="bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 text-zinc-400 shadow-sm transition-all duration-200"
-            >
-              <Info className="mr-2 h-4 w-4" />
-              Status
-            </Button>
-            <Button
-              onClick={() => sendMessage("1327558265357205535", "Hello from tauri")}
-              className="bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 text-zinc-400 shadow-sm transition-all duration-200"
-            
-            >
-              <Send className="mr-2 h-4 w-4" />
-              Send Msg
-            </Button>
-            <Button 
-              onClick={() => getToken("admin", "CWA#2025:)")} 
-              className="bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 text-zinc-400 shadow-sm transition-all duration-200"
-            >
-              <LogIn className="mr-2 h-4 w-4" />
-              Log In
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
+      <div className="max-w-[700px] w-full">
+        <Card className="w-full max-md neonbtn  to-red-95">
+          <CardHeader className="space-y-2 pb-6">
+            <CardTitle className="text-2xl font-bold text-center text-white">
+              Bot Manager
+            </CardTitle>
+            <CardDescription className="text-center text-sm text-zinc-400">
+              Control and monitor your bot
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            <div className="grid grid-cols-2 gap-6">
+              <Button
+                onClick={() => Start()}
+                className="bg-emerald-950 hover:bg-emerald-900 border border-emerald-700/50 text-emerald-400 shadow-lg shadow-emerald-800/20 transition-all duration-200"
+                size="lg"
+              >
+                <Power className="mr-2 h-5 w-5" />
+                Start Bot
+              </Button>
+              <Button
+                onClick={() => stopBot()}
+                className="bg-red-950 hover:bg-red-900 border border-red-700/50 text-red-400 shadow-lg shadow-red-800/20 transition-all duration-200"
+                size="lg"
+              >
+                <Power className="mr-2 h-5 w-5" />
+                Stop Bot
+              </Button>
+            </div>
+            <div className="grid grid-cols-3 gap-4">
+              <Button
+                onClick={() => fetchStatus()}
+                className="bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 text-zinc-400 shadow-sm transition-all duration-200"
+              >
+                <Info className="mr-2 h-4 w-4" />
+                Status
+              </Button>
+              <Button
+                onClick={() =>
+                  sendMessage("1327558265357205535", "Hello from tauri")
+                }
+                className="bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 text-zinc-400 shadow-sm transition-all duration-200"
+              >
+                <Send className="mr-2 h-4 w-4" />
+                Send Msg
+              </Button>
+              <Button
+                onClick={() => getToken("admin", "CWA#2025:)")}
+                className="bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 text-zinc-400 shadow-sm transition-all duration-200"
+              >
+                <LogIn className="mr-2 h-4 w-4" />
+                Log In
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
       </div>
     </div>
   );
 }
-
 
 export const Route = createLazyFileRoute("/bot")({
   component: Bot,
