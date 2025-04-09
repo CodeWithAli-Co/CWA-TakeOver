@@ -23,6 +23,7 @@ import {
 } from "./ui/Dashboard/role-datas";
 import UserView from "@/MyComponents/Reusables/userView";
 import { TeamSwitcher } from "./ui/Dashboard/team-switch";
+import { AudioWaveform, Bot, ClipboardList, Command, Frame, GalleryVerticalEnd, Home, MessageCircle, PieChart, Settings2, SquareTerminal } from "lucide-react";
 // import { tasks } from "@/MyComponents/SettingNavComponents/taskTypes"
 // import SettingsPage from 
 
