@@ -8,6 +8,7 @@ import {
   GalleryVerticalEnd,
   AudioWaveform,
   Command,
+  Target, // for wweekly quota
 } from "lucide-react";
 
 // Intern Data set (What Interns can see)
@@ -436,6 +437,12 @@ export const cooData = {
       isActive: false,
       icon: ClipboardList,
     },
+    {
+      title: "Weekly Quotas",
+      url : "WeeklyQuotas",
+      isActive: false,
+      icon: Target,
+    },
     // {
     //   title: "Schedule",
     //   url: "/schedule",
@@ -556,6 +563,12 @@ export const ceoData = {
       url: "/task",
       isActive: false,
       icon: ClipboardList,
+    },
+    {
+      title: "Weekly Quotas",
+      url : "WeeklyQuotas",
+      isActive: false,
+      icon: Target,
     },
     {
       title: "Settings",

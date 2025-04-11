@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { createLazyFileRoute } from "@tanstack/react-router";
 import {
   Card,
@@ -198,7 +198,7 @@ return (
 };
 
 // Weekly Quotas in main component
-const WeeklyQuotas = () => {
+export const WeeklyQuotas = () => {
   const [quotas, setQuotas] =  useState<any[]>([]);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingQuota, setEditingQuota] = useState<any | null>(null)
