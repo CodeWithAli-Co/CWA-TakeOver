@@ -22,18 +22,20 @@ import supabase from "@/MyComponents/supabase";
 import { format, startOfWeek, endOfWeek, addWeeks, subWeeks } from "date-fns";
 
 // Weekly QuotasItems 
+type QuotaStatus = 'pending' | 'in-progress' | 'completed';
+
 const QuotaItem =  ({
   quota, 
   onStatusChange,
   onDelete,
   onEdit
 } : {
-  quota: any,
+  quota: { id: number; status: QuotaStatus; title: string; description?: string; deadline?: string },
   onStatusChange : (id: number, status: string) => void,
   onDelete : (id: number) => void,
   onEdit : (quota : any) => void
 })  => {
-  const statusColors  = {
+  const statusColors: Record<QuotaStatus, string> = {
     pending: "bg-amber-500/20 text-amber-400 border-amber-500/30",
     "in-progress": "bg-blue-500/20 text-blue-400 border-blue-500/30",
     completed : "bg-emerald-500/20 text-emerald-400 border-emerald-500/30"
@@ -42,7 +44,7 @@ const QuotaItem =  ({
 return ( 
   <motion.div
   initial={{ opacity: 0, y: 10}}
-  animate={{ opacity: 0, y:0}}
+  animate={{ opacity: 1, y: 0}}
   exit={{ opacity: 0, y:-10}}
   className="p-4 rounded-lg border border-red-900/30 bg-black hover:border-red-800/50 mb-3"
   >
@@ -50,7 +52,7 @@ return (
     <div>
       <div className="flex items-center gap-2 mb-1">
         <h3 className="text-sm font-medium text-amber-50">{quota.title}</h3>
-        <Badge variant="outline" className="{${statusColors[quota.status]} text-xs">{quota.status}</Badge>
+        <Badge variant="outline" className={`${statusColors[quota.status]} text-xs`}>{quota.status}</Badge>
       </div>
       <p className="text-xs text-amber-50/70 mb-2">{quota.description}</p>
       {quota.deadline && (
