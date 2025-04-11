@@ -13,7 +13,7 @@ import { createFileRoute } from '@tanstack/react-router'
 // Import Routes
 
 import { Route as rootRoute } from './routes/__root'
-
+./routes/WeeklyQuotas.lazy
 // Create Virtual Routes
 
 const TaskLazyImport = createFileRoute('/task')()
@@ -27,6 +27,7 @@ const BudgetaryLazyImport = createFileRoute('/budgetary')()
 const BroadcastLazyImport = createFileRoute('/broadcast')()
 const BotLazyImport = createFileRoute('/bot')()
 const BioLazyImport = createFileRoute('/bio')()
+const WeeklyQuotasLazyImport = createFileRoute('/WeeklyQuotas')()
 const IndexLazyImport = createFileRoute('/')()
 
 // Create/Update Routes
@@ -97,6 +98,12 @@ const BioLazyRoute = BioLazyImport.update({
   getParentRoute: () => rootRoute,
 } as any).lazy(() => import('./routes/bio.lazy').then((d) => d.Route))
 
+const WeeklyQuotasLazyRoute = WeeklyQuotasLazyImport.update({
+  id: '/WeeklyQuotas',
+  path: '/WeeklyQuotas',
+  getParentRoute: () => rootRoute,
+} as any).lazy(() => import('./routes/WeeklyQuotas.lazy').then((d) => d.Route))
+
 const IndexLazyRoute = IndexLazyImport.update({
   id: '/',
   path: '/',
@@ -112,6 +119,13 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexLazyImport
+      parentRoute: typeof rootRoute
+    }
+    '/WeeklyQuotas': {
+      id: '/WeeklyQuotas'
+      path: '/WeeklyQuotas'
+      fullPath: '/WeeklyQuotas'
+      preLoaderRoute: typeof WeeklyQuotasLazyImport
       parentRoute: typeof rootRoute
     }
     '/bio': {
@@ -198,6 +212,7 @@ declare module '@tanstack/react-router' {
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexLazyRoute
+  '/WeeklyQuotas': typeof WeeklyQuotasLazyRoute
   '/bio': typeof BioLazyRoute
   '/bot': typeof BotLazyRoute
   '/broadcast': typeof BroadcastLazyRoute
@@ -213,6 +228,7 @@ export interface FileRoutesByFullPath {
 
 export interface FileRoutesByTo {
   '/': typeof IndexLazyRoute
+  '/WeeklyQuotas': typeof WeeklyQuotasLazyRoute
   '/bio': typeof BioLazyRoute
   '/bot': typeof BotLazyRoute
   '/broadcast': typeof BroadcastLazyRoute
@@ -229,6 +245,7 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRoute
   '/': typeof IndexLazyRoute
+  '/WeeklyQuotas': typeof WeeklyQuotasLazyRoute
   '/bio': typeof BioLazyRoute
   '/bot': typeof BotLazyRoute
   '/broadcast': typeof BroadcastLazyRoute
@@ -246,6 +263,7 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/WeeklyQuotas'
     | '/bio'
     | '/bot'
     | '/broadcast'
@@ -260,6 +278,7 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/WeeklyQuotas'
     | '/bio'
     | '/bot'
     | '/broadcast'
@@ -274,6 +293,7 @@ export interface FileRouteTypes {
   id:
     | '__root__'
     | '/'
+    | '/WeeklyQuotas'
     | '/bio'
     | '/bot'
     | '/broadcast'
@@ -290,6 +310,7 @@ export interface FileRouteTypes {
 
 export interface RootRouteChildren {
   IndexLazyRoute: typeof IndexLazyRoute
+  WeeklyQuotasLazyRoute: typeof WeeklyQuotasLazyRoute
   BioLazyRoute: typeof BioLazyRoute
   BotLazyRoute: typeof BotLazyRoute
   BroadcastLazyRoute: typeof BroadcastLazyRoute
@@ -305,6 +326,7 @@ export interface RootRouteChildren {
 
 const rootRouteChildren: RootRouteChildren = {
   IndexLazyRoute: IndexLazyRoute,
+  WeeklyQuotasLazyRoute: WeeklyQuotasLazyRoute,
   BioLazyRoute: BioLazyRoute,
   BotLazyRoute: BotLazyRoute,
   BroadcastLazyRoute: BroadcastLazyRoute,
@@ -329,6 +351,7 @@ export const routeTree = rootRoute
       "filePath": "__root.tsx",
       "children": [
         "/",
+        "/WeeklyQuotas",
         "/bio",
         "/bot",
         "/broadcast",
@@ -344,6 +367,9 @@ export const routeTree = rootRoute
     },
     "/": {
       "filePath": "index.lazy.tsx"
+    },
+    "/WeeklyQuotas": {
+      "filePath": "WeeklyQuotas.lazy.tsx"
     },
     "/bio": {
       "filePath": "bio.lazy.tsx"
