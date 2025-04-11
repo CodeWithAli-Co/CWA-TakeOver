@@ -131,11 +131,12 @@ const QuotaFormDialog = ({
   }, [isOpen, editingQuota]);
 
 
-const handleSubmit = (e) => {
+const handleSubmit = (e: any) => {
   e.preventDefault();
   onSave({
     id: editingQuota?.id,
     title,
+    status,
     description,
     deadline
   });
@@ -168,7 +169,7 @@ return (
 
       <div className="space-y-2">
         <label htmlFor="status" className="text-sm font-medium">Status</label>
-        <Select value={status} onValueChange={setStatus}>\
+        <Select value={status} onValueChange={setStatus}>
           <SelectTrigger className='bg-black/40 border-red-900/30 text-amber-50'>
             <SelectValue placeholder="Select status"/>
           </SelectTrigger>
@@ -205,7 +206,7 @@ export const WeeklyQuotas = () => {
   const [selectedWeek, setSelectedWeek]  = useState<Date>(new Date());
 
   // get current useruuu
-  const { date: activeUser } = ActiveUser();
+  const { data: activeUser } = ActiveUser();
   const currentUser = activeUser?.[0];
 
   // formatting date range for current week 
@@ -290,7 +291,7 @@ const handleSaveQuota = async (quotaData : any) => {
         description: quotaData.description,
         status: quotaData.status,
         deadline: quotaData.deadline,
-        user_id: currentUser.user_id,
+        user_id: currentUser.supa_id,
         week_start,
         week_end,
         created_at: new Date().toISOString(),
