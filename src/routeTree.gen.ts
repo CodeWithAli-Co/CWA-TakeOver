@@ -13,12 +13,13 @@ import { createFileRoute } from '@tanstack/react-router'
 // Import Routes
 
 import { Route as rootRoute } from './routes/__root'
-./routes/WeeklyQuotas.lazy
+
 // Create Virtual Routes
 
 const TaskLazyImport = createFileRoute('/task')()
 const SettingsLazyImport = createFileRoute('/settings')()
 const ScheduleLazyImport = createFileRoute('/schedule')()
+const QuotaLazyImport = createFileRoute('/quota')()
 const ModlogsLazyImport = createFileRoute('/mod_logs')()
 const EmployeeLazyImport = createFileRoute('/employee')()
 const DetailsLazyImport = createFileRoute('/details')()
@@ -27,7 +28,6 @@ const BudgetaryLazyImport = createFileRoute('/budgetary')()
 const BroadcastLazyImport = createFileRoute('/broadcast')()
 const BotLazyImport = createFileRoute('/bot')()
 const BioLazyImport = createFileRoute('/bio')()
-const WeeklyQuotasLazyImport = createFileRoute('/WeeklyQuotas')()
 const IndexLazyImport = createFileRoute('/')()
 
 // Create/Update Routes
@@ -49,6 +49,12 @@ const ScheduleLazyRoute = ScheduleLazyImport.update({
   path: '/schedule',
   getParentRoute: () => rootRoute,
 } as any).lazy(() => import('./routes/schedule.lazy').then((d) => d.Route))
+
+const QuotaLazyRoute = QuotaLazyImport.update({
+  id: '/quota',
+  path: '/quota',
+  getParentRoute: () => rootRoute,
+} as any).lazy(() => import('./routes/quota.lazy').then((d) => d.Route))
 
 const ModlogsLazyRoute = ModlogsLazyImport.update({
   id: '/mod_logs',
@@ -98,12 +104,6 @@ const BioLazyRoute = BioLazyImport.update({
   getParentRoute: () => rootRoute,
 } as any).lazy(() => import('./routes/bio.lazy').then((d) => d.Route))
 
-const WeeklyQuotasLazyRoute = WeeklyQuotasLazyImport.update({
-  id: '/WeeklyQuotas',
-  path: '/WeeklyQuotas',
-  getParentRoute: () => rootRoute,
-} as any).lazy(() => import('./routes/WeeklyQuotas.lazy').then((d) => d.Route))
-
 const IndexLazyRoute = IndexLazyImport.update({
   id: '/',
   path: '/',
@@ -119,13 +119,6 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexLazyImport
-      parentRoute: typeof rootRoute
-    }
-    '/WeeklyQuotas': {
-      id: '/WeeklyQuotas'
-      path: '/WeeklyQuotas'
-      fullPath: '/WeeklyQuotas'
-      preLoaderRoute: typeof WeeklyQuotasLazyImport
       parentRoute: typeof rootRoute
     }
     '/bio': {
@@ -184,6 +177,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ModlogsLazyImport
       parentRoute: typeof rootRoute
     }
+    '/quota': {
+      id: '/quota'
+      path: '/quota'
+      fullPath: '/quota'
+      preLoaderRoute: typeof QuotaLazyImport
+      parentRoute: typeof rootRoute
+    }
     '/schedule': {
       id: '/schedule'
       path: '/schedule'
@@ -212,7 +212,6 @@ declare module '@tanstack/react-router' {
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexLazyRoute
-  '/WeeklyQuotas': typeof WeeklyQuotasLazyRoute
   '/bio': typeof BioLazyRoute
   '/bot': typeof BotLazyRoute
   '/broadcast': typeof BroadcastLazyRoute
@@ -221,6 +220,7 @@ export interface FileRoutesByFullPath {
   '/details': typeof DetailsLazyRoute
   '/employee': typeof EmployeeLazyRoute
   '/mod_logs': typeof ModlogsLazyRoute
+  '/quota': typeof QuotaLazyRoute
   '/schedule': typeof ScheduleLazyRoute
   '/settings': typeof SettingsLazyRoute
   '/task': typeof TaskLazyRoute
@@ -228,7 +228,6 @@ export interface FileRoutesByFullPath {
 
 export interface FileRoutesByTo {
   '/': typeof IndexLazyRoute
-  '/WeeklyQuotas': typeof WeeklyQuotasLazyRoute
   '/bio': typeof BioLazyRoute
   '/bot': typeof BotLazyRoute
   '/broadcast': typeof BroadcastLazyRoute
@@ -237,6 +236,7 @@ export interface FileRoutesByTo {
   '/details': typeof DetailsLazyRoute
   '/employee': typeof EmployeeLazyRoute
   '/mod_logs': typeof ModlogsLazyRoute
+  '/quota': typeof QuotaLazyRoute
   '/schedule': typeof ScheduleLazyRoute
   '/settings': typeof SettingsLazyRoute
   '/task': typeof TaskLazyRoute
@@ -245,7 +245,6 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRoute
   '/': typeof IndexLazyRoute
-  '/WeeklyQuotas': typeof WeeklyQuotasLazyRoute
   '/bio': typeof BioLazyRoute
   '/bot': typeof BotLazyRoute
   '/broadcast': typeof BroadcastLazyRoute
@@ -254,6 +253,7 @@ export interface FileRoutesById {
   '/details': typeof DetailsLazyRoute
   '/employee': typeof EmployeeLazyRoute
   '/mod_logs': typeof ModlogsLazyRoute
+  '/quota': typeof QuotaLazyRoute
   '/schedule': typeof ScheduleLazyRoute
   '/settings': typeof SettingsLazyRoute
   '/task': typeof TaskLazyRoute
@@ -263,7 +263,6 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
-    | '/WeeklyQuotas'
     | '/bio'
     | '/bot'
     | '/broadcast'
@@ -272,13 +271,13 @@ export interface FileRouteTypes {
     | '/details'
     | '/employee'
     | '/mod_logs'
+    | '/quota'
     | '/schedule'
     | '/settings'
     | '/task'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
-    | '/WeeklyQuotas'
     | '/bio'
     | '/bot'
     | '/broadcast'
@@ -287,13 +286,13 @@ export interface FileRouteTypes {
     | '/details'
     | '/employee'
     | '/mod_logs'
+    | '/quota'
     | '/schedule'
     | '/settings'
     | '/task'
   id:
     | '__root__'
     | '/'
-    | '/WeeklyQuotas'
     | '/bio'
     | '/bot'
     | '/broadcast'
@@ -302,6 +301,7 @@ export interface FileRouteTypes {
     | '/details'
     | '/employee'
     | '/mod_logs'
+    | '/quota'
     | '/schedule'
     | '/settings'
     | '/task'
@@ -310,7 +310,6 @@ export interface FileRouteTypes {
 
 export interface RootRouteChildren {
   IndexLazyRoute: typeof IndexLazyRoute
-  WeeklyQuotasLazyRoute: typeof WeeklyQuotasLazyRoute
   BioLazyRoute: typeof BioLazyRoute
   BotLazyRoute: typeof BotLazyRoute
   BroadcastLazyRoute: typeof BroadcastLazyRoute
@@ -319,6 +318,7 @@ export interface RootRouteChildren {
   DetailsLazyRoute: typeof DetailsLazyRoute
   EmployeeLazyRoute: typeof EmployeeLazyRoute
   ModlogsLazyRoute: typeof ModlogsLazyRoute
+  QuotaLazyRoute: typeof QuotaLazyRoute
   ScheduleLazyRoute: typeof ScheduleLazyRoute
   SettingsLazyRoute: typeof SettingsLazyRoute
   TaskLazyRoute: typeof TaskLazyRoute
@@ -326,7 +326,6 @@ export interface RootRouteChildren {
 
 const rootRouteChildren: RootRouteChildren = {
   IndexLazyRoute: IndexLazyRoute,
-  WeeklyQuotasLazyRoute: WeeklyQuotasLazyRoute,
   BioLazyRoute: BioLazyRoute,
   BotLazyRoute: BotLazyRoute,
   BroadcastLazyRoute: BroadcastLazyRoute,
@@ -335,6 +334,7 @@ const rootRouteChildren: RootRouteChildren = {
   DetailsLazyRoute: DetailsLazyRoute,
   EmployeeLazyRoute: EmployeeLazyRoute,
   ModlogsLazyRoute: ModlogsLazyRoute,
+  QuotaLazyRoute: QuotaLazyRoute,
   ScheduleLazyRoute: ScheduleLazyRoute,
   SettingsLazyRoute: SettingsLazyRoute,
   TaskLazyRoute: TaskLazyRoute,
@@ -351,7 +351,6 @@ export const routeTree = rootRoute
       "filePath": "__root.tsx",
       "children": [
         "/",
-        "/WeeklyQuotas",
         "/bio",
         "/bot",
         "/broadcast",
@@ -360,6 +359,7 @@ export const routeTree = rootRoute
         "/details",
         "/employee",
         "/mod_logs",
+        "/quota",
         "/schedule",
         "/settings",
         "/task"
@@ -367,9 +367,6 @@ export const routeTree = rootRoute
     },
     "/": {
       "filePath": "index.lazy.tsx"
-    },
-    "/WeeklyQuotas": {
-      "filePath": "WeeklyQuotas.lazy.tsx"
     },
     "/bio": {
       "filePath": "bio.lazy.tsx"
@@ -394,6 +391,9 @@ export const routeTree = rootRoute
     },
     "/mod_logs": {
       "filePath": "mod_logs.lazy.tsx"
+    },
+    "/quota": {
+      "filePath": "quota.lazy.tsx"
     },
     "/schedule": {
       "filePath": "schedule.lazy.tsx"

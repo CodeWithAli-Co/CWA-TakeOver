@@ -439,7 +439,7 @@ export const cooData = {
     },
     {
       title: "Weekly Quotas",
-      url : "WeeklyQuotas",
+      url : "/quota",
       isActive: false,
       icon: Target,
     },
@@ -566,7 +566,7 @@ export const ceoData = {
     },
     {
       title: "Weekly Quotas",
-      url : "WeeklyQuotas",
+      url : "/quota",
       isActive: false,
       icon: Target,
     },
