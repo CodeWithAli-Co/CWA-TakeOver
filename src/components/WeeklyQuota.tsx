@@ -35,7 +35,7 @@ const QuotaItem =  ({
 })  => {
   const statusColors  = {
     pending: "bg-amber-500/20 text-amber-400 border-amber-500/30",
-    "in-progres": "bg-blue-500/20 text-blue-400 border-blue-500/30",
+    "in-progress": "bg-blue-500/20 text-blue-400 border-blue-500/30",
     completed : "bg-emerald-500/20 text-emerald-400 border-emerald-500/30"
   };
 
@@ -211,7 +211,7 @@ export const WeeklyQuotas = () => {
 
   // formatting date range for current week 
   const startDate = startOfWeek(selectedWeek, {weekStartsOn: 1}); // Monday will be the starting week
-  const endDate = endOfWeek(selectedWeek, {weekEndOn: 1}) ; // full week rotation back to monday
+  const endDate = endOfWeek(selectedWeek, {weekStartsOn: 1}) ; // full week rotation back to monday
 
   // might have to reformat this later on but im lazy so here
   const dateRangeText = `${format(startDate, 'MMM d')} - ${format(endDate, 'MMM d, yyyy')} `;
@@ -342,7 +342,7 @@ const handleSaveQuota = async (quotaData : any) => {
   const totalQuotas = quotas.length;
   const completedQuotas = quotas.filter(q => q.status === 'completed').length;
   const pendingQuotas = quotas.filter(q => q.status==='pending').length;
-  const inProgressQuotas = quotas.filter(q => q.status  === "in-progress");
+  const inProgressQuotas = quotas.filter(q => q.status  === "in-progress").length;
 
   return (
     <div className="min-h-screen bg-black overflow-y-auto">
