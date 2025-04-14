@@ -1,10 +1,10 @@
-use tauri::{State, Manager};
-use serde::{Deserialize, Serialize};
-use std::sync::Mutex;
 use chrono::Utc;
 use hmac::{Hmac, Mac};
+use serde::{Deserialize, Serialize};
 use sha1::Sha1;
 use std::collections::HashMap;
+use std::sync::Mutex;
+use tauri::{Manager, State};
 
 // Type alias for HMAC-SHA1
 type HmacSha1 = Hmac<Sha1>;
@@ -109,34 +109,36 @@ pub fn handle_github_webhook(
 ) -> Result<(), String> {
     // Verify webhook signature
     let secret = &state.github_webhook_secret;
-    
+
     // Create a new HMAC-SHA1 instance
     let mut mac = HmacSha1::new_from_slice(secret.as_bytes())
         .map_err(|_| "Invalid key length".to_string())?;
-    
+
     // Update the MAC with the payload
     mac.update(payload.as_bytes());
-    
+
     // Calculate signature
     let calculated_signature = format!("sha1={}", hex::encode(mac.finalize().into_bytes()));
-    
+
     // Compare signatures (constant-time comparison to prevent timing attacks)
     if calculated_signature != signature {
         return Err("Invalid webhook signature".to_string());
     }
-    
+
     // Parse the payload based on event type
     if event_type == "push" {
         if let Ok(push_event) = serde_json::from_str::<PushEvent>(&payload) {
             // Extract branch name from ref (refs/heads/main -> main)
-            let branch = push_event.ref_name
+            let branch = push_event
+                .ref_name
                 .split('/')
                 .last()
                 .unwrap_or("unknown")
                 .to_string();
-            
+
             // Transform commits to our format
-            let commits: Vec<GitHubWebhookCommit> = push_event.commits
+            let commits: Vec<GitHubWebhookCommit> = push_event
+                .commits
                 .iter()
                 .map(|commit| GitHubWebhookCommit {
                     id: commit.id.clone(),
@@ -145,28 +147,36 @@ pub fn handle_github_webhook(
                     timestamp: commit.timestamp.clone(),
                 })
                 .collect();
-            
+
             // Create the webhook event
             let webhook_event = GitHubWebhookEvent {
                 id: format!("github_{}", Utc::now().timestamp()),
                 event_type: "push".to_string(),
                 repo: push_event.repository.full_name,
                 branch,
-                author: push_event.pusher.get("name").unwrap_or(&"unknown".to_string()).clone(),
+                author: push_event
+                    .pusher
+                    .get("name")
+                    .unwrap_or(&"unknown".to_string())
+                    .clone(),
                 author_avatar: push_event.sender.avatar_url,
                 timestamp: Utc::now().to_rfc3339(),
                 commits,
             };
-            
+
             // Store the event
             let mut events = state.github_events.lock().unwrap();
             events.push(webhook_event);
-            
+
             // Keep only the most recent 100 events
             if events.len() > 100 {
-                *events = events.clone().into_iter().skip(events.len() - 100).collect();
+                *events = events
+                    .clone()
+                    .into_iter()
+                    .skip(events.len() - 100)
+                    .collect();
             }
-            
+
             Ok(())
         } else {
             Err("Failed to parse push event".to_string())
@@ -178,13 +188,15 @@ pub fn handle_github_webhook(
 }
 
 // Register this with Tauri in your main.rs
-pub fn register_github_webhook_commands(app: &mut tauri::App) -> Result<(), Box<dyn std::error::Error>> {
+pub fn register_github_webhook_commands(
+    app: &mut tauri::App,
+) -> Result<(), Box<dyn std::error::Error>> {
     // Get the webhook secret from environment or config
     let github_webhook_secret = std::env::var("GITHUB_WEBHOOK_SECRET")
         .unwrap_or_else(|_| "your_webhook_secret".to_string());
-    
+
     // Initialize webhook state
     app.manage(WebhookState::new(&github_webhook_secret));
-    
+
     Ok(())
 }
