@@ -1,5 +1,5 @@
 
-import { WeeklyQuotas } from '@/components/WeeklyQuota'
+import { WeeklyQuotas } from '@/MyComponents/WeeklyQuota'
 import { createLazyFileRoute } from '@tanstack/react-router'
 
 export const Route = createLazyFileRoute('/quota')({

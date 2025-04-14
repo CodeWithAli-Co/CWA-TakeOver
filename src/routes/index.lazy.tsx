@@ -30,6 +30,7 @@ import supabase from "@/MyComponents/supabase";
 import UserView, { Role } from "@/MyComponents/Reusables/userView";
 import { message } from "@tauri-apps/plugin-dialog";
 import { AddTodo } from "@/MyComponents/Sidebar/handlingTasking/addTodo";
+import Quotas from "@/MyComponents/HomeDashboard/qoutas";
 
 // Enhanced Task Priority Badge with animation
 const TaskPriorityBadge = ({ priority }: { priority: any }) => {
@@ -315,6 +316,8 @@ const Index = () => {
         className="p-6 space-y-6"
       >
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <Quotas />
+
           {/* Quick Actions */}
           <Card className="bg-black/40 border-red-900/30 lg:col-span-2">
             <CardHeader>
@@ -333,7 +336,11 @@ const Index = () => {
                   url="/chat"
                 />
                 <UserView userRole={[Role.CEO, Role.COO]}>
-                  <QuickActionCard title="Members" icon={Users} url="/employee" />
+                  <QuickActionCard
+                    title="Members"
+                    icon={Users}
+                    url="/employee"
+                  />
                 </UserView>
               </motion.div>
             </CardContent>
