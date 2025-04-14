@@ -31,6 +31,9 @@ import UserView, { Role } from "@/MyComponents/Reusables/userView";
 import { message } from "@tauri-apps/plugin-dialog";
 import { AddTodo } from "@/MyComponents/Sidebar/handlingTasking/addTodo";
 import Quotas from "@/MyComponents/HomeDashboard/qoutas";
+import CompanyStats from "@/MyComponents/HomeDashboard/companyStats";
+import Meetings from "@/MyComponents/HomeDashboard/meetings";
+import ApiWebhooks from "@/MyComponents/HomeDashboard/apiWebhooks";
 
 // Enhanced Task Priority Badge with animation
 const TaskPriorityBadge = ({ priority }: { priority: any }) => {
@@ -315,6 +318,11 @@ const Index = () => {
         animate={{ opacity: 1 }}
         className="p-6 space-y-6"
       >
+        {/* Company Stats */}
+        <UserView userRole={[Role.CEO, Role.COO]}>
+          <CompanyStats />
+        </UserView>
+
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           <Quotas />
 
@@ -349,10 +357,20 @@ const Index = () => {
           {/* Tasks */}
           <TasksComponent />
 
+          {/* Upcoming Meetings */}
+          <UserView userRole={[Role.CEO, Role.COO]}>
+            <Meetings />
+          </UserView>
+
           {/* storage graph */}
           <UserView userRole={[Role.CEO, Role.COO]}>
             <StorageUsageChart />
           </UserView>
+
+          {/* Api & Webhooks View */}
+          {/* <UserView userRole={[Role.CEO, Role.COO]}>
+            <ApiWebhooks />
+          </UserView> */}
         </div>
       </motion.div>
     </div>

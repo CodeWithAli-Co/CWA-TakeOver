@@ -9,7 +9,6 @@ import {
   AudioWaveform,
   Command,
   Target,
-  CalendarDays, // for wweekly quota
 } from "lucide-react";
 
 // Intern Data set (What Interns can see)
@@ -165,28 +164,28 @@ export const adminData = {
     },
     {
       title: "Admin Permissions",
-      url: "/details",
+      url: "/mod_logs",
       icon: SquareTerminal,
       isActive: true,
-      items: [
-        // {
-        //   title: "Email Broadcast",
-        //   url: "/broadcast",
-        // },
-        {
-          title: "Account Management",
-          url: "/details",
-        },
-        {
-          title: "Users",
-          url: "/employee",
-        },
-        {
-          title: "Mod logs",
-          url: "/mod_logs",
-        },
+      // items: [
+      //   // {
+      //   //   title: "Email Broadcast",
+      //   //   url: "/broadcast",
+      //   // },
+      //   // {
+      //   //   title: "Account Management",
+      //   //   url: "/details",
+      //   // },
+      //   // {
+      //   //   title: "Users",
+      //   //   url: "/employee",
+      //   // },
+      //   // {
+      //   //   title: "Mod logs",
+      //   //   url: "/mod_logs",
+      //   // },
     
-      ],
+      // ],
     },
     // {
     //   title: "Bot Management",
@@ -296,28 +295,28 @@ export const projectManagerData = {
     },
     {
       title: "Admin Permissions",
-      url: "/details",
+      url: "/mod_logs",
       icon: SquareTerminal,
       isActive: true,
-      items: [
-        // {
-        //   title: "Email Broadcast",
-        //   url: "/broadcast",
-        // },
-        {
-          title: "Account Management",
-          url: "/details",
-        },
-        {
-          title: "Users",
-          url: "/employee",
-        },
-        {
-          title: "Mod logs",
-          url: "/mod_logs",
-        },
+      // items: [
+      //   // {
+      //   //   title: "Email Broadcast",
+      //   //   url: "/broadcast",
+      //   // },
+      //   {
+      //     title: "Account Management",
+      //     url: "/details",
+      //   },
+      //   {
+      //     title: "Users",
+      //     url: "/employee",
+      //   },
+      //   {
+      //     title: "Mod logs",
+      //     url: "/mod_logs",
+      //   },
     
-      ],
+      // ],
     },
     // {
     //   title: "Bot Management",
