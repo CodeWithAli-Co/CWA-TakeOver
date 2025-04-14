@@ -1,6 +1,16 @@
 import { ActiveUser } from "@/stores/query";
 import React from "react";
 
+export const enum Role {
+  Intern = "Intern",
+  Member = "Member",
+  Marketing = "Marketing Specialist",
+  Admin = "Admin",
+  ProjectManager = "Project Manager",
+  COO = "COO",
+  CEO = "CEO"
+}
+
 type UserViewProps = {
   userRole: string | string[];
   children: React.ReactNode;

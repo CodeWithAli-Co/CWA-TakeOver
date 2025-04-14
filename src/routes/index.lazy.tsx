@@ -27,7 +27,7 @@ import {
 import { motion, AnimatePresence } from "framer-motion";
 import { useEffect, useState } from "react";
 import supabase from "@/MyComponents/supabase";
-import UserView from "@/MyComponents/Reusables/userView";
+import UserView, { Role } from "@/MyComponents/Reusables/userView";
 import { message } from "@tauri-apps/plugin-dialog";
 import { AddTodo } from "@/MyComponents/Sidebar/handlingTasking/addTodo";
 
@@ -332,7 +332,9 @@ const Index = () => {
                   icon={MessageSquare}
                   url="/chat"
                 />
-                <QuickActionCard title="Members" icon={Users} url="/employee" />
+                <UserView userRole={[Role.CEO, Role.COO]}>
+                  <QuickActionCard title="Members" icon={Users} url="/employee" />
+                </UserView>
               </motion.div>
             </CardContent>
           </Card>
@@ -341,7 +343,7 @@ const Index = () => {
           <TasksComponent />
 
           {/* storage graph */}
-          <UserView userRole={["CEO", "COO"]}>
+          <UserView userRole={[Role.CEO, Role.COO]}>
             <StorageUsageChart />
           </UserView>
         </div>

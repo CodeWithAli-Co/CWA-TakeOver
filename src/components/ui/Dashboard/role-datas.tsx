@@ -39,6 +39,12 @@ export const internData = {
       icon: ClipboardList,
     },
     {
+      title: "Weekly Quotas",
+      url : "/quota",
+      isActive: false,
+      icon: Target,
+    },
+    {
       title: "Settings",
       url: "/settings",
       icon: Settings2,
@@ -73,6 +79,12 @@ export const memberData = {
       icon: ClipboardList,
     },
     {
+      title: "Weekly Quotas",
+      url : "/quota",
+      isActive: false,
+      icon: Target,
+    },
+    {
       title: "Settings",
       url: "/settings",
       icon: Settings2,
@@ -105,6 +117,12 @@ export const marketingData = {
       url: "/task",
       isActive: false,
       icon: ClipboardList,
+    },
+    {
+      title: "Weekly Quotas",
+      url : "/quota",
+      isActive: false,
+      icon: Target,
     },
     {
       title: "Settings",
@@ -187,6 +205,12 @@ export const adminData = {
       url: "/task",
       isActive: false,
       icon: ClipboardList,
+    },
+    {
+      title: "Weekly Quotas",
+      url : "/quota",
+      isActive: false,
+      icon: Target,
     },
     // {
     //   title: "Schedule",
@@ -312,6 +336,12 @@ export const projectManagerData = {
       url: "/task",
       isActive: false,
       icon: ClipboardList,
+    },
+    {
+      title: "Weekly Quotas",
+      url : "/quota",
+      isActive: false,
+      icon: Target,
     },
     // {
     //   title: "Schedule",
@@ -444,12 +474,12 @@ export const cooData = {
       isActive: false,
       icon: Target,
     },
-    {
-      title: "Schedule",
-      url: "/schedule",
-      isActive: false,
-      icon: CalendarDays,
-    },
+    // {
+    //   title: "Schedule",
+    //   url: "/schedule",
+    //   isActive: false,
+    //   icon: CalendarDays,
+    // },
     // {
     //   title: "BioTech",
     //   url: "/bio",
@@ -571,12 +601,12 @@ export const ceoData = {
       isActive: false,
       icon: Target,
     },
-    {
-      title: "Schedule",
-      url: "/schedule",
-      isActive: false,
-      icon: CalendarDays,
-    },
+    // {
+    //   title: "Schedule",
+    //   url: "/schedule",
+    //   isActive: false,
+    //   icon: CalendarDays,
+    // },
     {
       title: "Settings",
       url: "/settings",
