@@ -5,7 +5,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { RefreshCcw, TrendingUp, DollarSign, AlertCircle, Zap, Database, ShieldAlert, Gauge } from "lucide-react";
 import { motion } from "framer-motion";
 import { createLazyFileRoute } from '@tanstack/react-router';
-import '../styles/statsCard.css'; // Import the statsCard.css file
+import '../assets/statsCard.css'; // Import the statsCard.css file
 import GradientText from '@/MyComponents/Reusables/gradientText';
 import { useClientStore } from '@/stores/invoiceStore';
 import { Invoices } from '@/stores/invoiceQuery';
