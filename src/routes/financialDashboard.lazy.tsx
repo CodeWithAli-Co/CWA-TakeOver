@@ -9,7 +9,8 @@ import '../assets/statsCard.css'; // Import the statsCard.css file
 import GradientText from '@/MyComponents/Reusables/gradientText';
 import { useClientStore } from '@/stores/invoiceStore';
 import { Invoices } from '@/stores/invoiceQuery';
-import { FinancialProjector } from '@/MyComponents/FinancialCalculator.tsx/financialField';
+import FinancialField from '@/MyComponents/FinancialCalculator.tsx/financialField';
+
 
 
 // Type definition for invoice data
@@ -341,7 +342,7 @@ export const FinancialDashboard = () => {
             
             {/* New Financial Projector Tab */}
             <TabsContent value="calculator" className="mt-0">
-              <FinancialProjector />
+              <FinancialField />
             </TabsContent>
           </Tabs>
         </div>
