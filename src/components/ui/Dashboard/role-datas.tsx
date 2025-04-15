@@ -590,10 +590,10 @@ export const ceoData = {
           title: "Users",
           url: "/employee",
         },
-        {
-          title: "Finance Dashboard",
-          url: "/financialDashboard"
-        },
+        // {
+        //   title: "Finance Dashboard",
+        //   url: "/financialDashboard"
+        // },
         {
           title: "Mod logs",
           url: "/mod_logs",
