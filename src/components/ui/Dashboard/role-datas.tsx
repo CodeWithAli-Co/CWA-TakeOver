@@ -9,7 +9,9 @@ import {
   AudioWaveform,
   Command,
   Target,
+  File,
 } from "lucide-react";
+import { title } from "process";
 
 // Intern Data set (What Interns can see)
 export const internData = {
@@ -454,7 +456,22 @@ export const cooData = {
     //   url: "/bot",
     //   icon: Bot,
     // },
-
+    {
+      title: "Invoicer",
+      url: "/invoicer",
+      icon: File,
+      isActive: true,
+      items: [
+        {
+          title: "Client",
+          url: "/invoiceClients"
+        },
+        {
+          title: "Preview",
+          url: "/invoicePreview"
+        }
+      ]
+    },
     {
       title: "Chat",
       url: "/chat",
@@ -581,7 +598,22 @@ export const ceoData = {
     //   url: "/bot",
     //   icon: Bot,
     // },
-
+    {
+      title: "Invoicer",
+      url: "/invoicer",
+      icon: File,
+      isActive: true,
+      items: [
+        {
+          title: "Client",
+          url: "/invoiceClients"
+        },
+        {
+          title: "Preview",
+          url: "/invoicePreview"
+        }
+      ]
+    },
     {
       title: "Chat",
       url: "/chat",

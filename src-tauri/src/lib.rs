@@ -3,11 +3,16 @@ use aes_gcm::{
     aead::{Aead, AeadCore, KeyInit, OsRng},
     Aes256Gcm, Key, Nonce,
 };
+use std::fs::File;
+use std::io::Read;
 use tauri_plugin_updater::UpdaterExt;
 
 use dotenv::dotenv;
 use resend_rs::{
-    types::{ContactChanges, ContactData, CreateBroadcastOptions, SendBroadcastOptions},
+    types::{
+        Attachment, ContactChanges, ContactData, CreateBroadcastOptions, CreateEmailBaseOptions,
+        SendBroadcastOptions,
+    },
     Resend, Result,
 };
 
@@ -157,6 +162,36 @@ async fn update(app: tauri::AppHandle) -> tauri_plugin_updater::Result<()> {
     Ok(())
 }
 
+#[tauri::command(async)]
+async fn send_invoice(
+    client_email: &str,
+    subject_msg: &str,
+    file_path: &str,
+    html: &str,
+) -> Result<String, String> {
+    let _env = dotenv().unwrap();
+
+    let resend = Resend::default();
+
+    let from = "CodeWithAli <mailer@codewithali.com>";
+    let to = [client_email];
+    let subject = subject_msg;
+
+    let filename = "Invoice.pdf";
+    let filepath = file_path;
+    let mut f = File::open(filepath).unwrap();
+    let mut invoice = Vec::new();
+    f.read_to_end(&mut invoice).unwrap();
+
+    let email = CreateEmailBaseOptions::new(from, to, subject)
+        .with_html(html)
+        .with_attachment(Attachment::from_content(invoice).with_filename(filename));
+
+    let email = resend.emails.send(email).await.map_err(|e| e.to_string())?;
+
+    Ok(email.id.to_string())
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
@@ -186,6 +221,7 @@ pub fn run() {
             add_contact,
             edit_contact,
             del_contact,
+            send_invoice,
             // GitHub webhook commands
             github_webhooks::get_github_webhooks,
             github_webhooks::handle_github_webhook,

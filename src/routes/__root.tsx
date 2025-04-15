@@ -1,5 +1,10 @@
 import { check } from "@tauri-apps/plugin-updater";
 import { relaunch } from "@tauri-apps/plugin-process";
+import {
+  isPermissionGranted,
+  requestPermission,
+} from "@tauri-apps/plugin-notification";
+import { create, exists, BaseDirectory } from "@tauri-apps/plugin-fs";
 import { createRootRoute, Outlet, useNavigate } from "@tanstack/react-router";
 import "../assets/sidebar.css";
 import { sendNotification } from "@tauri-apps/plugin-notification";
@@ -103,6 +108,46 @@ export const Route = createRootRoute({
         console.log("on DMS!");
       }
     }, [GroupName]);
+
+        // Check if can send notifications
+        useEffect(() => {
+          async function CheckNotifPerm() {
+            // Do you have permission to send a notification?
+            let permissionGranted = await isPermissionGranted();
+    
+            // If not we need to request it
+            if (!permissionGranted) {
+              const permission = await requestPermission();
+              permissionGranted = permission === "granted";
+            }
+    
+            // Once permission has been granted we can send the notification
+            if (permissionGranted) {
+              console.log("Notification Permission is Granted!");
+            }
+          }
+          CheckNotifPerm();
+        }, []);
+    
+        // Check if invoiceStats file exists or not
+        useEffect(() => {
+          async function Create() {
+            const checkFile = await exists("invoiceStats.json", {
+              baseDir: BaseDirectory.AppLocalData,
+            });
+            if (checkFile) {
+              return;
+            } else {
+              const file = await create("invoiceStats.json", {
+                baseDir: BaseDirectory.AppLocalData,
+              });
+              // await file.write(new TextEncoder().encode('Hello from CWA Invoicer'));
+              await file.close();
+            }
+          }
+          Create();
+        }, []);
+    
 
     // Add global pressence if possible
 

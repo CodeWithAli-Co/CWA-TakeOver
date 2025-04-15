@@ -8,6 +8,7 @@ interface ImportMetaEnv {
   readonly VITE_DB_KEY: string
   readonly VITE_ENCRYPTION_KEY: string
   readonly VITE_UPLOADTHING_TOKEN: string
+  readonly VITE_NEON_DB_URL: string
   // more env variables...
 }
 

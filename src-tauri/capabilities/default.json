@@ -16,10 +16,21 @@
     "dialog:default",
     "fs:default",
     {
-      "identifier": "fs:allow-app-read-recursive",
+      "identifier": "fs:allow-applocaldata-write-recursive",
       "allow": [
         {
           "path": "$APPDATA/*"
+        }
+      ]
+    },
+    {
+      "identifier": "fs:allow-applocaldata-read-recursive",
+      "allow": [
+        {
+          "path": "$APPDATA/*"
+        },
+        {
+          "path": "$DOWNLOAD/*"
         }
       ]
     }

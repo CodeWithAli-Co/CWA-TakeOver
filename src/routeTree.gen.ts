@@ -21,6 +21,11 @@ const SettingsLazyImport = createFileRoute('/settings')()
 const ScheduleLazyImport = createFileRoute('/schedule')()
 const QuotaLazyImport = createFileRoute('/quota')()
 const ModlogsLazyImport = createFileRoute('/mod_logs')()
+const MiddleLazyImport = createFileRoute('/middle')()
+const InvoicerLazyImport = createFileRoute('/invoicer')()
+const InvoicePreviewLazyImport = createFileRoute('/invoicePreview')()
+const InvoiceClientsLazyImport = createFileRoute('/invoiceClients')()
+const FinancialDashboardLazyImport = createFileRoute('/financialDashboard')()
 const EmployeeLazyImport = createFileRoute('/employee')()
 const DetailsLazyImport = createFileRoute('/details')()
 const ChatLazyImport = createFileRoute('/chat')()
@@ -61,6 +66,42 @@ const ModlogsLazyRoute = ModlogsLazyImport.update({
   path: '/mod_logs',
   getParentRoute: () => rootRoute,
 } as any).lazy(() => import('./routes/mod_logs.lazy').then((d) => d.Route))
+
+const MiddleLazyRoute = MiddleLazyImport.update({
+  id: '/middle',
+  path: '/middle',
+  getParentRoute: () => rootRoute,
+} as any).lazy(() => import('./routes/middle.lazy').then((d) => d.Route))
+
+const InvoicerLazyRoute = InvoicerLazyImport.update({
+  id: '/invoicer',
+  path: '/invoicer',
+  getParentRoute: () => rootRoute,
+} as any).lazy(() => import('./routes/invoicer.lazy').then((d) => d.Route))
+
+const InvoicePreviewLazyRoute = InvoicePreviewLazyImport.update({
+  id: '/invoicePreview',
+  path: '/invoicePreview',
+  getParentRoute: () => rootRoute,
+} as any).lazy(() =>
+  import('./routes/invoicePreview.lazy').then((d) => d.Route),
+)
+
+const InvoiceClientsLazyRoute = InvoiceClientsLazyImport.update({
+  id: '/invoiceClients',
+  path: '/invoiceClients',
+  getParentRoute: () => rootRoute,
+} as any).lazy(() =>
+  import('./routes/invoiceClients.lazy').then((d) => d.Route),
+)
+
+const FinancialDashboardLazyRoute = FinancialDashboardLazyImport.update({
+  id: '/financialDashboard',
+  path: '/financialDashboard',
+  getParentRoute: () => rootRoute,
+} as any).lazy(() =>
+  import('./routes/financialDashboard.lazy').then((d) => d.Route),
+)
 
 const EmployeeLazyRoute = EmployeeLazyImport.update({
   id: '/employee',
@@ -170,6 +211,41 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof EmployeeLazyImport
       parentRoute: typeof rootRoute
     }
+    '/financialDashboard': {
+      id: '/financialDashboard'
+      path: '/financialDashboard'
+      fullPath: '/financialDashboard'
+      preLoaderRoute: typeof FinancialDashboardLazyImport
+      parentRoute: typeof rootRoute
+    }
+    '/invoiceClients': {
+      id: '/invoiceClients'
+      path: '/invoiceClients'
+      fullPath: '/invoiceClients'
+      preLoaderRoute: typeof InvoiceClientsLazyImport
+      parentRoute: typeof rootRoute
+    }
+    '/invoicePreview': {
+      id: '/invoicePreview'
+      path: '/invoicePreview'
+      fullPath: '/invoicePreview'
+      preLoaderRoute: typeof InvoicePreviewLazyImport
+      parentRoute: typeof rootRoute
+    }
+    '/invoicer': {
+      id: '/invoicer'
+      path: '/invoicer'
+      fullPath: '/invoicer'
+      preLoaderRoute: typeof InvoicerLazyImport
+      parentRoute: typeof rootRoute
+    }
+    '/middle': {
+      id: '/middle'
+      path: '/middle'
+      fullPath: '/middle'
+      preLoaderRoute: typeof MiddleLazyImport
+      parentRoute: typeof rootRoute
+    }
     '/mod_logs': {
       id: '/mod_logs'
       path: '/mod_logs'
@@ -219,6 +295,11 @@ export interface FileRoutesByFullPath {
   '/chat': typeof ChatLazyRoute
   '/details': typeof DetailsLazyRoute
   '/employee': typeof EmployeeLazyRoute
+  '/financialDashboard': typeof FinancialDashboardLazyRoute
+  '/invoiceClients': typeof InvoiceClientsLazyRoute
+  '/invoicePreview': typeof InvoicePreviewLazyRoute
+  '/invoicer': typeof InvoicerLazyRoute
+  '/middle': typeof MiddleLazyRoute
   '/mod_logs': typeof ModlogsLazyRoute
   '/quota': typeof QuotaLazyRoute
   '/schedule': typeof ScheduleLazyRoute
@@ -235,6 +316,11 @@ export interface FileRoutesByTo {
   '/chat': typeof ChatLazyRoute
   '/details': typeof DetailsLazyRoute
   '/employee': typeof EmployeeLazyRoute
+  '/financialDashboard': typeof FinancialDashboardLazyRoute
+  '/invoiceClients': typeof InvoiceClientsLazyRoute
+  '/invoicePreview': typeof InvoicePreviewLazyRoute
+  '/invoicer': typeof InvoicerLazyRoute
+  '/middle': typeof MiddleLazyRoute
   '/mod_logs': typeof ModlogsLazyRoute
   '/quota': typeof QuotaLazyRoute
   '/schedule': typeof ScheduleLazyRoute
@@ -252,6 +338,11 @@ export interface FileRoutesById {
   '/chat': typeof ChatLazyRoute
   '/details': typeof DetailsLazyRoute
   '/employee': typeof EmployeeLazyRoute
+  '/financialDashboard': typeof FinancialDashboardLazyRoute
+  '/invoiceClients': typeof InvoiceClientsLazyRoute
+  '/invoicePreview': typeof InvoicePreviewLazyRoute
+  '/invoicer': typeof InvoicerLazyRoute
+  '/middle': typeof MiddleLazyRoute
   '/mod_logs': typeof ModlogsLazyRoute
   '/quota': typeof QuotaLazyRoute
   '/schedule': typeof ScheduleLazyRoute
@@ -270,6 +361,11 @@ export interface FileRouteTypes {
     | '/chat'
     | '/details'
     | '/employee'
+    | '/financialDashboard'
+    | '/invoiceClients'
+    | '/invoicePreview'
+    | '/invoicer'
+    | '/middle'
     | '/mod_logs'
     | '/quota'
     | '/schedule'
@@ -285,6 +381,11 @@ export interface FileRouteTypes {
     | '/chat'
     | '/details'
     | '/employee'
+    | '/financialDashboard'
+    | '/invoiceClients'
+    | '/invoicePreview'
+    | '/invoicer'
+    | '/middle'
     | '/mod_logs'
     | '/quota'
     | '/schedule'
@@ -300,6 +401,11 @@ export interface FileRouteTypes {
     | '/chat'
     | '/details'
     | '/employee'
+    | '/financialDashboard'
+    | '/invoiceClients'
+    | '/invoicePreview'
+    | '/invoicer'
+    | '/middle'
     | '/mod_logs'
     | '/quota'
     | '/schedule'
@@ -317,6 +423,11 @@ export interface RootRouteChildren {
   ChatLazyRoute: typeof ChatLazyRoute
   DetailsLazyRoute: typeof DetailsLazyRoute
   EmployeeLazyRoute: typeof EmployeeLazyRoute
+  FinancialDashboardLazyRoute: typeof FinancialDashboardLazyRoute
+  InvoiceClientsLazyRoute: typeof InvoiceClientsLazyRoute
+  InvoicePreviewLazyRoute: typeof InvoicePreviewLazyRoute
+  InvoicerLazyRoute: typeof InvoicerLazyRoute
+  MiddleLazyRoute: typeof MiddleLazyRoute
   ModlogsLazyRoute: typeof ModlogsLazyRoute
   QuotaLazyRoute: typeof QuotaLazyRoute
   ScheduleLazyRoute: typeof ScheduleLazyRoute
@@ -333,6 +444,11 @@ const rootRouteChildren: RootRouteChildren = {
   ChatLazyRoute: ChatLazyRoute,
   DetailsLazyRoute: DetailsLazyRoute,
   EmployeeLazyRoute: EmployeeLazyRoute,
+  FinancialDashboardLazyRoute: FinancialDashboardLazyRoute,
+  InvoiceClientsLazyRoute: InvoiceClientsLazyRoute,
+  InvoicePreviewLazyRoute: InvoicePreviewLazyRoute,
+  InvoicerLazyRoute: InvoicerLazyRoute,
+  MiddleLazyRoute: MiddleLazyRoute,
   ModlogsLazyRoute: ModlogsLazyRoute,
   QuotaLazyRoute: QuotaLazyRoute,
   ScheduleLazyRoute: ScheduleLazyRoute,
@@ -358,6 +474,11 @@ export const routeTree = rootRoute
         "/chat",
         "/details",
         "/employee",
+        "/financialDashboard",
+        "/invoiceClients",
+        "/invoicePreview",
+        "/invoicer",
+        "/middle",
         "/mod_logs",
         "/quota",
         "/schedule",
@@ -388,6 +509,21 @@ export const routeTree = rootRoute
     },
     "/employee": {
       "filePath": "employee.lazy.tsx"
+    },
+    "/financialDashboard": {
+      "filePath": "financialDashboard.lazy.tsx"
+    },
+    "/invoiceClients": {
+      "filePath": "invoiceClients.lazy.tsx"
+    },
+    "/invoicePreview": {
+      "filePath": "invoicePreview.lazy.tsx"
+    },
+    "/invoicer": {
+      "filePath": "invoicer.lazy.tsx"
+    },
+    "/middle": {
+      "filePath": "middle.lazy.tsx"
     },
     "/mod_logs": {
       "filePath": "mod_logs.lazy.tsx"
