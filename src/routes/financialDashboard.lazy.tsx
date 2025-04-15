@@ -2,13 +2,24 @@ import { useState } from 'react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell, Line, LineChart } from 'recharts';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
-import { RefreshCcw, TrendingUp, DollarSign, AlertCircle, Zap, Database, ShieldAlert, Gauge } from "lucide-react";
+import { RefreshCcw, TrendingUp, DollarSign, AlertCircle, Zap, Database, ShieldAlert, Gauge, Calculator, PieChart as PieChartIcon } from "lucide-react";
 import { motion } from "framer-motion";
 import { createLazyFileRoute } from '@tanstack/react-router';
 import '../assets/statsCard.css'; // Import the statsCard.css file
 import GradientText from '@/MyComponents/Reusables/gradientText';
 import { useClientStore } from '@/stores/invoiceStore';
 import { Invoices } from '@/stores/invoiceQuery';
+import { FinancialProjector } from '@/MyComponents/FinancialCalculator.tsx/financialField';
+
+
+// Type definition for invoice data
+interface Invoice {
+  invoice_id: string;
+  invoice_title: string;
+  client_name: string;
+  outcome: string;
+  status: string;
+}
 
 export const FinancialDashboard = () => {
   const { name } = useClientStore();
@@ -142,6 +153,13 @@ export const FinancialDashboard = () => {
                 >
                   <AlertCircle size={16} className="mr-2" />
                   SOURCES
+                </TabsTrigger>
+                <TabsTrigger 
+                  value="calculator" 
+                  className="px-6 py-2 rounded-none data-[state=active]:bg-red-900 data-[state=active]:text-white data-[state=active]:shadow-[0_0_10px_rgba(255,10,63,0.5)] transition-all duration-300"
+                >
+                  <Calculator size={16} className="mr-2" />
+                  PROJECTOR
                 </TabsTrigger>
               </TabsList>
               
@@ -320,6 +338,11 @@ export const FinancialDashboard = () => {
                 </div>
               </div>
             </TabsContent>
+            
+            {/* New Financial Projector Tab */}
+            <TabsContent value="calculator" className="mt-0">
+              <FinancialProjector />
+            </TabsContent>
           </Tabs>
         </div>
         
@@ -339,7 +362,7 @@ export const FinancialDashboard = () => {
           </div>
           
           <div className="space-y-4">
-            {data.slice(0, 5).map((invoice, idx) => (
+            {data.slice(0, 5).map((invoice: Invoice, idx: number) => (
               <motion.div
                 key={invoice.invoice_id}
                 initial={{ opacity: 0, y: 10 }}
