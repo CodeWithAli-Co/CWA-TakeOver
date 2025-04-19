@@ -30,7 +30,7 @@ export const InvoiceForm = () => {
       discount: ""
     },
     onSubmit: async ({ value }) => {
-      const db = await Database.load(import.meta.env.VITE_DB_URL);
+      const db = await Database.load(import.meta.env.VITE_NEON_DB_URL);
       const Total1 = Number(value.qty1) * Number(value.price1);
       const Total2 = Number(value.qty2) * Number(value.price2);
       const Total3 = Number(value.qty3) * Number(value.price3);

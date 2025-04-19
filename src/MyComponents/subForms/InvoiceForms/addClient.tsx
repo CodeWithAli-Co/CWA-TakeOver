@@ -11,7 +11,7 @@ export const AddClient = () => {
       clientEmail: "",
     },
     onSubmit: async ({ value }) => {
-      const db = await Database.load(import.meta.env.VITE_DB_URL);
+      const db = await Database.load(import.meta.env.VITE_NEON_DB_URL);
       await db.execute(
         "INSERT into clients (name, email) VALUES ($1, $2)",
         [
