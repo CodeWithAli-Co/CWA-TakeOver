@@ -221,7 +221,7 @@ const handleSaveQuota = async (quotaData : any) => {
         </Dialog>
       </div>
 
-      <ScrollArea className="h-[500px] pr-4">
+      <ScrollArea className="h-[500px] pr-4 overflow-y-auto">
         <AnimatePresence>
           {filteredQuotas.length > 0 ? (
             filteredQuotas.map((quota) => (

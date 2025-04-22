@@ -324,7 +324,6 @@ const Index = () => {
         </UserView>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          <Quotas />
 
           {/* Quick Actions */}
           <Card className="bg-black/40 border-red-900/30 lg:col-span-2">
@@ -333,11 +332,13 @@ const Index = () => {
             </CardHeader>
             <CardContent>
               <motion.div className="grid grid-cols-2 gap-4">
-                <QuickActionCard
-                  title="Accounts"
-                  icon={Terminal}
-                  url="/details"
-                />
+                <UserView userRole={[Role.CEO, Role.COO]}>
+                  <QuickActionCard
+                    title="Accounts"
+                    icon={Terminal}
+                    url="/details"
+                  />
+                </UserView>
                 <QuickActionCard
                   title="Chat"
                   icon={MessageSquare}
@@ -354,13 +355,16 @@ const Index = () => {
             </CardContent>
           </Card>
 
-          {/* Tasks */}
-          <TasksComponent />
-
           {/* Upcoming Meetings */}
           <UserView userRole={[Role.CEO, Role.COO]}>
             <Meetings />
           </UserView>
+
+          {/* Tasks */}
+          <TasksComponent />
+
+          {/* Weekly Quota */}
+          <Quotas />
 
           {/* storage graph */}
           <UserView userRole={[Role.CEO, Role.COO]}>
