@@ -20,6 +20,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogT
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/shadcnComponents/select";
 import supabase from "@/MyComponents/supabase";
 import { format, startOfWeek, endOfWeek, addWeeks, subWeeks } from "date-fns";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/shadcnComponents/tabs";
 
 // Weekly QuotasItems 
 type QuotaStatus = 'pending' | 'in-progress' | 'completed';
@@ -200,12 +201,15 @@ return (
 };
 
 // Weekly Quotas in main component
+// Weekly Quotas in main component
 export const WeeklyQuotas = () => {
   const [quotas, setQuotas] =  useState<any[]>([]);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingQuota, setEditingQuota] = useState<any | null>(null)
   const [searchQuery, setSearchQuery] = useState("")
   const [selectedWeek, setSelectedWeek]  = useState<Date>(new Date());
+  // Add state for selected status tab
+  const [selectedStatus, setSelectedStatus] = useState<string>("pending");
 
   // get current useruuu
   const { data: activeUser } = ActiveUser();
@@ -333,18 +337,23 @@ const handleSaveQuota = async (quotaData : any) => {
     setDialogOpen(true);
   } ;
 
-  // filter quotas based on search query
-  const filteredQuotas = quotas.filter(quota => 
-    quota.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    (quota.description && quota.description.toLowerCase().includes(searchQuery.toLowerCase()) )
-  );
+  // Filter quotas based on search query and selected status tab
+  const filteredQuotas = quotas.filter(quota => {
+    const matchesSearch = 
+      quota.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (quota.description && quota.description.toLowerCase().includes(searchQuery.toLowerCase()));
+    
+    const matchesStatus = quota.status === selectedStatus;
+    
+    return matchesSearch && matchesStatus;
+  });
 
 
   // stats ( we loves some stats ;) 
   const totalQuotas = quotas.length;
   const completedQuotas = quotas.filter(q => q.status === 'completed').length;
-  const pendingQuotas = quotas.filter(q => q.status==='pending').length;
-  const inProgressQuotas = quotas.filter(q => q.status  === "in-progress").length;
+  const pendingQuotas = quotas.filter(q => q.status === 'pending').length;
+  const inProgressQuotas = quotas.filter(q => q.status === 'in-progress').length;
 
   return (
     <div className="min-h-screen bg-black overflow-y-auto">
@@ -477,6 +486,36 @@ const handleSaveQuota = async (quotaData : any) => {
                 />
               </Dialog>
             </div>
+            
+            <Tabs 
+              defaultValue="pending" 
+              value={selectedStatus} 
+              onValueChange={setSelectedStatus}
+              className="mb-4"
+            >
+              <TabsList className="bg-black/40 border border-red-900/30">
+                <TabsTrigger 
+                  value="pending" 
+                  className="data-[state=active]:bg-red-900/20"
+                >
+                  Pending ({pendingQuotas})
+                </TabsTrigger>
+                <TabsTrigger 
+                  value="in-progress" 
+                  className="data-[state=active]:bg-red-900/20"
+                >
+                  In Progress ({inProgressQuotas})
+                </TabsTrigger>
+                <TabsTrigger 
+                  value="completed" 
+                  className="data-[state=active]:bg-red-900/20"
+                >
+                  Completed ({completedQuotas})
+                </TabsTrigger>
+              </TabsList>
+            </Tabs>
+
+
 
             <ScrollArea className="h-[500px] pr-4">
               <AnimatePresence>
@@ -497,9 +536,11 @@ const handleSaveQuota = async (quotaData : any) => {
                     className="flex flex-col items-center justify-center p-8 text-amber-50/70"
                   >
                     <Target className="h-12 w-12 mb-4" />
-                    <h3 className="text-lg font-medium mb-2">No quotas for this week</h3>
+                    <h3 className="text-lg font-medium mb-2">No quotas found</h3>
                     <p className="text-sm text-center max-w-md">
-                      Start by adding your weekly goals and targets to track your progress.
+                      {selectedStatus === "all" 
+                        ? "Start by adding your weekly goals and targets to track your progress."
+                        : `No ${selectedStatus} quotas for this week.`}
                     </p>
                   </motion.div>
                 )}
