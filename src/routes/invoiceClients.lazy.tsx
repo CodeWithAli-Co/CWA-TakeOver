@@ -113,9 +113,6 @@ function InvoiceClients() {
                 <div className="flex items-center justify-between relative z-10">
                   <div className="flex items-center">
                     <div className="w-1 h-1 bg-red-500 rounded-full mr-3 group-hover:scale-150 transition-all duration-30 "></div>
-                    <span className="text-lg font-medium  select-none group:hover:text-red-400 transition-colors duration-200">
-                      -
-                    </span>{" "}
                     {client.name}
                   </div>
                 {/* Fancy little email trick suprise for blazey */}

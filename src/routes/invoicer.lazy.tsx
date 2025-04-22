@@ -15,7 +15,6 @@ import { useClientStore, useInvoiceStore } from "@/stores/invoiceStore";
 import { Invoices } from "@/stores/invoiceQuery";
 import { InvoiceForm } from "@/MyComponents/subForms/InvoiceForms/createInvoice";
 
-
 function Invoicer() {
   const navigate = useNavigate();
 
@@ -32,7 +31,6 @@ function Invoicer() {
     return (
       <div className="p-2 w-full h-full">
         <span className="italic text-gray-400">Select a Client...</span>
-       
       </div>
     );
   }
@@ -41,33 +39,40 @@ function Invoicer() {
     return (
       <div className="p-2 w-full h-full">
         {/* Header */}
-        <section className="flex justify-center items-center text-3xl w-full font-semibold">
-          <h3 className="">Invoices</h3>
+        <section className="flex text-3xl items-center w-full mb-5 pl-2 font-semibold font-mono">
+          {name}
+
           <button
             className="absolute right-0 mr-2 hover:rotate-180 transition-all duration-200"
             id="refresh-btn"
             onClick={() => refetch()}
           >
-            <RefreshCcw className="hover:cursor-pointer" />
+            <RefreshCcw
+              className="hover:cursor-pointer bg-red-900 hover:scale-110 rounded-full text-black "
+              size={29}
+            />
           </button>
 
           {/* Sheet window for form input */}
           <Sheet>
-            <SheetTrigger className="absolute right-0 mr-15 hover:cursor-pointer hover:rotate-45 transition-all duration-200">
-              <Plus />
+            <SheetTrigger className="absolute right-0 mr-12 rounded-full p-1 bg-red-900 hover:scale-110 hover:cursor-pointer hover:rotate-45 transition-all duration-200">
+              <Plus className="text-black hover:text-gray-800" size={20} />
             </SheetTrigger>
             <SheetContent className="text-white bg-black border-l-2 border-red-500 overflow-y-scroll">
               <SheetHeader className="select-none">
                 <SheetTitle className="text-white">Create Invoice</SheetTitle>
                 <SheetDescription className="text-gray-400 italic">
-                  Create a new Invoice for the client. To Send it, you'd have to
-                  click the 'send' icon when hovering on the desired Invoice.
+                  Create a new Invoice for the client lol
                 </SheetDescription>
               </SheetHeader>
 
               <InvoiceForm />
             </SheetContent>
           </Sheet>
+        </section>
+        {/* <Separator /> */}
+        <section className="flex justify-center items-center text-3xl w-full mb-5 font-semibold select-none">
+          <h3 className="">Invoices</h3>
         </section>
 
         {/* Description */}
@@ -90,19 +95,22 @@ function Invoicer() {
       {/* Header */}
       <section className="flex text-3xl items-center w-full mb-5 pl-2 font-semibold font-mono">
         {data![0].client_name}
-        
+
         <button
           className="absolute right-0 mr-2 hover:rotate-180 transition-all duration-200"
           id="refresh-btn"
           onClick={() => refetch()}
         >
-          <RefreshCcw className="hover:cursor-pointer bg-red-900 hover:scale-110 rounded-full text-black "  size={29 } />
+          <RefreshCcw
+            className="hover:cursor-pointer bg-red-900 hover:scale-110 rounded-full text-black "
+            size={29}
+          />
         </button>
 
         {/* Sheet window for form input */}
         <Sheet>
           <SheetTrigger className="absolute right-0 mr-12 rounded-full p-1 bg-red-900 hover:scale-110 hover:cursor-pointer hover:rotate-45 transition-all duration-200">
-          <Plus className="text-black hover:text-gray-800" size={20} />
+            <Plus className="text-black hover:text-gray-800" size={20} />
           </SheetTrigger>
           <SheetContent className="text-white bg-black border-l-2 border-red-500 overflow-y-scroll">
             <SheetHeader className="select-none">
@@ -171,7 +179,6 @@ function Invoicer() {
           </motion.section>
         ))}
       </section>
-     
     </div>
   );
 }
