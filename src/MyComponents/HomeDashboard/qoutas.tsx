@@ -168,6 +168,7 @@ const handleSaveQuota = async (quotaData : any) => {
         </CardDescription>
       </div>
       <div className="flex space-x-2">
+        {/* Swap these with status tabs */}
         <Button 
           onClick={previousWeek} 
           variant="outline" 
