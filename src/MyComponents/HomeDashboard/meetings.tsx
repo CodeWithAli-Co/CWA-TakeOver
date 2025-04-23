@@ -50,6 +50,15 @@ const Meetings = () => {
         address: "456 Community Center, Downtown",
         url: "https://meet.google.com/abc-defg-hij",
       },
+      
+    },
+    {
+      title: "Quantum Computing Event",
+      time: "9:00 - 10:00 AM",
+      date: "April, 19 2025",
+      attendees: 2,
+      type: "in-person",
+      location: "123 Innovation Center, Tech District",
     },
     // Add more meetings as needed
   ];
@@ -76,12 +85,12 @@ const Meetings = () => {
   return (
     <>
       {/* Upcoming Meetings */}
-      <Card className="bg-black/40 border-red-900/30 overflow-y-auto">
+      <Card className="bg-black/40 border-red-900/30 overflow-y-auto  sm:col-span-2 lg:col-span-2">
         <CardHeader>
           <CardTitle className="text-amber-50">Upcoming Meetings</CardTitle>
         </CardHeader>
         <CardContent>
-          <ScrollArea className="h-[200px]">
+          <ScrollArea className="h-[400px]">
             <div className="space-y-3">
               {meetingsData.map((meeting, i) => (
                 <motion.div
@@ -95,13 +104,13 @@ const Meetings = () => {
                     </h3>
                     <Badge
                       variant="outline"
-                      className="bg-red-900/20 text-red-400"
+                      className="bg-red-900/20 text-red-400 "
                     >
                       {meeting.time}
                     </Badge>
                   </div>
                   <div className="flex items-center justify-between mt-2">
-                    <p className="text-xs text-amber-50/70">{meeting.date}</p>
+                    <p className="text-xs text-amber-50/70 ">{meeting.date}</p>
                     <div className="flex items-center gap-1">
                       <Users className="h-3 w-3 text-amber-50/70" />
                       <span className="text-xs text-amber-50/70">

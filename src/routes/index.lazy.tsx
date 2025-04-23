@@ -21,7 +21,7 @@ import {
   Activity,
   MessageSquare,
   Users,
-  ChevronRight,
+  
   Terminal,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
@@ -66,7 +66,7 @@ const QuickActionCard = ({
       transition={{ type: "spring", stiffness: 400, damping: 10 }}
       className="flex items-center justify-between p-4 bg-black/60 border border-red-900/30 rounded-lg hover:border-red-800/50 group"
     >
-      <div className="flex items-center gap-3">
+      <div className="flex items-center ">
         <motion.div
           whileHover={{ scale: 1.1 }}
           className="p-2 rounded-lg bg-red-900/20"
@@ -84,7 +84,7 @@ const QuickActionCard = ({
         whileHover={{ opacity: 1, x: 0 }}
         className="flex items-center gap-2"
       >
-        <ChevronRight className="h-4 w-4 text-red-500" />
+        {/* <ChevronRight className="h-4 w-4 text-red-500" /> */}
       </motion.div>
     </motion.div>
   </Link>
@@ -324,40 +324,46 @@ const Index = () => {
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
 
-          {/* Quick Actions */}
-          <Card className="bg-black/40 border-red-900/30 lg:col-span-2">
-            <CardHeader>
-              <CardTitle className="text-amber-50">Quick Actions</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <motion.div className="grid grid-cols-2 gap-4">
-                <UserView userRole={[Role.CEO, Role.COO]}>
-                  <QuickActionCard
-                    title="Accounts"
-                    icon={Terminal}
-                    url="/details"
-                  />
-                </UserView>
-                <QuickActionCard
-                  title="Chat"
-                  icon={MessageSquare}
-                  url="/chat"
-                />
-                <UserView userRole={[Role.CEO, Role.COO]}>
-                  <QuickActionCard
-                    title="Members"
-                    icon={Users}
-                    url="/employee"
-                  />
-                </UserView>
-              </motion.div>
-            </CardContent>
-          </Card>
-
+         
           {/* Upcoming Meetings */}
           <UserView userRole={[Role.CEO, Role.COO]}>
             <Meetings />
           </UserView>
+
+ {/* Quick Actions */}
+ <Card className="bg-black/40 border-red-900/30 ">
+            <CardHeader>
+              <CardTitle className="text-amber-50">Quick Actions</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <motion.div className="">
+                <UserView userRole={[Role.CEO, Role.COO]}>
+                <div className="group flex flex-col ">
+                    <QuickActionCard icon={Terminal} url="/details" title="" />
+                    <span className="text-white text-sm m-1 opacity-0 group-hover:opacity-100 transition-opacity duration-200 ">
+                      Accounts
+                    </span>
+                 </div>
+
+                </UserView>
+                <div className="group flex flex-col">
+                  <QuickActionCard title="" icon={MessageSquare} url="/chat"/>
+                  <span className="text-white text-sm m-1 opacity-0 group-hover:opacity-100 transition-opacity duration-200">Chat</span>
+                </div>
+
+                <div className="group flex flex-col">
+                  <UserView userRole={[Role.CEO, Role.COO]}>
+                    <QuickActionCard
+                      title=""
+                      icon={Users}
+                      url="/employee"
+                    />
+                    <span className="text-sm  m-1 opacity-0 group-hover:opacity-100 transition-opacity duration-200  ">Employees</span>
+                  </UserView>
+                </div>
+              </motion.div>
+            </CardContent>
+          </Card>
 
           {/* Tasks */}
           <TasksComponent />
