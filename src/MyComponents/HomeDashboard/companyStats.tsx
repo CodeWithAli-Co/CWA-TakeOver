@@ -54,7 +54,7 @@ const CompanyStats = () => {
         <StatCard
           icon={CircleDollarSign}
           label="Revenue"
-          value="$886.69"
+          value="$887.69"
         />
         <StatCard icon={BarChart3} label="Subscription" value="$46" />
         <StatCard icon={Boxes} label="Active Bots" value="1" />
