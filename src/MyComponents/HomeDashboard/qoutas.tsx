@@ -201,7 +201,7 @@ return (
 };
 
 
-export const Quotas = () => { 
+export default function Quotas()  { 
 
   
   const [quotas, setQuotas] =  useState<any[]>([]);
@@ -338,6 +338,7 @@ const handleSaveQuota = async (quotaData : any) => {
     setDialogOpen(true);
   } ;
 
+
   // Filter quotas based on search query and selected status tab
   const filteredQuotas = quotas.filter(quota => {
     const matchesSearch = 
@@ -358,14 +359,15 @@ const handleSaveQuota = async (quotaData : any) => {
 
   return (
  <div className=" bg-black col-span-2">
-     
+      {/* Navigation Bar */}
+   
+
       <motion.div
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
-        className="p-6 space-y-6"
+   
       >
-        
-
+      
         {/* Main Quotas Card */}
         <Card className="bg-black/40 border-red-900/30">
           <CardHeader className="flex flex-row items-center justify-between">
