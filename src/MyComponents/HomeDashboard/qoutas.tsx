@@ -159,7 +159,7 @@ const handleSaveQuota = async (quotaData : any) => {
   const inProgressQuotas = quotas.filter(q => q.status  === "in-progress").length;
 
   return (
-    <Card className="bg-black/40 border-red-900/30">
+    <Card className="bg-black/40 border-red-900/30 col-span-2">
     <CardHeader className="flex flex-row items-center justify-between">
       <div>
         <CardTitle className="text-amber-50">Weekly Quotas</CardTitle>

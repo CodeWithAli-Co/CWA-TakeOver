@@ -17,13 +17,7 @@ import { Badge } from "@/components/ui/shadcnComponents/badge";
 import { Input } from "@/components/ui/shadcnComponents/input";
 
 import { ActiveUser, Employees, Todos } from "@/stores/query";
-import {
-  Activity,
-  MessageSquare,
-  Users,
-  
-  Terminal,
-} from "lucide-react";
+import { Activity, MessageSquare, Users, Terminal } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useEffect, useState } from "react";
 import supabase from "@/MyComponents/supabase";
@@ -232,7 +226,7 @@ const TasksComponent = () => {
   const totalTasks = todos?.length || 0;
 
   return (
-    <Card className="bg-black/40 border-red-900/30 lg:col-span-2 ">
+    <Card className="bg-black/40 border-red-900/30 ">
       <CardHeader className="flex flex-row items-center justify-between">
         <div>
           <CardTitle className="text-amber-50">Tasks</CardTitle>
@@ -323,53 +317,52 @@ const Index = () => {
         </UserView>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-
-         
           {/* Upcoming Meetings */}
           <UserView userRole={[Role.CEO, Role.COO]}>
             <Meetings />
           </UserView>
 
- {/* Quick Actions */}
- <Card className="bg-black/40 border-red-900/30 ">
+          {/* Quick Actions */}
+          <Card className="bg-black/40 border-red-900/30 ">
             <CardHeader>
               <CardTitle className="text-amber-50">Quick Actions</CardTitle>
             </CardHeader>
             <CardContent>
               <motion.div className="">
                 <UserView userRole={[Role.CEO, Role.COO]}>
-                <div className="group flex flex-col ">
+                  <div className="group flex flex-col ">
                     <QuickActionCard icon={Terminal} url="/details" title="" />
                     <span className="text-white text-sm m-1 opacity-0 group-hover:opacity-100 transition-opacity duration-200 ">
                       Accounts
                     </span>
-                 </div>
-
+                  </div>
                 </UserView>
                 <div className="group flex flex-col">
-                  <QuickActionCard title="" icon={MessageSquare} url="/chat"/>
-                  <span className="text-white text-sm m-1 opacity-0 group-hover:opacity-100 transition-opacity duration-200">Chat</span>
+                  <QuickActionCard title="" icon={MessageSquare} url="/chat" />
+                  <span className="text-white text-sm m-1 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+                    Chat
+                  </span>
                 </div>
 
                 <div className="group flex flex-col">
                   <UserView userRole={[Role.CEO, Role.COO]}>
-                    <QuickActionCard
-                      title=""
-                      icon={Users}
-                      url="/employee"
-                    />
-                    <span className="text-sm  m-1 opacity-0 group-hover:opacity-100 transition-opacity duration-200  ">Employees</span>
+                    <QuickActionCard title="" icon={Users} url="/employee" />
+                    <span className="text-sm  m-1 opacity-0 group-hover:opacity-100 transition-opacity duration-200  ">
+                      Employees
+                    </span>
                   </UserView>
                 </div>
               </motion.div>
             </CardContent>
           </Card>
 
+          {/* Weekly Quota */}
+          <Quotas />
+
           {/* Tasks */}
           <TasksComponent />
 
-          {/* Weekly Quota */}
-          <Quotas />
+         
 
           {/* storage graph */}
           <UserView userRole={[Role.CEO, Role.COO]}>
