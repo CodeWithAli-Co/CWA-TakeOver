@@ -25,40 +25,52 @@ const Meetings = () => {
   // Sample data with the new fields
   const meetingsData: MeetingType[] = [
     {
-      title: "Stream Processing Event",
-      time: "5:30 - 8:00 PM",
-      date: "April, 16 2025",
+      title: "Find a Co-Founder, Help or Join a Tech Startup",
+      time: "5:00 - 6:30pm",
+      date: "April, 24 2025",
       attendees: 2,
       type: "online",
-      location: "https://zoom.us/j/123456789",
+      location: "https://www.meetup.com/startup-oasis-global/events/307077352"
     },
     {
-      title: "Quantum Computing Event",
-      time: "9:00 - 10:00 AM",
-      date: "April, 19 2025",
+      title: "Online Learning Spanish and Spanish speakers.",
+      time: "1:30 - 3:30pm",
+      date: "April, 26 2025",
       attendees: 2,
+      type: "online",
+      location: "https://www.meetup.com/HOLA-Spanish-Conversation-Meetup/events/306509745"
+    },
+    {
+      title: "Sunday Night Networking",
+      time: "7:00 - 9:00pm",
+      date: "April, 27 2025",
+      attendees: 1,
       type: "in-person",
-      location: "123 Innovation Center, Tech District",
+      location: "Panera Bread 2002 El Camino Real · Santa Clara, CA"
+    },
+    {
+      title: "NeuroNerds General",
+      time: "6:00 - 7:30pm",
+      date: "April, 28 2025",
+      attendees: 2,
+      type: "online",
+      location: "https://www.meetup.com/neuronerds/events/306369041"
+    },
+    {
+      title: "Defense Against LLM and AGI Scheming with Guardrails and Architecture",
+      time: "6:45 - 8:45pm",
+      date: "April, 28 2025",
+      attendees: 2,
+      type: "hybrid",
+      location: "https://www.meetup.com/sf-bay-acm/events/306888467"
     },
     {
       title: "Social Hangout",
       time: "7:00 - 9:00 PM",
-      date: "April, 23 2025",
+      date: "May, 28 2025",
       attendees: 1,
-      type: "hybrid",
-      location: {
-        address: "456 Community Center, Downtown",
-        url: "https://meet.google.com/abc-defg-hij",
-      },
-      
-    },
-    {
-      title: "Quantum Computing Event",
-      time: "9:00 - 10:00 AM",
-      date: "April, 19 2025",
-      attendees: 2,
       type: "in-person",
-      location: "123 Innovation Center, Tech District",
+      location: "170 South Sunnyvale Avenue · Sunnyvale, CA"
     },
     // Add more meetings as needed
   ];
