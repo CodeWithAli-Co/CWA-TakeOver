@@ -201,7 +201,6 @@ return (
 };
 
 // Weekly Quotas in main component
-// Weekly Quotas in main component
 export const WeeklyQuotas = () => {
   const [quotas, setQuotas] =  useState<any[]>([]);
   const [dialogOpen, setDialogOpen] = useState(false);
