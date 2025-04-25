@@ -7,7 +7,9 @@ import {
 import { ScrollArea } from "@radix-ui/react-scroll-area";
 import { Badge } from "@/components/ui/shadcnComponents/badge";
 import { motion } from "framer-motion";
-import { Users, Video, MapPin, ExternalLink } from "lucide-react";
+import { Users, Video, MapPin, ExternalLink, ArrowRight } from "lucide-react";
+import { SchedImgStore } from "@/stores/store";
+import { Button } from "@/components/ui/button";
 
 // Define types for our meeting data
 type LocationType = string | { address: string; url: string };
@@ -22,16 +24,10 @@ interface MeetingType {
 }
 
 const Meetings = () => {
+  const { setIsShowing, isShowing } = SchedImgStore();
+
   // Sample data with the new fields
   const meetingsData: MeetingType[] = [
-    {
-      title: "Find a Co-Founder, Help or Join a Tech Startup",
-      time: "5:00 - 6:30pm",
-      date: "April, 24 2025",
-      attendees: 2,
-      type: "online",
-      location: "https://www.meetup.com/startup-oasis-global/events/307077352"
-    },
     {
       title: "Online Learning Spanish and Spanish speakers.",
       time: "1:30 - 3:30pm",
@@ -99,7 +95,13 @@ const Meetings = () => {
       {/* Upcoming Meetings */}
       <Card className="bg-black/40 border-red-900/30 overflow-y-auto  sm:col-span-2 lg:col-span-2">
         <CardHeader>
-          <CardTitle className="text-amber-50">Upcoming Meetings</CardTitle>
+          <CardTitle className="text-amber-50 flex justify-between items-center">
+            <span>Upcoming Meetings</span>
+            <Button size={"default"} className="bg-red-600 hover:bg-gradient-to-tl hover:from-red-600 hover:via-red-950 hover:to-red-800 w-max h-auto transition-all duration-200 rounded-full" onClick={() => setIsShowing(!isShowing)}>
+              View Schedule
+            </Button>
+          </CardTitle>
+          
         </CardHeader>
         <CardContent>
           <ScrollArea className="h-[400px]">

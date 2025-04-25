@@ -78,3 +78,14 @@ export const useSubMenuStore = create<SubMenuState>()((set) => ({
   setShowPromote: (showPromote: string) => set({ showPromote }),
   resetPromote: () => set({ showPromote: 'hidden' })
 }))
+
+
+// Display Schedule Pic. *This is prob getting removed after adding pop-up function/component
+interface SchedImgState {
+  isShowing: boolean,
+  setIsShowing: (isShowing: boolean) => void
+}
+export const SchedImgStore = create<SchedImgState>()((set) => ({
+  isShowing: false,
+  setIsShowing: (isShowing: boolean) => set({ isShowing })
+}))

@@ -27,6 +27,7 @@ import { AddTodo } from "@/MyComponents/Sidebar/handlingTasking/addTodo";
 import Quotas from "@/MyComponents/HomeDashboard/qoutas";
 import CompanyStats from "@/MyComponents/HomeDashboard/companyStats";
 import Meetings from "@/MyComponents/HomeDashboard/meetings";
+import { SchedImgStore } from "@/stores/store";
 
 // Enhanced Task Priority Badge with animation
 const TaskPriorityBadge = ({ priority }: { priority: any }) => {
@@ -293,6 +294,7 @@ const TasksComponent = () => {
 };
 
 const Index = () => {
+  const { isShowing } = SchedImgStore();
   return (
     <div className="min-h-screen bg-black overflow-y-auto">
       {/* Navigation Bar */}
@@ -314,6 +316,13 @@ const Index = () => {
         {/* Company Stats */}
         <UserView userRole={[Role.CEO, Role.COO]}>
           <CompanyStats />
+        </UserView>
+
+        <UserView userRole={[Role.CEO, Role.COO]}>
+          {/* Set a pop-up function/component to it */}
+          <img src="/schedule.png" alt="Schedule"
+            className={`${isShowing ? 'w-full h-auto' : 'h-0 w-[1000px]'} flex justify-self-center border-2 border-red-700/50 rounded-xl shadow-md shadow-red-600/40 hover:-translate-x-0.5 hover:-translate-y-1 active:translate-x-0.5 active:translate-y-1 active:shadow-none active:brightness-90 hover:brightness-110 transition-all duration-300`}
+            />
         </UserView>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
