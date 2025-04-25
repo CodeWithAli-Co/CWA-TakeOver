@@ -7,10 +7,9 @@ import {
 import { ScrollArea } from "@radix-ui/react-scroll-area";
 import { Badge } from "@/components/ui/shadcnComponents/badge";
 import { motion } from "framer-motion";
-import { Users, Video, MapPin, ExternalLink, ArrowRight } from "lucide-react";
+import { Users, Video, MapPin, ExternalLink, ArrowRight, Calendar } from "lucide-react";
 import { SchedImgStore } from "@/stores/store";
 import { Button } from "@/components/ui/button";
-
 // Define types for our meeting data
 type LocationType = string | { address: string; url: string };
 
@@ -97,9 +96,20 @@ const Meetings = () => {
         <CardHeader>
           <CardTitle className="text-amber-50 flex justify-between items-center">
             <span>Upcoming Meetings</span>
-            <Button size={"default"} className="bg-red-600 hover:bg-gradient-to-tl hover:from-red-600 hover:via-red-950 hover:to-red-800 w-max h-auto transition-all duration-200 rounded-full" onClick={() => setIsShowing(!isShowing)}>
+           
+           {/* addding motion to smoothe things out */}
+           <motion.div
+           whileHover={{scale: 1.02}}
+           whileTap={{scale: 0.98}}
+           transition={{ type: "spring", stiffness: 400, damping: 17}}
+           >
+            <Button size={"default"} className="relative bg-gradient-to-r from-red-700 via-red-800 to-red-950  hover:from-red-800 hover:to-red-950 hover:via-red-900 active:from-red-800 active:to-red-990 w-auto h-auto px-6 py-2.5 transform transition-all duration-300 ease-out shadow-sm hover:shadow-red-500/25 hover:shadow-sm border border-red-500/20 group overflow-hidden rounded-full" onClick={() => setIsShowing(!isShowing)}>
+              <Calendar className="h-4 ww-4"></Calendar>
               View Schedule
             </Button>
+
+           </motion.div>
+
           </CardTitle>
           
         </CardHeader>
