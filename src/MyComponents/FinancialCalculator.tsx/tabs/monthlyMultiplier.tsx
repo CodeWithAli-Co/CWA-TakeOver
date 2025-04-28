@@ -219,7 +219,7 @@ const SimpleProjector: React.FC = () => {
             </div>
             
             <div className="bg-green-950/10 border border-green-900 p-3">
-              <div className="text-xs text-green-400 mb-1">Total Revenue</div>
+              <div className="text-xs text-green-500 mb-1">Total Revenue</div>
               <div className="text-xl font-bold text-white font-mono">
                 ${items.filter(item => item.type === 'revenue').reduce((sum, item) => sum + item.amount, 0)}
               </div>
@@ -296,16 +296,16 @@ const SimpleProjector: React.FC = () => {
                     return (
                       <tr className="border-t-2 border-red-700 font-medium">
                         <td className="py-2 text-red-300">NET TOTAL</td>
-                        <td className={`py-2 ${net6M >= 0 ? 'text-green-300' : 'text-red-300'}`}>
+                        <td className={`py-2 ${net6M >= 0 ? 'text-green-600/80' : 'text-red-300'}`}>
                           ${net6M}
                         </td>
-                        <td className={`py-2 ${net1Y >= 0 ? 'text-green-300' : 'text-red-300'}`}>
+                        <td className={`py-2 ${net1Y >= 0 ? 'text-green-600/80' : 'text-red-300'}`}>
                           ${net1Y}
                         </td>
-                        <td className={`py-2 ${net3Y >= 0 ? 'text-green-300' : 'text-red-300'}`}>
+                        <td className={`py-2 ${net3Y >= 0 ? 'text-green-600/80' : 'text-red-300'}`}>
                           ${net3Y}
                         </td>
-                        <td className={`py-2 ${net5Y >= 0 ? 'text-green-300' : 'text-red-300'}`}>
+                        <td className={`py-2 ${net5Y >= 0 ? 'text-green-600/80' : 'text-red-300'}`}>
                           ${net5Y}
                         </td>
                       </tr>
@@ -320,7 +320,7 @@ const SimpleProjector: React.FC = () => {
           
           {/* Visualization */}
           <div>
-            <h4 className="text-red-400 font-medium mb-3">Visualization</h4>
+            <h4 className="text-red-400 font-medium mb-3 ">Visualization</h4>
             
             <div className="h-60">
               <ResponsiveContainer width="100%" height="100%">
@@ -332,12 +332,12 @@ const SimpleProjector: React.FC = () => {
                   <XAxis 
                     dataKey="month" 
                     stroke="#ff0a3f80" 
-                    tick={{ fill: '#ff0a3f', fontSize: 10 }}
+                    tick={{ fill: '#ffffff', fontSize: 10 }}
                     label={{ value: 'Months', position: 'insideBottom', offset: -5, fill: '#ff0a3f' }}
                   />
                   <YAxis 
                     stroke="#ff0a3f80" 
-                    tick={{ fill: '#ff0a3f', fontSize: 10 }}
+                    tick={{ fill: '#ffffff', fontSize: 10 }}
                     tickFormatter={(value) => `$${value}`}
                   />
                   <Tooltip 
@@ -356,6 +356,7 @@ const SimpleProjector: React.FC = () => {
                       dataKey={item.name} 
                       stroke={item.type === 'expense' ? '#ff0a3f' : '#00e676'} 
                       dot={true}
+                      
                     />
                   ))}
                 </LineChart>
