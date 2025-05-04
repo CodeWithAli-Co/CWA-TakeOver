@@ -28,36 +28,44 @@ const Meetings = () => {
   // Sample data with the new fields
   const meetingsData: MeetingType[] = [
     {
-      title: "Online Learning Spanish and Spanish speakers.",
-      time: "1:30 - 3:30pm",
-      date: "April, 26 2025",
+      title: "E-Commerce Website Meeting",
+      time: "1:00pm - 2:00pm",
+      date: "May, 6 2025",
       attendees: 2,
       type: "online",
-      location: "https://www.meetup.com/HOLA-Spanish-Conversation-Meetup/events/306509745"
+      location: "https://sfpl-org.zoom.us/w/87319780450?tk=qZI35JsmfogzcSFVN87MI0lWb6BjyfQnagBuQ9tU9bE.DQcAAAAUVKocYhZmSmJsYVhObFIwLWgxdHoyZTlEdktRAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
     },
     {
-      title: "Sunday Night Networking",
-      time: "7:00 - 9:00pm",
-      date: "April, 27 2025",
+      title: "Pre-Departure Meeting",
+      time: "11:00am - 12:30pm",
+      date: "May, 7 2025",
+      attendees: 2,
+      type: "online",
+      location: "https://www.google.com/url?q=https://teams.microsoft.com/l/meetup-join/19%253ameeting_MDBjYTkxMGItOWZjMy00MjMzLThkNDUtNzVkMDBjZDk1MDJi%2540thread.v2/0?context%3D%257b%2522Tid%2522%253a%2522ca6fbace-7cba-4d53-8681-a06284f7ff46%2522%252c%2522Oid%2522%253a%252288eed1c4-b14d-480c-a796-9ac379e3c0e5%2522%257d&sa=D&source=calendar&usd=2&usg=AOvVaw1sVb54sA-lS7jcujII63LA"
+    },
+    {
+      title: "Bay Area Real Estate Investing Mixer & Fireside Chat",
+      time: "2:30pm - 5:30pm",
+      date: "May, 9 2025",
       attendees: 1,
       type: "in-person",
-      location: "Panera Bread 2002 El Camino Real · Santa Clara, CA"
+      location: "Quadrus Conference Center & Catering - 2400 Sand Hill Road - Menlo Park, CA, US"
     },
     {
-      title: "NeuroNerds General",
-      time: "6:00 - 7:30pm",
-      date: "April, 28 2025",
+      title: "Meet your VCs, Meet your startup teams: entrepreneurs' networking coffee time",
+      time: "11:00am - 1:00pm",
+      date: "May, 13 2025",
+      attendees: 1,
+      type: "in-person",
+      location: "Starbucks - 325 Sharon Park Dr - Menlo Park, CA, US"
+    },
+    {
+      title: "Startup Oasis",
+      time: "5:00pm - 7:00pm",
+      date: "May, 22 2025",
       attendees: 2,
       type: "online",
-      location: "https://www.meetup.com/neuronerds/events/306369041"
-    },
-    {
-      title: "Defense Against LLM and AGI Scheming with Guardrails and Architecture",
-      time: "6:45 - 8:45pm",
-      date: "April, 28 2025",
-      attendees: 2,
-      type: "hybrid",
-      location: "https://www.meetup.com/sf-bay-acm/events/306888467"
+      location: "https://us06web.zoom.us/j/84877132456?pwd=H8ZfGHbr5aEeEy0C1RXTepx3DEMhsm.1"
     },
     {
       title: "Social Hangout",
@@ -67,6 +75,14 @@ const Meetings = () => {
       type: "in-person",
       location: "170 South Sunnyvale Avenue · Sunnyvale, CA"
     },
+    {
+      title: "SJSU Mandatory Orientation Session",
+      time: "8:00am - 5:00pm (?)",
+      date: "July, 8 2025",
+      attendees: 1,
+      type: "in-person",
+      location: "unknown -> SJSU?"
+    }
     // Add more meetings as needed
   ];
 
