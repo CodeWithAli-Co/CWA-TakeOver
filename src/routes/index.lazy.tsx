@@ -321,7 +321,7 @@ const Index = () => {
         <UserView userRole={[Role.CEO, Role.COO]}>
           {/* Set a pop-up function/component to it */}
           <img src="/schedule.png" alt="Schedule"
-            className={`${isShowing ? 'w-full h-auto' : 'h-0 w-[1000px]'} flex justify-self-center border-2 border-red-700/50 rounded-xl shadow-md shadow-red-600/40 hover:-translate-x-0.5 hover:-translate-y-1 active:translate-x-0.5 active:translate-y-1 active:shadow-none active:brightness-90 hover:brightness-110 transition-all duration-300`}
+            className={`${isShowing ? 'w-full h-auto' : 'h-0 w-[1000px]'} flex justify-self-center border-2 border-red-700/50 rounded-xl shadow-md shadow-red-600/40 hover:brightness-110 transition-all duration-300`}
             />
         </UserView>
 
