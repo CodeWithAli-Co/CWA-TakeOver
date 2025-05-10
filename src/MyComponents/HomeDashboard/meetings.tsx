@@ -11,17 +11,6 @@ import { Users, Video, MapPin, ExternalLink, Calendar } from "lucide-react";
 import { SchedImgStore } from "@/stores/store";
 import { Button } from "@/components/ui/button";
 import { MeetingsQuery } from "@/stores/query";
-// Define types for our meeting data
-type LocationType = string | { address: string; url: string };
-
-interface MeetingType {
-  title: string;
-  time: string;
-  date: string;
-  attendees: number;
-  type?: "online" | "in-person" | "hybrid";
-  location?: LocationType;
-}
 
 const Meetings = () => {
   const { setIsShowing, isShowing } = SchedImgStore();
@@ -29,67 +18,6 @@ const Meetings = () => {
   if (error) {
     console.log('Error Fetching Meetings', error.message)
   };
-
-  // Sample data with the new fields
-  const meetingsData: MeetingType[] = [
-    {
-      title: "E-Commerce Website Meeting",
-      time: "1:00pm - 2:00pm",
-      date: "May, 6 2025",
-      attendees: 2,
-      type: "online",
-      location: "https://sfpl-org.zoom.us/w/87319780450?tk=qZI35JsmfogzcSFVN87MI0lWb6BjyfQnagBuQ9tU9bE.DQcAAAAUVKocYhZmSmJsYVhObFIwLWgxdHoyZTlEdktRAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
-    },
-    {
-      title: "Pre-Departure Meeting",
-      time: "11:00am - 12:30pm",
-      date: "May, 7 2025",
-      attendees: 2,
-      type: "online",
-      location: "https://www.google.com/url?q=https://teams.microsoft.com/l/meetup-join/19%253ameeting_MDBjYTkxMGItOWZjMy00MjMzLThkNDUtNzVkMDBjZDk1MDJi%2540thread.v2/0?context%3D%257b%2522Tid%2522%253a%2522ca6fbace-7cba-4d53-8681-a06284f7ff46%2522%252c%2522Oid%2522%253a%252288eed1c4-b14d-480c-a796-9ac379e3c0e5%2522%257d&sa=D&source=calendar&usd=2&usg=AOvVaw1sVb54sA-lS7jcujII63LA"
-    },
-    {
-      title: "Bay Area Real Estate Investing Mixer & Fireside Chat",
-      time: "2:30pm - 5:30pm",
-      date: "May, 9 2025",
-      attendees: 1,
-      type: "in-person",
-      location: "Quadrus Conference Center & Catering - 2400 Sand Hill Road - Menlo Park, CA, US"
-    },
-    {
-      title: "Meet your VCs, Meet your startup teams: entrepreneurs' networking coffee time",
-      time: "11:00am - 1:00pm",
-      date: "May, 13 2025",
-      attendees: 1,
-      type: "in-person",
-      location: "Starbucks - 325 Sharon Park Dr - Menlo Park, CA, US"
-    },
-    {
-      title: "Startup Oasis",
-      time: "5:00pm - 7:00pm",
-      date: "May, 22 2025",
-      attendees: 2,
-      type: "online",
-      location: "https://us06web.zoom.us/j/84877132456?pwd=H8ZfGHbr5aEeEy0C1RXTepx3DEMhsm.1"
-    },
-    {
-      title: "Social Hangout",
-      time: "7:00 - 9:00 PM",
-      date: "May, 28 2025",
-      attendees: 1,
-      type: "in-person",
-      location: "170 South Sunnyvale Avenue · Sunnyvale, CA"
-    },
-    {
-      title: "SJSU Mandatory Orientation Session",
-      time: "8:00am - 5:00pm (?)",
-      date: "July, 8 2025",
-      attendees: 1,
-      type: "in-person",
-      location: "unknown -> SJSU?"
-    }
-    // Add more meetings as needed
-  ];
 
   // Helper function to get badge color based on meeting type
   const getBadgeClass = (type?: string) => {
@@ -205,14 +133,14 @@ const Meetings = () => {
                           {meeting.location}
                         </div>
                       )}
-                      {meeting.meeting_type === "hybrid" && isHybridLocation(meeting.location) && (
+                      {meeting.meeting_type === "hybrid" && isHybridLocation(meeting.hybrid_location) && (
                         <div className="space-y-1">
                           <div className="flex items-center">
                             <MapPin className="h-3 w-3 mr-1" />
-                            {meeting.location.address}
+                            {meeting.hybrid_location.address}
                           </div>
                           <a 
-                            href={meeting.location.url} 
+                            href={meeting.hybrid_location.url} 
                             target="_blank" 
                             rel="noopener noreferrer"
                             className="flex items-center hover:text-amber-50 transition-colors"
