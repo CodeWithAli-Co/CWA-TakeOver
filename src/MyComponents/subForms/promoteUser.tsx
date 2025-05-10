@@ -11,6 +11,19 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/shadcnComponents/select";
+import { useSuspenseQuery } from "@tanstack/react-query";
+
+// Fetch CWA Employee Name
+const fetchEmployeeName = async (id: number) => {
+  const { data } = await supabase.from("app_users").select("*").eq('id', id).single();
+  return data;
+};
+const EmployeeName = (id: number) => {
+  return useSuspenseQuery({
+    queryKey: ["employee-name"],
+    queryFn: () => fetchEmployeeName(id),
+  });
+};
 
 interface PromoteInterface {
   userID: number;
@@ -18,6 +31,10 @@ interface PromoteInterface {
 
 export const PromoteUser = (props: PromoteInterface) => {
   const { resetPromote } = useSubMenuStore();
+  const { data, error } = EmployeeName(props.userID);
+  if (error) {
+    console.log('Error fetching selected Employee name. For more info:', error.message)
+  }
 
   const handleReset = () => {
     form.reset();
@@ -44,6 +61,8 @@ export const PromoteUser = (props: PromoteInterface) => {
       } else {
         await message(`Successfully Promoted User to ${value.Role}!`, {
           title: "User Promoted!",
+          kind: "info",
+          okLabel: "Close"
         });
       }
 
@@ -54,8 +73,15 @@ export const PromoteUser = (props: PromoteInterface) => {
 
   return (
     <>
-      <div>
-        <h3>Promote User</h3>
+      <div className="mb-2">
+        <h3>Promote {data?.username}
+          <button type="button" onClick={handleReset}
+          className="bg-red-800/50 rounded-xl text-[14px] p-1 px-2 hover:bg-red-800/30 float-right"
+        >
+          Cancel
+        </button>
+        </h3>
+        
         <form
           onSubmit={(e) => {
             e.preventDefault();
@@ -106,15 +132,14 @@ export const PromoteUser = (props: PromoteInterface) => {
           <form.Subscribe
             selector={(state) => [state.canSubmit]}
             children={([canSubmit]) => (
-              <button type="submit" disabled={!canSubmit}>
+              <button type="submit" disabled={!canSubmit}
+                className="bg-red-800/50 rounded-xl p-1 px-2 hover:bg-red-800/30"
+              >
                 Promote/Demote
               </button>
             )}
           />
         </form>
-        <button type="button" onClick={handleReset}>
-          Cancel
-        </button>
       </div>
     </>
   );

@@ -7,9 +7,10 @@ import {
 import { ScrollArea } from "@radix-ui/react-scroll-area";
 import { Badge } from "@/components/ui/shadcnComponents/badge";
 import { motion } from "framer-motion";
-import { Users, Video, MapPin, ExternalLink, ArrowRight, Calendar } from "lucide-react";
+import { Users, Video, MapPin, ExternalLink, Calendar } from "lucide-react";
 import { SchedImgStore } from "@/stores/store";
 import { Button } from "@/components/ui/button";
+import { MeetingsQuery } from "@/stores/query";
 // Define types for our meeting data
 type LocationType = string | { address: string; url: string };
 
@@ -24,6 +25,10 @@ interface MeetingType {
 
 const Meetings = () => {
   const { setIsShowing, isShowing } = SchedImgStore();
+  const { data: meetings, error } = MeetingsQuery();
+  if (error) {
+    console.log('Error Fetching Meetings', error.message)
+  };
 
   // Sample data with the new fields
   const meetingsData: MeetingType[] = [
@@ -132,7 +137,7 @@ const Meetings = () => {
         <CardContent>
           <ScrollArea className="h-[400px]">
             <div className="space-y-3">
-              {meetingsData.map((meeting, i) => (
+              {meetings.map((meeting, i) => (
                 <motion.div
                   whileHover={{ scale: 1.02 }}
                   key={i}
@@ -140,7 +145,7 @@ const Meetings = () => {
                 >
                   <div className="flex items-center justify-between">
                     <h3 className="text-sm font-medium text-amber-50">
-                      {meeting.title}
+                      {meeting.meeting_title}
                     </h3>
                     <Badge
                       variant="outline"
@@ -160,30 +165,30 @@ const Meetings = () => {
                   </div>
                   
                   {/* Meeting Type Badge - Only show if type exists */}
-                  {meeting.type && (
+                  {meeting.meeting_type && (
                     <div className="mt-2 flex items-center gap-2">
-                      <Badge className={getBadgeClass(meeting.type)}>
-                        {meeting.type === "online" && (
+                      <Badge className={getBadgeClass(meeting.meeting_type)}>
+                        {meeting.meeting_type === "online" && (
                           <Video className="h-3 w-3 mr-1" />
                         )}
-                        {meeting.type === "in-person" && (
+                        {meeting.meeting_type === "in-person" && (
                           <MapPin className="h-3 w-3 mr-1" />
                         )}
-                        {meeting.type === "hybrid" && (
+                        {meeting.meeting_type === "hybrid" && (
                           <div className="flex items-center">
                             <Video className="h-3 w-3 mr-1" />
                             <MapPin className="h-3 w-3 mr-1" />
                           </div>
                         )}
-                        {meeting.type.charAt(0).toUpperCase() + meeting.type.slice(1)}
+                        {meeting.meeting_type.charAt(0).toUpperCase() + meeting.meeting_type.slice(1)}
                       </Badge>
                     </div>
                   )}
                   
                   {/* Location Information - Only show if location exists */}
-                  {meeting.location && meeting.type && (
+                  {meeting.location && meeting.meeting_type && (
                     <div className="mt-2 text-xs text-amber-50/70">
-                      {meeting.type === "online" && typeof meeting.location === 'string' && (
+                      {meeting.meeting_type === "online" && typeof meeting.location === 'string' && (
                         <a 
                           href={meeting.location} 
                           target="_blank" 
@@ -194,13 +199,13 @@ const Meetings = () => {
                           Join Meeting
                         </a>
                       )}
-                      {meeting.type === "in-person" && typeof meeting.location === 'string' && (
+                      {meeting.meeting_type === "in-person" && typeof meeting.location === 'string' && (
                         <div className="flex items-center">
                           <MapPin className="h-3 w-3 mr-1" />
                           {meeting.location}
                         </div>
                       )}
-                      {meeting.type === "hybrid" && isHybridLocation(meeting.location) && (
+                      {meeting.meeting_type === "hybrid" && isHybridLocation(meeting.location) && (
                         <div className="space-y-1">
                           <div className="flex items-center">
                             <MapPin className="h-3 w-3 mr-1" />

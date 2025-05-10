@@ -26,6 +26,7 @@ import { useEffect, useRef } from "react";
 import { EditEmployee } from "@/MyComponents/subForms/editEmploy";
 import { PromoteUser } from "@/MyComponents/subForms/promoteUser";
 import { message } from "@tauri-apps/plugin-dialog";
+import UserView, { Role } from "@/MyComponents/Reusables/userView";
 
 function Employee() {
   const { setDialog, dialog } = useAppStore();
@@ -162,28 +163,32 @@ function Employee() {
                             <TableCell>
                               <Badge
                                 variant={
-                                  employee.role === "Admin"
+                                  employee.role === "CEO"
                                     ? "default"
                                     : "secondary"
                                 }
                                 className={
-                                  employee.role === "Admin"
-                                    ? "bg-red-900 text-amber-50"
-                                    : "bg-gray-800 text-amber-50/70"
+                                  employee.role === "CEO"
+                                    ? "bg-red-900 text-amber-50 rounded-xl"
+                                    : "bg-gray-800 text-amber-50/70 rounded-xl"
                                 }
                               >
                                 {employee.role}
                               </Badge>
                             </TableCell>
                             <TableCell>
-                              <Button
-                                onClick={() => {
-                                  setEmpID(employee.id);
-                                  setShowPromote("show");
-                                }}
-                              >
-                                Promote/Demote
-                              </Button>
+                              <UserView userRole={[ Role.COO, Role.CEO ]}>
+                                <Button
+                                  onClick={() => {
+                                    setEmpID(employee.id);
+                                    setShowPromote("show");
+                                  }}
+                                  variant={"outline"}
+                                  className="bg-red-900/50 rounded-xl border-1 border-red-900 hover:bg-red-600/50 hover:text-white"
+                                >
+                                  Promote/Demote
+                                </Button>
+                              </UserView>
                             </TableCell>
                             <TableCell className="text-right space-x-2">
                               {/* Enable again when edit form is fixed */}

@@ -185,4 +185,28 @@ export const Todos = (user: string) => {
   })
 }
 
-// Add Weekly Quota Query
+
+// Add Meetings Query
+interface MeetingInterface {
+  meeting_title: string;
+  time?: string;
+  date: string;
+  attendees: number;
+  meeting_type?: "online" | "in-person" | "hybrid";
+  location?: string;
+  hybrid_location?: { address: string, url: string };
+}
+const fetchMeetings = async () => {
+  const { data, error } = await supabase.from('cwa_meetings').select('*')
+  if (error) {
+    console.log('Error fetching Meetings from DB', error.message)
+  };
+
+  return data as MeetingInterface[]
+};
+export const MeetingsQuery = () => {
+  return useSuspenseQuery({
+    queryKey: ["meetings"],
+    queryFn: fetchMeetings
+  });
+};

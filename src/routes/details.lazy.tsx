@@ -159,7 +159,7 @@ function Details() {
                 <div className="space-y-4">
                   {cred.acc_username !== "" && (
                     <CardDescription className="text-sm text-zinc-400">
-                      Username: {cred.acc_username}
+                      Username: <span className="select-text">{cred.acc_username}</span>
                     </CardDescription>
                   )}
                   <div
@@ -170,11 +170,11 @@ function Details() {
                     }`}
                   >
                     <CardDescription className="text-sm text-zinc-400">
-                      Email: {cred.acc_email}
+                      Email: <span className="select-text">{cred.acc_email}</span>
                     </CardDescription>
                     {showDecPass !== "" && (
                       <CardDescription className="text-sm text-zinc-400">
-                        Password: {showDecPass || cred.acc_enc_password}
+                        Password: <span className="select-text">{showDecPass || cred.acc_enc_password}</span>
                       </CardDescription>
                     )}
                     {cred.acc_addinfo && (
