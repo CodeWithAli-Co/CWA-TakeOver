@@ -7,7 +7,7 @@ import {
 import { ScrollArea } from "@radix-ui/react-scroll-area";
 import { Badge } from "@/components/ui/shadcnComponents/badge";
 import { motion } from "framer-motion";
-import { Users, Video, MapPin, ExternalLink, Calendar } from "lucide-react";
+import { Users, Video, MapPin, ExternalLink, Calendar, Plus } from "lucide-react";
 import { SchedImgStore } from "@/stores/store";
 import { Button } from "@/components/ui/button";
 import { MeetingsQuery } from "@/stores/query";
@@ -46,19 +46,43 @@ const Meetings = () => {
           <CardTitle className="text-amber-50 flex justify-between items-center">
             <span>Upcoming Meetings</span>
            
+           <div className="flex space-x-2">
            {/* addding motion to smoothe things out */}
-           <motion.div
-           whileHover={{scale: 1.02}}
-           whileTap={{scale: 0.98}}
-           transition={{ type: "spring", stiffness: 400, damping: 17}}
-           >
-            <Button size={"default"} className="relative bg-gradient-to-r from-red-700 via-red-800 to-red-950  hover:from-red-800 hover:to-red-950 hover:via-red-900 active:from-red-800 active:to-red-990 w-auto h-auto px-6 py-2.5 transform transition-all duration-300 ease-out shadow-sm hover:shadow-red-500/25 hover:shadow-sm border border-red-500/20 group overflow-hidden rounded-full" onClick={() => setIsShowing(!isShowing)}>
-              <Calendar className="h-4 ww-4"></Calendar>
-              View Schedule
+          
+          {/* Meeting Button */}
+          <motion.div
+            whileHover={{ scale: 1.02}}
+            whileTap={{ scale: 0.98 }}
+            transition={{ type : "spring", stiffness: 400, damping: 17 }}
+          >
+            <Button
+              size={"default"}
+              className="relative bg-gradient-to-r from-green-700 via-green-800 to-green-950 hover:from-green-950 hover:via-green-900 active:from-green-800  active:to-green-990 w-auto h-auto px-4 py-2 transform transition-all ease-out border border-green-900 group rounded-full  duration-300"
+              // onClick={handleOpenAddForm}
+            >
+              <Plus className="h-4 w-4 mr-1"/>
+              Add Meeting
             </Button>
 
-           </motion.div>
 
+          </motion.div>
+          
+          
+          
+          
+          {/* Schedule Button */}
+            <motion.div
+            whileHover={{scale: 1.02}}
+            whileTap={{scale: 0.98}}
+            transition={{ type: "spring", stiffness: 400, damping: 17}}
+            >
+              <Button size={"default"} className="relative bg-gradient-to-r from-red-700 via-red-800 to-red-950  hover:from-red-800 hover:to-red-950 hover:via-red-900 active:from-red-800 active:to-red-990 w-auto h-auto px-6 py-2.5 transform transition-all duration-300 ease-out shadow-sm hover:shadow-red-500/25 hover:shadow-sm border border-red-500/20 group overflow-hidden rounded-full" onClick={() => setIsShowing(!isShowing)}>
+                <Calendar className="h-4 ww-4"></Calendar>
+                View Schedule
+              </Button>
+
+            </motion.div>
+        </div>
           </CardTitle>
           
         </CardHeader>

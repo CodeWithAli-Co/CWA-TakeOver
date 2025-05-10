@@ -119,7 +119,7 @@ function Details() {
     .subscribe();
 
   return (
-    <div className="p-6">
+    <div className="p-6 select-text">
       <div className="flex justify-between items-center mb-8">
         <h2 className="text-3xl font-bold">Accounts</h2>
         <Button
