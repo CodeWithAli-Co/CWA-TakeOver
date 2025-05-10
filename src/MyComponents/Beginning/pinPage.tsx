@@ -32,6 +32,7 @@ export default function PinPage() {
       pin: "",
     },
     onSubmit: async ({ value }) => {
+      // Maybe need to store app pin in ENV. But for now i'll leave it here
       if (value.pin === "8821") {
         document.startViewTransition(() => {
           setPinCheck("true");

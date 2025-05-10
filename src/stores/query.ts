@@ -184,3 +184,5 @@ export const Todos = (user: string) => {
     queryFn: () => fetchTodos(user)
   })
 }
+
+// Add Weekly Quota Query

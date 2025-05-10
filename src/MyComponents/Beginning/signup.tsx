@@ -3,6 +3,7 @@ import { useForm } from "@tanstack/react-form";
 import { useState } from "react";
 import { useAppStore } from "@/stores/store";
 import supabase from "../supabase";
+import { message } from "@tauri-apps/plugin-dialog";
 
 export const SignUpPage = () => {
   const { setIsLoggedIn } = useAppStore();
@@ -40,7 +41,7 @@ export const SignUpPage = () => {
         password: value.password,
       });
 
-      if (error) return console.log(error.message);
+      if (error) return await message(error.message, { title: 'Error Signing Up', kind: "error" });
 
 
       if (value.position === "Employee") {

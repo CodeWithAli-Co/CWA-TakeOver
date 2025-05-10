@@ -22,7 +22,7 @@ const Middle = () => {
   }
   Write();
 
-  async function Temp() {
+  async function ReadInvJson() {
     const file = await open("invoiceStats.json", {
       read: true,
       baseDir: BaseDirectory.AppLocalData,
@@ -37,8 +37,8 @@ const Middle = () => {
     await file.close();
     return newJson;
   }
-  // Temp();
-  Temp().then((res) => {
+  // ReadInvJson();
+  ReadInvJson().then((res) => {
     myInv = res;
     console.log("Read (res) INV in PDF:", myInv);
     navigate({ to: "/invoicePreview" });

@@ -154,7 +154,8 @@ export const Route = createRootRoute({
     useEffect(() => {
       async function RunUpdater() {
         const update = await check();
-        if (update) {
+        // Run when update has an actual version and has 'rid' value
+        if (update && update.rid !== null && update.version !== null) {
           sendNotification({
             title: 'New Update Available!',
             body: `Found update v${update.version}`

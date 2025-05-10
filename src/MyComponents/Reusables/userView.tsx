@@ -11,8 +11,10 @@ export const enum Role {
   CEO = "CEO"
 }
 
+type Roles = "Intern" | "Member" | "Marketing Specialist" | "Admin" | "Project Manager" | "COO" | "CEO"
+
 type UserViewProps = {
-  userRole: string | string[];
+  userRole: Roles | Roles[];
   children: React.ReactNode;
 };
 
