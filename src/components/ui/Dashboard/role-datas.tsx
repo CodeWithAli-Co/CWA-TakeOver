@@ -300,31 +300,47 @@ export const projectManagerData = {
       url: "/mod_logs",
       icon: SquareTerminal,
       isActive: true,
-      // items: [
-      //   // {
-      //   //   title: "Email Broadcast",
-      //   //   url: "/broadcast",
-      //   // },
-      //   {
-      //     title: "Account Management",
-      //     url: "/details",
-      //   },
-      //   {
-      //     title: "Users",
-      //     url: "/employee",
-      //   },
-      //   {
-      //     title: "Mod logs",
-      //     url: "/mod_logs",
-      //   },
+      items: [
+        // {
+        //   title: "Email Broadcast",
+        //   url: "/broadcast",
+        // },
+        {
+          title: "Account Management",
+          url: "/details",
+        },
+        // {
+        //   title: "Users",
+        //   url: "/employee",
+        // },
+        {
+          title: "Mod logs",
+          url: "/mod_logs",
+        },
     
-      // ],
+      ],
     },
     // {
     //   title: "Bot Management",
     //   url: "/bot",
     //   icon: Bot,
     // },
+      {
+      title: "Invoicer",
+      url: "/invoicer",
+      icon: File,
+      isActive: true,
+      items: [
+        {
+          title: "Client",
+          url: "/invoiceClients"
+        },
+        {
+          title: "Preview",
+          url: "/invoicePreview"
+        }
+      ]
+    },
 
     {
       title: "Chat",
