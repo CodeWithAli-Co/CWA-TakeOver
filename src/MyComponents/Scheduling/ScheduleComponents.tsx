@@ -4,12 +4,14 @@ import { generateScheduleData, employees } from './ScheduleData';
 // Types
 export interface EventType {
   id: string;
-  type: 'shift' | 'training' | 'break' | 'off';
+  type: 'shift' | 'training' | 'break' | 'off' | 'meeting';
   title: string;
   timeRange: string;
   location?: string | null;
   employeeName?: string;
   employeeId?: number;
+  isRequested?: boolean;
+  requestReason?: string;
 }
 
 export interface DayData {
@@ -28,14 +30,7 @@ export interface StatsType {
   totalShifts: number;
   upcomingBreaks: number;
 }
-export type DayDataType = {
-  date: string;
-  month: number;
-  dayName: string;
-  shortName: string;
-  isToday: boolean;
-  events: EventType[];
-};
+
 export interface WeekRangeType {
   start: {
     date: number;
@@ -54,7 +49,6 @@ export interface ScheduleDataType {
   weekOffset: number;
 }
 
-
 export interface EmployeeType {
   id: number;
   name: string;
@@ -62,14 +56,18 @@ export interface EmployeeType {
   avatar: string;
 }
 
+// ViewType for current view (day, week, month)
+export type ViewType = 'day' | 'week' | 'month';
+export type SidebarViewType = 'schedule' | 'team';
+
 // Context type
 interface ScheduleContextType {
-  currentView: 'day' | 'week' | 'month';
-  setCurrentView: React.Dispatch<React.SetStateAction<'day' | 'week' | 'month'>>;
+  currentView: ViewType;
+  setCurrentView: React.Dispatch<React.SetStateAction<ViewType>>;
   selectedDay: number | null;
   setSelectedDay: React.Dispatch<React.SetStateAction<number | null>>;
-  sidebarView: 'schedule' | 'team';
-  setSidebarView: React.Dispatch<React.SetStateAction<'schedule' | 'team'>>;
+  sidebarView: SidebarViewType;
+  setSidebarView: React.Dispatch<React.SetStateAction<SidebarViewType>>;
   isSidebarOpen: boolean;
   setIsSidebarOpen: React.Dispatch<React.SetStateAction<boolean>>;
   scheduleData: ScheduleDataType | null;
@@ -111,18 +109,37 @@ export const useSchedule = (): ScheduleContextType => {
 
 // Schedule Context Provider
 export const ScheduleProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [currentView, setCurrentView] = useState<'day' | 'week' | 'month'>('week');
+  const [currentView, setCurrentView] = useState<ViewType>('week');
   const [selectedDay, setSelectedDay] = useState<number | null>(null);
-  const [sidebarView, setSidebarView] = useState<'schedule' | 'team'>('schedule');
-  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+  const [sidebarView, setSidebarView] = useState<SidebarViewType>('schedule');
+  
+  // Set default sidebar open state based on screen size
+  const [isSidebarOpen, setIsSidebarOpen] = useState<boolean>(
+    typeof window !== 'undefined' ? window.innerWidth >= 1024 : true
+  );
+  
   const [scheduleData, setScheduleData] = useState<ScheduleDataType | null>(null);
-  const [weekOffset, setWeekOffset] = useState(0);
-  const [isLoading, setIsLoading] = useState(true);
-  const [isError, setIsError] = useState(false);
-  const [isAdminMode, setIsAdminMode] = useState(false);
+  const [weekOffset, setWeekOffset] = useState<number>(0);
+  const [isLoading, setIsLoading] = useState<boolean>(true);
+  const [isError, setIsError] = useState<boolean>(false);
+  const [isAdminMode, setIsAdminMode] = useState<boolean>(false);
   const [selectedEmployees, setSelectedEmployees] = useState<number[]>([]);
-  const [showAddShiftModal, setShowAddShiftModal] = useState(false);
+  const [showAddShiftModal, setShowAddShiftModal] = useState<boolean>(false);
   const [isPending, startTransition] = useTransition();
+  
+  // Handle responsive sidebar
+  useEffect(() => {
+    const handleResize = () => {
+      if (window.innerWidth >= 1024) {
+        setIsSidebarOpen(true);
+      } else if (window.innerWidth < 768 && isSidebarOpen) {
+        setIsSidebarOpen(false);
+      }
+    };
+
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, [isSidebarOpen]);
   
   // Fetch data when week changes
   useEffect(() => {
@@ -160,7 +177,7 @@ export const ScheduleProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     };
     
     fetchData();
-  }, [weekOffset, selectedDay]);
+  }, [weekOffset]); // Remove selectedDay from dependency array to avoid potential loops
   
   // Navigation functions
   const goToPreviousWeek = () => setWeekOffset(prev => prev - 1);

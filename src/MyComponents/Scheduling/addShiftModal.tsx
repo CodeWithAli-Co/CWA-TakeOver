@@ -1,9 +1,42 @@
 import React, { useState, useEffect } from "react";
-import { X, CheckSquare, Square, Edit2, Trash2, Info } from "lucide-react";
+import { 
+  X, 
+  CheckSquare, 
+  Square, 
+  Edit2, 
+  Trash2, 
+  Info, 
+  Check, 
+  ChevronDown,
+  Clock,
+  Calendar,
+  Briefcase,
+  Coffee,
+  Home,
+  Users
+} from "lucide-react";
 import { useSchedule } from "./ScheduleComponents";
 import { generateScheduleData, employees } from "./ScheduleData";
 import { EditingEvent } from "./AdminMode";
 
+// Import shadcn components
+import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
+
+import { Textarea } from "@/components/ui/textarea";
+
+
+import { Checkbox } from "@/components/ui/shadcnComponents/checkbox";
+import { Label } from "@/components/ui/shadcnComponents/label";
+import { Input } from "@/components/ui/shadcnComponents/input";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuGroup, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/shadcnComponents/dropdown-menu";
 
 export const AddShiftModal: React.FC = () => {
   const {
@@ -28,6 +61,7 @@ export const AddShiftModal: React.FC = () => {
   const [isRequested, setIsRequested] = useState<boolean>(false);
   const [requestReason, setRequestReason] = useState<string>("");
   const [showRequestFields, setShowRequestFields] = useState<boolean>(false);
+  const [isOpen, setIsOpen] = useState<boolean>(true);
 
   // Check for editing event from hidden input (passed from AdminModeComponent)
   useEffect(() => {
@@ -62,6 +96,11 @@ export const AddShiftModal: React.FC = () => {
       }
     }
   }, [setSelectedEmployees]);
+
+  const handleClose = () => {
+    setIsOpen(false);
+    setTimeout(() => setShowAddShiftModal(false), 300); // Allow animation to complete
+  };
 
   const toggleEmployeeSelection = (employeeId: number) => {
     if (isEditMode) {
@@ -103,6 +142,24 @@ export const AddShiftModal: React.FC = () => {
     "Saturday",
   ];
 
+  // Get shift type icon and description
+  const getShiftTypeInfo = (type: string) => {
+    switch (type) {
+      case 'shift':
+        return { icon: <Briefcase size={16} />, label: 'Regular Shift', color: 'text-red-400' };
+      case 'training':
+        return { icon: <Calendar size={16} />, label: 'Training', color: 'text-emerald-400' };
+      case 'break':
+        return { icon: <Coffee size={16} />, label: 'Break', color: 'text-blue-400' };
+      case 'off':
+        return { icon: <Home size={16} />, label: 'Day Off', color: 'text-gray-400' };
+      case 'meeting':
+        return { icon: <Users size={16} />, label: 'Meeting', color: 'text-purple-400' };
+      default:
+        return { icon: <Briefcase size={16} />, label: 'Shift', color: 'text-red-400' };
+    }
+  };
+
   const handleAddOrUpdateShift = () => {
     // Generate a base schedule
     const data = generateScheduleData(weekOffset);
@@ -122,7 +179,7 @@ export const AddShiftModal: React.FC = () => {
             timeRange: shiftType === "off" ? "All Day" : `${startTime} - ${endTime}`,
             employeeId: selectedEmployees[0],
             employeeName: employees.find(emp => emp.id === selectedEmployees[0])?.name || "Unknown",
-            isRequested: isRequested,
+            isRequested: isRequested || showRequestFields,
             requestReason: requestReason
           };
         }
@@ -146,7 +203,7 @@ export const AddShiftModal: React.FC = () => {
             timeRange: shiftType === "off" ? "All Day" : `${startTime} - ${endTime}`,
             employeeName: employee.name,
             employeeId: employee.id,
-            isRequested: isRequested,
+            isRequested: isRequested || showRequestFields,
             requestReason: requestReason
           };
           
@@ -158,9 +215,7 @@ export const AddShiftModal: React.FC = () => {
     
     // Update context with new data
     setScheduleData(data);
-    
-    // Close modal
-    setShowAddShiftModal(false);
+    handleClose();
   };
 
   const getShiftTitle = (type: string, time: string): string => {
@@ -192,33 +247,31 @@ export const AddShiftModal: React.FC = () => {
     
     // Update context with new data
     setScheduleData(data);
-    
-    // Close modal
-    setShowAddShiftModal(false);
+    handleClose();
   };
 
+  // Check if the form is valid
+  const isFormValid = selectedEmployees.length > 0 && selectedDays.length > 0 && 
+    (shiftType !== "off" ? startTime && endTime : true);
+
+  // Get current shift type info
+  const shiftTypeInfo = getShiftTypeInfo(shiftType);
+  
   return (
-    <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50">
-      <div className="bg-black border border-red-900/40 rounded-lg w-full max-w-2xl max-h-[90vh] overflow-auto p-6 transform transition-all animate-fadeIn">
-        <div className="flex justify-between items-center mb-6">
-          <h2 className="text-xl font-bold text-red-400 flex items-center">
+    <Dialog open={isOpen} onOpenChange={(open) => !open && handleClose()}>
+      <DialogContent className="bg-black border border-red-900/40 rounded-lg w-full max-w-2xl max-h-[90vh] overflow-auto p-4 sm:p-6">
+        <DialogHeader>
+          <DialogTitle className="text-xl font-bold text-red-400 flex items-center">
             {isEditMode ? (
               <>
                 <Edit2 size={20} className="mr-2" />
                 Edit {shiftType.charAt(0).toUpperCase() + shiftType.slice(1)}
               </>
             ) : (
-              <>Add Shift</>
+              <>{isAdminMode ? "Add Shift" : "Request Schedule Change"}</>
             )}
-          </h2>
-          <button
-            onClick={() => setShowAddShiftModal(false)}
-            className="p-1 rounded-full hover:bg-red-900/30 text-red-400"
-            aria-label="Close modal"
-          >
-            <X size={20} />
-          </button>
-        </div>
+          </DialogTitle>
+        </DialogHeader>
 
         {/* Employee Selection */}
         <div className="mb-6">
@@ -230,18 +283,17 @@ export const AddShiftModal: React.FC = () => {
               <div
                 key={employee.id}
                 onClick={() => toggleEmployeeSelection(employee.id)}
-                className={`flex items-center p-2 rounded-md cursor-pointer transition-colors ${
+                className={`flex items-center p-2 rounded-md cursor-pointer transition-colors duration-150 ${
                   selectedEmployees.includes(employee.id)
                     ? "bg-red-900/40 border border-red-500"
                     : "hover:bg-gray-800 border border-gray-700"
                 } ${isEditMode && editingEvent?.employeeId !== employee.id && selectedEmployees.includes(employee.id) ? "bg-yellow-900/20 border border-yellow-500" : ""}`}
               >
                 <div className="mr-2">
-                  {selectedEmployees.includes(employee.id) ? (
-                    <CheckSquare size={16} className="text-red-400" />
-                  ) : (
-                    <Square size={16} className="text-gray-400" />
-                  )}
+                  <Checkbox 
+                    checked={selectedEmployees.includes(employee.id)}
+                    className="data-[state=checked]:bg-red-600 data-[state=checked]:border-red-600"
+                  />
                 </div>
                 <div className="flex items-center">
                   <div className="w-6 h-6 rounded-full bg-red-800 flex items-center justify-center mr-2">
@@ -249,19 +301,20 @@ export const AddShiftModal: React.FC = () => {
                       {employee.avatar}
                     </span>
                   </div>
-                  <span className="text-white text-sm">{employee.name}</span>
+                  <span className="text-white text-sm truncate">{employee.name}</span>
                 </div>
               </div>
             ))}
           </div>
           {!isEditMode && (
             <div className="mt-2 text-right">
-              <button
+              <Button
                 onClick={clearSelectedEmployees}
-                className="text-xs text-red-400 hover:text-red-300"
+                variant="ghost"
+                className="text-xs text-red-400 hover:text-red-300 hover:bg-transparent"
               >
                 Clear Selection
-              </button>
+              </Button>
             </div>
           )}
         </div>
@@ -272,23 +325,22 @@ export const AddShiftModal: React.FC = () => {
             <h3 className="text-white text-sm font-medium mb-3">
               {isEditMode ? "Day" : "Select Days"}
             </h3>
-            <div className="space-y-2">
+            <div className="space-y-2 max-h-72 overflow-y-auto pr-1">
               {days.map((day, index) => (
                 <div
                   key={index}
                   onClick={() => toggleDaySelection(index)}
-                  className={`flex items-center p-2 rounded-md cursor-pointer transition-colors ${
+                  className={`flex items-center p-2 rounded-md cursor-pointer transition-colors duration-150 ${
                     selectedDays.includes(index)
                       ? "bg-red-900/40 border border-red-500"
                       : "hover:bg-gray-800 border border-gray-700"
                   } ${isEditMode && editingEvent?.dayIndex !== index && selectedDays.includes(index) ? "bg-yellow-900/20 border border-yellow-500" : ""}`}
                 >
                   <div className="mr-2">
-                    {selectedDays.includes(index) ? (
-                      <CheckSquare size={16} className="text-red-400" />
-                    ) : (
-                      <Square size={16} className="text-gray-400" />
-                    )}
+                    <Checkbox 
+                      checked={selectedDays.includes(index)}
+                      className="data-[state=checked]:bg-red-600 data-[state=checked]:border-red-600"
+                    />
                   </div>
                   <span className="text-white text-sm">{day}</span>
                 </div>
@@ -300,44 +352,119 @@ export const AddShiftModal: React.FC = () => {
             <h3 className="text-white text-sm font-medium mb-3">Shift Details</h3>
             <div className="space-y-4">
               <div>
-                <label className="block text-red-400 text-xs mb-1">
-                  Start Time
-                </label>
-                <input
-                  type="time"
-                  value={startTime}
-                  onChange={(e) => setStartTime(e.target.value)}
-                  className="w-full bg-black border border-red-900 rounded-md p-2 text-white"
-                />
-              </div>
-              <div>
-                <label className="block text-red-400 text-xs mb-1">
-                  End Time
-                </label>
-                <input
-                  type="time"
-                  value={endTime}
-                  onChange={(e) => setEndTime(e.target.value)}
-                  className="w-full bg-black border border-red-900 rounded-md p-2 text-white"
-                />
-              </div>
-
-              <div>
-                <label className="block text-red-400 text-xs mb-1">
+                <Label htmlFor="shift-type" className="text-red-400 text-xs">
                   Shift Type
-                </label>
-                <select 
-                  className="w-full bg-black border border-red-900 rounded-md p-2 text-white"
-                  value={shiftType}
-                  onChange={(e) => setShiftType(e.target.value as any)}
-                >
-                  <option value="shift">Regular Shift</option>
-                  <option value="training">Training</option>
-                  <option value="break">Break</option>
-                  <option value="off">Day Off</option>
-                  <option value="meeting">Meeting</option>
-                </select>
+                </Label>
+                
+                {/* shadcn/ui DropdownMenu */}
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button
+                      id="shift-type" 
+                      variant="outline"
+                      className="w-full justify-between mt-1 bg-black border border-red-900 text-white hover:bg-red-950"
+                    >
+                      <div className="flex items-center gap-2">
+                        <span className={shiftTypeInfo.color}>{shiftTypeInfo.icon}</span>
+                        <span>{shiftTypeInfo.label}</span>
+                      </div>
+                      <ChevronDown size={16} className="opacity-70" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent 
+                    className="w-[200px] bg-black border border-red-900 text-white"
+                    align="start"
+                  >
+                    <DropdownMenuLabel className="text-red-300">Shift Types</DropdownMenuLabel>
+                    <DropdownMenuSeparator className="bg-red-900/30" />
+                    <DropdownMenuGroup>
+                      <DropdownMenuItem
+                        className="flex items-center gap-2 cursor-pointer hover:bg-red-900 focus:bg-red-900"
+                        onClick={() => setShiftType("shift")}
+                      >
+                        <Briefcase size={16} className="text-red-400" />
+                        <span>Regular Shift</span>
+                        {shiftType === "shift" && (
+                          <Check size={16} className="ml-auto text-green-500" />
+                        )}
+                      </DropdownMenuItem>
+                      
+                      <DropdownMenuItem
+                        className="flex items-center gap-2 cursor-pointer hover:bg-red-900 focus:bg-red-900"
+                        onClick={() => setShiftType("training")}
+                      >
+                        <Calendar size={16} className="text-emerald-400" />
+                        <span>Training</span>
+                        {shiftType === "training" && (
+                          <Check size={16} className="ml-auto text-green-500" />
+                        )}
+                      </DropdownMenuItem>
+                      
+                      <DropdownMenuItem
+                        className="flex items-center gap-2 cursor-pointer hover:bg-red-900 focus:bg-red-900"
+                        onClick={() => setShiftType("break")}
+                      >
+                        <Coffee size={16} className="text-blue-400" />
+                        <span>Break</span>
+                        {shiftType === "break" && (
+                          <Check size={16} className="ml-auto text-green-500" />
+                        )}
+                      </DropdownMenuItem>
+                      
+                      <DropdownMenuItem
+                        className="flex items-center gap-2 cursor-pointer hover:bg-red-900 focus:bg-red-900"
+                        onClick={() => setShiftType("off")}
+                      >
+                        <Home size={16} className="text-gray-400" />
+                        <span>Day Off</span>
+                        {shiftType === "off" && (
+                          <Check size={16} className="ml-auto text-green-500" />
+                        )}
+                      </DropdownMenuItem>
+                      
+                      <DropdownMenuItem
+                        className="flex items-center gap-2 cursor-pointer hover:bg-red-900 focus:bg-red-900"
+                        onClick={() => setShiftType("meeting")}
+                      >
+                        <Users size={16} className="text-purple-400" />
+                        <span>Meeting</span>
+                        {shiftType === "meeting" && (
+                          <Check size={16} className="ml-auto text-green-500" />
+                        )}
+                      </DropdownMenuItem>
+                    </DropdownMenuGroup>
+                  </DropdownMenuContent>
+                </DropdownMenu>
               </div>
+              
+              {shiftType !== "off" && (
+                <>
+                  <div>
+                    <Label htmlFor="start-time" className="text-red-400 text-xs">
+                      Start Time
+                    </Label>
+                    <Input
+                      id="start-time"
+                      type="time"
+                      value={startTime}
+                      onChange={(e) => setStartTime(e.target.value)}
+                      className="bg-black border border-red-900 text-white mt-1"
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="end-time" className="text-red-400 text-xs">
+                      End Time
+                    </Label>
+                    <Input
+                      id="end-time"
+                      type="time"
+                      value={endTime}
+                      onChange={(e) => setEndTime(e.target.value)}
+                      className="bg-black border border-red-900 text-white mt-1"
+                    />
+                  </div>
+                </>
+              )}
             </div>
           </div>
         </div>
@@ -360,26 +487,35 @@ export const AddShiftModal: React.FC = () => {
                 </p>
                 
                 <div className="space-y-2">
-                  <label className="flex items-center text-white text-xs cursor-pointer">
-                    <input
-                      type="checkbox"
+                  <div className="flex items-center gap-2">
+                    <Checkbox
+                      id="request-change"
                       checked={showRequestFields}
-                      onChange={() => setShowRequestFields(!showRequestFields)}
-                      className="mr-2"
+                      onCheckedChange={(checked) => setShowRequestFields(!!checked)}
+                      className="data-[state=checked]:bg-yellow-600 data-[state=checked]:border-yellow-600"
                     />
-                    {isEditMode ? "Mark as a schedule change request" : "Request schedule change"}
-                  </label>
+                    <Label 
+                      htmlFor="request-change" 
+                      className="text-white text-xs cursor-pointer"
+                    >
+                      {isEditMode ? "Mark as a schedule change request" : "Request schedule change"}
+                    </Label>
+                  </div>
                   
                   {showRequestFields && (
                     <div className="mt-2">
-                      <label className="block text-yellow-400 text-xs mb-1">
+                      <Label 
+                        htmlFor="request-reason" 
+                        className="block text-yellow-400 text-xs mb-1"
+                      >
                         Reason for request
-                      </label>
-                      <textarea
+                      </Label>
+                      <Textarea
+                        id="request-reason"
                         value={requestReason}
                         onChange={(e) => setRequestReason(e.target.value)}
                         placeholder="Please provide a reason for this schedule change..."
-                        className="w-full bg-black border border-yellow-700/50 rounded-md p-2 text-white text-xs h-16"
+                        className="bg-black border border-yellow-700/50 text-white text-xs h-16 min-h-[64px]"
                       />
                     </div>
                   )}
@@ -390,34 +526,36 @@ export const AddShiftModal: React.FC = () => {
         )}
 
         {/* Action Buttons */}
-        <div className="mt-6 flex justify-between">
+        <DialogFooter className="mt-6 flex justify-between">
           {isEditMode && (
-            <button
+            <Button
               onClick={handleDeleteShift}
-              className="px-4 py-2 bg-red-900/60 hover:bg-red-800 text-white rounded-md text-sm transition-colors flex items-center"
+              variant="destructive"
+              className="bg-red-900/60 hover:bg-red-800 text-white flex items-center"
             >
               <Trash2 size={16} className="mr-1" />
               Delete
-            </button>
+            </Button>
           )}
           
           <div className={`flex gap-3 ${isEditMode ? 'ml-auto' : ''}`}>
-            <button
-              onClick={() => setShowAddShiftModal(false)}
-              className="px-4 py-2 bg-gray-800 hover:bg-gray-700 text-white rounded-md text-sm transition-colors"
+            <Button
+              onClick={handleClose}
+              variant="outline"
+              className="bg-gray-800 hover:bg-gray-700 text-white border-gray-700"
             >
               Cancel
-            </button>
-            <button 
+            </Button>
+            <Button 
               onClick={handleAddOrUpdateShift}
-              className="px-4 py-2 bg-red-800 hover:bg-red-700 text-white rounded-md text-sm transition-colors"
-              disabled={selectedEmployees.length === 0 || selectedDays.length === 0}
+              className={`bg-red-800 hover:bg-red-700 text-white`}
+              disabled={!isFormValid}
             >
               {isEditMode ? "Update" : "Add"} {shiftType.charAt(0).toUpperCase() + shiftType.slice(1)}
-            </button>
+            </Button>
           </div>
-        </div>
-      </div>
-    </div>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 };
