@@ -10,6 +10,7 @@ import {
   Command,
   Target,
   File,
+  CalendarDays,
 } from "lucide-react";
 import { title } from "process";
 
@@ -656,39 +657,39 @@ export const ceoData = {
       isActive: false,
       icon: Target,
     },
-    // {
-    //   title: "Schedule",
-    //   url: "/schedule",
-    //   isActive: false,
-    //   icon: CalendarDays,
-    // },
+    {
+      title: "Schedule",
+      url: "/schedule",
+      isActive: false,
+      icon: CalendarDays,
+    },
     {
       title: "Settings",
       url: "/settings",
       icon: Settings2,
-      // items: [
-      //   {
-      //     // // In your sidebar navigation <Link to="/settings">Settings</Link>
-      //     title: "General",
-      //     url: "/settings",
-      //   },
-      //   {
-      //     title: "Team",
-      //     url: "/settings?tab=teams",
-      //   },
-      //   {
-      //     title: "Tasks",
-      //     url: "/settings?tab=tasks",
-      //   },
-      //   {
-      //     title: "Company",
-      //     url: "/settings?tab=company",
-      //   },
-      //   {
-      //     title: "Notification",
-      //     url: "/settings?tab=notification",
-      //   },
-      // ],
+      items: [
+        {
+          // // In your sidebar navigation <Link to="/settings">Settings</Link>
+          title: "General",
+          url: "/settings",
+        },
+        {
+          title: "Team",
+          url: "/settings?tab=teams",
+        },
+        {
+          title: "Tasks",
+          url: "/settings?tab=tasks",
+        },
+        {
+          title: "Company",
+          url: "/settings?tab=company",
+        },
+        {
+          title: "Notification",
+          url: "/settings?tab=notification",
+        },
+      ],
     },
   ],
   projects: [
