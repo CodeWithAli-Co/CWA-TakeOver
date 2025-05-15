@@ -1,5 +1,6 @@
+
 import React from "react";
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import { ChevronLeft, ChevronRight, Calendar } from "lucide-react";
 import { WeekRangeType } from "./ScheduleComponents";
 
 interface WeekNavigatorProps {
@@ -20,7 +21,7 @@ export const WeekNavigator: React.FC<WeekNavigatorProps> = ({
   return (
     <div className="bg-black border-b border-red-900/40 px-4 py-3 flex justify-between items-center">
       <button
-        className="p-1 rounded-md hover:bg-red-900/30 text-red-400"
+        className="p-1 rounded-md hover:bg-red-900/30 text-red-400 transition-colors duration-150"
         onClick={goToPreviousWeek}
         aria-label="Previous week"
       >
@@ -49,14 +50,15 @@ export const WeekNavigator: React.FC<WeekNavigatorProps> = ({
       <div className="flex items-center gap-2">
         {weekOffset !== 0 && (
           <button
-            className="px-3 py-1 text-xs rounded-md bg-red-900/30 hover:bg-red-900/50 text-red-200"
+            className="px-3 py-1 text-xs rounded-md bg-red-900/30 hover:bg-red-900/50 text-red-200 transition-colors duration-150 flex items-center gap-1"
             onClick={goToCurrentWeek}
           >
-            Current Week
+            <Calendar size={12} className="hidden sm:inline" />
+            <span>Current Week</span>
           </button>
         )}
         <button
-          className="p-1 rounded-md hover:bg-red-900/30 text-red-400"
+          className="p-1 rounded-md hover:bg-red-900/30 text-red-400 transition-colors duration-150"
           onClick={goToNextWeek}
           aria-label="Next week"
         >
