@@ -20,6 +20,7 @@ export const EditEmployee = (props: Props) => {
     setDialog("closed");
     form.reset();
   };
+  console.log('Employee ID', props.rowID)
   const form = useForm({
     defaultValues: {
       Username: "",
