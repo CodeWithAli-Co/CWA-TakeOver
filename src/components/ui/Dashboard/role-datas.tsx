@@ -511,12 +511,12 @@ export const cooData = {
       isActive: false,
       icon: Target,
     },
-    // {
-    //   title: "Schedule",
-    //   url: "/schedule",
-    //   isActive: false,
-    //   icon: CalendarDays,
-    // },
+    {
+      title: "Schedule",
+      url: "/schedule",
+      isActive: false,
+      icon: CalendarDays,
+    },
     // {
     //   title: "BioTech",
     //   url: "/bio",
