@@ -186,8 +186,9 @@ export const Todos = (user: string) => {
 }
 
 
-// Add Meetings Query
+// Meetings Query
 interface MeetingInterface {
+  id: number;
   meeting_title: string;
   time?: string;
   date: string;
