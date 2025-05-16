@@ -157,7 +157,8 @@ const DynamicItem: React.FC<DynamicItemProps> = ({
           <div>
             <label className="text-xs text-red-400">Revenue Type</label>
             <select
-              value={item.type}
+            // @ts-ignore (RevenueType not being seen)
+              value={item.revenueType}
               onChange={(e) =>
                 updateItem({
                   revenueType: e.target.value as

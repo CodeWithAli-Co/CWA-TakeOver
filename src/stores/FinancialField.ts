@@ -126,6 +126,11 @@ export interface YearSelectorProps {
   setYears: (years: number) => void;
 }
 
+// type MergedItem = {
+//   expenseItem: ExpenseItem,
+//   revenueItem: RevenueItem
+// }
+
 export interface DynamicItemProps {
   item: ExpenseItem | RevenueItem;
   onChange: (item: ExpenseItem | RevenueItem) => void;
