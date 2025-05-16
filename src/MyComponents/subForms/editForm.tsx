@@ -1,37 +1,36 @@
 import { useForm } from "@tanstack/react-form";
 import { invoke } from "@tauri-apps/api/core";
-import { useAppStore } from "@/stores/store";
 import supabase from "../supabase";
-import { AnimatePresence, motion } from "framer-motion";
+import { motion } from "framer-motion";
 import { Input } from "@/components/ui/shadcnComponents/input";
 import { Label } from "@/components/ui/shadcnComponents/label";
 import { Button } from "@/components/ui/shadcnComponents/button";
-import { X } from "lucide-react";
+import { FolderClosed, Pen, Tags } from "lucide-react";
 import {
   RadioGroup,
   RadioGroupItem,
 } from "@/components/ui/shadcnComponents/radio-group";
 import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/shadcnComponents/card";
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/shadcnComponents/dialog";
+import { useState } from "react";
 interface Props {
   rowID: number;
 }
 
 export const EditData = (props: Props) => {
-  const { setDialog } = useAppStore();
-  const handleClose = () => {
-    setDialog("closed");
-    form.reset();
-  };
-
+  const [open, setOpen] = useState(false);
 
   const form = useForm({
     defaultValues: {
       platformName: "",
+      folder: "default",
       Username: "",
       Email: "",
       Password: "",
@@ -97,230 +96,269 @@ export const EditData = (props: Props) => {
         if (error) return console.log("Active Status Error:", error.message);
       }
 
-      handleClose();
+      setOpen(false);
+      form.reset();
     },
   });
 
-
   return (
-    <AnimatePresence mode="wait">
-      <motion.div
-        className="fixed inset-0 flex items-center justify-center backdrop-blur-sm"
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        exit={{ opacity: 0 }}
-        onClick={handleClose}
-      >
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild>
         <motion.div
-          initial={{ opacity: 0, scale: 0.95 }}
-          animate={{ opacity: 1, scale: 1 }}
-          exit={{ opacity: 0, scale: 0.95 }}
-          transition={{ type: "spring", damping: 20, stiffness: 300 }}
-          className="w-full max-w-md mx-4"
-          onClick={(e) => e.stopPropagation()}
+          whileHover={{ scale: 1.02 }}
+          whileTap={{ scale: 0.98 }}
+          transition={{ type: "spring", stiffness: 400, damping: 17 }}
         >
-          <Card className="bg-black border-red-800/30  shadow-xl shadow-red-800/20">
-            <CardHeader className="relative border-b border-red-950/20">
-              <motion.button
-                whileHover={{ scale: 1.1 }}
-                whileTap={{ scale: 0.9 }}
-                onClick={handleClose}
-                className="absolute right-4 top-4 p-1 rounded-full text-red-500 
-                         hover:text-red-400 hover:bg-red-950/20 transition-colors"
-              >
-                <X size={20} />
-              </motion.button>
-              <CardTitle className="text-2xl font-semibold text-white text-center">
-                Edit Platform
-              </CardTitle>
-            </CardHeader>
-
-            <CardContent className="p-6">
-              <form
-                onSubmit={(e) => {
-                  e.preventDefault();
-                  e.stopPropagation();
-                  form.handleSubmit();
-                }}
-                className="space-y-6"
-              >
-                <div className="space-y-4">
-                  {/* Platform Name Field */}
-                  <form.Field
-                    name="platformName"
-                    children={(field) => (
-                      <div className="space-y-2">
-                        <Label htmlFor={field.name} className="text-red-200">
-                          Platform Name
-                        </Label>
-                        <Input
-                          name={field.name}
-                          type="text"
-                          autoComplete="off"
-                          value={field.state.value}
-                          onChange={(e) => field.handleChange(e.target.value)}
-                          className="bg-black/40 border-red-950/30 text-white 
-                                   focus:border-red-500 focus:ring-red-500/20
-                                   placeholder:text-red-200/20"
-                          placeholder="Enter platform name..."
-                        />
-                      </div>
-                    )}
-                  />
-
-                  {/* Username Field */}
-                  <form.Field
-                    name="Username"
-                    children={(field) => (
-                      <div className="space-y-2">
-                        <Label htmlFor={field.name} className="text-red-200">
-                          Username
-                        </Label>
-                        <Input
-                          name={field.name}
-                          type="text"
-                          autoComplete="off"
-                          value={field.state.value}
-                          onChange={(e) => field.handleChange(e.target.value)}
-                          className="bg-black/40 border-red-950/30 text-white 
-                                   focus:border-red-500 focus:ring-red-500/20
-                                   placeholder:text-red-200/20"
-                          placeholder="Enter username..."
-                        />
-                      </div>
-                    )}
-                  />
-
-                  {/* Email Field */}
-                  <form.Field
-                    name="Email"
-                    children={(field) => (
-                      <div className="space-y-2">
-                        <Label htmlFor={field.name} className="text-red-200">
-                          Email
-                        </Label>
-                        <Input
-                          name={field.name}
-                          type="email"
-                          autoComplete="off"
-                          value={field.state.value}
-                          onChange={(e) => field.handleChange(e.target.value)}
-                          className="bg-black/40 border-red-950/30 text-white 
-                                   focus:border-red-500 focus:ring-red-500/20
-                                   placeholder:text-red-200/20"
-                          placeholder="Enter email..."
-                        />
-                      </div>
-                    )}
-                  />
-
-                  {/* Password Field */}
-                  <form.Field
-                    name="Password"
-                    children={(field) => (
-                      <div className="space-y-2">
-                        <Label htmlFor={field.name} className="text-red-200">
-                          Password
-                        </Label>
-                        <Input
-                          name={field.name}
-                          type="password"
-                          autoComplete="off"
-                          value={field.state.value}
-                          onChange={(e) => field.handleChange(e.target.value)}
-                          className="bg-black/40 border-red-950/30 text-white 
-                                   focus:border-red-500 focus:ring-red-500/20
-                                   placeholder:text-red-200/20"
-                          placeholder="Enter password..."
-                        />
-                      </div>
-                    )}
-                  />
-
-                  {/* Additional Info Field */}
-                  <form.Field
-                    name="AddInfo"
-                    children={(field) => (
-                      <div className="space-y-2">
-                        <Label htmlFor={field.name} className="text-red-200">
-                          Additional Info
-                        </Label>
-                        <Input
-                          name={field.name}
-                          type="text"
-                          autoComplete="off"
-                          value={field.state.value}
-                          onChange={(e) => field.handleChange(e.target.value)}
-                          className="bg-black/40 border-red-950/30 text-white 
-                                   focus:border-red-500 focus:ring-red-500/20
-                                   placeholder:text-red-200/20"
-                          placeholder="Enter additional info..."
-                        />
-                      </div>
-                    )}
-                  />
-
-                  {/* Status Field */}
-                  <form.Field
-                    name="Active"
-                    children={(field) => (
-                      <div className="space-y-2">
-                        <Label className="text-red-200">Status</Label>
-                        <RadioGroup
-                          defaultValue="true"
-                          onValueChange={(value) => field.handleChange(value)}
-                          className="flex space-x-4"
-                        >
-                          <div className="flex items-center space-x-2">
-                            <RadioGroupItem
-                              value="true"
-                              id="active"
-                              className="text-red-500 border-red-950/30"
-                            />
-                            <Label htmlFor="active" className="text-red-200">
-                              Active
-                            </Label>
-                          </div>
-                          <div className="flex items-center space-x-2">
-                            <RadioGroupItem
-                              value="false"
-                              id="inactive"
-                              className="text-red-500 border-red-950/30"
-                            />
-                            <Label htmlFor="inactive" className="text-red-200">
-                              Inactive
-                            </Label>
-                          </div>
-                        </RadioGroup>
-                      </div>
-                    )}
+          <Button
+            size={"default"}
+            className="relative bg-black hover:bg-zinc-800  active:to-red-990 w-auto h-auto px-4 py-2 transform transition-all ease-out border border-zinc-800 group  duration-300"
+          >
+            <Pen className="w-4 h-4" />
+          </Button>
+        </motion.div>
+      </DialogTrigger>
+      <DialogContent
+        className="sm:max-w-[600px] bg-black/95 border-red-950/30 
+        shadow-2xl shadow-red-950/40 rounded-xl"
+      >
+        <DialogHeader>
+          <DialogTitle className="text-red-200 flex items-center gap-2">
+            <FolderClosed className="w-6 h-6 text-red-500" />
+            Edit Account
+          </DialogTitle>
+          <DialogDescription className="text-red-200/60 flex items-center gap-2">
+            <Pen className="w-4 h-4 text-red-400" />
+            Edit an Account
+          </DialogDescription>
+        </DialogHeader>
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            form.handleSubmit();
+          }}
+          className="space-y-6"
+        >
+          <div className="grid gap-4">
+            {/* Platform Name */}
+            <form.Field
+              name="platformName"
+              children={(field) => (
+                <div className="grid gap-2">
+                  <Label
+                    htmlFor={field.name}
+                    className="text-red-200 flex items-center gap-2"
+                  >
+                    <Tags className="w-4 h-4 text-red-400" />
+                    Platform Name
+                  </Label>
+                  <Input
+                    id={field.name}
+                    type="text"
+                    autoComplete="off"
+                    placeholder="Enter Platform Name"
+                    className="bg-black/40 border-red-950/30 text-red-200 
+                    focus:border-red-700 focus:ring-2 focus:ring-red-900/50 
+                    transition-all duration-300"
+                    value={field.state.value}
+                    onChange={(e) => field.handleChange(e.target.value)}
                   />
                 </div>
-                {/* Submit Button */}
-                <form.Subscribe
-                  selector={(state) => [state.canSubmit]}
-                  children={([canSubmit]) => (
-                    <motion.div
-                      whileHover={{ scale: 1.01 }}
-                      whileTap={{ scale: 0.99 }}
-                    >
-                      <Button
-                        type="submit"
-                        disabled={!canSubmit}
-                        className="w-full bg-gradient-to-r from-red-950 to-black hover:from-red-900 
-                                 hover:to-red-950 text-white border border-red-900/30
-                                 shadow-lg shadow-red-950/20 disabled:opacity-50"
-                      >
-                        Edit
-                      </Button>
-                    </motion.div>
-                  )}
-                />
-              </form>
-            </CardContent>
-          </Card>
-        </motion.div>
-      </motion.div>
-    </AnimatePresence>
+              )}
+            />
+
+            {/* Folder Name */}
+            <form.Field
+              name="folder"
+              children={(field) => (
+                <div className="grid gap-2">
+                  <Label
+                    htmlFor={field.name}
+                    className="text-red-200 flex items-center gap-2"
+                  >
+                    <FolderClosed className="w-4 h-4 text-red-400" />
+                    Folder Name
+                  </Label>
+                  <Input
+                    id={field.name}
+                    type="text"
+                    autoComplete="off"
+                    placeholder="Enter Platform Name"
+                    className={`bg-black/40 border-red-950/30 ${field.state.value === "default" ? "text-red-800/90" : "text-red-200"} 
+                    focus:border-red-700 focus:ring-2 focus:ring-red-900/50 
+                    transition-all duration-300 capitalize`}
+                    value={field.state.value}
+                    onChange={(e) =>
+                      field.handleChange(e.target.value.toLocaleLowerCase())
+                    }
+                  />
+                </div>
+              )}
+            />
+
+            {/* Username */}
+            <form.Field
+              name="Username"
+              children={(field) => (
+                <div className="grid gap-2">
+                  <Label htmlFor={field.name} className="text-red-200">
+                    Username
+                  </Label>
+                  <Input
+                    id={field.name}
+                    type="text"
+                    autoComplete="off"
+                    placeholder="Enter Username"
+                    className="bg-black/40 inline border-red-950/30 text-red-200 
+                  focus:border-red-700 focus:ring-2 focus:ring-red-900/50 
+                  transition-all duration-300"
+                    value={field.state.value}
+                    onChange={(e) => field.handleChange(e.target.value)}
+                  />
+                </div>
+              )}
+            />
+
+            {/* Email */}
+            <form.Field
+              name="Email"
+              children={(field) => (
+                <div className="grid gap-2">
+                  <Label htmlFor={field.name} className="text-red-200">
+                    Email
+                  </Label>
+                  <Input
+                    id={field.name}
+                    type="email"
+                    autoComplete="off"
+                    placeholder="Enter Email"
+                    className="bg-black/40 inline border-red-950/30 text-red-200 
+                  focus:border-red-700 focus:ring-2 focus:ring-red-900/50 
+                  transition-all duration-300"
+                    value={field.state.value}
+                    onChange={(e) => field.handleChange(e.target.value)}
+                  />
+                </div>
+              )}
+            />
+
+            {/* Password */}
+            <form.Field
+              name="Password"
+              children={(field) => (
+                <div className="grid gap-2">
+                  <Label htmlFor={field.name} className="text-red-200">
+                    Password
+                  </Label>
+                  <Input
+                    id={field.name}
+                    type="password"
+                    autoComplete="off"
+                    placeholder="Enter Password"
+                    className="bg-black/40 inline border-red-950/30 text-red-200 
+                  focus:border-red-700 focus:ring-2 focus:ring-red-900/50 
+                  transition-all duration-300"
+                    value={field.state.value}
+                    onChange={(e) => field.handleChange(e.target.value)}
+                  />
+                </div>
+              )}
+            />
+
+            {/* Additional Info */}
+            <form.Field
+              name="AddInfo"
+              children={(field) => (
+                <div className="grid gap-2">
+                  <Label htmlFor={field.name} className="text-red-200">
+                    Additional Info
+                  </Label>
+                  <Input
+                    id={field.name}
+                    type="text"
+                    autoComplete="off"
+                    placeholder="Add Additional Info"
+                    className="bg-black/40 inline border-red-950/30 text-red-200 
+                  focus:border-red-700 focus:ring-2 focus:ring-red-900/50 
+                  transition-all duration-300"
+                    value={field.state.value}
+                    onChange={(e) => field.handleChange(e.target.value)}
+                  />
+                </div>
+              )}
+            />
+
+            {/* Status Field */}
+            <form.Field
+              name="Active"
+              children={(field) => (
+                <div className="space-y-2">
+                  <Label className="text-red-200">Status</Label>
+                  <RadioGroup
+                    defaultValue="true"
+                    onValueChange={(value) => field.handleChange(value)}
+                    className="flex space-x-4"
+                  >
+                    <div className="flex items-center space-x-2">
+                      <RadioGroupItem
+                        value="true"
+                        id="active"
+                        className="text-red-500 border-red-950/30"
+                      />
+                      <Label htmlFor="active" className="text-red-200">
+                        Active
+                      </Label>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <RadioGroupItem
+                        value="false"
+                        id="inactive"
+                        className="text-red-500 border-red-950/30"
+                      />
+                      <Label htmlFor="inactive" className="text-red-200">
+                        Inactive
+                      </Label>
+                    </div>
+                  </RadioGroup>
+                </div>
+              )}
+            />
+          </div>
+
+          <DialogFooter className="flex justify-between items-center">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => {
+                setOpen(false);
+                form.reset();
+              }}
+              className="border-red-800/30 text-red-200 
+              hover:bg-red-950/20 hover:text-red-100 
+              transition-all duration-300"
+            >
+              Cancel
+            </Button>
+            <form.Subscribe
+              selector={(state) => [state.canSubmit]}
+              children={([canSubmit]) => (
+                <Button
+                  type="submit"
+                  disabled={!canSubmit}
+                  className="bg-gradient-to-r from-red-950 to-red-900 
+                  hover:from-red-900 hover:to-red-800 
+                  text-white border border-red-800/30 
+                  disabled:opacity-50 disabled:cursor-not-allowed
+                  transition-all duration-300 
+                  hover:scale-[1.02] active:scale-[0.98]"
+                >
+                  Edit Account
+                </Button>
+              )}
+            />
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
   );
 };

@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useState } from "react";
 import {
   Card,
   CardContent,
@@ -7,12 +7,11 @@ import {
   CardTitle,
 } from "@/components/ui/shadcnComponents/card";
 import { Button } from "@/components/ui/shadcnComponents/button";
-import { useAppStore } from "@/stores/store";
 import { invoke } from "@tauri-apps/api/core";
 import supabase from "@/MyComponents/supabase";
 import { AddData } from "@/MyComponents/subForms/addForm";
 import { EditData } from "@/MyComponents/subForms/editForm";
-import { Eye, EyeOff, Edit2, Trash2 } from "lucide-react";
+import { Eye, EyeOff, Trash2 } from "lucide-react";
 import {
   getPlatformIcon,
   platformStyles,
@@ -34,11 +33,8 @@ interface Credential {
 }
 
 export const CompanyCreds = ({ folder = "default" }: { folder?: string }) => {
-  const { setDialog, setDisplayer, displayer, resetDisplayer } = useAppStore();
-  const dialogRef = useRef<HTMLDialogElement | null>(null);
   // Track expanded state for each card
   const [expandedCards, setExpandedCards] = useState<number[]>([]);
-  const [credID, setCredID] = useState(0);
   const [showDecPass, setShowDecPass] = useState("");
 
   const toggleCard = (id: number) => {
@@ -46,22 +42,6 @@ export const CompanyCreds = ({ folder = "default" }: { folder?: string }) => {
     setExpandedCards((prev) =>
       prev.includes(id) ? prev.filter((cardId) => cardId !== id) : [...prev, id]
     );
-  };
-
-  const showModal = (dialogDisplay: "addDialog" | "editDialog") => {
-    document.startViewTransition(() => {
-      dialogRef.current?.showModal();
-    });
-    setDisplayer(dialogDisplay);
-    setDialog("shown");
-  };
-
-  const closeModal = () => {
-    document.startViewTransition(() => {
-      dialogRef.current?.close();
-    });
-    resetDisplayer();
-    setDialog("closed");
   };
 
   // Reveal Password
@@ -123,18 +103,19 @@ export const CompanyCreds = ({ folder = "default" }: { folder?: string }) => {
     <div className="p-6 select-text bg-gradient-to-br from-[#010101] to-[#210000]">
       <div className="flex justify-between items-center mb-8">
         <h2 className="text-3xl font-bold">Accounts</h2>
-        <Button
-          variant="default"
-          className="bg-white text-black hover:bg-gray-100"
-          onClick={() => showModal("addDialog")}
-        >
-          Add Account
-        </Button>
+        <AddData />
       </div>
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-        <Link to="/detailFolders" className="bg-black border-[1px] border-zinc-600 min-h-[180px] w-auto rounded-xl flex justify-center items-center">
-          <img src="/folder.png" alt="folder icon" className="w-[200px] h-auto object-contain" />
+        <Link
+          to="/detailFolders"
+          className="bg-black border-[1px] border-zinc-600 min-h-[180px] w-auto rounded-xl flex justify-center items-center"
+        >
+          <img
+            src="/folder.png"
+            alt="folder icon"
+            className="w-[200px] h-auto object-contain"
+          />
           {folder}
         </Link>
         {cwaCreds?.map((cred: Credential) => {
@@ -232,17 +213,7 @@ export const CompanyCreds = ({ folder = "default" }: { folder?: string }) => {
                               {isExpanded ? "Hide" : "Reveal"}
                             </span>
                           </Button>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            className="text-zinc-400 border-zinc-800 hover:bg-zinc-800"
-                            onClick={() => {
-                              showModal("editDialog");
-                              setCredID(cred.id);
-                            }}
-                          >
-                            <Edit2 className="w-4 h-4" />
-                          </Button>
+                          <EditData rowID={cred.id} />
                           <Button
                             variant="outline"
                             size="sm"
@@ -253,7 +224,7 @@ export const CompanyCreds = ({ folder = "default" }: { folder?: string }) => {
                           </Button>
                         </div>
                         <ToggleSwitch
-                          checked={true}
+                          checked={cred.active}
                           onChange={(checked) =>
                             console.log("Switch toggled:", checked)
                           }
@@ -351,17 +322,7 @@ export const CompanyCreds = ({ folder = "default" }: { folder?: string }) => {
                               {isExpanded ? "Hide" : "Reveal"}
                             </span>
                           </Button>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            className="text-zinc-400 border-zinc-800 hover:bg-zinc-800"
-                            onClick={() => {
-                              showModal("editDialog");
-                              setCredID(cred.id);
-                            }}
-                          >
-                            <Edit2 className="w-4 h-4" />
-                          </Button>
+                          <EditData rowID={cred.id} />
                           <Button
                             variant="outline"
                             size="sm"
@@ -372,7 +333,7 @@ export const CompanyCreds = ({ folder = "default" }: { folder?: string }) => {
                           </Button>
                         </div>
                         <ToggleSwitch
-                          checked={true}
+                          checked={cred.active}
                           onChange={(checked) =>
                             console.log("Switch toggled:", checked)
                           }
@@ -386,24 +347,6 @@ export const CompanyCreds = ({ folder = "default" }: { folder?: string }) => {
           );
         })}
       </div>
-
-      <dialog ref={dialogRef}>
-        <Button
-          variant="ghost"
-          size="sm"
-          className="absolute right-4 top-4"
-          onClick={closeModal}
-        >
-          X
-        </Button>
-        {displayer === "editDialog" ? (
-          <EditData rowID={credID} />
-        ) : displayer === "addDialog" ? (
-          <AddData />
-        ) : (
-          "Error Loading Dialog..."
-        )}
-      </dialog>
     </div>
   );
 };
