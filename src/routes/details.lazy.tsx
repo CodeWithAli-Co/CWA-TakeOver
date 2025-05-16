@@ -119,7 +119,7 @@ function Details() {
     .subscribe();
 
   return (
-    <div className="p-6 select-text">
+    <div className="p-6 select-text bg-gradient-to-br from-[#010101] to-[#210000]">
       <div className="flex justify-between items-center mb-8">
         <h2 className="text-3xl font-bold">Accounts</h2>
         <Button
@@ -140,13 +140,13 @@ function Details() {
           return (
             <Card
               key={cred.id}
-              className={`bg-zinc-950 border-zinc-800 transition-all duration-300 ${
+              className={`bg-black border-zinc-800 transition-all duration-300 text-white/80 ${
                 isExpanded ? "min-h-[300px]" : "min-h-[180px]"
               }`}
             >
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-xl font-semibold">
-                  {cred.platform_name}
+                  <span className="capitalize">{cred.platform_name}</span>
                 </CardTitle>
                 <div
                   className={`h-12 w-12 rounded-full overflow-hidden flex items-center justify-center text-white bg-gradient-to-br ${style.gradient}`}
@@ -159,7 +159,8 @@ function Details() {
                 <div className="space-y-4">
                   {cred.acc_username !== "" && (
                     <CardDescription className="text-sm text-zinc-400">
-                      Username: <span className="select-text">{cred.acc_username}</span>
+                      <span className="mr-1 font-semibold text-white/90">Username:</span>
+                      <span className="select-text">{cred.acc_username}</span>
                     </CardDescription>
                   )}
                   <div
@@ -170,16 +171,21 @@ function Details() {
                     }`}
                   >
                     <CardDescription className="text-sm text-zinc-400">
-                      Email: <span className="select-text">{cred.acc_email}</span>
+                      <span className="mr-1 font-semibold text-white/90">Email:</span>
+                      <span className="select-text">{cred.acc_email}</span>
                     </CardDescription>
                     {showDecPass !== "" && (
                       <CardDescription className="text-sm text-zinc-400">
-                        Password: <span className="select-text">{showDecPass || cred.acc_enc_password}</span>
+                        <span className="mr-1 font-semibold text-white/90">Password:</span>
+                        <span className="select-text">
+                          {showDecPass || cred.acc_enc_password}
+                        </span>
                       </CardDescription>
                     )}
                     {cred.acc_addinfo && (
                       <CardDescription className="text-sm text-zinc-400">
-                        Additional Info: {cred.acc_addinfo}
+                        <span className="mr-1 font-semibold text-white/90">Additional Info:</span>
+                        {cred.acc_addinfo}
                       </CardDescription>
                     )}
                   </div>
@@ -212,7 +218,10 @@ function Details() {
                         variant="outline"
                         size="sm"
                         className="text-zinc-400 border-zinc-800 hover:bg-zinc-800"
-                        onClick={() => {showModal("editDialog"); setCredID(cred.id)}}
+                        onClick={() => {
+                          showModal("editDialog");
+                          setCredID(cred.id);
+                        }}
                       >
                         <Edit2 className="w-4 h-4" />
                       </Button>

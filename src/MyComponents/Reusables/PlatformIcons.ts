@@ -29,6 +29,7 @@ import {
   Cpu,
   Zap
 } from "lucide-react";
+import { calendlyLogo, CanvaLogo, cloudflareLogo, discordLogo, fiverrLogo, gmailLogo, hostingerLogo, netlifyLogo, npmLogo, patreonLogo, paypalLogo, redditLogo, stripeLogo, tiktokLogo, twitchLogo, upworkLogo, vercelLogo } from "../ImgToIcon";
 
 // Type definitions
 type IconComponent = React.FC<React.SVGProps<SVGSVGElement>>;
@@ -47,53 +48,53 @@ export const platformIcons: Record<string, IconComponent> = {
   twitter: Twitter,
   linkedin: Linkedin,
   facebook: Facebook,
-  gmail: Mail,
-  upwork: ArrowBigUp,
-  fiverr: Store,
-  patreon: Store,
+  gmail: gmailLogo,
+  upwork: upworkLogo,
+  fiverr: fiverrLogo,
+  patreon: patreonLogo,
   dev: FileCode2,
-  hostinger: Heading,
+  hostinger: hostingerLogo,
   hostingeremail: Mail,
   instagram: Instagram,
   
   // New platforms
   youtube: Youtube,
-  twitch: Zap,
+  twitch: twitchLogo,
   medium: BookOpen,
   substack: MessageCircle,
   behance: Image,
   dribbble: Image,
   slack: MessageCircle,
-  discord: MessageCircle,
+  discord: discordLogo,
   wordpress: Layout,
   shopify: Store,
   etsy: Store,
   pinterest: Image,
-  tiktok: Music,
+  tiktok: tiktokLogo,
   snapchat: Image,
-  reddit: MessageCircle,
+  reddit: redditLogo,
   quora: MessageCircle,
   whatsapp: MessageCircle,
   telegram: MessageCircle,
   hubspot: AreaChart,
   salesforce: Cloud,
   mailchimp: Mail,
-  stripe: DollarSign,
-  paypal: DollarSign,
+  stripe: stripeLogo,
+  paypal: paypalLogo,
   aws: Server,
   azure: Cloud,
   googlecloud: Cloud,
   digitalocean: Cloud,
-  netlify: Server,
-  vercel: Server,
+  netlify: netlifyLogo,
+  vercel: vercelLogo,
   heroku: Server,
-  cloudflare: Cloud,
+  cloudflare: cloudflareLogo,
   namecheap: Globe,
   godaddy: Globe,
   stackexchange: Code,
   stackoverflow: Code,
   codepen: Code,
-  npm: Cpu,
+  npm: npmLogo,
   gitlab: Code,
   bitbucket: Code,
   trello: Layout,
@@ -103,7 +104,8 @@ export const platformIcons: Record<string, IconComponent> = {
   microsoftoffice: Briefcase,
   notion: BookOpen,
   airtable: Layout,
-  canva: Image,
+  canva: CanvaLogo,
+  calendly: calendlyLogo,
   adobe: Image,
   coinbase: DollarSign,
   binance: DollarSign,
@@ -118,7 +120,7 @@ export const platformStyles: Record<string, PlatformStyle> = {
   github: {
     color: "#ffffff",
     gradient: "from-[#00000] to-[#ffffff]",
-    shadowColor: "rgba(255, 255, 255, 0.5)",
+    shadowColor: "rgba(252, 252, 252, 0.2)",
   },
   twitter: {
     color: "#1DA1F2", 
@@ -131,12 +133,12 @@ export const platformStyles: Record<string, PlatformStyle> = {
     shadowColor: "rgba(10, 102, 194, 0.5)",
   },
   facebook: {
-    color: "#1877F2",
-    gradient: "from-[#166FE5] to-[#1877F2]",
+    color: "#fff",
+    gradient: "from-[#296fcc] to-[#1354aa]",
     shadowColor: "rgba(24, 119, 242, 0.5)",
   },
   instagram: {
-    color: "#E4405F",
+    color: "#fff",
     gradient: "from-[#833AB4] via-[#FD1D1D] to-[#FCAF45]",
     shadowColor: "rgba(228, 64, 95, 0.5)",
   },
@@ -146,24 +148,24 @@ export const platformStyles: Record<string, PlatformStyle> = {
     shadowColor: "rgba(255, 0, 0, 0.5)",
   },
   gmail: {
-    color: "#EA4335",
-    gradient: "from-[#DB4437] to-[#EA4335]",
-    shadowColor: "rgba(234, 67, 53, 0.5)",
+    color: "#ffffff",
+    gradient: "from-[#ffffff] to-[#ffffff]",
+    shadowColor: "rgba(252, 252, 252, 0.5)",
   },
   upwork: {
-    color: "#6FDA44",
-    gradient: "from-[#14A800] to-[#6FDA44]",
-    shadowColor: "rgba(111, 218, 68, 0.5)",
+    color: "#19a503",
+    gradient: "from-[#19a503] to-[#19a503]",
+    shadowColor: "rgba(25, 165, 3, 0.5)",
   },
   fiverr: {
-    color: "#1DBF73",
-    gradient: "from-[#19A463] to-[#1DBF73]",
-    shadowColor: "rgba(29, 191, 115, 0.5)",
+    color: "#00b727",
+    gradient: "from-[#00b727] to-[#00b727]",
+    shadowColor: "rgba(0, 183, 39, 0.5)",
   },
   patreon: {
-    color: "#FF424D",
-    gradient: "from-[#F96854] to-[#FF424D]",
-    shadowColor: "rgba(255, 66, 77, 0.5)",
+    color: "#ff4c1c",
+    gradient: "from-[#ff4c1c] to-[#ff4c1c]",
+    shadowColor: "rgba(255, 76, 28, 0.5)",
   },
   dev: {
     color: "#0A0A0A",
@@ -171,14 +173,14 @@ export const platformStyles: Record<string, PlatformStyle> = {
     shadowColor: "rgba(10, 10, 10, 0.5)",
   },
   hostinger: {
-    color: "#673DE6",
-    gradient: "from-[#5B37CC] to-[#673DE6]",
-    shadowColor: "rgba(103, 61, 230, 0.5)",
+    color: "#742ff6",
+    gradient: "from-[#fff] to-[#bd9aff]",
+    shadowColor: "rgba(189, 154, 255, 0.5)",
   },
   hostingeremail: {
-    color: "#673DE6",
-    gradient: "from-[#5B37CC] to-[#673DE6]",
-    shadowColor: "rgba(103, 61, 230, 0.5)",
+    color: "#742ff6",
+    gradient: "from-[#fff] to-[#bd9aff]",
+    shadowColor: "rgba(189, 154, 255, 0.5)",
   },
   medium: {
     color: "#000000",
@@ -197,13 +199,13 @@ export const platformStyles: Record<string, PlatformStyle> = {
   },
   discord: {
     color: "#5865F2",
-    gradient: "from-[#4752C4] to-[#5865F2]",
+    gradient: "from-[#5865F2] to-[#5865F2]",
     shadowColor: "rgba(88, 101, 242, 0.5)",
   },
   twitch: {
-    color: "#9146FF",
-    gradient: "from-[#7C3AED] to-[#9146FF]",
-    shadowColor: "rgba(145, 70, 255, 0.5)",
+    color: "#4d00bd",
+    gradient: "from-[#4d00bd] to-[#4d00bd]",
+    shadowColor: "rgba(77, 0, 189, 0.8)",
   },
   behance: {
     color: "#1769FF",
@@ -237,8 +239,8 @@ export const platformStyles: Record<string, PlatformStyle> = {
   },
   tiktok: {
     color: "#000000",
-    gradient: "from-[#FF0050] via-[#00F2EA] to-[#000000]",
-    shadowColor: "rgba(0, 0, 0, 0.5)",
+    gradient: "from-black to-[#000000]",
+    shadowColor: "rgba(252, 252, 252, 0.2)",
   },
   snapchat: {
     color: "#FFFC00",
@@ -247,7 +249,7 @@ export const platformStyles: Record<string, PlatformStyle> = {
   },
   reddit: {
     color: "#FF4500",
-    gradient: "from-[#FF5700] to-[#FF4500]",
+    gradient: "from-[#FF4500] to-[#FF4500]",
     shadowColor: "rgba(255, 69, 0, 0.5)",
   },
   quora: {
@@ -281,14 +283,14 @@ export const platformStyles: Record<string, PlatformStyle> = {
     shadowColor: "rgba(255, 224, 27, 0.5)",
   },
   stripe: {
-    color: "#008CDD",
-    gradient: "from-[#007BB8] to-[#008CDD]",
-    shadowColor: "rgba(0, 140, 221, 0.5)",
+    color: "#5f70f3",
+    gradient: "from-[#5f70f3] to-[#5f70f3]",
+    shadowColor: "rgba(95, 112, 243, 0.8)",
   },
   paypal: {
-    color: "#00457C",
-    gradient: "from-[#003087] to-[#00457C]",
-    shadowColor: "rgba(0, 69, 124, 0.5)",
+    color: "#0e3fe8",
+    gradient: "from-[#0e3fe8] to-[#0e3fe8]",
+    shadowColor: "rgba(14, 63, 232, 0.8)",
   },
   aws: {
     color: "#232F3E",
@@ -312,13 +314,13 @@ export const platformStyles: Record<string, PlatformStyle> = {
   },
   netlify: {
     color: "#00C7B7",
-    gradient: "from-[#00AD9F] to-[#00C7B7]",
+    gradient: "from-[#fff] to-[#b5fff9]",
     shadowColor: "rgba(0, 199, 183, 0.5)",
   },
   vercel: {
     color: "#919191",
-    gradient: "from-[#000000] to-[#333333]",
-    shadowColor: "rgba(0, 0, 0, 0.5)",
+    gradient: "from-[#000] to-[#000]",
+    shadowColor: "rgba(252, 252, 252, 0.2)",
   },
   heroku: {
     color: "#430098",
@@ -327,7 +329,7 @@ export const platformStyles: Record<string, PlatformStyle> = {
   },
   cloudflare: {
     color: "#F38020",
-    gradient: "from-[#FAAD3F] to-[#F38020]",
+    gradient: "from-[#ffd9a2] to-[#ffd9a2]",
     shadowColor: "rgba(243, 128, 32, 0.5)",
   },
   namecheap: {
@@ -410,6 +412,11 @@ export const platformStyles: Record<string, PlatformStyle> = {
     gradient: "from-[#00A4AD] to-[#00C4CC]",
     shadowColor: "rgba(0, 196, 204, 0.5)",
   },
+  calendly: {
+    color: "#1874ee",
+    gradient: "from-[#d6d6d6] to-[#d6d6d6]",
+    shadowColor: "rgba(200, 200, 200, 200.5)"
+  },
   adobe: {
     color: "#FF0000",
     gradient: "",
@@ -433,8 +440,8 @@ export const platformStyles: Record<string, PlatformStyle> = {
   
   default: {
     color: "#000000",
-    gradient: "from-[#ffffff] to-[#7C3AED]",
-    shadowColor: "rgba(156, 36, 174, 1)",
+    gradient: "from-[#ffffff] to-[#ee2222]",
+    shadowColor: "rgba(238, 34, 34, 1)",
   },
 };
 
