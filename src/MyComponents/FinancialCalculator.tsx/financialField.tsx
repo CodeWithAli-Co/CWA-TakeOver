@@ -127,6 +127,29 @@ export const FinancialField: React.FC = () => {
               type: r.type,
             }))
           );
+        
+                  const { data, error } = await supabase
+          .from("cwa_calculatorProps")
+          .select("*");
+
+        if (error)
+          console.log(
+            "There is erorr with receiving actual data",
+            error.message
+          );
+
+        data?.map((e) => {
+          setInitialCapital(e.initialCapital);
+          setTaxRate(e.taxRate);
+          setInflationRate(e.inflationRate);
+          setYears(e.years);
+          setAvgSalary(e.avgSalary);
+          setEmployeeCount(e.employeeCount);
+          setSalaryGrowth(e.salaryGrowth);
+        });
+
+
+
       } catch (err) {
         console.error("Error in loadLastActiveScenario:", err);
       }
@@ -217,18 +240,12 @@ export const FinancialField: React.FC = () => {
   // Calculate projections when inputs change
   useEffect(() => {
     const loadCalcProps = async () => {
-      const { data: calcData, error: calcError } = await supabase
-        .from("cwa_calculatorProps")
-        .select("*");
-      if (calcError)
-        console.log("Error fetching from CalcProps table", calcError.message);
-
       const {
         projections: calculatedProjections,
         financialMetrics: calculatedMetrics,
       } = calculateProjections(
         initialCapital,
-        calcData![0].taxRate,
+        taxRate,
         inflationRate,
         years,
         avgSalary,
@@ -240,7 +257,6 @@ export const FinancialField: React.FC = () => {
 
       setProjections(calculatedProjections);
       setFinancialMetrics(calculatedMetrics);
-      console.log({ calcData })
     };
     loadCalcProps();
   }, [
