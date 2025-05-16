@@ -133,7 +133,10 @@ export const CompanyCreds = ({ folder = "default" }: { folder?: string }) => {
       </div>
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-        <Link to="/detailFolders" className="bg-white w-10 h-10"></Link>
+        <Link to="/detailFolders" className="bg-black border-[1px] border-zinc-600 min-h-[180px] w-auto rounded-xl flex justify-center items-center">
+          <img src="/folder.png" alt="folder icon" className="w-[200px] h-auto object-contain" />
+          {folder}
+        </Link>
         {cwaCreds?.map((cred: Credential) => {
           const isExpanded = expandedCards.includes(cred.id);
           const lowerPlatform = cred.platform_name.toLowerCase();

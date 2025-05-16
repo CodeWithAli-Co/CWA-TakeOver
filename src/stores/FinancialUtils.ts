@@ -17,7 +17,7 @@ export const calculateAnnualAmount = (item: ExpenseItem | RevenueItem): number =
   }
   
   // For revenue items, multiply by clients if it's a subscription or recurring
-  if ('clients' in item && (item.type === 'subscription' || item.type === 'recurring')) {
+  if ('clients' in item && (item.revenueType === 'subscription' || item.revenueType === 'recurring')) {
     base *= item.clients;
   }
   
@@ -72,7 +72,7 @@ export const calculateProjections = (
       
       // For recurring/subscription revenue, use compound growth 
       // For one-time revenue, use simple growth
-      const growthFactor = revenue.type === 'one-time' 
+      const growthFactor = revenue.revenueType === 'one-time' 
         ? (1 + (revenue.growth / 100) * year)
         : Math.pow(1 + revenue.growth / 100, year);
       

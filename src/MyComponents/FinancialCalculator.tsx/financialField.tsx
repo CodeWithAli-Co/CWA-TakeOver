@@ -216,23 +216,33 @@ export const FinancialField: React.FC = () => {
 
   // Calculate projections when inputs change
   useEffect(() => {
-    const {
-      projections: calculatedProjections,
-      financialMetrics: calculatedMetrics,
-    } = calculateProjections(
-      initialCapital,
-      taxRate,
-      inflationRate,
-      years,
-      avgSalary,
-      employeeCount,
-      salaryGrowth,
-      expenses,
-      revenues
-    );
+    const loadCalcProps = async () => {
+      const { data: calcData, error: calcError } = await supabase
+        .from("cwa_calculatorProps")
+        .select("*");
+      if (calcError)
+        console.log("Error fetching from CalcProps table", calcError.message);
 
-    setProjections(calculatedProjections);
-    setFinancialMetrics(calculatedMetrics);
+      const {
+        projections: calculatedProjections,
+        financialMetrics: calculatedMetrics,
+      } = calculateProjections(
+        initialCapital,
+        calcData![0].taxRate,
+        inflationRate,
+        years,
+        avgSalary,
+        employeeCount,
+        salaryGrowth,
+        expenses,
+        revenues
+      );
+
+      setProjections(calculatedProjections);
+      setFinancialMetrics(calculatedMetrics);
+      console.log({ calcData })
+    };
+    loadCalcProps();
   }, [
     initialCapital,
     taxRate,
