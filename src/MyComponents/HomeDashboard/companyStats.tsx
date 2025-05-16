@@ -1,6 +1,7 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import { Users, CircleDollarSign, BarChart3, Boxes } from "lucide-react";
+import supabase from "../supabase";
 
 // Enhanced Stat Card with animations
 const StatCard = ({
@@ -27,7 +28,7 @@ const StatCard = ({
       </motion.div>
       {change && (
         <span
-        className={`text-xs ${change > 0 ? "text-emerald-400" : "text-red-400"}`}
+          className={`text-xs ${change > 0 ? "text-emerald-400" : "text-red-400"}`}
         >
           {change > 0 ? "+" : ""}
           {change}%
@@ -41,7 +42,26 @@ const StatCard = ({
   </motion.div>
 );
 
-const CompanyStats = () => {
+const CompanyStats =  () => {
+  const [initialCapital, setInitialCapital] = useState("");
+
+  useEffect(() => {
+    async function initialCapitalStat() {
+      const { data, error } = await supabase
+        .from("cwa_calculatorProps")
+        .select("initialCapital")
+        .single();
+
+      if (error)
+        console.log(
+          "there was an error grabbing the initialCapital",
+          error.message
+        );
+      setInitialCapital(data?.initialCapital);
+    }
+    initialCapitalStat();
+  }, []);
+
   return (
     <>
       {/* Stats Overview */}
@@ -54,7 +74,7 @@ const CompanyStats = () => {
         <StatCard
           icon={CircleDollarSign}
           label="Revenue"
-          value="$1,014.97"
+          value={`$${initialCapital}`}
         />
         <StatCard icon={BarChart3} label="Subscription" value="$46" />
         <StatCard icon={Boxes} label="Active Bots" value="1" />
