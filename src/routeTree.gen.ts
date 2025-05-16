@@ -28,6 +28,7 @@ const InvoiceClientsLazyImport = createFileRoute('/invoiceClients')()
 const FinancialDashboardLazyImport = createFileRoute('/financialDashboard')()
 const EmployeeLazyImport = createFileRoute('/employee')()
 const DetailsLazyImport = createFileRoute('/details')()
+const DetailFoldersLazyImport = createFileRoute('/detailFolders')()
 const ChatLazyImport = createFileRoute('/chat')()
 const BudgetaryLazyImport = createFileRoute('/budgetary')()
 const BroadcastLazyImport = createFileRoute('/broadcast')()
@@ -115,6 +116,12 @@ const DetailsLazyRoute = DetailsLazyImport.update({
   getParentRoute: () => rootRoute,
 } as any).lazy(() => import('./routes/details.lazy').then((d) => d.Route))
 
+const DetailFoldersLazyRoute = DetailFoldersLazyImport.update({
+  id: '/detailFolders',
+  path: '/detailFolders',
+  getParentRoute: () => rootRoute,
+} as any).lazy(() => import('./routes/detailFolders.lazy').then((d) => d.Route))
+
 const ChatLazyRoute = ChatLazyImport.update({
   id: '/chat',
   path: '/chat',
@@ -195,6 +202,13 @@ declare module '@tanstack/react-router' {
       path: '/chat'
       fullPath: '/chat'
       preLoaderRoute: typeof ChatLazyImport
+      parentRoute: typeof rootRoute
+    }
+    '/detailFolders': {
+      id: '/detailFolders'
+      path: '/detailFolders'
+      fullPath: '/detailFolders'
+      preLoaderRoute: typeof DetailFoldersLazyImport
       parentRoute: typeof rootRoute
     }
     '/details': {
@@ -293,6 +307,7 @@ export interface FileRoutesByFullPath {
   '/broadcast': typeof BroadcastLazyRoute
   '/budgetary': typeof BudgetaryLazyRoute
   '/chat': typeof ChatLazyRoute
+  '/detailFolders': typeof DetailFoldersLazyRoute
   '/details': typeof DetailsLazyRoute
   '/employee': typeof EmployeeLazyRoute
   '/financialDashboard': typeof FinancialDashboardLazyRoute
@@ -314,6 +329,7 @@ export interface FileRoutesByTo {
   '/broadcast': typeof BroadcastLazyRoute
   '/budgetary': typeof BudgetaryLazyRoute
   '/chat': typeof ChatLazyRoute
+  '/detailFolders': typeof DetailFoldersLazyRoute
   '/details': typeof DetailsLazyRoute
   '/employee': typeof EmployeeLazyRoute
   '/financialDashboard': typeof FinancialDashboardLazyRoute
@@ -336,6 +352,7 @@ export interface FileRoutesById {
   '/broadcast': typeof BroadcastLazyRoute
   '/budgetary': typeof BudgetaryLazyRoute
   '/chat': typeof ChatLazyRoute
+  '/detailFolders': typeof DetailFoldersLazyRoute
   '/details': typeof DetailsLazyRoute
   '/employee': typeof EmployeeLazyRoute
   '/financialDashboard': typeof FinancialDashboardLazyRoute
@@ -359,6 +376,7 @@ export interface FileRouteTypes {
     | '/broadcast'
     | '/budgetary'
     | '/chat'
+    | '/detailFolders'
     | '/details'
     | '/employee'
     | '/financialDashboard'
@@ -379,6 +397,7 @@ export interface FileRouteTypes {
     | '/broadcast'
     | '/budgetary'
     | '/chat'
+    | '/detailFolders'
     | '/details'
     | '/employee'
     | '/financialDashboard'
@@ -399,6 +418,7 @@ export interface FileRouteTypes {
     | '/broadcast'
     | '/budgetary'
     | '/chat'
+    | '/detailFolders'
     | '/details'
     | '/employee'
     | '/financialDashboard'
@@ -421,6 +441,7 @@ export interface RootRouteChildren {
   BroadcastLazyRoute: typeof BroadcastLazyRoute
   BudgetaryLazyRoute: typeof BudgetaryLazyRoute
   ChatLazyRoute: typeof ChatLazyRoute
+  DetailFoldersLazyRoute: typeof DetailFoldersLazyRoute
   DetailsLazyRoute: typeof DetailsLazyRoute
   EmployeeLazyRoute: typeof EmployeeLazyRoute
   FinancialDashboardLazyRoute: typeof FinancialDashboardLazyRoute
@@ -442,6 +463,7 @@ const rootRouteChildren: RootRouteChildren = {
   BroadcastLazyRoute: BroadcastLazyRoute,
   BudgetaryLazyRoute: BudgetaryLazyRoute,
   ChatLazyRoute: ChatLazyRoute,
+  DetailFoldersLazyRoute: DetailFoldersLazyRoute,
   DetailsLazyRoute: DetailsLazyRoute,
   EmployeeLazyRoute: EmployeeLazyRoute,
   FinancialDashboardLazyRoute: FinancialDashboardLazyRoute,
@@ -472,6 +494,7 @@ export const routeTree = rootRoute
         "/broadcast",
         "/budgetary",
         "/chat",
+        "/detailFolders",
         "/details",
         "/employee",
         "/financialDashboard",
@@ -503,6 +526,9 @@ export const routeTree = rootRoute
     },
     "/chat": {
       "filePath": "chat.lazy.tsx"
+    },
+    "/detailFolders": {
+      "filePath": "detailFolders.lazy.tsx"
     },
     "/details": {
       "filePath": "details.lazy.tsx"

@@ -49,14 +49,14 @@ export const ActiveUser = () => {
 
 
 // Fetch All CWA Credentials
-const fetchCreds = async () => {
-  const { data } = await supabase.from("cwa_creds").select("*");
+const fetchCreds = async (folder: string) => {
+  const { data } = await supabase.from("cwa_creds").select("*").eq('folder', folder);
   return data;
 };
-export const CWACreds = () => {
+export const CWACreds = (folder: string) => {
   return useSuspenseQuery({
     queryKey: ["creds"],
-    queryFn: fetchCreds,
+    queryFn: () => fetchCreds(folder),
   });
 };
 
