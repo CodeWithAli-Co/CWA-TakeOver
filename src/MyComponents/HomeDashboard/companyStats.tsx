@@ -42,40 +42,56 @@ const StatCard = ({
   </motion.div>
 );
 
-const CompanyStats =  () => {
+const CompanyStats = () => {
   const [initialCapital, setInitialCapital] = useState("");
-  const [appUsers, setAppUsers]  = useState('')
+  const [appUsers, setAppUsers] = useState("");
+  const [subscription, setSubscription] = useState("");
 
   useEffect(() => {
     async function Stat() {
-      const { data : revenue, error : revenueError } = await supabase
-        .from("cwa_calculatorProps")  
+      const { data: revenue, error: revenueError } = await supabase
+        .from("cwa_calculatorProps")
         .select("initialCapital")
         .single();
-     
-        const { data : userCount, error : userCountError} = await supabase
+
+      const { data: userCount, error: userCountError } = await supabase
         .from("app_users")
-        .select("id")
-        
+        .select("id");
+
+      const { data: subscriptions, error: subscriptionError } = await supabase
+        .from("cwa_revenues")
+        .select("amount")
+        .eq("revenueType", "subscription");
 
       if (revenueError)
         console.log(
           "there was an error grabbing the initialCapital",
           revenueError.message
-        
         );
 
       if (userCountError)
-        
-        console.log("could not count the users within the database to vsCode", userCountError.message);
-    
-      setInitialCapital(revenue?.initialCapital);
-      setAppUsers( userCount!.length as unknown as string)
-     
-      
-     
-    }
+        console.log(
+          "could not count the users within the database to vsCode",
+          userCountError.message
+        );
 
+      if (subscriptionError)
+        console.log(
+          "Error fetching subscription stat",
+          subscriptionError.message
+        );
+
+      var totSubs = 0;
+      if (subscriptions!.length) {
+        totSubs = subscriptions!.reduce((total, subscription) => {
+          return total + (subscription.amount || 0);
+        }, 0);
+      }
+
+      setInitialCapital(revenue?.initialCapital);
+      setAppUsers(userCount!.length as unknown as string);
+      setSubscription(totSubs.toFixed(2));
+    }
     Stat();
   }, []);
 
@@ -87,13 +103,20 @@ const CompanyStats =  () => {
         animate={{ opacity: 1, y: 0 }}
         className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4"
       >
-        <StatCard icon={Users} label="Total Users" value={appUsers} change={300} />
+        <StatCard icon={Users} label="Total Users" value={appUsers} />
+
+        {/* Can either link up actual bank account or calc how much money there is on bank acc */}
         <StatCard
           icon={CircleDollarSign}
-          label="Revenue"
+          label="Bank"
           value={`$${initialCapital}`}
         />
-        <StatCard icon={BarChart3} label="Subscription" value="$46" />
+        {/* Can make it so it shows actual revenue ( income - expenses ) */}
+        <StatCard
+          icon={BarChart3}
+          label="Subscription Income"
+          value={`$${subscription}`}
+        />
         <StatCard icon={Boxes} label="Active Bots" value="1" />
       </motion.div>
     </>
