@@ -35,9 +35,9 @@ export const FinancialField: React.FC = () => {
   const [years, setYears] = useState<number>(5);
 
   // Employee costs
-  const [avgSalary, setAvgSalary] = useState<number>(60000);
-  const [employeeCount, setEmployeeCount] = useState<number>(3);
-  const [salaryGrowth, setSalaryGrowth] = useState<number>(3);
+  const [avgSalary, setAvgSalary] = useState<number>(0);
+  const [employeeCount, setEmployeeCount] = useState<number>(0);
+  const [salaryGrowth, setSalaryGrowth] = useState<number>(0);
 
   // Dynamic expenses
   const [expenses, setExpenses] = useState<ExpenseItem[]>([
