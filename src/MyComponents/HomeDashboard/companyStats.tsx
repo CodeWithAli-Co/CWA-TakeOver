@@ -44,22 +44,39 @@ const StatCard = ({
 
 const CompanyStats =  () => {
   const [initialCapital, setInitialCapital] = useState("");
+  const [appUsers, setAppUsers]  = useState('')
 
   useEffect(() => {
-    async function initialCapitalStat() {
-      const { data, error } = await supabase
-        .from("cwa_calculatorProps")
+    async function Stat() {
+      const { data : revenue, error : revenueError } = await supabase
+        .from("cwa_calculatorProps")  
         .select("initialCapital")
         .single();
+     
+        const { data : userCount, error : userCountError} = await supabase
+        .from("app_users")
+        .select("id")
+        
 
-      if (error)
+      if (revenueError)
         console.log(
           "there was an error grabbing the initialCapital",
-          error.message
+          revenueError.message
+        
         );
-      setInitialCapital(data?.initialCapital);
+
+      if (userCountError)
+        
+        console.log("could not count the users within the database to vsCode", userCountError.message);
+    
+      setInitialCapital(revenue?.initialCapital);
+      setAppUsers( userCount!.length as unknown as string)
+     
+      
+     
     }
-    initialCapitalStat();
+
+    Stat();
   }, []);
 
   return (
@@ -70,7 +87,7 @@ const CompanyStats =  () => {
         animate={{ opacity: 1, y: 0 }}
         className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4"
       >
-        <StatCard icon={Users} label="Total Users" value="5" change={300} />
+        <StatCard icon={Users} label="Total Users" value={appUsers} change={300} />
         <StatCard
           icon={CircleDollarSign}
           label="Revenue"
