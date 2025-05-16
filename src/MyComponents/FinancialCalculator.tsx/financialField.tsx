@@ -29,10 +29,10 @@ export const FinancialField: React.FC = () => {
   const [activateScenario, setActivateScenario] = useState(false);
 
   // Basic financials
-  const [initialCapital, setInitialCapital] = useState<number>(1);
+  const [initialCapital, setInitialCapital] = useState<number>(0);
   const [taxRate, setTaxRate] = useState<number>(9);
   const [inflationRate, setInflationRate] = useState<number>(3);
-  const [years, setYears] = useState<number>(5);
+  const [years, setYears] = useState<number>(1);
 
   // Employee costs
   const [avgSalary, setAvgSalary] = useState<number>(0);
@@ -48,6 +48,7 @@ export const FinancialField: React.FC = () => {
       growth: 5,
       frequency: "annually",
       category: "Technology",
+      type: "expense",
     },
   ]);
 
@@ -58,10 +59,11 @@ export const FinancialField: React.FC = () => {
       name: "Basic Plan",
       amount: 29,
       growth: 15,
-      type: "subscription",
+      revenueType: "subscription",
       frequency: "monthly",
       category: "Subscriptions",
       clients: 100,
+      type: "revenue",
     },
   ]);
 
@@ -101,6 +103,7 @@ export const FinancialField: React.FC = () => {
               growth: e.growth,
               frequency: e.frequency,
               category: e.category,
+              type: e.type,
             }))
           );
 
@@ -117,10 +120,11 @@ export const FinancialField: React.FC = () => {
               name: r.name,
               amount: r.amount,
               growth: r.growth,
-              type: r.type,
+              revenueType: r.revenueType,
               frequency: r.frequency,
               category: r.category,
               clients: r.clients,
+              type: r.type,
             }))
           );
       } catch (err) {
