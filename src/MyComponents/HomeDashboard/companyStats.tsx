@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { motion } from "framer-motion";
-import { Users, CircleDollarSign, BarChart3, Boxes } from "lucide-react";
+import { Users, CircleDollarSign, BarChart3, Boxes, DollarSign } from "lucide-react";
 import supabase from "../supabase";
 
 // Enhanced Stat Card with animations
@@ -46,9 +46,17 @@ const CompanyStats = () => {
   const [initialCapital, setInitialCapital] = useState("");
   const [appUsers, setAppUsers] = useState("");
   const [subscription, setSubscription] = useState("");
+  const [expenses, setExpenses] = useState("")
 
   useEffect(() => {
     async function Stat() {
+
+      const { data : expense, error : expenseError} = await supabase
+        .from("cwa_expenses")
+        .select("amount")
+        // .eq("")
+
+
       const { data: revenue, error: revenueError } = await supabase
         .from("cwa_calculatorProps")
         .select("initialCapital")
@@ -81,6 +89,16 @@ const CompanyStats = () => {
           subscriptionError.message
         );
 
+      if ( expenseError ) console.log("There was an error retrieving the expenses from the database", expenseError.message)
+        
+      var totalExpense = 0
+      if (expense!.length) 
+      {
+        totalExpense =  expense!.reduce((total, expenses) => {
+          return total - (expenses.amount || 0);
+        }, 0)
+      }
+
       var totSubs = 0;
       if (subscriptions!.length) {
         totSubs = subscriptions!.reduce((total, subscription) => {
@@ -91,6 +109,7 @@ const CompanyStats = () => {
       setInitialCapital(revenue?.initialCapital);
       setAppUsers(userCount!.length as unknown as string);
       setSubscription(totSubs.toFixed(2));
+      setExpenses(totalExpense.toFixed(2))
     }
     Stat();
   }, []);
@@ -117,7 +136,8 @@ const CompanyStats = () => {
           label="Subscription Income"
           value={`$${subscription}`}
         />
-        <StatCard icon={Boxes} label="Active Bots" value="1" />
+        <StatCard icon={DollarSign} label="Expenses" value={expenses} />
+        {/* <StatCard icon={Boxes} label="Active Bots" value="1" /> */}
       </motion.div>
     </>
   );
