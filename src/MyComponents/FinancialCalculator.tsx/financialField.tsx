@@ -16,9 +16,9 @@ export const FinancialField: React.FC = () => {
   const [mainTab, setMainTab] = useState<string>('calculator');
   
   // Basic financials
-  const [initialCapital, setInitialCapital] = useState<number>(50000);
-  const [taxRate, setTaxRate] = useState<number>(25);
-  const [inflationRate, setInflationRate] = useState<number>(2.5);
+  const [initialCapital, setInitialCapital] = useState<number>(1);
+  const [taxRate, setTaxRate] = useState<number>(9);
+  const [inflationRate, setInflationRate] = useState<number>(3);
   const [years, setYears] = useState<number>(5);
   
   // Employee costs
@@ -29,15 +29,12 @@ export const FinancialField: React.FC = () => {
   // Dynamic expenses
   const [expenses, setExpenses] = useState<ExpenseItem[]>([
     { id: 1, name: 'Website Hosting', amount: 1200, growth: 5, frequency: 'annually', category: 'Technology' },
-    { id: 2, name: 'Software Subscriptions', amount: 300, growth: 10, frequency: 'monthly', category: 'Software' },
-    { id: 3, name: 'Office Space', amount: 2000, growth: 3, frequency: 'monthly', category: 'Rent' }
   ]);
   
   // Revenue streams
   const [revenues, setRevenues] = useState<RevenueItem[]>([
     { id: 1, name: 'Basic Plan', amount: 29, growth: 15, type: 'subscription', frequency: 'monthly', category: 'Subscriptions', clients: 100 },
-    { id: 2, name: 'Premium Plan', amount: 79, growth: 20, type: 'subscription', frequency: 'monthly', category: 'Subscriptions', clients: 50 },
-    { id: 3, name: 'Consulting', amount: 5000, growth: 5, type: 'one-time', frequency: 'quarterly', category: 'Services', clients: 7 }
+   
   ]);
   
   // Computed financial projections
