@@ -7,9 +7,8 @@ import CalculatorTab from './tabs/calculatorTab';
 import MonthlyMultiplier from './tabs/monthlyMultiplier';
 import ScenarioManager from './tabs/ScenarioManager';
 import VisualizerTab from './tabs/VisualizerTab';
-
-// Import types
-
+import supabase from '@/MyComponents/supabase';
+import { ActiveUser } from '@/stores/query';
 
 export const FinancialField: React.FC = () => {
   // Main Navigation Tabs
@@ -34,7 +33,6 @@ export const FinancialField: React.FC = () => {
   // Revenue streams
   const [revenues, setRevenues] = useState<RevenueItem[]>([
     { id: 1, name: 'Basic Plan', amount: 29, growth: 15, type: 'subscription', frequency: 'monthly', category: 'Subscriptions', clients: 100 },
-   
   ]);
   
   // Computed financial projections
@@ -49,6 +47,81 @@ export const FinancialField: React.FC = () => {
     employeeCostRatio: 0,
     runwayMonths: 0
   });
+
+  // Get the active user
+  const { data: activeUser } = ActiveUser();
+  const currentUser = activeUser?.[0];
+  
+  // Load the last active scenario when component mounts
+  useEffect(() => {
+    const loadLastActiveScenario = async () => {
+      if (!currentUser) return;
+      
+      try {
+        // Fetch the most recently accessed scenario
+        const { data, error } = await supabase
+          .from('financial_scenarios')
+          .select('*')
+          .eq('user_id', currentUser.supa_id)
+          .order('last_accessed', { ascending: false })
+          .limit(1);
+          
+        if (error) {
+          console.error('Error loading last scenario:', error);
+          return;
+        }
+        
+        // If a scenario exists, load it
+        if (data && data.length > 0) {
+          const scenario = data[0];
+          setInitialCapital(scenario.initial_capital);
+          setTaxRate(scenario.tax_rate);
+          setInflationRate(scenario.inflation_rate);
+          setYears(scenario.years);
+          setAvgSalary(scenario.avg_salary);
+          setEmployeeCount(scenario.employee_count);
+          setSalaryGrowth(scenario.salary_growth);
+          
+          // Load expenses and revenues from the related tables
+          const { data: expenseData, error: expenseError } = await supabase
+            .from('financial_expenses')
+            .select('*')
+            .eq('scenario_id', scenario.id);
+            
+          if (expenseError) console.error('Error loading expenses:', expenseError);
+          else setExpenses(expenseData.map(e => ({
+            id: e.id,
+            name: e.name,
+            amount: e.amount,
+            growth: e.growth,
+            frequency: e.frequency,
+            category: e.category
+          })));
+          
+          const { data: revenueData, error: revenueError } = await supabase
+            .from('financial_revenues')
+            .select('*')
+            .eq('scenario_id', scenario.id);
+            
+          if (revenueError) console.error('Error loading revenues:', revenueError);
+          else setRevenues(revenueData.map(r => ({
+            id: r.id,
+            name: r.name,
+            amount: r.amount,
+            growth: r.growth,
+            type: r.type,
+            frequency: r.frequency,
+            category: r.category,
+            clients: r.clients
+          })));
+        }
+      } catch (err) {
+        console.error('Error in loadLastActiveScenario:', err);
+      }
+    };
+    
+    loadLastActiveScenario();
+  }, [currentUser]);
   
   // Calculate projections when inputs change
   useEffect(() => {
@@ -73,8 +146,8 @@ export const FinancialField: React.FC = () => {
   ]);
   
   // Save the current scenario
-  const saveCurrentScenario = (): ScenarioData => {
-    return {
+  const saveCurrentScenario = async (): Promise<ScenarioData> => {
+    const scenarioData = {
       id: '', // Will be filled by ScenarioManager
       name: '',
       description: '',
@@ -89,6 +162,8 @@ export const FinancialField: React.FC = () => {
       expenses,
       revenues
     };
+    
+    return scenarioData;
   };
   
   // Load a saved scenario

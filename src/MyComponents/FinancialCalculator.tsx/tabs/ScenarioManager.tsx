@@ -3,7 +3,9 @@ import { motion } from 'framer-motion';
 import { Save, Download, ArrowUpCircle } from 'lucide-react';
 import { ScenarioData, ScenarioManagerProps } from '@/stores/FinancialField';
 import SectionHeader from '../sectionHeader';
-
+import supabase from '@/MyComponents/supabase';
+import { message } from '@tauri-apps/plugin-dialog';
+import { ActiveUser } from '@/stores/query';
 
 // Financial Scenario Manager Component
 const ScenarioManager: React.FC<ScenarioManagerProps> = ({ loadScenario, saveScenario }) => {
@@ -11,55 +13,271 @@ const ScenarioManager: React.FC<ScenarioManagerProps> = ({ loadScenario, saveSce
   const [scenarioName, setScenarioName] = useState('');
   const [scenarioDesc, setScenarioDesc] = useState('');
   
+  // Get the active user
+  const { data: activeUser } = ActiveUser();
+  const currentUser = activeUser?.[0];
+  
   // Load saved scenarios on component mount
   useEffect(() => {
-    const savedScenarios = localStorage.getItem('financePrince_scenarios');
-    if (savedScenarios) {
+    const loadSavedScenarios = async () => {
+      if (!currentUser) return;
+      
       try {
-        setScenarios(JSON.parse(savedScenarios));
-      } catch (e) {
-        console.error('Error loading scenarios:', e);
+        // Fetch all scenarios for the current user
+        const { data, error } = await supabase
+          .from('financial_scenarios')
+          .select(`
+            id, 
+            name, 
+            description, 
+            created_at, 
+            initial_capital, 
+            tax_rate, 
+            inflation_rate, 
+            years, 
+            avg_salary, 
+            employee_count, 
+            salary_growth
+          `)
+          .eq('user_id', currentUser.supa_id)
+          .order('created_at', { ascending: false });
+          
+        if (error) {
+          console.error('Error fetching scenarios:', error);
+          return;
+        }
+        
+        // For each scenario, get the associated expenses and revenues
+        const scenariosWithDetails = await Promise.all(data.map(async (scenario) => {
+          // Get expenses
+          const { data: expenses, error: expensesError } = await supabase
+            .from('financial_expenses')
+            .select('*')
+            .eq('scenario_id', scenario.id);
+            
+          if (expensesError) {
+            console.error('Error fetching expenses:', expensesError);
+            return null;
+          }
+          
+          // Get revenues
+          const { data: revenues, error: revenuesError } = await supabase
+            .from('financial_revenues')
+            .select('*')
+            .eq('scenario_id', scenario.id);
+            
+          if (revenuesError) {
+            console.error('Error fetching revenues:', revenuesError);
+            return null;
+          }
+          
+          // Convert to the expected format
+          return {
+            id: scenario.id,
+            name: scenario.name,
+            description: scenario.description,
+            date: scenario.created_at,
+            initialCapital: scenario.initial_capital,
+            taxRate: scenario.tax_rate,
+            inflationRate: scenario.inflation_rate,
+            years: scenario.years,
+            avgSalary: scenario.avg_salary,
+            employeeCount: scenario.employee_count,
+            salaryGrowth: scenario.salary_growth,
+            expenses: expenses.map(e => ({
+              id: e.id,
+              name: e.name,
+              amount: e.amount,
+              growth: e.growth,
+              frequency: e.frequency,
+              category: e.category
+            })),
+            revenues: revenues.map(r => ({
+              id: r.id,
+              name: r.name,
+              amount: r.amount,
+              growth: r.growth,
+              type: r.type,
+              frequency: r.frequency,
+              category: r.category,
+              clients: r.clients
+            }))
+          };
+        }));
+        
+        // Filter out any null results from errors
+        const validScenarios = scenariosWithDetails.filter(s => s !== null) as ScenarioData[];
+        setScenarios(validScenarios);
+      } catch (err) {
+        console.error('Error in loadSavedScenarios:', err);
       }
-    }
-  }, []);
-  
-  // Save scenarios to localStorage when updated
-  useEffect(() => {
-    if (scenarios.length > 0) {
-      localStorage.setItem('financePrince_scenarios', JSON.stringify(scenarios));
-    }
-  }, [scenarios]);
+    };
+    
+    loadSavedScenarios();
+    
+    // Set up real-time subscription for scenarios
+    const scenarioSubscription = supabase
+      .channel('financial_scenarios_changes')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'financial_scenarios' },
+        () => loadSavedScenarios()
+      )
+      .subscribe();
+      
+    return () => {
+      scenarioSubscription.unsubscribe();
+    };
+  }, [currentUser]);
   
   // Save current scenario
-  const handleSaveScenario = () => {
-    if (!scenarioName) return;
+  const handleSaveScenario = async () => {
+    if (!scenarioName || !currentUser) return;
     
-    const newScenario = saveScenario();
-    newScenario.name = scenarioName;
-    newScenario.description = scenarioDesc;
-    newScenario.date = new Date().toISOString();
-    
-    // Check if this is an update to existing scenario
-    const existingIndex = scenarios.findIndex(s => s.id === newScenario.id);
-    
-    if (existingIndex >= 0) {
-      // Update existing
-      const updatedScenarios = [...scenarios];
-      updatedScenarios[existingIndex] = newScenario;
-      setScenarios(updatedScenarios);
-    } else {
-      // Add new with unique ID
-      newScenario.id = Date.now().toString();
-      setScenarios([...scenarios, newScenario]);
+    try {
+      const newScenario = await saveScenario();
+      
+      // Insert the scenario into the financial_scenarios table
+      const { data: scenarioData, error: scenarioError } = await supabase
+        .from('financial_scenarios')
+        .insert({
+          user_id: currentUser.supa_id,
+          name: scenarioName,
+          description: scenarioDesc,
+          created_at: new Date().toISOString(),
+          last_accessed: new Date().toISOString(),
+          initial_capital: newScenario.initialCapital,
+          tax_rate: newScenario.taxRate,
+          inflation_rate: newScenario.inflationRate,
+          years: newScenario.years,
+          avg_salary: newScenario.avgSalary,
+          employee_count: newScenario.employeeCount,
+          salary_growth: newScenario.salaryGrowth
+        })
+        .select()
+        .single();
+        
+      if (scenarioError) {
+        console.error('Error saving scenario:', scenarioError);
+        await message('Error saving scenario: ' + scenarioError.message, {
+          title: 'Save Error',
+          kind: 'error'
+        });
+        return;
+      }
+      
+      // Insert expenses
+      if (newScenario.expenses.length > 0) {
+        const expensesData = newScenario.expenses.map(expense => ({
+          scenario_id: scenarioData.id,
+          name: expense.name,
+          amount: expense.amount,
+          growth: expense.growth,
+          frequency: expense.frequency,
+          category: expense.category
+        }));
+        
+        const { error: expensesError } = await supabase
+          .from('financial_expenses')
+          .insert(expensesData);
+          
+        if (expensesError) {
+          console.error('Error saving expenses:', expensesError);
+        }
+      }
+      
+      // Insert revenues
+      if (newScenario.revenues.length > 0) {
+        const revenuesData = newScenario.revenues.map(revenue => ({
+          scenario_id: scenarioData.id,
+          name: revenue.name,
+          amount: revenue.amount,
+          growth: revenue.growth,
+          type: revenue.type,
+          frequency: revenue.frequency,
+          category: revenue.category,
+          clients: revenue.clients
+        }));
+        
+        const { error: revenuesError } = await supabase
+          .from('financial_revenues')
+          .insert(revenuesData);
+          
+        if (revenuesError) {
+          console.error('Error saving revenues:', revenuesError);
+        }
+      }
+      
+      // Reset form fields
+      setScenarioName('');
+      setScenarioDesc('');
+      
+      // Show success message
+      await message('Scenario saved successfully', {
+        title: 'Success',
+        kind: 'info'
+      });
+    } catch (err) {
+      console.error('Error in handleSaveScenario:', err);
+      await message('An unexpected error occurred while saving', {
+        title: 'Error',
+        kind: 'error'
+      });
     }
-    
-    setScenarioName('');
-    setScenarioDesc('');
   };
   
   // Delete a scenario
-  const deleteScenario = (id: string) => {
-    setScenarios(scenarios.filter(s => s.id !== id));
+  const deleteScenario = async (id: string) => {
+    try {
+      // First delete related expenses and revenues (due to foreign key constraints)
+      const { error: expensesError } = await supabase
+        .from('financial_expenses')
+        .delete()
+        .eq('scenario_id', id);
+        
+      if (expensesError) {
+        console.error('Error deleting expenses:', expensesError);
+      }
+      
+      const { error: revenuesError } = await supabase
+        .from('financial_revenues')
+        .delete()
+        .eq('scenario_id', id);
+        
+      if (revenuesError) {
+        console.error('Error deleting revenues:', revenuesError);
+      }
+      
+      // Then delete the scenario
+      const { error: scenarioError } = await supabase
+        .from('financial_scenarios')
+        .delete()
+        .eq('id', id);
+        
+      if (scenarioError) {
+        console.error('Error deleting scenario:', scenarioError);
+        await message('Error deleting scenario: ' + scenarioError.message, {
+          title: 'Delete Error',
+          kind: 'error'
+        });
+        return;
+      }
+      
+      // Update local state
+      setScenarios(scenarios.filter(s => s.id !== id));
+      
+      // Show success message
+      await message('Scenario deleted successfully', {
+        title: 'Success',
+        kind: 'info'
+      });
+    } catch (err) {
+      console.error('Error in deleteScenario:', err);
+      await message('An unexpected error occurred while deleting', {
+        title: 'Error',
+        kind: 'error'
+      });
+    }
   };
   
   // Export scenarios to JSON file
@@ -76,19 +294,89 @@ const ScenarioManager: React.FC<ScenarioManagerProps> = ({ loadScenario, saveSce
   };
   
   // Import scenarios from JSON file
-  const importScenarios = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const importScenarios = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (!file) return;
+    if (!file || !currentUser) return;
     
     const reader = new FileReader();
-    reader.onload = (event) => {
+    reader.onload = async (event) => {
       try {
-        const importedData = JSON.parse(event.target?.result as string);
+        const importedData = JSON.parse(event.target?.result as string) as ScenarioData[];
         if (Array.isArray(importedData)) {
-          setScenarios([...scenarios, ...importedData]);
+          // Insert each imported scenario
+          for (const scenario of importedData) {
+            // Insert the scenario first
+            const { data: scenarioData, error: scenarioError } = await supabase
+              .from('financial_scenarios')
+              .insert({
+                user_id: currentUser.supa_id,
+                name: scenario.name,
+                description: scenario.description,
+                created_at: new Date().toISOString(),
+                last_accessed: new Date().toISOString(),
+                initial_capital: scenario.initialCapital,
+                tax_rate: scenario.taxRate,
+                inflation_rate: scenario.inflationRate,
+                years: scenario.years,
+                avg_salary: scenario.avgSalary,
+                employee_count: scenario.employeeCount,
+                salary_growth: scenario.salaryGrowth
+              })
+              .select()
+              .single();
+              
+            if (scenarioError) {
+              console.error('Error importing scenario:', scenarioError);
+              continue;
+            }
+            
+            // Insert expenses
+            if (scenario.expenses.length > 0) {
+              const expensesData = scenario.expenses.map(expense => ({
+                scenario_id: scenarioData.id,
+                name: expense.name,
+                amount: expense.amount,
+                growth: expense.growth,
+                frequency: expense.frequency,
+                category: expense.category
+              }));
+              
+              await supabase
+                .from('financial_expenses')
+                .insert(expensesData);
+            }
+            
+            // Insert revenues
+            if (scenario.revenues.length > 0) {
+              const revenuesData = scenario.revenues.map(revenue => ({
+                scenario_id: scenarioData.id,
+                name: revenue.name,
+                amount: revenue.amount,
+                growth: revenue.growth,
+                type: revenue.type,
+                frequency: revenue.frequency,
+                category: revenue.category,
+                clients: revenue.clients
+              }));
+              
+              await supabase
+                .from('financial_revenues')
+                .insert(revenuesData);
+            }
+          }
+          
+          // Show success message
+          await message('Scenarios imported successfully', {
+            title: 'Success',
+            kind: 'info'
+          });
         }
       } catch (error) {
         console.error('Error importing scenarios:', error);
+        await message('Error importing scenarios', {
+          title: 'Import Error',
+          kind: 'error'
+        });
       }
     };
     reader.readAsText(file);
