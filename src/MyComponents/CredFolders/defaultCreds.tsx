@@ -11,7 +11,7 @@ import { invoke } from "@tauri-apps/api/core";
 import supabase from "@/MyComponents/supabase";
 import { AddData } from "@/MyComponents/subForms/addForm";
 import { EditData } from "@/MyComponents/subForms/editForm";
-import { Eye, EyeOff, Trash2 } from "lucide-react";
+import { ChevronRight, Eye, EyeOff, Trash2 } from "lucide-react";
 import {
   getPlatformIcon,
   platformStyles,
@@ -102,22 +102,25 @@ export const CompanyCreds = ({ folder = "default" }: { folder?: string }) => {
   return (
     <div className="p-6 select-text bg-gradient-to-br from-[#010101] to-[#210000]">
       <div className="flex justify-between items-center mb-8">
+        <Link
+          to="/detailFolders"
+          className="bg-black flex justify-center items-center border p-2 pr-5 border-red-950 hover:bg-red-950 text-white group hover:text-black"
+        >
+          <img
+            src="/folder.png"
+            alt="folder icon"
+            className="w-[20px] h-auto object-contain "
+          />
+          <ChevronRight className="h-4 w-5 text-red-950 group-hover:text-black "/>
+
+          <span className="mr-1">CCC  </span>
+          {folder}
+        </Link>
         <h2 className="text-3xl font-bold">Accounts</h2>
         <AddData />
       </div>
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-        <Link
-          to="/detailFolders"
-          className="bg-black border-[1px] border-zinc-600 min-h-[180px] w-auto rounded-xl flex justify-center items-center"
-        >
-          <img
-            src="/folder.png"
-            alt="folder icon"
-            className="w-[200px] h-auto object-contain"
-          />
-          {folder}
-        </Link>
         {cwaCreds?.map((cred: Credential) => {
           const isExpanded = expandedCards.includes(cred.id);
           const lowerPlatform = cred.platform_name.toLowerCase();
