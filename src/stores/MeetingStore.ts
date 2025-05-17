@@ -42,7 +42,7 @@ interface SingleMeeting {
   time?: string;
   date: string;
   attendees: string;
-  meeting_type?: string;
+  meeting_type: string;
   location?: string;
   hybrid_location?: { address: string, url: string };
 }

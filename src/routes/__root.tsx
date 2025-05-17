@@ -196,16 +196,15 @@ export const Route = createRootRoute({
       <>
         {pinCheck === "false" ? (
           <>
-          <UserView userRole={["Intern", "Member", "Marketing Specialist", "Admin", "Project Manager"]}>
-            <PinPage />
-          </UserView>
-          <UserView userRole={"COO"}>
-            <CyberpunkPinPage />
-          </UserView>
-           <UserView userRole={"CEO"}>
-            <SecurityBreach />
-          </UserView>
-
+            <UserView userRole={["Intern", "Member", "Marketing Specialist", "Admin", "Project Manager"]}>
+              <PinPage />
+            </UserView>
+            <UserView userRole={"COO"}>
+              <CyberpunkPinPage />
+            </UserView>
+            <UserView userRole={"CEO"}>
+              <SecurityBreach />
+            </UserView>
           </>
         ) : pinCheck === "true" && isLoggedIn === "false" ? (
           <LoginPage />

@@ -78,12 +78,14 @@ export const EditMeeting = ({ meetingID, open, setOpen, onComplete }: EditMeetin
         meetingType : data.meeting_type || "",
 
       // we have to handle different locaation types
+        // @ts-expect-error (location is possibly undefined)
         location: data.meeting_type ===  "in-person"
         ? data.location
         : data.meeting_type === "hybrid"
           ? data.hybrid_location?.address
           : ""
         ,
+        // @ts-expect-error (location is possibly undefined)
         url_location : data.meeting_type === "online"
         ? data.location 
         : data.meeting_type === "hybrid"

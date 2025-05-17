@@ -35,7 +35,7 @@ import { EditMeeting } from "../subForms/MeetingForms/editMeeting";
 
 const Meetings = () => {
   const [moreToggle, setMoreToggle] = useState(false);
-  const [editingMeetingId, setEditingMeetingId] = useState(null) // This state to track which meeting is being edited
+  const [editingMeetingId, setEditingMeetingId] = useState(null) // This state to track which meeting is being edited | blaze: is there a reason why default value is null?
   const [showEditDialog, setShowEditDialog] = useState(false) //this state will control the visibility of the edit dialog 
   const { setIsShowing, isShowing } = SchedImgStore();
   const { data: meetings, error, refetch } = MeetingsQuery();
@@ -215,6 +215,8 @@ const Meetings = () => {
                                 {meeting.location}
                               </div>
                             )}
+
+                          {/* Hybrid locations is not showing for some reason */}
                           {meeting.meeting_type === "hybrid" &&
                             isHybridLocation(meeting.hybrid_location) && (
                               <div className="space-y-1">
