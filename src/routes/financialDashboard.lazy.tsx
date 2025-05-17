@@ -8,19 +8,20 @@ import { createLazyFileRoute } from '@tanstack/react-router';
 import '../assets/statsCard.css'; // Import the statsCard.css file
 import GradientText from '@/MyComponents/Reusables/gradientText';
 import { useClientStore } from '@/stores/invoiceStore';
-import { Invoices } from '@/stores/invoiceQuery';
+import { Invoices, InvoiceType } from '@/stores/invoiceQuery';
 import FinancialField from '@/MyComponents/FinancialCalculator.tsx/financialField';
+import LiveTime from '@/MyComponents/Reusables/liveTime';
 
 
 
-// Type definition for invoice data
-interface Invoice {
-  invoice_id: string;
-  invoice_title: string;
-  client_name: string;
-  outcome: string;
-  status: string;
-}
+// Type definition for invoice data -> blaze: not needed bc we already have one, I imported it
+// interface Invoice {
+//   invoice_id: string;
+//   invoice_title: string;
+//   client_name: string;
+//   outcome: string;
+//   status: string;
+// }
 
 export const FinancialDashboard = () => {
   const { name } = useClientStore();
@@ -165,7 +166,7 @@ export const FinancialDashboard = () => {
               </TabsList>
               
               <div className="text-xs text-red-500 font-mono border border-red-900 px-3 py-1">
-                SYSTEM TIME: {new Date().toLocaleTimeString()}
+                SYSTEM TIME: <LiveTime />
               </div>
             </div>
             
@@ -363,7 +364,7 @@ export const FinancialDashboard = () => {
           </div>
           
           <div className="space-y-4">
-            {data.slice(0, 5).map((invoice: Invoice, idx: number) => (
+            {data.slice(0, 5).map((invoice: InvoiceType, idx: number) => (
               <motion.div
                 key={invoice.invoice_id}
                 initial={{ opacity: 0, y: 10 }}

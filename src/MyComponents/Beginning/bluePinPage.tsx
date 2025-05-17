@@ -7,6 +7,8 @@ import OrionAnimation from "./OrionAnimation";
 import { message } from "@tauri-apps/plugin-dialog";
 import { motion } from "framer-motion";
 import ParticleBackground from "./particleBackground";
+import { ActiveUser } from "@/stores/query";
+import LiveTime from "../Reusables/liveTime";
 
 export default function CyberpunkPinPage() {
   const { setPinCheck, setIsLoggedIn } = useAppStore();
@@ -15,6 +17,9 @@ export default function CyberpunkPinPage() {
   const [isWrongPin, setIsWrongPin] = useState(false);
   const [activePinIndex, setActivePinIndex] = useState(-1);
   const [pinDigits, setPinDigits] = useState(["", "", "", ""]);
+
+  const { data: activeUser, error: activeUserError } = ActiveUser();
+  if (activeUserError) console.log('Error fetching active user for pin page', activeUserError.message);
   
   // Keypad sounds
   const playKeypadSound = () => {
@@ -150,7 +155,8 @@ export default function CyberpunkPinPage() {
         />
         
         {/* Cyberpunk terminal overlay */}
-        <div className="absolute inset-0 overflow-hidden pointer-events-none z-0 opacity-10">
+        {/* blaze: i disabled this for now bc i think it looks cleaner without it, but maybe i change my mind later */}
+        {/* <div className="absolute inset-0 overflow-hidden pointer-events-none z-0 opacity-10">
           <div className="w-full h-full flex flex-col text-[8px] font-mono text-cyan-500 leading-3 select-none">
             {Array.from({ length: 100 }).map((_, i) => (
               <div key={i} className="whitespace-nowrap">
@@ -160,7 +166,7 @@ export default function CyberpunkPinPage() {
               </div>
             ))}
           </div>
-        </div>
+        </div> */}
         
         {/* Terminal top bar */}
         <motion.div
@@ -172,12 +178,12 @@ export default function CyberpunkPinPage() {
           <div>TAKEOVER SYSTEM // RESTRICTED ACCESS</div>
           <div className="flex items-center space-x-4">
             <div>
-              USER: <span className="text-cyan-300">ANONYMOUS</span>
+              USER: <span className="text-cyan-300">{activeUser[0].username || "UNKNOWN"}</span>
             </div>
             <div>
               STATUS: <span className="text-yellow-400">VERIFICATION REQUIRED</span>
             </div>
-            <div>{new Date().toLocaleTimeString()}</div>
+            <LiveTime />
           </div>
         </motion.div>
         
@@ -417,7 +423,7 @@ export default function CyberpunkPinPage() {
           className="fixed bottom-0 left-0 right-0 bg-black border-t border-cyan-700/50 p-2 font-mono text-xs text-cyan-600 z-20"
         >
           <div className="flex justify-between items-center">
-            <div>TAKEOVER v2.3.5 // CYBERSEC MODULE ACTIVE</div>
+            <div>TAKEOVER v1.1.3 // CYBERSEC MODULE ACTIVE</div>
             <div className="flex items-center space-x-4">
               <div>CORE TEMP: 42.3°C</div>
               <div>CPU: 12%</div>

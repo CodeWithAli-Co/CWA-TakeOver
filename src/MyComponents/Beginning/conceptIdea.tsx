@@ -6,6 +6,7 @@ import OrionAnimation from "./OrionAnimation";
 import { message } from "@tauri-apps/plugin-dialog";
 import { motion } from "framer-motion";
 import ParticleBackground from "./particleBackground";
+import LiveTime from "../Reusables/liveTime";
 
 export default function SecurityBreach() {
   const { setPinCheck, setIsLoggedIn } = useAppStore();
@@ -122,12 +123,12 @@ export default function SecurityBreach() {
           transition={{ duration: 0.5, delay: 0.2 }}
           className="absolute top-0 left-0 right-0 p-3 flex justify-between items-center text-xs font-mono text-red-700/80 border-b border-red-900/30 bg-black/60 backdrop-blur-sm z-10"
         >
-          <div>SYSTEM: TakeOver v2.0</div>
+          <div>SYSTEM: TakeOver v1.1.3</div>
           <div className="flex items-center">
             <div className="w-2 h-2 rounded-full bg-red-700 animate-ping mr-2"></div>
             <span>SECURE CONNECTION ACTIVE</span>
           </div>
-          <div>{new Date().toLocaleTimeString()}</div>
+          <LiveTime />
         </motion.div>
 
         {/* Main authentication container */}
