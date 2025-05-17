@@ -5,6 +5,7 @@ import { useAppStore } from "@/stores/store";
 import OrionAnimation from "./OrionAnimation";
 import { message } from "@tauri-apps/plugin-dialog";
 import { motion } from "framer-motion";
+import ParticleBackground from "./particleBackground";
 
 export default function PinPage() {
   const { setPinCheck, setIsLoggedIn } = useAppStore();
@@ -95,7 +96,7 @@ export default function PinPage() {
         </div>
 
         {/* Hexagon grid background */}
-        <div className="absolute inset-0 z-0 opacity-5">
+        {/* <div className="absolute inset-0 z-0 opacity-5">
           <svg width="100%" height="100%" xmlns="http://www.w3.org/2000/svg">
             <defs>
               <pattern id="hexGrid" width="50" height="43.4" patternUnits="userSpaceOnUse" patternTransform="scale(2)">
@@ -104,7 +105,15 @@ export default function PinPage() {
             </defs>
             <rect width="100%" height="100%" fill="url(#hexGrid)" />
           </svg>
-        </div>
+        </div> */}
+
+     {/* Particle background with red color */}
+        <ParticleBackground 
+          particleColor="red" 
+          lineColor="rgba(255, 0, 0, 0.2)"
+          particleCount={150}
+          connectionDistance={120}
+        />
 
         {/* Top security info panel */}
         <motion.div
