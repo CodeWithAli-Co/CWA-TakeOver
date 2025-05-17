@@ -195,7 +195,7 @@ export const TasksComponent = () => {
             className="w-[200px] bg-black/40 border-red-900/30 text-amber-50"
           />
           <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
-            <AddTodo Users={AllEmployees || []} />
+            <AddTodo Users={AllEmployees || []} homeDash />
           </motion.div>
         </div>
       </CardHeader>

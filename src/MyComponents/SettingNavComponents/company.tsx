@@ -87,7 +87,7 @@ export const CompanySettings = () => {
               <div className="flex items-center gap-4">
                 <div className="h-24 w-24 rounded-lg bg-red-900/20 border-2 border-dashed border-red-900/70 flex items-center justify-center">
                   <img
-                    src="/public/codewithali_logo_full.png"
+                    src="/codewithali_logo_full.png"
                     alt="Company Logo"
                     className="h-22 w-22 text-red-500/70"
                   />
@@ -108,7 +108,7 @@ export const CompanySettings = () => {
                   <Input
                     className="bg-black/40 border-red-900/70 text-white hover:border-red-900  disabled:opacity-100"
                     //   placeholder="https://"
-                    defaultValue="https://codewithali.com"
+                    defaultValue="https://www.codewithali.com/"
                     disabled
                   />
                 </div>
@@ -119,7 +119,7 @@ export const CompanySettings = () => {
                   <Textarea
                     className="bg-black/40 border-red-900/70  min-h-[100px] hover:border-red-900 cursor-not-allowed disabled:white  disabled:opacity-100"
                     placeholder="Brief company description"
-                    defaultValue="We are to ensure everyone has a good time and we dedicte firstly to helping people reach the spotlight and showcase their hobbies"
+                    defaultValue="We design, develop and host websites for individual clients aiming to strengthen their online presence. As well as for companies seeking a modern, feature-rich platform to boost business growth."
                     disabled
                   />
                 </div>

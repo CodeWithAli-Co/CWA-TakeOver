@@ -3,7 +3,7 @@ import { CompanyCreds } from "./defaultCreds";
 export const CooCeoCreds = () => {
   return (
     <>
-      <CompanyCreds folder="CCC" />
+      <CompanyCreds folder="ccc" />
     </>
   );
 };

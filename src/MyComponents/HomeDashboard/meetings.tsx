@@ -24,7 +24,13 @@ import { AddMeeting } from "../subForms/MeetingForms/addMeeting";
 import supabase from "../supabase";
 import { message } from "@tauri-apps/plugin-dialog";
 import { useState } from "react";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/shadcnComponents/dropdown-menu";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/shadcnComponents/dropdown-menu";
+import UserView from "../Reusables/userView";
 
 const Meetings = () => {
   const [moreToggle, setMoreToggle] = useState(false);
@@ -72,7 +78,7 @@ const Meetings = () => {
   };
 
   // Im simply going to put a placeholder function for the editing form
-  const editMeeting= (id: number) => {
+  const editMeeting = (id: number) => {
     console.log("Edit meeting with ID:", id);
   };
 
@@ -86,7 +92,9 @@ const Meetings = () => {
 
             <div className="flex space-x-2">
               {/* Add Meeting Dialog */}
-              <AddMeeting />
+              <UserView userRole={["CEO", "COO", "Project Manager"]}>
+                <AddMeeting />
+              </UserView>
 
               {/* Schedule Button */}
               <motion.div
@@ -211,32 +219,34 @@ const Meetings = () => {
                       )}
                     </section>
 
-                    <section className="flex flex-col items-center justify-center border-l-[1px] border-red-950">
-                      {/* Replace the ellipsis toggle with dropdown menu */}
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <div className="text-red-700 hover:text-red-300 hover:cursor-pointer p-1">
-                            <EllipsisVertical />
-                          </div>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent className="bg-black/90 border border-red-900/30 text-amber-50/70">
-                          <DropdownMenuItem 
-                            onClick={() => editMeeting(meeting.id)}
-                            className="flex items-center hover:bg-red-900/30 hover:text-amber-50 cursor-pointer"
-                          >
-                            <Pencil className="h-4 w-4 mr-2" />
-                            Edit
-                          </DropdownMenuItem>
-                          <DropdownMenuItem 
-                            onClick={() => delMeeting(meeting.id)}
-                            className="flex items-center hover:bg-red-900/30 hover:text-amber-50 cursor-pointer text-red-400 "
-                          >
-                            <Trash className="h-4 w-4 mr-2" />
-                            Delete
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    </section>
+                    <UserView userRole={["CEO", "COO"]}>
+                      <section className="flex flex-col items-center justify-center border-l-[1px] border-red-950">
+                        {/* Replace the ellipsis toggle with dropdown menu */}
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <div className="text-red-700 hover:text-red-300 hover:cursor-pointer p-1">
+                              <EllipsisVertical />
+                            </div>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent className="bg-black/90 border border-red-900/30 text-amber-50/70">
+                            <DropdownMenuItem
+                              onClick={() => editMeeting(meeting.id)}
+                              className="flex items-center hover:bg-red-900/30 hover:text-amber-50 cursor-pointer"
+                            >
+                              <Pencil className="h-4 w-4 mr-2" />
+                              Edit
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                              onClick={() => delMeeting(meeting.id)}
+                              className="flex items-center hover:bg-red-900/30 hover:text-amber-50 cursor-pointer text-red-400 "
+                            >
+                              <Trash className="h-4 w-4 mr-2" />
+                              Delete
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </section>
+                    </UserView>
                   </div>
                 </motion.div>
               ))}

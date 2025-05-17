@@ -33,6 +33,7 @@ import { useState } from "react";
 
 interface Users {
   Users: any;
+  homeDash?: boolean;
 }
 
 export const AddTodo = (props: Users) => {
@@ -118,8 +119,10 @@ export const AddTodo = (props: Users) => {
           hover:scale-[1.02] active:scale-[0.98]"
         >
           <span className="absolute inset-0 bg-red-700/10 opacity-0 group-hover:opacity-20 transition-opacity"></span>
-          <PlusCircle className="h-4 w-4 mr-2 transition-transform group-hover:rotate-90" />
-          Create Task
+          <PlusCircle className={`h-4 w-4 ${props.homeDash ? "m-0" : " mr-2"} transition-transform group-hover:rotate-90`} />
+          {!props.homeDash && (
+            <span>Create Task</span>
+          )}
         </Button>
       </DialogTrigger>
       <DialogContent

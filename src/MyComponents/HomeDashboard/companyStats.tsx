@@ -136,7 +136,7 @@ const CompanyStats = () => {
           label="Subscription Income"
           value={`$${subscription}`}
         />
-        <StatCard icon={DollarSign} label="Expenses" value={expenses} />
+        <StatCard icon={DollarSign} label="Expenses" value={`$${expenses}`} />
         {/* <StatCard icon={Boxes} label="Active Bots" value="1" /> */}
       </motion.div>
     </>
