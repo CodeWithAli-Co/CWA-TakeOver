@@ -15,9 +15,9 @@ export const QuickActionCard = ({
     <motion.div
       whileHover={{ scale: 1.0 }}
       transition={{ type: "spring", stiffness: 400, damping: 10 }}
-      className="flex items-center justify-between p-4 bg-black/60 border border-red-900/30 rounded-lg hover:border-red-800/50 group"
+      className="flex items-center justify-between p-4 mb-5 bg-black/60 border border-red-900/30 rounded-lg hover:border-red-800/50 group"
     >
-      <div className="flex items-center ">
+      <div className="flex items-center gap-2">
         <motion.div
           whileHover={{ scale: 1.1 }}
           className="p-2 rounded-lg bg-red-900/20"

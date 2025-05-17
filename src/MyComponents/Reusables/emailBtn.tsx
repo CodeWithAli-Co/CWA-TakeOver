@@ -219,11 +219,11 @@ const EmailBtn = (props: Props) => {
       navigate({ to: "/middle" });
     }, 500);
     // Need to wait more than 3s for this to work properly
-    await sleep(4000);
+    await sleep(5000);
     await downloadInvoice();
     const dirName = await downloadDir();
     // waiting an extra 1s to avoid rust errors
-    await sleep(1000);
+    await sleep(1500);
     await invoke("send_invoice", {
       clientEmail: email,
       subjectMsg: subject,
@@ -233,7 +233,7 @@ const EmailBtn = (props: Props) => {
       (res) => (
         sendNotification({
           title: "Invoice Sent",
-          body: "Invoice was successfully sent to Client",
+          body: `Invoice was successfully sent to Client: ${res}`,
         }),
         console.log("Email ID:", res)
       )

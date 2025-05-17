@@ -5,6 +5,13 @@ import {
   Bell,
   Moon,
   Menu,
+  Users2,
+  Building2,
+  CreditCard,
+  Database,
+  LineChart,
+  Plug,
+  Shield,
 } from "lucide-react";
 import { Button } from "@/components/ui/shadcnComponents/button";
 import {
@@ -50,6 +57,7 @@ import UploadAvatar from "../Reusables/uploadAvatar";
 import ReportSettings from "../SettingNavComponents/reports";
 import TeamsAndProjects from "../SettingNavComponents/TeamProject";
 import ToggleSwitch from "../Reusables/switchUI";
+import UserView from "../Reusables/userView";
 
 const formSchema = z.object({
   name: z.string().min(2).max(50),
@@ -59,6 +67,14 @@ const formSchema = z.object({
 
 const settingsTabs = [
   { value: "profile", label: "Profile Settings", icon: UserCircle },
+  { value: "teams", label: "Teams & Projects", icon: Users2 },
+  { value: "company", label: "Company", icon: Building2 },
+  { value: "reports", label: "Reports", icon: LineChart },
+  { value: "resources", label: "Resources", icon: Database },
+  { value: "integrations", label: "Integrations", icon: Plug },
+  { value: "billing", label: "Billing", icon: CreditCard },
+  { value: "notifications", label: "Notifications", icon: Bell },
+  { value: "security", label: "Security & Access Logs", icon: Shield },
 ];
 
 export const Route = createLazyFileRoute("/settings")({
@@ -346,111 +362,114 @@ export default function SettingsPage() {
                   </Card>
                 </TabsContent>
 
-                {/* Teams & Projects Tab */}
-                <TabsContent value="teams" className="space-y-4">
-                  <Card className="bg-black/60 border-red-950/30 backdrop-blur-sm p-4 sm:p-6">
-                    <TeamsAndProjects />
-                  </Card>
-                </TabsContent>
+                {/* Only visible for higher ups for now until finished */}
+                <UserView userRole={["Project Manager", "COO", "CEO"]}>
+                  {/* Teams & Projects Tab */}
+                  <TabsContent value="teams" className="space-y-4">
+                    <Card className="bg-black/60 border-red-950/30 backdrop-blur-sm p-4 sm:p-6">
+                      <TeamsAndProjects />
+                    </Card>
+                  </TabsContent>
 
-                {/* Company Tab */}
-                <TabsContent value="company" className="space-y-4">
-                  <Card className="bg-black/60 border-red-950/30 backdrop-blur-sm p-4 sm:p-6">
-                    <CompanySettings />
-                  </Card>
-                </TabsContent>
+                  {/* Company Tab */}
+                  <TabsContent value="company" className="space-y-4">
+                    <Card className="bg-black/60 border-red-950/30 backdrop-blur-sm p-4 sm:p-6">
+                      <CompanySettings />
+                    </Card>
+                  </TabsContent>
 
-                {/* Reports Tab */}
-                <TabsContent value="reports" className="space-y-4">
-                  <Card className="bg-black/60 border-red-950/30 backdrop-blur-sm p-4 sm:p-6">
-                    <ReportSettings />
-                  </Card>
-                </TabsContent>
+                  {/* Reports Tab */}
+                  <TabsContent value="reports" className="space-y-4">
+                    <Card className="bg-black/60 border-red-950/30 backdrop-blur-sm p-4 sm:p-6">
+                      <ReportSettings />
+                    </Card>
+                  </TabsContent>
 
-                {/* Resources Tab */}
-                <TabsContent value="resources" className="space-y-4">
-                  <Card className="bg-black/60 border-red-950/30 backdrop-blur-sm">
-                    <CardHeader className="p-4 sm:p-6">
-                      <CardTitle className="text-xl md:text-2xl text-white">
-                        Resources
-                      </CardTitle>
-                      <CardDescription className="text-xs md:text-sm text-red-200/60">
-                        Developer resources and documentation.
-                      </CardDescription>
-                    </CardHeader>
-                    <CardContent className="p-4 sm:p-6">
-                      <DeveloperResourceHub />
-                    </CardContent>
-                  </Card>
-                </TabsContent>
+                  {/* Resources Tab */}
+                  <TabsContent value="resources" className="space-y-4">
+                    <Card className="bg-black/60 border-red-950/30 backdrop-blur-sm">
+                      <CardHeader className="p-4 sm:p-6">
+                        <CardTitle className="text-xl md:text-2xl text-white">
+                          Resources
+                        </CardTitle>
+                        <CardDescription className="text-xs md:text-sm text-red-200/60">
+                          Developer resources and documentation.
+                        </CardDescription>
+                      </CardHeader>
+                      <CardContent className="p-4 sm:p-6">
+                        <DeveloperResourceHub />
+                      </CardContent>
+                    </Card>
+                  </TabsContent>
 
-                {/* Integrations Tab */}
-                <TabsContent value="integrations" className="space-y-4">
-                  <Card className="bg-black/60 border-red-950/30 backdrop-blur-sm">
-                    <CardHeader className="p-4 sm:p-6">
-                      <CardTitle className="text-xl md:text-2xl text-white">
-                        Integrations
-                      </CardTitle>
-                      <CardDescription className="text-xs md:text-sm text-red-200/60">
-                        Configure and manage third-party integrations.
-                      </CardDescription>
-                    </CardHeader>
-                    <CardContent className="p-4 sm:p-6">
-                      <IntegrationsSettings />
-                    </CardContent>
-                  </Card>
-                </TabsContent>
+                  {/* Integrations Tab */}
+                  <TabsContent value="integrations" className="space-y-4">
+                    <Card className="bg-black/60 border-red-950/30 backdrop-blur-sm">
+                      <CardHeader className="p-4 sm:p-6">
+                        <CardTitle className="text-xl md:text-2xl text-white">
+                          Integrations
+                        </CardTitle>
+                        <CardDescription className="text-xs md:text-sm text-red-200/60">
+                          Configure and manage third-party integrations.
+                        </CardDescription>
+                      </CardHeader>
+                      <CardContent className="p-4 sm:p-6">
+                        <IntegrationsSettings />
+                      </CardContent>
+                    </Card>
+                  </TabsContent>
 
-                {/* Billing Tab */}
-                <TabsContent value="billing" className="space-y-4">
-                  <Card className="bg-black/60 border-red-950/30 backdrop-blur-sm">
-                    <CardHeader className="p-4 sm:p-6">
-                      <CardTitle className="text-xl md:text-2xl text-white">
-                        Billing & Subscription
-                      </CardTitle>
-                      <CardDescription className="text-xs md:text-sm text-red-200/60">
-                        Manage billing information and subscription details.
-                      </CardDescription>
-                    </CardHeader>
-                    <CardContent className="p-4 sm:p-6">
-                      {/* Billing content goes here */}
-                    </CardContent>
-                  </Card>
-                </TabsContent>
+                  {/* Billing Tab */}
+                  <TabsContent value="billing" className="space-y-4">
+                    <Card className="bg-black/60 border-red-950/30 backdrop-blur-sm">
+                      <CardHeader className="p-4 sm:p-6">
+                        <CardTitle className="text-xl md:text-2xl text-white">
+                          Billing & Subscription
+                        </CardTitle>
+                        <CardDescription className="text-xs md:text-sm text-red-200/60">
+                          Manage billing information and subscription details.
+                        </CardDescription>
+                      </CardHeader>
+                      <CardContent className="p-4 sm:p-6">
+                        {/* Billing content goes here */}
+                      </CardContent>
+                    </Card>
+                  </TabsContent>
 
-                {/* Notifications Tab */}
-                <TabsContent value="notifications" className="space-y-4">
-                  <Card className="bg-black/60 border-red-950/30 backdrop-blur-sm">
-                    <CardHeader className="p-4 sm:p-6">
-                      <CardTitle className="text-xl md:text-2xl text-white">
-                        Notification Settings
-                      </CardTitle>
-                      <CardDescription className="text-xs md:text-sm text-red-200/60">
-                        Customize your notification preferences.
-                      </CardDescription>
-                    </CardHeader>
-                    <CardContent className="p-4 sm:p-6">
-                      <NotificationSetting />
-                    </CardContent>
-                  </Card>
-                </TabsContent>
+                  {/* Notifications Tab */}
+                  <TabsContent value="notifications" className="space-y-4">
+                    <Card className="bg-black/60 border-red-950/30 backdrop-blur-sm">
+                      <CardHeader className="p-4 sm:p-6">
+                        <CardTitle className="text-xl md:text-2xl text-white">
+                          Notification Settings
+                        </CardTitle>
+                        <CardDescription className="text-xs md:text-sm text-red-200/60">
+                          Customize your notification preferences.
+                        </CardDescription>
+                      </CardHeader>
+                      <CardContent className="p-4 sm:p-6">
+                        <NotificationSetting />
+                      </CardContent>
+                    </Card>
+                  </TabsContent>
 
-                {/* Security Tab */}
-                <TabsContent value="security" className="space-y-4">
-                  <Card className="bg-black/60 border-red-950/30 backdrop-blur-sm">
-                    <CardHeader className="p-4 sm:p-6">
-                      <CardTitle className="text-xl md:text-2xl text-white">
-                        Security & Access Logs
-                      </CardTitle>
-                      <CardDescription className="text-xs md:text-sm text-red-200/60">
-                        Manage security settings and view access history.
-                      </CardDescription>
-                    </CardHeader>
-                    <CardContent className="p-4 sm:p-6">
-                      {/* Security content goes here */}
-                    </CardContent>
-                  </Card>
-                </TabsContent>
+                  {/* Security Tab */}
+                  <TabsContent value="security" className="space-y-4">
+                    <Card className="bg-black/60 border-red-950/30 backdrop-blur-sm">
+                      <CardHeader className="p-4 sm:p-6">
+                        <CardTitle className="text-xl md:text-2xl text-white">
+                          Security & Access Logs
+                        </CardTitle>
+                        <CardDescription className="text-xs md:text-sm text-red-200/60">
+                          Manage security settings and view access history.
+                        </CardDescription>
+                      </CardHeader>
+                      <CardContent className="p-4 sm:p-6">
+                        {/* Security content goes here */}
+                      </CardContent>
+                    </Card>
+                  </TabsContent>
+                </UserView>
               </motion.div>
             </AnimatePresence>
           </Tabs>

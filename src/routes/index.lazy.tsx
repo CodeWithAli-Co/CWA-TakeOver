@@ -53,7 +53,7 @@ const Index = () => {
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {/* Upcoming Meetings */}
-          <UserView userRole={[Role.CEO, Role.COO]}>
+          <UserView userRole={[Role.CEO, Role.COO, Role.ProjectManager, Role.Marketing]}>
             <Meetings />
           </UserView>
 
@@ -64,27 +64,46 @@ const Index = () => {
             </CardHeader>
             <CardContent>
               <motion.div className="">
-                <UserView userRole={[Role.CEO, Role.COO]}>
+                <UserView
+                  userRole={[
+                    Role.CEO,
+                    Role.COO,
+                    Role.ProjectManager,
+                    Role.Marketing,
+                  ]}
+                >
                   <div className="group flex flex-col ">
-                    <QuickActionCard icon={Terminal} url="/details" title="" />
-                    <span className="text-white text-sm m-1 opacity-0 group-hover:opacity-100 transition-opacity duration-200 ">
+                    <QuickActionCard
+                      icon={Terminal}
+                      url="/details"
+                      title="Accounts"
+                    />
+                    {/* <span className="text-white text-sm m-1 opacity-0 group-hover:opacity-100 transition-opacity duration-200 ">
                       Accounts
-                    </span>
+                    </span> */}
                   </div>
                 </UserView>
                 <div className="group flex flex-col">
-                  <QuickActionCard title="" icon={MessageSquare} url="/chat" />
-                  <span className="text-white text-sm m-1 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+                  <QuickActionCard
+                    title="Chat"
+                    icon={MessageSquare}
+                    url="/chat"
+                  />
+                  {/* <span className="text-white text-sm m-1 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
                     Chat
-                  </span>
+                  </span> */}
                 </div>
 
                 <div className="group flex flex-col">
                   <UserView userRole={[Role.CEO, Role.COO]}>
-                    <QuickActionCard title="" icon={Users} url="/employee" />
-                    <span className="text-sm  m-1 opacity-0 group-hover:opacity-100 transition-opacity duration-200  ">
+                    <QuickActionCard
+                      title="Employees"
+                      icon={Users}
+                      url="/employee"
+                    />
+                    {/* <span className="text-sm  m-1 opacity-0 group-hover:opacity-100 transition-opacity duration-200  ">
                       Employees
-                    </span>
+                    </span> */}
                   </UserView>
                 </div>
               </motion.div>
