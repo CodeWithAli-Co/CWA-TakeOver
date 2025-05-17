@@ -54,8 +54,6 @@ const CompanyStats = () => {
       const { data : expense, error : expenseError} = await supabase
         .from("cwa_expenses")
         .select("amount")
-        // .eq("")
-
 
       const { data: revenue, error: revenueError } = await supabase
         .from("cwa_calculatorProps")
