@@ -31,9 +31,12 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/shadcnComponents/dropdown-menu";
 import UserView from "../Reusables/userView";
+import { EditMeeting } from "../subForms/MeetingForms/editMeeting";
 
 const Meetings = () => {
   const [moreToggle, setMoreToggle] = useState(false);
+  const [editingMeetingId, setEditingMeetingId] = useState(null) // This state to track which meeting is being edited
+  const [showEditDialog, setShowEditDialog] = useState(false) //this state will control the visibility of the edit dialog 
   const { setIsShowing, isShowing } = SchedImgStore();
   const { data: meetings, error, refetch } = MeetingsQuery();
   if (error) {
@@ -79,11 +82,26 @@ const Meetings = () => {
 
   // Im simply going to put a placeholder function for the editing form
   const editMeeting = (id: number) => {
+    setEditingMeetingId(id); // setting the id of the appropiate meeting to edit ()
+    setShowEditDialog(true);
     console.log("Edit meeting with ID:", id);
   };
 
   return (
     <>
+      {/* EditMeeting Dialog - its gonna render only when the showDialog is true */}
+      {showEditDialog && editingMeetingId && (
+        <EditMeeting 
+          meetingID={editingMeetingId} 
+          open={showEditDialog}
+          setOpen={setShowEditDialog}
+          onComplete={() => {
+            setEditingMeetingId(null);
+            refetch();
+          }}
+        />
+      )}
+
       {/* Upcoming Meetings */}
       <Card className="bg-black/40 border-red-900/30 overflow-y-auto  sm:col-span-2 lg:col-span-2">
         <CardHeader>

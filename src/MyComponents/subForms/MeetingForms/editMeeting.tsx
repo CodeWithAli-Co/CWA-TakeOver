@@ -34,25 +34,78 @@ import { message } from "@tauri-apps/plugin-dialog";
 import { MeetingsQuery } from "@/stores/query";
 import { FetchMeetingQuery } from "@/stores/MeetingStore";
 
-export const EditMeeting = ({ meetingID }: { meetingID: number }) => {
-  const [open, setOpen] = useState(false);
-  const { refetch } = MeetingsQuery();
-  const { data, error } = FetchMeetingQuery(meetingID);
+// I don't knoww if you had this elsewhere but im making aa prop for noww, you can delete later
+interface EditMeetingProps {
+  meetingID: number;
+  open: boolean;
+  setOpen : (open : boolean) => void;
+  onComplete : () => void;
+}
+
+
+export const EditMeeting = ({ meetingID, open, setOpen, onComplete }: EditMeetingProps) => {
+  // const [open, setOpen] = useState(false);
+  // const { refetch } = MeetingsQuery();
+
+  const { data, error, isLoading } = FetchMeetingQuery(meetingID);
+  console.log({ meetingID });
+  
+  // creaating a state for the form default values to handle async loading
+  const [defaultValues, setDefaultValues] = useState({
+    meetingTitle: "",
+    time: "",
+    date: "",
+    attendees: "",
+    meetingType: "",
+    location: "",
+    url_location: ""
+  })
+  
   if (error) {
     console.log("Error fetching Selected Meeting to edit", error.message);
   }
-  console.log({ meetingID });
 
+
+  // a little useEffect actionn to update the default vaalues once data is loaded
+  useEffect(() => {
+    if ( data && !isLoading) {
+      // extraact values from the meeting dataa
+      setDefaultValues({
+        meetingTitle: data.meeting_title || "",
+        time: data.time || "",
+        date: data.date || "",
+        attendees: data.attendees?.toString() || "",
+        meetingType : data.meeting_type || "",
+
+      // we have to handle different locaation types
+        location: data.meeting_type ===  "in-person"
+        ? data.location
+        : data.meeting_type === "hybrid"
+          ? data.hybrid_location?.address
+          : ""
+        ,
+        url_location : data.meeting_type === "online"
+        ? data.location 
+        : data.meeting_type === "hybrid"
+        ? data.hybrid_location?.url
+          : "",
+
+      })
+    }
+  }, [data, isLoading])
+  
   const form = useForm({
-    defaultValues: {
-      meetingTitle: data.meeting_title,
-      time: data.time,
-      date: data.date,
-      attendees: data.attendees,
-      meetingType: data.meeting_type,
-      location: data.location || data.hybrid_location?.address,
-      url_location: data.location || data.hybrid_location?.url,
-    },
+    defaultValues,
+    // Dont need this no more
+    // : {
+    //   meetingTitle: data.meeting_title,
+    //   time: data.time,
+    //   date: data.date,
+    //   attendees: data.attendees,
+    //   meetingType: data.meeting_type,
+    //   location: data.location || data.hybrid_location?.address,
+    //   url_location: data.location || data.hybrid_location?.url,
+    // },
     onSubmit: async ({ value }) => {
       try {
         switch (value.meetingType) {
@@ -66,6 +119,9 @@ export const EditMeeting = ({ meetingID }: { meetingID: number }) => {
                 attendees: value.attendees,
                 meeting_type: value.meetingType,
                 location: value.location,
+
+                // clear hybrid location when switching to in-person
+                hybrid_location: null
               })
               .eq("id", meetingID);
 
@@ -75,9 +131,11 @@ export const EditMeeting = ({ meetingID }: { meetingID: number }) => {
                 kind: "error",
               });
             } else {
-              refetch();
+              // refetch();
+              onComplete(); // we can just call on the onComplete rather than refetching
               setOpen(false);
-              form.reset();
+              // form.reset();  // I  think this has been causing a few issues you can test this if youd like im just gonnaa not deal with it
+              // actually im just gonna put it in a useEffect
             }
             return;
 
@@ -91,6 +149,8 @@ export const EditMeeting = ({ meetingID }: { meetingID: number }) => {
                 attendees: value.attendees,
                 meeting_type: value.meetingType,
                 location: value.url_location,
+                // clear hybrid 
+                hybrid_locatiion: null
               })
               .eq("id", meetingID);
 
@@ -100,9 +160,10 @@ export const EditMeeting = ({ meetingID }: { meetingID: number }) => {
                 kind: "error",
               });
             } else {
-              refetch();
+              // refetch();
+              onComplete();
               setOpen(false);
-              form.reset();
+              // form.reset();
             }
             return;
 
@@ -115,6 +176,8 @@ export const EditMeeting = ({ meetingID }: { meetingID: number }) => {
                 date: value.date,
                 attendees: value.attendees,
                 meeting_type: value.meetingType,
+                // clear regular locaation when switching to a hybridd
+                location: null,
                 hybrid_location: {
                   address: value.location,
                   url: value.url_location,
@@ -128,9 +191,10 @@ export const EditMeeting = ({ meetingID }: { meetingID: number }) => {
                 kind: "error",
               });
             } else {
-              refetch();
+              // refetch();
+              onComplete();
               setOpen(false);
-              form.reset();
+              // form.reset();
             }
         }
       } catch (err) {
@@ -142,23 +206,28 @@ export const EditMeeting = ({ meetingID }: { meetingID: number }) => {
     },
   });
 
-  return (
+  // updatae the form values when defaultValues Change
+  useEffect(() => {
+    if (defaultValues) {
+      form.reset(defaultValues);
+    }
+  }, [defaultValues])
+
+  // If still loading data, show a loading message in the dialog ( for funzies can't tweaak how it looks later)
+  if (isLoading) {
+    return (
+      <Dialog open={open} onOpenChange={setOpen}>
+        <DialogContent className="sm:max-w-[600px] bg-black/95 border-red-950/30 shadow-2xl shadow-red-950/40 rounded-xl">
+          <DialogHeader>
+            <DialogTitle className="text-red-200">Loading meeting data...</DialogTitle>
+          </DialogHeader>
+        </DialogContent>
+      </Dialog>
+    );
+  }
+
+ return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
-        <motion.div
-          whileHover={{ scale: 1.02 }}
-          whileTap={{ scale: 0.98 }}
-          transition={{ type: "spring", stiffness: 400, damping: 17 }}
-        >
-          <Button
-            size={"default"}
-            className="relative bg-gradient-to-r from-orange-700 via-orange-800 to-orange-950 hover:from-orange-950 hover:via-orange-900 active:from-orange-800  active:to-orange-990 w-auto h-auto px-4 py-2 transform transition-all ease-out border border-orange-900 group rounded-full  duration-300"
-          >
-            <Plus className="h-4 w-4 mr-1" />
-            Edit Meeting
-          </Button>
-        </motion.div>
-      </DialogTrigger>
       <DialogContent
         className="sm:max-w-[600px] bg-black/95 border-red-950/30 
         shadow-2xl shadow-red-950/40 rounded-xl"
@@ -166,12 +235,11 @@ export const EditMeeting = ({ meetingID }: { meetingID: number }) => {
         <DialogHeader>
           <DialogTitle className="text-red-200 flex items-center gap-2">
             <Calendar className="w-6 h-6 text-red-500" />
-            Add New Meeting
+            Edit Meeting
           </DialogTitle>
           <DialogDescription className="text-red-200/60 flex items-center gap-2">
             <Clock className="w-4 h-4 text-red-400" />
-            Add a new meeting to the schedule. Fill in the meeting details
-            below.
+            Update the meeting details below.
           </DialogDescription>
         </DialogHeader>
         <form
@@ -200,7 +268,7 @@ export const EditMeeting = ({ meetingID }: { meetingID: number }) => {
                     type="text"
                     autoComplete="off"
                     required
-                    placeholder="Task title"
+                    placeholder="Meeting title"
                     className="bg-black/40 border-red-950/30 text-red-200 
                     focus:border-red-700 focus:ring-2 focus:ring-red-900/50 
                     transition-all duration-300"
@@ -365,6 +433,7 @@ export const EditMeeting = ({ meetingID }: { meetingID: number }) => {
                           id={field.name}
                           type="text"
                           autoComplete="off"
+                          required
                           placeholder="Physical Location for Meeting"
                           className="bg-black/40 border-red-950/30 text-red-200 
                     focus:border-red-700 focus:ring-2 focus:ring-red-900/50 
@@ -401,6 +470,7 @@ export const EditMeeting = ({ meetingID }: { meetingID: number }) => {
                           id={field.name}
                           type="url"
                           autoComplete="off"
+                          required
                           placeholder="Online Meeting Link"
                           className="bg-black/40 border-red-950/30 text-red-200 
                     focus:border-red-700 focus:ring-2 focus:ring-red-900/50 
@@ -424,7 +494,6 @@ export const EditMeeting = ({ meetingID }: { meetingID: number }) => {
               variant="outline"
               onClick={() => {
                 setOpen(false);
-                form.reset();
               }}
               className="border-red-800/30 text-red-200 
               hover:bg-red-950/20 hover:text-red-100 
@@ -445,7 +514,7 @@ export const EditMeeting = ({ meetingID }: { meetingID: number }) => {
                   transition-all duration-300 
                   hover:scale-[1.02] active:scale-[0.98]"
                 >
-                  Edit Meeting
+                  Update Meeting
                 </Button>
               )}
             />
