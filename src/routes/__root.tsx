@@ -18,6 +18,8 @@ import LoginPage from "@/MyComponents/Beginning/login";
 import PinPage from "@/MyComponents/Beginning/pinPage";
 import { SignUpPage } from "@/MyComponents/Beginning/signup";
 import { ActiveUser, DMGroups, Messages } from "@/stores/query";
+import UserView from "@/MyComponents/Reusables/userView";
+import CyberpunkPinPage from "@/MyComponents/Beginning/bluePinPage";
 
 export const Route = createRootRoute({
   component: () => {
@@ -192,7 +194,14 @@ export const Route = createRootRoute({
     return (
       <>
         {pinCheck === "false" ? (
-          <PinPage />
+          <>
+          <UserView userRole={["Intern", "Member", "Marketing Specialist", "Admin", "Project Manager", "CEO"]}>
+            <PinPage />
+          </UserView>
+          <UserView userRole={"COO"}>
+            <CyberpunkPinPage />
+          </UserView>
+          </>
         ) : pinCheck === "true" && isLoggedIn === "false" ? (
           <LoginPage />
         ) : pinCheck === "true" && isLoggedIn === "makeAcc" ? (
