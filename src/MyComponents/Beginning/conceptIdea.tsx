@@ -7,7 +7,7 @@ import { message } from "@tauri-apps/plugin-dialog";
 import { motion } from "framer-motion";
 import ParticleBackground from "./particleBackground";
 
-export default function PinPage() {
+export default function SecurityBreach() {
   const { setPinCheck, setIsLoggedIn } = useAppStore();
   const [showContent, setShowContent] = useState(false);
   const [pinValue, setPinValue] = useState("");
