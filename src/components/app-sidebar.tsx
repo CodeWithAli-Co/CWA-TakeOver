@@ -20,6 +20,7 @@ import {
   marketingData,
   memberData,
   projectManagerData,
+  securityEngineerData,
 } from "./ui/Dashboard/role-datas";
 import UserView from "@/MyComponents/Reusables/userView";
 
@@ -59,6 +60,12 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
           <NavMain items={memberData.navMain} />
         </UserView>
 
+        {/* Project Manager View */}
+        <UserView userRole="Project Manager">
+          <NavMain items={projectManagerData.navMain} />
+          <NavProjects projects={projectManagerData.projects} />
+        </UserView>
+
         {/* Marketing Specialist View */}
         <UserView userRole="Marketing Specialist">
           <NavMain items={marketingData.navMain} />
@@ -69,10 +76,9 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
           <NavMain items={adminData.navMain} />
         </UserView>
 
-        {/* Project Manager View */}
-        <UserView userRole="Project Manager">
-          <NavMain items={projectManagerData.navMain} />
-          <NavProjects projects={projectManagerData.projects} />
+        {/* Security Engineer View */}
+        <UserView userRole={"Security Engineer"}>
+          <NavMain items={securityEngineerData.navMain} />
         </UserView>
 
         {/* COO View */}

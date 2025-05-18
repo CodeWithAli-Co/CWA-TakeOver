@@ -4,14 +4,36 @@ import React from "react";
 export const enum Role {
   Intern = "Intern",
   Member = "Member",
-  Marketing = "Marketing Specialist",
-  Admin = "Admin",
+  UIDesigner = "UI/UX Designer",
+  SoftwareDev = "Software Developer",
+  MechEngineer = "Mechanical engineer",
+  Recruiter = "Recruiter",
+  AiDev = "AI Specialist",
+  DBAdmin = "Database Administrator",
+  AccManager = "Account Manager",
+  DataScientist = "Data Scientist",
   ProjectManager = "Project Manager",
+  Marketing = "Marketing Specialist",
+  CustomerSupport = "Customer Support",
+  Admin = "Admin",
+  SecurityEngineer = "Security Engineer",
+  Partner = "Partnership Lead",
   COO = "COO",
   CEO = "CEO"
 }
 
-type Roles = "Intern" | "Member" | "Marketing Specialist" | "Admin" | "Project Manager" | "COO" | "CEO"
+// const enum RoleRanks {
+//   Intern = 1,
+//   Member,
+//   SoftwareDev,
+//   Marketing,
+//   Admin,
+//   ProjectManager,
+//   COO,
+//   CEO
+// }
+
+type Roles = "Intern" | "Member" | "UI/UX Designer" | "Software Developer" | "Mechanical engineer" | "Recruiter" | "AI Specialist" | "Database Administrator" | "Account Manager" | "Data Scientist" | "Project Manager" | "Marketing Specialist" | "Customer Support" | "Admin" | "Security Engineer" | "Partnership Lead" | "COO" | "CEO"
 
 type UserViewProps = {
   userRole: Roles | Roles[];

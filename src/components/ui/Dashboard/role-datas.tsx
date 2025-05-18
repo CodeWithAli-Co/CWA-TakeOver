@@ -42,7 +42,7 @@ export const internData = {
     },
     {
       title: "Weekly Quotas",
-      url : "/quota",
+      url: "/quota",
       isActive: false,
       icon: Target,
     },
@@ -82,7 +82,7 @@ export const memberData = {
     },
     {
       title: "Weekly Quotas",
-      url : "/quota",
+      url: "/quota",
       isActive: false,
       icon: Target,
     },
@@ -130,7 +130,6 @@ export const marketingData = {
         //   title: "Mod logs",
         //   url: "/mod_logs",
         // },
-    
       ],
     },
     {
@@ -147,7 +146,7 @@ export const marketingData = {
     },
     {
       title: "Weekly Quotas",
-      url : "/quota",
+      url: "/quota",
       isActive: false,
       icon: Target,
     },
@@ -218,7 +217,7 @@ export const adminData = {
       //   //   title: "Mod logs",
       //   //   url: "/mod_logs",
       //   // },
-    
+
       // ],
     },
     // {
@@ -241,7 +240,7 @@ export const adminData = {
     },
     {
       title: "Weekly Quotas",
-      url : "/quota",
+      url: "/quota",
       isActive: false,
       icon: Target,
     },
@@ -349,7 +348,6 @@ export const projectManagerData = {
           title: "Mod logs",
           url: "/mod_logs",
         },
-    
       ],
     },
     // {
@@ -357,7 +355,7 @@ export const projectManagerData = {
     //   url: "/bot",
     //   icon: Bot,
     // },
-      {
+    {
       title: "Invoicer",
       url: "/invoiceClients",
       icon: File,
@@ -365,13 +363,13 @@ export const projectManagerData = {
       items: [
         {
           title: "Client",
-          url: "/invoiceClients"
+          url: "/invoiceClients",
         },
         {
           title: "Preview",
-          url: "/invoicePreview"
-        }
-      ]
+          url: "/invoicePreview",
+        },
+      ],
     },
 
     {
@@ -388,7 +386,156 @@ export const projectManagerData = {
     },
     {
       title: "Weekly Quotas",
-      url : "/quota",
+      url: "/quota",
+      isActive: false,
+      icon: Target,
+    },
+    {
+      title: "Schedule",
+      url: "/schedule",
+      isActive: false,
+      icon: CalendarDays,
+    },
+    // {
+    //   title: "BioTech",
+    //   url: "/bio",
+    //   isActive: false,
+    //   icon: Cat,
+    // },
+
+    {
+      title: "Settings",
+      url: "/settings",
+      icon: Settings2,
+      items: [
+        {
+          // // In your sidebar navigation <Link to="/settings">Settings</Link>
+          title: "General",
+          url: "/settings",
+        },
+        {
+          title: "Team",
+          // url: "/settings?tab=teams",
+        },
+        {
+          title: "Tasks",
+          // url: "/settings?tab=tasks",
+        },
+        {
+          title: "Company",
+          // url: "/settings?tab=company",
+        },
+        {
+          title: "Notification",
+          // url: "/settings?tab=notification",
+        },
+      ],
+    },
+  ],
+  projects: [
+    {
+      name: "Budgetary",
+      url: "/budgetary",
+      icon: Frame,
+    },
+  ],
+};
+
+export const securityEngineerData = {
+  user: {
+    name: "CodeWithAli",
+    email: "unfold@codewithali.com",
+    avatar: "/public/codewithali_logo.png",
+  },
+  teams: [
+    {
+      name: "CodeWithAli Co.",
+      logo: GalleryVerticalEnd,
+      plan: "Enterprise",
+    },
+    {
+      name: "Interns",
+      logo: AudioWaveform,
+      plan: "Startup",
+    },
+    {
+      name: "Members",
+      logo: Command,
+      plan: "Free",
+    },
+  ],
+  navMain: [
+    {
+      title: "Home",
+      url: "/",
+      isActive: false,
+      icon: Home,
+    },
+    {
+      title: "Admin Permissions",
+      url: "/details",
+      icon: SquareTerminal,
+      isActive: true,
+      items: [
+        // {
+        //   title: "Email Broadcast",
+        //   url: "/broadcast",
+        // },
+        {
+          title: "Account Management",
+          url: "/details",
+        },
+        // {
+        //   title: "Users",
+        //   url: "/employee",
+        // },
+        {
+          title: "Finance Dashboard",
+          url: "/financialDashboard",
+        },
+        {
+          title: "Mod logs",
+          url: "/mod_logs",
+        },
+      ],
+    },
+    // {
+    //   title: "Bot Management",
+    //   url: "/bot",
+    //   icon: Bot,
+    // },
+    {
+      title: "Invoicer",
+      url: "/invoiceClients",
+      icon: File,
+      isActive: true,
+      items: [
+        {
+          title: "Client",
+          url: "/invoiceClients",
+        },
+        {
+          title: "Preview",
+          url: "/invoicePreview",
+        },
+      ],
+    },
+
+    {
+      title: "Chat",
+      url: "/chat",
+      isActive: false,
+      icon: MessageCircle,
+    },
+    {
+      title: "Task",
+      url: "/task",
+      isActive: false,
+      icon: ClipboardList,
+    },
+    {
+      title: "Weekly Quotas",
+      url: "/quota",
       isActive: false,
       icon: Target,
     },
@@ -494,13 +641,12 @@ export const cooData = {
         },
         {
           title: "Finance Dashboard",
-          url: "/financialDashboard"
+          url: "/financialDashboard",
         },
         {
           title: "Mod logs",
           url: "/mod_logs",
         },
-    
       ],
     },
     // {
@@ -516,13 +662,13 @@ export const cooData = {
       items: [
         {
           title: "Client",
-          url: "/invoiceClients"
+          url: "/invoiceClients",
         },
         {
           title: "Preview",
-          url: "/invoicePreview"
-        }
-      ]
+          url: "/invoicePreview",
+        },
+      ],
     },
     {
       title: "Chat",
@@ -538,7 +684,7 @@ export const cooData = {
     },
     {
       title: "Weekly Quotas",
-      url : "/quota",
+      url: "/quota",
       isActive: false,
       icon: Target,
     },
@@ -640,13 +786,12 @@ export const ceoData = {
         },
         {
           title: "Finance Dashboard",
-          url: "/financialDashboard"
+          url: "/financialDashboard",
         },
         {
           title: "Mod logs",
           url: "/mod_logs",
         },
-    
       ],
     },
     // {
@@ -662,13 +807,13 @@ export const ceoData = {
       items: [
         {
           title: "Client",
-          url: "/invoiceClients"
+          url: "/invoiceClients",
         },
         {
           title: "Preview",
-          url: "/invoicePreview"
-        }
-      ]
+          url: "/invoicePreview",
+        },
+      ],
     },
     {
       title: "Chat",
@@ -684,7 +829,7 @@ export const ceoData = {
     },
     {
       title: "Weekly Quotas",
-      url : "/quota",
+      url: "/quota",
       isActive: false,
       icon: Target,
     },
