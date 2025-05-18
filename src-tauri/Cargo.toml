@@ -1,6 +1,6 @@
 [package]
 name = "cwa-takeover"
-version = "1.2.0"
+version = "1.2.1"
 description = "The CWA TakeOver App is used to Manage the CodeWithAli Company with precision."
 authors = ["Hanif Palm", "Ali Alibrahimi"]
 edition = "2021"

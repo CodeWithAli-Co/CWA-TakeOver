@@ -19,6 +19,7 @@ import {
 import ToggleSwitch from "@/MyComponents/Reusables/switchUI";
 import { CWACreds } from "@/stores/query";
 import { Link } from "@tanstack/react-router";
+import UserView from "../Reusables/userView";
 
 // Type definitions
 interface Credential {
@@ -102,20 +103,23 @@ export const CompanyCreds = ({ folder = "default" }: { folder?: string }) => {
   return (
     <div className="p-6 select-text bg-gradient-to-br from-[#010101] to-[#210000]">
       <div className="flex justify-between items-center mb-8">
-        <Link
-          to="/detailFolders"
-          className="bg-black flex justify-center items-center border p-2 pr-5 border-red-950 hover:bg-red-950 text-white group hover:text-black"
-        >
-          <img
-            src="/folder.png"
-            alt="folder icon"
-            className="w-[20px] h-auto object-contain "
-          />
-          <ChevronRight className="h-4 w-5 text-red-950 group-hover:text-black "/>
+        {/* Only for CEO and COO for now */}
+        <UserView userRole={["CEO", "COO"]}>
+          <Link
+            to="/detailFolders"
+            className="bg-black flex justify-center items-center border p-2 pr-5 border-red-950 hover:bg-red-950 text-white group hover:text-black"
+          >
+            <img
+              src="/folder.png"
+              alt="folder icon"
+              className="w-[20px] h-auto object-contain "
+            />
+            <ChevronRight className="h-4 w-5 text-red-950 group-hover:text-black " />
 
-          <span className="mr-1">CCC  </span>
-          {folder}
-        </Link>
+            <span className="mr-1">CCC </span>
+            {folder}
+          </Link>
+        </UserView>
         <h2 className="text-3xl font-bold">Accounts</h2>
         <AddData />
       </div>
@@ -217,14 +221,16 @@ export const CompanyCreds = ({ folder = "default" }: { folder?: string }) => {
                             </span>
                           </Button>
                           <EditData rowID={cred.id} />
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            className="text-zinc-400 border-zinc-800 hover:bg-zinc-800"
-                            onClick={() => DelData(cred.id)}
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </Button>
+                          <UserView userRole={["CEO", "COO"]}>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="text-zinc-400 border-zinc-800 hover:bg-zinc-800"
+                              onClick={() => DelData(cred.id)}
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </Button>
+                          </UserView>
                         </div>
                         <ToggleSwitch
                           checked={cred.active}
@@ -326,14 +332,16 @@ export const CompanyCreds = ({ folder = "default" }: { folder?: string }) => {
                             </span>
                           </Button>
                           <EditData rowID={cred.id} />
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            className="text-zinc-400 border-zinc-800 hover:bg-zinc-800"
-                            onClick={() => DelData(cred.id)}
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </Button>
+                          <UserView userRole={["CEO", "COO"]}>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="text-zinc-400 border-zinc-800 hover:bg-zinc-800"
+                              onClick={() => DelData(cred.id)}
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </Button>
+                          </UserView>
                         </div>
                         <ToggleSwitch
                           checked={cred.active}

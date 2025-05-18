@@ -126,7 +126,7 @@ export default function SecurityBreach() {
           transition={{ duration: 0.5, delay: 0.2 }}
           className="absolute top-0 left-0 right-0 p-3 flex justify-between items-center text-xs font-mono text-red-700/80 border-b border-red-900/30 bg-black/60 backdrop-blur-sm z-10"
         >
-          <div>SYSTEM: TakeOver v1.2.0</div>
+          <div>SYSTEM: TakeOver v1.2.1</div>
           <div className="flex items-center">
             <div className="w-2 h-2 rounded-full bg-red-700 animate-ping mr-2"></div>
             <span>SECURE CONNECTION ACTIVE</span>
