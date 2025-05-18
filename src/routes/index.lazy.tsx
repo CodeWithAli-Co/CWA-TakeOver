@@ -7,7 +7,7 @@ import {
 } from "@/components/ui/shadcnComponents/card";
 import { StorageUsageChart } from "@/MyComponents/HomeDashboard/storage";
 
-import { MessageSquare, Users, Terminal } from "lucide-react";
+import { MessageSquare, Users, Terminal, GitGraph, DollarSign, DollarSignIcon, File, CalendarSearch } from "lucide-react";
 import { motion } from "framer-motion";
 import UserView, { Role } from "@/MyComponents/Reusables/userView";
 import Quotas from "@/MyComponents/HomeDashboard/qoutas";
@@ -16,6 +16,7 @@ import Meetings from "@/MyComponents/HomeDashboard/meetings";
 import { SchedImgStore } from "@/stores/store";
 import { QuickActionCard } from "@/MyComponents/HomeDashboard/Components/quickActionCard";
 import { TasksComponent } from "@/MyComponents/HomeDashboard/tasks";
+import { pdf } from "@react-pdf/renderer";
 
 const Index = () => {
   const { isShowing } = SchedImgStore();
@@ -92,6 +93,36 @@ const Index = () => {
                   {/* <span className="text-white text-sm m-1 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
                     Chat
                   </span> */}
+                </div>
+                <div className="group flex flex-col">
+                  <UserView userRole= {[ "CEO", "COO"]}>
+
+                  <QuickActionCard 
+                    title="FinancePrince"
+                    url="/financialDashboard"
+                    icon={DollarSignIcon}
+                  />
+                  </UserView>
+                </div>
+                <div className="group flex flex-col">
+                  <UserView excludeRoles={"COO"}>
+
+                  <QuickActionCard 
+                   title="Invoicer"
+                   url="/invoiceClients"
+                   icon={File}
+                  />
+                  </UserView>
+                </div>
+
+                <div className="group flex flex-col">
+                  <UserView excludeRoles={["COO", "CEO"]}>
+                      <QuickActionCard 
+                        title="Schedule"
+                        url="/schedule"
+                        icon={CalendarSearch}
+                      />
+                  </UserView>
                 </div>
 
                 <div className="group flex flex-col">
