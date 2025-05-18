@@ -51,7 +51,7 @@ import {
   Messages,
 } from "@/stores/query";
 import { useAppStore } from "@/stores/store";
-import { createLazyFileRoute } from "@tanstack/react-router";
+import { createLazyFileRoute, useLocation } from "@tanstack/react-router";
 import {
   Dialog,
   DialogContent,
@@ -61,6 +61,8 @@ import {
 import { AddDMGroup } from "@/MyComponents/subForms/addDMGroup";
 import { formatDistanceToNow, isValid } from "date-fns";
 import { cn } from "@/lib/utils";
+import supabase from "@/MyComponents/supabase";
+import { sendNotification } from "@tauri-apps/plugin-notification";
 
 const formatMessageDate = (dateString: string) => {
   try {
@@ -96,6 +98,50 @@ function GroupChats() {
       </div>
     );
   }
+
+  // Need to work on scrolling to bottom when new chat is sent
+  
+  // if (GroupName === "General") {
+  //       supabase
+  //         .channel("dm")
+  //         .on(
+  //           "postgres_changes",
+  //           { event: "INSERT", schema: "public", table: "cwa_dm_chat" },
+  //           (payload) =>
+  //             scrollTo({ top: 1 })
+  //         )
+  //         .subscribe();
+  //       console.log("Not on DMS 2");
+
+  //       // While not on GeneralChat, they will get notifications
+  //       const channels = supabase.getChannels();
+  //       channels.map((channel) =>
+  //         channel.topic === "realtime:general"
+  //           ? supabase.removeChannel(channel)
+  //           : console.log("No Such Realtime General channel")
+  //       );
+  //       console.log("on General chat! 2");
+  //     } else {
+  //       // Listens to the general chat updates no matter where user is in the App
+  //       supabase
+  //         .channel("general")
+  //         .on(
+  //           "postgres_changes",
+  //           { event: "INSERT", schema: "public", table: "cwa_chat" },
+  //           (payload) =>
+  //             scrollTo({ top: 1 })
+  //         )
+  //         .subscribe();
+  //       console.log("Not on General chat");
+
+  //       const channels = supabase.getChannels();
+  //       channels.map((channel) =>
+  //         channel.topic === "realtime:dm"
+  //           ? supabase.removeChannel(channel)
+  //           : console.log("No Such Realtime DM channel")
+  //       );
+  //       console.log("on DMS! 2");
+  //     }
 
   return (
     <div className="flex h-[100dvh] w-full bg-gradient-to-br from-zinc-900 via-black to-zinc-900">
@@ -419,6 +465,15 @@ function ChatSidebar({
       refetchMgs();
     }
   }, [GroupName]);
+
+  const routeLocation = useLocation({
+    select: (location) => location.pathname,
+  });
+
+  useEffect(() => {
+    setGroupName("General");
+  }, [routeLocation]);
+
   return (
     <div className="flex h-[100dvh] w-full flex-col">
       <div className="p-4 border-b border-white/10">

@@ -5,7 +5,12 @@ import {
   requestPermission,
 } from "@tauri-apps/plugin-notification";
 import { create, exists, BaseDirectory } from "@tauri-apps/plugin-fs";
-import { createRootRoute, Outlet, useNavigate } from "@tanstack/react-router";
+import {
+  createRootRoute,
+  Outlet,
+  useLocation,
+  useNavigate,
+} from "@tanstack/react-router";
 import "../assets/sidebar.css";
 import { sendNotification } from "@tauri-apps/plugin-notification";
 import { useAppStore } from "../stores/store";
@@ -112,45 +117,44 @@ export const Route = createRootRoute({
       }
     }, [GroupName]);
 
-        // Check if can send notifications
-        useEffect(() => {
-          async function CheckNotifPerm() {
-            // Do you have permission to send a notification?
-            let permissionGranted = await isPermissionGranted();
-    
-            // If not we need to request it
-            if (!permissionGranted) {
-              const permission = await requestPermission();
-              permissionGranted = permission === "granted";
-            }
-    
-            // Once permission has been granted we can send the notification
-            if (permissionGranted) {
-              console.log("Notification Permission is Granted!");
-            }
-          }
-          CheckNotifPerm();
-        }, []);
-    
-        // Check if invoiceStats file exists or not
-        useEffect(() => {
-          async function Create() {
-            const checkFile = await exists("invoiceStats.json", {
-              baseDir: BaseDirectory.AppLocalData,
-            });
-            if (checkFile) {
-              return;
-            } else {
-              const file = await create("invoiceStats.json", {
-                baseDir: BaseDirectory.AppLocalData,
-              });
-              // await file.write(new TextEncoder().encode('Hello from CWA Invoicer'));
-              await file.close();
-            }
-          }
-          Create();
-        }, []);
-    
+    // Check if can send notifications
+    useEffect(() => {
+      async function CheckNotifPerm() {
+        // Do you have permission to send a notification?
+        let permissionGranted = await isPermissionGranted();
+
+        // If not we need to request it
+        if (!permissionGranted) {
+          const permission = await requestPermission();
+          permissionGranted = permission === "granted";
+        }
+
+        // Once permission has been granted we can send the notification
+        if (permissionGranted) {
+          console.log("Notification Permission is Granted!");
+        }
+      }
+      CheckNotifPerm();
+    }, []);
+
+    // Check if invoiceStats file exists or not
+    useEffect(() => {
+      async function Create() {
+        const checkFile = await exists("invoiceStats.json", {
+          baseDir: BaseDirectory.AppLocalData,
+        });
+        if (checkFile) {
+          return;
+        } else {
+          const file = await create("invoiceStats.json", {
+            baseDir: BaseDirectory.AppLocalData,
+          });
+          // await file.write(new TextEncoder().encode('Hello from CWA Invoicer'));
+          await file.close();
+        }
+      }
+      Create();
+    }, []);
 
     // Add global pressence if possible
 
@@ -160,9 +164,9 @@ export const Route = createRootRoute({
         // Run when update has an actual version and has 'rid' value
         if (update && update.rid !== null && update.version !== null) {
           sendNotification({
-            title: 'New Update Available!',
-            body: `Found update v${update.version}`
-          })
+            title: `New Update Available: v${update.version}`,
+            body: `${update.body || "Get new Update now!"}`,
+          });
           let downloaded = 0;
           let contentLength = 0;
           // alternatively we could also call update.download() and update.install() separately
@@ -196,7 +200,26 @@ export const Route = createRootRoute({
       <>
         {pinCheck === "false" ? (
           <>
-            <UserView userRole={["Intern", "Member", "Marketing Specialist", "Admin", "Project Manager"]}>
+            <UserView
+              userRole={[
+                "Intern",
+                "Member",
+                "UI/UX Designer",
+                "Software Developer",
+                "Mechanical engineer",
+                "Recruiter",
+                "AI Specialist",
+                "Database Administrator",
+                "Account Manager",
+                "Data Scientist",
+                "Project Manager",
+                "Marketing Specialist",
+                "Customer Support",
+                "Admin",
+                "Security Engineer",
+                "Partnership Lead",
+              ]}
+            >
               <PinPage />
             </UserView>
             <UserView userRole={"COO"}>

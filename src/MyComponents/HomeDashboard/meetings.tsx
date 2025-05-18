@@ -110,11 +110,12 @@ const Meetings = () => {
 
             <div className="flex space-x-2">
               {/* Add Meeting Dialog */}
-              <UserView userRole={["CEO", "COO", "Project Manager"]}>
+              <UserView userRole={["CEO", "COO", "Project Manager", "Marketing Specialist"]}>
                 <AddMeeting />
               </UserView>
 
-              {/* Schedule Button */}
+              <UserView userRole={["CEO", "COO", "Software Developer"]}>
+                {/* Schedule Button */}
               <motion.div
                 whileHover={{ scale: 1.02 }}
                 whileTap={{ scale: 0.98 }}
@@ -129,6 +130,7 @@ const Meetings = () => {
                   View Schedule
                 </Button>
               </motion.div>
+              </UserView>
             </div>
           </CardTitle>
         </CardHeader>

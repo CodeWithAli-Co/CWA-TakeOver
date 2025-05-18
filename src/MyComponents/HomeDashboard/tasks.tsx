@@ -225,7 +225,7 @@ export const TasksComponent = () => {
             </TabsTrigger>
           </TabsList>
         </Tabs>
-        <ScrollArea className="h-[300px] pr-4">
+        <ScrollArea className="h-[600px] pr-4">
           <AnimatePresence mode="wait">
             <motion.div
               key={selectedTab}
