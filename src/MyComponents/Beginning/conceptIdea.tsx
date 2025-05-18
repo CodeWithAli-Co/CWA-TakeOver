@@ -36,10 +36,10 @@ export default function SecurityBreach() {
     onSubmit: async ({ value }) => {
       setIsLoading(true);
       setError(false);
-      
+
       // Simulate authentication delay
-      await new Promise(resolve => setTimeout(resolve, 800));
-      
+      await new Promise((resolve) => setTimeout(resolve, 800));
+
       if (value.pin === "8821") {
         document.startViewTransition(() => {
           setPinCheck("true");
@@ -58,10 +58,13 @@ export default function SecurityBreach() {
   // Generate cyberpunk style binary data for background
   const generateBinaryRows = () => {
     return Array.from({ length: 24 }).map((_, i) => (
-      <div key={i} className="text-red-900/20 text-xs font-mono whitespace-nowrap overflow-hidden">
-        {Array.from({ length: 120 }).map((_, j) => 
-          Math.random() > 0.5 ? '1' : '0'
-        ).join('')}
+      <div
+        key={i}
+        className="text-red-900/20 text-xs font-mono whitespace-nowrap overflow-hidden"
+      >
+        {Array.from({ length: 120 })
+          .map((_, j) => (Math.random() > 0.5 ? "1" : "0"))
+          .join("")}
       </div>
     ));
   };
@@ -72,9 +75,9 @@ export default function SecurityBreach() {
 
       <motion.div
         initial={{ opacity: 0 }}
-        animate={{ 
+        animate={{
           opacity: showContent ? 1 : 0,
-          visibility: showContent ? "visible" : "hidden" 
+          visibility: showContent ? "visible" : "hidden",
         }}
         transition={{ duration: 0.8 }}
         className="relative flex flex-col items-center justify-center w-screen h-screen bg-black overflow-hidden"
@@ -84,11 +87,11 @@ export default function SecurityBreach() {
           <motion.div
             initial={{ y: -1000 }}
             animate={{ y: 0 }}
-            transition={{ 
-              duration: 60, 
-              repeat: Infinity, 
+            transition={{
+              duration: 60,
+              repeat: Infinity,
               repeatType: "loop",
-              ease: "linear" 
+              ease: "linear",
             }}
             className="flex flex-col"
           >
@@ -108,9 +111,9 @@ export default function SecurityBreach() {
           </svg>
         </div> */}
 
-     {/* Particle background with red color */}
-        <ParticleBackground 
-          particleColor="red" 
+        {/* Particle background with red color */}
+        <ParticleBackground
+          particleColor="red"
           lineColor="rgba(255, 0, 0, 0.2)"
           particleCount={150}
           connectionDistance={120}
@@ -123,7 +126,7 @@ export default function SecurityBreach() {
           transition={{ duration: 0.5, delay: 0.2 }}
           className="absolute top-0 left-0 right-0 p-3 flex justify-between items-center text-xs font-mono text-red-700/80 border-b border-red-900/30 bg-black/60 backdrop-blur-sm z-10"
         >
-          <div>SYSTEM: TakeOver v1.1.3</div>
+          <div>SYSTEM: TakeOver v1.2.0</div>
           <div className="flex items-center">
             <div className="w-2 h-2 rounded-full bg-red-700 animate-ping mr-2"></div>
             <span>SECURE CONNECTION ACTIVE</span>
@@ -148,18 +151,18 @@ export default function SecurityBreach() {
               >
                 Authentication Required
               </motion.span>
-              
+
               {/* Glitch effect overlay */}
               <motion.span
-                animate={{ 
+                animate={{
                   x: [0, -3, 3, 0],
-                  opacity: [0, 1, 0]
+                  opacity: [0, 1, 0],
                 }}
-                transition={{ 
-                  duration: 0.5, 
-                  repeat: Infinity, 
+                transition={{
+                  duration: 0.5,
+                  repeat: Infinity,
                   repeatType: "loop",
-                  repeatDelay: 5
+                  repeatDelay: 5,
                 }}
                 className="absolute left-0 top-0 text-red-300 z-0 w-full"
                 style={{ clipPath: "inset(0 0 50% 0)" }}
@@ -167,16 +170,16 @@ export default function SecurityBreach() {
                 Authentication Required
               </motion.span>
               <motion.span
-                animate={{ 
+                animate={{
                   x: [0, 3, -3, 0],
-                  opacity: [0, 1, 0]
+                  opacity: [0, 1, 0],
                 }}
-                transition={{ 
-                  duration: 0.5, 
-                  repeat: Infinity, 
+                transition={{
+                  duration: 0.5,
+                  repeat: Infinity,
                   repeatType: "loop",
                   repeatDelay: 5,
-                  delay: 0.1
+                  delay: 0.1,
                 }}
                 className="absolute left-0 top-0 text-blue-500 z-0 w-full opacity-70"
                 style={{ clipPath: "inset(50% 0 0 0)" }}
@@ -194,18 +197,18 @@ export default function SecurityBreach() {
                 alt="CodeWithAli Logo"
                 className="w-32 h-auto filter drop-shadow-[0_0_8px_rgba(220,38,38,0.4)]"
                 draggable={false}
-                animate={{ 
+                animate={{
                   scale: [1, 1.05, 1],
                   filter: [
-                    'drop-shadow(0 0 8px rgba(220,38,38,0.4))',
-                    'drop-shadow(0 0 12px rgba(220,38,38,0.6))',
-                    'drop-shadow(0 0 8px rgba(220,38,38,0.4))'
-                  ]
+                    "drop-shadow(0 0 8px rgba(220,38,38,0.4))",
+                    "drop-shadow(0 0 12px rgba(220,38,38,0.6))",
+                    "drop-shadow(0 0 8px rgba(220,38,38,0.4))",
+                  ],
                 }}
-                transition={{ 
-                  duration: 4, 
+                transition={{
+                  duration: 4,
                   repeat: Infinity,
-                  ease: "easeInOut"
+                  ease: "easeInOut",
                 }}
               />
             </div>
@@ -222,8 +225,10 @@ export default function SecurityBreach() {
               className="space-y-6"
             >
               <div className="space-y-2">
-                <div className="text-center text-red-500 font-mono text-sm mb-3">ENTER SECURITY CREDENTIALS</div>
-                
+                <div className="text-center text-red-500 font-mono text-sm mb-3">
+                  ENTER SECURITY CREDENTIALS
+                </div>
+
                 <form.Field
                   name="pin"
                   children={(field) => (
@@ -231,27 +236,41 @@ export default function SecurityBreach() {
                       {/* Individual PIN digit boxes */}
                       <div className="flex justify-center gap-3">
                         {[0, 1, 2, 3].map((index) => (
-                          <motion.div 
+                          <motion.div
                             key={index}
-                            className={`w-12 h-14 flex items-center justify-center border-2 ${error ? 'border-red-600' : 'border-red-900/80'} bg-black rounded-md text-2xl font-mono text-red-500`}
-                            animate={{ 
-                              borderColor: field.state.value.length > index 
-                                ? error ? '#dc2626' : '#b91c1c' 
-                                : error ? 'rgba(220, 38, 38, 0.6)' : 'rgba(127, 29, 29, 0.6)',
-                              backgroundColor: field.state.value.length === index 
-                                ? ['rgba(127, 29, 29, 0.1)', 'rgba(127, 29, 29, 0.2)', 'rgba(127, 29, 29, 0.1)'] 
-                                : 'rgba(0, 0, 0, 0.5)'
+                            className={`w-12 h-14 flex items-center justify-center border-2 ${error ? "border-red-600" : "border-red-900/80"} bg-black rounded-md text-2xl font-mono text-red-500`}
+                            animate={{
+                              borderColor:
+                                field.state.value.length > index
+                                  ? error
+                                    ? "#dc2626"
+                                    : "#b91c1c"
+                                  : error
+                                    ? "rgba(220, 38, 38, 0.6)"
+                                    : "rgba(127, 29, 29, 0.6)",
+                              backgroundColor:
+                                field.state.value.length === index
+                                  ? [
+                                      "rgba(127, 29, 29, 0.1)",
+                                      "rgba(127, 29, 29, 0.2)",
+                                      "rgba(127, 29, 29, 0.1)",
+                                    ]
+                                  : "rgba(0, 0, 0, 0.5)",
                             }}
-                            transition={{ 
-                              duration: field.state.value.length === index ? 1.5 : 0.2,
-                              repeat: field.state.value.length === index ? Infinity : 0
+                            transition={{
+                              duration:
+                                field.state.value.length === index ? 1.5 : 0.2,
+                              repeat:
+                                field.state.value.length === index
+                                  ? Infinity
+                                  : 0,
                             }}
                           >
-                            {field.state.value.length > index ? '*' : ''}
+                            {field.state.value.length > index ? "*" : ""}
                           </motion.div>
                         ))}
                       </div>
-                      
+
                       {/* Hidden real input field */}
                       <input
                         name={field.name}
@@ -260,7 +279,9 @@ export default function SecurityBreach() {
                         value={field.state.value}
                         onChange={(e) => {
                           // Only allow digits and max 4 characters
-                          const value = e.target.value.replace(/\D/g, '').slice(0, 4);
+                          const value = e.target.value
+                            .replace(/\D/g, "")
+                            .slice(0, 4);
                           setPinValue(value);
                           field.handleChange(value);
                           setError(false);
@@ -268,37 +289,42 @@ export default function SecurityBreach() {
                         autoFocus={showContent}
                         maxLength={4}
                       />
-                      
+
                       {/* PIN pad */}
                       <div className="grid grid-cols-3 gap-2 mt-6">
-                        {[1, 2, 3, 4, 5, 6, 7, 8, 9, null, 0, 'del'].map((num, i) => (
-                          <motion.button
-                            key={i}
-                            type="button"
-                            whileHover={{ scale: 1.05 }}
-                            whileTap={{ scale: 0.95 }}
-                            className={`w-full h-12 flex items-center justify-center rounded border ${
-                              num === 'del' 
-                                ? 'border-red-900/60 bg-red-950/30 text-red-500' 
-                                : 'border-red-900/40 bg-black text-red-500'
-                            } font-mono ${num === null ? 'cursor-default' : 'hover:bg-red-950/40'}`}
-                            onClick={() => {
-                              if (num === null) return;
-                              if (num === 'del') {
-                                const newValue = field.state.value.slice(0, -1);
-                                setPinValue(newValue);
-                                field.handleChange(newValue);
-                              } else if (field.state.value.length < 4) {
-                                const newValue = field.state.value + num;
-                                setPinValue(newValue);
-                                field.handleChange(newValue);
-                              }
-                              setError(false);
-                            }}
-                          >
-                            {num === 'del' ? '⌫' : num === null ? '' : num}
-                          </motion.button>
-                        ))}
+                        {[1, 2, 3, 4, 5, 6, 7, 8, 9, null, 0, "del"].map(
+                          (num, i) => (
+                            <motion.button
+                              key={i}
+                              type="button"
+                              whileHover={{ scale: 1.05 }}
+                              whileTap={{ scale: 0.95 }}
+                              className={`w-full h-12 flex items-center justify-center rounded border ${
+                                num === "del"
+                                  ? "border-red-900/60 bg-red-950/30 text-red-500"
+                                  : "border-red-900/40 bg-black text-red-500"
+                              } font-mono ${num === null ? "cursor-default" : "hover:bg-red-950/40"}`}
+                              onClick={() => {
+                                if (num === null) return;
+                                if (num === "del") {
+                                  const newValue = field.state.value.slice(
+                                    0,
+                                    -1
+                                  );
+                                  setPinValue(newValue);
+                                  field.handleChange(newValue);
+                                } else if (field.state.value.length < 4) {
+                                  const newValue = field.state.value + num;
+                                  setPinValue(newValue);
+                                  field.handleChange(newValue);
+                                }
+                                setError(false);
+                              }}
+                            >
+                              {num === "del" ? "⌫" : num === null ? "" : num}
+                            </motion.button>
+                          )
+                        )}
                       </div>
                     </div>
                   )}
@@ -314,16 +340,45 @@ export default function SecurityBreach() {
               >
                 {isLoading ? (
                   <div className="flex items-center justify-center">
-                    <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    <svg
+                      className="animate-spin -ml-1 mr-3 h-5 w-5 text-white"
+                      xmlns="http://www.w3.org/2000/svg"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                    >
+                      <circle
+                        className="opacity-25"
+                        cx="12"
+                        cy="12"
+                        r="10"
+                        stroke="currentColor"
+                        strokeWidth="4"
+                      ></circle>
+                      <path
+                        className="opacity-75"
+                        fill="currentColor"
+                        d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                      ></path>
                     </svg>
                     AUTHENTICATING...
                   </div>
                 ) : (
                   <div className="flex items-center justify-center">
-                    <svg className="h-5 w-5 mr-2" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+                    <svg
+                      className="h-5 w-5 mr-2"
+                      xmlns="http://www.w3.org/2000/svg"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      stroke="currentColor"
+                    >
+                      <rect
+                        x="3"
+                        y="11"
+                        width="18"
+                        height="11"
+                        rx="2"
+                        ry="2"
+                      ></rect>
                       <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
                     </svg>
                     VERIFY IDENTITY
@@ -332,12 +387,12 @@ export default function SecurityBreach() {
               </motion.button>
             </form>
           </div>
-          
+
           {/* Status footer */}
           <div className="border-t border-red-900/30 p-3 font-mono text-xs text-red-700/70 flex justify-between items-center">
             <div>SYSTEM STATUS: {error ? "ACCESS DENIED" : "READY"}</div>
             <div className="flex items-center">
-              <motion.div 
+              <motion.div
                 animate={{ opacity: [0.5, 1, 0.5] }}
                 transition={{ duration: 2, repeat: Infinity }}
                 className="w-1.5 h-1.5 rounded-full bg-red-700 mr-2"
@@ -346,7 +401,7 @@ export default function SecurityBreach() {
             </div>
           </div>
         </motion.div>
-        
+
         {/* Bottom console text */}
         <motion.div
           initial={{ opacity: 0 }}
@@ -356,12 +411,23 @@ export default function SecurityBreach() {
         >
           <div className="flex flex-col gap-1">
             <div>$ ./initialize_security_protocol.sh</div>
-            <div>$ loading security modules....... <span className="text-red-500">COMPLETE</span></div>
-            <div>$ establishing secure connection... <span className="text-red-500">COMPLETE</span></div>
-            <div>$ waiting for authentication<motion.span
-              animate={{ opacity: [0, 1, 0] }}
-              transition={{ duration: 1.5, repeat: Infinity }}
-            >...</motion.span></div>
+            <div>
+              $ loading security modules.......{" "}
+              <span className="text-red-500">COMPLETE</span>
+            </div>
+            <div>
+              $ establishing secure connection...{" "}
+              <span className="text-red-500">COMPLETE</span>
+            </div>
+            <div>
+              $ waiting for authentication
+              <motion.span
+                animate={{ opacity: [0, 1, 0] }}
+                transition={{ duration: 1.5, repeat: Infinity }}
+              >
+                ...
+              </motion.span>
+            </div>
           </div>
         </motion.div>
       </motion.div>
