@@ -472,7 +472,7 @@ export default function CyberpunkPinPage() {
           className="fixed bottom-0 left-0 right-0 bg-black border-t border-cyan-700/50 p-2 font-mono text-xs text-cyan-600 z-20"
         >
           <div className="flex justify-between items-center">
-            <div>TAKEOVER v1.2.0 // CYBERSEC MODULE ACTIVE</div>
+            <div>TAKEOVER v1.2.1 // CYBERSEC MODULE ACTIVE</div>
             <div className="flex items-center space-x-4">
               <div>CORE TEMP: 42.3°C</div>
               <div>CPU: 12%</div>
