@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { motion } from "framer-motion";
-import { Users, CircleDollarSign, BarChart3, Boxes, DollarSign, File, FolderCode } from "lucide-react";
+import { Users, CircleDollarSign, BarChart3, Boxes, DollarSign, File, FolderCode, Video } from "lucide-react";
 import supabase from "../supabase";
 import UserView, { Role } from "../Reusables/userView";
 import { ActiveUser } from "@/stores/query";
@@ -49,6 +49,7 @@ const CompanyStats = () => {
   const [appUsers, setAppUsers] = useState("0");
   const [subscription, setSubscription] = useState("0");
   const [expenses, setExpenses] = useState("0")
+  const [meeting, setMeetings] = useState("0")
   // accounts
   const [accounts, setAccounts] = useState("0")
   
@@ -67,6 +68,9 @@ const CompanyStats = () => {
 
       try{
 
+      const { data: meeting, error : meetingError} = await supabase
+        .from("cwa_meetings")
+        .select("id")
       // const for accounts
       const { data: credentials, error: credentialsError} = await supabase
         .from("cwa_creds")
@@ -95,7 +99,10 @@ const CompanyStats = () => {
         .select("amount")
         .eq("revenueType", "subscription");
 
-      
+      if ( meetingError )
+      {
+        console.log("There was an error with fetching the meetings Id from supabase", meetingError.message)
+      }
       if ( credentialsError )
       {
         console.log("There was an error retrieving credential data from supabase", credentialsError.message)
@@ -178,12 +185,12 @@ const CompanyStats = () => {
         } else {
           accountsToShow = 0;
         }
-
+        // accounts
         setAccounts(accountsToShow.toString());
       }
 
-   
-      // accounts
+      // meetings
+      setMeetings(meeting?.length as unknown as string)
       // setTotalTask(userTasks?.length as unknown as string)
       setInitialCapital(revenue?.initialCapital);
       setAppUsers(userCount!.length as unknown as string);
@@ -197,8 +204,8 @@ const CompanyStats = () => {
   }
   fetchStats();
 }, [userRole]);
+console.log(meeting)
 
-console.log({ accounts })
   return (
     <>
       {/* Stats Overview */}
@@ -235,6 +242,7 @@ console.log({ accounts })
         value={  ( userTasks - completedTasks )  }
         />
 
+        {/* ACCOUNTS  */}
         <UserView userRole={[Role.CEO, Role.COO,  Role.AccManager]}>
 
             <StatCard 
@@ -243,6 +251,14 @@ console.log({ accounts })
               icon={FolderCode}
             />
         </UserView>
+
+        {/* MEETINGS */}
+        <StatCard
+          label="Meetings"
+          icon={Video}
+          value={meeting}
+        />
+        
       </motion.div>
     </>
   );
