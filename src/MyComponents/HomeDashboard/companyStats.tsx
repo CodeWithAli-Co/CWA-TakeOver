@@ -163,10 +163,10 @@ const CompanyStats = () => {
 
 
         // set task status
-        setTotalTask(total );
-        setUserTasks(userRoleTasks  );
-        setCompletedTasks(completed  );
-        setPendingTasks(pending );
+        setTotalTask(total);
+        setUserTasks(userRoleTasks);
+        setCompletedTasks(completed);
+        setPendingTasks(pending);
        
       }
 
@@ -176,11 +176,11 @@ const CompanyStats = () => {
         // filter creds by folder type based on role
         var accountsToShow = 0;
 
-        if(userRole === Role.CEO)
+        if(userRole === Role.CEO || userRole === Role.COO)
         {
           // all accounts seen by these twwo roles
           accountsToShow = credentials.length;
-        } else if (userRole === Role.AccManager || userRole === Role.COO) {
+        } else if (userRole === Role.AccManager) {
           accountsToShow = credentials.filter(cred => cred.folder === "default").length;
         } else {
           accountsToShow = 0;
