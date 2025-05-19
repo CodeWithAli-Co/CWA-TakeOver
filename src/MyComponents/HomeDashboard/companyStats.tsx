@@ -14,7 +14,7 @@ const StatCard = ({
 }: {
   icon: React.ComponentType<{ className?: string }>;
   label: string;
-  value: string;
+  value: string | number;
   change?: number;
 }) => (
   <motion.div
@@ -50,12 +50,15 @@ const CompanyStats = () => {
   const [subscription, setSubscription] = useState("");
   const [expenses, setExpenses] = useState("")
   
-  const [alltask, setAllTask] = useState("")
-  const [userTasks, setUserTasks] = useState("")
+  // Task plus the status of them
+  const [totalTasks, setTotalTask] = useState(0)
+  const [userTasks, setUserTasks] = useState(0)
+  const [completedTasks, setCompletedTasks] = useState(0)
+  const [pendingTasks, setPendingTasks] = useState(0)
 
   // get the current user role from activeUser hook
   const { data: user } = ActiveUser();
-  const userRole = user?.[0]?.role || Role.Member; // or we default to member if the role is undefined
+  const userRole = user[0].role || Role.Member; // or we default to member if the role is undefined
   
   useEffect(() => {
     async function fetchStats() {
@@ -67,6 +70,7 @@ const CompanyStats = () => {
       const { data: allTask, error: taskError } = await supabase
         .from("cwa_todos")
         .select("todo_id, label, status")
+        .eq("label", userRole)
       const { data : expense, error : expenseError} = await supabase
         .from("cwa_expenses")
         .select("amount")
@@ -124,20 +128,35 @@ const CompanyStats = () => {
           return total + (subscription.amount || 0);
         }, 0);
       }
-
+    
       // Need to assing the roles based on your role
       if(allTask)
       {
         // for later 
-        // const total = allTask.length;
+        const total = allTask.length;
 
         // Filter tasks assigned to current user's role
         // The label field might store the enum value (like "CEO") rather than the key
         const userRoleTasks = allTask.filter(task => task.label === userRole).length
 
-        // setUserTasks(userRoleTasks)
+        // count the completedd aand pending tasks for the user roles
+        // might changee allTask.filter to userRoleTask.filter
+        const completed = allTask.filter(task => task.status === "done").length
+        const pending = allTask.filter(task => task.status === "in-progress" ).length
+
+
+        // set task status
+        setTotalTask(total );
+        setUserTasks(userRoleTasks  );
+        setCompletedTasks(completed  );
+        setPendingTasks(pending );
+        console.log({ userRole  })
+      console.log ({ allTask })
+      console.log({ completedTasks})
+      console.log({pendingTasks})
+      console.log({totalTasks})
       }
-      setAllTask(userTasks?.length as unknown as string)
+      // setTotalTask(userTasks?.length as unknown as string)
       setInitialCapital(revenue?.initialCapital);
       setAppUsers(userCount!.length as unknown as string);
       setSubscription(totSubs.toFixed(2));
@@ -183,7 +202,8 @@ const CompanyStats = () => {
         <StatCard 
         label="Tasks"
         icon={File}
-        value={userTasks}
+        // total - completed
+        value={  ( userTasks - completedTasks )  }
         />
       </motion.div>
     </>
