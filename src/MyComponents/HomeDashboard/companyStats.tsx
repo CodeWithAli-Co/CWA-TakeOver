@@ -45,12 +45,12 @@ const StatCard = ({
 );
 
 const CompanyStats = () => {
-  const [initialCapital, setInitialCapital] = useState("");
-  const [appUsers, setAppUsers] = useState("");
-  const [subscription, setSubscription] = useState("");
-  const [expenses, setExpenses] = useState("")
+  const [initialCapital, setInitialCapital] = useState("0");
+  const [appUsers, setAppUsers] = useState("0");
+  const [subscription, setSubscription] = useState("0");
+  const [expenses, setExpenses] = useState("0")
   // accounts
-  const [accounts, setAccounts] = useState("")
+  const [accounts, setAccounts] = useState("0")
   
   // Task plus the status of them
   const [totalTasks, setTotalTask] = useState(0)
@@ -235,7 +235,7 @@ console.log({ accounts })
         value={  ( userTasks - completedTasks )  }
         />
 
-        <UserView userRole={[Role.CEO || Role.COO || Role.AccManager]}>
+        <UserView userRole={[Role.CEO, Role.COO,  Role.AccManager]}>
 
             <StatCard 
               label="Accounts"
