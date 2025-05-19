@@ -214,6 +214,9 @@ console.log(meeting)
         animate={{ opacity: 1, y: 0 }}
         className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4"
       >
+        {/* CCC Eyes ONLY */}
+        <UserView userRole={[Role.CEO, Role.COO]}>
+
         <StatCard icon={Users} label="Total Users" value={appUsers} />
 
         {/* Can either link up actual bank account or calc how much money there is on bank acc */}
@@ -230,11 +233,10 @@ console.log(meeting)
         />
         <StatCard icon={DollarSign} label="Expenses" value={`$${expenses}`} />
         {/* <StatCard icon={Boxes} label="Active Bots" value="1" /> */}
+        </UserView>
 
         {/* NON-CEO/COO Eyes */}
-        {/* Task */} 
-        {/* # of Accounts for account manager */}
-        {/*  */}
+        {/* Task Cards */}
         <StatCard 
         label="Tasks"
         icon={File}
