@@ -180,7 +180,7 @@ const CompanyStats = () => {
         {
           // all accounts seen by these twwo roles
           accountsToShow = credentials.length;
-        } else if (userRole === Role.AccManager) {
+        } else if (userRole === Role.Marketing || userRole === Role.AccManager) {
           accountsToShow = credentials.filter(cred => cred.folder === "default").length;
         } else {
           accountsToShow = 0;
