@@ -1,8 +1,8 @@
 import React, { useEffect, useState } from "react";
 import { motion } from "framer-motion";
-import { Users, CircleDollarSign, BarChart3, Boxes, DollarSign, File } from "lucide-react";
+import { Users, CircleDollarSign, BarChart3, Boxes, DollarSign, File, FolderCode } from "lucide-react";
 import supabase from "../supabase";
-import { Role } from "../Reusables/userView";
+import UserView, { Role } from "../Reusables/userView";
 import { ActiveUser } from "@/stores/query";
 
 // Enhanced Stat Card with animations
@@ -49,6 +49,8 @@ const CompanyStats = () => {
   const [appUsers, setAppUsers] = useState("");
   const [subscription, setSubscription] = useState("");
   const [expenses, setExpenses] = useState("")
+  // accounts
+  const [accounts, setAccounts] = useState("")
   
   // Task plus the status of them
   const [totalTasks, setTotalTask] = useState(0)
@@ -65,6 +67,10 @@ const CompanyStats = () => {
 
       try{
 
+      // const for accounts
+      const { data: credentials, error: credentialsError} = await supabase
+        .from("cwa_creds")
+        .select("id, folder")
      
       // const for Task
       const { data: allTask, error: taskError } = await supabase
@@ -89,7 +95,11 @@ const CompanyStats = () => {
         .select("amount")
         .eq("revenueType", "subscription");
 
-
+      
+      if ( credentialsError )
+      {
+        console.log("There was an error retrieving credential data from supabase", credentialsError.message)
+      }
       if( taskError)
       {
         console.log("There was an error with fetching tasks", taskError.message);
@@ -150,12 +160,30 @@ const CompanyStats = () => {
         setUserTasks(userRoleTasks  );
         setCompletedTasks(completed  );
         setPendingTasks(pending );
-        console.log({ userRole  })
-      console.log ({ allTask })
-      console.log({ completedTasks})
-      console.log({pendingTasks})
-      console.log({totalTasks})
+       
       }
+
+      // conditional statement for defaault and ccc
+      if( credentials )
+      {
+        // filter creds by folder type based on role
+        var accountsToShow = 0;
+
+        if(userRole === Role.CEO)
+        {
+          // all accounts seen by these twwo roles
+          accountsToShow = credentials.length;
+        } else if (userRole === Role.AccManager || userRole === Role.COO) {
+          accountsToShow = credentials.filter(cred => cred.folder === "default").length;
+        } else {
+          accountsToShow = 0;
+        }
+
+        setAccounts(accountsToShow.toString());
+      }
+
+   
+      // accounts
       // setTotalTask(userTasks?.length as unknown as string)
       setInitialCapital(revenue?.initialCapital);
       setAppUsers(userCount!.length as unknown as string);
@@ -170,6 +198,7 @@ const CompanyStats = () => {
   fetchStats();
 }, [userRole]);
 
+console.log({ accounts })
   return (
     <>
       {/* Stats Overview */}
@@ -205,6 +234,15 @@ const CompanyStats = () => {
         // total - completed
         value={  ( userTasks - completedTasks )  }
         />
+
+        <UserView userRole={[Role.CEO || Role.COO || Role.AccManager]}>
+
+            <StatCard 
+              label="Accounts"
+              value={accounts}
+              icon={FolderCode}
+            />
+        </UserView>
       </motion.div>
     </>
   );
