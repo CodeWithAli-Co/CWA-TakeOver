@@ -243,7 +243,7 @@ console.log(meeting)
         />
 
         {/* ACCOUNTS  */}
-        <UserView userRole={[Role.CEO, Role.COO,  Role.AccManager]}>
+        <UserView userRole={[Role.CEO, Role.COO,  Role.AccManager, Role.Marketing]}>
 
             <StatCard 
               label="Accounts"

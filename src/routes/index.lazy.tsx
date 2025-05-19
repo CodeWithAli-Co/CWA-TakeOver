@@ -39,7 +39,7 @@ const Index = () => {
         className="p-6 space-y-6"
       >
         {/* Company Stats */}
-        <UserView userRole={[Role.CEO, Role.COO]}>
+        <UserView excludeRoles={[Role.Intern, Role.Member]}>
           <CompanyStats />
         </UserView>
 
