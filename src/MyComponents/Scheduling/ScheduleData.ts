@@ -1,4 +1,5 @@
 // ScheduleData.ts - Consistent data for schedule
+import supabase from "../supabase";
 import { 
     ScheduleDataType, 
     EventType, 
@@ -6,6 +7,19 @@ import {
     DayDataType 
   } from "./ScheduleComponents";
   
+
+  const { data : events, error: eventsError } = await supabase
+    .schema("schedule")
+    .from("event")
+    .select("*")
+
+  if( eventsError ) 
+  {
+    console.log("There was an error grabbing data from the supabase for events", eventsError.message)
+  }
+
+  
+
   // Employee data
   export const employees: EmployeeType[] = [
     { id: 0, name: "Current User", shifts: 4, avatar: "CU" },
@@ -182,27 +196,31 @@ import {
       currentDate.setDate(startOfWeek.getDate() + i);
       
       // Get base events for this day
-      const dayEvents: EventType[] = [...baseEvents[i]];
-      
-      // Add any user-added events for this day
-      const addedEventsForDay = userAddedEvents.filter(event => event.dayIndex === i);
-      if (addedEventsForDay.length > 0) {
-        addedEventsForDay.forEach(event => {
-          const { dayIndex, ...eventWithoutDay } = event;
-          dayEvents.push(eventWithoutDay);
-        });
+      if (events) 
+      {
+         const dayEvents: EventType[] = [...events[i]];
+         // Add any user-added events for this day
+         const addedEventsForDay = userAddedEvents.filter(event => event.dayIndex === i);
+         if (addedEventsForDay.length > 0) {
+           addedEventsForDay.forEach(event => {
+             const { dayIndex, ...eventWithoutDay } = event;
+             dayEvents.push(eventWithoutDay);
+           });
+         }
+         
+         const dayData: DayDataType = {
+           date: currentDate.getDate().toString(),
+           month: currentDate.getMonth(),
+           dayName: new Intl.DateTimeFormat('en-US', { weekday: 'long' }).format(currentDate),
+           shortName: new Intl.DateTimeFormat('en-US', { weekday: 'short' }).format(currentDate),
+           isToday: currentDate.toDateString() === today.toDateString(),
+           events: dayEvents
+         };
+         
+         weekData.push(dayData);
       }
+     
       
-      const dayData: DayDataType = {
-        date: currentDate.getDate().toString(),
-        month: currentDate.getMonth(),
-        dayName: new Intl.DateTimeFormat('en-US', { weekday: 'long' }).format(currentDate),
-        shortName: new Intl.DateTimeFormat('en-US', { weekday: 'short' }).format(currentDate),
-        isToday: currentDate.toDateString() === today.toDateString(),
-        events: dayEvents
-      };
-      
-      weekData.push(dayData);
     }
     
     // Calculate statistics based on all events

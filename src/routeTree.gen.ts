@@ -35,6 +35,7 @@ const BroadcastLazyImport = createFileRoute('/broadcast')()
 const BotLazyImport = createFileRoute('/bot')()
 const BioLazyImport = createFileRoute('/bio')()
 const IndexLazyImport = createFileRoute('/')()
+const ClientIndexLazyImport = createFileRoute('/client/')()
 
 // Create/Update Routes
 
@@ -157,6 +158,12 @@ const IndexLazyRoute = IndexLazyImport.update({
   path: '/',
   getParentRoute: () => rootRoute,
 } as any).lazy(() => import('./routes/index.lazy').then((d) => d.Route))
+
+const ClientIndexLazyRoute = ClientIndexLazyImport.update({
+  id: '/client/',
+  path: '/client/',
+  getParentRoute: () => rootRoute,
+} as any).lazy(() => import('./routes/client/index.lazy').then((d) => d.Route))
 
 // Populate the FileRoutesByPath interface
 
@@ -295,6 +302,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof TaskLazyImport
       parentRoute: typeof rootRoute
     }
+    '/client/': {
+      id: '/client/'
+      path: '/client'
+      fullPath: '/client'
+      preLoaderRoute: typeof ClientIndexLazyImport
+      parentRoute: typeof rootRoute
+    }
   }
 }
 
@@ -320,6 +334,7 @@ export interface FileRoutesByFullPath {
   '/schedule': typeof ScheduleLazyRoute
   '/settings': typeof SettingsLazyRoute
   '/task': typeof TaskLazyRoute
+  '/client': typeof ClientIndexLazyRoute
 }
 
 export interface FileRoutesByTo {
@@ -342,6 +357,7 @@ export interface FileRoutesByTo {
   '/schedule': typeof ScheduleLazyRoute
   '/settings': typeof SettingsLazyRoute
   '/task': typeof TaskLazyRoute
+  '/client': typeof ClientIndexLazyRoute
 }
 
 export interface FileRoutesById {
@@ -365,6 +381,7 @@ export interface FileRoutesById {
   '/schedule': typeof ScheduleLazyRoute
   '/settings': typeof SettingsLazyRoute
   '/task': typeof TaskLazyRoute
+  '/client/': typeof ClientIndexLazyRoute
 }
 
 export interface FileRouteTypes {
@@ -389,6 +406,7 @@ export interface FileRouteTypes {
     | '/schedule'
     | '/settings'
     | '/task'
+    | '/client'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -410,6 +428,7 @@ export interface FileRouteTypes {
     | '/schedule'
     | '/settings'
     | '/task'
+    | '/client'
   id:
     | '__root__'
     | '/'
@@ -431,6 +450,7 @@ export interface FileRouteTypes {
     | '/schedule'
     | '/settings'
     | '/task'
+    | '/client/'
   fileRoutesById: FileRoutesById
 }
 
@@ -454,6 +474,7 @@ export interface RootRouteChildren {
   ScheduleLazyRoute: typeof ScheduleLazyRoute
   SettingsLazyRoute: typeof SettingsLazyRoute
   TaskLazyRoute: typeof TaskLazyRoute
+  ClientIndexLazyRoute: typeof ClientIndexLazyRoute
 }
 
 const rootRouteChildren: RootRouteChildren = {
@@ -476,6 +497,7 @@ const rootRouteChildren: RootRouteChildren = {
   ScheduleLazyRoute: ScheduleLazyRoute,
   SettingsLazyRoute: SettingsLazyRoute,
   TaskLazyRoute: TaskLazyRoute,
+  ClientIndexLazyRoute: ClientIndexLazyRoute,
 }
 
 export const routeTree = rootRoute
@@ -506,7 +528,8 @@ export const routeTree = rootRoute
         "/quota",
         "/schedule",
         "/settings",
-        "/task"
+        "/task",
+        "/client/"
       ]
     },
     "/": {
@@ -565,6 +588,9 @@ export const routeTree = rootRoute
     },
     "/task": {
       "filePath": "task.lazy.tsx"
+    },
+    "/client/": {
+      "filePath": "client/index.lazy.tsx"
     }
   }
 }

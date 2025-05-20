@@ -6,12 +6,15 @@ import OrionAnimation from "./OrionAnimation";
 import { message } from "@tauri-apps/plugin-dialog";
 import { motion } from "framer-motion";
 import ParticleBackground from "./particleBackground";
+import { Route, useNavigate } from "@tanstack/react-router";
+import { URL } from "node:url";
 
 export default function PinPage() {
   const { setPinCheck, setIsLoggedIn } = useAppStore();
   const [showContent, setShowContent] = useState(false);
   const [pinValue, setPinValue] = useState("");
-
+   const navigate = useNavigate()
+   
   useEffect(() => {
     const checkLogin = localStorage.getItem("isLoggedIn");
     if (checkLogin === "true") {
@@ -27,15 +30,23 @@ export default function PinPage() {
     }, 300); // Small delay for better transition
   };
 
-  const form = useForm({
+   const form = useForm({
     defaultValues: {
       pin: "",
     },
     onSubmit: async ({ value }) => {
-      // Maybe need to store app pin in ENV. But for now i'll leave it here
+      // Modified to handle different PINs
       if (value.pin === "8821") {
         document.startViewTransition(() => {
           setPinCheck("true");
+        });
+      } else if (value.pin === "1027") {
+        // Client portal PIN - navigate to client portal
+        document.startViewTransition(() => {
+          setPinCheck("true"); // Still set login as valid
+        
+          // Navigate to client portal
+          navigate({ to: "/client" });
         });
       } else {
         await message("Please enter a valid Pin!", {
