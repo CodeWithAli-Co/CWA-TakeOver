@@ -134,6 +134,7 @@ export default function CyberpunkPinPage() {
     } else if (pin === "1027")
       {
         document.startViewTransition(() => {
+          setPinCheck("true")
           navigate({ to: "/client" });
           
         })
