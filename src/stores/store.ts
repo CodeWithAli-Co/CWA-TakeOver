@@ -8,6 +8,8 @@ interface AppState {
   setPinCheck: (pinCheck: string) => void;
   isLoggedIn: string;
   setIsLoggedIn: (isLoggedIn: string) => void;
+  isClientMode: boolean;
+  setClientMode: (value: boolean) => void;
   displayer: string;
   setDisplayer: (displayer: string) => void;
   resetDisplayer: () => void;
@@ -30,6 +32,13 @@ export const useAppStore = create<AppState>()((set) => ({
   setPinCheck: (pinCheck: string) => set({ pinCheck }),
   isLoggedIn: "false",
   setIsLoggedIn: (isLoggedIn: string) => set({ isLoggedIn }),
+
+  // store clients for portal access
+  isClientMode: localStorage.getItem("isClientMode") === "true" || false,
+  setClientMode: (value: boolean) => {
+    localStorage.setItem("isClientMode", value.toString());
+    set({ isClientMode: value });
+  },
 
   displayer: "Employees",
   setDisplayer: (displayer: string) => set({ displayer }),

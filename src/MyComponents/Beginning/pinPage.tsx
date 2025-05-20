@@ -44,7 +44,8 @@ export default function PinPage() {
         // Client portal PIN - navigate to client portal
         document.startViewTransition(() => {
           setPinCheck("true"); // Still set login as valid
-        
+          setIsLoggedIn("true")
+          setClientMode(true) // client mode Flag ( edit later for employees to enter client mode they would have no permission include CEO ahaha)
           // Navigate to client portal
           navigate({ to: "/client" });
         });
@@ -215,4 +216,8 @@ export default function PinPage() {
       </motion.div>
     </>
   );
+}
+
+function setClientMode(arg0: boolean) {
+  throw new Error("Function not implemented.");
 }

@@ -22,10 +22,12 @@ import {
   projectManagerData,
   securityEngineerData,
 } from "./ui/Dashboard/role-datas";
-import UserView from "@/MyComponents/Reusables/userView";
+import UserView, { Role } from "@/MyComponents/Reusables/userView";
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   return (
+    <UserView excludeRoles={Role.Client}>
+
     <Sidebar collapsible="icon" {...props}>
       <SidebarHeader>
         {/* Admin View */}
@@ -61,34 +63,34 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
         </UserView>
 
         {/* Project Manager View */}
-        <UserView userRole="Project Manager">
+        <UserView userRole={Role.ProjectManager}>
           <NavMain items={projectManagerData.navMain} />
           <NavProjects projects={projectManagerData.projects} />
         </UserView>
 
         {/* Marketing Specialist View */}
-        <UserView userRole="Marketing Specialist">
+        <UserView userRole={Role.Marketing}>
           <NavMain items={marketingData.navMain} />
         </UserView>
 
         {/* Admin View */}
-        <UserView userRole="Admin">
+        <UserView userRole={Role.Admin}>
           <NavMain items={adminData.navMain} />
         </UserView>
 
         {/* Security Engineer View */}
-        <UserView userRole={"Security Engineer"}>
+        <UserView userRole={Role.SecurityEngineer}>
           <NavMain items={securityEngineerData.navMain} />
         </UserView>
 
         {/* COO View */}
-        <UserView userRole="COO">
+        <UserView userRole={Role.COO}>
           <NavMain items={cooData.navMain} />
           <NavProjects projects={cooData.projects} />
         </UserView>
 
         {/* CEO View */}
-        <UserView userRole="CEO">
+        <UserView userRole={Role.CEO}>
           <NavMain items={ceoData.navMain} />
           <NavProjects projects={ceoData.projects} />
         </UserView>
@@ -99,5 +101,6 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       </SidebarFooter>
       <SidebarRail />
     </Sidebar>
+    </UserView>
   );
 }
