@@ -9,6 +9,7 @@ import { motion } from "framer-motion";
 import ParticleBackground from "./particleBackground";
 import { ActiveUser } from "@/stores/query";
 import LiveTime from "../Reusables/liveTime";
+import { Navigate, useNavigate } from "@tanstack/react-router";
 
 export default function CyberpunkPinPage() {
   const { setPinCheck, setIsLoggedIn } = useAppStore();
@@ -17,6 +18,8 @@ export default function CyberpunkPinPage() {
   const [isWrongPin, setIsWrongPin] = useState(false);
   const [activePinIndex, setActivePinIndex] = useState(-1);
   const [pinDigits, setPinDigits] = useState(["", "", "", ""]);
+  const navigate = useNavigate()
+  
 
   const { data: activeUser, error: activeUserError } = ActiveUser();
   if (activeUserError)
@@ -128,7 +131,16 @@ export default function CyberpunkPinPage() {
       document.startViewTransition(() => {
         setPinCheck("true");
       });
-    } else {
+    } else if (pin === "1027")
+      {
+        document.startViewTransition(() => {
+          navigate({ to: "/client" });
+          
+        })
+      } 
+    
+    
+    else {
       setIsWrongPin(true);
       setIsLoading(false);
       setPinDigits(["", "", "", ""]);
