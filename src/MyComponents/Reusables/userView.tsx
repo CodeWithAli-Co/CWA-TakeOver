@@ -2,6 +2,7 @@ import { ActiveUser } from "@/stores/query";
 import React from "react";
 
 export const enum Role {
+  Client =  "Client",
   Intern = "Intern",
   Member = "Member",
   UIDesigner = "UI/UX Designer",
@@ -18,7 +19,6 @@ export const enum Role {
   Admin = "Admin",
   SecurityEngineer = "Security Engineer",
   Partner = "Partnership Lead",
-  Client =  "Client",
   COO = "COO",
   CEO = "CEO"
 }
