@@ -17,7 +17,7 @@ import {
   SelectValue,
 } from "@/components/ui/shadcnComponents/select";
 import { useSuspenseQuery } from "@tanstack/react-query";
-import UserView from "../Reusables/userView";
+import UserView, { Role } from "../Reusables/userView";
 
 // Fetch CWA Employee Name
 const fetchEmployeeName = async (id: number) => {
@@ -126,29 +126,30 @@ export const PromoteUser = (props: PromoteInterface) => {
                   </SelectTrigger>
                   <UserView
                     userRole={[
-                      "Intern",
-                      "Member",
-                      "UI/UX Designer",
-                      "Software Developer",
-                      "Mechanical engineer",
-                      "Recruiter",
-                      "AI Specialist",
-                      "Database Administrator",
-                      "Account Manager",
-                      "Data Scientist",
-                      "Project Manager",
-                      "Marketing Specialist",
-                      "Customer Support",
-                      "Admin",
-                      "Security Engineer",
-                      "Partnership Lead",
+                      Role.Client,
+                      Role.Intern,
+                      Role.Member,
+                      Role.UIDesigner,
+                      Role.SoftwareDev,
+                      Role.MechEngineer,
+                      Role.Recruiter,
+                      Role.AiDev,
+                      Role.DBAdmin,
+                      Role.AccManager,
+                      Role.DataScientist,
+                      Role.ProjectManager,
+                      Role.Marketing,
+                      Role.CustomerSupport,
+                      Role.Admin,
+                      Role.SecurityEngineer,
+                      Role.Partner
                     ]}
                   >
                     <SelectContent
                       className="bg-black/95 border-red-950/30 
                             text-red-200"
                     >
-                      {RolesList.map((role) => (
+                      {RolesList.map((role : string) => (
                         <SelectItem
                           key={role}
                           value={role}

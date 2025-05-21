@@ -45,7 +45,7 @@ export default function PinPage() {
         document.startViewTransition(() => {
           setPinCheck("true"); // Still set login as valid
           setIsLoggedIn("true")
-          setClientMode(true) // client mode Flag ( edit later for employees to enter client mode they would have no permission include CEO ahaha)
+        
           // Navigate to client portal
           navigate({ to: "/client" });
         });
