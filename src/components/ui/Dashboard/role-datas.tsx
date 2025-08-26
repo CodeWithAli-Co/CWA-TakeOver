@@ -28,6 +28,7 @@ export const internData = {
       isActive: false,
       icon: Home,
     },
+
     {
       title: "Chat",
       url: "/chat",
@@ -757,6 +758,7 @@ export const ceoData = {
       logo: AudioWaveform,
       plan: "Startup",
     },
+    
     {
       name: "Members",
       logo: Command,
@@ -769,6 +771,12 @@ export const ceoData = {
       url: "/",
       isActive: false,
       icon: Home,
+    },
+        {
+      title: "Contract",
+      url: "/contractGenerator",
+
+      icon: File
     },
     {
       title: "Admin Permissions",

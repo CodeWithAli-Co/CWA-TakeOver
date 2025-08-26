@@ -29,6 +29,7 @@ const FinancialDashboardLazyImport = createFileRoute('/financialDashboard')()
 const EmployeeLazyImport = createFileRoute('/employee')()
 const DetailsLazyImport = createFileRoute('/details')()
 const DetailFoldersLazyImport = createFileRoute('/detailFolders')()
+const ContractGeneratorLazyImport = createFileRoute('/contractGenerator')()
 const ChatLazyImport = createFileRoute('/chat')()
 const BudgetaryLazyImport = createFileRoute('/budgetary')()
 const BroadcastLazyImport = createFileRoute('/broadcast')()
@@ -123,6 +124,14 @@ const DetailFoldersLazyRoute = DetailFoldersLazyImport.update({
   getParentRoute: () => rootRoute,
 } as any).lazy(() => import('./routes/detailFolders.lazy').then((d) => d.Route))
 
+const ContractGeneratorLazyRoute = ContractGeneratorLazyImport.update({
+  id: '/contractGenerator',
+  path: '/contractGenerator',
+  getParentRoute: () => rootRoute,
+} as any).lazy(() =>
+  import('./routes/contractGenerator.lazy').then((d) => d.Route),
+)
+
 const ChatLazyRoute = ChatLazyImport.update({
   id: '/chat',
   path: '/chat',
@@ -209,6 +218,13 @@ declare module '@tanstack/react-router' {
       path: '/chat'
       fullPath: '/chat'
       preLoaderRoute: typeof ChatLazyImport
+      parentRoute: typeof rootRoute
+    }
+    '/contractGenerator': {
+      id: '/contractGenerator'
+      path: '/contractGenerator'
+      fullPath: '/contractGenerator'
+      preLoaderRoute: typeof ContractGeneratorLazyImport
       parentRoute: typeof rootRoute
     }
     '/detailFolders': {
@@ -321,6 +337,7 @@ export interface FileRoutesByFullPath {
   '/broadcast': typeof BroadcastLazyRoute
   '/budgetary': typeof BudgetaryLazyRoute
   '/chat': typeof ChatLazyRoute
+  '/contractGenerator': typeof ContractGeneratorLazyRoute
   '/detailFolders': typeof DetailFoldersLazyRoute
   '/details': typeof DetailsLazyRoute
   '/employee': typeof EmployeeLazyRoute
@@ -344,6 +361,7 @@ export interface FileRoutesByTo {
   '/broadcast': typeof BroadcastLazyRoute
   '/budgetary': typeof BudgetaryLazyRoute
   '/chat': typeof ChatLazyRoute
+  '/contractGenerator': typeof ContractGeneratorLazyRoute
   '/detailFolders': typeof DetailFoldersLazyRoute
   '/details': typeof DetailsLazyRoute
   '/employee': typeof EmployeeLazyRoute
@@ -368,6 +386,7 @@ export interface FileRoutesById {
   '/broadcast': typeof BroadcastLazyRoute
   '/budgetary': typeof BudgetaryLazyRoute
   '/chat': typeof ChatLazyRoute
+  '/contractGenerator': typeof ContractGeneratorLazyRoute
   '/detailFolders': typeof DetailFoldersLazyRoute
   '/details': typeof DetailsLazyRoute
   '/employee': typeof EmployeeLazyRoute
@@ -393,6 +412,7 @@ export interface FileRouteTypes {
     | '/broadcast'
     | '/budgetary'
     | '/chat'
+    | '/contractGenerator'
     | '/detailFolders'
     | '/details'
     | '/employee'
@@ -415,6 +435,7 @@ export interface FileRouteTypes {
     | '/broadcast'
     | '/budgetary'
     | '/chat'
+    | '/contractGenerator'
     | '/detailFolders'
     | '/details'
     | '/employee'
@@ -437,6 +458,7 @@ export interface FileRouteTypes {
     | '/broadcast'
     | '/budgetary'
     | '/chat'
+    | '/contractGenerator'
     | '/detailFolders'
     | '/details'
     | '/employee'
@@ -461,6 +483,7 @@ export interface RootRouteChildren {
   BroadcastLazyRoute: typeof BroadcastLazyRoute
   BudgetaryLazyRoute: typeof BudgetaryLazyRoute
   ChatLazyRoute: typeof ChatLazyRoute
+  ContractGeneratorLazyRoute: typeof ContractGeneratorLazyRoute
   DetailFoldersLazyRoute: typeof DetailFoldersLazyRoute
   DetailsLazyRoute: typeof DetailsLazyRoute
   EmployeeLazyRoute: typeof EmployeeLazyRoute
@@ -484,6 +507,7 @@ const rootRouteChildren: RootRouteChildren = {
   BroadcastLazyRoute: BroadcastLazyRoute,
   BudgetaryLazyRoute: BudgetaryLazyRoute,
   ChatLazyRoute: ChatLazyRoute,
+  ContractGeneratorLazyRoute: ContractGeneratorLazyRoute,
   DetailFoldersLazyRoute: DetailFoldersLazyRoute,
   DetailsLazyRoute: DetailsLazyRoute,
   EmployeeLazyRoute: EmployeeLazyRoute,
@@ -516,6 +540,7 @@ export const routeTree = rootRoute
         "/broadcast",
         "/budgetary",
         "/chat",
+        "/contractGenerator",
         "/detailFolders",
         "/details",
         "/employee",
@@ -549,6 +574,9 @@ export const routeTree = rootRoute
     },
     "/chat": {
       "filePath": "chat.lazy.tsx"
+    },
+    "/contractGenerator": {
+      "filePath": "contractGenerator.lazy.tsx"
     },
     "/detailFolders": {
       "filePath": "detailFolders.lazy.tsx"
