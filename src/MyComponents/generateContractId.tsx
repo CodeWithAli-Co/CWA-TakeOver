@@ -881,7 +881,7 @@ if (!showContract) {
                             onChange={(e) => updateFeature('advancedFeatures', index, e.target.value)}
                           />
                           {/* We are not entering a value for this button, just removing it at its index */}
-                          <Button type='button' variant={"outline"} size={"sm"} onClick={() => removeFeature("advancedFeatures", index)} ></Button>
+                          <Button type='button' variant={"outline"} size={"sm"} onClick={() => removeFeature("advancedFeatures", index)}   className='hover:border-red-800 hover:bg-red-200'> <Minus className="w-4 h-4 text-red-500" /> </Button>
                         </div>
                       ))}
                       <Button 
@@ -898,6 +898,40 @@ if (!showContract) {
 
             </CardContent>
           </Card>
+
+          {/* Special Arrangements */}
+          <Card className="mb-6">
+            <CardContent className="p-6">
+              <h2 className="text-xl font-semibold flex text-blue-700 items-center gap-2 mb-4">
+                <FileText className="w-5 h-5 text-blue-700" />
+                Special Arrangements
+              </h2>
+              <form.Field name="specialArrangements">
+                {(field) => (
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Special Terms or Arrangements (Optional)
+                    </label>
+                    <Textarea
+                      placeholder="Any special terms, payment arrangements, or custom clauses..."
+                      value={field.state.value}
+                      onChange={(e) => field.handleChange(e.target.value)}
+                      rows={3}
+                    />
+                  </div>
+                )}
+              </form.Field>
+            </CardContent>
+          </Card>
+
+          {/* Generate Button */}
+          <div className="text-center mb-8">
+            <Button onClick={form.handleSubmit} className="bg-blue-800 hover:bg-blue-900 text-white"
+            > 
+              <span>Generate Contract Preview</span></Button>
+          
+          </div>
+
       </div>
     </div>
   )
