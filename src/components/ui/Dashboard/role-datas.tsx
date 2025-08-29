@@ -637,6 +637,10 @@ export const cooData = {
           url: "/details",
         },
         {
+          title: "Contract",
+           url: "/contractGenerator",
+        },
+        {
           title: "Users",
           url: "/employee",
         },
