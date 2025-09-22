@@ -691,7 +691,7 @@ Ali`,
             <h1 className="text-4xl font-bold text-white mb-4">
               Cold Email Lead Generator
             </h1>
-            <p className="text-xl text-red-200">
+            <p className="text-xl text-white">
               AI-powered personalized outreach for CodeWithAli/Convergent
             </p>
           </div>
@@ -700,7 +700,7 @@ Ali`,
           <Card className="mb-8 bg-zinc-950 border-red-500/30">
             <CardHeader>
               <CardTitle className="text-white flex items-center gap-2">
-                <BarChart className="w-5 h-5 text-red-400" />
+                <BarChart className="w-5 h-5 text-red-900" />
                 Campaign Performance
               </CardTitle>
             </CardHeader>
@@ -708,19 +708,19 @@ Ali`,
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                 <div className="text-center p-4 bg-zinc-950 rounded-lg">
                   <div className="text-2xl font-bold text-white">{campaignStats.emailsSent}</div>
-                  <div className="text-sm text-red-300">Emails Sent</div>
+                  <div className="text-sm text-white">Emails Sent</div>
                 </div>
                 <div className="text-center p-4 bg-zinc-950 rounded-lg">
                   <div className="text-2xl font-bold text-green-400">{campaignStats.openRate}%</div>
-                  <div className="text-sm text-red-300">Open Rate</div>
+                  <div className="text-sm text-white">Open Rate</div>
                 </div>
                 <div className="text-center p-4 bg-zinc-950 rounded-lg">
                   <div className="text-2xl font-bold text-yellow-400">{campaignStats.replyRate}%</div>
-                  <div className="text-sm text-red-300">Reply Rate</div>
+                  <div className="text-sm text-white">Reply Rate</div>
                 </div>
                 <div className="text-center p-4 bg-zinc-950 rounded-lg">
                   <div className="text-2xl font-bold text-purple-400">{campaignStats.meetings}</div>
-                  <div className="text-sm text-red-300">Meetings Booked</div>
+                  <div className="text-sm text-white">Meetings Booked</div>
                 </div>
               </div>
             </CardContent>
@@ -728,9 +728,9 @@ Ali`,
 
           <Tabs defaultValue="single" className="w-full">
             <TabsList className="grid w-full grid-cols-3 bg-zinc-950">
-              <TabsTrigger value="single" className="data-[state=active]:bg-red-600">Single Email</TabsTrigger>
-              <TabsTrigger value="bulk" className="data-[state=active]:bg-red-600">Bulk Campaign</TabsTrigger>
-              <TabsTrigger value="analytics" className="data-[state=active]:bg-red-600">Analytics</TabsTrigger>
+              <TabsTrigger value="single" className="data-[state=active]:bg-red-600 text-white ">Single Email</TabsTrigger>
+              <TabsTrigger value="bulk" className="data-[state=active]:bg-red-600 text-white">Bulk Campaign</TabsTrigger>
+              <TabsTrigger value="analytics" className="data-[state=active]:bg-red-600 text-white">Analytics</TabsTrigger>
             </TabsList>
 
             <TabsContent value="single" className="space-y-6">
@@ -738,7 +738,7 @@ Ali`,
               <Card className="bg-zinc-950 border-red-500/30">
                 <CardContent className="p-4">
                   <div className="flex gap-3 justify-center">
-                    <Button onClick={loadSampleData} variant="outline" className="border-red-500 text-red-300">
+                    <Button onClick={loadSampleData} variant="outline" className="border-red-500 text-white">
                       <Database className="w-4 h-4 mr-2" />
                       Load Sample Data
                     </Button>
@@ -755,25 +755,25 @@ Ali`,
                 <Card className="bg-zinc-950 border-red-500/30">
                   <CardHeader>
                     <CardTitle className="text-white flex items-center gap-2">
-                      <Target className="w-5 h-5 text-red-400" />
+                      <Target className="w-5 h-5 text-red-900" />
                       Lead Information
                     </CardTitle>
                   </CardHeader>
                   <CardContent className="space-y-4">
                     <div className="grid grid-cols-2 gap-4">
                       <div>
-                        <Label className="text-red-200">Company Name</Label>
+                        <Label className="text-white">Company Name</Label>
                         <Input
                           placeholder="Acme Corp"
                           value={leadData.companyName}
                           onChange={(e) => setLeadData(prev => ({ ...prev, companyName: e.target.value }))}
-                          className="bg-slate-700 border-slate-600 text-white"
+                          className="bg-black border-red-950 text-white"
                         />
                       </div>
                       <div>
-                        <Label className="text-red-200">Industry</Label>
+                        <Label className="text-white">Industry</Label>
                         <Select value={leadData.industry} onValueChange={(value) => setLeadData(prev => ({ ...prev, industry: value }))}>
-                          <SelectTrigger className="bg-slate-700 border-slate-600 text-white">
+                          <SelectTrigger className="bg-black border-red-950 text-white">
                             <SelectValue placeholder="Select industry" />
                           </SelectTrigger>
                           <SelectContent>
@@ -798,31 +798,31 @@ Ali`,
 
                     <div className="grid grid-cols-2 gap-4">
                       <div>
-                        <Label className="text-red-200">Contact Name</Label>
+                        <Label className="text-white">Contact Name</Label>
                         <Input
                           placeholder="John Smith"
                           value={leadData.contactName}
                           onChange={(e) => setLeadData(prev => ({ ...prev, contactName: e.target.value }))}
-                          className="bg-slate-700 border-slate-600 text-white"
+                          className="bg-black border-red-950 text-white"
                         />
                       </div>
                       <div>
-                        <Label className="text-red-200">Contact Email</Label>
+                        <Label className="text-white">Contact Email</Label>
                         <Input
                           placeholder="john@acmecorp.com"
                           type="email"
                           value={leadData.contactEmail}
                           onChange={(e) => setLeadData(prev => ({ ...prev, contactEmail: e.target.value }))}
-                          className="bg-slate-700 border-slate-600 text-white"
+                          className="bg-black border-red-950 text-white"
                         />
                       </div>
                     </div>
 
                     <div className="grid grid-cols-2 gap-4">
                       <div>
-                        <Label className="text-red-200">Company Size</Label>
+                        <Label className="text-white">Company Size</Label>
                         <Select value={leadData.companySize} onValueChange={(value) => setLeadData(prev => ({ ...prev, companySize: value }))}>
-                          <SelectTrigger className="bg-slate-700 border-slate-600 text-white">
+                          <SelectTrigger className="bg-black border-red-950 text-white">
                             <SelectValue placeholder="Select size" />
                           </SelectTrigger>
                           <SelectContent>
@@ -835,37 +835,37 @@ Ali`,
                         </Select>
                       </div>
                       <div>
-                        <Label className="text-red-200">Website</Label>
+                        <Label className="text-white">Website</Label>
                         <Input
                           placeholder="acmecorp.com"
                           value={leadData.website}
                           onChange={(e) => setLeadData(prev => ({ ...prev, website: e.target.value }))}
-                          className="bg-slate-700 border-slate-600 text-white"
+                          className="bg-black border-red-950 text-white"
                         />
                       </div>
                     </div>
 
                     <div>
-                      <Label className="text-red-200">Recent News/Updates</Label>
+                      <Label className="text-white">Recent News/Updates</Label>
                       <Textarea
                         placeholder="Recently raised funding, expanded to new location, etc."
                         value={leadData.recentNews}
                         onChange={(e) => setLeadData(prev => ({ ...prev, recentNews: e.target.value }))}
-                        className="bg-slate-700 border-slate-600 text-white"
+                        className="bg-black border-red-950 text-white"
                         rows={2}
                       />
                     </div>
 
                     {/* Pain Points */}
                     <div>
-                      <Label className="text-red-200 mb-2 block">Pain Points/Challenges</Label>
+                      <Label className="text-white mb-2 block">Pain Points/Challenges</Label>
                       {leadData.painPoints.map((painPoint, index) => (
                         <div key={index} className="flex gap-2 mb-2">
                           <Input
                             placeholder="e.g., Low online visibility, poor website performance"
                             value={painPoint}
                             onChange={(e) => updatePainPoint(index, e.target.value)}
-                            className="bg-slate-700 border-slate-600 text-white"
+                            className="bg-black border-red-950 text-white"
                           />
                           <Button
                             type="button"
@@ -893,14 +893,14 @@ Ali`,
 
                     {/* Competitors */}
                     <div>
-                      <Label className="text-red-200 mb-2 block">Known Competitors</Label>
+                      <Label className="text-white mb-2 block">Known Competitors</Label>
                       {leadData.competitors.map((competitor, index) => (
                         <div key={index} className="flex gap-2 mb-2">
                           <Input
                             placeholder="Competitor name"
                             value={competitor}
                             onChange={(e) => updateCompetitor(index, e.target.value)}
-                            className="bg-slate-700 border-slate-600 text-white"
+                            className="bg-black border-red-950 text-white"
                           />
                           <Button
                             type="button"
@@ -932,16 +932,16 @@ Ali`,
                 <Card className="bg-zinc-950 border-red-500/30">
                   <CardHeader>
                     <CardTitle className="text-white flex items-center gap-2">
-                      <Settings className="w-5 h-5 text-red-400" />
+                      <Settings className="w-5 h-5 text-red-900" />
                       Email Settings
                     </CardTitle>
                   </CardHeader>
                   <CardContent className="space-y-4">
                     <div className="grid grid-cols-2 gap-4">
                       <div>
-                        <Label className="text-red-200">Tone</Label>
+                        <Label className="text-white">Tone</Label>
                         <Select value={emailSettings.tone} onValueChange={(value: 'professional' | 'friendly' | 'casual' | 'consultative') => setEmailSettings(prev => ({ ...prev, tone: value }))}>
-                          <SelectTrigger className="bg-slate-700 border-slate-600 text-white">
+                          <SelectTrigger className="bg-black border-red-950 text-white">
                             <SelectValue />
                           </SelectTrigger>
                           <SelectContent>
@@ -953,9 +953,9 @@ Ali`,
                         </Select>
                       </div>
                       <div>
-                        <Label className="text-red-200">Length</Label>
+                        <Label className="text-white">Length</Label>
                         <Select value={emailSettings.length} onValueChange={(value: 'short' | 'medium' | 'detailed') => setEmailSettings(prev => ({ ...prev, length: value }))}>
-                          <SelectTrigger className="bg-slate-700 border-slate-600 text-white">
+                          <SelectTrigger className="bg-black border-red-950 text-white">
                             <SelectValue />
                           </SelectTrigger>
                           <SelectContent>
@@ -968,9 +968,9 @@ Ali`,
                     </div>
 
                     <div>
-                      <Label className="text-red-200">Focus Area</Label>
+                      <Label className="text-white">Focus Area</Label>
                       <Select value={emailSettings.focusArea} onValueChange={(value: 'website' | 'mobile-app' | 'dashboard' | 'full-stack' | 'partnership') => setEmailSettings(prev => ({ ...prev, focusArea: value }))}>
-                        <SelectTrigger className="bg-slate-700 border-slate-600 text-white">
+                        <SelectTrigger className="bg-black border-red-950 text-white">
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
@@ -985,42 +985,42 @@ Ali`,
 
                     <div className="space-y-3">
                       <div className="flex items-center justify-between">
-                        <Label className="text-red-200">Include Case Study</Label>
+                        <Label className="text-white">Include Case Study</Label>
                         <Switch
                           checked={emailSettings.includeCasestudy}
                           onCheckedChange={(checked) => setEmailSettings(prev => ({ ...prev, includeCaseStudy: checked }))}
                         />
                       </div>
                       <div className="flex items-center justify-between">
-                        <Label className="text-red-200">Include Pricing</Label>
+                        <Label className="text-white">Include Pricing</Label>
                         <Switch
                           checked={emailSettings.includePricing}
                           onCheckedChange={(checked) => setEmailSettings(prev => ({ ...prev, includePricing: checked }))}
                         />
                       </div>
                       <div className="flex items-center justify-between">
-                        <Label className="text-red-200">Include Calendly Link</Label>
+                        <Label className="text-white">Include Calendly Link</Label>
                         <Switch
                           checked={emailSettings.includeCalendlyLink}
                           onCheckedChange={(checked) => setEmailSettings(prev => ({ ...prev, includeCalendlyLink: checked }))}
                         />
                       </div>
                       <div className="flex items-center justify-between">
-                        <Label className="text-red-200">Personalized Research</Label>
+                        <Label className="text-white">Personalized Research</Label>
                         <Switch
                           checked={emailSettings.personalizedResearch}
                           onCheckedChange={(checked) => setEmailSettings(prev => ({ ...prev, personalizedResearch: checked }))}
                         />
                       </div>
                       <div className="flex items-center justify-between">
-                        <Label className="text-red-200">Follow-up Sequence</Label>
+                        <Label className="text-white">Follow-up Sequence</Label>
                         <Switch
                           checked={emailSettings.followUpSequence}
                           onCheckedChange={(checked) => setEmailSettings(prev => ({ ...prev, followUpSequence: checked }))}
                         />
                       </div>
                       <div className="flex items-center justify-between">
-                        <Label className="text-red-200">GDPR Compliance Mode</Label>
+                        <Label className="text-white">GDPR Compliance Mode</Label>
                         <Switch
                           checked={emailSettings.complianceMode}
                           onCheckedChange={(checked) => setEmailSettings(prev => ({ ...prev, complianceMode: checked }))}
@@ -1030,9 +1030,9 @@ Ali`,
 
                     <div className="grid grid-cols-2 gap-4">
                       <div>
-                        <Label className="text-red-200">Estimated Budget</Label>
+                        <Label className="text-white">Estimated Budget</Label>
                         <Select value={leadData.estimatedBudget} onValueChange={(value) => setLeadData(prev => ({ ...prev, estimatedBudget: value }))}>
-                          <SelectTrigger className="bg-slate-700 border-slate-600 text-white">
+                          <SelectTrigger className="bg-black border-red-950 text-white">
                             <SelectValue placeholder="Select budget" />
                           </SelectTrigger>
                           <SelectContent>
@@ -1044,9 +1044,9 @@ Ali`,
                         </Select>
                       </div>
                       <div>
-                        <Label className="text-red-200">Project Timeframe</Label>
+                        <Label className="text-white">Project Timeframe</Label>
                         <Select value={leadData.timeframe} onValueChange={(value) => setLeadData(prev => ({ ...prev, timeframe: value }))}>
-                          <SelectTrigger className="bg-slate-700 border-slate-600 text-white">
+                          <SelectTrigger className="bg-black border-red-950 text-white">
                             <SelectValue placeholder="Select timeframe" />
                           </SelectTrigger>
                           <SelectContent>
@@ -1067,7 +1067,7 @@ Ali`,
               <Card className="bg-zinc-950 border-red-500/30">
                 <CardHeader>
                   <CardTitle className="text-white flex items-center gap-2">
-                    <Users className="w-5 h-5 text-red-400" />
+                    <Users className="w-5 h-5 text-red-900" />
                     Bulk Campaign Management
                   </CardTitle>
                 </CardHeader>
@@ -1078,7 +1078,7 @@ Ali`,
                         <Upload className="w-4 h-4 mr-2" />
                         Import CSV
                       </Button>
-                      <Button variant="outline" className="border-red-500 text-red-300">
+                      <Button variant="outline" className="border-red-500 text-white">
                         <Filter className="w-4 h-4 mr-2" />
                         Filter Leads
                       </Button>
@@ -1102,7 +1102,7 @@ Ali`,
               <Card className="bg-zinc-950 border-red-500/30">
                 <CardHeader>
                   <CardTitle className="text-white flex items-center gap-2">
-                    <TrendingUp className="w-5 h-5 text-red-400" />
+                    <TrendingUp className="w-5 h-5 text-red-900" />
                     Campaign Analytics
                   </CardTitle>
                 </CardHeader>
@@ -1124,12 +1124,12 @@ Ali`,
 
   // Email Preview Page
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-red-900 to-slate-900 p-6">
+    <div className="min-h-screen bg-gradient-to-br from-black via-red-900 to-black p-6">
       <div className="max-w-6xl mx-auto">
         {/* Action Bar */}
         <div className="flex justify-between items-center mb-6 bg-zinc-950 rounded-lg p-4">
           <div className="flex gap-3">
-            <Button onClick={() => setShowPreview(false)} variant="outline" className="border-red-500 text-red-300">
+            <Button onClick={() => setShowPreview(false)} variant="outline" className="border-red-500 text-white">
               ← Back to Generator
             </Button>
             <Button onClick={() => window.print()} variant="outline" className="border-green-500 text-green-300">
@@ -1204,23 +1204,23 @@ Ali`,
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="flex justify-between items-center">
-                  <span className="text-red-200 text-sm">Subject Length</span>
+                  <span className="text-white text-sm">Subject Length</span>
                   <Badge className="bg-green-600">
                     {generatedTemplate.subject.length} chars
                   </Badge>
                 </div>
                 <div className="flex justify-between items-center">
-                  <span className="text-red-200 text-sm">Body Word Count</span>
+                  <span className="text-white text-sm">Body Word Count</span>
                   <Badge className="bg-red-600">
                     {generatedTemplate.body.split(' ').length} words
                   </Badge>
                 </div>
                 <div className="flex justify-between items-center">
-                  <span className="text-red-200 text-sm">Personalization</span>
+                  <span className="text-white text-sm">Personalization</span>
                   <Badge className="bg-purple-600">High</Badge>
                 </div>
                 <div className="flex justify-between items-center">
-                  <span className="text-red-200 text-sm">Spam Score</span>
+                  <span className="text-white text-sm">Spam Score</span>
                   <Badge className="bg-green-600">Low</Badge>
                 </div>
               </CardContent>
@@ -1232,19 +1232,19 @@ Ali`,
               </CardHeader>
               <CardContent className="space-y-3">
                 <div className="flex justify-between">
-                  <span className="text-red-200 text-sm">Industry</span>
+                  <span className="text-white text-sm">Industry</span>
                   <span className="text-white text-sm">{leadData.industry}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-red-200 text-sm">Tone</span>
+                  <span className="text-white text-sm">Tone</span>
                   <span className="text-white text-sm">{emailSettings.tone}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-red-200 text-sm">Focus</span>
+                  <span className="text-white text-sm">Focus</span>
                   <span className="text-white text-sm">{emailSettings.focusArea}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-red-200 text-sm">Length</span>
+                  <span className="text-white text-sm">Length</span>
                   <span className="text-white text-sm">{emailSettings.length}</span>
                 </div>
               </CardContent>
@@ -1277,7 +1277,7 @@ Ali`,
         </div>
 
         {/* Footer */}
-        <div className="mt-8 text-center text-red-300 text-sm">
+        <div className="mt-8 text-center text-white text-sm">
           Generated by Convergent Cold Email AI • {currentDate}
         </div>
       </div>
