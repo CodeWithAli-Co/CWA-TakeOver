@@ -30,6 +30,7 @@ const EmployeeLazyImport = createFileRoute('/employee')()
 const DetailsLazyImport = createFileRoute('/details')()
 const DetailFoldersLazyImport = createFileRoute('/detailFolders')()
 const ContractGeneratorLazyImport = createFileRoute('/contractGenerator')()
+const ColdEmailLazyImport = createFileRoute('/coldEmail')()
 const ChatLazyImport = createFileRoute('/chat')()
 const BudgetaryLazyImport = createFileRoute('/budgetary')()
 const BroadcastLazyImport = createFileRoute('/broadcast')()
@@ -132,6 +133,12 @@ const ContractGeneratorLazyRoute = ContractGeneratorLazyImport.update({
   import('./routes/contractGenerator.lazy').then((d) => d.Route),
 )
 
+const ColdEmailLazyRoute = ColdEmailLazyImport.update({
+  id: '/coldEmail',
+  path: '/coldEmail',
+  getParentRoute: () => rootRoute,
+} as any).lazy(() => import('./routes/coldEmail.lazy').then((d) => d.Route))
+
 const ChatLazyRoute = ChatLazyImport.update({
   id: '/chat',
   path: '/chat',
@@ -218,6 +225,13 @@ declare module '@tanstack/react-router' {
       path: '/chat'
       fullPath: '/chat'
       preLoaderRoute: typeof ChatLazyImport
+      parentRoute: typeof rootRoute
+    }
+    '/coldEmail': {
+      id: '/coldEmail'
+      path: '/coldEmail'
+      fullPath: '/coldEmail'
+      preLoaderRoute: typeof ColdEmailLazyImport
       parentRoute: typeof rootRoute
     }
     '/contractGenerator': {
@@ -337,6 +351,7 @@ export interface FileRoutesByFullPath {
   '/broadcast': typeof BroadcastLazyRoute
   '/budgetary': typeof BudgetaryLazyRoute
   '/chat': typeof ChatLazyRoute
+  '/coldEmail': typeof ColdEmailLazyRoute
   '/contractGenerator': typeof ContractGeneratorLazyRoute
   '/detailFolders': typeof DetailFoldersLazyRoute
   '/details': typeof DetailsLazyRoute
@@ -361,6 +376,7 @@ export interface FileRoutesByTo {
   '/broadcast': typeof BroadcastLazyRoute
   '/budgetary': typeof BudgetaryLazyRoute
   '/chat': typeof ChatLazyRoute
+  '/coldEmail': typeof ColdEmailLazyRoute
   '/contractGenerator': typeof ContractGeneratorLazyRoute
   '/detailFolders': typeof DetailFoldersLazyRoute
   '/details': typeof DetailsLazyRoute
@@ -386,6 +402,7 @@ export interface FileRoutesById {
   '/broadcast': typeof BroadcastLazyRoute
   '/budgetary': typeof BudgetaryLazyRoute
   '/chat': typeof ChatLazyRoute
+  '/coldEmail': typeof ColdEmailLazyRoute
   '/contractGenerator': typeof ContractGeneratorLazyRoute
   '/detailFolders': typeof DetailFoldersLazyRoute
   '/details': typeof DetailsLazyRoute
@@ -412,6 +429,7 @@ export interface FileRouteTypes {
     | '/broadcast'
     | '/budgetary'
     | '/chat'
+    | '/coldEmail'
     | '/contractGenerator'
     | '/detailFolders'
     | '/details'
@@ -435,6 +453,7 @@ export interface FileRouteTypes {
     | '/broadcast'
     | '/budgetary'
     | '/chat'
+    | '/coldEmail'
     | '/contractGenerator'
     | '/detailFolders'
     | '/details'
@@ -458,6 +477,7 @@ export interface FileRouteTypes {
     | '/broadcast'
     | '/budgetary'
     | '/chat'
+    | '/coldEmail'
     | '/contractGenerator'
     | '/detailFolders'
     | '/details'
@@ -483,6 +503,7 @@ export interface RootRouteChildren {
   BroadcastLazyRoute: typeof BroadcastLazyRoute
   BudgetaryLazyRoute: typeof BudgetaryLazyRoute
   ChatLazyRoute: typeof ChatLazyRoute
+  ColdEmailLazyRoute: typeof ColdEmailLazyRoute
   ContractGeneratorLazyRoute: typeof ContractGeneratorLazyRoute
   DetailFoldersLazyRoute: typeof DetailFoldersLazyRoute
   DetailsLazyRoute: typeof DetailsLazyRoute
@@ -507,6 +528,7 @@ const rootRouteChildren: RootRouteChildren = {
   BroadcastLazyRoute: BroadcastLazyRoute,
   BudgetaryLazyRoute: BudgetaryLazyRoute,
   ChatLazyRoute: ChatLazyRoute,
+  ColdEmailLazyRoute: ColdEmailLazyRoute,
   ContractGeneratorLazyRoute: ContractGeneratorLazyRoute,
   DetailFoldersLazyRoute: DetailFoldersLazyRoute,
   DetailsLazyRoute: DetailsLazyRoute,
@@ -540,6 +562,7 @@ export const routeTree = rootRoute
         "/broadcast",
         "/budgetary",
         "/chat",
+        "/coldEmail",
         "/contractGenerator",
         "/detailFolders",
         "/details",
@@ -574,6 +597,9 @@ export const routeTree = rootRoute
     },
     "/chat": {
       "filePath": "chat.lazy.tsx"
+    },
+    "/coldEmail": {
+      "filePath": "coldEmail.lazy.tsx"
     },
     "/contractGenerator": {
       "filePath": "contractGenerator.lazy.tsx"

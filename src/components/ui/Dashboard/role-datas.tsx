@@ -804,6 +804,10 @@ export const ceoData = {
           title: "Mod logs",
           url: "/mod_logs",
         },
+        {
+          title: "Cold Email Generator",
+          url: "/coldEmail"
+        },
       ],
     },
     // {
