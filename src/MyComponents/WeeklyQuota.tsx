@@ -47,7 +47,7 @@ return (
   initial={{ opacity: 0, y: 10}}
   animate={{ opacity: 1, y: 0}}
   exit={{ opacity: 0, y:-10}}
-  className="p-4 rounded-lg border border-red-900/30 bg-black hover:border-red-800/50 mb-3"
+  className="p-4 rounded-lg border border-zinc-900 bg-zinc-950/20 hover:border-red-800/50 mb-3"
   >
   <div className="flex items-start justify-between">
     <div>
@@ -63,7 +63,7 @@ return (
         </div>
       )}
     </div>
-    <div className="flex gap-2">
+    <div className="flex gap-2 ">
       {quota.status !== "completed" && (
         <motion.button
           whileHover={{ scale: 1.05 }}
@@ -147,7 +147,7 @@ const handleSubmit = (e: any) => {
 };
 
 return (
-  <DialogContent className='bg-black border-red-900/30 text-amber-50' >
+  <DialogContent className='bg-black border-zinc-900 text-amber-50' >
     <DialogHeader>
       <DialogTitle>{editingQuota ? "Edit Quota" : "Add Weekly Quota"}</DialogTitle>  
     </DialogHeader> 
@@ -160,23 +160,23 @@ return (
           value={title}
           onChange={(e) => setTitle(e.target.value)}
           placeholder="Enter Quota Title"
-          className="bg-black/40 border-red-900/30 text-amber-50"
+          className="bg-zinc-950/20 border-zinc-900 text-amber-50"
           required
           />
           
         </div>
         <div className="space-y-2">
           <label htmlFor="description" className="text-sm font-medium">Description</label>
-          <Textarea id="ddescription" value={description} onChange={(e) => setDescription(e.target.value)} className="bg-black/40 border-red-900/30 text-amber-50" />
+          <Textarea id="ddescription" value={description} onChange={(e) => setDescription(e.target.value)} className="bg-zinc-950/20 border-zinc-900 text-amber-50" />
         </div>
 
       <div className="space-y-2">
         <label htmlFor="status" className="text-sm font-medium">Status</label>
         <Select value={status} onValueChange={setStatus}>
-          <SelectTrigger className='bg-black/40 border-red-900/30 text-amber-50'>
+          <SelectTrigger className='bg-zinc-950/20 border-zinc-900 text-amber-50'>
             <SelectValue placeholder="Select status"/>
           </SelectTrigger>
-          <SelectContent className='bg-black border-redd-900/30 text-amber-50'>
+          <SelectContent className='bg-black border-zinc-900 text-amber-50'>
             <SelectItem value="pending">Pending</SelectItem>
             <SelectItem value="in-progress">In-progress</SelectItem>
             <SelectItem value="completed">Completed</SelectItem>
@@ -185,7 +185,7 @@ return (
       </div>
       <div className="space-y-2">
         <label htmlFor="deadline" className="text-sm font-medium">Deadline</label>
-        <Input id="deadline" type="date" value={deadline} onChange={(e) => setDeadline(e.target.value)} className="bg-black/40  bordder-red-900/30 text-amber-50"/>
+        <Input id="deadline" type="date" value={deadline} onChange={(e) => setDeadline(e.target.value)} className="bg-zinc-950/20  border-zinc-900 text-amber-50"/>
       </div>
 
       </div>
@@ -357,10 +357,10 @@ const handleSaveQuota = async (quotaData : any) => {
   return (
     <div className="min-h-screen bg-black overflow-y-auto">
       {/* Navigation Bar */}
-      <nav className="border-b border-red-900/30 bg-black/40 sticky top-0 z-50">
+      <nav className="border-b border-zinc-900 bg-zinc-950/20 sticky top-0 z-50 py-6">
         <div className="flex items-center justify-between h-14 px-6">
           <div className="flex items-center space-x-4">
-            <h1 className="bg-gradient-to-r from-red-500 to-red-900 bg-clip-text text-transparent font-bold">
+            <h1 className="text-white font-bold">
               Weekly Quotas
             </h1>
           </div>
@@ -370,11 +370,11 @@ const handleSaveQuota = async (quotaData : any) => {
       <motion.div
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
-        className="p-6 space-y-6"
+        className="p-6 px-3 space-y-6"
       >
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
           {/* Statistics Cards */}
-          <motion.div whileHover={{ scale: 1.02 }} className="bg-black/40 border border-red-900/30 rounded-lg p-4">
+          <motion.div whileHover={{ scale: 1.02 }} className="bg-zinc-950/20 border border-zinc-900 rounded-lg p-4">
             <div className="flex items-center gap-3">
               <div className="p-2 rounded-lg bg-red-900/20">
                 <Target className="h-5 w-5 text-red-500" />
@@ -386,7 +386,7 @@ const handleSaveQuota = async (quotaData : any) => {
             </div>
           </motion.div>
 
-          <motion.div whileHover={{ scale: 1.02 }} className="bg-black/40 border border-red-900/30 rounded-lg p-4">
+          <motion.div whileHover={{ scale: 1.02 }} className="bg-zinc-950/20 border border-zinc-900 rounded-lg p-4">
             <div className="flex items-center gap-3">
               <div className="p-2 rounded-lg bg-emerald-900/20">
                 <CheckCircle className="h-5 w-5 text-emerald-500" />
@@ -398,7 +398,7 @@ const handleSaveQuota = async (quotaData : any) => {
             </div>
           </motion.div>
 
-          <motion.div whileHover={{ scale: 1.02 }} className="bg-black/40 border border-red-900/30 rounded-lg p-4">
+          <motion.div whileHover={{ scale: 1.02 }} className="bg-zinc-950/20 border border-zinc-900 rounded-lg p-4">
             <div className="flex items-center gap-3">
               <div className="p-2 rounded-lg bg-blue-900/20">
                 <Target className="h-5 w-5 text-blue-500" />
@@ -410,7 +410,7 @@ const handleSaveQuota = async (quotaData : any) => {
             </div>
           </motion.div>
 
-          <motion.div whileHover={{ scale: 1.02 }} className="bg-black/40 border border-red-900/30 rounded-lg p-4">
+          <motion.div whileHover={{ scale: 1.02 }} className="bg-zinc-950/20 border border-zinc-900 rounded-lg p-4">
             <div className="flex items-center gap-3">
               <div className="p-2 rounded-lg bg-amber-900/20">
                 <Calendar className="h-5 w-5 text-amber-500" />
@@ -424,7 +424,7 @@ const handleSaveQuota = async (quotaData : any) => {
         </div>
 
         {/* Main Quotas Card */}
-        <Card className="bg-black/40 border-red-900/30">
+        <Card className="bg-zinc-950/20 border-zinc-900 rounded-xs">
           <CardHeader className="flex flex-row items-center justify-between">
             <div>
               <CardTitle className="text-amber-50">Weekly Quotas</CardTitle>
@@ -437,7 +437,7 @@ const handleSaveQuota = async (quotaData : any) => {
                 onClick={previousWeek} 
                 variant="outline" 
                 size="sm"
-                className="bg-black/40 border-red-900/30 text-amber-50 hover:bg-red-900/20"
+                className="bg-black border-zinc-900 text-amber-50 hover:bg-red-900/20"
               >
                 Previous
               </Button>
@@ -445,7 +445,7 @@ const handleSaveQuota = async (quotaData : any) => {
                 onClick={currentWeek} 
                 variant="outline" 
                 size="sm"
-                className="bg-black/40 border-red-900/30 text-amber-50 hover:bg-red-900/20"
+                className="bg-black border-zinc-900 text-amber-50 hover:bg-red-900/20"
               >
                 Current
               </Button>
@@ -453,7 +453,7 @@ const handleSaveQuota = async (quotaData : any) => {
                 onClick={nextWeek} 
                 variant="outline" 
                 size="sm"
-                className="bg-black/40 border-red-900/30 text-amber-50 hover:bg-red-900/20"
+                className="bg-black border-zinc-900 text-amber-50 hover:bg-red-900/20"
               >
                 Next
               </Button>
@@ -465,7 +465,7 @@ const handleSaveQuota = async (quotaData : any) => {
                 placeholder="Search quotas..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-[300px] bg-black/40 border-red-900/30 text-amber-50"
+                className="w-[300px] bg-zinc-950/20 border-zinc-900 text-amber-50"
               />
               <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
                 <DialogTrigger asChild>
@@ -492,7 +492,7 @@ const handleSaveQuota = async (quotaData : any) => {
               onValueChange={setSelectedStatus}
               className="mb-4"
             >
-              <TabsList className="bg-black/40 border border-red-900/30">
+              <TabsList className="bg-zinc-950/20 border border-zinc-900">
                 <TabsTrigger 
                   value="pending" 
                   className="data-[state=active]:bg-red-900/20"
@@ -546,7 +546,7 @@ const handleSaveQuota = async (quotaData : any) => {
               </AnimatePresence>
             </ScrollArea>
           </CardContent>
-          <CardFooter className="border-t border-red-900/30 pt-4">
+          <CardFooter className="border-t border-zinc-900 pt-4">
             <p className="text-xs text-amber-50/70">
               Weekly quotas help track team goals and personal targets.
             </p>
