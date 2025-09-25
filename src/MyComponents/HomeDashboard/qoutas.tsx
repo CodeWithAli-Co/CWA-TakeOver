@@ -47,7 +47,7 @@ return (
   initial={{ opacity: 0, y: 10}}
   animate={{ opacity: 1, y: 0}}
   exit={{ opacity: 0, y:-10}}
-  className="p-4 rounded-lg border border-red-900/30 bg-black hover:border-red-800/50 mb-3"
+  className="p-4 rounded-lg border hover:bg-red-900/10 border-red-900/30 bg-foreground hover:border-red-800/50 mb-3"
   >
   <div className="flex items-start justify-between">
     <div>

@@ -141,7 +141,7 @@ export const AddMeeting = () => {
         >
           <Button
             size={"default"}
-            className="relative bg-gradient-to-r from-green-700 via-green-800 to-green-950 hover:from-green-950 hover:via-green-900 active:from-green-800  active:to-green-990 w-auto h-auto px-4 py-2 transform transition-all ease-out border border-green-900 group rounded-full  duration-300"
+            className="relative bg-green-950/20 hover:bg-green-950/10  active:to-green-950/20 w-auto h-auto px-4 py-2 transform transition-all ease-out border border-green-900 group rounded-xs  duration-300"
           >
             <Plus className="h-4 w-4 mr-1" />
             Add Meeting

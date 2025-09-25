@@ -110,11 +110,11 @@ const Meetings = () => {
 
             <div className="flex space-x-2">
               {/* Add Meeting Dialog */}
-              <UserView userRole={["CEO", "COO", "Project Manager", "Marketing Specialist"]}>
+              <UserView userRole={["CEO", "COO", "ProjectManager", "Marketing"]}>
                 <AddMeeting />
               </UserView>
 
-              <UserView userRole={["CEO", "COO", "Software Developer"]}>
+              <UserView userRole={["CEO", "COO", "SoftwareDev"]}>
                 {/* Schedule Button */}
               <motion.div
                 whileHover={{ scale: 1.02 }}
@@ -123,7 +123,7 @@ const Meetings = () => {
               >
                 <Button
                   size={"default"}
-                  className="relative bg-gradient-to-r from-red-700 via-red-800 to-red-950  hover:from-red-800 hover:to-red-950 hover:via-red-900 active:from-red-800 active:to-red-990 w-auto h-auto px-6 py-2.5 transform transition-all duration-300 ease-out shadow-sm hover:shadow-red-500/25 hover:shadow-sm border border-red-500/20 group overflow-hidden rounded-full"
+                  className="relative bg-red-950/20 hover:bg-red-950/10 w-auto h-auto px-6 py-2  border border-red-500/20 group overflow-hidden rounded-xs"
                   onClick={() => setIsShowing(!isShowing)}
                 >
                   <Calendar className="h-4 ww-4"></Calendar>
