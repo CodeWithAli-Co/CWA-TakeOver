@@ -74,7 +74,7 @@ export const AddData = () => {
         >
           <Button
             size={"default"}
-            className="relative bg-gradient-to-r from-red-600 via-red-800 to-red-950 hover:from-red-950 hover:via-red-900 active:from-red-800  active:to-red-990 w-auto h-auto px-4 py-2 transform transition-all ease-out border border-red-900 group rounded-full  duration-300"
+            className="relative bg-gradient-to-r rounded-xs from-red-950/10 via-red-950 to-red-950/20 hover:from-red-950/5 hover:via-red-950 to:red-950/10 active:from-950/10  active:to-red-950/10 w-auto h-auto px-4 py-2 transform transition-all ease-out border border-red-900 group   duration-300"
           >
             <Plus className="h-4 w-4 mr-1" />
             Add Account

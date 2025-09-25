@@ -11,7 +11,7 @@ import { invoke } from "@tauri-apps/api/core";
 import supabase from "@/MyComponents/supabase";
 import { AddData } from "@/MyComponents/subForms/addForm";
 import { EditData } from "@/MyComponents/subForms/editForm";
-import { ChevronRight, Eye, EyeOff, Trash2 } from "lucide-react";
+import { ChevronRight, Eye, EyeOff, Folder, Trash2 } from "lucide-react";
 import {
   getPlatformIcon,
   platformStyles,
@@ -33,7 +33,7 @@ interface Credential {
   folder?: string;
 }
 
-export const CompanyCreds = ({ folder = "default" }: { folder?: string }) => {
+export const CompanyCreds = ({ folder = "default" }: { folder?: string, className?: string }) => {
   // Track expanded state for each card
   const [expandedCards, setExpandedCards] = useState<number[]>([]);
   const [showDecPass, setShowDecPass] = useState("");
@@ -101,23 +101,21 @@ export const CompanyCreds = ({ folder = "default" }: { folder?: string }) => {
     .subscribe();
 
   return (
-    <div className="p-6 select-text bg-gradient-to-br from-[#010101] to-[#210000]">
+    <div className="p-6 select-text bg-black min-h-screen">
       <div className="flex justify-between items-center mb-8">
         {/* Only for CEO and COO for now */}
         <UserView userRole={["CEO", "COO"]}>
           <Link
             to="/detailFolders"
-            className="bg-black flex justify-center items-center border p-2 pr-5 border-red-950 hover:bg-red-950 text-white group hover:text-black"
+            className="bg-red-950/20 flex justify-center items-center border p-2 pr-5 border-red-950 hover:bg-red-950 text-white group hover:text-black"
           >
-            <img
-              src="/folder.png"
-              alt="folder icon"
-              className="w-[20px] h-auto object-contain "
-            />
-            <ChevronRight className="h-4 w-5 text-red-950 group-hover:text-black " />
 
-            <span className="mr-1">CCC </span>
-            {folder}
+            <Folder className="h-4 w-4 text-white" />
+            <ChevronRight className="h-4 w-5 text-white group-hover:text-black " />
+
+         
+           <span className="text-bold font-26"> CCC </span>
+           {/* {folder} */}
           </Link>
         </UserView>
         <h2 className="text-3xl font-bold">Accounts</h2>
@@ -136,7 +134,7 @@ export const CompanyCreds = ({ folder = "default" }: { folder?: string }) => {
                 // Cred Card
                 <Card
                   key={cred.id}
-                  className={`bg-black border-zinc-800 transition-all duration-300 text-white/80 ${
+                  className={`bg-zinc-950/20 rounded-xs  border-zinc-800 transition-all duration-300 text-white/80 ${
                     isExpanded ? "min-h-[300px]" : "min-h-[180px]"
                   }`}
                 >
@@ -247,7 +245,7 @@ export const CompanyCreds = ({ folder = "default" }: { folder?: string }) => {
               {folder === cred.folder && cred.folder !== "default" && (
                 <Card
                   key={cred.id}
-                  className={`bg-black border-zinc-800 transition-all duration-300 text-white/80 ${
+                  className={` bg-zinc-950/20 rounded-xs border-zinc-800 transition-all duration-300 text-white/80 ${
                     isExpanded ? "min-h-[300px]" : "min-h-[180px]"
                   }`}
                 >

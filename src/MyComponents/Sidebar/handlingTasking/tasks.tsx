@@ -122,17 +122,17 @@ const TaskBlockerItem: React.FC<{ blocker: TaskBlocker }> = ({ blocker }) => (
 );
 
 // Component for displaying task dependencies
-const TaskDependencyItem: React.FC<{ dependency: TaskDependency }> = ({
-  dependency,
-}) => (
-  <div className="flex items-center gap-2 p-2 rounded-lg bg-red-950/10 border border-red-900/30">
-    <GitBranch className="h-4 w-4 text-red-400" />
-    <span className="text-sm text-red-200">{dependency.taskTitle}</span>
-    <Badge variant="outline" className="bg-red-900/20 text-red-400">
-      {dependency.type}
-    </Badge>
-  </div>
-);
+// const TaskDependencyItem: React.FC<{ dependency: TaskDependency }> = ({
+//   dependency,
+// }) => (
+//   <div className="flex items-center gap-2 p-2 rounded-lg bg-red-950/10 border border-red-900/30">
+//     <GitBranch className="h-4 w-4 text-red-400" />
+//     <span className="text-sm text-red-200">{dependency.taskTitle}</span>
+//     <Badge variant="outline" className="bg-red-900/20 text-red-400">
+//       {dependency.type}
+//     </Badge>
+//   </div>
+// );
 
 // Task Priority Badge Component
 const TaskPriorityBadge: React.FC<{ priority: TaskPriority }> = ({
@@ -180,17 +180,18 @@ const TaskItem: React.FC<{ task: TodosInterface }> = ({ task }) => {
       {/* Task Header */}
       <div className="p-4 cursor-pointer">
         <div className="flex items-start gap-4 w-full">
-          <div className="p-2 rounded-lg bg-red-900/20 mt-1">
+          <div className="p-2 rounded-lg bg-zinc-900/20 mt-1">
             <Activity className="h-4 w-4 text-red-500" />
           </div>
           <div className="flex-1">
             <div className="flex items-center justify-between">
               <div className="flex items-center">
                 <span
-                  className="text-sm font-medium text-red-200"
+                  className="text-sm font-bold text-white"
                   onClick={() => setIsExpanded(!isExpanded)}
                 >
                   {task.title}
+                  
                 </span>
                 <TaskPriorityBadge priority={task.priority} />
               </div>
@@ -224,16 +225,16 @@ const TaskItem: React.FC<{ task: TodosInterface }> = ({ task }) => {
                 )}
               </div>
             </div>
-            <div className="flex items-center gap-4 mt-2">
-              <div className="flex items-center gap-1 text-xs text-red-200/60">
+            <div className="flex items-center gap-4 mt-1">
+              <div className="flex items-center gap-1 text-xs text-slate-400">
                 <Calendar className="h-3 w-3" />
                 {task.deadline}
               </div>
-              <div className="flex items-center gap-1 text-xs text-red-200/60">
+              <div className="flex items-center gap-1 text-xs text-slate-400">
                 <Clock className="h-3 w-3" />
                 {task.status}
               </div>
-              <div className="flex items-center gap-1 text-xs text-red-200/60">
+              <div className="flex items-center gap-1 text-xs text-slate-400">
                 <div className="w-4 h-4 rounded-full bg-red-900/30 flex items-center justify-center text-[10px]">
                   {/* Need to fix the name display */}
                   {/* {task.assignee} */}
@@ -260,7 +261,7 @@ const TaskItem: React.FC<{ task: TodosInterface }> = ({ task }) => {
                 <h4 className="text-sm font-medium text-red-200">
                   Description
                 </h4>
-                <p className="text-sm text-red-200/60">{task.description}</p>
+                <p className="text-sm text-slate-400">{task.description}</p>
               </div>
             </div>
           </motion.div>
@@ -328,10 +329,10 @@ const TaskSettings: React.FC = () => {
   return (
     <div className="min-h-screen bg-black  py-6 px-8">
       <div className="mb-6">
-        <h2 className="text-3xl font-bold tracking-tight text-red-200">
+        <h2 className="text-3xl font-bold tracking-tight text-white">
           Tasks
         </h2>
-        <p className="text-red-200/60">{allCount} total tasks</p>
+        <p className="text-slate-200">{allCount} total tasks</p>
       </div>
       <div className="justify-self-end">
 
@@ -397,21 +398,21 @@ const TaskSettings: React.FC = () => {
               <TabsTrigger
                 value="to-do"
                 onClick={() => setSelectedTab("to-do")}
-                className="data-[state=active]:bg-red-900/20 data-[state=active]:text-red-200"
+                className="data-[state=active]:bg-red-900/20 data-[state=active]:text-red-200 data-[state=active]:border-red-800 data-[state=active]:border"
               >
                 To Do ({todoCount})
               </TabsTrigger>
               <TabsTrigger
                 value="in-progress"
                 onClick={() => setSelectedTab("in-progress")}
-                className="data-[state=active]:bg-red-900/20 data-[state=active]:text-red-200"
+                className="data-[state=active]:bg-blue-900/60 data-[state=active]:text-blue-400 data-[state=active]:border-blue-800 data-[state=active]:border"
               >
                 In Progress ({inProgressCount})
               </TabsTrigger>
               <TabsTrigger
                 value="done"
                 onClick={() => setSelectedTab("done")}
-                className="data-[state=active]:bg-red-900/20 data-[state=active]:text-red-200"
+                className="data-[state=active]:bg-green-900/20 data-[state=active]:text-green-600 data-[state=active]:border data-[status=active]:border-green-900"
               >
                 Done ({doneCount})
               </TabsTrigger>
