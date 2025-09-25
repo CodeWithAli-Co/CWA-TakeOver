@@ -13,15 +13,16 @@
     "windows": [
       {
         "title": "TakeOver",
-        "width": 1700,
+        "width": 1600,
         "minWidth": 450,
-        "height": 950,
+        "height": 900,
         "minHeight": 750,
         "decorations": true,
         "transparent": false,
         "theme": "Dark",
         "backgroundColor": "#0F0000",
-        "center": true
+        "center": true,
+        "visible": false
       }
     ],
     "security": {
