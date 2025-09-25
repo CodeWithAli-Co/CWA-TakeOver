@@ -103,7 +103,7 @@ const Meetings = () => {
       )}
 
       {/* Upcoming Meetings */}
-      <Card className="bg-black/40 border-red-900/30 overflow-y-auto  sm:col-span-2 lg:col-span-2">
+      <Card className="bg-zinc-950/20 border-red-900/30 overflow-y-auto  sm:col-span-2 lg:col-span-2 rounded-xs">
         <CardHeader>
           <CardTitle className="text-amber-50 flex justify-between items-center">
             <span>Upcoming Meetings</span>

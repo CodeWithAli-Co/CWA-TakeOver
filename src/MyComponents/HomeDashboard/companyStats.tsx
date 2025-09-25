@@ -19,7 +19,7 @@ const StatCard = ({
 }) => (
   <motion.div
     whileHover={{ scale: 1.0 }}
-    className="bg-black/40 border border-red-900/30 rounded-lg p-4 hover:border-red-800/50 transition-colors"
+    className="bg-zinc-950/20 border border-red-900/30 rounded-lg p-4 hover:border-red-800/50 transition-colors"
   >
     <div className="flex items-center justify-between">
       <motion.div

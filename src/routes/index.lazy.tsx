@@ -59,7 +59,7 @@ const Index = () => {
           </UserView>
 
           {/* Quick Actions */}
-          <Card className="bg-black/40 border-red-900/30 ">
+          <Card className="bg-zinc-950/20 border-red-900/30 rounded-xs">
             <CardHeader>
               <CardTitle className="text-amber-50">Quick Actions</CardTitle>
             </CardHeader>
@@ -84,7 +84,7 @@ const Index = () => {
                     </span> */}
                   </div>
                 </UserView>
-                <div className="group flex flex-col">
+                <div className="group flex flex-col ">
                   <QuickActionCard
                     title="Chat"
                     icon={MessageSquare}

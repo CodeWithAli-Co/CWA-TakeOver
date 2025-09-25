@@ -179,7 +179,7 @@ export const TasksComponent = () => {
   const totalTasks = todos?.length || 0;
 
   return (
-    <Card className="bg-black/40 border-red-900/30 ">
+    <Card className="bg-zinc-950/20 border-red-900/30 rounded-xs">
       <CardHeader className="flex flex-row items-center justify-between">
         <div>
           <CardTitle className="text-amber-50">Tasks</CardTitle>

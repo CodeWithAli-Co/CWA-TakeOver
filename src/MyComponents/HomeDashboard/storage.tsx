@@ -91,7 +91,7 @@ export const StorageUsageChart = () => {
   // animation for the bar loadidng
 
   return (
-    <Card className="bg-black/40 border-red-900/30">
+    <Card className="bg-zinc-950/20 border-red-900/30 rounded-xs">
       <CardHeader>
         <div className="flex items-center justify-between">
           <CardTitle className="text-amber-50">Storage Usage</CardTitle>

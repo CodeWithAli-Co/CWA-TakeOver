@@ -20,7 +20,7 @@ export const QuickActionCard = ({
       <div className="flex items-center gap-2">
         <motion.div
           whileHover={{ scale: 1.1 }}
-          className="p-2 rounded-lg bg-red-900/20"
+          className="p-2 rounded-lg bg-zinc-950/20"
         >
           <Icon className="h-5 w-5 text-red-500" />
         </motion.div>
