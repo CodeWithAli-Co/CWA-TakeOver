@@ -1,14 +1,7 @@
 import { useForm } from "@tanstack/react-form";
 import { useSubMenuStore } from "@/stores/store";
 import supabase from "../supabase";
-import {
-  CEORolesList,
-  COORolesList,
-  RoleRank,
-  RolesList,
-} from "../Reusables/roleRanks";
 import { message } from "@tauri-apps/plugin-dialog";
-import { Label } from "@/components/ui/shadcnComponents/label";
 import {
   Select,
   SelectContent,
@@ -18,6 +11,13 @@ import {
 } from "@/components/ui/shadcnComponents/select";
 import { useSuspenseQuery } from "@tanstack/react-query";
 import UserView, { Role } from "../Reusables/userView";
+import { Label } from "@/components/ui/shadcnComponents/Label";
+import {
+  CEORolesList,
+  COORolesList,
+  getRoleRank,
+  RoleList,
+} from "../Reusables/roleRanks";
 
 // Fetch CWA Employee Name
 const fetchEmployeeName = async (id: number) => {
@@ -59,9 +59,7 @@ export const PromoteUser = (props: PromoteInterface) => {
       Role: "",
     },
     onSubmit: async ({ value }) => {
-      console.log(value);
-
-      const rank = await RoleRank(value.Role);
+      const rank = getRoleRank(value.Role);
       const { error } = await supabase
         .from("app_users")
         .update({ role: value.Role, role_rank: rank })
@@ -142,14 +140,14 @@ export const PromoteUser = (props: PromoteInterface) => {
                       Role.CustomerSupport,
                       Role.Admin,
                       Role.SecurityEngineer,
-                      Role.Partner
+                      Role.Partner,
                     ]}
                   >
                     <SelectContent
                       className="bg-black/95 border-red-950/30 
                             text-red-200"
                     >
-                      {RolesList.map((role : string) => (
+                      {RoleList.map((role: string) => (
                         <SelectItem
                           key={role}
                           value={role}

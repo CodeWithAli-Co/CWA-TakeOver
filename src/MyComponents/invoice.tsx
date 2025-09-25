@@ -10,6 +10,7 @@ import {
 } from "@react-pdf/renderer";
 import { myInv } from "../routes/middle.lazy";
 import { Download } from "lucide-react";
+import { FormatDate } from "./Reusables/dateFormatter";
 // import { ClientInvoice } from '../stores/query';
 // import download_logo from '../../../../resources/download.svg';
 
@@ -209,7 +210,7 @@ const styles = StyleSheet.create({
 export const Invoice = () => {
   // Format currency helper
   const formatCurrency = (amount : any) => {
-    return parseFloat(amount).toFixed(2);
+    return amount.toFixed(2);
   };
 
   return (
@@ -238,7 +239,7 @@ export const Invoice = () => {
           <View style={styles.titleSection}>
             <Text style={styles.invoiceTitle}>Invoice</Text>
             <Text style={styles.invoiceDate}>
-              Submitted on {myInv.creation_date}
+              Submitted on {FormatDate(myInv.creation_date)}
             </Text>
           </View>
 
@@ -258,7 +259,7 @@ export const Invoice = () => {
             <View style={styles.infoBlock}>
               <Text style={styles.infoHeader}>Invoice Details</Text>
               <Text style={styles.infoContent}>Invoice #: {myInv.invoice_id}</Text>
-              <Text style={styles.infoContent}>Due Date: {myInv.creation_date}</Text>
+              <Text style={styles.infoContent}>Due Date: {FormatDate(myInv.creation_date)}</Text>
             </View>
           </View>
 

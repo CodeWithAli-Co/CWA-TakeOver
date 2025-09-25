@@ -30,11 +30,11 @@ function InvoiceClients() {
     return (
       <>
         <div className="h-screen w-full border-r-2 border-red-500">
-          <section className="flex justify-center mt-1">
+          <section className="relative flex justify-center mt-1">
             <h3 className="text-xl font-semibold select-none">Clients</h3>
             {/* Sheet window to add client */}
             <Sheet>
-              <SheetTrigger className="absolute left-0 ml-2 mt-1 hover:cursor-pointer hover:rotate-45 transition-all duration-200">
+              <SheetTrigger className="absolute right-0 mr-5 mt-1 hover:cursor-pointer hover:rotate-45 transition-all duration-200">
                 <Plus className="text-red-500 hover:text-amber-200" />
               </SheetTrigger>
               <SheetContent

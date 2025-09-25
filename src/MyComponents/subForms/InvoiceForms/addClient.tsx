@@ -1,8 +1,8 @@
 import { Button } from "@/components/ui/button";
 import { useForm } from "@tanstack/react-form";
 import { Loader2, Mail, Send, User } from "lucide-react";
-import Database from "@tauri-apps/plugin-sql";
 import Capitalize from "@/MyComponents/Reusables/capitalize";
+import supabase from "@/MyComponents/supabase";
 
 export const AddClient = () => {
   const form = useForm({
@@ -11,12 +11,11 @@ export const AddClient = () => {
       clientEmail: "",
     },
     onSubmit: async ({ value }) => {
-      const db = await Database.load(import.meta.env.VITE_NEON_DB_URL);
-      await db.execute("INSERT into clients (name, email) VALUES ($1, $2)", [
-        value.clientName,
-        value.clientEmail,
-      ]);
-
+      await supabase.from("clients").insert({
+        name: value.clientName,
+        email: value.clientEmail
+      })
+      
       form.reset();
     },
   });

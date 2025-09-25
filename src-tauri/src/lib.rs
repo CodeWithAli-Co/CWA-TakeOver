@@ -169,6 +169,7 @@ async fn send_invoice(
     file_path: &str,
     html: &str,
 ) -> Result<String, String> {
+    // This grabs the value of 'RESEND_API_KEY' from the .env in src/tauri folder
     let _env = dotenv().unwrap();
 
     let resend = Resend::default();
@@ -187,9 +188,9 @@ async fn send_invoice(
         .with_html(html)
         .with_attachment(Attachment::from_content(invoice).with_filename(filename));
 
-    let email = resend.emails.send(email).await.map_err(|e| e.to_string())?;
+    let _email = resend.emails.send(email).await.map_err(|e| e.to_string())?;
 
-    Ok(email.id.to_string())
+    Ok(client_email.to_string())
 }
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]

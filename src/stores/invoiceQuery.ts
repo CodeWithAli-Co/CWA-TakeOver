@@ -1,24 +1,22 @@
+import supabase from "@/MyComponents/supabase";
 import { useQuery } from "@tanstack/react-query";
-import Database from "@tauri-apps/plugin-sql";
-// when using `"withGlobalTauri": true`, you may use
-// const Database = window.__TAURI__.sql;
-
-// Placing the db 'await' outside of everything makes the whole app wait until it connects to DB successfully
 
 interface ClientType {
   id: number;
   name: string;
+  /**
+   * *Emails are `unique` in DB
+   */
   email: string;
 }
-type ClientRes = {
-  fullRes: ClientType[];
-};
-// Fetch Active User with Avatar
+// Fetch All Clients
 const fetchClients = async () => {
-  const db = await Database.load(import.meta.env.VITE_NEON_DB_URL);
-  const res: any = await db.select("SELECT * FROM clients");
-  const result: ClientRes = { fullRes: res };
-  return result.fullRes;
+  const { data, error } = await supabase.from("clients").select("*");
+  if (error) {
+    console.error("Error fetching Clients:", error.message);
+  }
+  const res = data as ClientType[];
+  return res;
 };
 export const Clients = () => {
   return useQuery({
@@ -28,11 +26,11 @@ export const Clients = () => {
   });
 };
 
-
+type InvoiceStatus = "paid" | "pending";
 export interface InvoiceType {
-  status: string;
+  status: InvoiceStatus;
   invoice_id: number;
-  creation_date: string;
+  creation_date: number;
   invoice_title: string;
   client_name: string;
   client_email: string;
@@ -40,33 +38,38 @@ export interface InvoiceType {
   item_1: string;
   item_2?: string;
   item_3?: string;
-  qty_1: string;
-  qty_2?: string;
-  qty_3?: string;
-  price_1: string;
-  price_2?: string;
-  price_3?: string;
-  total_1: string;
-  total_2?: string;
-  total_3?: string;
+  qty_1: number;
+  qty_2?: number;
+  qty_3?: number;
+  price_1: number;
+  price_2?: number;
+  price_3?: number;
+  total_1: number;
+  total_2?: number;
+  total_3?: number;
   note?: string;
-  subtotal: string;
-  adjustment?: string;
+  subtotal: number;
+  adjustment?: number;
   sender: string;
-  outcome: string;
+  outcome: number;
   bank_account?: string;
-  discount?: string;
+  /**
+   * Discount is in USD amount
+   */
+  discount?: number;
 }
-type InvoiceRes = {
-  fullRes: InvoiceType[];
-};
 // Fetch all of Client's Invoices
 const fetchInvoices = async (name: string) => {
-  const db = await Database.load(import.meta.env.VITE_NEON_DB_URL);
-  const res: any = await db.select("SELECT * FROM invoices WHERE client_name = $1", [name]);
-  const result: InvoiceRes = { fullRes: res };
-  // console.log("Result:", res)
-  return result.fullRes;
+  const { data, error } = await supabase
+    .from("invoices")
+    .select("*")
+    .eq("client_name", name);
+  if (error) {
+    console.error("Error fetching Invoices:", error.message);
+  }
+
+  const res = data as InvoiceType[];
+  return res;
 };
 export const Invoices = (name: string) => {
   return useQuery({
@@ -77,14 +80,17 @@ export const Invoices = (name: string) => {
   });
 };
 
-
 // Fetch Client's Invoice
 const fetchInvoice = async (id: number) => {
-  const db = await Database.load(import.meta.env.VITE_NEON_DB_URL);
-  const res: any = await db.select("SELECT * FROM invoices WHERE invoice_id = $1", [id]);
-  const result: InvoiceRes = { fullRes: res };
-  // console.log("Result:", res)
-  return result.fullRes;
+  const { data, error } = await supabase
+    .from("invoices")
+    .select("*")
+    .eq("invoice_id", id);
+  if (error) {
+    console.error("Error fetching client's Invoice:", error.message);
+  }
+  const res = data as InvoiceType[];
+  return res;
 };
 export const ClientInvoice = (id: number) => {
   return useQuery({

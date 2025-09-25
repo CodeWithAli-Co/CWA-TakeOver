@@ -13,16 +13,6 @@ import FinancialField from '@/MyComponents/FinancialCalculator.tsx/financialFiel
 import LiveTime from '@/MyComponents/Reusables/liveTime';
 
 
-
-// Type definition for invoice data -> blaze: not needed bc we already have one, I imported it
-// interface Invoice {
-//   invoice_id: string;
-//   invoice_title: string;
-//   client_name: string;
-//   outcome: string;
-//   status: string;
-// }
-
 export const FinancialDashboard = () => {
   const { name } = useClientStore();
   const { data, isLoading, refetch } = Invoices(name);
@@ -382,7 +372,7 @@ export const FinancialDashboard = () => {
                   </div>
                   <div className="text-right">
                     <p className={`font-bold text-lg ${invoice.status === 'paid' ? 'text-green-500' : 'text-red-500'}`}>
-                      ${Number(invoice.outcome).toFixed(2)}
+                      ${invoice.outcome.toFixed(2)}
                     </p>
                     <p className={`text-xs px-2 py-0.5 inline-block font-mono mt-1 ${
                       invoice.status === 'paid' 

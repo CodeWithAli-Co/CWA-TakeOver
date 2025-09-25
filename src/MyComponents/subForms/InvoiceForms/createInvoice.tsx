@@ -2,8 +2,9 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { useForm } from "@tanstack/react-form";
 import { Loader2, Send } from "lucide-react";
-import Database from "@tauri-apps/plugin-sql";
 import { useClientStore } from "@/stores/invoiceStore";
+import supabase from "@/MyComponents/supabase";
+import { InvoiceType } from "@/stores/invoiceQuery";
 
 export const InvoiceForm = () => {
   const { name, email } = useClientStore();
@@ -30,40 +31,39 @@ export const InvoiceForm = () => {
       discount: ""
     },
     onSubmit: async ({ value }) => {
-      const db = await Database.load(import.meta.env.VITE_NEON_DB_URL);
       const Total1 = Number(value.qty1) * Number(value.price1);
       const Total2 = Number(value.qty2) * Number(value.price2);
       const Total3 = Number(value.qty3) * Number(value.price3);
       const Subtotal = Total1 + Total2 + Total3;
       const Outcome = (Subtotal + Number(value.adjustment)) - Number(value.discount);
-      await db.execute(
-        "INSERT into invoices (invoice_title, client_name, client_email, client_location,item_1,item_2,item_3, qty_1, qty_2, qty_3, price_1, price_2, price_3, total_1, total_2, total_3, note, subtotal, adjustment, sender, outcome, bank_account, discount) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23)",
-        [
-          value.title,
-          value.clientName,
-          value.clientEmail,
-          value.clientLocation,
-          value.item1,
-          value.item2,
-          value.item3,
-          value.qty1,
-          value.qty2,
-          value.qty3,
-          value.price1,
-          value.price2,
-          value.price3,
-          Total1,
-          Total2,
-          Total3,
-          value.note,
-          Subtotal,
-          value.adjustment,
-          value.sender,
-          Outcome,
-          value.bankAcc,
-          value.discount,
-        ]
-      );
+      await supabase.from("invoices").insert({
+        invoice_title: value.title,
+        client_name: value.clientName,
+        client_email: value.clientEmail,
+        client_location: value.clientLocation,
+        item_1: value.item1,
+        item_2: value.item2,
+        item_3: value.item3,
+        qty_1: Number(value.qty1),
+        qty_2: Number(value.qty2),
+        qty_3: Number(value.qty3),
+        price_1: Number(value.price1),
+        price_2: Number(value.price2),
+        price_3: Number(value.price3),
+        total_1: Total1,
+        total_2: Total2,
+        total_3: Total3,
+        note: value.note,
+        subtotal: Subtotal,
+        adjustment: Number(value.adjustment),
+        sender: value.sender,
+        outcome: Outcome,
+        bank_account: value.bankAcc,
+        discount: Number(value.discount),
+        creation_date: Date.now(),
+        status: "pending", // Later add btn to say that invoice has been paid and we'll update the value to 'paid' ?ali
+      } as Omit<InvoiceType, 'invoice_id'>)
+
       form.reset();
     },
   });
