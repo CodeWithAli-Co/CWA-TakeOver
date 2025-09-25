@@ -144,7 +144,7 @@ function GroupChats() {
   //     }
 
   return (
-    <div className="flex h-[100dvh] w-full bg-gradient-to-br from-zinc-900 via-black to-zinc-900">
+    <div className="flex h-[100dvh] w-full bg-zinc-950/20">
       {/* Mobile Menu Button - Adjusted positioning */}
       <Button
         variant="ghost"
@@ -159,7 +159,7 @@ function GroupChats() {
       <Sheet open={showMobileMenu} onOpenChange={setShowMobileMenu}>
         <SheetContent
           side="left"
-          className="w-full sm:w-80 p-0 bg-black/95 backdrop-blur-xl border-r border-white/10"
+          className="w-full sm:w-80 p-0 bg-zinc-950/10 backdrop-blur-xl border-r border-white/10"
         >
           <ChatSidebar
             user={user![0]}
@@ -179,7 +179,7 @@ function GroupChats() {
       </Sheet>
 
       {/* Desktop Sidebar - Adjusted width and visibility */}
-      <div className="hidden lg:flex w-80 xl:w-96 border-r border-white/10 bg-black/95 backdrop-blur-xl">
+      <div className="hidden lg:flex w-80 xl:w-96 border-r border-white/10 bg-zinc-950/10 backdrop-blur-xl">
         <ChatSidebar
           user={user![0]}
           groups={[
@@ -402,7 +402,7 @@ function GroupChats() {
                       Start New Conversation
                     </Button>
                   </DialogTrigger>
-                  <DialogContent className="bg-black/95 backdrop-blur-xl border border-white/10">
+                  <DialogContent className="bg-zinc-950/10 backdrop-blur-xl border border-white/10">
                     <DialogTitle>New Conversation</DialogTitle>
                     <AddDMGroup Users={AllEmployees || []} />
                   </DialogContent>
@@ -490,7 +490,7 @@ function ChatSidebar({
                 <Plus className="h-4 w-4" />
               </Button>
             </DialogTrigger>
-            <DialogContent className="bg-black/95 backdrop-blur-xl border border-white/10">
+            <DialogContent className="bg-zinc-950/10 backdrop-blur-xl border border-white/10">
               <DialogTitle>New Conversation</DialogTitle>
               <AddDMGroup Users={employees || []} />
             </DialogContent>

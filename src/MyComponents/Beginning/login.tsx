@@ -2,6 +2,8 @@ import { useForm } from "@tanstack/react-form";
 import { useAppStore } from "@/stores/store";
 import supabase from "../supabase";
 import { Button } from "@/components/ui/button";
+import { Label } from "@/components/ui/shadcnComponents/Label";
+import { Input } from "@/components/ui/shadcnComponents/input";
 
 export const LoginPage = () => {
   const { setIsLoggedIn } = useAppStore();
@@ -42,8 +44,8 @@ export const LoginPage = () => {
   });
 
   return (
-    <div className="min-h-screen w-full flex justify-center items-center bg-gradient-to-br from-red-950/20 via-red-900/20 to-red-950">
-      <div className="w-96 p-8 bg-black rounded-lg flex flex-col items-center border border-white-600">
+    <div className="min-h-screen w-full flex justify-center items-center bg-gradient-to-br from-red-950/20 via-red-950/70 to-red-950/20">
+      <div className="w-[24em] h-[30em] p-8 bg-black rounded-lg flex flex-col items-center border border-white-600">
         <h3 className="text-2xl text-amber-50 mb-12">Login</h3>
         {/* <img src={cwa_logo_full} alt="CodeWithAli Logo Full" id='cwa-logo-full' draggable={false} /> */}
 
@@ -61,18 +63,19 @@ export const LoginPage = () => {
               name="email"
               children={(field) => (
                 <div className="w-full">
-                  <label
+                  <Label
                     className="text-amber-50 block mb-2"
                     htmlFor={field.name}
                   >
                     Email:
-                  </label>
-                  <input
+                  </Label>
+                  <Input
                     name={field.name}
                     type="email"
-                    className="w-full p-1 bg-transparent text-amber-50 border-b border-amber-50 
-                             focus:outline-none focus:bg-gray-600 focus:rounded-lg transition-all duration-300
-                             hover:bg-gray-600 hover:rounded-lg hover:border-none"
+                    placeholder="john@gmail.com"
+                    className="w-full p-1  text-amber-50 border pl-3 border-zinc-900  
+                             focus:border-red-950 focus:bg-zinc-950/10 focus:rounded-lg 
+                             hover:bg-zinc-950/20 hover:rounded-lg hover:border-none"
                     value={field.state.value}
                     onChange={(e) => field.handleChange(e.target.value)}
                   />
@@ -85,18 +88,19 @@ export const LoginPage = () => {
               name="password"
               children={(field) => (
                 <div className="w-full">
-                  <label
+                  <Label
                     className="text-amber-50 block mb-2"
                     htmlFor={field.name}
                   >
                     Password:
-                  </label>
-                  <input
+                  </Label>
+                  <Input
                     name={field.name}
                     type="password"
-                    className="w-full p-1 bg-transparent text-amber-50 border-b border-amber-50 
-                             focus:outline-none focus:bg-gray-600 focus:rounded-lg transition-all duration-300
-                             hover:bg-gray-600 hover:rounded-lg hover:border-none"
+                    placeholder="Enter Password "
+                    className="w-full p-1 pl-3 text-amber-50 border border-zinc-900  
+                             focus:border-red-950 focus:bg-zinc-950/10 focus:rounded-lg 
+                             hover:bg-zinc-950/20 hover:rounded-lg hover:border-none"
                     value={field.state.value}
                     onChange={(e) => field.handleChange(e.target.value)}
                   />
@@ -113,7 +117,7 @@ export const LoginPage = () => {
                 type="submit"
                 disabled={!canSubmit}
                 // neonbtn
-                className="mt-7 bg-red-950 hover:bg-red-950/10 w-full"
+                className="my-9 bg-red-950 hover:bg-red-950/10 w-full "
               >
                 Submit
               </Button>
@@ -122,7 +126,7 @@ export const LoginPage = () => {
         </form>
 
         {/* Sign Up Button */}
-        <div className="mt-4 text-center w-full">
+        <div className="mt-4 text-center ">
           <p>Already Have an Account?</p>
           <Button
             // goes to the above function, pretty simple right?

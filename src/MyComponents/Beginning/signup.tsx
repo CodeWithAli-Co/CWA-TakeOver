@@ -75,7 +75,7 @@ export const SignUpPage = () => {
 
   return (
     
-      <div className="min-h-screen w-full flex justify-center items-center  bg-gradient-to-br from-red-950/20 via-red-900/20 to-red-950">
+      <div className="min-h-screen w-full flex justify-center items-center  bg-gradient-to-br from-red-950/20 via-red-950/70 to-red-950/20">
       <div className="w-[400px]  p-8 rounded-lg flex flex-col items-center border bg-black border-white">
         <h3 className="text-2xl text-amber-50 mb-12">Sign Up</h3>
 
