@@ -1,6 +1,7 @@
 import { useForm } from "@tanstack/react-form";
 import { useAppStore } from "@/stores/store";
 import supabase from "../supabase";
+import { Button } from "@/components/ui/button";
 
 export const LoginPage = () => {
   const { setIsLoggedIn } = useAppStore();
@@ -41,13 +42,13 @@ export const LoginPage = () => {
   });
 
   return (
-    <div className="min-h-screen w-full flex justify-center items-center bg-red-550">
-      <div className="w-96 p-8 bg-gradient-to-b to-red-950 rounded-lg flex flex-col items-center border border-white-600">
+    <div className="min-h-screen w-full flex justify-center items-center bg-gradient-to-br from-red-950/20 via-red-900/20 to-red-950">
+      <div className="w-96 p-8 bg-black rounded-lg flex flex-col items-center border border-white-600">
         <h3 className="text-2xl text-amber-50 mb-12">Login</h3>
         {/* <img src={cwa_logo_full} alt="CodeWithAli Logo Full" id='cwa-logo-full' draggable={false} /> */}
 
         <form
-          className="w-full flex flex-col items-center"
+          className="w-full flex flex-col items-center "
           onSubmit={(e) => {
             e.preventDefault();
             e.stopPropagation();
@@ -108,27 +109,28 @@ export const LoginPage = () => {
           <form.Subscribe
             selector={(state) => [state.canSubmit]}
             children={([canSubmit]) => (
-              <button
+              <Button
                 type="submit"
                 disabled={!canSubmit}
-                className="mt-7 neonbtn"
+                // neonbtn
+                className="mt-7 bg-red-950 hover:bg-red-950/10 w-full"
               >
                 Submit
-              </button>
+              </Button>
             )}
           />
         </form>
 
         {/* Sign Up Button */}
-        <div className="mt-4 text-center">
+        <div className="mt-4 text-center w-full">
           <p>Already Have an Account?</p>
-          <button
+          <Button
             // goes to the above function, pretty simple right?
             onClick={handleSignUp}
-            className="mt-3 neonbtn"
+            className="mt-3 bg-blue-950 hover:bg-blue-900/20 w-full "
               >
             Sign Up
-          </button>
+          </Button>
         </div>
       </div>
     </div>

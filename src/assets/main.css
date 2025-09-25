@@ -44,9 +44,6 @@ html, body {
 
 /* using this for the dm.lazy for now */
 
-.bg-gradient-messages {
-  @apply bg-gradient-to-b from-[#8B0000] via-[#600000] to-[#B22222] text-white;
-}
 
 .backdrop {
   position: fixed;
@@ -66,7 +63,8 @@ body {
   height: 100vh;
   /* overflow-y: hidden; */
   overflow-x: hidden;
-  background: linear-gradient(180deg, #090909 0%, #2f0606 100%);
+  /* background: linear-gradient(180deg, #090909 0%, #2f0606 100%); */
+  background: black;
   color: whitesmoke;
   #root {
     width: 100%;
