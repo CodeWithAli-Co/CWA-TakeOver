@@ -50,7 +50,7 @@ const IntegrationCard = ({
   const [isEnabled, setIsEnabled] = useState(connected);
 
   return (
-    <Card className="bg-black/40 border-red-900/30">
+    <Card className="bg-zinc-950/10 rounded-xs border-red-900/30">
       <CardHeader className="pb-4">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
@@ -104,7 +104,7 @@ const IntegrationCard = ({
                 <Input
                   type="password"
                   value={apiKey}
-                  className="bg-black/40 border-red-900/30 text-amber-50"
+                  className="bg-zinc-950/10 rounded-xs border-red-900/30 text-amber-50"
                   readOnly
                 />
                 <Button
@@ -120,7 +120,7 @@ const IntegrationCard = ({
               <div className="flex gap-2">
                 <Input
                   value={webhookUrl}
-                  className="bg-black/40 border-red-900/30 text-amber-50"
+                  className="bg-zinc-950/10 rounded-xs border-red-900/30 text-amber-50"
                   readOnly
                 />
                 <Button
@@ -190,7 +190,7 @@ export const IntegrationsSettings = () => {
           webhookUrl="https://api.example.com/webhooks/indeed"
         />
 
-        <Card className="bg-black/40 border-red-900/30">
+        <Card className="bg-zinc-950/10 rounded-xs border-red-900/30">
           <CardHeader>
             <div className="flex items-center justify-between">
               <CardTitle className="text-amber-50">Active Webhooks</CardTitle>

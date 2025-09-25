@@ -246,7 +246,7 @@ export default function SettingsPage() {
               >
                 {/* Profile Settings Tab */}
                 <TabsContent value="profile" className="space-y-4">
-                  <Card className="bg-black/60 border-red-950/30 backdrop-blur-sm">
+                  <Card className="bg-zinc-950/20 border-red-950/30 backdrop-blur-sm rounded-xs">
                     <CardHeader className="p-4 sm:p-6">
                       <CardTitle className="text-xl md:text-2xl text-white">
                         Profile Settings
@@ -363,48 +363,41 @@ export default function SettingsPage() {
                 </TabsContent>
 
                 {/* Only visible for higher ups for now until finished */}
-                <UserView userRole={["Project Manager", "COO", "CEO"]}>
+                <UserView userRole={["ProjectManager", "COO", "CEO"]}>
                   {/* Teams & Projects Tab */}
                   <TabsContent value="teams" className="space-y-4">
-                    <Card className="bg-black/60 border-red-950/30 backdrop-blur-sm p-4 sm:p-6">
+                    <Card className="bg-black/60 border-red-950/30 backdrop-blur-sm p-4 sm:p-6  rounded-xs">
                       <TeamsAndProjects />
                     </Card>
                   </TabsContent>
 
                   {/* Company Tab */}
                   <TabsContent value="company" className="space-y-4">
-                    <Card className="bg-black/60 border-red-950/30 backdrop-blur-sm p-4 sm:p-6">
+                    <Card className="bg-black/60 border-red-950/30 backdrop-blur-sm p-4 sm:p-6  rounded-xs">
                       <CompanySettings />
                     </Card>
                   </TabsContent>
 
                   {/* Reports Tab */}
                   <TabsContent value="reports" className="space-y-4">
-                    <Card className="bg-black/60 border-red-950/30 backdrop-blur-sm p-4 sm:p-6">
+                    <Card className="bg-black/60 border-red-950/30 backdrop-blur-sm p-4 sm:p-6 rounded-xs">
                       <ReportSettings />
                     </Card>
                   </TabsContent>
 
                   {/* Resources Tab */}
                   <TabsContent value="resources" className="space-y-4">
-                    <Card className="bg-black/60 border-red-950/30 backdrop-blur-sm">
-                      <CardHeader className="p-4 sm:p-6">
-                        <CardTitle className="text-xl md:text-2xl text-white">
-                          Resources
-                        </CardTitle>
-                        <CardDescription className="text-xs md:text-sm text-red-200/60">
-                          Developer resources and documentation.
-                        </CardDescription>
-                      </CardHeader>
-                      <CardContent className="p-4 sm:p-6">
+                    <Card className="bg-zinc-950/20 border-red-950/30 backdrop-blur-sm rounded-xs ">
+                   
+                     
                         <DeveloperResourceHub />
-                      </CardContent>
+                      
                     </Card>
                   </TabsContent>
 
                   {/* Integrations Tab */}
                   <TabsContent value="integrations" className="space-y-4">
-                    <Card className="bg-black/60 border-red-950/30 backdrop-blur-sm">
+                    <Card className="bg-zinc-950/20 border-red-950/30 backdrop-blur-sm rounded-xs">
                       <CardHeader className="p-4 sm:p-6">
                         <CardTitle className="text-xl md:text-2xl text-white">
                           Integrations
@@ -421,7 +414,7 @@ export default function SettingsPage() {
 
                   {/* Billing Tab */}
                   <TabsContent value="billing" className="space-y-4">
-                    <Card className="bg-black/60 border-red-950/30 backdrop-blur-sm">
+                    <Card className="bg-zinc-950/20 border-red-950/30 backdrop-blur-sm rounded-xs">
                       <CardHeader className="p-4 sm:p-6">
                         <CardTitle className="text-xl md:text-2xl text-white">
                           Billing & Subscription
@@ -438,7 +431,7 @@ export default function SettingsPage() {
 
                   {/* Notifications Tab */}
                   <TabsContent value="notifications" className="space-y-4">
-                    <Card className="bg-black/60 border-red-950/30 backdrop-blur-sm">
+                    <Card className="bg-zinc-950/20 border-red-950/30 backdrop-blur-sm rounded-xs">
                       <CardHeader className="p-4 sm:p-6">
                         <CardTitle className="text-xl md:text-2xl text-white">
                           Notification Settings
@@ -455,7 +448,7 @@ export default function SettingsPage() {
 
                   {/* Security Tab */}
                   <TabsContent value="security" className="space-y-4">
-                    <Card className="bg-black/60 border-red-950/30 backdrop-blur-sm">
+                    <Card className="bg-zinc-950/20 border-red-950/30 backdrop-blur-sm rounded-xs">
                       <CardHeader className="p-4 sm:p-6">
                         <CardTitle className="text-xl md:text-2xl text-white">
                           Security & Access Logs

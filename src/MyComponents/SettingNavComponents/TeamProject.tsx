@@ -459,7 +459,7 @@ const TeamsAndProjects = () => {
 
   return (
     <div className="space-y-6">
-      <Card className="bg-black/60 border-red-950/30 backdrop-blur-sm">
+      <Card className="bg-zinc-950/20 rounded-xs border-red-950/30 backdrop-blur-sm">
         <CardHeader>
           <div className="flex justify-between items-center">
             <div>

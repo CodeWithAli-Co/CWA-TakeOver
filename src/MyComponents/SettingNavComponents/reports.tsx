@@ -405,7 +405,7 @@ const NewReportDialog = ({ templates, onSave }: { templates: any, onSave: any })
             >
               <SelectTrigger
                 id="template"
-                className="bg-black/40 border-red-950/30 text-red-200"
+                className="bg-zinc-950/20 rounded-xs border-red-950/30 text-red-200"
               >
                 <SelectValue placeholder="Select a report template" />
               </SelectTrigger>
@@ -427,7 +427,7 @@ const NewReportDialog = ({ templates, onSave }: { templates: any, onSave: any })
           </div>
 
           {selectedTemplateData && (
-            <div className="p-3 bg-black/40 border border-red-950/30 rounded-md text-sm text-red-200/70">
+            <div className="p-3 bg-zinc-950/20 rounded-xs border border-red-950/30 rounded-md text-sm text-red-200/70">
               {selectedTemplateData.description}
             </div>
           )}
@@ -441,7 +441,7 @@ const NewReportDialog = ({ templates, onSave }: { templates: any, onSave: any })
               value={reportName}
               onChange={(e) => setReportName(e.target.value)}
               placeholder="Enter a descriptive name"
-              className="bg-black/40 border-red-950/30 text-red-200 placeholder:text-red-200/40"
+              className="bg-zinc-950/20 rounded-xs border-red-950/30 text-red-200 placeholder:text-red-200/40"
             />
           </div>
 
@@ -453,7 +453,7 @@ const NewReportDialog = ({ templates, onSave }: { templates: any, onSave: any })
               <Select value={reportFormat} onValueChange={setReportFormat}>
                 <SelectTrigger
                   id="format"
-                  className="bg-black/40 border-red-950/30 text-red-200"
+                  className="bg-zinc-950/20 rounded-xs border-red-950/30 text-red-200"
                 >
                   <SelectValue placeholder="Select format" />
                 </SelectTrigger>
@@ -491,7 +491,7 @@ const NewReportDialog = ({ templates, onSave }: { templates: any, onSave: any })
             <Select value={schedule} onValueChange={setSchedule}>
               <SelectTrigger
                 id="schedule"
-                className="bg-black/40 border-red-950/30 text-red-200"
+                className="bg-zinc-950/20 rounded-xs border-red-950/30 text-red-200"
               >
                 <SelectValue placeholder="Select schedule" />
               </SelectTrigger>
@@ -533,7 +533,7 @@ const NewReportDialog = ({ templates, onSave }: { templates: any, onSave: any })
               value={recipients}
               onChange={(e) => setRecipients(e.target.value)}
               placeholder="email1@example.com, email2@example.com"
-              className="bg-black/40 border-red-950/30 text-red-200 placeholder:text-red-200/40"
+              className="bg-zinc-950/20 rounded-xs border-red-950/30 text-red-200 placeholder:text-red-200/40"
             />
           </div>
 
@@ -572,7 +572,7 @@ const NewReportDialog = ({ templates, onSave }: { templates: any, onSave: any })
 // Report cards for different report types
 const ReportCard = ({ report, onGenerate, onDelete }: { report: any, onGenerate: any, onDelete: any }) => {
   return (
-    <Card className="bg-black/40 border-red-900/30 overflow-hidden hover:border-red-900/50 transition-all duration-200">
+    <Card className="bg-zinc-950/20 rounded-xs border-red-900/30 overflow-hidden hover:border-red-900/50 transition-all duration-200">
       <CardHeader className="pb-2">
         <div className="flex justify-between items-start">
           <div>
@@ -706,7 +706,7 @@ const ReportSettings = () => {
             placeholder="Search reports..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-10 w-full bg-black/40 border-red-950/30 text-red-200 placeholder:text-red-200/40"
+            className="pl-10 w-full bg-zinc-950/20 rounded-xs border-red-950/30 text-red-200 placeholder:text-red-200/40"
           />
         </div>
       </div>
@@ -717,7 +717,7 @@ const ReportSettings = () => {
         onValueChange={setActiveTab}
         className="space-y-6"
       >
-        <TabsList className="h-12 justify-start space-x-2 bg-black/40 p-1 text-red-200/60 border border-red-950/20">
+        <TabsList className="h-12 justify-start space-x-2 bg-zinc-950/20 rounded-xs p-1 text-red-200/60 border border-red-950/20">
           <TabsTrigger
             value="all"
             className="data-[state=active]:bg-red-950/20 data-[state=active]:text-red-200 hover:text-red-200 transition-colors duration-200"
@@ -771,7 +771,7 @@ const ReportSettings = () => {
             transition={{ duration: 0.2 }}
           >
             <TabsContent value="all" className="mt-4 space-y-4">
-              <Card className="bg-black/60 border-red-950/30 backdrop-blur-sm">
+              <Card className="bg-zinc-950/20  rounded-xs  border-red-950/30 backdrop-blur-sm">
                 <CardHeader className="pb-2">
                   <CardTitle className="text-white text-lg">
                     All Reports
@@ -815,7 +815,7 @@ const ReportSettings = () => {
 
             {/* Performance tab */}
             <TabsContent value="performance" className="mt-4 space-y-4">
-              <Card className="bg-black/60 border-red-950/30 backdrop-blur-sm">
+              <Card className="bg-zinc-950/20  rounded-xs  border-red-950/30 backdrop-blur-sm">
                 <CardHeader className="pb-2">
                   <CardTitle className="text-white text-lg">
                     Performance Reports
@@ -858,7 +858,7 @@ const ReportSettings = () => {
 
             {/* Audit tab */}
             <TabsContent value="audit" className="mt-4 space-y-4">
-              <Card className="bg-black/60 border-red-950/30 backdrop-blur-sm">
+              <Card className="bg-zinc-950/20  rounded-xs  border-red-950/30 backdrop-blur-sm">
                 <CardHeader className="pb-2">
                   <CardTitle className="text-white text-lg">
                     Audit Reports
@@ -901,7 +901,7 @@ const ReportSettings = () => {
 
             {/* Custom tab */}
             <TabsContent value="custom" className="mt-4 space-y-4">
-              <Card className="bg-black/60 border-red-950/30 backdrop-blur-sm">
+              <Card className="bg-zinc-950/20  rounded-xs  border-red-950/30 backdrop-blur-sm">
                 <CardHeader className="pb-2">
                   <CardTitle className="text-white text-lg">
                     Custom Reports
@@ -946,7 +946,7 @@ const ReportSettings = () => {
       </Tabs>
 
       {/* Available Templates */}
-      <Card className="bg-black/60 border-red-950/30 backdrop-blur-sm">
+      <Card className="bg-zinc-950/20  rounded-xs  border-red-950/30 backdrop-blur-sm">
         <CardHeader>
           <CardTitle className="text-white">Report Templates</CardTitle>
           <CardDescription className="text-red-200/60">
@@ -958,7 +958,7 @@ const ReportSettings = () => {
             {reportTemplates.map((template) => (
               <Card
                 key={template.id}
-                className="bg-black/40 border-red-900/30 hover:border-red-900/50 transition-all duration-200"
+                className="bg-zinc-950/20 rounded-xs border-red-900/30 hover:border-red-900/50 transition-all duration-200"
               >
                 <CardHeader className="pb-2">
                   <div className="flex justify-between items-center">
@@ -998,7 +998,7 @@ const ReportSettings = () => {
       </Card>
 
       {/* Global Report Settings */}
-      <Card className="bg-black/60 border-red-950/30 backdrop-blur-sm">
+      <Card className="bg-zinc-950/20  rounded-xs  border-red-950/30 backdrop-blur-sm">
         <CardHeader>
           <CardTitle className="text-white">Report Settings</CardTitle>
           <CardDescription className="text-red-200/60">
@@ -1030,7 +1030,7 @@ const ReportSettings = () => {
               </p>
             </div>
             <Select defaultValue="pdf">
-              <SelectTrigger className="w-[180px] bg-black/40 border-red-950/30 text-red-200">
+              <SelectTrigger className="w-[180px] bg-zinc-950/20 rounded-xs border-red-950/30 text-red-200">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent className="bg-black/95 border-red-950/30 text-red-200">
@@ -1074,7 +1074,7 @@ const ReportSettings = () => {
               </p>
             </div>
             <Select defaultValue="90">
-              <SelectTrigger className="w-[180px] bg-black/40 border-red-950/30 text-red-200">
+              <SelectTrigger className="w-[180px] bg-zinc-950/20 rounded-xs border-red-950/30 text-red-200">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent className="bg-black/95 border-red-950/30 text-red-200">

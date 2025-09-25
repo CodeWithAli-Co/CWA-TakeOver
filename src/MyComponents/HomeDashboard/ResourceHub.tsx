@@ -41,7 +41,7 @@ const MetricCard = ({
 }) => (
   <motion.div
     whileHover={{ scale: 1.02 }}
-    className="p-4 rounded-lg bg-black/60 border border-red-900/30"
+    className="p-4 rounded-lg bg-zinc-950/10 border border-red-900/30"
   >
     <div className="flex justify-between items-start">
       <span className="text-sm text-amber-50/70">{title}</span>
@@ -106,7 +106,7 @@ const ResourceMetric = ({
 
 export const DeveloperResourceHub = () => {
   return (
-    <Card className="bg-black/40 border-red-900/30 lg:col-span-2">
+    <Card className="bg-zinc-950/10 rounded-xs border-red-900/30 lg:col-span-2">
       <CardHeader>
         <div className="flex items-center justify-between">
           <CardTitle className="text-amber-50">
@@ -128,7 +128,7 @@ export const DeveloperResourceHub = () => {
       </CardHeader>
       <CardContent>
         <Tabs defaultValue="performance" className="space-y-4">
-          <TabsList className="bg-black/40 border border-red-900/30">
+          <TabsList className="bg-zinc-950/10 rounded-xs border border-red-900/30">
             <TabsTrigger
               value="performance"
               className="data-[state=active]:bg-red-900/20"
@@ -177,7 +177,7 @@ export const DeveloperResourceHub = () => {
               />
             </div>
 
-            <Card className="bg-black/60 border-red-900/30">
+            <Card className="bg-zinc-950/10 border-red-900/30  rounded-xs">
               <CardContent className="pt-4">
                 <h3 className="text-sm font-medium text-amber-50 mb-3">
                   Live Performance Metrics
@@ -258,7 +258,7 @@ export const DeveloperResourceHub = () => {
               />
             </div>
 
-            <Card className="bg-black/60 border-red-900/30">
+            <Card className="bg-zinc-950/10 border-red-900/30">
               <CardContent className="pt-4">
                 <h3 className="text-sm font-medium text-amber-50 mb-3">
                   Resource Allocation
@@ -333,7 +333,7 @@ export const DeveloperResourceHub = () => {
               />
             </div>
 
-            <Card className="bg-black/60 border-red-900/30">
+            <Card className="bg-zinc-950/10 border-red-900/30">
               <CardContent className="pt-4">
                 <h3 className="text-sm font-medium text-amber-50 mb-3">
                   Quality Metrics
