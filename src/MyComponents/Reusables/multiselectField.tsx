@@ -71,15 +71,15 @@ export const MultiSelectField = ({
 }) => {
   const { setOptionsValue } = useMultiSelectStore();
   return (
-    <div className="w-full">
-      <label className="text-amber-50 font-semibold block mb-2 ">{name}</label>
+    <div className="w-full rounded-none">
+      <label className="text-amber-50 font-semibold block mb-2 rounded-none ">{name}</label>
       <Select
         isMulti
         options={options}
         name={name}
         onChange={(value) => setOptionsValue(value)}
         styles={customSelectStyles}
-        className="text-amber-50 rounded-2xl"
+        className="text-amber-50  rounded-xs"
         placeholder="Select subscribers..."
       />
     </div>

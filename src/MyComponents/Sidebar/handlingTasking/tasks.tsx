@@ -326,29 +326,32 @@ const TaskSettings: React.FC = () => {
   }, [selectedTab]);
 
   return (
-    <div className="min-h-screen bg-black/95 py-6 px-8">
+    <div className="min-h-screen bg-black  py-6 px-8">
       <div className="mb-6">
         <h2 className="text-3xl font-bold tracking-tight text-red-200">
           Tasks
         </h2>
         <p className="text-red-200/60">{allCount} total tasks</p>
       </div>
+      <div className="justify-self-end">
+
       <AddTodo Users={AllEmployees || []} />
+      </div>
       {/* Stats Overview */}
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-4 mb-6">
-        <Card className="bg-black/40 border-red-950/20">
+        <Card className="bg-zinc-950/20 rounded-xs border-red-950/20">
           <CardContent className="p-4">
             <div className="flex items-center gap-2 text-red-200/60">
-              <CheckCircle className="h-4 w-4" />
+              <CheckCircle className="h-4 w-4 text-red-900" />
               <span className="text-sm">Completed</span>
             </div>
             <p className="text-2xl font-bold text-red-200 mt-2">{doneCount}</p>
           </CardContent>
         </Card>
-        <Card className="bg-black/40 border-red-950/20">
+        <Card className="bg-zinc-950/20 rounded-xs border-red-950/20">
           <CardContent className="p-4">
             <div className="flex items-center gap-2 text-red-200/60">
-              <Clock className="h-4 w-4" />
+              <Clock className="h-4 w-4 text-blue-900" />
               <span className="text-sm">In Progress</span>
             </div>
             <p className="text-2xl font-bold text-red-200 mt-2">
@@ -356,19 +359,19 @@ const TaskSettings: React.FC = () => {
             </p>
           </CardContent>
         </Card>
-        <Card className="bg-black/40 border-red-950/20">
+        <Card className="bg-zinc-950/20 rounded-xs border-red-950/20">
           <CardContent className="p-4">
             <div className="flex items-center gap-2 text-red-200/60">
-              <AlertCircle className="h-4 w-4" />
+              <AlertCircle className="h-4 w-4 text-purple-900" />
               <span className="text-sm">To Do</span>
             </div>
             <p className="text-2xl font-bold text-red-200 mt-2">{todoCount}</p>
           </CardContent>
         </Card>
-        <Card className="bg-black/40 border-red-950/20">
+        <Card className="bg-zinc-950/20 rounded-xs border-red-950/20">
           <CardContent className="p-4">
             <div className="flex items-center gap-2 text-red-200/60">
-              <Activity className="h-4 w-4" />
+              <Activity className="h-4 w-4 text-green-900" />
               <span className="text-sm">Total Tasks</span>
             </div>
             <p className="text-2xl font-bold text-red-200 mt-2">{allCount}</p>
@@ -377,7 +380,7 @@ const TaskSettings: React.FC = () => {
       </div>
 
       {/* Task List */}
-      <Card className="bg-black/40 border-red-950/20">
+      <Card className="bg-zinc-950/20 rounded-xs border-red-950/20">
         <CardHeader className="flex flex-row items-center justify-between">
           <CardTitle className="text-red-200">Task Management</CardTitle>
           <Input

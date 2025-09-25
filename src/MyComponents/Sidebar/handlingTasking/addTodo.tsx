@@ -113,9 +113,9 @@ export const AddTodo = (props: Users) => {
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
         <Button
-          className="group relative overflow-hidden bg-gradient-to-r from-red-950 to-red-900 
+          className="group relative overflow-hidden bg-gradient-to-r from-red-950 to-red-900 mb-2 
           hover:from-red-900 hover:to-red-800 text-white border border-red-800/30 
-          shadow-lg shadow-red-950/20 transition-all duration-300 
+          shadow-md shadow-red-950/20 transition-all duration-300 
           hover:scale-[1.02] active:scale-[0.98]"
         >
           <span className="absolute inset-0 bg-red-700/10 opacity-0 group-hover:opacity-20 transition-opacity"></span>
@@ -127,7 +127,7 @@ export const AddTodo = (props: Users) => {
       </DialogTrigger>
       <DialogContent
         className="sm:max-w-[600px] bg-black/95 border-red-950/30 
-        shadow-2xl shadow-red-950/40 rounded-xl"
+        shadow-xl shadow-red-950/40 rounded-xl"
       >
         <DialogHeader>
           <DialogTitle className="text-red-200 flex items-center gap-2">
