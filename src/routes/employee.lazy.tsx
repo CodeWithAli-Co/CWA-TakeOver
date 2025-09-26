@@ -106,10 +106,10 @@ function Employee() {
           onValueChange={(value) => setDisplayer(value)}
           className="w-full"
         >
-          <TabsList className="inline-flex bg-red-950/20 rounded-full p-1 gap-1">
+          <TabsList className="inline-flex bg-red-950/20 rounded-xs p-1 gap-1">
             <TabsTrigger
               value="Employees"
-              className="rounded-full px-6 py-2 data-[state=active]:bg-red-900 
+              className="rounded-xs px-6 py-2 data-[state=active]:bg-red-900 
                        data-[state=active]:text-amber-50 transition-all duration-300"
             >
               Employees
@@ -129,10 +129,10 @@ function Employee() {
                 {/* Employee List */}
                 {/* Promote Form */}
                 {showPromote === "show" && <PromoteUser userID={EmpID} />}
-                <Card className="bg-red-950/10 border-red-900/20">
+                <Card className="bg-red-950/10 border-red-900/20 rounded-xs">
                   <CardContent className="pt-6">
                     <Table>
-                      <TableHeader>
+                      <TableHeader >
                         <TableRow className="border-red-900/20">
                           <TableHead className="text-amber-50/70">
                             Username
@@ -169,8 +169,10 @@ function Employee() {
                                 }
                                 className={
                                   employee.role === "CEO"
-                                    ? "bg-red-900 text-amber-50 rounded-xl"
-                                    : "bg-gray-800 text-amber-50/70 rounded-xl"
+                                    ? "bg-red-900 hover:bg-red-950 text-amber-50 rounded-xs"
+                                    : employee.role ===  "COO"
+                                    ? "bg-blue-900 hover:bg-blue-9050 text-amber-50/70 rounded-xs"
+                                    : "bg-slate-900 hover:bg-slate-950"
                                 }
                               >
                                 {employee.role}
@@ -184,7 +186,7 @@ function Employee() {
                                     setShowPromote("show");
                                   }}
                                   variant={"outline"}
-                                  className="bg-red-900/50 rounded-xl border-1 border-red-900 hover:bg-red-600/50 hover:text-white"
+                                  className="bg-red-900/50 rounded-xs border-1 border-red-900 hover:bg-red-600/50 hover:text-white"
                                 >
                                   Promote/Demote
                                 </Button>
@@ -195,7 +197,7 @@ function Employee() {
                               <Button
                                 variant="outline"
                                 size="sm"
-                                className="border-red-900/30 hover:bg-red-900/20 text-amber-50"
+                                className="border-red-900/30 hover:bg-red-900/20 text-amber-50 rounded-xs  "
                                 onClick={() => {
                                   showModal();
                                   setEmpID(employee.id);
@@ -206,7 +208,7 @@ function Employee() {
                               <Button
                                 variant="outline"
                                 size="sm"
-                                className="border-red-900/30 hover:bg-red-900/20 text-amber-50"
+                                className="border-red-900/30 hover:bg-red-900/20 text-amber-50 rounded-xs  "
                                 onClick={() => DelEmployee(employee.id)}
                               >
                                 <Trash2 className="w-4 h-4" />
