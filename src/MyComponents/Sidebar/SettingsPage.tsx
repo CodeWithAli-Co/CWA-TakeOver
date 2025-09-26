@@ -246,7 +246,7 @@ export default function SettingsPage() {
               >
                 {/* Profile Settings Tab */}
                 <TabsContent value="profile" className="space-y-4">
-                  <Card className="bg-zinc-950/20 border-red-950/30 backdrop-blur-sm rounded-xs">
+                  <Card className="bg-zinc-950 high-dpi:bg-zinc-950/20 border-red-950/30 backdrop-blur-sm rounded-xs">
                     <CardHeader className="p-4 sm:p-6">
                       <CardTitle className="text-xl md:text-2xl text-white">
                         Profile Settings
@@ -387,17 +387,14 @@ export default function SettingsPage() {
 
                   {/* Resources Tab */}
                   <TabsContent value="resources" className="space-y-4">
-                    <Card className="bg-zinc-950/20 border-red-950/30 backdrop-blur-sm rounded-xs ">
-                   
-                     
-                        <DeveloperResourceHub />
-                      
+                    <Card className="bg-zinc-950 high-dpi:bg-zinc-950/20 border-red-950/30 backdrop-blur-sm rounded-xs ">
+                      <DeveloperResourceHub />
                     </Card>
                   </TabsContent>
 
                   {/* Integrations Tab */}
                   <TabsContent value="integrations" className="space-y-4">
-                    <Card className="bg-zinc-950/20 border-red-950/30 backdrop-blur-sm rounded-xs">
+                    <Card className="bg-zinc-950 high-dpi:bg-zinc-950/20 border-red-950/30 backdrop-blur-sm rounded-xs">
                       <CardHeader className="p-4 sm:p-6">
                         <CardTitle className="text-xl md:text-2xl text-white">
                           Integrations
@@ -414,7 +411,7 @@ export default function SettingsPage() {
 
                   {/* Billing Tab */}
                   <TabsContent value="billing" className="space-y-4">
-                    <Card className="bg-zinc-950/20 border-red-950/30 backdrop-blur-sm rounded-xs">
+                    <Card className="bg-zinc-950 high-dpi:bg-zinc-950/20 border-red-950/30 backdrop-blur-sm rounded-xs">
                       <CardHeader className="p-4 sm:p-6">
                         <CardTitle className="text-xl md:text-2xl text-white">
                           Billing & Subscription
@@ -431,7 +428,7 @@ export default function SettingsPage() {
 
                   {/* Notifications Tab */}
                   <TabsContent value="notifications" className="space-y-4">
-                    <Card className="bg-zinc-950/20 border-red-950/30 backdrop-blur-sm rounded-xs">
+                    <Card className="bg-zinc-950 high-dpi:bg-zinc-950/20 border-red-950/30 backdrop-blur-sm rounded-xs">
                       <CardHeader className="p-4 sm:p-6">
                         <CardTitle className="text-xl md:text-2xl text-white">
                           Notification Settings
@@ -448,7 +445,7 @@ export default function SettingsPage() {
 
                   {/* Security Tab */}
                   <TabsContent value="security" className="space-y-4">
-                    <Card className="bg-zinc-950/20 border-red-950/30 backdrop-blur-sm rounded-xs">
+                    <Card className="bg-zinc-950 high-dpi:bg-zinc-950/20 border-red-950/30 backdrop-blur-sm rounded-xs">
                       <CardHeader className="p-4 sm:p-6">
                         <CardTitle className="text-xl md:text-2xl text-white">
                           Security & Access Logs

@@ -9,7 +9,7 @@ export const LoginPage = () => {
   const { setIsLoggedIn } = useAppStore();
   // const router = useRouter(); // Initialize router
 
-  // Check if user is logged in 
+  // Check if user is logged in
   // without this the redirect wont work
   const handleSignUp = () => {
     setIsLoggedIn("makeAcc"); // Indicate that user is signing up
@@ -59,7 +59,7 @@ export const LoginPage = () => {
         >
           <div className="w-full space-y-4">
             {/* Email Field */}
-            <form.Field 
+            <form.Field
               name="email"
               children={(field) => (
                 <div className="w-full">
@@ -75,7 +75,7 @@ export const LoginPage = () => {
                     placeholder="john@gmail.com"
                     className="w-full p-1  text-amber-50 border pl-3 border-zinc-900  
                              focus:border-red-950 focus:bg-zinc-950/10 focus:rounded-lg 
-                             hover:bg-zinc-950/20 hover:rounded-lg hover:border-none"
+                             hover:bg-zinc-950 high-dpi:bg-zinc-950/20 hover:rounded-lg hover:border-none"
                     value={field.state.value}
                     onChange={(e) => field.handleChange(e.target.value)}
                   />
@@ -100,7 +100,7 @@ export const LoginPage = () => {
                     placeholder="Enter Password "
                     className="w-full p-1 pl-3 text-amber-50 border border-zinc-900  
                              focus:border-red-950 focus:bg-zinc-950/10 focus:rounded-lg 
-                             hover:bg-zinc-950/20 hover:rounded-lg hover:border-none"
+                             hover:bg-zinc-950 high-dpi:bg-zinc-950/20 hover:rounded-lg hover:border-none"
                     value={field.state.value}
                     onChange={(e) => field.handleChange(e.target.value)}
                   />
@@ -132,7 +132,7 @@ export const LoginPage = () => {
             // goes to the above function, pretty simple right?
             onClick={handleSignUp}
             className="mt-3 bg-blue-950 hover:bg-blue-900/20 w-full "
-              >
+          >
             Sign Up
           </Button>
         </div>

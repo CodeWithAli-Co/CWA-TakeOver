@@ -169,7 +169,7 @@ const StatusBadge = ({ status }: { status: any }) => {
 };
 
 // Team member avatars group
-const TeamAvatars = ({ avatars, max = 4 }: { avatars: any, max?: number }) => {
+const TeamAvatars = ({ avatars, max = 4 }: { avatars: any; max?: number }) => {
   const displayedAvatars = avatars.slice(0, max);
   const remaining = avatars.length - max;
 
@@ -459,7 +459,7 @@ const TeamsAndProjects = () => {
 
   return (
     <div className="space-y-6">
-      <Card className="bg-zinc-950/20 rounded-xs border-red-950/30 backdrop-blur-sm">
+      <Card className="bg-zinc-950 high-dpi:bg-zinc-950/20 rounded-xs border-red-950/30 backdrop-blur-sm">
         <CardHeader>
           <div className="flex justify-between items-center">
             <div>

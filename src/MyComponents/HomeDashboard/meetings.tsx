@@ -35,8 +35,8 @@ import { EditMeeting } from "../subForms/MeetingForms/editMeeting";
 
 const Meetings = () => {
   const [moreToggle, setMoreToggle] = useState(false);
-  const [editingMeetingId, setEditingMeetingId] = useState(null) // This state to track which meeting is being edited | blaze: is there a reason why default value is null?
-  const [showEditDialog, setShowEditDialog] = useState(false) //this state will control the visibility of the edit dialog 
+  const [editingMeetingId, setEditingMeetingId] = useState(null); // This state to track which meeting is being edited | blaze: is there a reason why default value is null?
+  const [showEditDialog, setShowEditDialog] = useState(false); //this state will control the visibility of the edit dialog
   const { setIsShowing, isShowing } = SchedImgStore();
   const { data: meetings, error, refetch } = MeetingsQuery();
   if (error) {
@@ -91,8 +91,8 @@ const Meetings = () => {
     <>
       {/* EditMeeting Dialog - its gonna render only when the showDialog is true */}
       {showEditDialog && editingMeetingId && (
-        <EditMeeting 
-          meetingID={editingMeetingId} 
+        <EditMeeting
+          meetingID={editingMeetingId}
           open={showEditDialog}
           setOpen={setShowEditDialog}
           onComplete={() => {
@@ -103,33 +103,35 @@ const Meetings = () => {
       )}
 
       {/* Upcoming Meetings */}
-      <Card className="bg-zinc-950/20 border-red-900/30 overflow-y-auto  sm:col-span-2 lg:col-span-2 rounded-xs">
+      <Card className="bg-zinc-950 high-dpi:bg-zinc-950/20 border-red-900/30 overflow-y-auto  sm:col-span-2 lg:col-span-2 rounded-xs">
         <CardHeader>
           <CardTitle className="text-amber-50 flex justify-between items-center">
             <span>Upcoming Meetings</span>
 
             <div className="flex space-x-2">
               {/* Add Meeting Dialog */}
-              <UserView userRole={["CEO", "COO", "ProjectManager", "Marketing"]}>
+              <UserView
+                userRole={["CEO", "COO", "ProjectManager", "Marketing"]}
+              >
                 <AddMeeting />
               </UserView>
 
               <UserView userRole={["CEO", "COO", "SoftwareDev"]}>
                 {/* Schedule Button */}
-              <motion.div
-                whileHover={{ scale: 1.02 }}
-                whileTap={{ scale: 0.98 }}
-                transition={{ type: "spring", stiffness: 400, damping: 17 }}
-              >
-                <Button
-                  size={"default"}
-                  className="relative bg-red-950/20 hover:bg-red-950/10 w-auto h-auto px-6 py-2  border border-red-500/20 group overflow-hidden rounded-xs"
-                  onClick={() => setIsShowing(!isShowing)}
+                <motion.div
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                  transition={{ type: "spring", stiffness: 400, damping: 17 }}
                 >
-                  <Calendar className="h-4 ww-4"></Calendar>
-                  View Schedule
-                </Button>
-              </motion.div>
+                  <Button
+                    size={"default"}
+                    className="relative bg-red-950/20 hover:bg-red-950/10 w-auto h-auto px-6 py-2  border border-red-500/20 group overflow-hidden rounded-xs"
+                    onClick={() => setIsShowing(!isShowing)}
+                  >
+                    <Calendar className="h-4 ww-4"></Calendar>
+                    View Schedule
+                  </Button>
+                </motion.div>
               </UserView>
             </div>
           </CardTitle>

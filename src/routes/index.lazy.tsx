@@ -7,7 +7,16 @@ import {
 } from "@/components/ui/shadcnComponents/card";
 import { StorageUsageChart } from "@/MyComponents/HomeDashboard/storage";
 
-import { MessageSquare, Users, Terminal, GitGraph, DollarSign, DollarSignIcon, File, CalendarSearch } from "lucide-react";
+import {
+  MessageSquare,
+  Users,
+  Terminal,
+  GitGraph,
+  DollarSign,
+  DollarSignIcon,
+  File,
+  CalendarSearch,
+} from "lucide-react";
 import { motion } from "framer-motion";
 import UserView, { Role } from "@/MyComponents/Reusables/userView";
 import Quotas from "@/MyComponents/HomeDashboard/qoutas";
@@ -54,12 +63,14 @@ const Index = () => {
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
           {/* Upcoming Meetings */}
-          <UserView userRole={[Role.CEO, Role.COO, Role.ProjectManager, Role.Marketing]}>
+          <UserView
+            userRole={[Role.CEO, Role.COO, Role.ProjectManager, Role.Marketing]}
+          >
             <Meetings />
           </UserView>
 
           {/* Quick Actions */}
-          <Card className="bg-zinc-950/20 border-red-900/30 rounded-xs">
+          <Card className="bg-zinc-950 high-dpi:bg-zinc-950/20 border-red-900/30 rounded-xs">
             <CardHeader>
               <CardTitle className="text-amber-50">Quick Actions</CardTitle>
             </CardHeader>
@@ -95,33 +106,31 @@ const Index = () => {
                   </span> */}
                 </div>
                 <div className="group flex flex-col">
-                  <UserView userRole= {[ "CEO", "COO"]}>
-
-                  <QuickActionCard 
-                    title="FinancePrince"
-                    url="/financialDashboard"
-                    icon={DollarSignIcon}
-                  />
+                  <UserView userRole={["CEO", "COO"]}>
+                    <QuickActionCard
+                      title="FinancePrince"
+                      url="/financialDashboard"
+                      icon={DollarSignIcon}
+                    />
                   </UserView>
                 </div>
                 <div className="group flex flex-col">
                   <UserView excludeRoles={"COO"}>
-
-                  <QuickActionCard 
-                   title="Invoicer"
-                   url="/invoiceClients"
-                   icon={File}
-                  />
+                    <QuickActionCard
+                      title="Invoicer"
+                      url="/invoiceClients"
+                      icon={File}
+                    />
                   </UserView>
                 </div>
 
                 <div className="group flex flex-col">
                   <UserView excludeRoles={["COO", "CEO"]}>
-                      <QuickActionCard 
-                        title="Schedule"
-                        url="/schedule"
-                        icon={CalendarSearch}
-                      />
+                    <QuickActionCard
+                      title="Schedule"
+                      url="/schedule"
+                      icon={CalendarSearch}
+                    />
                   </UserView>
                 </div>
 

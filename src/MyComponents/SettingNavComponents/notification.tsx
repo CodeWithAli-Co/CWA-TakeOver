@@ -45,7 +45,7 @@ export const NotificationSetting = () => {
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Email Notifications */}
-        <Card className="bg-zinc-950/20 border-red-900/30 rounded-xs ">
+        <Card className="bg-zinc-950 high-dpi:bg-zinc-950/20 border-red-900/30 rounded-xs ">
           <CardHeader>
             <div className="flex items-center justify-between">
               <CardTitle className="text-amber-50">
@@ -102,14 +102,13 @@ export const NotificationSetting = () => {
                       </p>
                     </div>
                   </div>
-                 
-                    <ToggleSwitch
-                      checked={true}
-                      onChange={(checked) =>
-                        console.log("Switch toggled:", checked)
-                      }
-                    />
-                 
+
+                  <ToggleSwitch
+                    checked={true}
+                    onChange={(checked) =>
+                      console.log("Switch toggled:", checked)
+                    }
+                  />
                 </motion.div>
               ))}
             </div>
@@ -117,7 +116,7 @@ export const NotificationSetting = () => {
         </Card>
 
         {/* In-App Notifications */}
-        <Card className="bg-zinc-950/20 border-red-900/30 rounded-xs ">
+        <Card className="bg-zinc-950 high-dpi:bg-zinc-950/20 border-red-900/30 rounded-xs ">
           <CardHeader>
             <div className="flex items-center justify-between">
               <CardTitle className="text-amber-50">
@@ -179,11 +178,11 @@ export const NotificationSetting = () => {
                     </div>
                   </div>
                   <ToggleSwitch
-                      checked={true}
-                      onChange={(checked) =>
-                        console.log("Switch toggled:", checked)
-                      }
-                    />
+                    checked={true}
+                    onChange={(checked) =>
+                      console.log("Switch toggled:", checked)
+                    }
+                  />
                 </motion.div>
               ))}
             </div>
@@ -192,7 +191,7 @@ export const NotificationSetting = () => {
 
         {/* Notification Log */}
         {/* Recent Notifications */}
-        <Card className="bg-zinc-950/20 border-red-900/30 col-span-2 rounded-xs ">
+        <Card className="bg-zinc-950 high-dpi:bg-zinc-950/20 border-red-900/30 col-span-2 rounded-xs ">
           <CardHeader>
             <div className="flex items-center justify-between">
               <CardTitle className="text-amber-50">

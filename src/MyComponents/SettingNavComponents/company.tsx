@@ -76,7 +76,7 @@ export const CompanySettings = () => {
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Company Profile */}
-          <Card className="bg-zinc-950/20 rounded-xs border-red-900/40 lg:col-span-2">
+          <Card className="bg-zinc-950 high-dpi:bg-zinc-950/20 rounded-xs border-red-900/40 lg:col-span-2">
             <CardHeader>
               <CardTitle className="text-amber-50">Company Profile</CardTitle>
               <CardDescription className="text-amber-50/70">
@@ -99,14 +99,14 @@ export const CompanySettings = () => {
                   <label className="text-sm text-amber-50/70">
                     Company Name
                   </label>
-                  <div className="bg-zinc-950/20 rounded-xs border-red-900/40 text-amber-50 p-2 rounded-md select-none hover:border-red-900">
+                  <div className="bg-zinc-950 high-dpi:bg-zinc-950/20 rounded-xs border-red-900/40 text-amber-50 p-2 rounded-md select-none hover:border-red-900">
                     CodeWithAli Co.
                   </div>
                 </div>
                 <div className="grid gap-2">
                   <label className="text-sm text-amber-50/70">Website</label>
                   <Input
-                    className="bg-zinc-950/20 rounded-xs border-red-900/40 text-white hover:border-red-900  disabled:opacity-100"
+                    className="bg-zinc-950 high-dpi:bg-zinc-950/20 rounded-xs border-red-900/40 text-white hover:border-red-900  disabled:opacity-100"
                     //   placeholder="https://"
                     defaultValue="https://www.codewithali.com/"
                     disabled
@@ -117,7 +117,7 @@ export const CompanySettings = () => {
                     Description
                   </label>
                   <Textarea
-                    className="bg-zinc-950/20 rounded-xs border-red-900/40  min-h-[100px] hover:border-red-900 cursor-not-allowed disabled:white  disabled:opacity-100"
+                    className="bg-zinc-950 high-dpi:bg-zinc-950/20 rounded-xs border-red-900/40  min-h-[100px] hover:border-red-900 cursor-not-allowed disabled:white  disabled:opacity-100"
                     placeholder="Brief company description"
                     defaultValue="We design, develop and host websites for individual clients aiming to strengthen their online presence. As well as for companies seeking a modern, feature-rich platform to boost business growth."
                     disabled
@@ -128,7 +128,7 @@ export const CompanySettings = () => {
           </Card>
 
           {/* Business Hours */}
-          <Card className="bg-zinc-950/20 rounded-xs border-red-900/40">
+          <Card className="bg-zinc-950 high-dpi:bg-zinc-950/20 rounded-xs border-red-900/40">
             <CardHeader>
               <div className="flex items-center justify-between">
                 <CardTitle className="text-amber-50 ">Business Hours</CardTitle>
@@ -153,7 +153,7 @@ export const CompanySettings = () => {
                       </span>
                       <div className="flex items-center space-x-2">
                         <div className="flex items-center">
-                          <span className="bg-zinc-950/20 rounded-xs px-3 py-1 rounded-l border border-gray-700 text-gray-200 hover:border-green-800">
+                          <span className="bg-zinc-950 high-dpi:bg-zinc-950/20 rounded-xs px-3 py-1 rounded-l border border-gray-700 text-gray-200 hover:border-green-800">
                             9:00
                           </span>
                           <span className="bg-emerald-500/20 text-emerald-400 px-2 py-1 text-sm font-medium rounded-r border-y border-r border-gray-700 hover:border-amber-50/70">
@@ -162,7 +162,7 @@ export const CompanySettings = () => {
                         </div>
                         <span className="text-gray-500">to</span>
                         <div className="flex items-center">
-                          <span className="bg-zinc-950/20 rounded-xs px-3 py-1 rounded-l border border-gray-700 text-gray-200 hover:border-red-900 ">
+                          <span className="bg-zinc-950 high-dpi:bg-zinc-950/20 rounded-xs px-3 py-1 rounded-l border border-gray-700 text-gray-200 hover:border-red-900 ">
                             20:00
                           </span>
                           <span className="bg-red-500/20 text-red-400 px-2 py-1 text-sm font-medium rounded-r border-y border-r border-gray-700 hover:border-amber-50/70">
@@ -178,7 +178,7 @@ export const CompanySettings = () => {
           </Card>
 
           {/* Team Management */}
-          <Card className="bg-zinc-950/20 rounded-xs border-red-900/40 lg:col-span-2 ">
+          <Card className="bg-zinc-950 high-dpi:bg-zinc-950/20 rounded-xs border-red-900/40 lg:col-span-2 ">
             <CardHeader>
               <CardTitle className="text-amber-50">Team Management</CardTitle>
               <CardDescription className="text-amber-50/70">
@@ -237,7 +237,7 @@ export const CompanySettings = () => {
           </Card>
 
           {/* Compliance Settings */}
-          <Card className="bg-zinc-950/20 rounded-xs border-red-900/40">
+          <Card className="bg-zinc-950 high-dpi:bg-zinc-950/20 rounded-xs border-red-900/40">
             <CardHeader>
               <CardTitle className="text-amber-50">Compliance</CardTitle>
               <CardDescription className="text-amber-50/70">
@@ -290,7 +290,7 @@ export const CompanySettings = () => {
                 <label className="text-sm text-amber-50/70">
                   Industry Type
                 </label>
-                <select className="bg-zinc-950/20 rounded-xs border-red-900/40 text-amber-50 rounded-lg p-2">
+                <select className="bg-zinc-950 high-dpi:bg-zinc-950/20 rounded-xs border-red-900/40 text-amber-50 rounded-lg p-2">
                   <option value="software" className="bg-black">
                     Software Development
                   </option>
@@ -308,7 +308,7 @@ export const CompanySettings = () => {
               <div className="grid gap-2">
                 <label className="text-sm text-amber-50/70">Year Founded</label>
                 <Input
-                  className="bg-zinc-950/20 rounded-xs border-red-900/40 text-amber-50"
+                  className="bg-zinc-950 high-dpi:bg-zinc-950/20 rounded-xs border-red-900/40 text-amber-50"
                   value="2024"
                   disabled
                 />
@@ -320,7 +320,7 @@ export const CompanySettings = () => {
                 Company Tagline
               </label>
               <Textarea
-                className="bg-zinc-950/20 rounded-xs border-red-900/40 text-amber-50  hover:border-red-900"
+                className="bg-zinc-950 high-dpi:bg-zinc-950/20 rounded-xs border-red-900/40 text-amber-50  hover:border-red-900"
                 placeholder="Beyond existence, we forge excellence."
                 defaultValue="Where innovation meets ambition - We don't just exist, we excel."
                 disabled
@@ -332,14 +332,14 @@ export const CompanySettings = () => {
                 Mission Statement
               </label>
               <Textarea
-                className="bg-zinc-950/20 rounded-xs border-red-900/40 text-amber-50 min-h-[100px]  hover:border-red-900"
+                className="bg-zinc-950 high-dpi:bg-zinc-950/20 rounded-xs border-red-900/40 text-amber-50 min-h-[100px]  hover:border-red-900"
                 defaultValue="To revolutionize software development through innovative solutions that empower businesses to thrive in the digital age, while maintaining the highest standards of quality and security."
               />
             </div>
           </div>
 
           {/* Company Status */}
-          <Card className="bg-zinc-950/20 rounded-xs border-red-900/40 mt-6">
+          <Card className="bg-zinc-950 high-dpi:bg-zinc-950/20 rounded-xs border-red-900/40 mt-6">
             <CardHeader>
               <CardTitle className="text-amber-50">Company Status</CardTitle>
             </CardHeader>
@@ -387,7 +387,7 @@ export const CompanySettings = () => {
           </Card>
 
           {/* Security & Compliance */}
-          <Card className="bg-zinc-950/20 rounded-xs border-red-900/40 mt-6">
+          <Card className="bg-zinc-950 high-dpi:bg-zinc-950/20 rounded-xs border-red-900/40 mt-6">
             <CardHeader>
               <CardTitle className="text-amber-50">
                 Security & Compliance
@@ -441,7 +441,7 @@ export const CompanySettings = () => {
           </Card>
 
           {/* Social & Contact */}
-          <Card className="bg-zinc-950/20 rounded-xs border-red-900/40">
+          <Card className="bg-zinc-950 high-dpi:bg-zinc-950/20 rounded-xs border-red-900/40">
             <CardHeader>
               <CardTitle className="text-amber-50">
                 Social Media & Contact
@@ -460,7 +460,7 @@ export const CompanySettings = () => {
                     <Input
                       value={url}
                       disabled
-                      className="bg-zinc-950/20 rounded-xs border-red-900/40 text-amber-50 hover:border-red-900"
+                      className="bg-zinc-950 high-dpi:bg-zinc-950/20 rounded-xs border-red-900/40 text-amber-50 hover:border-red-900"
                     />
                     <Button
                       variant="outline"
@@ -484,14 +484,14 @@ export const CompanySettings = () => {
                 <Input
                   value="unfold@codewithali.com"
                   disabled
-                  className="bg-zinc-950/20 rounded-xs border-red-900/40 text-amber-50"
+                  className="bg-zinc-950 high-dpi:bg-zinc-950/20 rounded-xs border-red-900/40 text-amber-50"
                 />
               </div>
             </CardContent>
           </Card>
 
           {/* Newsletter & KPIs */}
-          <Card className="bg-zinc-950/20 rounded-xs border-red-900/40 mt-6">
+          <Card className="bg-zinc-950 high-dpi:bg-zinc-950/20 rounded-xs border-red-900/40 mt-6">
             <CardHeader>
               <CardTitle className="text-amber-50">
                 Newsletter & Performance
@@ -520,11 +520,11 @@ export const CompanySettings = () => {
                           {item.type}
                         </span>
                         <ToggleSwitch
-                      checked={true}
-                      onChange={(checked) =>
-                        console.log("Switch toggled:", checked)
-                      }
-                    />
+                          checked={true}
+                          onChange={(checked) =>
+                            console.log("Switch toggled:", checked)
+                          }
+                        />
                       </motion.div>
                     ))}
                   </div>

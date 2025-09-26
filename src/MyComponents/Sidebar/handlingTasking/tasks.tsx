@@ -33,9 +33,8 @@ import { AddTodo } from "./addTodo";
 
 //task types.ts
 
-
-export type TaskPriority = 'high' | 'medium' | 'low';
-export type TaskStatus = 'to-do' | 'in-progress' | 'done';
+export type TaskPriority = "high" | "medium" | "low";
+export type TaskStatus = "to-do" | "in-progress" | "done";
 
 export interface TaskComment {
   id: number;
@@ -47,15 +46,15 @@ export interface TaskComment {
 export interface TaskBlocker {
   id: number;
   description: string;
-  severity: 'critical' | 'moderate' | 'minor';
-  status: 'active' | 'resolved';
+  severity: "critical" | "moderate" | "minor";
+  status: "active" | "resolved";
 }
 
 export interface TaskDependency {
   id: number;
   taskId: number;
   taskTitle: string;
-  type: 'blocks' | 'blocked-by' | 'related';
+  type: "blocks" | "blocked-by" | "related";
 }
 
 export interface Task {
@@ -79,7 +78,6 @@ export interface Task {
   estimatedTime?: string;
   timeSpent?: string;
 }
-
 
 // Component for displaying task blockers
 const TaskBlockerItem: React.FC<{ blocker: TaskBlocker }> = ({ blocker }) => (
@@ -191,7 +189,6 @@ const TaskItem: React.FC<{ task: TodosInterface }> = ({ task }) => {
                   onClick={() => setIsExpanded(!isExpanded)}
                 >
                   {task.title}
-                  
                 </span>
                 <TaskPriorityBadge priority={task.priority} />
               </div>
@@ -329,18 +326,15 @@ const TaskSettings: React.FC = () => {
   return (
     <div className="min-h-screen bg-black  py-6 px-8">
       <div className="mb-6">
-        <h2 className="text-3xl font-bold tracking-tight text-white">
-          Tasks
-        </h2>
+        <h2 className="text-3xl font-bold tracking-tight text-white">Tasks</h2>
         <p className="text-slate-200">{allCount} total tasks</p>
       </div>
       <div className="justify-self-end">
-
-      <AddTodo Users={AllEmployees || []} />
+        <AddTodo Users={AllEmployees || []} />
       </div>
       {/* Stats Overview */}
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-4 mb-6">
-        <Card className="bg-zinc-950/20 rounded-xs border-red-950/20">
+        <Card className="bg-zinc-950 high-dpi:bg-zinc-950/20 rounded-xs border-red-950/20">
           <CardContent className="p-4">
             <div className="flex items-center gap-2 text-red-200/60">
               <CheckCircle className="h-4 w-4 text-red-900" />
@@ -349,7 +343,7 @@ const TaskSettings: React.FC = () => {
             <p className="text-2xl font-bold text-red-200 mt-2">{doneCount}</p>
           </CardContent>
         </Card>
-        <Card className="bg-zinc-950/20 rounded-xs border-red-950/20">
+        <Card className="bg-zinc-950 high-dpi:bg-zinc-950/20 rounded-xs border-red-950/20">
           <CardContent className="p-4">
             <div className="flex items-center gap-2 text-red-200/60">
               <Clock className="h-4 w-4 text-blue-900" />
@@ -360,7 +354,7 @@ const TaskSettings: React.FC = () => {
             </p>
           </CardContent>
         </Card>
-        <Card className="bg-zinc-950/20 rounded-xs border-red-950/20">
+        <Card className="bg-zinc-950 high-dpi:bg-zinc-950/20 rounded-xs border-red-950/20">
           <CardContent className="p-4">
             <div className="flex items-center gap-2 text-red-200/60">
               <AlertCircle className="h-4 w-4 text-purple-900" />
@@ -369,7 +363,7 @@ const TaskSettings: React.FC = () => {
             <p className="text-2xl font-bold text-red-200 mt-2">{todoCount}</p>
           </CardContent>
         </Card>
-        <Card className="bg-zinc-950/20 rounded-xs border-red-950/20">
+        <Card className="bg-zinc-950 high-dpi:bg-zinc-950/20 rounded-xs border-red-950/20">
           <CardContent className="p-4">
             <div className="flex items-center gap-2 text-red-200/60">
               <Activity className="h-4 w-4 text-green-900" />
@@ -381,7 +375,7 @@ const TaskSettings: React.FC = () => {
       </div>
 
       {/* Task List */}
-      <Card className="bg-zinc-950/20 rounded-xs border-red-950/20">
+      <Card className="bg-zinc-950 high-dpi:bg-zinc-950/20 rounded-xs border-red-950/20">
         <CardHeader className="flex flex-row items-center justify-between">
           <CardTitle className="text-red-200">Task Management</CardTitle>
           <Input

@@ -33,7 +33,12 @@ interface Credential {
   folder?: string;
 }
 
-export const CompanyCreds = ({ folder = "default" }: { folder?: string, className?: string }) => {
+export const CompanyCreds = ({
+  folder = "default",
+}: {
+  folder?: string;
+  className?: string;
+}) => {
   // Track expanded state for each card
   const [expandedCards, setExpandedCards] = useState<number[]>([]);
   const [showDecPass, setShowDecPass] = useState("");
@@ -109,13 +114,11 @@ export const CompanyCreds = ({ folder = "default" }: { folder?: string, classNam
             to="/detailFolders"
             className="bg-red-950/20 flex justify-center items-center border p-2 pr-5 border-red-950 hover:bg-red-950 text-white group hover:text-black"
           >
-
             <Folder className="h-4 w-4 text-white" />
             <ChevronRight className="h-4 w-5 text-white group-hover:text-black " />
 
-         
-           <span className="text-bold font-26"> CCC </span>
-           {/* {folder} */}
+            <span className="text-bold font-26"> CCC </span>
+            {/* {folder} */}
           </Link>
         </UserView>
         <h2 className="text-3xl font-bold">Accounts</h2>
@@ -134,7 +137,7 @@ export const CompanyCreds = ({ folder = "default" }: { folder?: string, classNam
                 // Cred Card
                 <Card
                   key={cred.id}
-                  className={`bg-zinc-950/20 rounded-xs  border-zinc-800 transition-all duration-300 text-white/80 ${
+                  className={`bg-zinc-950 high-dpi:bg-zinc-950/20 rounded-xs  border-zinc-800 transition-all duration-300 text-white/80 ${
                     isExpanded ? "min-h-[300px]" : "min-h-[180px]"
                   }`}
                 >
@@ -245,7 +248,7 @@ export const CompanyCreds = ({ folder = "default" }: { folder?: string, classNam
               {folder === cred.folder && cred.folder !== "default" && (
                 <Card
                   key={cred.id}
-                  className={` bg-zinc-950/20 rounded-xs border-zinc-800 transition-all duration-300 text-white/80 ${
+                  className={` bg-zinc-950 high-dpi:bg-zinc-950/20 rounded-xs border-zinc-800 transition-all duration-300 text-white/80 ${
                     isExpanded ? "min-h-[300px]" : "min-h-[180px]"
                   }`}
                 >

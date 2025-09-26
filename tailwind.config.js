@@ -14,6 +14,10 @@ export default {
 			listStyleType: {
 				none: 'none',
 		},
+		screens:  {
+			'high-dpi': {'raw'  : '(min-resolution: 144dpi)' },
+
+		},
 
   		colors: {
 			border: "hsl(var(--border))",

@@ -100,7 +100,7 @@ function GroupChats() {
   }
 
   // Need to work on scrolling to bottom when new chat is sent
-  
+
   // if (GroupName === "General") {
   //       supabase
   //         .channel("dm")
@@ -144,7 +144,7 @@ function GroupChats() {
   //     }
 
   return (
-    <div className="flex h-[100dvh] w-full bg-zinc-950/20">
+    <div className="flex h-[100dvh] w-full bg-zinc-950 high-dpi:bg-zinc-950/20">
       {/* Mobile Menu Button - Adjusted positioning */}
       <Button
         variant="ghost"
