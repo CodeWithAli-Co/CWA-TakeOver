@@ -178,13 +178,13 @@ const TeamAvatars = ({ avatars, max = 4 }: { avatars: any; max?: number }) => {
       {displayedAvatars.map((avatar: any, idx: any) => (
         <Avatar
           key={idx}
-          className="h-7 w-7 border-2 border-black/40 bg-red-900 text-red-200 text-xs"
+          className="h-7 w-7 border-2 border-black/40 bg-red-900 text-white text-xs"
         >
           <AvatarFallback>{avatar}</AvatarFallback>
         </Avatar>
       ))}
       {remaining > 0 && (
-        <Avatar className="h-7 w-7 border-2 border-black/40 bg-red-950 text-red-200 text-xs">
+        <Avatar className="h-7 w-7 border-2 border-black/40 bg-red-950 text-white text-xs">
           <AvatarFallback>+{remaining}</AvatarFallback>
         </Avatar>
       )}
@@ -200,18 +200,18 @@ const TeamCard = ({ team }: { team: any }) => (
   >
     <div className="p-4">
       <div className="flex justify-between items-start mb-3">
-        <h3 className="text-lg font-semibold text-red-200">{team.name}</h3>
+        <h3 className="text-lg font-semibold text-white">{team.name}</h3>
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button
               variant="ghost"
               size="icon"
-              className="text-red-200/60 hover:text-red-200 hover:bg-red-950/20"
+              className="text-white/60 hover:text-white hover:bg-red-950/20"
             >
               <MoreHorizontal className="h-4 w-4" />
             </Button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent className="bg-black/95 border-red-950/30 text-red-200">
+          <DropdownMenuContent className="bg-black/95 border-red-950/30 text-white">
             <DropdownMenuLabel>Team Actions</DropdownMenuLabel>
             <DropdownMenuSeparator className="bg-red-950/30" />
             <DropdownMenuItem className="hover:bg-red-950/30">
@@ -227,14 +227,14 @@ const TeamCard = ({ team }: { team: any }) => (
           </DropdownMenuContent>
         </DropdownMenu>
       </div>
-      <p className="text-red-200/60 text-sm mb-4">{team.description}</p>
+      <p className="text-white/60 text-sm mb-4">{team.description}</p>
       <div className="flex justify-between items-center">
         <div className="flex items-center gap-4">
-          <div className="flex items-center text-red-200/60 text-sm">
+          <div className="flex items-center text-white/60 text-sm">
             <Users2 className="h-4 w-4 mr-1 text-red-400" />
             {team.members} Members
           </div>
-          <div className="flex items-center text-red-200/60 text-sm">
+          <div className="flex items-center text-white/60 text-sm">
             <Briefcase className="h-4 w-4 mr-1 text-red-400" />
             {team.projects} Projects
           </div>
@@ -256,23 +256,23 @@ const ProjectCard = ({ project }: { project: any }) => {
     >
       <div className="p-4">
         <div className="flex justify-between items-start mb-3">
-          <h3 className="text-lg font-semibold text-red-200">{project.name}</h3>
+          <h3 className="text-lg font-semibold text-white">{project.name}</h3>
           <StatusBadge status={project.status} />
         </div>
-        <p className="text-red-200/60 text-sm mb-4">{project.description}</p>
+        <p className="text-white/60 text-sm mb-4">{project.description}</p>
 
         <div className="space-y-3">
           <div className="flex justify-between text-sm mb-1">
-            <span className="text-red-200/70">Team: {project.team}</span>
-            <span className="text-red-200/70">
+            <span className="text-white/70">Team: {project.team}</span>
+            <span className="text-white/70">
               Deadline: {project.deadline}
             </span>
           </div>
 
           <div>
             <div className="flex justify-between text-sm mb-1">
-              <span className="text-red-200/70">Completion</span>
-              <span className="text-red-200">{project.completion}%</span>
+              <span className="text-white/70">Completion</span>
+              <span className="text-white">{project.completion}%</span>
             </div>
             <div className="h-2 bg-red-950/20 rounded-full overflow-hidden">
               <motion.div
@@ -313,41 +313,41 @@ const CreateTeamDialog = () => {
           Create Team
         </Button>
       </DialogTrigger>
-      <DialogContent className="bg-black/95 border-red-950/30 text-red-200">
+      <DialogContent className="bg-black/95 border-red-950/30 text-white">
         <DialogHeader>
-          <DialogTitle className="text-red-200 text-xl">
+          <DialogTitle className="text-white text-xl">
             Create New Team
           </DialogTitle>
-          <DialogDescription className="text-red-200/60">
+          <DialogDescription className="text-white/60">
             Create a new team and add members to collaborate on projects.
           </DialogDescription>
         </DialogHeader>
         <div className="grid gap-4 py-4">
           <div className="grid gap-2">
-            <label className="text-sm text-red-200">Team Name</label>
+            <label className="text-sm text-white">Team Name</label>
             <Input
-              className="bg-black/40 border-red-950/30 text-red-200"
+              className="bg-black/40 border-red-950/30 text-white"
               placeholder="Enter team name..."
             />
           </div>
           <div className="grid gap-2">
-            <label className="text-sm text-red-200">Description</label>
+            <label className="text-sm text-white">Description</label>
             <Input
-              className="bg-black/40 border-red-950/30 text-red-200"
+              className="bg-black/40 border-red-950/30 text-white"
               placeholder="Team description..."
             />
           </div>
           <div className="grid gap-2">
-            <label className="text-sm text-red-200">Initial Members</label>
+            <label className="text-sm text-white">Initial Members</label>
             <div className="flex items-center gap-2">
               <Input
-                className="bg-black/40 border-red-950/30 text-red-200"
+                className="bg-black/40 border-red-950/30 text-white"
                 placeholder="Search members..."
               />
               <Button
                 size="icon"
                 variant="outline"
-                className="border-red-950/30 text-red-200 hover:bg-red-950/20"
+                className="border-red-950/30 text-white hover:bg-red-950/20"
               >
                 <Plus className="h-4 w-4" />
               </Button>
@@ -358,7 +358,7 @@ const CreateTeamDialog = () => {
           <Button
             variant="outline"
             onClick={() => setOpen(false)}
-            className="border-red-800/30 text-red-200 hover:bg-red-950/20"
+            className="border-red-800/30 text-white hover:bg-red-950/20"
           >
             Cancel
           </Button>
@@ -393,41 +393,41 @@ const CreateProjectDialog = () => {
           New Project
         </Button>
       </DialogTrigger>
-      <DialogContent className="bg-black/95 border-red-950/30 text-red-200">
+      <DialogContent className="bg-black/95 border-red-950/30 text-white">
         <DialogHeader>
-          <DialogTitle className="text-red-200 text-xl">
+          <DialogTitle className="text-white text-xl">
             Create New Project
           </DialogTitle>
-          <DialogDescription className="text-red-200/60">
+          <DialogDescription className="text-white/60">
             Add a new project and assign it to a team.
           </DialogDescription>
         </DialogHeader>
         <div className="grid gap-4 py-4">
           <div className="grid gap-2">
-            <label className="text-sm text-red-200">Project Name</label>
+            <label className="text-sm text-white">Project Name</label>
             <Input
-              className="bg-black/40 border-red-950/30 text-red-200"
+              className="bg-black/40 border-red-950/30 text-white"
               placeholder="Enter project name..."
             />
           </div>
           <div className="grid gap-2">
-            <label className="text-sm text-red-200">Description</label>
+            <label className="text-sm text-white">Description</label>
             <Input
-              className="bg-black/40 border-red-950/30 text-red-200"
+              className="bg-black/40 border-red-950/30 text-white"
               placeholder="Project description..."
             />
           </div>
           <div className="grid gap-2">
-            <label className="text-sm text-red-200">Assign Team</label>
+            <label className="text-sm text-white">Assign Team</label>
             <Input
-              className="bg-black/40 border-red-950/30 text-red-200"
+              className="bg-black/40 border-red-950/30 text-white"
               placeholder="Select team..."
             />
           </div>
           <div className="grid gap-2">
-            <label className="text-sm text-red-200">Deadline</label>
+            <label className="text-sm text-white">Deadline</label>
             <Input
-              className="bg-black/40 border-red-950/30 text-red-200"
+              className="bg-black/40 border-red-950/30 text-white"
               type="date"
             />
           </div>
@@ -436,7 +436,7 @@ const CreateProjectDialog = () => {
           <Button
             variant="outline"
             onClick={() => setOpen(false)}
-            className="border-red-800/30 text-red-200 hover:bg-red-950/20"
+            className="border-red-800/30 text-white hover:bg-red-950/20"
           >
             Cancel
           </Button>
@@ -467,7 +467,7 @@ const TeamsAndProjects = () => {
                 <Users2 className="h-5 w-5 mr-2 text-red-500" />
                 Teams & Projects
               </CardTitle>
-              <CardDescription className="text-red-200/60">
+              <CardDescription className="text-white/60">
                 Manage your teams and project assignments
               </CardDescription>
             </div>
@@ -490,24 +490,24 @@ const TeamsAndProjects = () => {
               <TabsList className="bg-black/40 border border-red-950/20">
                 <TabsTrigger
                   value="teams"
-                  className="data-[state=active]:bg-red-950/20 data-[state=active]:text-red-200 hover:text-red-200 text-red-200/60"
+                  className="data-[state=active]:bg-red-950/20 data-[state=active]:text-white hover:text-white text-white/60"
                 >
                   <Users2 className="h-4 w-4 mr-2" />
                   Teams
                 </TabsTrigger>
                 <TabsTrigger
                   value="projects"
-                  className="data-[state=active]:bg-red-950/20 data-[state=active]:text-red-200 hover:text-red-200 text-red-200/60"
+                  className="data-[state=active]:bg-red-950/20 data-[state=active]:text-white hover:text-white text-white/60"
                 >
                   <Briefcase className="h-4 w-4 mr-2" />
                   Projects
                 </TabsTrigger>
               </TabsList>
               <div className="relative">
-                <Search className="h-4 w-4 absolute left-3 top-3 text-red-200/60" />
+                <Search className="h-4 w-4 absolute left-3 top-3 text-white/60" />
                 <Input
                   placeholder={`Search ${activeTab}...`}
-                  className="bg-black/40 border-red-950/30 text-red-200 pl-10 w-[250px]"
+                  className="bg-black/40 border-red-950/30 text-white pl-10 w-[250px]"
                 />
               </div>
             </div>

@@ -156,7 +156,7 @@ export default function SettingsPage() {
               <h2 className="text-2xl md:text-3xl font-bold tracking-tight text-white">
                 Settings
               </h2>
-              <p className="text-red-200/60 text-sm md:text-base">
+              <p className="text-slate-300 text-sm md:text-base">
                 Manage your account settings and preferences.
               </p>
             </div>
@@ -178,7 +178,7 @@ export default function SettingsPage() {
                   <DropdownMenuTrigger asChild>
                     <Button
                       variant="outline"
-                      className="w-full justify-between bg-black/40 text-red-200/60 border border-red-950/20"
+                      className="w-full justify-between bg-black/40 text-white border border-red-950/20"
                     >
                       <div className="flex items-center">
                         {(() => {
@@ -199,7 +199,7 @@ export default function SettingsPage() {
                       <Menu className="h-4 w-4 ml-2" />
                     </Button>
                   </DropdownMenuTrigger>
-                  <DropdownMenuContent className="w-[94vw] max-w-md bg-black/90 border-red-950/30 text-red-200">
+                  <DropdownMenuContent className="w-[94vw] max-w-md bg-black/90 border-red-950/30 text-white">
                     {settingsTabs.map((tab) => (
                       <DropdownMenuItem
                         key={tab.value}
@@ -218,13 +218,13 @@ export default function SettingsPage() {
             {/* Tablet & desktop horizontal tabs with scroll capability */}
             {!isMobile && (
               <div className="overflow-x-auto">
-                <TabsList className="h-12 w-full justify-start space-x-2 bg-black/40 p-1 text-red-200/60 border border-red-950/20 flex-nowrap">
+                <TabsList className="h-12 w-full justify-start space-x-2 bg-black/40 p-1 text-white border border-red-950/20 flex-nowrap">
                   {settingsTabs.map((tab) => (
                     <TabsTrigger
                       key={tab.value}
                       value={tab.value}
-                      className="data-[state=active]:bg-red-950/20 data-[state=active]:text-red-200 
-                              hover:text-red-200 transition-colors duration-200 flex items-center space-x-2 px-3 py-2 whitespace-nowrap"
+                      className="data-[state=active]:bg-red-950/20 data-[state=active]:text-white 
+                              hover:text-white transition-colors duration-200 flex items-center space-x-2 px-3 py-2 whitespace-nowrap"
                     >
                       <tab.icon className="h-4 w-4" />
                       <span className={isTablet ? "hidden lg:inline" : ""}>
@@ -251,7 +251,7 @@ export default function SettingsPage() {
                       <CardTitle className="text-xl md:text-2xl text-white">
                         Profile Settings
                       </CardTitle>
-                      <CardDescription className="text-xs md:text-sm text-red-200/60">
+                      <CardDescription className="text-xs md:text-sm text-white">
                         Manage your profile information and preferences.
                       </CardDescription>
                     </CardHeader>
@@ -268,7 +268,7 @@ export default function SettingsPage() {
                                 name="name"
                                 render={({ field }) => (
                                   <FormItem>
-                                    <FormLabel className="text-red-200">
+                                    <FormLabel className="text-white">
                                       <UserCircle className="h-4 w-4 inline mr-2" />
                                       Name
                                     </FormLabel>
@@ -279,7 +279,7 @@ export default function SettingsPage() {
                                                 focus:border-red-500 focus:ring-red-500/20"
                                       />
                                     </FormControl>
-                                    <FormDescription className="text-xs sm:text-sm text-red-200/60">
+                                    <FormDescription className="text-xs sm:text-sm text-white">
                                       This is your public display name.
                                     </FormDescription>
                                     <FormMessage className="text-red-500" />
@@ -295,11 +295,11 @@ export default function SettingsPage() {
                                 render={({ field }) => (
                                   <FormItem className="flex flex-col sm:flex-row justify-between sm:items-center space-y-2 sm:space-y-0">
                                     <div>
-                                      <FormLabel className="text-red-200">
+                                      <FormLabel className="text-white">
                                         <Bell className="h-4 w-4 inline mr-2" />
                                         Email Notifications
                                       </FormLabel>
-                                      <FormDescription className="text-xs sm:text-sm text-red-200/60">
+                                      <FormDescription className="text-xs sm:text-sm text-white">
                                         Receive email notifications about
                                         account activity.
                                       </FormDescription>
@@ -325,11 +325,11 @@ export default function SettingsPage() {
                                 render={({ field }) => (
                                   <FormItem className="flex flex-col sm:flex-row justify-between sm:items-center space-y-2 sm:space-y-0">
                                     <div>
-                                      <FormLabel className="text-red-200">
+                                      <FormLabel className="text-white">
                                         <Moon className="h-4 w-4 inline mr-2" />
                                         Dark Mode
                                       </FormLabel>
-                                      <FormDescription className="text-xs sm:text-sm text-red-200/60">
+                                      <FormDescription className="text-xs sm:text-sm text-white">
                                         Toggle between light and dark mode.
                                       </FormDescription>
                                     </div>
@@ -399,7 +399,7 @@ export default function SettingsPage() {
                         <CardTitle className="text-xl md:text-2xl text-white">
                           Integrations
                         </CardTitle>
-                        <CardDescription className="text-xs md:text-sm text-red-200/60">
+                        <CardDescription className="text-xs md:text-sm text-white">
                           Configure and manage third-party integrations.
                         </CardDescription>
                       </CardHeader>
@@ -416,7 +416,7 @@ export default function SettingsPage() {
                         <CardTitle className="text-xl md:text-2xl text-white">
                           Billing & Subscription
                         </CardTitle>
-                        <CardDescription className="text-xs md:text-sm text-red-200/60">
+                        <CardDescription className="text-xs md:text-sm text-white">
                           Manage billing information and subscription details.
                         </CardDescription>
                       </CardHeader>
@@ -433,7 +433,7 @@ export default function SettingsPage() {
                         <CardTitle className="text-xl md:text-2xl text-white">
                           Notification Settings
                         </CardTitle>
-                        <CardDescription className="text-xs md:text-sm text-red-200/60">
+                        <CardDescription className="text-xs md:text-sm text-white">
                           Customize your notification preferences.
                         </CardDescription>
                       </CardHeader>
@@ -450,7 +450,7 @@ export default function SettingsPage() {
                         <CardTitle className="text-xl md:text-2xl text-white">
                           Security & Access Logs
                         </CardTitle>
-                        <CardDescription className="text-xs md:text-sm text-red-200/60">
+                        <CardDescription className="text-xs md:text-sm text-white">
                           Manage security settings and view access history.
                         </CardDescription>
                       </CardHeader>
