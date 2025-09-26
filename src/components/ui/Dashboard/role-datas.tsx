@@ -11,6 +11,7 @@ import {
   Target,
   File,
   CalendarDays,
+  Bot,
 } from "lucide-react";
 import { title } from "process";
 
@@ -652,8 +653,13 @@ export const cooData = {
           title: "Mod logs",
           url: "/mod_logs",
         },
+           {
+          title: "Bio",
+          url: "/bio"
+        },
       ],
     },
+    
     // {
     //   title: "Bot Management",
     //   url: "/bot",
@@ -803,6 +809,10 @@ export const ceoData = {
         {
           title: "Mod logs",
           url: "/mod_logs",
+        },
+        {
+          title: "Bio",
+          url: "/bio"
         },
         {
           title: "Cold Email Generator",

@@ -58,6 +58,7 @@ import ReportSettings from "../SettingNavComponents/reports";
 import TeamsAndProjects from "../SettingNavComponents/TeamProject";
 import ToggleSwitch from "../Reusables/switchUI";
 import UserView from "../Reusables/userView";
+import BillingPage from "../Beginning/billingPage";
 
 const formSchema = z.object({
   name: z.string().min(2).max(50),
@@ -422,6 +423,7 @@ export default function SettingsPage() {
                       </CardHeader>
                       <CardContent className="p-4 sm:p-6">
                         {/* Billing content goes here */}
+                        <BillingPage />
                       </CardContent>
                     </Card>
                   </TabsContent>

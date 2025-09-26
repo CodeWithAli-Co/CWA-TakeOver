@@ -172,7 +172,7 @@ function BiotechDashboard() {
     return matchesSearch && matchesFilter;
   });
 
-  const getStatusColor = (status) => {
+  const getStatusColor = (status : any) => {
     switch(status) {
       case "In Progress": return "bg-yellow-600 text-yellow-100";
       case "Completed": return "bg-green-700 text-green-100";
@@ -185,7 +185,7 @@ function BiotechDashboard() {
     }
   };
 
-  const getPriorityColor = (priority) => {
+  const getPriorityColor = (priority : any) => {
     switch(priority) {
       case "High": return "bg-red-700 text-red-100";
       case "Medium": return "bg-yellow-600 text-yellow-100";
