@@ -333,9 +333,9 @@ import { Sidebar } from "../Scheduling/sidebar";
 import AdminModeComponent, { AdminModeToggle, filterEventsByAdminMode } from "../Scheduling/AdminMode";
 
 // Declare global window interface to support our global functions
-declare global {
-  interface Window {
-    editShift?: (event: any) => void;
-    setShowAddShiftModal?: (value: boolean) => void;
-  }
-}
+// declare global {
+//   interface Window {
+//     editShift?: (event: EditingEvent) => void;
+//     setShowAddShiftModal?: (value: boolean) => void;
+//   }
+// }
