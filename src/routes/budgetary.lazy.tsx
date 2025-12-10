@@ -4,39 +4,35 @@ import { motion, AnimatePresence } from 'framer-motion'
 import {
   Terminal,
   Zap,
-
   GitBranch,
   AlertTriangle,
   CheckCircle,
- 
   Target,
   Rocket,
   Brain,
   Code2,
-
   TrendingUp,
   Play,
   Pause,
   RotateCcw,
-
   Lightbulb,
-
   Flame,
   Trophy,
-
   Copy,
   Check,
   X,
   Plus,
-
   BarChart3,
-
   Bug,
   MessageSquare,
-
   ShieldAlert,
-
+  Calendar,
+  Clock,
+  ChevronLeft,
+  ChevronRight,
+  BookOpen,
 } from 'lucide-react'
+import { Resource, ResourcesStation } from '@/MyComponents/ResourceStation'
 
 // ============================================================================
 // TYPES
@@ -108,6 +104,17 @@ interface QuickCapture {
   processed: boolean
 }
 
+interface ScheduleEvent {
+  id: string
+  title: string
+  description?: string
+  date: string // YYYY-MM-DD
+  startTime: string // HH:mm (24-hour)
+  duration: number // in minutes
+  category: 'work' | 'personal' | 'meeting' | 'gym' | 'other'
+  completed: boolean
+}
+
 // ============================================================================
 // STORAGE
 // ============================================================================
@@ -148,6 +155,7 @@ const initialDecisions: Decision[] = [
     tags: ['architecture', 'strategy', 'yc'],
   },
 ]
+
 
 const initialPatterns: CodePattern[] = [
   {
@@ -213,14 +221,69 @@ const systemStatuses: SystemStatus[] = [
 ]
 
 // ============================================================================
+// HELPER FUNCTIONS
+// ============================================================================
+
+const formatDate = (date: Date): string => {
+  const year = date.getFullYear()
+  const month = String(date.getMonth() + 1).padStart(2, '0')
+  const day = String(date.getDate()).padStart(2, '0')
+  return `${year}-${month}-${day}`
+}
+
+const getDayName = (date: Date): string => {
+  return date.toLocaleDateString('en-US', { weekday: 'long' })
+}
+
+const getWeekDays = (startDate: Date): Date[] => {
+  const days: Date[] = []
+  for (let i = 0; i < 7; i++) {
+    const day = new Date(startDate)
+    day.setDate(startDate.getDate() + i)
+    days.push(day)
+  }
+  return days
+}
+
+const getStartOfWeek = (date: Date): Date => {
+  const d = new Date(date)
+  const day = d.getDay()
+  const diff = d.getDate() - day
+  return new Date(d.setDate(diff))
+}
+
+const timeToMinutes = (time: string): number => {
+  const [hours, minutes] = time.split(':').map(Number)
+  return hours * 60 + minutes
+}
+
+const checkConflict = (event1: ScheduleEvent, event2: ScheduleEvent): boolean => {
+  if (event1.date !== event2.date) return false
+  
+  const start1 = timeToMinutes(event1.startTime)
+  const end1 = start1 + event1.duration
+  const start2 = timeToMinutes(event2.startTime)
+  const end2 = start2 + event2.duration
+  
+  return (start1 < end2 && end1 > start2)
+}
+
+// ============================================================================
 // COMPONENT
 // ============================================================================
 
 const SimplicityMissionControl = () => {
+
+  const [resources, setResources] = useState<Resource[]>(() => {
+  const saved = loadState()
+  return saved?.resources || []
+})
+
+
   // ===== STATE =====
-  const [activeStation, setActiveStation] = useState<
-    'command' | 'focus' | 'decisions' | 'patterns' | 'warroom' | 'metrics'
-  >('command')
+const [activeStation, setActiveStation] = useState<
+  'command' | 'focus' | 'decisions' | 'patterns' | 'warroom' | 'metrics' | 'schedule' | 'resources'
+>('command')
 
   const [currentTime, setCurrentTime] = useState(new Date())
   const [commandInput, setCommandInput] = useState('')
@@ -234,11 +297,27 @@ const SimplicityMissionControl = () => {
     const saved = loadState()
     return saved?.patterns || initialPatterns
   })
+  const [scheduleEvents, setScheduleEvents] = useState<ScheduleEvent[]>(() => {
+    const saved = loadState()
+    return saved?.scheduleEvents || []
+  })
 
   // Focus Mode State
   const [focusSession, setFocusSession] = useState<FocusSession | null>(null)
   const [focusTimeLeft, setFocusTimeLeft] = useState(25 * 60) // 25 min in seconds
   const [focusInput, setFocusInput] = useState({ task: '', project: 'simplicity-web' })
+
+  // Schedule State
+  const [currentWeekStart, setCurrentWeekStart] = useState(getStartOfWeek(new Date()))
+  const [showNewEvent, setShowNewEvent] = useState(false)
+  const [selectedDate, setSelectedDate] = useState(formatDate(new Date()))
+  const [newEvent, setNewEvent] = useState({
+    title: '',
+    description: '',
+    startTime: '09:00',
+    duration: 60,
+    category: 'work' as ScheduleEvent['category'],
+  })
 
   // Quick Capture
   const [captureInput, setCaptureInput] = useState('')
@@ -300,9 +379,9 @@ const SimplicityMissionControl = () => {
   }, [focusSession?.status, focusTimeLeft])
 
   // Persist State
-  useEffect(() => {
-    saveState({ decisions, patterns, quickCaptures })
-  }, [decisions, patterns, quickCaptures])
+useEffect(() => {
+  saveState({ decisions, patterns, quickCaptures, scheduleEvents, resources })
+}, [decisions, patterns, quickCaptures, scheduleEvents, resources])
 
   // Keyboard shortcuts
   useEffect(() => {
@@ -322,6 +401,7 @@ const SimplicityMissionControl = () => {
         setShowCapture(false)
         setShowNewDecision(false)
         setShowNewPattern(false)
+        setShowNewEvent(false)
       }
     }
 
@@ -352,6 +432,7 @@ Available Commands:
   run <project>       - Start dev server
   metrics             - Show key metrics
   yc                  - Show YC checklist
+  schedule            - Show today's schedule
   clear               - Clear terminal
   
 Shortcuts:
@@ -386,6 +467,23 @@ Shortcuts:
           setActiveStation('focus')
           output = `🎯 Focus session started: "${task}"\n   25 minutes on the clock. Let's go.`
         }
+        break
+
+      case 'schedule':
+        const today = formatDate(new Date())
+        const todayEvents = scheduleEvents
+          .filter(e => e.date === today)
+          .sort((a, b) => timeToMinutes(a.startTime) - timeToMinutes(b.startTime))
+        
+        if (todayEvents.length === 0) {
+          output = 'No events scheduled for today.'
+        } else {
+          output = `Today's Schedule (${today}):\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n` +
+            todayEvents.map(e => 
+              `  ${e.startTime} - ${e.title} (${e.duration}min) ${e.completed ? '✓' : ''}`
+            ).join('\n')
+        }
+        setActiveStation('schedule')
         break
 
       case 'deploy':
@@ -554,6 +652,48 @@ YC W26 Application Checklist
     setShowNewPattern(false)
   }
 
+  const handleAddEvent = () => {
+    if (!newEvent.title.trim()) return
+
+    const event: ScheduleEvent = {
+      id: `event-${Date.now()}`,
+      title: newEvent.title,
+      description: newEvent.description,
+      date: selectedDate,
+      startTime: newEvent.startTime,
+      duration: newEvent.duration,
+      category: newEvent.category,
+      completed: false,
+    }
+
+    // Check for conflicts
+    const hasConflict = scheduleEvents.some(existing => checkConflict(event, existing))
+    if (hasConflict) {
+      alert('⚠️ Schedule conflict detected! This event overlaps with an existing one.')
+      return
+    }
+
+    setScheduleEvents(prev => [...prev, event])
+    setNewEvent({
+      title: '',
+      description: '',
+      startTime: '09:00',
+      duration: 60,
+      category: 'work',
+    })
+    setShowNewEvent(false)
+  }
+
+  const toggleEventComplete = (eventId: string) => {
+    setScheduleEvents(prev =>
+      prev.map(e => e.id === eventId ? { ...e, completed: !e.completed } : e)
+    )
+  }
+
+  const deleteEvent = (eventId: string) => {
+    setScheduleEvents(prev => prev.filter(e => e.id !== eventId))
+  }
+
   const copyToClipboard = async (text: string, id: string) => {
     await navigator.clipboard.writeText(text)
     setCopiedId(id)
@@ -584,6 +724,16 @@ YC W26 Application Checklist
       case 'idea': return <Lightbulb size={14} className="text-yellow-400" />
       case 'todo': return <CheckCircle size={14} className="text-blue-400" />
       case 'blocker': return <AlertTriangle size={14} className="text-orange-400" />
+    }
+  }
+
+  const getCategoryColor = (category: ScheduleEvent['category']) => {
+    switch (category) {
+      case 'work': return 'bg-teal-500/20 text-teal-400 border-teal-500/50'
+      case 'personal': return 'bg-blue-500/20 text-blue-400 border-blue-500/50'
+      case 'meeting': return 'bg-purple-500/20 text-purple-400 border-purple-500/50'
+      case 'gym': return 'bg-orange-500/20 text-orange-400 border-orange-500/50'
+      case 'other': return 'bg-zinc-500/20 text-zinc-400 border-zinc-500/50'
     }
   }
 
@@ -636,11 +786,13 @@ YC W26 Application Checklist
         <nav className="w-16 border-r border-zinc-800 flex flex-col items-center py-4 gap-2 bg-zinc-900/30">
           {[
             { id: 'command', icon: Terminal, label: 'Command' },
-            { id: 'focus', icon: Target, label: 'Focus' },
-            { id: 'decisions', icon: GitBranch, label: 'Decisions' },
-            { id: 'patterns', icon: Code2, label: 'Patterns' },
-            { id: 'warroom', icon: Flame, label: 'War Room' },
-            { id: 'metrics', icon: BarChart3, label: 'Metrics' },
+{ id: 'schedule', icon: Calendar, label: 'Schedule' },
+{ id: 'focus', icon: Target, label: 'Focus' },
+{ id: 'decisions', icon: GitBranch, label: 'Decisions' },
+{ id: 'patterns', icon: Code2, label: 'Patterns' },
+{ id: 'resources', icon: BookOpen, label: 'Resources' },  // ADD THIS LINE
+{ id: 'warroom', icon: Flame, label: 'War Room' },
+{ id: 'metrics', icon: BarChart3, label: 'Metrics' },
           ].map(({ id, icon: Icon, label }) => (
             <button
               key={id}
@@ -719,12 +871,195 @@ YC W26 Application Checklist
                         processCommand(commandInput)
                       }
                     }}
-                    placeholder="Enter command... (try 'help')"
+                    placeholder="Enter command... (try 'help' or 'schedule')"
                     className="flex-1 bg-transparent outline-none text-zinc-100 placeholder:text-zinc-600"
                     autoFocus
                   />
                   <kbd className="text-xs text-zinc-600 bg-zinc-800 px-2 py-1 rounded">⌘K to focus</kbd>
                 </div>
+              </div>
+            </div>
+          )}
+
+          {/* ===== SCHEDULE STATION ===== */}
+          {activeStation === 'schedule' && (
+            <div className="flex-1 overflow-y-auto p-6 space-y-6">
+              {/* Header with Week Navigation */}
+              <div className="flex items-center justify-between">
+                <div>
+                  <h2 className="text-xl font-bold">Weekly Schedule</h2>
+                  <p className="text-sm text-zinc-500">Plan your days, avoid conflicts</p>
+                </div>
+                <div className="flex items-center gap-4">
+                  <button
+                    onClick={() => {
+                      const newStart = new Date(currentWeekStart)
+                      newStart.setDate(newStart.getDate() - 7)
+                      setCurrentWeekStart(newStart)
+                    }}
+                    className="p-2 hover:bg-zinc-800 rounded-lg transition-colors"
+                  >
+                    <ChevronLeft size={20} />
+                  </button>
+                  <span className="text-sm font-medium">
+                    {currentWeekStart.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                  </span>
+                  <button
+                    onClick={() => {
+                      const newStart = new Date(currentWeekStart)
+                      newStart.setDate(newStart.getDate() + 7)
+                      setCurrentWeekStart(newStart)
+                    }}
+                    className="p-2 hover:bg-zinc-800 rounded-lg transition-colors"
+                  >
+                    <ChevronRight size={20} />
+                  </button>
+                  <button
+                    onClick={() => setCurrentWeekStart(getStartOfWeek(new Date()))}
+                    className="px-3 py-1.5 bg-zinc-800 hover:bg-zinc-700 rounded-lg text-sm transition-colors"
+                  >
+                    Today
+                  </button>
+                </div>
+              </div>
+
+              {/* Week View Grid */}
+              <div className="grid grid-cols-7 gap-3">
+                {getWeekDays(currentWeekStart).map(day => {
+                  const dateStr = formatDate(day)
+                  const isToday = dateStr === formatDate(new Date())
+                  const dayEvents = scheduleEvents
+                    .filter(e => e.date === dateStr)
+                    .sort((a, b) => timeToMinutes(a.startTime) - timeToMinutes(b.startTime))
+
+                  return (
+                    <div
+                      key={dateStr}
+                      className={`bg-zinc-900 border rounded-lg overflow-hidden ${
+                        isToday ? 'border-teal-500' : 'border-zinc-800'
+                      }`}
+                    >
+                      {/* Day Header */}
+                      <div className={`p-3 border-b ${isToday ? 'bg-teal-500/10 border-teal-500/30' : 'border-zinc-800'}`}>
+                        <p className="text-xs text-zinc-500 uppercase">{getDayName(day).slice(0, 3)}</p>
+                        <p className={`text-lg font-bold ${isToday ? 'text-teal-400' : 'text-zinc-100'}`}>
+                          {day.getDate()}
+                        </p>
+                      </div>
+
+                      {/* Events List */}
+                      <div className="p-2 space-y-2 min-h-[200px]">
+                        {dayEvents.map(event => (
+                          <div
+                            key={event.id}
+                            className={`p-2 rounded border text-xs ${getCategoryColor(event.category)} ${
+                              event.completed ? 'opacity-50' : ''
+                            }`}
+                          >
+                            <div className="flex items-start justify-between gap-1 mb-1">
+                              <div className="flex items-center gap-1">
+                                <Clock size={10} />
+                                <span className="font-medium">{event.startTime}</span>
+                              </div>
+                              <button
+                                onClick={() => toggleEventComplete(event.id)}
+                                className="text-zinc-400 hover:text-zinc-100"
+                              >
+                                {event.completed ? <Check size={12} /> : <span className="w-3 h-3 border border-current rounded" />}
+                              </button>
+                            </div>
+                            <p className="font-medium mb-1 line-clamp-2">{event.title}</p>
+                            <div className="flex items-center justify-between text-[10px] opacity-70">
+                              <span>{event.duration}min</span>
+                              <button
+                                onClick={() => deleteEvent(event.id)}
+                                className="hover:text-red-400"
+                              >
+                                <X size={12} />
+                              </button>
+                            </div>
+                          </div>
+                        ))}
+
+                        {/* Add Event Button */}
+                        <button
+                          onClick={() => {
+                            setSelectedDate(dateStr)
+                            setShowNewEvent(true)
+                          }}
+                          className="w-full p-2 border border-dashed border-zinc-700 hover:border-teal-500 hover:bg-teal-500/5 rounded flex items-center justify-center gap-1 text-xs text-zinc-500 hover:text-teal-400 transition-colors"
+                        >
+                          <Plus size={12} />
+                          <span>Add</span>
+                        </button>
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+
+              {/* Today's Summary */}
+              <div className="bg-zinc-900 border border-zinc-800 rounded-lg p-5">
+                <h3 className="font-bold mb-4 flex items-center gap-2">
+                  <Clock size={18} className="text-teal-500" />
+                  Today's Summary
+                </h3>
+                {(() => {
+                  const today = formatDate(new Date())
+                  const todayEvents = scheduleEvents
+                    .filter(e => e.date === today)
+                    .sort((a, b) => timeToMinutes(a.startTime) - timeToMinutes(b.startTime))
+                  
+                  if (todayEvents.length === 0) {
+                    return <p className="text-zinc-500 text-sm">No events scheduled for today</p>
+                  }
+
+                  return (
+                    <div className="space-y-2">
+                      {todayEvents.map(event => (
+                        <div
+                          key={event.id}
+                          className={`flex items-center justify-between p-3 rounded-lg border ${getCategoryColor(event.category)} ${
+                            event.completed ? 'opacity-50' : ''
+                          }`}
+                        >
+                          <div className="flex items-center gap-3">
+                            <button
+                              onClick={() => toggleEventComplete(event.id)}
+                              className="flex-shrink-0"
+                            >
+                              {event.completed ? (
+                                <Check size={18} className="text-current" />
+                              ) : (
+                                <span className="w-5 h-5 border-2 border-current rounded" />
+                              )}
+                            </button>
+                            <div>
+                              <p className={`font-medium ${event.completed ? 'line-through' : ''}`}>
+                                {event.title}
+                              </p>
+                              {event.description && (
+                                <p className="text-xs opacity-70 mt-1">{event.description}</p>
+                              )}
+                            </div>
+                          </div>
+                          <div className="text-right flex items-center gap-3">
+                            <div>
+                              <p className="text-sm font-mono">{event.startTime}</p>
+                              <p className="text-xs opacity-70">{event.duration}min</p>
+                            </div>
+                            <button
+                              onClick={() => deleteEvent(event.id)}
+                              className="text-zinc-500 hover:text-red-400 transition-colors"
+                            >
+                              <X size={16} />
+                            </button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )
+                })()}
               </div>
             </div>
           )}
@@ -993,6 +1328,11 @@ YC W26 Application Checklist
             </div>
           )}
 
+          {/* ===== RESOURCES STATION ===== */}
+{activeStation === 'resources' && (
+  <ResourcesStation resources={resources} setResources={setResources} />
+)}
+
           {/* ===== WAR ROOM (YC) =====  */}
           {activeStation === 'warroom' && (
             <div className="flex-1 overflow-y-auto p-6 space-y-6">
@@ -1027,7 +1367,6 @@ YC W26 Application Checklist
                   ].map((check, i) => (
                     <div key={i} className="flex items-start gap-3 p-3 rounded-lg hover:bg-zinc-800/50 transition-colors">
                       <div className={`mt-0.5 ${check.done ? 'text-green-500' : 'text-zinc-600'}`}>
-                        {/* {check.done ? <CheckCircle size={18} /> : <ShieldAlert size={18} />} */}
                         {check.done ? <CheckCircle size={18} /> : <ShieldAlert size={18} />}
                       </div>
                       <div className="flex-1">
@@ -1294,6 +1633,105 @@ YC W26 Application Checklist
         )}
       </AnimatePresence>
 
+      {/* New Event Modal */}
+      <AnimatePresence>
+        {showNewEvent && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-4"
+            onClick={() => setShowNewEvent(false)}
+          >
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="bg-zinc-900 border border-zinc-700 rounded-xl w-full max-w-md p-6 shadow-2xl"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <h3 className="text-xl font-bold mb-4 flex items-center gap-2">
+                <Plus size={20} />
+                Add Event - {new Date(selectedDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+              </h3>
+              
+              <div className="space-y-4">
+                <input
+                  type="text"
+                  value={newEvent.title}
+                  onChange={(e) => setNewEvent(prev => ({ ...prev, title: e.target.value }))}
+                  placeholder="Event title"
+                  className="w-full px-4 py-3 bg-zinc-800 border border-zinc-700 rounded-lg outline-none focus:border-teal-500"
+                />
+                
+                <textarea
+                  value={newEvent.description}
+                  onChange={(e) => setNewEvent(prev => ({ ...prev, description: e.target.value }))}
+                  placeholder="Description (optional)"
+                  className="w-full px-4 py-3 bg-zinc-800 border border-zinc-700 rounded-lg outline-none focus:border-teal-500 resize-none"
+                  rows={2}
+                />
+                
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="text-xs text-zinc-500 mb-1 block">Start Time</label>
+                    <input
+                      type="time"
+                      value={newEvent.startTime}
+                      onChange={(e) => setNewEvent(prev => ({ ...prev, startTime: e.target.value }))}
+                      className="w-full px-4 py-3 bg-zinc-800 border border-zinc-700 rounded-lg outline-none focus:border-teal-500"
+                    />
+                  </div>
+                  
+                  <div>
+                    <label className="text-xs text-zinc-500 mb-1 block">Duration (min)</label>
+                    <input
+                      type="number"
+                      value={newEvent.duration}
+                      onChange={(e) => setNewEvent(prev => ({ ...prev, duration: parseInt(e.target.value) || 60 }))}
+                      min={15}
+                      step={15}
+                      className="w-full px-4 py-3 bg-zinc-800 border border-zinc-700 rounded-lg outline-none focus:border-teal-500"
+                    />
+                  </div>
+                </div>
+                
+                <div>
+                  <label className="text-xs text-zinc-500 mb-1 block">Category</label>
+                  <select
+                    value={newEvent.category}
+                    onChange={(e) => setNewEvent(prev => ({ ...prev, category: e.target.value as ScheduleEvent['category'] }))}
+                    className="w-full px-4 py-3 bg-zinc-800 border border-zinc-700 rounded-lg outline-none focus:border-teal-500"
+                  >
+                    <option value="work">Work</option>
+                    <option value="personal">Personal</option>
+                    <option value="meeting">Meeting</option>
+                    <option value="gym">Gym</option>
+                    <option value="other">Other</option>
+                  </select>
+                </div>
+              </div>
+              
+              <div className="flex justify-end gap-3 mt-6">
+                <button
+                  onClick={() => setShowNewEvent(false)}
+                  className="px-4 py-2 text-zinc-400 hover:text-zinc-200"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleAddEvent}
+                  disabled={!newEvent.title.trim()}
+                  className="px-6 py-2 bg-teal-500 hover:bg-teal-600 disabled:opacity-50 rounded-lg font-medium transition-colors"
+                >
+                  Add Event
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       {/* New Decision Modal */}
       <AnimatePresence>
         {showNewDecision && (
@@ -1491,5 +1929,3 @@ export default SimplicityMissionControl
 export const Route = createLazyFileRoute('/budgetary')({
   component: SimplicityMissionControl,
 })
-
-// new
