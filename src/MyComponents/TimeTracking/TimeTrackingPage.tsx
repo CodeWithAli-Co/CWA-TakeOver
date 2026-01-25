@@ -1,265 +1,331 @@
-// TimeTrackingPage - Main dashboard combining all time tracking components
+// TimeTrackingPage - Modern bento-grid dashboard for time tracking
 import { useState, Suspense } from "react";
-import { format, startOfMonth, endOfMonth, parseISO } from "date-fns";
+import { format, startOfMonth, endOfMonth } from "date-fns";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Clock,
-  Calendar,
-  BarChart3,
-  PieChart,
-  FileText,
-  Download,
   Plus,
   ChevronLeft,
   ChevronRight,
-  Layout,
-  List,
-  Grid3X3,
-  Settings,
   Loader2,
+  Zap,
+  BarChart2,
+  FileText,
+  Timer,
+  CalendarDays,
+  TrendingUp,
 } from "lucide-react";
-import { Card, CardContent } from "@/components/ui/shadcnComponents/card";
-import { Badge } from "@/components/ui/shadcnComponents/badge";
-import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from "@/components/ui/shadcnComponents/dialog";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/shadcnComponents/tabs";
 
 import { TimeEntryForm } from "./TimeEntryForm";
 import { TimeEntryList } from "./TimeEntryList";
-import { TimeStatsCards, TimeStatsCompact } from "./TimeStats";
+import { TimeStatsCards, QuickStatsBar } from "./TimeStats";
 import {
   WeeklyBarChart,
   CompanyPieChart,
   CategoryBarChart,
   CalendarHeatmap,
-  YearlyTrendChart,
 } from "./TimeChart";
 import { TimeReportGenerator, ExportButtons } from "./ReportGenerator";
 
-import { type ViewMode, type TimeEntryWithRelations, formatHours } from "@/stores/timeTrackingTypes";
+import { type TimeEntryWithRelations } from "@/stores/timeTrackingTypes";
 import { useWeeklyStats, useTimeEntriesByDateRange } from "@/stores/timeTrackingQueries";
 
-// Loading fallback component
-const LoadingSpinner = () => (
-  <div className="flex items-center justify-center p-8">
-    <Loader2 className="h-8 w-8 animate-spin text-red-500" />
+// Loading component
+const LoadingState = ({ className }: { className?: string }) => (
+  <div className={cn("flex items-center justify-center", className)}>
+    <Loader2 className="h-6 w-6 animate-spin text-white/30" />
   </div>
 );
 
-// View mode tabs
-type ViewTab = "dashboard" | "entries" | "reports";
+// Bento grid card wrapper
+const BentoCard = ({
+  children,
+  className,
+  gradient,
+  onClick,
+}: {
+  children: React.ReactNode;
+  className?: string;
+  gradient?: string;
+  onClick?: () => void;
+}) => (
+  <motion.div
+    whileHover={{ scale: 1.01, y: -2 }}
+    transition={{ duration: 0.2 }}
+    onClick={onClick}
+    className={cn(
+      "relative overflow-hidden rounded-2xl border border-white/[0.08] bg-white/[0.02] backdrop-blur-xl",
+      "hover:border-white/[0.15] hover:bg-white/[0.04] transition-all duration-300",
+      onClick && "cursor-pointer",
+      className
+    )}
+  >
+    {gradient && (
+      <div className={cn("absolute inset-0 opacity-30", gradient)} />
+    )}
+    <div className="relative z-10 h-full">{children}</div>
+  </motion.div>
+);
+
+// Section header
+const SectionHeader = ({ icon: Icon, title, action }: { icon: any; title: string; action?: React.ReactNode }) => (
+  <div className="flex items-center justify-between mb-4">
+    <div className="flex items-center gap-2">
+      <div className="p-1.5 rounded-lg bg-white/[0.05]">
+        <Icon className="h-4 w-4 text-white/70" />
+      </div>
+      <h3 className="text-sm font-medium text-white/70 uppercase tracking-wider">{title}</h3>
+    </div>
+    {action}
+  </div>
+);
+
+// View tabs
+type ViewTab = "overview" | "entries" | "reports";
 
 export const TimeTrackingPage = () => {
-  const [activeTab, setActiveTab] = useState<ViewTab>("dashboard");
-  const [viewMode, setViewMode] = useState<ViewMode>("weekly");
+  const [activeTab, setActiveTab] = useState<ViewTab>("overview");
   const [selectedMonth, setSelectedMonth] = useState(new Date());
   const [showAddEntry, setShowAddEntry] = useState(false);
   const [editingEntry, setEditingEntry] = useState<TimeEntryWithRelations | null>(null);
 
-  // Date range for monthly view
-  const monthStart = format(startOfMonth(selectedMonth), "yyyy-MM-dd");
-  const monthEnd = format(endOfMonth(selectedMonth), "yyyy-MM-dd");
-
   return (
-    <div className="p-6 space-y-6 min-h-screen">
+    <div className="min-h-screen p-6 lg:p-8">
       {/* Header */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+      <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-6 mb-8">
         <div>
-          <h1 className="text-2xl font-bold text-amber-50 flex items-center gap-3">
-            <Clock className="h-7 w-7 text-red-500" />
-            Time Tracking
-          </h1>
-          <p className="text-amber-50/60 mt-1">Track your work hours and generate proof of work reports</p>
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="flex items-center gap-3 mb-2"
+          >
+            <div className="p-2 rounded-xl bg-gradient-to-br from-red-500/20 to-orange-500/20 border border-red-500/20">
+              <Timer className="h-6 w-6 text-red-400" />
+            </div>
+            <h1 className="text-3xl font-bold text-white tracking-tight">Time Tracking</h1>
+          </motion.div>
+          <motion.p
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.1 }}
+            className="text-white/40 text-sm"
+          >
+            Track work hours and generate proof of work for YC application
+          </motion.p>
         </div>
 
-        <div className="flex items-center gap-3">
-          {/* Add Entry Button */}
-          <Dialog open={showAddEntry} onOpenChange={setShowAddEntry}>
-            <DialogTrigger asChild>
-              <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
-                <Button className="bg-red-900 hover:bg-red-800 text-amber-50">
-                  <Plus className="h-4 w-4 mr-2" />
-                  Log Time
-                </Button>
-              </motion.div>
-            </DialogTrigger>
-            <DialogContent className="bg-zinc-950 border-red-900/30 max-w-2xl">
-              <DialogHeader>
-                <DialogTitle className="text-amber-50">Log Time Entry</DialogTitle>
-              </DialogHeader>
-              <TimeEntryForm
-                onSuccess={() => setShowAddEntry(false)}
-                defaultDate={format(new Date(), "yyyy-MM-dd")}
-              />
-            </DialogContent>
-          </Dialog>
-
-          {/* Export Dropdown */}
-          <Suspense fallback={<Button disabled className="bg-black/40"><Loader2 className="h-4 w-4 animate-spin" /></Button>}>
-            <ExportButtons />
-          </Suspense>
-        </div>
+        {/* Quick Stats Bar */}
+        <Suspense fallback={<LoadingState className="h-12 w-64" />}>
+          <QuickStatsBar />
+        </Suspense>
       </div>
 
-      {/* Main Tabs */}
-      <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as ViewTab)} className="w-full">
-        <TabsList className="bg-black/40 border border-red-900/30 p-1">
-          <TabsTrigger
-            value="dashboard"
-            className="data-[state=active]:bg-red-900/50 data-[state=active]:text-amber-50 text-amber-50/70"
-          >
-            <Layout className="h-4 w-4 mr-2" />
-            Dashboard
-          </TabsTrigger>
-          <TabsTrigger
-            value="entries"
-            className="data-[state=active]:bg-red-900/50 data-[state=active]:text-amber-50 text-amber-50/70"
-          >
-            <List className="h-4 w-4 mr-2" />
-            Entries
-          </TabsTrigger>
-          <TabsTrigger
-            value="reports"
-            className="data-[state=active]:bg-red-900/50 data-[state=active]:text-amber-50 text-amber-50/70"
-          >
-            <FileText className="h-4 w-4 mr-2" />
-            Reports
-          </TabsTrigger>
-        </TabsList>
-
-        {/* Dashboard Tab */}
-        <TabsContent value="dashboard" className="mt-6 space-y-6">
-          {/* Stats Cards */}
-          <Suspense fallback={<LoadingSpinner />}>
-            <TimeStatsCards showAllStats={true} />
-          </Suspense>
-
-          {/* View Mode Selector */}
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2 bg-black/40 border border-red-900/30 rounded-lg p-1">
-              {(["daily", "weekly", "monthly", "yearly"] as ViewMode[]).map((mode) => (
-                <Button
-                  key={mode}
-                  size="sm"
-                  variant="ghost"
-                  onClick={() => setViewMode(mode)}
-                  className={`capitalize ${
-                    viewMode === mode
-                      ? "bg-red-900/50 text-amber-50"
-                      : "text-amber-50/70 hover:text-amber-50 hover:bg-red-900/20"
-                  }`}
-                >
-                  {mode}
-                </Button>
-              ))}
-            </div>
-
-            {/* Month Navigation for Monthly View */}
-            {viewMode === "monthly" && (
-              <div className="flex items-center gap-2">
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  onClick={() => setSelectedMonth(new Date(selectedMonth.setMonth(selectedMonth.getMonth() - 1)))}
-                  className="text-amber-50/70 hover:text-amber-50 hover:bg-red-900/20 h-8 w-8 p-0"
-                >
-                  <ChevronLeft className="h-4 w-4" />
-                </Button>
-                <span className="text-amber-50/70 min-w-[120px] text-center">
-                  {format(selectedMonth, "MMMM yyyy")}
-                </span>
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  onClick={() => setSelectedMonth(new Date(selectedMonth.setMonth(selectedMonth.getMonth() + 1)))}
-                  className="text-amber-50/70 hover:text-amber-50 hover:bg-red-900/20 h-8 w-8 p-0"
-                >
-                  <ChevronRight className="h-4 w-4" />
-                </Button>
-              </div>
+      {/* Navigation Tabs */}
+      <div className="flex items-center gap-2 mb-6">
+        {[
+          { id: "overview", label: "Overview", icon: BarChart2 },
+          { id: "entries", label: "Entries", icon: CalendarDays },
+          { id: "reports", label: "Reports", icon: FileText },
+        ].map((tab) => (
+          <motion.button
+            key={tab.id}
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.98 }}
+            onClick={() => setActiveTab(tab.id as ViewTab)}
+            className={cn(
+              "flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition-all",
+              activeTab === tab.id
+                ? "bg-white/10 text-white border border-white/10"
+                : "text-white/50 hover:text-white/70 hover:bg-white/[0.03]"
             )}
-          </div>
+          >
+            <tab.icon className="h-4 w-4" />
+            {tab.label}
+          </motion.button>
+        ))}
 
-          {/* Charts Grid */}
-          <Suspense fallback={<LoadingSpinner />}>
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              {/* Weekly/Daily View */}
-              {(viewMode === "weekly" || viewMode === "daily") && (
-                <>
+        <div className="flex-1" />
+
+        {/* Export Button */}
+        <Suspense fallback={null}>
+          <ExportButtons />
+        </Suspense>
+
+        {/* Add Entry Button */}
+        <motion.button
+          whileHover={{ scale: 1.02 }}
+          whileTap={{ scale: 0.98 }}
+          onClick={() => setShowAddEntry(true)}
+          className="flex items-center gap-2 px-4 py-2 rounded-xl bg-gradient-to-r from-red-500 to-orange-500 text-white text-sm font-medium shadow-lg shadow-red-500/20"
+        >
+          <Plus className="h-4 w-4" />
+          Log Time
+        </motion.button>
+      </div>
+
+      {/* Content */}
+      <AnimatePresence mode="wait">
+        {activeTab === "overview" && (
+          <motion.div
+            key="overview"
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -10 }}
+            className="space-y-6"
+          >
+            {/* Stats Cards */}
+            <Suspense fallback={<LoadingState className="h-32" />}>
+              <TimeStatsCards />
+            </Suspense>
+
+            {/* Bento Grid */}
+            <div className="grid grid-cols-12 gap-4">
+              {/* Weekly Chart - Large */}
+              <BentoCard className="col-span-12 lg:col-span-8 p-6">
+                <SectionHeader icon={BarChart2} title="This Week" />
+                <Suspense fallback={<LoadingState className="h-64" />}>
                   <WeeklyBarChart />
-                  <WeeklyStatsCharts />
-                </>
-              )}
+                </Suspense>
+              </BentoCard>
 
-              {/* Monthly View */}
-              {viewMode === "monthly" && (
-                <>
+              {/* Company Distribution */}
+              <BentoCard className="col-span-12 lg:col-span-4 p-6">
+                <SectionHeader icon={TrendingUp} title="By Company" />
+                <Suspense fallback={<LoadingState className="h-64" />}>
+                  <WeeklyStatsCharts type="company" />
+                </Suspense>
+              </BentoCard>
+
+              {/* Calendar Heatmap */}
+              <BentoCard className="col-span-12 lg:col-span-6 p-6">
+                <SectionHeader
+                  icon={CalendarDays}
+                  title={format(selectedMonth, "MMMM yyyy")}
+                  action={
+                    <div className="flex items-center gap-1">
+                      <button
+                        onClick={() => setSelectedMonth(new Date(selectedMonth.setMonth(selectedMonth.getMonth() - 1)))}
+                        className="p-1 rounded-lg hover:bg-white/10 text-white/50 hover:text-white transition-colors"
+                      >
+                        <ChevronLeft className="h-4 w-4" />
+                      </button>
+                      <button
+                        onClick={() => setSelectedMonth(new Date(selectedMonth.setMonth(selectedMonth.getMonth() + 1)))}
+                        className="p-1 rounded-lg hover:bg-white/10 text-white/50 hover:text-white transition-colors"
+                      >
+                        <ChevronRight className="h-4 w-4" />
+                      </button>
+                    </div>
+                  }
+                />
+                <Suspense fallback={<LoadingState className="h-48" />}>
                   <MonthlyHeatmapWrapper month={selectedMonth} />
-                  <WeeklyStatsCharts />
-                </>
-              )}
+                </Suspense>
+              </BentoCard>
 
-              {/* Yearly View */}
-              {viewMode === "yearly" && (
-                <>
-                  <YearlyStats />
-                  <WeeklyStatsCharts />
-                </>
-              )}
-            </div>
-          </Suspense>
+              {/* Category Breakdown */}
+              <BentoCard className="col-span-12 lg:col-span-6 p-6">
+                <SectionHeader icon={Zap} title="By Category" />
+                <Suspense fallback={<LoadingState className="h-48" />}>
+                  <WeeklyStatsCharts type="category" />
+                </Suspense>
+              </BentoCard>
 
-          {/* Recent Entries */}
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            <div className="lg:col-span-2">
-              <Suspense fallback={<LoadingSpinner />}>
-                <TimeEntryList maxEntries={5} showFilters={false} onEditEntry={setEditingEntry} />
-              </Suspense>
+              {/* Recent Entries */}
+              <BentoCard className="col-span-12 p-6">
+                <SectionHeader
+                  icon={Clock}
+                  title="Recent Entries"
+                  action={
+                    <button
+                      onClick={() => setActiveTab("entries")}
+                      className="text-xs text-white/40 hover:text-white/70 transition-colors"
+                    >
+                      View All
+                    </button>
+                  }
+                />
+                <Suspense fallback={<LoadingState className="h-48" />}>
+                  <TimeEntryList maxEntries={5} showFilters={false} onEditEntry={setEditingEntry} compact />
+                </Suspense>
+              </BentoCard>
             </div>
-            <div>
-              <Suspense fallback={<LoadingSpinner />}>
-                <TimeStatsCompact />
-              </Suspense>
-            </div>
-          </div>
-        </TabsContent>
+          </motion.div>
+        )}
 
-        {/* Entries Tab */}
-        <TabsContent value="entries" className="mt-6">
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            <div className="lg:col-span-2">
-              <Suspense fallback={<LoadingSpinner />}>
-                <TimeEntryList showFilters={true} onEditEntry={setEditingEntry} />
-              </Suspense>
+        {activeTab === "entries" && (
+          <motion.div
+            key="entries"
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -10 }}
+            className="grid grid-cols-12 gap-6"
+          >
+            {/* Entries List */}
+            <div className="col-span-12 lg:col-span-8">
+              <BentoCard className="p-6">
+                <Suspense fallback={<LoadingState className="h-96" />}>
+                  <TimeEntryList showFilters={true} onEditEntry={setEditingEntry} />
+                </Suspense>
+              </BentoCard>
             </div>
-            <div className="space-y-6">
-              <TimeEntryForm compact />
-              <Suspense fallback={<LoadingSpinner />}>
-                <TimeStatsCompact />
-              </Suspense>
-            </div>
-          </div>
-        </TabsContent>
 
-        {/* Reports Tab */}
-        <TabsContent value="reports" className="mt-6">
-          <Suspense fallback={<LoadingSpinner />}>
-            <TimeReportGenerator />
-          </Suspense>
-        </TabsContent>
-      </Tabs>
+            {/* Quick Entry Form */}
+            <div className="col-span-12 lg:col-span-4 space-y-4">
+              <BentoCard className="p-6" gradient="bg-gradient-to-br from-red-500/10 to-transparent">
+                <TimeEntryForm compact onSuccess={() => {}} />
+              </BentoCard>
+            </div>
+          </motion.div>
+        )}
+
+        {activeTab === "reports" && (
+          <motion.div
+            key="reports"
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -10 }}
+          >
+            <BentoCard className="p-6">
+              <Suspense fallback={<LoadingState className="h-96" />}>
+                <TimeReportGenerator />
+              </Suspense>
+            </BentoCard>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Add Entry Dialog */}
+      <Dialog open={showAddEntry} onOpenChange={setShowAddEntry}>
+        <DialogContent className="bg-zinc-950/95 backdrop-blur-xl border-white/10 max-w-2xl">
+          <DialogHeader>
+            <DialogTitle className="text-white flex items-center gap-2">
+              <Timer className="h-5 w-5 text-red-400" />
+              Log Time Entry
+            </DialogTitle>
+          </DialogHeader>
+          <TimeEntryForm
+            onSuccess={() => setShowAddEntry(false)}
+            defaultDate={format(new Date(), "yyyy-MM-dd")}
+          />
+        </DialogContent>
+      </Dialog>
 
       {/* Edit Entry Dialog */}
       <Dialog open={!!editingEntry} onOpenChange={(open) => !open && setEditingEntry(null)}>
-        <DialogContent className="bg-zinc-950 border-red-900/30 max-w-2xl">
+        <DialogContent className="bg-zinc-950/95 backdrop-blur-xl border-white/10 max-w-2xl">
           <DialogHeader>
-            <DialogTitle className="text-amber-50">Edit Time Entry</DialogTitle>
+            <DialogTitle className="text-white flex items-center gap-2">
+              <Timer className="h-5 w-5 text-red-400" />
+              Edit Time Entry
+            </DialogTitle>
           </DialogHeader>
           {editingEntry && (
             <TimeEntryForm
@@ -269,18 +335,39 @@ export const TimeTrackingPage = () => {
           )}
         </DialogContent>
       </Dialog>
+
+      {/* Floating Quick Add Button (Mobile) */}
+      <motion.button
+        whileHover={{ scale: 1.1 }}
+        whileTap={{ scale: 0.9 }}
+        onClick={() => setShowAddEntry(true)}
+        className="fixed bottom-6 right-6 lg:hidden p-4 rounded-full bg-gradient-to-r from-red-500 to-orange-500 text-white shadow-2xl shadow-red-500/30"
+      >
+        <Plus className="h-6 w-6" />
+      </motion.button>
     </div>
   );
 };
 
 // Helper component for weekly stats charts
-const WeeklyStatsCharts = () => {
+const WeeklyStatsCharts = ({ type }: { type: "company" | "category" }) => {
   const { data: stats } = useWeeklyStats(0);
 
-  return (
-    <div className="space-y-6">
-      {stats.by_company.length > 0 && <CompanyPieChart data={stats.by_company} />}
-      {stats.by_category.length > 0 && <CategoryBarChart data={stats.by_category} />}
+  if (type === "company") {
+    return stats.by_company.length > 0 ? (
+      <CompanyPieChart data={stats.by_company} />
+    ) : (
+      <div className="h-48 flex items-center justify-center text-white/30 text-sm">
+        No data this week
+      </div>
+    );
+  }
+
+  return stats.by_category.length > 0 ? (
+    <CategoryBarChart data={stats.by_category} />
+  ) : (
+    <div className="h-48 flex items-center justify-center text-white/30 text-sm">
+      No data this week
     </div>
   );
 };
@@ -291,7 +378,6 @@ const MonthlyHeatmapWrapper = ({ month }: { month: Date }) => {
   const monthEnd = format(endOfMonth(month), "yyyy-MM-dd");
   const { data: entries } = useTimeEntriesByDateRange(monthStart, monthEnd);
 
-  // Aggregate hours by date
   const dailyData: Record<string, number> = {};
   entries.forEach((entry) => {
     dailyData[entry.date] = (dailyData[entry.date] || 0) + entry.duration_minutes / 60;
@@ -300,22 +386,6 @@ const MonthlyHeatmapWrapper = ({ month }: { month: Date }) => {
   const heatmapData = Object.entries(dailyData).map(([date, hours]) => ({ date, hours }));
 
   return <CalendarHeatmap data={heatmapData} month={month} />;
-};
-
-// Helper component for yearly stats
-const YearlyStats = () => {
-  // This would need a yearly query - for now showing placeholder
-  const currentYear = new Date().getFullYear();
-  const months = [];
-  for (let i = 0; i < 12; i++) {
-    months.push({
-      month: `${currentYear}-${String(i + 1).padStart(2, "0")}`,
-      hours: Math.random() * 160 + 40, // Placeholder
-      billable_hours: Math.random() * 120 + 30,
-    });
-  }
-
-  return <YearlyTrendChart data={months} />;
 };
 
 export default TimeTrackingPage;
