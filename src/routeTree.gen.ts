@@ -16,6 +16,7 @@ import { Route as rootRoute } from './routes/__root'
 
 // Create Virtual Routes
 
+const TimetrackingLazyImport = createFileRoute('/timetracking')()
 const TaskLazyImport = createFileRoute('/task')()
 const SettingsLazyImport = createFileRoute('/settings')()
 const ScheduleLazyImport = createFileRoute('/schedule')()
@@ -40,6 +41,12 @@ const IndexLazyImport = createFileRoute('/')()
 const ClientIndexLazyImport = createFileRoute('/client/')()
 
 // Create/Update Routes
+
+const TimetrackingLazyRoute = TimetrackingLazyImport.update({
+  id: '/timetracking',
+  path: '/timetracking',
+  getParentRoute: () => rootRoute,
+} as any).lazy(() => import('./routes/timetracking.lazy').then((d) => d.Route))
 
 const TaskLazyRoute = TaskLazyImport.update({
   id: '/task',
@@ -332,6 +339,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof TaskLazyImport
       parentRoute: typeof rootRoute
     }
+    '/timetracking': {
+      id: '/timetracking'
+      path: '/timetracking'
+      fullPath: '/timetracking'
+      preLoaderRoute: typeof TimetrackingLazyImport
+      parentRoute: typeof rootRoute
+    }
     '/client/': {
       id: '/client/'
       path: '/client'
@@ -366,6 +380,7 @@ export interface FileRoutesByFullPath {
   '/schedule': typeof ScheduleLazyRoute
   '/settings': typeof SettingsLazyRoute
   '/task': typeof TaskLazyRoute
+  '/timetracking': typeof TimetrackingLazyRoute
   '/client': typeof ClientIndexLazyRoute
 }
 
@@ -391,6 +406,7 @@ export interface FileRoutesByTo {
   '/schedule': typeof ScheduleLazyRoute
   '/settings': typeof SettingsLazyRoute
   '/task': typeof TaskLazyRoute
+  '/timetracking': typeof TimetrackingLazyRoute
   '/client': typeof ClientIndexLazyRoute
 }
 
@@ -417,6 +433,7 @@ export interface FileRoutesById {
   '/schedule': typeof ScheduleLazyRoute
   '/settings': typeof SettingsLazyRoute
   '/task': typeof TaskLazyRoute
+  '/timetracking': typeof TimetrackingLazyRoute
   '/client/': typeof ClientIndexLazyRoute
 }
 
@@ -444,6 +461,7 @@ export interface FileRouteTypes {
     | '/schedule'
     | '/settings'
     | '/task'
+    | '/timetracking'
     | '/client'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -468,6 +486,7 @@ export interface FileRouteTypes {
     | '/schedule'
     | '/settings'
     | '/task'
+    | '/timetracking'
     | '/client'
   id:
     | '__root__'
@@ -492,6 +511,7 @@ export interface FileRouteTypes {
     | '/schedule'
     | '/settings'
     | '/task'
+    | '/timetracking'
     | '/client/'
   fileRoutesById: FileRoutesById
 }
@@ -518,6 +538,7 @@ export interface RootRouteChildren {
   ScheduleLazyRoute: typeof ScheduleLazyRoute
   SettingsLazyRoute: typeof SettingsLazyRoute
   TaskLazyRoute: typeof TaskLazyRoute
+  TimetrackingLazyRoute: typeof TimetrackingLazyRoute
   ClientIndexLazyRoute: typeof ClientIndexLazyRoute
 }
 
@@ -543,6 +564,7 @@ const rootRouteChildren: RootRouteChildren = {
   ScheduleLazyRoute: ScheduleLazyRoute,
   SettingsLazyRoute: SettingsLazyRoute,
   TaskLazyRoute: TaskLazyRoute,
+  TimetrackingLazyRoute: TimetrackingLazyRoute,
   ClientIndexLazyRoute: ClientIndexLazyRoute,
 }
 
@@ -577,6 +599,7 @@ export const routeTree = rootRoute
         "/schedule",
         "/settings",
         "/task",
+        "/timetracking",
         "/client/"
       ]
     },
@@ -642,6 +665,9 @@ export const routeTree = rootRoute
     },
     "/task": {
       "filePath": "task.lazy.tsx"
+    },
+    "/timetracking": {
+      "filePath": "timetracking.lazy.tsx"
     },
     "/client/": {
       "filePath": "client/index.lazy.tsx"

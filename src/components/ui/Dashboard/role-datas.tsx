@@ -12,6 +12,7 @@ import {
   File,
   CalendarDays,
   Bot,
+  Clock,
 } from "lucide-react";
 import { title } from "process";
 
@@ -705,6 +706,12 @@ export const cooData = {
       isActive: false,
       icon: CalendarDays,
     },
+    {
+      title: "Time Tracking",
+      url: "/timetracking",
+      isActive: false,
+      icon: Clock,
+    },
     // {
     //   title: "BioTech",
     //   url: "/bio",
@@ -864,6 +871,12 @@ export const ceoData = {
       url: "/schedule",
       isActive: false,
       icon: CalendarDays,
+    },
+    {
+      title: "Time Tracking",
+      url: "/timetracking",
+      isActive: false,
+      icon: Clock,
     },
     {
       title: "Settings",
