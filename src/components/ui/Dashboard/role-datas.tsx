@@ -13,6 +13,7 @@ import {
   CalendarDays,
   Bot,
   Clock,
+  User,
 } from "lucide-react";
 import { title } from "process";
 
@@ -625,6 +626,12 @@ export const cooData = {
       icon: Home,
     },
     {
+      title: "Personal Life",
+      url: "/personal",
+      isActive: false,
+      icon: User
+    },
+    {
       title: "Admin Permissions",
       url: "/details",
       icon: SquareTerminal,
@@ -658,6 +665,10 @@ export const cooData = {
           title: "Bio",
           url: "/bio"
         },
+          {
+              title: "Cold Email Generator",
+              url: "/coldEmail"
+          },
       ],
     },
     
