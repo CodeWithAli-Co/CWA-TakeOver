@@ -13,6 +13,7 @@ import {
   CalendarDays,
   Bot,
   Clock,
+  GraduationCap,
 } from "lucide-react";
 import { title } from "process";
 
@@ -49,6 +50,7 @@ export const internData = {
       isActive: false,
       icon: Target,
     },
+
     {
       title: "Settings",
       url: "/settings",
@@ -89,6 +91,7 @@ export const memberData = {
       isActive: false,
       icon: Target,
     },
+ 
     {
       title: "Settings",
       url: "/settings",
@@ -159,6 +162,7 @@ export const marketingData = {
       isActive: false,
       icon: CalendarDays,
     },
+ 
     {
       title: "Settings",
       url: "/settings",
@@ -260,6 +264,7 @@ export const adminData = {
     //   icon: Cat,
     // },
 
+ 
     {
       title: "Settings",
       url: "/settings",
@@ -554,6 +559,7 @@ export const securityEngineerData = {
     //   isActive: false,
     //   icon: Cat,
     // },
+
 
     {
       title: "Settings",
@@ -877,6 +883,12 @@ export const ceoData = {
       url: "/timetracking",
       isActive: false,
       icon: Clock,
+    },
+    {
+      title: "Training Plan",
+      url: "/trainingplan",
+      isActive: false,
+      icon: GraduationCap,
     },
     {
       title: "Settings",
