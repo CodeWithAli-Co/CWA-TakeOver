@@ -22,6 +22,7 @@ const TaskLazyImport = createFileRoute('/task')()
 const SettingsLazyImport = createFileRoute('/settings')()
 const ScheduleLazyImport = createFileRoute('/schedule')()
 const QuotaLazyImport = createFileRoute('/quota')()
+const PersonalLazyImport = createFileRoute('/personal')()
 const ModlogsLazyImport = createFileRoute('/mod_logs')()
 const MiddleLazyImport = createFileRoute('/middle')()
 const InvoicerLazyImport = createFileRoute('/invoicer')()
@@ -78,6 +79,12 @@ const QuotaLazyRoute = QuotaLazyImport.update({
   path: '/quota',
   getParentRoute: () => rootRoute,
 } as any).lazy(() => import('./routes/quota.lazy').then((d) => d.Route))
+
+const PersonalLazyRoute = PersonalLazyImport.update({
+  id: '/personal',
+  path: '/personal',
+  getParentRoute: () => rootRoute,
+} as any).lazy(() => import('./routes/personal.lazy').then((d) => d.Route))
 
 const ModlogsLazyRoute = ModlogsLazyImport.update({
   id: '/mod_logs',
@@ -318,6 +325,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ModlogsLazyImport
       parentRoute: typeof rootRoute
     }
+    '/personal': {
+      id: '/personal'
+      path: '/personal'
+      fullPath: '/personal'
+      preLoaderRoute: typeof PersonalLazyImport
+      parentRoute: typeof rootRoute
+    }
     '/quota': {
       id: '/quota'
       path: '/quota'
@@ -390,6 +404,7 @@ export interface FileRoutesByFullPath {
   '/invoicer': typeof InvoicerLazyRoute
   '/middle': typeof MiddleLazyRoute
   '/mod_logs': typeof ModlogsLazyRoute
+  '/personal': typeof PersonalLazyRoute
   '/quota': typeof QuotaLazyRoute
   '/schedule': typeof ScheduleLazyRoute
   '/settings': typeof SettingsLazyRoute
@@ -417,6 +432,7 @@ export interface FileRoutesByTo {
   '/invoicer': typeof InvoicerLazyRoute
   '/middle': typeof MiddleLazyRoute
   '/mod_logs': typeof ModlogsLazyRoute
+  '/personal': typeof PersonalLazyRoute
   '/quota': typeof QuotaLazyRoute
   '/schedule': typeof ScheduleLazyRoute
   '/settings': typeof SettingsLazyRoute
@@ -445,6 +461,7 @@ export interface FileRoutesById {
   '/invoicer': typeof InvoicerLazyRoute
   '/middle': typeof MiddleLazyRoute
   '/mod_logs': typeof ModlogsLazyRoute
+  '/personal': typeof PersonalLazyRoute
   '/quota': typeof QuotaLazyRoute
   '/schedule': typeof ScheduleLazyRoute
   '/settings': typeof SettingsLazyRoute
@@ -474,6 +491,7 @@ export interface FileRouteTypes {
     | '/invoicer'
     | '/middle'
     | '/mod_logs'
+    | '/personal'
     | '/quota'
     | '/schedule'
     | '/settings'
@@ -500,6 +518,7 @@ export interface FileRouteTypes {
     | '/invoicer'
     | '/middle'
     | '/mod_logs'
+    | '/personal'
     | '/quota'
     | '/schedule'
     | '/settings'
@@ -526,6 +545,7 @@ export interface FileRouteTypes {
     | '/invoicer'
     | '/middle'
     | '/mod_logs'
+    | '/personal'
     | '/quota'
     | '/schedule'
     | '/settings'
@@ -554,6 +574,7 @@ export interface RootRouteChildren {
   InvoicerLazyRoute: typeof InvoicerLazyRoute
   MiddleLazyRoute: typeof MiddleLazyRoute
   ModlogsLazyRoute: typeof ModlogsLazyRoute
+  PersonalLazyRoute: typeof PersonalLazyRoute
   QuotaLazyRoute: typeof QuotaLazyRoute
   ScheduleLazyRoute: typeof ScheduleLazyRoute
   SettingsLazyRoute: typeof SettingsLazyRoute
@@ -581,6 +602,7 @@ const rootRouteChildren: RootRouteChildren = {
   InvoicerLazyRoute: InvoicerLazyRoute,
   MiddleLazyRoute: MiddleLazyRoute,
   ModlogsLazyRoute: ModlogsLazyRoute,
+  PersonalLazyRoute: PersonalLazyRoute,
   QuotaLazyRoute: QuotaLazyRoute,
   ScheduleLazyRoute: ScheduleLazyRoute,
   SettingsLazyRoute: SettingsLazyRoute,
@@ -617,6 +639,7 @@ export const routeTree = rootRoute
         "/invoicer",
         "/middle",
         "/mod_logs",
+        "/personal",
         "/quota",
         "/schedule",
         "/settings",
@@ -676,6 +699,9 @@ export const routeTree = rootRoute
     },
     "/mod_logs": {
       "filePath": "mod_logs.lazy.tsx"
+    },
+    "/personal": {
+      "filePath": "personal.lazy.tsx"
     },
     "/quota": {
       "filePath": "quota.lazy.tsx"

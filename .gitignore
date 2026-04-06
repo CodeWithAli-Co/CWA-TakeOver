@@ -28,3 +28,6 @@ dist-ssr
 ~
 # For Releases
 release.json
+
+# Ignoring rust-analyzer target folder
+target/**
