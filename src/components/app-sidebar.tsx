@@ -1,6 +1,4 @@
-//  was import type * as React from "react"
 import * as React from "react";
-// quick check
 import {
   Sidebar,
   SidebarContent,
@@ -23,84 +21,68 @@ import {
   securityEngineerData,
 } from "./ui/Dashboard/role-datas";
 import UserView, { Role } from "@/MyComponents/Reusables/userView";
+import { RolePreviewSelector } from "./ui/Dashboard/role-preview";
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   return (
     <UserView excludeRoles={Role.Client}>
+      <Sidebar collapsible="icon" {...props}>
+        <SidebarHeader>
+          <SidebarTrigger />
+          {/* Role Preview — CEO/COO only */}
+          <UserView userRole={[Role.CEO, Role.COO]}>
+            <RolePreviewSelector />
+          </UserView>
+        </SidebarHeader>
+        <SidebarContent>
+          {/* Intern View */}
+          <UserView userRole="Intern">
+            <NavMain items={internData.navMain} />
+          </UserView>
 
-    <Sidebar collapsible="icon" {...props}>
-      <SidebarHeader>
-        {/* Admin View */}
-        {/* <UserView userRole="Admin">
-          <TeamSwitcher teams={adminData.teams} />
-        </UserView> */}
+          {/* Member View */}
+          <UserView userRole="Member">
+            <NavMain items={memberData.navMain} />
+          </UserView>
 
-        {/* Project Manager View */}
-        {/* <UserView userRole="Project Manager">
-          <TeamSwitcher teams={projectManagerData.teams} />
-        </UserView> */}
+          {/* Project Manager View */}
+          <UserView userRole={Role.ProjectManager}>
+            <NavMain items={projectManagerData.navMain} />
+            <NavProjects projects={projectManagerData.projects} />
+          </UserView>
 
-        {/* COO View */}
-        {/* <UserView userRole="COO">
-          <TeamSwitcher teams={cooData.teams} />
-        </UserView> */}
+          {/* Marketing Specialist View */}
+          <UserView userRole={Role.Marketing}>
+            <NavMain items={marketingData.navMain} />
+          </UserView>
 
-        {/* CEO View */}
-        {/* <UserView userRole="CEO">
-          <TeamSwitcher teams={ceoData.teams} />
-        </UserView> */}
-        <SidebarTrigger />
-      </SidebarHeader>
-      <SidebarContent>
-        {/* Intern View */}
-        <UserView userRole="Intern">
-          <NavMain items={internData.navMain} />
-        </UserView>
+          {/* Admin View */}
+          <UserView userRole={Role.Admin}>
+            <NavMain items={adminData.navMain} />
+          </UserView>
 
-        {/* Member View */}
-        <UserView userRole="Member">
-          <NavMain items={memberData.navMain} />
-        </UserView>
+          {/* Security Engineer View */}
+          <UserView userRole={Role.SecurityEngineer}>
+            <NavMain items={securityEngineerData.navMain} />
+          </UserView>
 
-        {/* Project Manager View */}
-        <UserView userRole={Role.ProjectManager}>
-          <NavMain items={projectManagerData.navMain} />
-          <NavProjects projects={projectManagerData.projects} />
-        </UserView>
+          {/* COO View */}
+          <UserView userRole={Role.COO}>
+            <NavMain items={cooData.navMain} />
+            <NavProjects projects={cooData.projects} />
+          </UserView>
 
-        {/* Marketing Specialist View */}
-        <UserView userRole={Role.Marketing}>
-          <NavMain items={marketingData.navMain} />
-        </UserView>
-
-        {/* Admin View */}
-        <UserView userRole={Role.Admin}>
-          <NavMain items={adminData.navMain} />
-        </UserView>
-
-        {/* Security Engineer View */}
-        <UserView userRole={Role.SecurityEngineer}>
-          <NavMain items={securityEngineerData.navMain} />
-        </UserView>
-
-        {/* COO View */}
-        <UserView userRole={Role.COO}>
-          <NavMain items={cooData.navMain} />
-          <NavProjects projects={cooData.projects} />
-        </UserView>
-
-        {/* CEO View */}
-        <UserView userRole={Role.CEO}>
-          <NavMain items={ceoData.navMain} />
-          <NavProjects projects={ceoData.projects} />
-        </UserView>
-      </SidebarContent>
-      <SidebarFooter>
-        {/* Using InternData here bc it's default role, so everyone has access to it */}
-        <NavUser userData={internData.user} />
-      </SidebarFooter>
-      <SidebarRail />
-    </Sidebar>
+          {/* CEO View */}
+          <UserView userRole={Role.CEO}>
+            <NavMain items={ceoData.navMain} />
+            <NavProjects projects={ceoData.projects} />
+          </UserView>
+        </SidebarContent>
+        <SidebarFooter>
+          <NavUser userData={internData.user} />
+        </SidebarFooter>
+        <SidebarRail />
+      </Sidebar>
     </UserView>
   );
 }

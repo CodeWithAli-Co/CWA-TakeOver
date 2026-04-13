@@ -1,12 +1,4 @@
 import { useState, useEffect } from "react";
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-  CardDescription,
-  CardFooter,
-} from "@/components/ui/shadcnComponents/card";
 import { ScrollArea } from "@/components/ui/shadcnComponents/scroll-area";
 import { Button } from "@/components/ui/shadcnComponents/button";
 import { Input } from "@/components/ui/shadcnComponents/input";
@@ -23,7 +15,6 @@ import {
   DialogFooter,
   DialogTrigger,
 } from "@/components/ui/shadcnComponents/dialog";
-
 import {
   Select,
   SelectContent,
@@ -39,7 +30,6 @@ import {
   TabsTrigger,
 } from "@/components/ui/shadcnComponents/tabs";
 
-// Weekly QuotasItems
 type QuotaStatus = "pending" | "in-progress" | "completed";
 
 export const QuotaItem = ({
@@ -48,83 +38,71 @@ export const QuotaItem = ({
   onDelete,
   onEdit,
 }: {
-  quota: {
-    id: number;
-    status: QuotaStatus;
-    title: string;
-    description?: string;
-    deadline?: string;
-  };
+  quota: { id: number; status: QuotaStatus; title: string; description?: string; deadline?: string };
   onStatusChange: (id: number, status: string) => void;
   onDelete: (id: number) => void;
   onEdit: (quota: any) => void;
 }) => {
   const statusColors: Record<QuotaStatus, string> = {
-    pending: "bg-amber-500/20 text-amber-400 border-amber-500/30",
-    "in-progress": "bg-blue-500/20 text-blue-400 border-blue-500/30",
-    completed: "bg-emerald-500/20 text-emerald-400 border-emerald-500/30",
+    pending: "bg-amber-500/[0.06] text-amber-400/70 border-amber-500/10",
+    "in-progress": "bg-blue-500/[0.06] text-blue-400/70 border-blue-500/10",
+    completed: "bg-emerald-500/[0.06] text-emerald-400/70 border-emerald-500/10",
   };
 
   return (
     <motion.div
-      initial={{ opacity: 0, y: 10 }}
-      animate={{ opacity: 1, y: 0 }}
-      exit={{ opacity: 0, y: -10 }}
-      className="p-4 rounded-lg border hover:bg-red-900/10 border-red-900/30 bg-foreground hover:border-red-800/50 mb-3"
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      className="p-4 rounded-sm bg-white/[0.015] border border-white/[0.03] hover:border-red-500/10 transition-all duration-400 mb-2.5 group"
     >
       <div className="flex items-start justify-between">
         <div>
           <div className="flex items-center gap-2 mb-1">
-            <h3 className="text-sm font-medium text-amber-50">{quota.title}</h3>
-            <Badge
-              variant="outline"
-              className={`${statusColors[quota.status]} text-xs`}
-            >
+            <h3 className="text-[13px] font-medium text-white/70">{quota.title}</h3>
+            <Badge variant="outline" className={`${statusColors[quota.status]} text-[10px]`}>
               {quota.status}
             </Badge>
           </div>
-          <p className="text-xs text-amber-50/70 mb-2">{quota.description}</p>
+          {quota.description && (
+            <p className="text-[11px] text-white/20 mb-1.5">{quota.description}</p>
+          )}
           {quota.deadline && (
-            <div className="flex items-start gap-1 text-xs text-amber-50/70">
-              <Calendar className="h-3 w-3" />
+            <div className="flex items-center gap-1 text-[11px] text-white/15">
+              <Calendar className="h-2.5 w-2.5" />
               <span>Due: {quota.deadline}</span>
             </div>
           )}
         </div>
-        <div className="flex gap-2">
+        <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
           {quota.status !== "completed" && (
             <motion.button
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
+              whileTap={{ scale: 0.9 }}
               onClick={() => onStatusChange(quota.id, "completed")}
-              className="p-1 rounded-md bg-emerald-500/20 text-emerald-400 hover:bg-emerald-500/30"
+              className="p-1.5 rounded-lg bg-emerald-500/[0.06] text-emerald-400/60 hover:text-emerald-400 transition-colors"
             >
-              <CheckCircle className="h-4  w-4" />
+              <CheckCircle className="h-3 w-3" />
             </motion.button>
           )}
           <motion.button
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
+            whileTap={{ scale: 0.9 }}
             onClick={() => onEdit(quota)}
-            className="p-1  rounded-md  bg-blue-500/20 text-blue-400 hover:bg-blue-500/30"
+            className="p-1.5 rounded-lg bg-white/[0.03] text-white/20 hover:text-white/60 transition-colors"
           >
-            <Edit className="h-4  w-4" />
+            <Edit className="h-3 w-3" />
           </motion.button>
-
           <motion.button
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
+            whileTap={{ scale: 0.9 }}
             onClick={() => onDelete(quota.id)}
+            className="p-1.5 rounded-lg bg-red-500/[0.04] text-red-400/40 hover:text-red-400 transition-colors"
           >
-            <Trash className="h-4 w-4" />
+            <Trash className="h-3 w-3" />
           </motion.button>
         </div>
       </div>
     </motion.div>
   );
 };
-
-// Add/Edit Quota Dialog
 
 export const QuotaFormDialog = ({
   isOpen,
@@ -141,8 +119,6 @@ export const QuotaFormDialog = ({
   const [description, setDescription] = useState("");
   const [status, setStatus] = useState("pending");
   const [deadline, setDeadline] = useState("");
-
-  // this is going to be the reset form when diaalong open/closes or editing quota changes
 
   useEffect(() => {
     if (isOpen) {
@@ -162,59 +138,44 @@ export const QuotaFormDialog = ({
 
   const handleSubmit = (e: any) => {
     e.preventDefault();
-    onSave({
-      id: editingQuota?.id,
-      title,
-      status,
-      description,
-      deadline,
-    });
+    onSave({ id: editingQuota?.id, title, status, description, deadline });
     onOpenChange(false);
   };
 
   return (
-    <DialogContent className="bg-black border-red-900/30 text-amber-50">
+    <DialogContent className="bg-[#0a0a0a] border-white/[0.06] text-white rounded-sm">
       <DialogHeader>
-        <DialogTitle>
+        <DialogTitle className="text-white/90">
           {editingQuota ? "Edit Quota" : "Add Weekly Quota"}
         </DialogTitle>
       </DialogHeader>
       <form onSubmit={handleSubmit}>
         <div className="space-y-4 py-4">
           <div className="space-y-2">
-            <label htmlFor="title" className="text-sm font-medium">
-              Title
-            </label>
+            <label className="text-[12px] font-medium text-white/30">Title</label>
             <Input
-              id="title"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               placeholder="Enter Quota Title"
-              className="bg-black/40 border-red-900/30 text-amber-50"
+              className="bg-white/[0.02] border-white/[0.06] text-white placeholder:text-white/15 rounded-sm focus:border-red-500/20"
               required
             />
           </div>
           <div className="space-y-2">
-            <label htmlFor="description" className="text-sm font-medium">
-              Description
-            </label>
+            <label className="text-[12px] font-medium text-white/30">Description</label>
             <Textarea
-              id="ddescription"
               value={description}
               onChange={(e) => setDescription(e.target.value)}
-              className="bg-black/40 border-red-900/30 text-amber-50"
+              className="bg-white/[0.02] border-white/[0.06] text-white placeholder:text-white/15 rounded-sm focus:border-red-500/20"
             />
           </div>
-
           <div className="space-y-2">
-            <label htmlFor="status" className="text-sm font-medium">
-              Status
-            </label>
+            <label className="text-[12px] font-medium text-white/30">Status</label>
             <Select value={status} onValueChange={setStatus}>
-              <SelectTrigger className="bg-black/40 border-red-900/30 text-amber-50">
-                <SelectValue placeholder="Select status" />
+              <SelectTrigger className="bg-white/[0.02] border-white/[0.06] text-white rounded-sm">
+                <SelectValue />
               </SelectTrigger>
-              <SelectContent className="bg-black border-redd-900/30 text-amber-50">
+              <SelectContent className="bg-[#0f0f0f] border-white/[0.06] text-white rounded-sm">
                 <SelectItem value="pending">Pending</SelectItem>
                 <SelectItem value="in-progress">In-progress</SelectItem>
                 <SelectItem value="completed">Completed</SelectItem>
@@ -222,24 +183,17 @@ export const QuotaFormDialog = ({
             </Select>
           </div>
           <div className="space-y-2">
-            <label htmlFor="deadline" className="text-sm font-medium">
-              Deadline
-            </label>
+            <label className="text-[12px] font-medium text-white/30">Deadline</label>
             <Input
-              id="deadline"
               type="date"
               value={deadline}
               onChange={(e) => setDeadline(e.target.value)}
-              className="bg-black/40  bordder-red-900/30 text-amber-50"
+              className="bg-white/[0.02] border-white/[0.06] text-white rounded-sm focus:border-red-500/20"
             />
           </div>
         </div>
-
         <DialogFooter>
-          <Button
-            className="bg-red-900 hover:bg-red-800 text-white"
-            type="submit"
-          >
+          <Button className="bg-red-600 hover:bg-red-500 text-white rounded-sm" type="submit">
             {editingQuota ? "Update" : "Add"} Quota
           </Button>
         </DialogFooter>
@@ -256,282 +210,166 @@ export default function Quotas() {
   const [selectedWeek, setSelectedWeek] = useState<Date>(new Date());
   const [selectedStatus, setSelectedStatus] = useState<string>("pending");
 
-  // get current useruuu
   const { data: activeUser } = ActiveUser();
   const currentUser = activeUser?.[0];
 
-  // formatting date range for current week
-  const startDate = startOfWeek(selectedWeek, { weekStartsOn: 1 }); // Monday will be the starting week
-  const endDate = endOfWeek(selectedWeek, { weekStartsOn: 1 }); // full week rotation back to monday
-
-  // might have to reformat this later on but im lazy so here
-  const dateRangeText = `${format(startDate, "MMM d")} - ${format(endDate, "MMM d, yyyy")} `;
-
-  // obv we gonna make a quotas in the subapase and then we have to load it from supabase
+  const startDate = startOfWeek(selectedWeek, { weekStartsOn: 1 });
+  const endDate = endOfWeek(selectedWeek, { weekStartsOn: 1 });
+  const dateRangeText = `${format(startDate, "MMM d")} – ${format(endDate, "MMM d, yyyy")}`;
 
   useEffect(() => {
     const loadQuotas = async () => {
       if (!currentUser) return;
-
-      // we have to create a 'weekly_quotas' table in supaaaabasee
       const { data, error } = await supabase
         .from("weekly_quotas")
-        .select("*") // I lovee the star hehe
-        .gte("week_start", format(startDate, "yyyy-MM-dd")) //again probably gonna have to reformat the date but oh well
+        .select("*")
+        .gte("week_start", format(startDate, "yyyy-MM-dd"))
         .lte("week_end", format(endDate, "yyyy-MM-dd"))
         .order("created_at", { ascending: false });
-
-      if (error) {
-        console.error("Error loading Quotas", error);
-        return;
-      }
+      if (error) { console.error("Error loading Quotas", error); return; }
       setQuotas(data || []);
     };
     loadQuotas();
 
-    // set up real time subscription
-    // basically This enables a real-time user experience where quota changes (by you or me) instantly appear without needing manual refreshes. So like when someone adds or completes a quota, everyone's dashboard updates immediately.
     const subscription = supabase
       .channel("weekly_quotas_changes")
-      .on(
-        "postgres_changes",
-        { event: "*", schema: "public", table: "weekly_quotas" },
-        () => loadQuotas()
-      )
+      .on("postgres_changes", { event: "*", schema: "public", table: "weekly_quotas" }, () => loadQuotas())
       .subscribe();
-    // The return function is React's useEffect cleanup it'll unsubscribe when the component unmounts
-    return () => {
-      subscription.unsubscribe();
-    };
+    return () => { subscription.unsubscribe(); };
   }, [currentUser, selectedWeek]);
 
-  // Handle week navigation
   const previousWeek = () => setSelectedWeek(subWeeks(selectedWeek, 1));
   const nextWeek = () => setSelectedWeek(addWeeks(selectedWeek, 1));
   const currentWeek = () => setSelectedWeek(new Date());
 
-  // Handle saving new/edited quota
   const handleSaveQuota = async (quotaData: any) => {
     if (!currentUser) return;
-
     const week_start = format(startDate, "yyyy-MM-dd");
     const week_end = format(endDate, "yyyy-MM-dd");
 
     if (quotaData.id) {
-      // Update existing quota
-      const { error } = await supabase
+      await supabase
         .from("weekly_quotas")
-        .update({
-          title: quotaData.title,
-          description: quotaData.description,
-          status: quotaData.status,
-          deadline: quotaData.deadline,
-          updated_at: new Date().toISOString(),
-        })
+        .update({ title: quotaData.title, description: quotaData.description, status: quotaData.status, deadline: quotaData.deadline, updated_at: new Date().toISOString() })
         .eq("id", quotaData.id);
-
-      if (error) console.error("Error updating quota:", error);
     } else {
-      // Add new quota
-      const { error } = await supabase.from("weekly_quotas").insert({
-        title: quotaData.title,
-        description: quotaData.description,
-        status: quotaData.status,
-        deadline: quotaData.deadline,
-        user_id: currentUser.supa_id,
-        week_start,
-        week_end,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
+      await supabase.from("weekly_quotas").insert({
+        title: quotaData.title, description: quotaData.description, status: quotaData.status,
+        deadline: quotaData.deadline, user_id: currentUser.supa_id, week_start, week_end,
+        created_at: new Date().toISOString(), updated_at: new Date().toISOString(),
       });
-
-      if (error) console.error("Error adding quota:", error);
     }
   };
 
-  // handle status changeey
   const handleStatusChange = async (id: any, newStatus: any) => {
-    const { error } = await supabase
-      .from("weekly_quotas")
-      .update({
-        status: newStatus,
-        updated_at: new Date().toISOString(),
-      })
-      .eq("id", id);
-
-    if (error) console.error("Error updating quota status", error);
+    await supabase.from("weekly_quotas").update({ status: newStatus, updated_at: new Date().toISOString() }).eq("id", id);
   };
 
-  // handle delete
   const handleDeleteQuota = async (id: any) => {
-    const { error } = await supabase
-      .from("weekly_quotas")
-      .delete()
-      .eq("id", id);
-
-    if (error) console.error("Error deleting quota", error);
-  };
-  //handle editing
-  const handleEditQuota = (quota: any) => {
-    setEditingQuota(quota);
-    setDialogOpen(true);
+    await supabase.from("weekly_quotas").delete().eq("id", id);
   };
 
-  // Filter quotas based on search query and selected status tab
-  const filteredQuotas = quotas.filter((quota) => {
-    const matchesSearch =
-      quota.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      (quota.description &&
-        quota.description.toLowerCase().includes(searchQuery.toLowerCase()));
+  const handleEditQuota = (quota: any) => { setEditingQuota(quota); setDialogOpen(true); };
 
-    const matchesStatus = quota.status === selectedStatus;
-
-    return matchesSearch && matchesStatus;
+  const filteredQuotas = quotas.filter((q) => {
+    const matchesSearch = q.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (q.description && q.description.toLowerCase().includes(searchQuery.toLowerCase()));
+    return matchesSearch && q.status === selectedStatus;
   });
 
-  // stats ( we loves some stats ;)
-  const totalQuotas = quotas.length;
-  const completedQuotas = quotas.filter((q) => q.status === "completed").length;
   const pendingQuotas = quotas.filter((q) => q.status === "pending").length;
-  const inProgressQuotas = quotas.filter(
-    (q) => q.status === "in-progress"
-  ).length;
+  const inProgressQuotas = quotas.filter((q) => q.status === "in-progress").length;
+  const completedQuotas = quotas.filter((q) => q.status === "completed").length;
 
   return (
-    <div className=" bg-black col-span-2">
-      {/* Navigation Bar */}
-
-      <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
-        {/* Main Quotas Card */}
-        <Card className="bg-zinc-950 high-dpi:bg-zinc-950/20 border-red-900/30 rounded-xs">
-          <CardHeader className="flex flex-row items-center justify-between">
-            <div>
-              <CardTitle className="text-amber-50">Weekly Quotas</CardTitle>
-              <CardDescription className="text-amber-50/70">
-                {dateRangeText}
-              </CardDescription>
+    <div className="bg-[#0a0a0a] border border-white/[0.04] rounded-sm h-full overflow-hidden">
+      {/* Header */}
+      <div className="px-6 pt-5 pb-4 flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <div className="p-2 rounded-sm bg-white/[0.03] border border-white/[0.04]">
+            <Target className="h-4 w-4 text-red-500/70" />
+          </div>
+          <div>
+            <span className="text-[11px] text-white/20 uppercase tracking-[0.15em] font-medium">
+              Weekly Quotas
+            </span>
+            <p className="text-[11px] text-white/10 mt-0.5">{dateRangeText}</p>
+            <div className="flex items-center gap-1 mt-0.5">
+              <div className="h-1 w-1 rounded-full bg-white/15" />
+              <span className="text-[9px] text-white/10 uppercase tracking-wider">Both companies</span>
             </div>
-            <div className="flex space-x-2">
-              <Button
-                onClick={previousWeek}
-                variant="outline"
-                size="sm"
-                className="bg-black/40 border-red-900/30 text-amber-50 hover:bg-red-900/20"
-              >
-                Previous
-              </Button>
-              <Button
-                onClick={currentWeek}
-                variant="outline"
-                size="sm"
-                className="bg-black/40 border-red-900/30 text-amber-50 hover:bg-red-900/20"
-              >
-                Current
-              </Button>
-              <Button
-                onClick={nextWeek}
-                variant="outline"
-                size="sm"
-                className="bg-black/40 border-red-900/30 text-amber-50 hover:bg-red-900/20"
-              >
-                Next
-              </Button>
-            </div>
-          </CardHeader>
-          <CardContent>
-            <div className="flex justify-between items-center mb-4">
-              <Input
-                placeholder="Search quotas..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-[300px] bg-black/40 border-red-900/30 text-amber-50"
-              />
-              <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-                <DialogTrigger asChild>
-                  <Button
-                    onClick={() => setEditingQuota(null)}
-                    className="bg-red-900 hover:bg-red-800 text-white"
-                  >
-                    <Plus className="h-4 w-4 mr-2" />
-                    Add Quota
-                  </Button>
-                </DialogTrigger>
-                <QuotaFormDialog
-                  isOpen={dialogOpen}
-                  onOpenChange={setDialogOpen}
-                  onSave={handleSaveQuota}
-                  editingQuota={editingQuota}
-                />
-              </Dialog>
-            </div>
-
-            <Tabs
-              defaultValue="pending"
-              value={selectedStatus}
-              onValueChange={setSelectedStatus}
-              className="mb-4"
+          </div>
+        </div>
+        <div className="flex items-center gap-1.5">
+          {["Prev", "Current", "Next"].map((label, i) => (
+            <Button
+              key={label}
+              onClick={[previousWeek, currentWeek, nextWeek][i]}
+              variant="outline"
+              size="sm"
+              className="bg-white/[0.02] border-white/[0.04] text-white/20 hover:text-white/50 hover:bg-white/[0.04] rounded-lg text-[11px] h-7 px-2.5"
             >
-              <TabsList className="bg-black/40 border border-red-900/30">
-                <TabsTrigger
-                  value="pending"
-                  className="data-[state=active]:bg-red-900/20"
-                >
-                  Pending ({pendingQuotas})
-                </TabsTrigger>
-                <TabsTrigger
-                  value="in-progress"
-                  className="data-[state=active]:bg-red-900/20"
-                >
-                  In Progress ({inProgressQuotas})
-                </TabsTrigger>
-                <TabsTrigger
-                  value="completed"
-                  className="data-[state=active]:bg-red-900/20"
-                >
-                  Completed ({completedQuotas})
-                </TabsTrigger>
-              </TabsList>
-            </Tabs>
+              {label}
+            </Button>
+          ))}
+        </div>
+      </div>
 
-            <ScrollArea className="h-[500px] pr-4">
-              <AnimatePresence>
-                {filteredQuotas.length > 0 ? (
-                  filteredQuotas.map((quota) => (
-                    <QuotaItem
-                      key={quota.id}
-                      quota={quota}
-                      onStatusChange={handleStatusChange}
-                      onDelete={handleDeleteQuota}
-                      onEdit={handleEditQuota}
-                    />
-                  ))
-                ) : (
-                  <motion.div
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    className="flex flex-col items-center justify-center p-8 text-amber-50/70"
-                  >
-                    <Target className="h-12 w-12 mb-4" />
-                    <h3 className="text-lg font-medium mb-2">
-                      No quotas found
-                    </h3>
-                    <p className="text-sm text-center max-w-md">
-                      {selectedStatus === "all"
-                        ? "Start by adding your weekly goals and targets to track your progress."
-                        : `No ${selectedStatus} quotas for this week.`}
-                    </p>
-                  </motion.div>
-                )}
-              </AnimatePresence>
-            </ScrollArea>
-          </CardContent>
-          <CardFooter className="border-t border-red-900/30 pt-4">
-            <p className="text-xs text-amber-50/70">
-              Weekly quotas help track team goals and personal targets.
-            </p>
-          </CardFooter>
-        </Card>
-      </motion.div>
+      <div className="px-6 pb-6">
+        <div className="flex justify-between items-center mb-4">
+          <Input
+            placeholder="Search quotas..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="w-[200px] h-7 text-[12px] bg-white/[0.02] border-white/[0.04] text-white/60 placeholder:text-white/15 rounded-lg focus:border-red-500/15"
+          />
+          <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+            <DialogTrigger asChild>
+              <Button
+                onClick={() => setEditingQuota(null)}
+                className="bg-red-600 hover:bg-red-500 text-white rounded-sm h-7 text-[11px] px-3"
+              >
+                <Plus className="h-3 w-3 mr-1" />
+                Add
+              </Button>
+            </DialogTrigger>
+            <QuotaFormDialog isOpen={dialogOpen} onOpenChange={setDialogOpen} onSave={handleSaveQuota} editingQuota={editingQuota} />
+          </Dialog>
+        </div>
+
+        <Tabs defaultValue="pending" value={selectedStatus} onValueChange={setSelectedStatus} className="mb-4">
+          <TabsList className="bg-white/[0.02] border border-white/[0.04] rounded-sm h-8">
+            <TabsTrigger value="pending" className="data-[state=active]:bg-amber-500/[0.08] data-[state=active]:text-amber-400/80 text-white/20 rounded-lg text-[11px] h-6">
+              Pending ({pendingQuotas})
+            </TabsTrigger>
+            <TabsTrigger value="in-progress" className="data-[state=active]:bg-blue-500/[0.08] data-[state=active]:text-blue-400/80 text-white/20 rounded-lg text-[11px] h-6">
+              Active ({inProgressQuotas})
+            </TabsTrigger>
+            <TabsTrigger value="completed" className="data-[state=active]:bg-emerald-500/[0.08] data-[state=active]:text-emerald-400/80 text-white/20 rounded-lg text-[11px] h-6">
+              Done ({completedQuotas})
+            </TabsTrigger>
+          </TabsList>
+        </Tabs>
+
+        <ScrollArea className="h-[350px]">
+          <AnimatePresence>
+            {filteredQuotas.length > 0 ? (
+              filteredQuotas.map((quota) => (
+                <QuotaItem key={quota.id} quota={quota} onStatusChange={handleStatusChange} onDelete={handleDeleteQuota} onEdit={handleEditQuota} />
+              ))
+            ) : (
+              <div className="flex flex-col items-center justify-center py-16">
+                <Target className="h-8 w-8 text-white/[0.06] mb-3" />
+                <p className="text-[13px] text-white/15">No {selectedStatus} quotas this week</p>
+              </div>
+            )}
+          </AnimatePresence>
+        </ScrollArea>
+      </div>
+
+      <div className="px-6 py-3 border-t border-white/[0.03]">
+        <p className="text-[11px] text-white/10">Track weekly goals across both companies.</p>
+      </div>
     </div>
   );
 }

@@ -1,4 +1,5 @@
 import { ActiveUser } from "@/stores/query";
+import { useRolePreview } from "@/stores/store";
 import React from "react";
 
 export const enum Role {
@@ -23,53 +24,35 @@ export const enum Role {
   CEO = "CEO"
 }
 
-// const enum RoleRanks {
-//   Intern = 1,
-//   Member,
-//   SoftwareDev,
-//   Marketing,
-//   Admin,
-//   ProjectManager,
-//   COO,
-//   CEO
-// }
-
-// we alreaady have role defined as enum, so we just variable it instead of redundant code whe we have to add changes to both sides when addng a new role
 type Roles = keyof typeof Role | Role;
 
 type UserViewProps = {
-  userRole?: Roles | Roles[]; // we make this an option for an inclusion list
-  excludeRoles?: Roles | Roles [];  //so that we now have an exclusion list
+  userRole?: Roles | Roles[];
+  excludeRoles?: Roles | Roles [];
   children: React.ReactNode;
 };
 
 const UserView = ({ userRole, excludeRoles = [], children }: UserViewProps) => {
   const { data: user } = ActiveUser();
+  const { previewRole } = useRolePreview();
   const defaultRole: any = "Member";
-  // This is to fix error when fetching user data for the first time, it needs a placeholder for this component to not give error
-  const role: any = user?.[0]?.role || defaultRole;
-  
- // Exclusion logic
+
+  // Use preview role if active, otherwise use actual role
+  const role: any = previewRole || user?.[0]?.role || defaultRole;
+
+  // Exclusion logic
   if (excludeRoles.includes(role)) {
     return null;
   }
 
-  // Since we created an exclusion now we have to specify the inclusion logic more detailed
-  if ( userRole) 
-  {
+  // Inclusion logic
+  if (userRole) {
     const allowedRoles = Array.isArray(userRole) ? userRole : [userRole];
     if(!allowedRoles.includes(role)) {
       return null;
     }
   }
   return <>{children}</>
-
-  // The old Broad inclusion list
-  // This doesn't work anymore becaause the excludeRoles prop isn't even being read or used.
-  // if (Array.isArray(userRole) ? userRole.includes(role) : role === userRole) {
-  //   return <>{children}</>;
-  // }
-  // return null;
 };
 
 export default UserView;

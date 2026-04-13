@@ -1,175 +1,235 @@
 import { createLazyFileRoute } from "@tanstack/react-router";
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/shadcnComponents/card";
 import { StorageUsageChart } from "@/MyComponents/HomeDashboard/storage";
-
 import {
   MessageSquare,
   Users,
   Terminal,
-  GitGraph,
-  DollarSign,
   DollarSignIcon,
   File,
   CalendarSearch,
+  Clock,
 } from "lucide-react";
 import { motion } from "framer-motion";
 import UserView, { Role } from "@/MyComponents/Reusables/userView";
 import Quotas from "@/MyComponents/HomeDashboard/qoutas";
 import CompanyStats from "@/MyComponents/HomeDashboard/companyStats";
 import Meetings from "@/MyComponents/HomeDashboard/meetings";
-import { SchedImgStore } from "@/stores/store";
+import { SchedImgStore, useCompanyFilter, type CompanyFilter } from "@/stores/store";
 import { QuickActionCard } from "@/MyComponents/HomeDashboard/Components/quickActionCard";
 import { TasksComponent } from "@/MyComponents/HomeDashboard/tasks";
-import { pdf } from "@react-pdf/renderer";
+import { ActiveUser } from "@/stores/query";
+import { CompanyCard } from "@/MyComponents/HomeDashboard/Components/companyCard";
+import { ActivityFeed } from "@/MyComponents/HomeDashboard/Components/activityFeed";
+import { TeamPresence } from "@/MyComponents/HomeDashboard/Components/teamPresence";
+
+const getGreeting = () => {
+  const hour = new Date().getHours();
+  if (hour < 12) return "Good morning";
+  if (hour < 17) return "Good afternoon";
+  return "Good evening";
+};
+
+// ── Company Selector Tabs ──
+const CompanyTabs = () => {
+  const { activeCompany, setActiveCompany } = useCompanyFilter();
+
+  const tabs: { key: CompanyFilter; label: string; dot?: string }[] = [
+    { key: "all", label: "All" },
+    { key: "codeWithAli", label: "CodeWithAli", dot: "bg-red-500" },
+    { key: "simplicityFunds", label: "Simplicity", dot: "bg-blue-500" },
+  ];
+
+  return (
+    <div className="flex items-center gap-1 bg-white/[0.02] border border-white/[0.04] rounded-sm p-0.5 w-fit">
+      {tabs.map((tab) => (
+        <button
+          key={tab.key}
+          onClick={() => setActiveCompany(tab.key)}
+          className={`px-3 py-1 rounded-sm text-[11px] font-medium transition-all duration-200 ${
+            activeCompany === tab.key
+              ? "bg-red-500/[0.1] text-red-400"
+              : "text-white/20 hover:text-white/40"
+          }`}
+        >
+          {tab.dot && (
+            <span className={`inline-block h-1.5 w-1.5 rounded-full mr-1.5 ${tab.dot}`} />
+          )}
+          {tab.label}
+        </button>
+      ))}
+    </div>
+  );
+};
 
 const Index = () => {
   const { isShowing } = SchedImgStore();
+  const { data: user } = ActiveUser();
+  const username = user?.[0]?.username || "there";
+  const { activeCompany } = useCompanyFilter();
+
+  const currentDate = new Date().toLocaleDateString("en-US", {
+    weekday: "short",
+    month: "short",
+    day: "numeric",
+  });
+
   return (
     <div className="min-h-screen bg-black overflow-y-auto">
-      {/* Navigation Bar */}
-      <nav className="border-b border-red-900/30 bg-black/40 sticky top-0 z-50">
-        <div className="flex items-center justify-between h-14 px-6">
-          <div className="flex items-center space-x-4">
-            <h1 className="bg-gradient-to-r from-red-500 to-red-900 bg-clip-text text-transparent font-bold">
-              Dashboard
-            </h1>
+      {/* ── Header ── */}
+      <div className="px-8 pt-7 pb-1">
+        <div className="flex items-end justify-between">
+          <div>
+            <motion.h1
+              initial={{ opacity: 0, y: -8 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="text-[26px] font-bold text-white tracking-tight"
+            >
+              {getGreeting()},{" "}
+              <span className="text-red-500">{username}</span>
+            </motion.h1>
+            <motion.p
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ delay: 0.1 }}
+              className="text-[12px] text-white/20 mt-1 flex items-center gap-1.5"
+            >
+              <Clock className="h-3 w-3" />
+              {currentDate}
+            </motion.p>
           </div>
-        </div>
-      </nav>
 
-      <motion.div
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        className="p-6 space-y-6"
-      >
-        {/* Company Stats */}
+          {/* Quick nav */}
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.15 }}
+            className="flex items-center gap-1.5"
+          >
+            <UserView userRole={[Role.CEO, Role.COO, Role.ProjectManager, Role.Marketing]}>
+              <QuickActionCard icon={Terminal} url="/details" title="Accounts" />
+            </UserView>
+            <QuickActionCard title="Chat" icon={MessageSquare} url="/chat" />
+            <UserView userRole={["CEO", "COO"]}>
+              <QuickActionCard title="Finance" url="/financialDashboard" icon={DollarSignIcon} />
+            </UserView>
+            <UserView excludeRoles={"COO"}>
+              <QuickActionCard title="Invoicer" url="/invoiceClients" icon={File} />
+            </UserView>
+            <UserView excludeRoles={["COO", "CEO"]}>
+              <QuickActionCard title="Schedule" url="/schedule" icon={CalendarSearch} />
+            </UserView>
+            <UserView userRole={[Role.CEO, Role.COO]}>
+              <QuickActionCard title="Employees" icon={Users} url="/employee" />
+            </UserView>
+          </motion.div>
+        </div>
+      </div>
+
+      {/* ── Company Tabs ── */}
+      <UserView userRole={[Role.CEO, Role.COO]}>
+        <div className="px-8 pt-4">
+          <CompanyTabs />
+        </div>
+      </UserView>
+
+      {/* ── Main Grid ── */}
+      <div className="px-8 pt-4 pb-10 space-y-4">
+        {/* Schedule image */}
+        <UserView userRole={[Role.CEO, Role.COO]}>
+          <img
+            src="/schedule.png"
+            alt="Schedule"
+            className={`${isShowing ? "w-full h-auto" : "h-0"} rounded-sm border border-white/[0.04] transition-all duration-300`}
+          />
+        </UserView>
+
+        {/* ── Company Cards ── */}
+        <UserView userRole={[Role.CEO, Role.COO]}>
+          {activeCompany === "all" ? (
+            <div className="grid grid-cols-2 gap-4">
+              <CompanyCard name="CodeWithAli" description="Software agency & media" memberCount={7} projectCount={4} revenue="$671" status="active" accentPosition="left" companyKey="codeWithAli" />
+              <CompanyCard name="Simplicity" description="Fintech budgeting platform" memberCount={3} projectCount={2} revenue="$0" status="growing" accentPosition="right" companyKey="simplicityFunds" />
+            </div>
+          ) : (
+            <CompanyCard
+              name={activeCompany === "codeWithAli" ? "CodeWithAli" : "Simplicity"}
+              description={activeCompany === "codeWithAli" ? "Software agency & media" : "Fintech budgeting platform"}
+              memberCount={activeCompany === "codeWithAli" ? 7 : 3}
+              projectCount={activeCompany === "codeWithAli" ? 4 : 2}
+              revenue={activeCompany === "codeWithAli" ? "$671" : "$0"}
+              status={activeCompany === "codeWithAli" ? "active" : "growing"}
+              accentPosition="left"
+              companyKey={activeCompany}
+            />
+          )}
+        </UserView>
+
+        {/* ── Stats strip (one unified card) ── */}
         <UserView excludeRoles={[Role.Intern, Role.Member]}>
           <CompanyStats />
         </UserView>
 
-        <UserView userRole={[Role.CEO, Role.COO]}>
-          {/* Set a pop-up function/component to it */}
-          <img
-            src="/schedule.png"
-            alt="Schedule"
-            className={`${isShowing ? "w-full h-auto" : "h-0 w-[1000px]"} flex justify-self-center border-2 border-red-700/50 rounded-xl shadow-md shadow-red-600/40 hover:brightness-110 transition-all duration-300`}
-          />
-        </UserView>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-          {/* Upcoming Meetings */}
-          <UserView
-            userRole={[Role.CEO, Role.COO, Role.ProjectManager, Role.Marketing]}
-          >
-            <Meetings />
-          </UserView>
-
-          {/* Quick Actions */}
-          <Card className="bg-zinc-950 high-dpi:bg-zinc-950/20 border-red-900/30 rounded-xs">
-            <CardHeader>
-              <CardTitle className="text-amber-50">Quick Actions</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <motion.div className="">
-                <UserView
-                  userRole={[
-                    Role.CEO,
-                    Role.COO,
-                    Role.ProjectManager,
-                    Role.Marketing,
-                  ]}
-                >
-                  <div className="group flex flex-col ">
-                    <QuickActionCard
-                      icon={Terminal}
-                      url="/details"
-                      title="Accounts"
-                    />
-                    {/* <span className="text-white text-sm m-1 opacity-0 group-hover:opacity-100 transition-opacity duration-200 ">
-                      Accounts
-                    </span> */}
+        {/* ── Row: Activity+Team (connected) | Meetings (fills column) ── */}
+        <div className="grid grid-cols-12 gap-4">
+          {/* Activity + Team — single card with internal divider */}
+          <div className="col-span-12 lg:col-span-7">
+            <div className="bg-[#0a0a0a] border border-white/[0.04] rounded-sm overflow-hidden h-full">
+              <div className="grid grid-cols-2 h-full">
+                {/* Activity side */}
+                <div className="border-r border-white/[0.04]">
+                  <div className="px-5 pt-4 pb-2">
+                    <span className="text-[11px] text-white/15 uppercase tracking-[0.15em] font-medium">
+                      Recent Activity
+                    </span>
                   </div>
-                </UserView>
-                <div className="group flex flex-col ">
-                  <QuickActionCard
-                    title="Chat"
-                    icon={MessageSquare}
-                    url="/chat"
-                  />
-                  {/* <span className="text-white text-sm m-1 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
-                    Chat
-                  </span> */}
+                  <div className="px-5 pb-5">
+                    <ActivityFeed />
+                  </div>
                 </div>
-                <div className="group flex flex-col">
-                  <UserView userRole={["CEO", "COO"]}>
-                    <QuickActionCard
-                      title="FinancePrince"
-                      url="/financialDashboard"
-                      icon={DollarSignIcon}
-                    />
-                  </UserView>
+                {/* Team side */}
+                <div>
+                  <div className="px-5 pt-4 pb-2">
+                    <span className="text-[11px] text-white/15 uppercase tracking-[0.15em] font-medium">
+                      Team
+                    </span>
+                  </div>
+                  <div className="px-5 pb-5">
+                    <TeamPresence />
+                  </div>
                 </div>
-                <div className="group flex flex-col">
-                  <UserView excludeRoles={"COO"}>
-                    <QuickActionCard
-                      title="Invoicer"
-                      url="/invoiceClients"
-                      icon={File}
-                    />
-                  </UserView>
-                </div>
+              </div>
+            </div>
+          </div>
 
-                <div className="group flex flex-col">
-                  <UserView excludeRoles={["COO", "CEO"]}>
-                    <QuickActionCard
-                      title="Schedule"
-                      url="/schedule"
-                      icon={CalendarSearch}
-                    />
-                  </UserView>
-                </div>
-
-                <div className="group flex flex-col">
-                  <UserView userRole={[Role.CEO, Role.COO]}>
-                    <QuickActionCard
-                      title="Employees"
-                      icon={Users}
-                      url="/employee"
-                    />
-                    {/* <span className="text-sm  m-1 opacity-0 group-hover:opacity-100 transition-opacity duration-200  ">
-                      Employees
-                    </span> */}
-                  </UserView>
-                </div>
-              </motion.div>
-            </CardContent>
-          </Card>
-
-          {/* Weekly Quota */}
-          <Quotas />
-
-          {/* Tasks */}
-          <TasksComponent />
-
-          {/* storage graph */}
-          <UserView userRole={[Role.CEO, Role.COO]}>
-            <StorageUsageChart />
+          {/* Meetings — fills remaining column, stretches to match */}
+          <UserView userRole={[Role.CEO, Role.COO, Role.ProjectManager, Role.Marketing]}>
+            <div className="col-span-12 lg:col-span-5 h-full">
+              <Meetings />
+            </div>
           </UserView>
-
-          {/* Api & Webhooks View */}
-          {/* <UserView userRole={[Role.CEO, Role.COO]}>
-            <ApiWebhooks />
-          </UserView> */}
         </div>
-      </motion.div>
+
+        {/* ── Row: Tasks | Quotas ── */}
+        <div className="grid grid-cols-12 gap-4">
+          <div className="col-span-12 lg:col-span-5">
+            <TasksComponent />
+          </div>
+          <div className="col-span-12 lg:col-span-7">
+            <Quotas />
+          </div>
+        </div>
+
+        {/* ── Storage ── */}
+        <UserView userRole={[Role.CEO, Role.COO]}>
+          <div className="max-w-md">
+            <StorageUsageChart />
+          </div>
+        </UserView>
+      </div>
     </div>
   );
 };
+
 export const Route = createLazyFileRoute("/")({
   component: Index,
 });

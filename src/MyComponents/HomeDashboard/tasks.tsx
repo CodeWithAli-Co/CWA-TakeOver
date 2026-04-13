@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import supabase from "@/MyComponents/supabase";
 import { motion, AnimatePresence } from "framer-motion";
 import { ActiveUser, Employees, Todos } from "@/stores/query";
-import { Activity } from "lucide-react";
+import { Activity, ListTodo } from "lucide-react";
 import { Badge } from "@/components/ui/shadcnComponents/badge";
 import { Input } from "@/components/ui/shadcnComponents/input";
 import { ScrollArea } from "@/components/ui/shadcnComponents/scroll-area";
@@ -13,87 +13,63 @@ import {
   TabsList,
   TabsTrigger,
 } from "@/components/ui/shadcnComponents/tabs";
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/shadcnComponents/card";
 
-const colors = {
-  high: "bg-red-500/20 text-red-400 border-red-500/30",
-  medium: "bg-amber-500/20 text-amber-400 border-amber-500/30",
-  low: "bg-emerald-500/20 text-emerald-400 border-emerald-500/30",
-};
-// Enhanced Task Priority Badge with animation
-// *First grabbing the keys and then using the keys as type ( priority type )
-const TaskPriorityBadge = ({ priority }: { priority: keyof typeof colors }) => {
-  return (
-    <motion.div whileHover={{ scale: 1.05 }}>
-      <Badge variant="outline" className={`${colors[priority]} text-xs ml-2`}>
-        {priority}
-      </Badge>
-    </motion.div>
-  );
+const priorityColors = {
+  high: "bg-red-500/[0.06] text-red-400/70 border-red-500/10",
+  medium: "bg-amber-500/[0.06] text-amber-400/70 border-amber-500/10",
+  low: "bg-emerald-500/[0.06] text-emerald-400/70 border-emerald-500/10",
 };
 
-// Task Item Component with animations
+const TaskPriorityBadge = ({ priority }: { priority: keyof typeof priorityColors }) => (
+  <Badge variant="outline" className={`${priorityColors[priority]} text-[10px] ml-2`}>
+    {priority}
+  </Badge>
+);
+
 const TaskItem = ({ task }: { task: any }) => {
   async function EditTask(todoStatus: string, todoID: number) {
-    const { error } = await supabase
-      .from("cwa_todos")
-      .update({ status: todoStatus })
-      .eq("todo_id", todoID);
-    if (error) {
-      await message(error.message, {
-        title: "Error Editing Todo Status",
-        kind: "error",
-      });
-    }
+    const { error } = await supabase.from("cwa_todos").update({ status: todoStatus }).eq("todo_id", todoID);
+    if (error) await message(error.message, { title: "Error Editing Todo Status", kind: "error" });
   }
 
   return (
     <motion.div
-      initial={{ opacity: 0, y: 10 }}
-      animate={{ opacity: 1, y: 0 }}
-      exit={{ opacity: 0, y: -10 }}
-      whileHover={{ scale: 1.01 }}
-      className="flex items-center justify-between p-3 rounded-lg hover:bg-red-900/10 
-              transition-colors border border-transparent hover:border-red-900/30"
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      className="flex items-center justify-between py-3 px-3 rounded-sm hover:bg-white/[0.02] transition-all duration-300 group"
     >
       <div className="flex items-center gap-3">
-        <motion.div
-          whileHover={{ scale: 1.1 }}
-          className="p-2 rounded-lg bg-red-900/20"
-        >
-          <Activity className="h-4 w-4 text-red-500" />
-        </motion.div>
+        <div className="p-1.5 rounded-sm bg-white/[0.03] group-hover:bg-red-500/[0.04] transition-colors">
+          <Activity className="h-3.5 w-3.5 text-red-500/50" />
+        </div>
         <div>
           <div className="flex items-center">
-            <span className="text-sm font-medium text-amber-50">
+            <span className="text-[13px] font-medium text-white/65 group-hover:text-white/85 transition-colors">
               {task.title}
             </span>
             <TaskPriorityBadge priority={task.priority} />
+            {/* Company badge */}
+            <span className="ml-2 text-[9px] text-white/10 uppercase tracking-wider bg-white/[0.02] px-1.5 py-0.5 rounded-sm border border-white/[0.03]">
+              Both
+            </span>
           </div>
-          <span className="text-xs text-amber-50/70">{task.deadline}</span>
+          {task.deadline && <span className="text-[11px] text-white/15">{task.deadline}</span>}
         </div>
       </div>
       {task.status === "to-do" && (
         <motion.button
-          whileHover={{ scale: 1.05 }}
           whileTap={{ scale: 0.95 }}
-          className="text-amber-50/70 hover:text-amber-50 hover:bg-red-900/20 px-3 py-1 rounded"
+          className="text-[11px] text-white/20 hover:text-white/60 bg-white/[0.03] hover:bg-red-500/[0.06] border border-white/[0.04] hover:border-red-500/10 px-3 py-1.5 rounded-sm transition-all duration-300 opacity-0 group-hover:opacity-100"
           onClick={() => EditTask("in-progress", task.todo_id)}
         >
           Start
         </motion.button>
       )}
-
       {task.status === "in-progress" && (
         <motion.button
-          whileHover={{ scale: 1.05 }}
           whileTap={{ scale: 0.95 }}
-          className="text-amber-50/70 hover:text-amber-50 hover:bg-red-900/20 px-3 py-1 rounded"
+          className="text-[11px] text-white/20 hover:text-emerald-400/80 bg-white/[0.03] hover:bg-emerald-500/[0.06] border border-white/[0.04] hover:border-emerald-500/10 px-3 py-1.5 rounded-sm transition-all duration-300 opacity-0 group-hover:opacity-100"
           onClick={() => EditTask("done", task.todo_id)}
         >
           Finish
@@ -103,144 +79,103 @@ const TaskItem = ({ task }: { task: any }) => {
   );
 };
 
-// Enhanced Tasks Component with Tabs
 export const TasksComponent = () => {
   const [selectedTab, setSelectedTab] = useState("to-do");
   const [searchQuery, setSearchQuery] = useState("");
 
   const { data: AllEmployees, error: EmployeesError } = Employees();
-  if (EmployeesError) {
-    console.log(
-      "Error fetching Employees for ToDo in Home",
-      EmployeesError.message
-    );
-  }
+  if (EmployeesError) console.log("Error fetching Employees:", EmployeesError.message);
 
-  // Get the active user
   const { data: user, error: activeUserError } = ActiveUser();
-  if (activeUserError) {
-    console.log(
-      "Error fetching Active User for Tasks",
-      activeUserError.message
-    );
-  }
+  if (activeUserError) console.log("Error fetching Active User:", activeUserError.message);
 
-  // Fetch todos for the active user
-  const {
-    data: todos,
-    error: TodoError,
-    refetch: refetchTodos,
-  } = Todos(user?.[0]?.username);
+  const { data: todos, error: TodoError, refetch: refetchTodos } = Todos(user?.[0]?.username);
+  if (TodoError) console.log("Error fetching Todos:", TodoError.message);
 
-  if (TodoError) {
-    console.log("Error fetching Todos Data:", TodoError.message);
-  }
-
-  // Set up real-time subscription
   useEffect(() => {
     const subscription = supabase
       .channel("all-todos")
-      .on(
-        "postgres_changes",
-        { event: "*", schema: "public", table: "cwa_todos" },
-        () => refetchTodos()
-      )
+      .on("postgres_changes", { event: "*", schema: "public", table: "cwa_todos" }, () => refetchTodos())
       .subscribe();
-
-    return () => {
-      subscription.unsubscribe();
-    };
+    return () => { subscription.unsubscribe(); };
   }, [refetchTodos]);
 
-  // Fetch todos when tab changes
   useEffect(() => {
-    if (user && user.length > 0) {
-      refetchTodos();
-    }
+    if (user && user.length > 0) refetchTodos();
   }, [selectedTab, user]);
 
-  // Filter tasks based on selected tab and search query
-  const filteredTasks =
-    todos?.filter((task) => {
-      const matchesSearch =
-        task.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        (task.description &&
-          task.description.toLowerCase().includes(searchQuery.toLowerCase()));
-      const matchesStatus = task.status === selectedTab;
-      return matchesSearch && matchesStatus;
-    }) || [];
+  const filteredTasks = todos?.filter((task) => {
+    const matchesSearch = task.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (task.description && task.description.toLowerCase().includes(searchQuery.toLowerCase()));
+    return matchesSearch && task.status === selectedTab;
+  }) || [];
 
-  // Count tasks by status
-  const todoCount =
-    todos?.filter((task) => task.status === "to-do").length || 0;
-  const inProgressCount =
-    todos?.filter((task) => task.status === "in-progress").length || 0;
-  const doneCount = todos?.filter((task) => task.status === "done").length || 0;
+  const todoCount = todos?.filter((t) => t.status === "to-do").length || 0;
+  const inProgressCount = todos?.filter((t) => t.status === "in-progress").length || 0;
+  const doneCount = todos?.filter((t) => t.status === "done").length || 0;
   const totalTasks = todos?.length || 0;
 
   return (
-    <Card className="bg-zinc-950 high-dpi:bg-zinc-950/20 border-red-900/30 rounded-xs">
-      <CardHeader className="flex flex-row items-center justify-between">
-        <div>
-          <CardTitle className="text-amber-50">Tasks</CardTitle>
-          <p className="text-sm text-amber-50/70 mt-1">
-            {totalTasks} total tasks
-          </p>
+    <div className="bg-[#0a0a0a] border border-white/[0.04] rounded-sm h-full overflow-hidden">
+      <div className="px-5 pt-4 pb-3 flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <div className="p-2 rounded-sm bg-white/[0.03] border border-white/[0.04]">
+            <ListTodo className="h-4 w-4 text-red-500/70" />
+          </div>
+          <div>
+            <span className="text-[11px] text-white/20 uppercase tracking-[0.15em] font-medium">Tasks</span>
+            <p className="text-[11px] text-white/10 mt-0.5">{totalTasks} total</p>
+          </div>
         </div>
         <div className="flex items-center gap-2">
           <Input
-            placeholder="Search tasks..."
+            placeholder="Search..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-[200px] bg-black/40 border-red-900/30 text-amber-50"
+            className="w-[120px] h-7 text-[11px] bg-white/[0.02] border-white/[0.04] text-white/50 placeholder:text-white/10 rounded-sm focus:border-red-500/15"
           />
-          <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
-            <AddTodo Users={AllEmployees || []} homeDash />
-          </motion.div>
+          <AddTodo Users={AllEmployees || []} homeDash />
         </div>
-      </CardHeader>
-      <CardContent>
-        <Tabs defaultValue="to-do" className="mb-4">
-          <TabsList className="bg-black/40 border border-red-900/30">
-            <TabsTrigger
-              value="to-do"
-              onClick={() => setSelectedTab("to-do")}
-              className="data-[state=active]:bg-red-900/20"
-            >
+      </div>
+
+      <div className="px-5 pb-5">
+        <Tabs defaultValue="to-do" className="mb-3">
+          <TabsList className="bg-white/[0.02] border border-white/[0.04] rounded-sm h-7">
+            <TabsTrigger value="to-do" onClick={() => setSelectedTab("to-do")} className="data-[state=active]:bg-red-500/[0.08] data-[state=active]:text-red-400/80 text-white/20 rounded-sm text-[10px] h-5">
               To Do ({todoCount})
             </TabsTrigger>
-            <TabsTrigger
-              value="in-progress"
-              onClick={() => setSelectedTab("in-progress")}
-              className="data-[state=active]:bg-red-900/20"
-            >
-              In Progress ({inProgressCount})
+            <TabsTrigger value="in-progress" onClick={() => setSelectedTab("in-progress")} className="data-[state=active]:bg-amber-500/[0.08] data-[state=active]:text-amber-400/80 text-white/20 rounded-sm text-[10px] h-5">
+              Active ({inProgressCount})
             </TabsTrigger>
-            <TabsTrigger
-              value="done"
-              onClick={() => setSelectedTab("done")}
-              className="data-[state=active]:bg-red-900/20"
-            >
+            <TabsTrigger value="done" onClick={() => setSelectedTab("done")} className="data-[state=active]:bg-emerald-500/[0.08] data-[state=active]:text-emerald-400/80 text-white/20 rounded-sm text-[10px] h-5">
               Done ({doneCount})
             </TabsTrigger>
           </TabsList>
         </Tabs>
-        <ScrollArea className="h-[600px] pr-4">
-          <AnimatePresence mode="wait">
-            <motion.div
-              key={selectedTab}
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -20 }}
-              className="space-y-3"
-            >
-              {filteredTasks.map((task) => (
-                <TaskItem key={task.todo_id} task={task} />
-              ))}
-            </motion.div>
-          </AnimatePresence>
-        </ScrollArea>
-      </CardContent>
-    </Card>
+
+        {filteredTasks.length === 0 ? (
+          <div className="text-center py-8">
+            <ListTodo className="h-6 w-6 text-white/[0.05] mx-auto mb-2" />
+            <p className="text-[12px] text-white/15">No {selectedTab} tasks</p>
+          </div>
+        ) : (
+          <ScrollArea className="h-[340px]">
+            <AnimatePresence mode="wait">
+              <motion.div
+                key={selectedTab}
+                initial={{ opacity: 0, y: 4 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -4 }}
+                className="space-y-0.5"
+              >
+                {filteredTasks.map((task) => (
+                  <TaskItem key={task.todo_id} task={task} />
+                ))}
+              </motion.div>
+            </AnimatePresence>
+          </ScrollArea>
+        )}
+      </div>
+    </div>
   );
 };

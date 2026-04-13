@@ -82,6 +82,27 @@ export const useSubMenuStore = create<SubMenuState>()((set) => ({
 }))
 
 
+// Role Preview — lets CEO/COO preview what other roles see
+interface RolePreviewState {
+  previewRole: string | null; // null = no preview active, string = previewing that role
+  setPreviewRole: (role: string | null) => void;
+}
+export const useRolePreview = create<RolePreviewState>()((set) => ({
+  previewRole: null,
+  setPreviewRole: (previewRole: string | null) => set({ previewRole }),
+}));
+
+// Company Filter — scopes the entire dashboard to a single company or "all"
+export type CompanyFilter = "all" | "codeWithAli" | "simplicityFunds";
+interface CompanyFilterState {
+  activeCompany: CompanyFilter;
+  setActiveCompany: (company: CompanyFilter) => void;
+}
+export const useCompanyFilter = create<CompanyFilterState>()((set) => ({
+  activeCompany: "all",
+  setActiveCompany: (activeCompany: CompanyFilter) => set({ activeCompany }),
+}));
+
 // Display Schedule Pic. *This is prob getting removed after adding pop-up function/component
 interface SchedImgState {
   isShowing: boolean,
