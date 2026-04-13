@@ -11,15 +11,14 @@ import {
 } from "@/components/ui/shadcnComponents/select";
 import { useSuspenseQuery } from "@tanstack/react-query";
 import UserView, { Role } from "../Reusables/userView";
-import { Label } from "@/components/ui/shadcnComponents/Label";
 import {
   CEORolesList,
   COORolesList,
   getRoleRank,
   RoleList,
 } from "../Reusables/roleRanks";
+import { Shield, X } from "lucide-react";
 
-// Fetch CWA Employee Name
 const fetchEmployeeName = async (id: number) => {
   const { data } = await supabase
     .from("app_users")
@@ -43,10 +42,7 @@ export const PromoteUser = (props: PromoteInterface) => {
   const { resetPromote } = useSubMenuStore();
   const { data, error } = EmployeeName(props.userID);
   if (error) {
-    console.log(
-      "Error fetching selected Employee name. For more info:",
-      error.message
-    );
+    console.log("Error fetching selected Employee name:", error.message);
   }
 
   const handleReset = () => {
@@ -65,158 +61,119 @@ export const PromoteUser = (props: PromoteInterface) => {
         .update({ role: value.Role, role_rank: rank })
         .eq("id", props.userID);
       if (error) {
-        await message(error.message, {
-          title: "Error Promoting User",
-          kind: "error",
-        });
+        await message(error.message, { title: "Error Promoting User", kind: "error" });
       } else {
-        await message(`Successfully Promoted User to ${value.Role}!`, {
-          title: "User Promoted!",
+        await message(`Successfully updated ${data?.username} to ${value.Role}`, {
+          title: "Role Updated",
           kind: "info",
           okLabel: "Close",
         });
       }
-
-      // Reset Form and State
       handleReset();
     },
   });
 
   return (
-    <>
-      <div className="mb-2">
-        <h3>
-          Promote {data?.username}
-          <button
-            type="button"
-            onClick={handleReset}
-            className="bg-red-800/50 rounded-xl text-[14px] p-1 px-2 hover:bg-red-800/30 float-right"
-          >
-            Cancel
-          </button>
-        </h3>
-
-        <form
-          onSubmit={(e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            form.handleSubmit();
-          }}
+    <div className="bg-[#0a0a0a] border border-white/[0.04] rounded-sm overflow-hidden">
+      <div className="flex items-center justify-between px-5 py-3 border-b border-white/[0.04]">
+        <div className="flex items-center gap-2.5">
+          <div className="p-1.5 rounded-sm bg-amber-500/[0.06]">
+            <Shield className="h-3.5 w-3.5 text-amber-400/70" />
+          </div>
+          <div>
+            <span className="text-[12px] text-white/60 font-medium">
+              Change role for{" "}
+              <span className="text-white/80">{data?.username}</span>
+            </span>
+          </div>
+        </div>
+        <button
+          onClick={handleReset}
+          className="p-1.5 rounded-sm text-white/15 hover:text-white/40 hover:bg-white/[0.04] transition-colors"
         >
-          {/* Role */}
-          <form.Field
-            name="Role"
-            children={(field) => (
-              <div className="grid gap-2">
-                <Label htmlFor={field.name} className="text-red-200">
-                  Role
-                </Label>
-                <Select
-                  value={field.state.value}
-                  onValueChange={(value) => field.handleChange(value)}
-                >
-                  <SelectTrigger
-                    className="bg-black/40 border-red-950/30 
-                            text-red-200 focus:border-red-700 
-                            focus:ring-2 focus:ring-red-900/50"
-                  >
-                    <SelectValue placeholder="Select role" />
-                  </SelectTrigger>
-                  <UserView
-                    userRole={[
-                      Role.Client,
-                      Role.Intern,
-                      Role.Member,
-                      Role.UIDesigner,
-                      Role.SoftwareDev,
-                      Role.MechEngineer,
-                      Role.Recruiter,
-                      Role.AiDev,
-                      Role.DBAdmin,
-                      Role.AccManager,
-                      Role.DataScientist,
-                      Role.ProjectManager,
-                      Role.Marketing,
-                      Role.CustomerSupport,
-                      Role.Admin,
-                      Role.SecurityEngineer,
-                      Role.Partner,
-                    ]}
-                  >
-                    <SelectContent
-                      className="bg-black/95 border-red-950/30 
-                            text-red-200"
-                    >
-                      {RoleList.map((role: string) => (
-                        <SelectItem
-                          key={role}
-                          value={role}
-                          className="text-red-200 
-                                hover:bg-red-950/30 focus:bg-red-950/40"
-                        >
-                          {role}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </UserView>
-
-                  {/* Let COO have power to promote anyone to any role */}
-                  <UserView userRole={"COO"}>
-                    <SelectContent
-                      className="bg-black/95 border-red-950/30 
-                            text-red-200"
-                    >
-                      {COORolesList.map((role) => (
-                        <SelectItem
-                          key={role}
-                          value={role}
-                          className="text-red-200 
-                                hover:bg-red-950/30 focus:bg-red-950/40"
-                        >
-                          {role}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </UserView>
-
-                  {/* Let CEO have power to promote anyone to any role */}
-                  <UserView userRole={"CEO"}>
-                    <SelectContent
-                      className="bg-black/95 border-red-950/30 
-                            text-red-200"
-                    >
-                      {CEORolesList.map((role) => (
-                        <SelectItem
-                          key={role}
-                          value={role}
-                          className="text-red-200 
-                                hover:bg-red-950/30 focus:bg-red-950/40"
-                        >
-                          {role}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </UserView>
-                </Select>
-              </div>
-            )}
-          />
-
-          <br />
-          <form.Subscribe
-            selector={(state) => [state.canSubmit]}
-            children={([canSubmit]) => (
-              <button
-                type="submit"
-                disabled={!canSubmit}
-                className="bg-red-800/50 rounded-xl p-1 px-2 hover:bg-red-800/30"
-              >
-                Promote/Demote
-              </button>
-            )}
-          />
-        </form>
+          <X className="h-3.5 w-3.5" />
+        </button>
       </div>
-    </>
+
+      <form
+        onSubmit={(e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          form.handleSubmit();
+        }}
+        className="flex items-center gap-3 px-5 py-3"
+      >
+        <form.Field
+          name="Role"
+          children={(field) => (
+            <div className="flex-1">
+              <Select
+                value={field.state.value}
+                onValueChange={(value) => field.handleChange(value)}
+              >
+                <SelectTrigger className="bg-white/[0.02] border-white/[0.06] text-white/60 rounded-sm text-[12px] h-8 focus:border-red-500/20">
+                  <SelectValue placeholder="Select new role" />
+                </SelectTrigger>
+
+                {/* Regular users */}
+                <UserView
+                  userRole={[
+                    Role.Client, Role.Intern, Role.Member, Role.UIDesigner,
+                    Role.SoftwareDev, Role.MechEngineer, Role.Recruiter,
+                    Role.AiDev, Role.DBAdmin, Role.AccManager, Role.DataScientist,
+                    Role.ProjectManager, Role.Marketing, Role.CustomerSupport,
+                    Role.Admin, Role.SecurityEngineer, Role.Partner,
+                  ]}
+                >
+                  <SelectContent className="bg-[#0a0a0a] border-white/[0.06] text-white/60 rounded-sm">
+                    {RoleList.map((role: string) => (
+                      <SelectItem key={role} value={role} className="text-white/50 hover:text-white hover:bg-white/[0.04] rounded-sm text-[12px]">
+                        {role}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </UserView>
+
+                {/* COO */}
+                <UserView userRole={"COO"}>
+                  <SelectContent className="bg-[#0a0a0a] border-white/[0.06] text-white/60 rounded-sm">
+                    {COORolesList.map((role) => (
+                      <SelectItem key={role} value={role} className="text-white/50 hover:text-white hover:bg-white/[0.04] rounded-sm text-[12px]">
+                        {role}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </UserView>
+
+                {/* CEO */}
+                <UserView userRole={"CEO"}>
+                  <SelectContent className="bg-[#0a0a0a] border-white/[0.06] text-white/60 rounded-sm">
+                    {CEORolesList.map((role) => (
+                      <SelectItem key={role} value={role} className="text-white/50 hover:text-white hover:bg-white/[0.04] rounded-sm text-[12px]">
+                        {role}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </UserView>
+              </Select>
+            </div>
+          )}
+        />
+
+        <form.Subscribe
+          selector={(state) => [state.canSubmit]}
+          children={([canSubmit]) => (
+            <button
+              type="submit"
+              disabled={!canSubmit}
+              className="px-4 py-1.5 bg-red-600 hover:bg-red-500 text-white text-[11px] font-medium rounded-sm h-8
+                disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+            >
+              Update Role
+            </button>
+          )}
+        />
+      </form>
+    </div>
   );
 };

@@ -1,12 +1,6 @@
 import { useForm } from "@tanstack/react-form";
 import supabase from "../supabase";
 import { useAppStore } from "@/stores/store";
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/shadcnComponents/card";
 import { UserPlus, X } from "lucide-react";
 import { AnimatePresence, motion } from "framer-motion";
 
@@ -20,15 +14,13 @@ export const EditEmployee = (props: Props) => {
     setDialog("closed");
     form.reset();
   };
-  console.log('Employee ID', props.rowID)
+
   const form = useForm({
     defaultValues: {
       Username: "",
       Email: "",
     },
     onSubmit: async ({ value }) => {
-      console.log(value);
-
       if (value.Username !== "") {
         const { error } = await supabase
           .from("app_users")
@@ -52,115 +44,107 @@ export const EditEmployee = (props: Props) => {
   return (
     <AnimatePresence mode="wait">
       <motion.div
-        className="fixed inset-0 flex items-center justify-center backdrop-blur-sm"
+        className="fixed inset-0 flex items-center justify-center z-50"
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
         onClick={handleClose}
       >
         <motion.div
-          initial={{ opacity: 0, scale: 0.95 }}
-          animate={{ opacity: 1, scale: 1 }}
-          exit={{ opacity: 0, scale: 0.95 }}
-          transition={{ type: "spring", damping: 20, stiffness: 300 }}
+          initial={{ opacity: 0, scale: 0.97, y: 8 }}
+          animate={{ opacity: 1, scale: 1, y: 0 }}
+          exit={{ opacity: 0, scale: 0.97, y: 8 }}
+          transition={{ type: "spring", damping: 25, stiffness: 350 }}
           className="w-full max-w-md mx-4"
           onClick={(e) => e.stopPropagation()}
         >
-          <Card className="bg-black border-red-800/30  shadow-xl shadow-red-800/20">
-            <CardHeader className="relative border-b border-red-950/20">
-              <motion.button
-                whileHover={{ scale: 1.1 }}
-                whileTap={{ scale: 0.9 }}
+          <div className="bg-[#0a0a0a] border border-white/[0.06] rounded-sm shadow-2xl shadow-black/50">
+            {/* Header */}
+            <div className="flex items-center justify-between px-6 py-4 border-b border-white/[0.04]">
+              <h2 className="text-[15px] font-semibold text-white/85">Edit User</h2>
+              <button
                 onClick={handleClose}
-                className="absolute right-4 top-4 p-1 rounded-full text-red-500 
-                         hover:text-red-400 hover:bg-red-950/20 transition-colors"
+                className="p-1.5 rounded-sm text-white/20 hover:text-white/50 hover:bg-white/[0.04] transition-colors"
               >
-                <X size={20} />
-              </motion.button>
-              <CardTitle className="text-2xl font-semibold text-white text-center">
-                Edit User
-              </CardTitle>
-            </CardHeader>
+                <X className="h-4 w-4" />
+              </button>
+            </div>
 
-            <CardContent className="pt-6">
+            {/* Form */}
+            <div className="p-6">
               <form
                 onSubmit={(e) => {
                   e.preventDefault();
                   e.stopPropagation();
                   form.handleSubmit();
                 }}
-                className="space-y-6"
+                className="space-y-5"
               >
-                <div className="space-y-4">
-                  <form.Field
-                    name="Username"
-                    children={(field) => (
-                      <div className="space-y-2">
-                        <label
-                          className="text-amber-50/70 text-sm font-medium"
-                          htmlFor={field.name}
-                        >
-                          Username
-                        </label>
-                        <input
-                          name={field.name}
-                          type="text"
-                          id="username"
-                          autoComplete="off"
-                          placeholder="Enter username"
-                          className="w-full px-3 py-2 bg-black/40 border border-red-900/30 text-amber-50 rounded-lg
-                             focus:border-red-500 focus:outline-none hover:bg-black/60 transition-colors"
-                          value={field.state.value}
-                          onChange={(e) => field.handleChange(e.target.value)}
-                        />
-                      </div>
-                    )}
-                  />
+                <form.Field
+                  name="Username"
+                  children={(field) => (
+                    <div className="space-y-2">
+                      <label
+                        className="text-[11px] text-white/25 uppercase tracking-[0.12em] font-medium"
+                        htmlFor={field.name}
+                      >
+                        Username
+                      </label>
+                      <input
+                        name={field.name}
+                        type="text"
+                        autoComplete="off"
+                        placeholder="Enter username"
+                        className="w-full px-3.5 py-2.5 bg-white/[0.02] border border-white/[0.06] text-white/80 rounded-sm text-[13px]
+                           placeholder:text-white/15 focus:border-red-500/20 focus:outline-none transition-colors"
+                        value={field.state.value}
+                        onChange={(e) => field.handleChange(e.target.value)}
+                      />
+                    </div>
+                  )}
+                />
 
-                  <form.Field
-                    name="Email"
-                    children={(field) => (
-                      <div className="space-y-2">
-                        <label
-                          className="text-amber-50/70 text-sm font-medium"
-                          htmlFor={field.name}
-                        >
-                          Email
-                        </label>
-                        <input
-                          name={field.name}
-                          type="email"
-                          id="email"
-                          autoComplete="off"
-                          placeholder="Enter email"
-                          className="w-full px-3 py-2 bg-black/40 border border-red-900/30 text-amber-50 rounded-lg
-                             focus:border-red-500 focus:outline-none hover:bg-black/60 transition-colors"
-                          value={field.state.value}
-                          onChange={(e) => field.handleChange(e.target.value)}
-                        />
-                      </div>
-                    )}
-                  />
-                </div>
+                <form.Field
+                  name="Email"
+                  children={(field) => (
+                    <div className="space-y-2">
+                      <label
+                        className="text-[11px] text-white/25 uppercase tracking-[0.12em] font-medium"
+                        htmlFor={field.name}
+                      >
+                        Email
+                      </label>
+                      <input
+                        name={field.name}
+                        type="email"
+                        autoComplete="off"
+                        placeholder="Enter email"
+                        className="w-full px-3.5 py-2.5 bg-white/[0.02] border border-white/[0.06] text-white/80 rounded-sm text-[13px]
+                           placeholder:text-white/15 focus:border-red-500/20 focus:outline-none transition-colors"
+                        value={field.state.value}
+                        onChange={(e) => field.handleChange(e.target.value)}
+                      />
+                    </div>
+                  )}
+                />
 
                 <form.Subscribe
                   selector={(state) => [state.canSubmit]}
                   children={([canSubmit]) => (
                     <button
                       type="submit"
-                      className="w-full bg-gradient-to-r from-red-950 to-black hover:from-red-900 
-                      hover:to-red-950 text-white border border-red-900/30
-                      shadow-lg shadow-red-950/20 disabled:opacity-50 flex items-center justify-center py-2"
                       disabled={!canSubmit}
+                      className="w-full py-2.5 bg-red-600 hover:bg-red-500 text-white text-[13px] font-medium rounded-sm
+                        disabled:opacity-30 disabled:cursor-not-allowed flex items-center justify-center gap-2 transition-colors"
                     >
-                      <UserPlus className="w-4 h-4 mr-2" />
-                      Edit Employee
+                      <UserPlus className="h-3.5 w-3.5" />
+                      Save Changes
                     </button>
                   )}
                 />
               </form>
-            </CardContent>
-          </Card>
+            </div>
+          </div>
         </motion.div>
       </motion.div>
     </AnimatePresence>
