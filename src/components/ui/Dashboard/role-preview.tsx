@@ -1,6 +1,7 @@
-import { Eye, EyeOff, X } from "lucide-react";
+import { Eye, X } from "lucide-react";
 import { useRolePreview } from "@/stores/store";
 import { Role } from "@/MyComponents/Reusables/userView";
+import { ActiveUser } from "@/stores/query";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -27,7 +28,18 @@ export function RolePreviewSelector() {
   const { state } = useSidebar();
   const isCollapsed = state === "collapsed";
 
-  // When previewing, show a persistent banner
+  // Always check the REAL role — never the preview role.
+  // This ensures the preview controls are always visible to CEO/COO
+  // even when previewing a lower role.
+  const { data: activeUser } = ActiveUser();
+  const realRole = activeUser?.[0]?.role || "Member";
+
+  // Only CEO and COO can use role preview
+  if (realRole !== "CEO" && realRole !== "COO") {
+    return null;
+  }
+
+  // When previewing, show a persistent banner with exit button
   if (previewRole) {
     return (
       <div className="mx-2 mb-1">
@@ -50,6 +62,14 @@ export function RolePreviewSelector() {
                 <X className="h-3 w-3" />
               </button>
             </>
+          )}
+          {isCollapsed && (
+            <button
+              onClick={() => setPreviewRole(null)}
+              className="p-0.5 rounded-sm hover:bg-red-500/10 text-red-400/50 hover:text-red-400 transition-colors"
+            >
+              <X className="h-3 w-3" />
+            </button>
           )}
         </div>
       </div>

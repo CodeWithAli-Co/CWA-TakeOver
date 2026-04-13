@@ -33,10 +33,8 @@ export function NavMain({
   const navigate = useNavigate();
   return (
     <SidebarGroup>
-      <SidebarMenu>
+      <SidebarMenu className="space-y-0.5">
         {items.map((item) =>
-          // this statement will check if a dropdown has sub items hehe
-          // this surrounds all the sidebar menu, we want this to check if the item has sub items or not, if it does, it will render the collapsible component
           item.items && item.items.length > 0 ? (
             <Collapsible
               key={item.title}
@@ -46,23 +44,23 @@ export function NavMain({
             >
               <SidebarMenuItem>
                 <CollapsibleTrigger asChild>
-                  {/* Sidebar Items that are dropdowns */}
                   <SidebarMenuButton
                     tooltip={item.title}
                     onClick={() => navigate({ to: item.url })}
+                    className="hover:bg-white/[0.04] text-white/50 hover:text-white/80 rounded-sm transition-colors data-[active=true]:bg-red-500/[0.08] data-[active=true]:text-red-400"
                   >
-                    {item.icon && <item.icon />}
-                    <span>{item.title}</span>
-                    <ChevronRight className="ml-auto transition-transform duration-200 group-data-[state=open]/collapsible:rotate-90" />
+                    {item.icon && <item.icon className="h-4 w-4 text-white/20" />}
+                    <span className="text-[13px]">{item.title}</span>
+                    <ChevronRight className="ml-auto h-3.5 w-3.5 text-white/15 transition-transform duration-200 group-data-[state=open]/collapsible:rotate-90" />
                   </SidebarMenuButton>
                 </CollapsibleTrigger>
                 <CollapsibleContent>
-                  <SidebarMenuSub>
+                  <SidebarMenuSub className="border-l border-white/[0.04] ml-4">
                     {item.items?.map((subItem) => (
                       <SidebarMenuSubItem key={subItem.title}>
-                        <SidebarMenuSubButton asChild>
+                        <SidebarMenuSubButton asChild className="hover:bg-white/[0.03] text-white/35 hover:text-white/60 rounded-sm">
                           <Link to={subItem.url}>
-                            <span>{subItem.title}</span>
+                            <span className="text-[12px]">{subItem.title}</span>
                           </Link>
                         </SidebarMenuSubButton>
                       </SidebarMenuSubItem>
@@ -72,15 +70,14 @@ export function NavMain({
               </SidebarMenuItem>
             </Collapsible>
           ) : (
-            // this is basically an else statement, if the item does not have sub items, it will render this
             <SidebarMenuItem key={item.title}>
-              {/* Sidebar Items that arent dropdowns */}
               <SidebarMenuButton
                 tooltip={item.title}
                 onClick={() => navigate({ to: item.url })}
+                className="hover:bg-white/[0.04] text-white/50 hover:text-white/80 rounded-sm transition-colors data-[active=true]:bg-red-500/[0.08] data-[active=true]:text-red-400"
               >
-                {item.icon && <item.icon />}
-                <span>{item.title}</span>
+                {item.icon && <item.icon className="h-4 w-4 text-white/20" />}
+                <span className="text-[13px]">{item.title}</span>
               </SidebarMenuButton>
             </SidebarMenuItem>
           )
