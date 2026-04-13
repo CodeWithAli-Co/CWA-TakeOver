@@ -366,19 +366,9 @@ export const projectManagerData = {
     // },
     {
       title: "Invoicer",
-      url: "/invoiceClients",
+      url: "/invoicer",
       icon: File,
-      isActive: true,
-      items: [
-        {
-          title: "Client",
-          url: "/invoiceClients",
-        },
-        {
-          title: "Preview",
-          url: "/invoicePreview",
-        },
-      ],
+      isActive: false,
     },
 
     {
@@ -515,19 +505,9 @@ export const securityEngineerData = {
     // },
     {
       title: "Invoicer",
-      url: "/invoiceClients",
+      url: "/invoicer",
       icon: File,
-      isActive: true,
-      items: [
-        {
-          title: "Client",
-          url: "/invoiceClients",
-        },
-        {
-          title: "Preview",
-          url: "/invoicePreview",
-        },
-      ],
+      isActive: false,
     },
 
     {
@@ -685,19 +665,9 @@ export const cooData = {
     // },
     {
       title: "Invoicer",
-      url: "/invoiceClients",
+      url: "/invoicer",
       icon: File,
-      isActive: true,
-      items: [
-        {
-          title: "Client",
-          url: "/invoiceClients",
-        },
-        {
-          title: "Preview",
-          url: "/invoicePreview",
-        },
-      ],
+      isActive: false,
     },
     {
       title: "Chat",
@@ -851,19 +821,9 @@ export const ceoData = {
     // },
     {
       title: "Invoicer",
-      url: "/invoiceClients",
+      url: "/invoicer",
       icon: File,
-      isActive: true,
-      items: [
-        {
-          title: "Client",
-          url: "/invoiceClients",
-        },
-        {
-          title: "Preview",
-          url: "/invoicePreview",
-        },
-      ],
+      isActive: false,
     },
     {
       title: "Chat",

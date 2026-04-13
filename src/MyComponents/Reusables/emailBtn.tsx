@@ -3,10 +3,10 @@ import { invoke } from "@tauri-apps/api/core";
 import { SendHorizonal } from "lucide-react";
 import { downloadDir } from "@tauri-apps/api/path";
 import { remove, BaseDirectory } from "@tauri-apps/plugin-fs";
-import { useNavigate } from "@tanstack/react-router";
 import { sendNotification } from "@tauri-apps/plugin-notification";
-import { useInvoiceStore } from "@/stores/invoiceStore";
 import { downloadInvoice } from "../invoice";
+import supabase from "@/MyComponents/supabase";
+import { InvoiceType } from "@/stores/invoiceQuery";
 
 type Props = {
   email: string;
@@ -206,40 +206,43 @@ const HTML = `
 `;
 
 const EmailBtn = (props: Props) => {
-  const navigate = useNavigate();
-  const { setInvoiceID } = useInvoiceStore();
-
   function sleep(ms: number): Promise<void> {
     return new Promise((resolve) => setTimeout(resolve, ms));
   }
 
   const sendEmail = async (email: string, subject: string = "New Invoice") => {
-    setInvoiceID(props.invoiceID);
-    setTimeout(() => {
-      navigate({ to: "/middle" });
-    }, 500);
-    // Need to wait more than 3s for this to work properly
-    await sleep(5000);
-    await downloadInvoice();
+    // Fetch invoice directly (no more /middle navigation hack)
+    const { data, error } = await supabase
+      .from("invoices")
+      .select("*")
+      .eq("invoice_id", props.invoiceID)
+      .single();
+
+    if (error || !data) {
+      sendNotification({ title: "Error", body: "Failed to load invoice" });
+      return;
+    }
+
+    const filename = `cwa-invoice-${props.invoiceID}.pdf`;
+    await downloadInvoice(data as InvoiceType, filename);
     const dirName = await downloadDir();
-    // waiting an extra 1s to avoid rust errors
     await sleep(1500);
+
     await invoke("send_invoice", {
       clientEmail: email,
       subjectMsg: subject,
-      filePath: `${dirName}\\\cwa-invoice2051316.pdf`,
+      filePath: `${dirName}\\${filename}`,
       html: HTML,
-    }).then(
-      (res) => (
-        sendNotification({
-          title: "Invoice Sent",
-          body: `Invoice was successfully sent to Client: ${res}`,
-        }),
-        console.log("Email ID:", res)
-      )
-    );
-    await remove("cwa-invoice2051316.pdf", { baseDir: BaseDirectory.Download });
+    }).then((res) => {
+      sendNotification({
+        title: "Invoice Sent",
+        body: `Invoice was successfully sent to Client: ${res}`,
+      });
+    });
+
+    await remove(filename, { baseDir: BaseDirectory.Download });
   };
+
   return (
     <Button
       className={props.className}

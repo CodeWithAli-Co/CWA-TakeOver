@@ -23,6 +23,7 @@ import LoginPage from "@/MyComponents/Beginning/login";
 import PinPage from "@/MyComponents/Beginning/pinPage";
 import { SignUpPage } from "@/MyComponents/Beginning/signup";
 import { ActiveUser, DMGroups, Messages } from "@/stores/query";
+import { useChatStore } from "@/stores/chatStore";
 import UserView from "@/MyComponents/Reusables/userView";
 import CyberpunkPinPage from "@/MyComponents/Beginning/bluePinPage";
 import SecurityBreach from "@/MyComponents/Beginning/conceptIdea";
@@ -38,27 +39,19 @@ export const Route = createRootRoute({
       });
     }
     const { refetch: refetchDMGroups } = DMGroups(user[0]?.username);
-    const { refetch: refetchMessages } = Messages(GroupName);
 
-    // Messaging Realtime channel
-    supabase
-      .channel("all-messages")
-      .on(
-        "postgres_changes",
-        { event: "*", schema: "public", table: "cwa_dm_chat" },
-        () => refetchMessages()
-      )
-      .on(
-        "postgres_changes",
-        { event: "*", schema: "public", table: "dm_groups" },
-        () => refetchDMGroups()
-      )
-      .on(
-        "postgres_changes",
-        { event: "*", schema: "public", table: "cwa_chat" },
-        () => refetchMessages()
-      )
-      .subscribe();
+    // Keep DMGroups in sync across the app (channel is idempotent for same name)
+    useEffect(() => {
+      const channel = supabase
+        .channel("dm-groups-sync")
+        .on(
+          "postgres_changes",
+          { event: "*", schema: "public", table: "dm_groups" },
+          () => refetchDMGroups()
+        )
+        .subscribe();
+      return () => { channel.unsubscribe(); };
+    }, [refetchDMGroups]);
 
     // Checks if user is on DMChat or not. Using useEffect to prevent multiple rerenders
     useEffect(() => {
@@ -68,54 +61,49 @@ export const Route = createRootRoute({
 
       // If user's on GeneralChat, remove realtime channel so they wont receive notification while in chat
       // Default value is General, so by default users wont receive notification from generalchat unless navigated to a DM
-      if (GroupName === "General") {
-        supabase
-          .channel("dm")
-          .on(
-            "postgres_changes",
-            { event: "INSERT", schema: "public", table: "cwa_dm_chat" },
-            (payload) =>
-              sendNotification({
-                title: "New DM Message",
-                body: `${payload.new.sent_by}: "${payload.new.message}"`,
-              })
-          )
-          .subscribe();
-        console.log("Not on DMS");
+      const currentUsername = user?.[0]?.username || "";
+      const { incrementUnread } = useChatStore.getState();
 
-        // While not on GeneralChat, they will get notifications
-        const channels = supabase.getChannels();
-        channels.map((channel) =>
-          channel.topic === "realtime:general"
-            ? supabase.removeChannel(channel)
-            : console.log("No Such Realtime General channel")
-        );
-        console.log("on General chat!");
-      } else {
-        // Listens to the general chat updates no matter where user is in the App
-        supabase
-          .channel("general")
-          .on(
-            "postgres_changes",
-            { event: "INSERT", schema: "public", table: "cwa_chat" },
-            (payload) =>
+      // Listen to ALL message tables; increment unread + notify when not viewing that group
+      const unreadChannel = supabase
+        .channel("unread-tracker")
+        .on(
+          "postgres_changes",
+          { event: "INSERT", schema: "public", table: "cwa_dm_chat" },
+          (payload) => {
+            const groupName = payload.new.dm_group;
+            const sentBy = payload.new.sent_by;
+            // Skip own messages
+            if (sentBy === currentUsername) return;
+            // If not currently viewing this DM, increment unread + notify
+            if (GroupName !== groupName) {
+              incrementUnread(groupName);
               sendNotification({
-                title: "New Message in General",
-                body: `${payload.new.sent_by}: "${payload.new.message}"`,
-              })
-          )
-          .subscribe();
-        console.log("Not on General chat");
+                title: `New message in ${groupName}`,
+                body: `${sentBy}: ${payload.new.message}`,
+              });
+            }
+          }
+        )
+        .on(
+          "postgres_changes",
+          { event: "INSERT", schema: "public", table: "cwa_chat" },
+          (payload) => {
+            const sentBy = payload.new.sent_by;
+            if (sentBy === currentUsername) return;
+            if (GroupName !== "General") {
+              incrementUnread("General");
+              sendNotification({
+                title: "New message in General",
+                body: `${sentBy}: ${payload.new.message}`,
+              });
+            }
+          }
+        )
+        .subscribe();
 
-        const channels = supabase.getChannels();
-        channels.map((channel) =>
-          channel.topic === "realtime:dm"
-            ? supabase.removeChannel(channel)
-            : console.log("No Such Realtime DM channel")
-        );
-        console.log("on DMS!");
-      }
-    }, [GroupName]);
+      return () => { unreadChannel.unsubscribe(); };
+    }, [GroupName, user]);
 
     // Check if can send notifications
     useEffect(() => {

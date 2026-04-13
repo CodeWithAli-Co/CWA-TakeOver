@@ -7,6 +7,12 @@
   ],
   "permissions": [
     "core:default",
+    "core:tray:default",
+    "core:window:allow-show",
+    "core:window:allow-hide",
+    "core:window:allow-set-focus",
+    "core:window:allow-unminimize",
+    "core:window:allow-is-visible",
     "opener:default",
     "sql:default",
     "sql:allow-execute",
@@ -14,6 +20,7 @@
     "process:default",
     "updater:default",
     "dialog:default",
+    "autostart:default",
     "fs:default",
     {
       "identifier": "fs:allow-applocaldata-write-recursive",

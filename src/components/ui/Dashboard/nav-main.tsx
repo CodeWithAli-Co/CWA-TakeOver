@@ -1,4 +1,6 @@
 import { ChevronRight, type LucideIcon } from "lucide-react";
+import { useChatStore } from "@/stores/chatStore";
+import { UnreadBadge } from "@/MyComponents/Chat/UnreadBadge";
 
 import {
   Collapsible,
@@ -31,6 +33,7 @@ export function NavMain({
   }[];
 }) {
   const navigate = useNavigate();
+  const totalUnread = useChatStore((s) => Object.values(s.unreadCounts).reduce((sum, n) => sum + n, 0));
   return (
     <SidebarGroup>
       <SidebarMenu className="space-y-0.5">
@@ -76,8 +79,22 @@ export function NavMain({
                 onClick={() => navigate({ to: item.url })}
                 className="hover:bg-white/[0.04] text-white/50 hover:text-white/80 rounded-sm transition-colors data-[active=true]:bg-red-500/[0.08] data-[active=true]:text-red-400"
               >
-                {item.icon && <item.icon className="h-4 w-4 text-white/20" />}
+                {item.icon && (
+                  <span className="relative">
+                    <item.icon className="h-4 w-4 text-white/20" />
+                    {item.title === "Chat" && totalUnread > 0 && (
+                      <span className="absolute -top-1 -right-1">
+                        <UnreadBadge count={totalUnread} />
+                      </span>
+                    )}
+                  </span>
+                )}
                 <span className="text-[13px]">{item.title}</span>
+                {item.title === "Chat" && totalUnread > 0 && (
+                  <span className="ml-auto">
+                    <UnreadBadge count={totalUnread} />
+                  </span>
+                )}
               </SidebarMenuButton>
             </SidebarMenuItem>
           )

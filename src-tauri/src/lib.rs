@@ -5,7 +5,18 @@ use aes_gcm::{
 };
 use std::fs::File;
 use std::io::Read;
+use std::sync::atomic::{AtomicBool, Ordering};
+use tauri::{
+    menu::{Menu, MenuItem},
+    tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent},
+    Manager, WindowEvent,
+};
+use tauri_plugin_autostart::MacosLauncher;
 use tauri_plugin_updater::UpdaterExt;
+
+// Global flag — when true, app fully exits on window close.
+// When false (default), window close → hide to tray.
+static SHOULD_EXIT: AtomicBool = AtomicBool::new(false);
 
 use dotenv::dotenv;
 use resend_rs::{
@@ -193,11 +204,25 @@ async fn send_invoice(
     Ok(client_email.to_string())
 }
 
+// Tauri command — called from frontend to fully quit the app
+#[tauri::command]
+fn quit_app(app: tauri::AppHandle) {
+    SHOULD_EXIT.store(true, Ordering::SeqCst);
+    app.exit(0);
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_window_state::Builder::new().build())
         .plugin(tauri_plugin_updater::Builder::new().build())
+        // Autostart — launches app on system boot.
+        // Default disabled. User toggles via Settings UI which calls
+        // tauri-plugin-autostart's enable()/disable() commands.
+        .plugin(tauri_plugin_autostart::init(
+            MacosLauncher::LaunchAgent,
+            None,
+        ))
         .invoke_handler(tauri::generate_handler![
             github_webhooks::get_github_webhooks
         ])
@@ -212,7 +237,72 @@ pub fn run() {
         .setup(|app| {
             // Register GitHub webhook commands and initialize state
             github_webhooks::register_github_webhook_commands(app)?;
+
+            // ─── System Tray Setup ─────────────────────────────────────────
+            // Tray menu: Open / Quit
+            let open_item = MenuItem::with_id(app, "open", "Open Window", true, None::<&str>)?;
+            let quit_item = MenuItem::with_id(app, "quit", "Quit", true, None::<&str>)?;
+            let tray_menu = Menu::with_items(app, &[&open_item, &quit_item])?;
+
+            let _tray = TrayIconBuilder::with_id("main-tray")
+                .icon(app.default_window_icon().unwrap().clone())
+                .menu(&tray_menu)
+                .show_menu_on_left_click(false)
+                .on_menu_event(|app, event| match event.id.as_ref() {
+                    "open" => {
+                        if let Some(window) = app.get_webview_window("main") {
+                            let _ = window.show();
+                            let _ = window.set_focus();
+                            let _ = window.unminimize();
+                        }
+                    }
+                    "quit" => {
+                        SHOULD_EXIT.store(true, Ordering::SeqCst);
+                        app.exit(0);
+                    }
+                    _ => {}
+                })
+                .on_tray_icon_event(|tray, event| {
+                    // Left-click tray icon → toggle window
+                    if let TrayIconEvent::Click {
+                        button: MouseButton::Left,
+                        button_state: MouseButtonState::Up,
+                        ..
+                    } = event
+                    {
+                        let app = tray.app_handle();
+                        if let Some(window) = app.get_webview_window("main") {
+                            if window.is_visible().unwrap_or(false) {
+                                let _ = window.hide();
+                            } else {
+                                let _ = window.show();
+                                let _ = window.set_focus();
+                            }
+                        }
+                    }
+                })
+                .build(app)?;
+
+            // Show window on startup (we set visible: false in tauri.conf.json
+            // for tray-startup support, so we manually show it here)
+            if let Some(window) = app.get_webview_window("main") {
+                let _ = window.show();
+            }
+
             Ok(())
+        })
+        // ─── Window close → hide to tray instead of quit ──────────────
+        // Background notifications continue working because window stays
+        // alive (just hidden). Supabase realtime channels keep firing,
+        // tauri-plugin-notification continues to send OS notifications.
+        // True quit only via tray menu "Quit" or quit_app() command.
+        .on_window_event(|window, event| {
+            if let WindowEvent::CloseRequested { api, .. } = event {
+                if !SHOULD_EXIT.load(Ordering::SeqCst) {
+                    api.prevent_close();
+                    let _ = window.hide();
+                }
+            }
         })
         .invoke_handler(tauri::generate_handler![
             greet,
@@ -224,6 +314,7 @@ pub fn run() {
             edit_contact,
             del_contact,
             send_invoice,
+            quit_app,
             // GitHub webhook commands
             github_webhooks::get_github_webhooks,
             github_webhooks::handle_github_webhook,

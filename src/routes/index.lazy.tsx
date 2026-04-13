@@ -113,7 +113,7 @@ const Index = () => {
               <QuickActionCard title="Finance" url="/financialDashboard" icon={DollarSignIcon} />
             </UserView>
             <UserView excludeRoles={"COO"}>
-              <QuickActionCard title="Invoicer" url="/invoiceClients" icon={File} />
+              <QuickActionCard title="Invoicer" url="/invoicer" icon={File} />
             </UserView>
             <UserView excludeRoles={["COO", "CEO"]}>
               <QuickActionCard title="Schedule" url="/schedule" icon={CalendarSearch} />

@@ -104,6 +104,10 @@ export const DMGroups = (user: string) => {
 
 
 // Fetch Chat Messages
+export interface MessageReactions {
+  [emoji: string]: string[]; // emoji → list of usernames who reacted
+}
+
 export interface MessageInterface {
   msg_id: number
   sent_by: string
@@ -111,6 +115,10 @@ export interface MessageInterface {
   message: string
   userAvatar: string
   dm_group: string
+  // Extended fields from 2025 schema migration (all optional for backward compat):
+  reply_to?: number | null;     // msg_id of message being replied to
+  reactions?: MessageReactions; // emoji → usernames who reacted
+  read_by?: string[];           // list of usernames who have read this message
 }
 const fetchMessages = async (groupName: string ) => {
   switch(groupName) {
@@ -126,7 +134,7 @@ const fetchMessages = async (groupName: string ) => {
 };
 export const Messages = (groupName: string) => {
   return useSuspenseQuery({
-    queryKey: ["messages"],
+    queryKey: ["messages", groupName], // include group in key so each cache is isolated
     queryFn: () => fetchMessages(groupName)
   });
 };
