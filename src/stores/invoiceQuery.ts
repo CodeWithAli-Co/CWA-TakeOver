@@ -80,6 +80,25 @@ export const Invoices = (name: string) => {
   });
 };
 
+// Fetch ALL invoices (no client filter) — used by financial dashboard
+const fetchAllInvoices = async () => {
+  const { data, error } = await supabase
+    .from("invoices")
+    .select("*")
+    .order("creation_date", { ascending: false });
+  if (error) {
+    console.error("Error fetching all Invoices:", error.message);
+  }
+  return (data as InvoiceType[]) || [];
+};
+export const AllInvoices = () => {
+  return useQuery({
+    queryKey: ["all-invoices"],
+    queryFn: fetchAllInvoices,
+    refetchOnWindowFocus: true,
+  });
+};
+
 // Fetch Client's Invoice
 const fetchInvoice = async (id: number) => {
   const { data, error } = await supabase

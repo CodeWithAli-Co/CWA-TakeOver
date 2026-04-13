@@ -1,3 +1,18 @@
+/**
+ * FinancialUtils.ts — Core financial calculation engine.
+ *
+ * Pure functions used by the entire financial system. Has no UI or React deps.
+ *
+ * Exports:
+ *   - calculateAnnualAmount(item)  → converts frequency + clients to annual $
+ *   - getCategoryColor(cat, isExp) → color lookup for charts
+ *   - calculateProjections(...)    → main multi-year projection engine
+ *                                     returns { projections, financialMetrics }
+ *
+ * Used by FinancialContext.tsx (memoized projections) and FinancialModeler
+ * (annual amount display).
+ */
+
 import { EXPENSE_COLORS, REVENUE_COLORS } from "./FinancialConstants";
 import { ExpenseItem, RevenueItem, ProjectionData, FinancialMetrics } from "./FinancialField";
 
@@ -24,12 +39,12 @@ export const calculateAnnualAmount = (item: ExpenseItem | RevenueItem): number =
   return base;
 };
 
-// Get color for expense/revenue categories
+// Get color for expense/revenue categories — falls back to red/white
 export const getCategoryColor = (category: string, isExpense: boolean): string => {
   if (isExpense) {
-    return EXPENSE_COLORS[category] || '#ff0a3f';
+    return EXPENSE_COLORS[category] || '#ef4444';
   } else {
-    return REVENUE_COLORS[category] || '#00ff9f';
+    return REVENUE_COLORS[category] || 'rgba(255,255,255,0.6)';
   }
 };
 

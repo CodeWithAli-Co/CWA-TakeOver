@@ -1,4 +1,15 @@
-// Type definitions
+/**
+ * FinancialField.ts — Type definitions for the financial system.
+ *
+ * Contains all shared interfaces consumed by:
+ *   - FinancialContext.tsx     (state shape)
+ *   - FinancialModeler.tsx     (input form)
+ *   - FinancialProjections.tsx (visualizer)
+ *   - FinancialComponents.tsx  (UI primitives)
+ *   - FinancialUtils.ts        (calculation engine)
+ */
+
+// ── Item shapes ──
 export interface ExpenseItem {
   id: number;
   name: string;
@@ -23,6 +34,7 @@ export interface RevenueItem {
   type: "expense" | "revenue";
 }
 
+// ── Breakdown maps ──
 export interface ExpenseBreakdown {
   [key: string]: number;
 }
@@ -31,6 +43,7 @@ export interface RevenueBreakdown {
   [key: string]: number;
 }
 
+// ── Per-year projection result ──
 export interface ProjectionData {
   year: number;
   totalRevenue: number;
@@ -47,16 +60,10 @@ export interface ProjectionData {
   expenseCategories?: ExpenseBreakdown;
   revenueCategories?: RevenueBreakdown;
   roi?: number;
-  [key: string]: any; // For dynamic expense and revenue keys
+  [key: string]: any; // dynamic expense/revenue keys
 }
 
-export interface MonthlyMultiplierData {
-  name: string;
-  amount: number;
-  months: number[];
-  years: number[];
-}
-
+// ── Aggregated metrics across all years ──
 export interface FinancialMetrics {
   cagr: number;
   breakEvenYear: number | null;
@@ -68,6 +75,7 @@ export interface FinancialMetrics {
   runwayMonths: number;
 }
 
+// ── Scenario snapshot (currently unused — kept for future ScenarioManager) ──
 export interface ScenarioData {
   id: string;
   name: string;
@@ -84,6 +92,7 @@ export interface ScenarioData {
   revenues: RevenueItem[];
 }
 
+// ── UI component prop shapes ──
 export interface CustomTooltipProps {
   active?: boolean;
   payload?: any[];
@@ -100,7 +109,7 @@ export interface NumericFieldProps {
   label: string;
   value: number;
   onChange: (value: number) => void;
-  icon: React.ElementType;
+  icon?: React.ElementType;
   description?: string;
   prefix?: string;
   suffix?: string;
@@ -114,7 +123,7 @@ export interface GrowthRateFieldProps {
   label: string;
   value: number;
   onChange: (value: number) => void;
-  icon: React.ElementType;
+  icon?: React.ElementType;
   description?: string;
   min?: number;
   max?: number;
@@ -126,90 +135,10 @@ export interface YearSelectorProps {
   setYears: (years: number) => void;
 }
 
-// type MergedItem = {
-//   expenseItem: ExpenseItem,
-//   revenueItem: RevenueItem
-// }
-
 export interface DynamicItemProps {
   item: ExpenseItem | RevenueItem;
   onChange: (item: ExpenseItem | RevenueItem) => void;
   onDelete: () => void;
   type: "expense" | "revenue";
   categories: string[];
-}
-
-export interface ScenarioManagerProps {
-  loadScenario: (scenario: ScenarioData) => void;
-  saveScenario: () => ScenarioData;
-}
-
-export interface CalculatorTabProps {
-  initialCapital: number;
-  setInitialCapital: (value: number) => void;
-  taxRate: number;
-  setTaxRate: (value: number) => void;
-  inflationRate: number;
-  setInflationRate: (value: number) => void;
-  years: number;
-  setYears: (value: number) => void;
-  avgSalary: number;
-  setAvgSalary: (value: number) => void;
-  employeeCount: number;
-  setEmployeeCount: (value: number) => void;
-  salaryGrowth: number;
-  setSalaryGrowth: (value: number) => void;
-  expenses: ExpenseItem[];
-  setExpenses: React.Dispatch<React.SetStateAction<ExpenseItem[]>>;
-  revenues: RevenueItem[];
-  setRevenues: React.Dispatch<React.SetStateAction<RevenueItem[]>>;
-  projections: ProjectionData[];
-  financialMetrics: FinancialMetrics;
-}
-
-export interface VisualizerTabProps {
-  years: number;
-  projections: ProjectionData[];
-  financialMetrics: FinancialMetrics;
-  expenses: ExpenseItem[];
-  revenues: RevenueItem[];
-}
-
-export interface BasicParametersProps {
-  initialCapital: number;
-  setInitialCapital: (value: number) => void;
-  taxRate: number;
-  setTaxRate: (value: number) => void;
-  inflationRate: number;
-  setInflationRate: (value: number) => void;
-  years: number;
-  setYears: (value: number) => void;
-  financialMetrics: FinancialMetrics;
-  projections: ProjectionData[];
-}
-
-export interface ExpensesTabProps {
-  expenses: ExpenseItem[];
-  setExpenses: React.Dispatch<React.SetStateAction<ExpenseItem[]>>;
-  avgSalary: number;
-  employeeCount: number;
-  calculateAnnualAmount: (item: ExpenseItem | RevenueItem) => number;
-  getCategoryColor: (category: string, isExpense: boolean) => string;
-}
-
-export interface RevenueTabProps {
-  revenues: RevenueItem[];
-  setRevenues: React.Dispatch<React.SetStateAction<RevenueItem[]>>;
-  calculateAnnualAmount: (item: ExpenseItem | RevenueItem) => number;
-  getCategoryColor: (category: string, isExpense: boolean) => string;
-}
-
-export interface PersonnelTabProps {
-  avgSalary: number;
-  setAvgSalary: (value: number) => void;
-  employeeCount: number;
-  setEmployeeCount: (value: number) => void;
-  salaryGrowth: number;
-  setSalaryGrowth: (value: number) => void;
-  projections: ProjectionData[];
 }

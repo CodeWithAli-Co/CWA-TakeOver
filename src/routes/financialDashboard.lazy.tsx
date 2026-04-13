@@ -1,416 +1,915 @@
-import { useState } from 'react';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell, Line, LineChart } from 'recharts';
+/**
+ * financialDashboard.lazy.tsx — Top-level financial dashboard page.
+ *
+ * Multi-tab portfolio management view for CodeWithAli + Simplicity.
+ *
+ * Tabs:
+ *   1. Overview   — Bento dashboard: metrics + revenue/expense charts + transactions
+ *   2. Companies  — Side-by-side comparison (red=CWA, blue=Simplicity)
+ *   3. Cash Flow  — Burn rate, runway gauge, monthly trend, date range selector
+ *   4. Reports    — Filterable invoice export + downloadable summaries
+ *
+ * Modeler section (collapsible) is always visible at the bottom.
+ * Wraps the entire page in <FinancialProvider> so modeler/projections work.
+ */
+
+import React, { useState, useEffect, useMemo } from "react";
+import { createLazyFileRoute } from "@tanstack/react-router";
+import { motion, AnimatePresence } from "framer-motion";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  AreaChart, Area, BarChart, Bar, PieChart, Pie, Cell,
+  XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
+  RadialBarChart, RadialBar,
+} from "recharts";
+import {
+  RefreshCcw, TrendingUp, TrendingDown, DollarSign, Wallet,
+  CreditCard, ChevronDown, ChevronUp, Receipt, Activity,
+  BarChart3, Building2, FileBarChart, Download,
+  Flame, Gauge, AlertTriangle,
+} from "lucide-react";
+import { AllInvoices, InvoiceType } from "@/stores/invoiceQuery";
+import supabase from "@/MyComponents/supabase";
+import { FinancialProvider } from "@/MyComponents/Financial/FinancialContext";
+import FinancialModeler from "@/MyComponents/Financial/FinancialModeler";
+import FinancialProjections from "@/MyComponents/Financial/FinancialProjections";
+import { EXPENSE_COLORS, REVENUE_COLORS } from "@/stores/FinancialConstants";
 
-import { RefreshCcw, TrendingUp, DollarSign, AlertCircle, Zap, Database, ShieldAlert, Gauge, Calculator, PieChart as PieChartIcon } from "lucide-react";
-import { motion } from "framer-motion";
-import { createLazyFileRoute } from '@tanstack/react-router';
-import '../assets/statsCard.css'; // Import the statsCard.css file
-import GradientText from '@/MyComponents/Reusables/gradientText';
-import { useClientStore } from '@/stores/invoiceStore';
-import { Invoices, InvoiceType } from '@/stores/invoiceQuery';
-import FinancialField from '@/MyComponents/FinancialCalculator.tsx/financialField';
-import LiveTime from '@/MyComponents/Reusables/liveTime';
+// ════════════════════════════════════════════
+// Shared utilities
+// ════════════════════════════════════════════
 
+// Aggregate invoice data into monthly buckets
+function aggregateMonthly(invoices: InvoiceType[], months = 6) {
+  const buckets: Record<string, { revenue: number; count: number; pending: number }> = {};
+  invoices.forEach((inv) => {
+    const date = new Date(inv.creation_date);
+    const key = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`;
+    if (!buckets[key]) buckets[key] = { revenue: 0, count: 0, pending: 0 };
+    if (inv.status === "paid") {
+      buckets[key].revenue += Number(inv.outcome) || 0;
+    } else {
+      buckets[key].pending += Number(inv.outcome) || 0;
+    }
+    buckets[key].count += 1;
+  });
 
-export const FinancialDashboard = () => {
-  const { name } = useClientStore();
-  const { data, isLoading, refetch } = Invoices(name);
-  // const [timeframe, setTimeframe] = useState("month");
-  
-  // If no data or still loading, show placeholder
-  if (isLoading || !data) {
-    return (
-      <div className="flex justify-center items-center h-screen bg-black">
-        <div className="p-8 text-red-500 flex flex-col items-center">
-          <div className="w-20 h-20 border-4 border-t-transparent border-red-600 rounded-full animate-spin mb-4"></div>
-          <div className="text-xl font-mono tracking-wider">INITIALIZING DATA PROTOCOLS</div>
-        </div>
-      </div>
-    );
-  }
-  
-  // Calculate financial metrics
-  const totalInvoiced = data.reduce((sum, invoice) => sum + (Number(invoice.outcome) || 0), 0);
-  const paidInvoices = data.filter(invoice => invoice.status === "paid");
-  const totalPaid = paidInvoices.reduce((sum, invoice) => sum + (Number(invoice.outcome) || 0), 0);
-  const percentPaid = totalInvoiced > 0 ? (totalPaid / totalInvoiced) * 100 : 0;
-  
-  // Calculate growth rate - new metric replacing Outstanding
-  const lastMonthAmount = 3800; // This would normally be calculated from actual data
-  const currentMonthAmount = 4200; // This would normally be calculated from actual data
-  const growthRate = ((currentMonthAmount - lastMonthAmount) / lastMonthAmount) * 100;
-  
-  // Generate monthly data
-  const monthlyData = [
-    { name: 'Jan', income: 4000, expenses: 2400, profit: 1600 },
-    { name: 'Feb', income: 3000, expenses: 1398, profit: 1602 },
-    { name: 'Mar', income: 2000, expenses: 1800, profit: 200 },
-    { name: 'Apr', income: 2780, expenses: 1908, profit: 872 },
-    { name: 'May', income: 1890, expenses: 1400, profit: 490 },
-    { name: 'Jun', income: 2390, expenses: 1800, profit: 590 },
-  ];
-  
-  // Pie chart data for income sources
-  const pieData = [
-    { name: 'Design Work', value: 400 },
-    { name: 'Development', value: 300 },
-    { name: 'Consulting', value: 300 },
-    { name: 'Other', value: 200 },
-  ];
-  
-  const COLORS = ['#ff0a3f', '#ff305a', '#ff0050', '#e6194b'];
-  
+  return Object.entries(buckets)
+    .sort((a, b) => a[0].localeCompare(b[0]))
+    .slice(-months)
+    .map(([key, val]) => ({
+      month: new Date(key + "-01").toLocaleDateString("en-US", { month: "short" }),
+      revenue: Math.round(val.revenue),
+      pending: Math.round(val.pending),
+      count: val.count,
+    }));
+}
+
+// ════════════════════════════════════════════
+// Reusable cell components
+// ════════════════════════════════════════════
+
+const MetricCell: React.FC<{
+  icon: React.ReactNode;
+  label: string;
+  value: string;
+  trend?: { value: number; positive: boolean };
+  borderRight?: boolean;
+  accent?: "red" | "blue";
+}> = ({ icon, label, value, trend, borderRight = true, accent = "red" }) => {
+  const accentBar = accent === "blue" ? "bg-blue-500/40" : "bg-red-500/40";
+  const accentColor = accent === "blue" ? "text-blue-500/60" : "text-red-500/60";
+
   return (
-    <div className="min-h-screen bg-black text-gray-300 relative overflow-hidden dark-mode">
-      {/* Background Grid Pattern */}
-      <div 
-        className="absolute inset-0 z-0 opacity-10" 
-        style={{
-          backgroundImage: `linear-gradient(#ff0a3f80 1px, transparent 1px), linear-gradient(90deg, #ff0a3f80 1px, transparent 1px)`,
-          backgroundSize: '40px 40px'
-        }}
-      ></div>
+    <div className={`flex-1 px-5 py-4 ${borderRight ? "border-r border-white/[0.04]" : ""} relative`}>
+      <div className={`absolute left-0 top-3 bottom-3 w-[2px] ${accentBar}`} />
+      <div className="flex items-center gap-1.5 mb-2">
+        <span className={accentColor}>{icon}</span>
+        <span className="text-[10px] text-white/20 uppercase tracking-[0.12em] font-medium">{label}</span>
+      </div>
+      <div className="flex items-baseline gap-2">
+        <p className="text-xl font-bold text-white tracking-tight">{value}</p>
+        {trend && (
+          <span className={`text-[10px] font-medium flex items-center gap-0.5 ${trend.positive ? "text-emerald-400/80" : "text-red-400"}`}>
+            {trend.positive ? <TrendingUp className="h-2.5 w-2.5" /> : <TrendingDown className="h-2.5 w-2.5" />}
+            {Math.abs(trend.value).toFixed(1)}%
+          </span>
+        )}
+      </div>
+    </div>
+  );
+};
 
-      {/* Header */}
-      <div className="relative z-10 bg-black bg-opacity-70 backdrop-blur-sm border-b border-red-900">
-        <div className="max-w-7xl mx-auto px-6 py-5 flex justify-between items-center">
-          <div>
-            <h1 className="text-4xl font-bold tracking-tighter text-white">
-            <GradientText children = {"Finance"} />
-            Prince
-            </h1>
-            <p className="text-red-500 font-mono text-xs tracking-widest">CYBERNETIC FINANCIAL INTERFACE v2.5</p>
-          </div>
-          <button
-            onClick={() => refetch()}
-            className="p-3 bg-red-900 bg-opacity-30 border border-red-700 rounded hover:bg-red-800 hover:bg-opacity-50 transition-colors duration-300 text-red-500 flex items-center gap-2"
-          >
-            <RefreshCcw size={18} className="text-black" />
-            <span className="text-xs font-mono tracking-wider text-black">SYNC</span>
-          </button>
+// ════════════════════════════════════════════
+// OVERVIEW TAB
+// ════════════════════════════════════════════
+const OverviewTab: React.FC<{
+  invoices: InvoiceType[];
+  bankBalance: number;
+  expenseTotal: number;
+  revenueByCategory: { name: string; value: number }[];
+  expenseByCategory: { name: string; value: number }[];
+  totalRevenueFromCategories: number;
+}> = ({ invoices, bankBalance, expenseTotal, revenueByCategory, expenseByCategory, totalRevenueFromCategories }) => {
+
+  const { totalRevenue, totalPaid, monthlyChartData, growthRate } = useMemo(() => {
+    const totalRevenue = invoices.reduce((s, inv) => s + (Number(inv.outcome) || 0), 0);
+    const totalPaid = invoices.filter((inv) => inv.status === "paid").reduce((s, inv) => s + (Number(inv.outcome) || 0), 0);
+    const monthly = aggregateMonthly(invoices);
+    let growth = 0;
+    if (monthly.length >= 2) {
+      const prev = monthly[monthly.length - 2].revenue;
+      const curr = monthly[monthly.length - 1].revenue;
+      growth = prev > 0 ? ((curr - prev) / prev) * 100 : 0;
+    }
+    return { totalRevenue, totalPaid, monthlyChartData: monthly, growthRate: growth };
+  }, [invoices]);
+
+  const netProfit = totalRevenueFromCategories - expenseTotal;
+
+  return (
+    <div className="space-y-4">
+      {/* Metrics Strip */}
+      <div className="bg-[#0a0a0a] border border-white/[0.04] rounded-sm overflow-hidden">
+        <div className="flex">
+          <MetricCell icon={<Wallet className="h-3 w-3" />} label="Bank" value={`$${bankBalance.toLocaleString()}`} />
+          <MetricCell icon={<TrendingUp className="h-3 w-3" />} label="Revenue (annual)" value={`$${totalRevenueFromCategories.toLocaleString()}`} />
+          <MetricCell icon={<CreditCard className="h-3 w-3" />} label="Expenses (annual)" value={`$${expenseTotal.toLocaleString()}`} />
+          <MetricCell icon={<DollarSign className="h-3 w-3" />} label="Net Profit" value={`$${netProfit.toLocaleString()}`} trend={{ value: netProfit > 0 ? 100 : 0, positive: netProfit > 0 }} />
+          <MetricCell icon={<Activity className="h-3 w-3" />} label="Invoice Growth" value={`${growthRate > 0 ? "+" : ""}${growthRate.toFixed(1)}%`} trend={{ value: growthRate, positive: growthRate >= 0 }} borderRight={false} />
         </div>
       </div>
-      
-      <div className="max-w-7xl mx-auto px-6 py-12 relative z-10">
-        {/* Stats Grid using the special CSS */}
-        <div className="stats-grid" style={{ marginTop: '-40px', marginBottom: '60px' }}>
-          <div className="stat-card">
-            <div className="absolute top-3 left-3 text-red-400 opacity-70">
-              <DollarSign size={24} />
-            </div>
-            <div className="stat-label">Total Invoiced</div>
-            <div className="stat-value">${totalInvoiced.toFixed(2)}</div>
-          </div>
-          
-          <div className="stat-card">
-            <div className="absolute top-3 left-3 text-red-400 opacity-70">
-              <Gauge size={24} />
-            </div>
-            <div className="stat-label">Growth Rate</div>
-            <div className="stat-value">+{growthRate.toFixed(1)}%</div>
-          </div>
-          
-          <div className="stat-card">
-            <div className="absolute top-3 left-3 text-red-400 opacity-70">
-              <ShieldAlert size={24} />
-            </div>
-            <div className="stat-label">Collection Rate</div>
-            <div className="stat-value">{percentPaid.toFixed(1)}%</div>
-          </div>
-        </div>
-        
-        {/* Charts Section */}
-        <div className="mb-16 mt-12">
-          <Tabs defaultValue="income" className="w-full">
-            <div className="flex justify-between items-center mb-8">
-              <TabsList className="p-1 bg-black bg-opacity-50 backdrop-blur-sm border border-red-900 rounded-none">
-                <TabsTrigger 
-                  value="income" 
-                  className="px-6 py-2 rounded-none data-[state=active]:bg-red-900 data-[state=active]:text-white data-[state=active]:shadow-[0_0_10px_rgba(255,10,63,0.5)] transition-all duration-300"
-                >
-                  <Zap size={16} className="mr-2" />
-                  INCOME
-                </TabsTrigger>
-                <TabsTrigger 
-                  value="expenses" 
-                  className="px-6 py-2 rounded-none data-[state=active]:bg-red-900 data-[state=active]:text-white data-[state=active]:shadow-[0_0_10px_rgba(255,10,63,0.5)] transition-all duration-300"
-                >
-                  <TrendingUp size={16} className="mr-2" />
-                  EXPENSES
-                </TabsTrigger>
-                <TabsTrigger 
-                  value="sources" 
-                  className="px-6 py-2 rounded-none data-[state=active]:bg-red-900 data-[state=active]:text-white data-[state=active]:shadow-[0_0_10px_rgba(255,10,63,0.5)] transition-all duration-300"
-                >
-                  <AlertCircle size={16} className="mr-2" />
-                  SOURCES
-                </TabsTrigger>
-                <TabsTrigger 
-                  value="calculator" 
-                  className="px-6 py-2 rounded-none data-[state=active]:bg-red-900 data-[state=active]:text-white data-[state=active]:shadow-[0_0_10px_rgba(255,10,63,0.5)] transition-all duration-300"
-                >
-                  <Calculator size={16} className="mr-2" />
-                  PROJECTOR
-                </TabsTrigger>
-              </TabsList>
-              
-              <div className="text-xs text-red-500 font-mono border border-red-900 px-3 py-1">
-                SYSTEM TIME: <LiveTime />
-              </div>
-            </div>
-            
-            <TabsContent value="income" className="mt-0">
-              <div className="backdrop-blur-lg bg-black bg-opacity-40 border border-red-900 p-8 shadow-[0_0_30px_rgba(0,0,0,0.3)]">
-                <div className="text-xl font-bold text-white mb-2 flex items-center">
-                  <Zap className="mr-2 text-red-500" size={20} />
-                  Income Flow Analysis
-                </div>
-                <div className="text-sm text-red-400 mb-8 font-mono">Neural mapping of revenue streams - 6 month analysis</div>
-                <div className="h-80 w-full px-2">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <BarChart
-                      data={monthlyData}
-                      margin={{ top: 20, right: 30, left: 20, bottom: 10 }}
-                    >
-                      <CartesianGrid strokeDasharray="3 3" stroke="rgba(255, 10, 63, 0.15)" />
-                      <XAxis 
-                        dataKey="name" 
-                        stroke="#ff0a3f80" 
-                        tickLine={false} 
-                        axisLine={false} 
-                        tick={{ fill: '#ff0a3f', fontSize: 12 }}
-                      />
-                      <YAxis 
-                        stroke="#ff0a3f80" 
-                        tickLine={false} 
-                        axisLine={false} 
-                        tick={{ fill: '#ff0a3f', fontSize: 12 }}
-                      />
-                      <Tooltip 
-                        contentStyle={{ 
-                          backgroundColor: 'rgba(0, 0, 0, 0.9)', 
-                          borderColor: '#ff0a3f', 
-                          boxShadow: '0 0 20px rgba(255, 10, 63, 0.3)',
-                          backdropFilter: 'blur(4px)',
-                          fontFamily: 'monospace',
-                          padding: '10px'
-                        }}
-                        itemStyle={{ color: '#fff' }}
-                        formatter={(value) => [`${value}`, '']}
-                        labelFormatter={(label) => `PERIOD: ${label}`}
-                        separator=""
-                        itemSorter={() => -1}
-                      />
-                      <Legend 
-                        wrapperStyle={{ color: '#ff0a3f', paddingTop: '15px' }} 
-                        formatter={(value) => <span style={{ color: '#ff0a3f', fontFamily: 'monospace' }}>{value.toUpperCase()}</span>}
-                      />
-                      <Bar 
-                        dataKey="income" 
-                        fill="#ff0a3f" 
-                        radius={[4, 4, 0, 0]}
-                        barSize={60}
-                        background={{ fill: 'rgba(255, 10, 63, 0.05)' }}
-                      />
-                    </BarChart>
-                  </ResponsiveContainer>
-                </div>
-              </div>
-            </TabsContent>
-            
-            <TabsContent value="expenses" className="mt-0">
-              <div className="backdrop-blur-lg bg-black bg-opacity-40 border border-red-900 p-8 shadow-[0_0_30px_rgba(0,0,0,0.3)]">
-                <div className="text-xl font-bold text-white mb-2 flex items-center">
-                  <TrendingUp className="mr-2 text-red-500" size={20} />
-                  Expense Pattern Recognition
-                </div>
-                <div className="text-sm text-red-400 mb-8 font-mono">Algorithmic analysis of resource allocation</div>
-                <div className="h-80 w-full px-2">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <LineChart
-                      data={monthlyData}
-                      margin={{ top: 20, right: 30, left: 20, bottom: 10 }}
-                    >
-                      <CartesianGrid strokeDasharray="3 3" stroke="rgba(255, 10, 63, 0.15)" />
-                      <XAxis 
-                        dataKey="name" 
-                        stroke="#ff0a3f80" 
-                        tickLine={false} 
-                        axisLine={false} 
-                        tick={{ fill: '#ff0a3f', fontSize: 12 }}
-                      />
-                      <YAxis 
-                        stroke="#ff0a3f80" 
-                        tickLine={false} 
-                        axisLine={false} 
-                        tick={{ fill: '#ff0a3f', fontSize: 12 }}
-                      />
-                      <Tooltip 
-                        contentStyle={{ 
-                          backgroundColor: 'rgba(0, 0, 0, 0.9)', 
-                          borderColor: '#ff0a3f', 
-                          boxShadow: '0 0 20px rgba(255, 10, 63, 0.3)',
-                          backdropFilter: 'blur(4px)',
-                          fontFamily: 'monospace'
-                        }}
-                        itemStyle={{ color: '#fff' }}
-                        formatter={(value) => [`${value}`, '']}
-                        labelFormatter={(label) => `PERIOD: ${label}`}
-                      />
-                      <Legend 
-                        wrapperStyle={{ color: '#ff0a3f', paddingTop: '15px' }} 
-                        formatter={(value) => <span style={{ color: '#ff0a3f', fontFamily: 'monospace' }}>{value.toUpperCase()}</span>}
-                      />
-                      <Line 
-                        type="monotone" 
-                        dataKey="expenses" 
-                        stroke="#304ffe" 
-                        strokeWidth={3}
-                        dot={{ fill: '#304ffe', stroke: '#304ffe', strokeWidth: 2, r: 6 }}
-                        activeDot={{ fill: '#304ffe', stroke: '#fff', strokeWidth: 2, r: 8 }}
-                      />
-                      <Line 
-                        type="monotone" 
-                        dataKey="profit" 
-                        stroke="#ff0a3f" 
-                        strokeWidth={3}
-                        dot={{ fill: '#ff0a3f', stroke: '#ff0a3f', strokeWidth: 2, r: 6 }}
-                        activeDot={{ fill: '#ff0a3f', stroke: '#fff', strokeWidth: 2, r: 8 }}
-                      />
-                    </LineChart>
-                  </ResponsiveContainer>
-                </div>
-              </div>
-            </TabsContent>
-            
-            <TabsContent value="sources" className="mt-0">
-              <div className="backdrop-blur-lg bg-black bg-opacity-40 border border-red-900 p-8 shadow-[0_0_30px_rgba(0,0,0,0.3)]">
-                <div className="text-xl font-bold text-white mb-2 flex items-center">
-                  <AlertCircle className="mr-2 text-red-500" size={20} />
-                  Revenue Source Distribution
-                </div>
-                <div className="text-sm text-red-400 mb-8 font-mono">Quantum analysis of capital influx origins</div>
-                <div className="h-80 w-full">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <PieChart>
-                      <Pie
-                        data={pieData}
-                        cx="50%"
-                        cy="50%"
-                        labelLine={true}
-                        outerRadius={100}
-                        fill="#8884d8"
-                        dataKey="value"
-                        label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
-                        labelStyle={{ fill: '#fff', fontSize: 12, fontFamily: 'monospace' }}
-                      >
-                        {pieData.map((entry, index) => (
-                          <Cell 
-                            key={`cell-${index}`} 
-                            fill={COLORS[index % COLORS.length]} 
-                            stroke="rgba(0,0,0,0.5)"
-                            strokeWidth={1}
-                          />
-                        ))}
-                      </Pie>
-                      <Tooltip 
-                        contentStyle={{ 
-                          backgroundColor: 'rgba(0, 0, 0, 0.9)', 
-                          borderColor: '#ff0a3f', 
-                          boxShadow: '0 0 20px rgba(255, 10, 63, 0.3)',
-                          backdropFilter: 'blur(4px)',
-                          fontFamily: 'monospace'
-                        }}
-                        itemStyle={{ color: '#fff' }}
-                        formatter={(value) => [`${value}`, '']}
-                      />
-                    </PieChart>
-                  </ResponsiveContainer>
-                </div>
-              </div>
-            </TabsContent>
-            
-            {/* New Financial Projector Tab */}
-            <TabsContent value="calculator" className="mt-0">
-              <FinancialField />
-            </TabsContent>
-          </Tabs>
-        </div>
-        
-        {/* Recent Transactions Section */}
-        <div className="backdrop-blur-lg bg-black bg-opacity-40 border border-red-900 p-8 shadow-[0_0_30px_rgba(0,0,0,0.3)] mb-12">
-          <div className="flex justify-between items-center mb-8">
+
+      {/* Charts row 1 */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        <div className="bg-[#0a0a0a] border border-white/[0.04] rounded-sm p-5">
+          <div className="flex items-center justify-between mb-4">
             <div>
-              <div className="text-xl font-bold text-white flex items-center">
-                <Database className="mr-2 text-red-500" size={20} />
-                Transaction Log
-              </div>
-              <div className="text-sm text-red-400 font-mono">Latest financial activity matrix</div>
+              <p className="text-[11px] text-white/15 uppercase tracking-[0.15em] font-medium">Invoice Revenue</p>
+              <p className="text-[11px] text-white/30 mt-0.5">Last 6 months · paid + pending</p>
             </div>
-            <div className="text-xs text-red-500 border border-red-900 px-3 py-1 font-mono">
-              ENTRIES: {data.length}
+            <span className="text-[18px] font-bold text-white">${totalPaid.toLocaleString()}</span>
+          </div>
+          <div className="h-56">
+            {monthlyChartData.length > 0 ? (
+              <ResponsiveContainer>
+                <AreaChart data={monthlyChartData}>
+                  <defs>
+                    <linearGradient id="paidGrad" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%" stopColor="#ef4444" stopOpacity={0.3} />
+                      <stop offset="100%" stopColor="#ef4444" stopOpacity={0} />
+                    </linearGradient>
+                    <linearGradient id="pendGrad" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%" stopColor="#ffffff" stopOpacity={0.15} />
+                      <stop offset="100%" stopColor="#ffffff" stopOpacity={0} />
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.04)" />
+                  <XAxis dataKey="month" tick={{ fill: "rgba(255,255,255,0.3)", fontSize: 11 }} axisLine={false} tickLine={false} />
+                  <YAxis tick={{ fill: "rgba(255,255,255,0.3)", fontSize: 11 }} axisLine={false} tickLine={false} />
+                  <Tooltip contentStyle={{ backgroundColor: "#0a0a0a", border: "1px solid rgba(255,255,255,0.08)", borderRadius: "2px", fontSize: "12px" }} itemStyle={{ color: "#fff" }} formatter={(v: any) => [`$${Number(v).toLocaleString()}`, ""]} />
+                  <Area type="monotone" dataKey="revenue" stroke="#ef4444" strokeWidth={2} fill="url(#paidGrad)" name="Paid" />
+                  <Area type="monotone" dataKey="pending" stroke="rgba(255,255,255,0.4)" strokeWidth={2} fill="url(#pendGrad)" name="Pending" />
+                </AreaChart>
+              </ResponsiveContainer>
+            ) : (
+              <div className="h-full flex items-center justify-center"><p className="text-[12px] text-white/15">No invoice data yet</p></div>
+            )}
+          </div>
+        </div>
+
+        <div className="bg-[#0a0a0a] border border-white/[0.04] rounded-sm p-5">
+          <div className="flex items-center justify-between mb-4">
+            <div>
+              <p className="text-[11px] text-white/15 uppercase tracking-[0.15em] font-medium">Invoice Volume</p>
+              <p className="text-[11px] text-white/30 mt-0.5">Last 6 months · all invoices</p>
+            </div>
+            <span className="text-[18px] font-bold text-white">{invoices.length}</span>
+          </div>
+          <div className="h-56">
+            {monthlyChartData.length > 0 ? (
+              <ResponsiveContainer>
+                <BarChart data={monthlyChartData}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.04)" />
+                  <XAxis dataKey="month" tick={{ fill: "rgba(255,255,255,0.3)", fontSize: 11 }} axisLine={false} tickLine={false} />
+                  <YAxis tick={{ fill: "rgba(255,255,255,0.3)", fontSize: 11 }} axisLine={false} tickLine={false} />
+                  <Tooltip contentStyle={{ backgroundColor: "#0a0a0a", border: "1px solid rgba(255,255,255,0.08)", borderRadius: "2px", fontSize: "12px" }} itemStyle={{ color: "#fff" }} />
+                  <Bar dataKey="count" fill="#ef4444" radius={[2, 2, 0, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            ) : (
+              <div className="h-full flex items-center justify-center"><p className="text-[12px] text-white/15">No invoice data yet</p></div>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* Charts row 2 — pies */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        <div className="bg-[#0a0a0a] border border-white/[0.04] rounded-sm p-5">
+          <p className="text-[11px] text-white/15 uppercase tracking-[0.15em] font-medium mb-4">Revenue Sources</p>
+          {revenueByCategory.length > 0 ? (
+            <div className="grid grid-cols-2 gap-3">
+              <div className="h-48">
+                <ResponsiveContainer>
+                  <PieChart>
+                    <Pie data={revenueByCategory} dataKey="value" cx="50%" cy="50%" innerRadius={36} outerRadius={70} stroke="none">
+                      {revenueByCategory.map((entry, i) => <Cell key={i} fill={REVENUE_COLORS[entry.name] || "#ef4444"} />)}
+                    </Pie>
+                    <Tooltip contentStyle={{ backgroundColor: "#0a0a0a", border: "1px solid rgba(255,255,255,0.08)", borderRadius: "2px", fontSize: "12px" }} itemStyle={{ color: "#fff" }} formatter={(v: any) => [`$${Number(v).toLocaleString()}`, ""]} />
+                  </PieChart>
+                </ResponsiveContainer>
+              </div>
+              <div className="space-y-1.5 self-center">
+                {revenueByCategory.slice(0, 6).map((r) => (
+                  <div key={r.name} className="flex items-center justify-between text-[11px]">
+                    <div className="flex items-center gap-1.5">
+                      <div className="h-1.5 w-1.5 rounded-full" style={{ background: REVENUE_COLORS[r.name] || "#ef4444" }} />
+                      <span className="text-white/40 truncate">{r.name}</span>
+                    </div>
+                    <span className="text-white/60">${(r.value / 1000).toFixed(1)}k</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ) : (
+            <div className="h-48 flex items-center justify-center"><p className="text-[12px] text-white/15">No revenue data yet</p></div>
+          )}
+        </div>
+
+        <div className="bg-[#0a0a0a] border border-white/[0.04] rounded-sm p-5">
+          <p className="text-[11px] text-white/15 uppercase tracking-[0.15em] font-medium mb-4">Expense Breakdown</p>
+          {expenseByCategory.length > 0 ? (
+            <div className="grid grid-cols-2 gap-3">
+              <div className="h-48">
+                <ResponsiveContainer>
+                  <PieChart>
+                    <Pie data={expenseByCategory} dataKey="value" cx="50%" cy="50%" innerRadius={36} outerRadius={70} stroke="none">
+                      {expenseByCategory.map((entry, i) => <Cell key={i} fill={EXPENSE_COLORS[entry.name] || "#ef4444"} />)}
+                    </Pie>
+                    <Tooltip contentStyle={{ backgroundColor: "#0a0a0a", border: "1px solid rgba(255,255,255,0.08)", borderRadius: "2px", fontSize: "12px" }} itemStyle={{ color: "#fff" }} formatter={(v: any) => [`$${Number(v).toLocaleString()}`, ""]} />
+                  </PieChart>
+                </ResponsiveContainer>
+              </div>
+              <div className="space-y-1.5 self-center">
+                {expenseByCategory.slice(0, 6).map((e) => (
+                  <div key={e.name} className="flex items-center justify-between text-[11px]">
+                    <div className="flex items-center gap-1.5">
+                      <div className="h-1.5 w-1.5 rounded-full" style={{ background: EXPENSE_COLORS[e.name] || "#ef4444" }} />
+                      <span className="text-white/40 truncate">{e.name}</span>
+                    </div>
+                    <span className="text-white/60">${(e.value / 1000).toFixed(1)}k</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ) : (
+            <div className="h-48 flex items-center justify-center"><p className="text-[12px] text-white/15">No expense data yet</p></div>
+          )}
+        </div>
+      </div>
+
+      {/* Recent Transactions */}
+      <div className="bg-[#0a0a0a] border border-white/[0.04] rounded-sm overflow-hidden">
+        <div className="px-5 pt-4 pb-3 flex items-center justify-between border-b border-white/[0.04]">
+          <div className="flex items-center gap-3">
+            <div className="p-1.5 rounded-sm bg-white/[0.03]"><Receipt className="h-3.5 w-3.5 text-red-500/70" /></div>
+            <div>
+              <p className="text-[11px] text-white/15 uppercase tracking-[0.15em] font-medium">Recent Transactions</p>
+              <p className="text-[11px] text-white/20 mt-0.5">{invoices.length} total invoices</p>
             </div>
           </div>
-          
-          <div className="space-y-4">
-            {data.slice(0, 5).map((invoice: InvoiceType, idx: number) => (
-              <motion.div
-                key={invoice.invoice_id}
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: idx * 0.1 }}
-                className="relative backdrop-blur-md bg-gradient-to-r from-black to-red-950 bg-opacity-70 p-5 border-l-2 border-red-600 overflow-hidden group"
-              >
-                {/* Glow effect on hover */}
-                <div className="absolute inset-0 bg-gradient-to-r from-transparent to-red-900 opacity-0 group-hover:opacity-10 transition-opacity duration-300"></div>
-                
-                <div className="flex justify-between items-center relative z-10">
-                  <div>
-                    <p className="font-medium text-white text-lg">{invoice.invoice_title}</p>
-                    <p className="text-xs text-red-400 font-mono mt-1">{invoice.client_name}</p>
-                  </div>
-                  <div className="text-right">
-                    <p className={`font-bold text-lg ${invoice.status === 'paid' ? 'text-green-500' : 'text-red-500'}`}>
-                      ${invoice.outcome.toFixed(2)}
-                    </p>
-                    <p className={`text-xs px-2 py-0.5 inline-block font-mono mt-1 ${
-                      invoice.status === 'paid' 
-                        ? 'text-green-400 border border-green-800' 
-                        : 'text-red-400 border border-red-800'
-                    }`}>
-                      {invoice.status === 'paid' ? 'COMPLETE' : 'PENDING'}
-                    </p>
-                  </div>
+          <span className="text-[18px] font-bold text-white">${totalRevenue.toLocaleString()}</span>
+        </div>
+        <div>
+          <div className="grid grid-cols-[2fr_1.5fr_1fr_1fr] gap-4 px-5 py-2.5 border-b border-white/[0.04] text-[10px] text-white/20 uppercase tracking-[0.15em]">
+            <span>Invoice</span><span>Client</span><span className="text-right">Amount</span><span className="text-right">Status</span>
+          </div>
+          {invoices.length === 0 ? (
+            <div className="py-12 text-center"><p className="text-[13px] text-white/15">No invoices yet</p></div>
+          ) : (
+            invoices.slice(0, 8).map((inv: InvoiceType, i) => (
+              <motion.div key={inv.invoice_id} initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: i * 0.03 }} className="grid grid-cols-[2fr_1.5fr_1fr_1fr] gap-4 items-center px-5 py-3 border-b border-white/[0.025] last:border-b-0 hover:bg-white/[0.015] transition-colors">
+                <span className="text-[13px] font-medium text-white/75 truncate">{inv.invoice_title}</span>
+                <span className="text-[12px] text-white/40 truncate">{inv.client_name}</span>
+                <span className="text-[13px] font-medium text-right text-white/80">${Number(inv.outcome).toFixed(2)}</span>
+                <div className="flex justify-end">
+                  <span className={`text-[10px] uppercase tracking-wider px-2 py-0.5 rounded-sm border ${inv.status === "paid" ? "bg-emerald-500/[0.08] text-emerald-400 border-emerald-500/15" : "bg-red-500/[0.08] text-red-400 border-red-500/15"}`}>{inv.status}</span>
                 </div>
               </motion.div>
-            ))}
-          </div>
-          
-          <div className="mt-8 flex justify-end">
-            <button className="bg-red-900 bg-opacity-30 text-black text-sm px-4 py-2 border-2 hover:border-red-950  hover:bg-opacity-50 transition-colors duration-300 flex items-center gap-2 font-mono">
-              ACCESS FULL LOGS
-              <Zap size={14} />
-            </button>
-          </div>
-        </div>
-        
-        {/* Footer */}
-        <div className="text-xs text-red-900 text-center py-6 font-mono border-t border-red-900 mt-16">
-          <div className="flex justify-center space-x-4">
-            <GradientText children = {"FinancePrince"} />
-           
-            <span>•</span>
-            <span className="text-red-700">SECURITY LEVEL: Prince </span>
-            <span>•</span>
-            <span className="text-red-700">v2.5.9</span>
-          </div>
+            ))
+          )}
         </div>
       </div>
     </div>
   );
 };
 
-export const Route = createLazyFileRoute('/financialDashboard')({
+// ════════════════════════════════════════════
+// COMPANIES TAB — side-by-side comparison
+// ════════════════════════════════════════════
+const CompaniesTab: React.FC<{
+  totalRevenueFromCategories: number;
+  expenseTotal: number;
+  bankBalance: number;
+  invoices: InvoiceType[];
+}> = ({ totalRevenueFromCategories, expenseTotal, bankBalance, invoices }) => {
+  // Heuristic split: distribute revenue/expenses by company
+  // CWA gets 70% (more mature), Simplicity gets 30% (growing)
+  // In future: filter by company_id when DB schema supports it
+  const cwaShare = 0.7;
+  const smpShare = 0.3;
+
+  const cwa = {
+    revenue: totalRevenueFromCategories * cwaShare,
+    expenses: expenseTotal * cwaShare,
+    bank: bankBalance * cwaShare,
+    invoices: Math.round(invoices.length * cwaShare),
+    color: "#ef4444",
+    bgColor: "bg-red-500/[0.06]",
+    borderColor: "border-red-500/15",
+    textColor: "text-red-400",
+    accentBar: "bg-red-500",
+  };
+  const smp = {
+    revenue: totalRevenueFromCategories * smpShare,
+    expenses: expenseTotal * smpShare,
+    bank: bankBalance * smpShare,
+    invoices: Math.round(invoices.length * smpShare),
+    color: "#3b82f6",
+    bgColor: "bg-blue-500/[0.06]",
+    borderColor: "border-blue-500/15",
+    textColor: "text-blue-400",
+    accentBar: "bg-blue-500",
+  };
+
+  const comparisonData = [
+    { metric: "Revenue", CodeWithAli: cwa.revenue, Simplicity: smp.revenue },
+    { metric: "Expenses", CodeWithAli: cwa.expenses, Simplicity: smp.expenses },
+    { metric: "Bank", CodeWithAli: cwa.bank, Simplicity: smp.bank },
+    { metric: "Profit", CodeWithAli: cwa.revenue - cwa.expenses, Simplicity: smp.revenue - smp.expenses },
+  ];
+
+  const CompanyCard: React.FC<{
+    name: string;
+    description: string;
+    data: typeof cwa;
+  }> = ({ name, description, data }) => {
+    const profit = data.revenue - data.expenses;
+    const profitPositive = profit >= 0;
+    const margin = data.revenue > 0 ? (profit / data.revenue) * 100 : 0;
+
+    return (
+      <div className="relative bg-[#0a0a0a] border border-white/[0.04] rounded-sm overflow-hidden">
+        <div className={`absolute left-0 top-0 bottom-0 w-[3px] ${data.accentBar}`} />
+        <div className="p-6 space-y-5">
+          {/* Header */}
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className={`p-2 rounded-sm ${data.bgColor} border ${data.borderColor}`}>
+                <Building2 className={`h-4 w-4 ${data.textColor}`} />
+              </div>
+              <div>
+                <h3 className="text-[15px] font-semibold text-white/90">{name}</h3>
+                <p className="text-[11px] text-white/25">{description}</p>
+              </div>
+            </div>
+          </div>
+
+          {/* Big numbers */}
+          <div className="space-y-3">
+            <div>
+              <p className="text-[10px] text-white/20 uppercase tracking-wider">Revenue</p>
+              <p className={`text-3xl font-bold tracking-tight ${data.textColor}`}>${data.revenue.toLocaleString()}</p>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="bg-white/[0.015] border border-white/[0.04] rounded-sm p-3">
+                <p className="text-[10px] text-white/20 uppercase tracking-wider">Expenses</p>
+                <p className="text-lg font-bold text-white/80 tracking-tight mt-1">${data.expenses.toLocaleString()}</p>
+              </div>
+              <div className="bg-white/[0.015] border border-white/[0.04] rounded-sm p-3">
+                <p className="text-[10px] text-white/20 uppercase tracking-wider">Bank</p>
+                <p className="text-lg font-bold text-white/80 tracking-tight mt-1">${data.bank.toLocaleString()}</p>
+              </div>
+            </div>
+          </div>
+
+          {/* Profit + margin */}
+          <div className={`p-4 rounded-sm border ${profitPositive ? "bg-emerald-500/[0.04] border-emerald-500/10" : "bg-red-500/[0.04] border-red-500/10"}`}>
+            <div className="flex items-center justify-between mb-1">
+              <span className="text-[11px] text-white/30 uppercase tracking-wider">Net Profit</span>
+              <span className={`text-[11px] font-medium ${profitPositive ? "text-emerald-400" : "text-red-400"}`}>
+                {margin.toFixed(1)}% margin
+              </span>
+            </div>
+            <p className={`text-2xl font-bold tracking-tight ${profitPositive ? "text-emerald-400" : "text-red-400"}`}>
+              {profitPositive ? "+" : ""}${profit.toLocaleString()}
+            </p>
+          </div>
+
+          {/* Quick stats */}
+          <div className="grid grid-cols-2 gap-3 pt-2 border-t border-white/[0.04]">
+            <div>
+              <p className="text-[10px] text-white/20 uppercase tracking-wider">Invoices</p>
+              <p className="text-base font-semibold text-white/70 mt-0.5">{data.invoices}</p>
+            </div>
+            <div>
+              <p className="text-[10px] text-white/20 uppercase tracking-wider">Avg Invoice</p>
+              <p className="text-base font-semibold text-white/70 mt-0.5">${data.invoices > 0 ? Math.round(data.revenue / data.invoices).toLocaleString() : "0"}</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  return (
+    <div className="space-y-4">
+      {/* Note about heuristic */}
+      <div className="bg-amber-500/[0.04] border border-amber-500/10 rounded-sm px-4 py-2.5 flex items-start gap-2">
+        <AlertTriangle className="h-3.5 w-3.5 text-amber-400/70 mt-0.5 shrink-0" />
+        <p className="text-[11px] text-amber-400/70">
+          Per-company breakdown uses an estimated 70/30 split until the database schema includes a <code className="text-amber-400/90">company_id</code> column on revenue and expense tables.
+        </p>
+      </div>
+
+      {/* Side-by-side cards */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        <CompanyCard name="CodeWithAli" description="Software agency & media" data={cwa} />
+        <CompanyCard name="Simplicity" description="Fintech budgeting platform" data={smp} />
+      </div>
+
+      {/* Comparison chart */}
+      <div className="bg-[#0a0a0a] border border-white/[0.04] rounded-sm p-5">
+        <div className="flex items-center justify-between mb-4">
+          <div>
+            <p className="text-[11px] text-white/15 uppercase tracking-[0.15em] font-medium">Side-by-Side Comparison</p>
+            <p className="text-[11px] text-white/30 mt-0.5">Annual financial metrics</p>
+          </div>
+          <div className="flex items-center gap-3 text-[10px]">
+            <div className="flex items-center gap-1.5">
+              <div className="h-1.5 w-1.5 rounded-full bg-red-500" />
+              <span className="text-white/40">CodeWithAli</span>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <div className="h-1.5 w-1.5 rounded-full bg-blue-500" />
+              <span className="text-white/40">Simplicity</span>
+            </div>
+          </div>
+        </div>
+        <div className="h-72">
+          <ResponsiveContainer>
+            <BarChart data={comparisonData}>
+              <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.04)" />
+              <XAxis dataKey="metric" tick={{ fill: "rgba(255,255,255,0.3)", fontSize: 11 }} axisLine={false} tickLine={false} />
+              <YAxis tick={{ fill: "rgba(255,255,255,0.3)", fontSize: 11 }} axisLine={false} tickLine={false} />
+              <Tooltip contentStyle={{ backgroundColor: "#0a0a0a", border: "1px solid rgba(255,255,255,0.08)", borderRadius: "2px", fontSize: "12px" }} itemStyle={{ color: "#fff" }} formatter={(v: any) => [`$${Number(v).toLocaleString()}`, ""]} />
+              <Bar dataKey="CodeWithAli" fill="#ef4444" radius={[2, 2, 0, 0]} barSize={28} />
+              <Bar dataKey="Simplicity" fill="#3b82f6" radius={[2, 2, 0, 0]} barSize={28} />
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// ════════════════════════════════════════════
+// CASH FLOW TAB — burn rate, runway gauge, monthly trend
+// ════════════════════════════════════════════
+const CashFlowTab: React.FC<{
+  bankBalance: number;
+  expenseTotal: number;
+  totalRevenueFromCategories: number;
+  invoices: InvoiceType[];
+}> = ({ bankBalance, expenseTotal, totalRevenueFromCategories, invoices }) => {
+  // Burn rate = monthly expenses
+  const monthlyBurn = expenseTotal / 12;
+  // Runway in months
+  const runwayMonths = monthlyBurn > 0 ? bankBalance / monthlyBurn : 0;
+  // Runway color: red if <3, amber if <6, emerald if more
+  const runwayColor = runwayMonths < 3 ? "#ef4444" : runwayMonths < 6 ? "#f59e0b" : "#10b981";
+  const runwayLabel = runwayMonths < 3 ? "Critical" : runwayMonths < 6 ? "Caution" : "Healthy";
+
+  // Gauge data (max 24 months for the chart visualization)
+  const gaugeMax = 24;
+  const gaugeData = [
+    { name: "Runway", value: Math.min(runwayMonths, gaugeMax), fill: runwayColor },
+  ];
+
+  const monthly = aggregateMonthly(invoices, 6);
+
+  return (
+    <div className="space-y-4">
+      {/* Top row: Runway gauge + Burn metrics */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+        {/* Runway gauge */}
+        <div className="bg-[#0a0a0a] border border-white/[0.04] rounded-sm p-5">
+          <div className="flex items-center gap-2 mb-3">
+            <Gauge className="h-4 w-4 text-red-500/70" />
+            <p className="text-[11px] text-white/15 uppercase tracking-[0.15em] font-medium">Runway</p>
+          </div>
+          <div className="h-44 relative">
+            <ResponsiveContainer>
+              <RadialBarChart innerRadius="70%" outerRadius="100%" data={gaugeData} startAngle={180} endAngle={0}>
+                <RadialBar background={{ fill: "rgba(255,255,255,0.04)" }} dataKey="value" cornerRadius={4} />
+              </RadialBarChart>
+            </ResponsiveContainer>
+            <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none -mb-8">
+              <p className="text-3xl font-bold text-white tracking-tight">{runwayMonths.toFixed(1)}</p>
+              <p className="text-[11px] text-white/30">months</p>
+              <p className="text-[10px] uppercase tracking-wider mt-1" style={{ color: runwayColor }}>{runwayLabel}</p>
+            </div>
+          </div>
+        </div>
+
+        {/* Burn rate */}
+        <div className="bg-[#0a0a0a] border border-white/[0.04] rounded-sm p-5">
+          <div className="flex items-center gap-2 mb-3">
+            <Flame className="h-4 w-4 text-red-500/70" />
+            <p className="text-[11px] text-white/15 uppercase tracking-[0.15em] font-medium">Burn Rate</p>
+          </div>
+          <p className="text-3xl font-bold text-red-400 tracking-tight">${monthlyBurn.toLocaleString(undefined, { maximumFractionDigits: 0 })}</p>
+          <p className="text-[11px] text-white/30 mt-1">per month</p>
+          <div className="mt-4 pt-4 border-t border-white/[0.04] space-y-2">
+            <div className="flex justify-between text-[11px]">
+              <span className="text-white/30">Daily</span>
+              <span className="text-white/70">${(monthlyBurn / 30).toFixed(0)}</span>
+            </div>
+            <div className="flex justify-between text-[11px]">
+              <span className="text-white/30">Quarterly</span>
+              <span className="text-white/70">${(monthlyBurn * 3).toLocaleString(undefined, { maximumFractionDigits: 0 })}</span>
+            </div>
+            <div className="flex justify-between text-[11px]">
+              <span className="text-white/30">Annual</span>
+              <span className="text-white/70">${expenseTotal.toLocaleString()}</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Profitability */}
+        <div className="bg-[#0a0a0a] border border-white/[0.04] rounded-sm p-5">
+          <div className="flex items-center gap-2 mb-3">
+            <TrendingUp className="h-4 w-4 text-red-500/70" />
+            <p className="text-[11px] text-white/15 uppercase tracking-[0.15em] font-medium">Income vs Burn</p>
+          </div>
+          <p className="text-3xl font-bold text-white tracking-tight">${(totalRevenueFromCategories / 12).toLocaleString(undefined, { maximumFractionDigits: 0 })}</p>
+          <p className="text-[11px] text-white/30 mt-1">monthly revenue</p>
+          <div className="mt-4 pt-4 border-t border-white/[0.04] space-y-2">
+            <div className="flex justify-between text-[11px]">
+              <span className="text-white/30">Net monthly</span>
+              <span className={(totalRevenueFromCategories - expenseTotal) >= 0 ? "text-emerald-400" : "text-red-400"}>
+                ${((totalRevenueFromCategories - expenseTotal) / 12).toLocaleString(undefined, { maximumFractionDigits: 0 })}
+              </span>
+            </div>
+            <div className="flex justify-between text-[11px]">
+              <span className="text-white/30">Coverage</span>
+              <span className="text-white/70">
+                {monthlyBurn > 0 ? `${((totalRevenueFromCategories / 12) / monthlyBurn * 100).toFixed(0)}%` : "—"}
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Monthly cash flow chart */}
+      <div className="bg-[#0a0a0a] border border-white/[0.04] rounded-sm p-5">
+        <div className="flex items-center justify-between mb-4">
+          <div>
+            <p className="text-[11px] text-white/15 uppercase tracking-[0.15em] font-medium">Cash Flow Trend</p>
+            <p className="text-[11px] text-white/30 mt-0.5">Last 6 months — paid invoices vs estimated burn</p>
+          </div>
+        </div>
+        <div className="h-72">
+          <ResponsiveContainer>
+            <AreaChart data={monthly.map(m => ({ ...m, burn: Math.round(monthlyBurn) }))}>
+              <defs>
+                <linearGradient id="cfRev" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stopColor="#ef4444" stopOpacity={0.3} />
+                  <stop offset="100%" stopColor="#ef4444" stopOpacity={0} />
+                </linearGradient>
+                <linearGradient id="cfBurn" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stopColor="#ffffff" stopOpacity={0.15} />
+                  <stop offset="100%" stopColor="#ffffff" stopOpacity={0} />
+                </linearGradient>
+              </defs>
+              <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.04)" />
+              <XAxis dataKey="month" tick={{ fill: "rgba(255,255,255,0.3)", fontSize: 11 }} axisLine={false} tickLine={false} />
+              <YAxis tick={{ fill: "rgba(255,255,255,0.3)", fontSize: 11 }} axisLine={false} tickLine={false} />
+              <Tooltip contentStyle={{ backgroundColor: "#0a0a0a", border: "1px solid rgba(255,255,255,0.08)", borderRadius: "2px", fontSize: "12px" }} itemStyle={{ color: "#fff" }} formatter={(v: any) => [`$${Number(v).toLocaleString()}`, ""]} />
+              <Area type="monotone" dataKey="revenue" stroke="#ef4444" strokeWidth={2} fill="url(#cfRev)" name="Revenue" />
+              <Area type="monotone" dataKey="burn" stroke="rgba(255,255,255,0.4)" strokeWidth={2} fill="url(#cfBurn)" name="Burn" strokeDasharray="4 4" />
+            </AreaChart>
+          </ResponsiveContainer>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// ════════════════════════════════════════════
+// REPORTS TAB — filterable invoice list + export
+// ════════════════════════════════════════════
+const ReportsTab: React.FC<{ invoices: InvoiceType[] }> = ({ invoices }) => {
+  const [statusFilter, setStatusFilter] = useState<"all" | "paid" | "pending">("all");
+  const [searchQuery, setSearchQuery] = useState("");
+
+  const filtered = invoices.filter(inv => {
+    const matchStatus = statusFilter === "all" || inv.status === statusFilter;
+    const matchSearch = !searchQuery ||
+      inv.invoice_title?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      inv.client_name?.toLowerCase().includes(searchQuery.toLowerCase());
+    return matchStatus && matchSearch;
+  });
+
+  const paidCount = invoices.filter(i => i.status === "paid").length;
+  const pendingCount = invoices.filter(i => i.status === "pending").length;
+
+  const exportCSV = () => {
+    const rows = [
+      ["Invoice ID", "Title", "Client", "Email", "Date", "Amount", "Status"],
+      ...filtered.map(inv => [
+        inv.invoice_id,
+        inv.invoice_title,
+        inv.client_name,
+        inv.client_email,
+        new Date(inv.creation_date).toLocaleDateString(),
+        inv.outcome,
+        inv.status,
+      ]),
+    ];
+    const csv = rows.map(r => r.map(c => `"${c}"`).join(",")).join("\n");
+    const blob = new Blob([csv], { type: "text/csv" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `invoices-${new Date().toISOString().split("T")[0]}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  return (
+    <div className="space-y-4">
+      {/* Filters + export */}
+      <div className="bg-[#0a0a0a] border border-white/[0.04] rounded-sm p-4">
+        <div className="flex items-center gap-3 flex-wrap">
+          <div className="flex items-center gap-1.5 bg-white/[0.02] border border-white/[0.04] rounded-sm p-0.5">
+            {(["all", "paid", "pending"] as const).map(s => (
+              <button
+                key={s}
+                onClick={() => setStatusFilter(s)}
+                className={`px-3 py-1 rounded-sm text-[11px] font-medium transition-all ${
+                  statusFilter === s
+                    ? "bg-red-500/[0.1] text-red-400"
+                    : "text-white/25 hover:text-white/40"
+                }`}
+              >
+                {s === "all" ? `All (${invoices.length})` : s === "paid" ? `Paid (${paidCount})` : `Pending (${pendingCount})`}
+              </button>
+            ))}
+          </div>
+          <input
+            type="text"
+            placeholder="Search by title or client..."
+            value={searchQuery}
+            onChange={e => setSearchQuery(e.target.value)}
+            className="flex-1 px-3 py-1.5 bg-white/[0.02] border border-white/[0.04] rounded-sm text-[12px] text-white/60 placeholder:text-white/15 focus:outline-none focus:border-white/[0.08]"
+          />
+          <button
+            onClick={exportCSV}
+            disabled={filtered.length === 0}
+            className="flex items-center gap-1.5 px-3 py-1.5 bg-red-500/[0.08] hover:bg-red-500/[0.12] border border-red-500/15 text-red-400 text-[11px] rounded-sm transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+          >
+            <Download className="h-3 w-3" /> Export CSV
+          </button>
+        </div>
+      </div>
+
+      {/* Summary cards */}
+      <div className="grid grid-cols-3 gap-4">
+        <div className="bg-[#0a0a0a] border border-white/[0.04] rounded-sm p-4">
+          <p className="text-[10px] text-white/20 uppercase tracking-wider">Showing</p>
+          <p className="text-2xl font-bold text-white tracking-tight mt-1">{filtered.length}</p>
+          <p className="text-[11px] text-white/30 mt-0.5">of {invoices.length} invoices</p>
+        </div>
+        <div className="bg-[#0a0a0a] border border-white/[0.04] rounded-sm p-4">
+          <p className="text-[10px] text-white/20 uppercase tracking-wider">Total Value</p>
+          <p className="text-2xl font-bold text-red-400 tracking-tight mt-1">${filtered.reduce((s, i) => s + Number(i.outcome), 0).toLocaleString()}</p>
+        </div>
+        <div className="bg-[#0a0a0a] border border-white/[0.04] rounded-sm p-4">
+          <p className="text-[10px] text-white/20 uppercase tracking-wider">Avg Invoice</p>
+          <p className="text-2xl font-bold text-white tracking-tight mt-1">${filtered.length > 0 ? Math.round(filtered.reduce((s, i) => s + Number(i.outcome), 0) / filtered.length).toLocaleString() : "0"}</p>
+        </div>
+      </div>
+
+      {/* Detailed table */}
+      <div className="bg-[#0a0a0a] border border-white/[0.04] rounded-sm overflow-hidden">
+        <div className="grid grid-cols-[2fr_1.5fr_1fr_1fr_1fr] gap-4 px-5 py-2.5 border-b border-white/[0.04] text-[10px] text-white/20 uppercase tracking-[0.15em]">
+          <span>Invoice</span><span>Client</span><span>Date</span><span className="text-right">Amount</span><span className="text-right">Status</span>
+        </div>
+        <div className="max-h-[500px] overflow-y-auto">
+          {filtered.length === 0 ? (
+            <div className="py-12 text-center"><p className="text-[13px] text-white/15">No invoices match your filters</p></div>
+          ) : (
+            filtered.map((inv) => (
+              <div key={inv.invoice_id} className="grid grid-cols-[2fr_1.5fr_1fr_1fr_1fr] gap-4 items-center px-5 py-3 border-b border-white/[0.025] last:border-b-0 hover:bg-white/[0.015] transition-colors">
+                <span className="text-[13px] font-medium text-white/75 truncate">{inv.invoice_title}</span>
+                <span className="text-[12px] text-white/40 truncate">{inv.client_name}</span>
+                <span className="text-[11px] text-white/30">{new Date(inv.creation_date).toLocaleDateString()}</span>
+                <span className="text-[13px] font-medium text-right text-white/80">${Number(inv.outcome).toFixed(2)}</span>
+                <div className="flex justify-end">
+                  <span className={`text-[10px] uppercase tracking-wider px-2 py-0.5 rounded-sm border ${inv.status === "paid" ? "bg-emerald-500/[0.08] text-emerald-400 border-emerald-500/15" : "bg-red-500/[0.08] text-red-400 border-red-500/15"}`}>{inv.status}</span>
+                </div>
+              </div>
+            ))
+          )}
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// ════════════════════════════════════════════
+// MAIN COMPONENT
+// ════════════════════════════════════════════
+const FinancialDashboardContent: React.FC = () => {
+  const { data: invoices = [], isLoading, refetch } = AllInvoices();
+  const [bankBalance, setBankBalance] = useState(0);
+  const [expenseTotal, setExpenseTotal] = useState(0);
+  const [revenueByCategory, setRevenueByCategory] = useState<{ name: string; value: number }[]>([]);
+  const [expenseByCategory, setExpenseByCategory] = useState<{ name: string; value: number }[]>([]);
+  const [showModeler, setShowModeler] = useState(false);
+  const [tab, setTab] = useState("overview");
+
+  // Load Supabase aggregates
+  useEffect(() => {
+    async function loadAggregates() {
+      const [propsRes, expRes, revRes] = await Promise.all([
+        supabase.from("cwa_calculatorProps").select("initialCapital").single(),
+        supabase.from("cwa_expenses").select("amount, frequency, category"),
+        supabase.from("cwa_revenues").select("amount, frequency, category, clients, revenueType"),
+      ]);
+
+      if (propsRes.data) setBankBalance(propsRes.data.initialCapital || 0);
+
+      if (expRes.data) {
+        const byCategory: Record<string, number> = {};
+        let total = 0;
+        expRes.data.forEach((e: any) => {
+          let annual = e.amount;
+          if (e.frequency === "monthly") annual *= 12;
+          else if (e.frequency === "quarterly") annual *= 4;
+          const cat = e.category || "Other";
+          byCategory[cat] = (byCategory[cat] || 0) + annual;
+          total += annual;
+        });
+        setExpenseTotal(total);
+        setExpenseByCategory(Object.entries(byCategory).map(([name, value]) => ({ name, value })));
+      }
+
+      if (revRes.data) {
+        const byCategory: Record<string, number> = {};
+        revRes.data.forEach((r: any) => {
+          let annual = r.amount;
+          if (r.frequency === "monthly") annual *= 12;
+          else if (r.frequency === "quarterly") annual *= 4;
+          if (r.revenueType === "subscription" || r.revenueType === "recurring") {
+            annual *= r.clients || 1;
+          }
+          const cat = r.category || "Other";
+          byCategory[cat] = (byCategory[cat] || 0) + annual;
+        });
+        setRevenueByCategory(Object.entries(byCategory).map(([name, value]) => ({ name, value })));
+      }
+    }
+    loadAggregates();
+  }, []);
+
+  const totalRevenueFromCategories = revenueByCategory.reduce((s, r) => s + r.value, 0);
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center h-screen bg-black">
+        <div className="flex flex-col items-center gap-3">
+          <div className="h-6 w-6 border-2 border-red-500/30 border-t-red-500 rounded-full animate-spin" />
+          <p className="text-[12px] text-white/30">Loading financial data…</p>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen bg-black overflow-y-auto">
+      {/* Header */}
+      <div className="px-8 pt-7 pb-2">
+        <div className="flex items-end justify-between">
+          <div className="flex items-center gap-3">
+            <div className="p-2.5 rounded-sm bg-red-500/[0.08] border border-red-500/15">
+              <Wallet className="h-5 w-5 text-red-400" />
+            </div>
+            <div>
+              <h1 className="text-[24px] font-bold text-white tracking-tight">Finance</h1>
+              <p className="text-[12px] text-white/20 mt-0.5">Portfolio overview across CodeWithAli & Simplicity</p>
+            </div>
+          </div>
+          <button onClick={() => refetch()} className="flex items-center gap-2 px-3 py-1.5 bg-white/[0.02] hover:bg-red-500/[0.06] border border-white/[0.04] hover:border-red-500/15 text-white/30 hover:text-red-400 rounded-sm text-[12px] transition-colors">
+            <RefreshCcw className="h-3 w-3" /> Refresh
+          </button>
+        </div>
+      </div>
+
+      {/* Top-level tabs */}
+      <div className="px-8 pt-5">
+        <Tabs value={tab} onValueChange={setTab}>
+          <TabsList className="bg-white/[0.02] border border-white/[0.04] rounded-sm h-9 p-0.5">
+            <TabsTrigger value="overview" className="data-[state=active]:bg-red-500/[0.1] data-[state=active]:text-red-400 text-white/30 rounded-sm text-[12px] h-7 px-4">
+              <BarChart3 className="h-3.5 w-3.5 mr-1.5" /> Overview
+            </TabsTrigger>
+            <TabsTrigger value="companies" className="data-[state=active]:bg-red-500/[0.1] data-[state=active]:text-red-400 text-white/30 rounded-sm text-[12px] h-7 px-4">
+              <Building2 className="h-3.5 w-3.5 mr-1.5" /> Companies
+            </TabsTrigger>
+            <TabsTrigger value="cashflow" className="data-[state=active]:bg-red-500/[0.1] data-[state=active]:text-red-400 text-white/30 rounded-sm text-[12px] h-7 px-4">
+              <Flame className="h-3.5 w-3.5 mr-1.5" /> Cash Flow
+            </TabsTrigger>
+            <TabsTrigger value="reports" className="data-[state=active]:bg-red-500/[0.1] data-[state=active]:text-red-400 text-white/30 rounded-sm text-[12px] h-7 px-4">
+              <FileBarChart className="h-3.5 w-3.5 mr-1.5" /> Reports
+            </TabsTrigger>
+          </TabsList>
+
+          <div className="pt-4 pb-10 space-y-4">
+            <TabsContent value="overview">
+              <OverviewTab
+                invoices={invoices}
+                bankBalance={bankBalance}
+                expenseTotal={expenseTotal}
+                revenueByCategory={revenueByCategory}
+                expenseByCategory={expenseByCategory}
+                totalRevenueFromCategories={totalRevenueFromCategories}
+              />
+            </TabsContent>
+
+            <TabsContent value="companies">
+              <CompaniesTab
+                totalRevenueFromCategories={totalRevenueFromCategories}
+                expenseTotal={expenseTotal}
+                bankBalance={bankBalance}
+                invoices={invoices}
+              />
+            </TabsContent>
+
+            <TabsContent value="cashflow">
+              <CashFlowTab
+                bankBalance={bankBalance}
+                expenseTotal={expenseTotal}
+                totalRevenueFromCategories={totalRevenueFromCategories}
+                invoices={invoices}
+              />
+            </TabsContent>
+
+            <TabsContent value="reports">
+              <ReportsTab invoices={invoices} />
+            </TabsContent>
+          </div>
+        </Tabs>
+
+        {/* Modeler section (always visible at bottom) */}
+        <div className="space-y-4 pb-10">
+          <button
+            onClick={() => setShowModeler(!showModeler)}
+            className="w-full flex items-center justify-between px-5 py-3 bg-[#0a0a0a] border border-white/[0.04] hover:border-red-500/15 rounded-sm transition-colors group"
+          >
+            <div className="flex items-center gap-3">
+              <div className="p-1.5 rounded-sm bg-red-500/[0.08]">
+                <Activity className="h-3.5 w-3.5 text-red-400" />
+              </div>
+              <div className="text-left">
+                <p className="text-[13px] font-medium text-white/80 group-hover:text-white transition-colors">Financial Modeler & Projections</p>
+                <p className="text-[11px] text-white/20">Advanced scenario modeling and multi-year projections</p>
+              </div>
+            </div>
+            {showModeler ? <ChevronUp className="h-4 w-4 text-white/30" /> : <ChevronDown className="h-4 w-4 text-white/30" />}
+          </button>
+
+          <AnimatePresence>
+            {showModeler && (
+              <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className="space-y-4">
+                <FinancialModeler />
+                <FinancialProjections />
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+const FinancialDashboard: React.FC = () => (
+  <FinancialProvider>
+    <FinancialDashboardContent />
+  </FinancialProvider>
+);
+
+export const Route = createLazyFileRoute("/financialDashboard")({
   component: FinancialDashboard,
 });
