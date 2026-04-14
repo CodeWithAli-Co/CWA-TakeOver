@@ -1,264 +1,156 @@
+/**
+ * tasks.tsx — Full-page task management.
+ *
+ * Sections:
+ *   1. Header          — title + task count + Add Task button
+ *   2. Stats strip     — one unified card with Total / To Do / Active / Done / Completion%
+ *   3. View toggle     — List | Kanban
+ *   4. Filter bar      — status pills + priority pills + search + assignee filter
+ *   5. Task display    — List rows OR 3-column Kanban with drag-ready move buttons
+ */
+
 import React, { useEffect, useState } from "react";
-import {
-  Card,
-  CardHeader,
-  CardTitle,
-  CardContent,
-} from "@/components/ui/shadcnComponents/card";
 import { ScrollArea } from "@/components/ui/shadcnComponents/scroll-area";
-import { Input } from "@/components/ui/shadcnComponents/input";
-import {
-  Tabs,
-  TabsList,
-  TabsTrigger,
-} from "@/components/ui/shadcnComponents/tabs";
-import { Badge } from "@/components/ui/shadcnComponents/badge";
 import { motion, AnimatePresence } from "framer-motion";
 import {
-  Activity,
-  Calendar,
-  Clock,
-  AlertCircle,
-  CheckCircle,
-  ChevronDown,
-  ChevronUp,
-  GitBranch,
-  CheckCircle2,
-  AlertTriangle,
+  Activity, Calendar, CheckCircle, ClipboardList, Clock,
+  AlertCircle, ChevronRight, List, LayoutGrid, Users, X, Flag,
 } from "lucide-react";
 import { ActiveUser, Employees, Todos, TodosInterface } from "@/stores/query";
 import supabase from "@/MyComponents/supabase";
 import { message } from "@tauri-apps/plugin-dialog";
 import { AddTodo } from "./addTodo";
 
-//task types.ts
-
 export type TaskPriority = "high" | "medium" | "low";
 export type TaskStatus = "to-do" | "in-progress" | "done";
 
-export interface TaskComment {
-  id: number;
-  user: string;
-  content: string;
-  timestamp: string;
-}
-
-export interface TaskBlocker {
-  id: number;
-  description: string;
-  severity: "critical" | "moderate" | "minor";
-  status: "active" | "resolved";
-}
-
-export interface TaskDependency {
-  id: number;
-  taskId: number;
-  taskTitle: string;
-  type: "blocks" | "blocked-by" | "related";
-}
-
-export interface Task {
-  id: number;
-  title: string;
-  priority: TaskPriority;
-  dueDate: string;
-  description: string;
-  detailedDescription?: string;
-  vision?: string;
-  assignee: string;
-  status: TaskStatus;
-  progress: number;
-  comments: TaskComment[];
-  blockers: TaskBlocker[];
-  dependencies: TaskDependency[];
-  technicalNotes?: string;
-  lastUpdated: string;
-  watchers: string[];
-  tags: string[];
-  estimatedTime?: string;
-  timeSpent?: string;
-}
-
-// Component for displaying task blockers
-const TaskBlockerItem: React.FC<{ blocker: TaskBlocker }> = ({ blocker }) => (
-  <div
-    className={`p-3 rounded-lg border ${
-      blocker.status === "active"
-        ? "border-red-500/30 bg-red-950/10"
-        : "border-green-500/30 bg-green-950/10"
-    }`}
-  >
-    <div className="flex items-center justify-between">
-      <div className="flex items-center gap-2">
-        {blocker.status === "active" ? (
-          <AlertTriangle className="h-4 w-4 text-red-400" />
-        ) : (
-          <CheckCircle2 className="h-4 w-4 text-green-400" />
-        )}
-        <span
-          className={`text-sm ${blocker.status === "active" ? "text-red-200" : "text-green-200"}`}
-        >
-          {blocker.description}
-        </span>
-      </div>
-      <Badge
-        variant="outline"
-        className={`
-        ${
-          blocker.severity === "critical"
-            ? "bg-red-500/20 text-red-400"
-            : blocker.severity === "moderate"
-              ? "bg-yellow-500/20 text-yellow-400"
-              : "bg-blue-500/20 text-blue-400"
-        }
-      `}
-      >
-        {blocker.severity}
-      </Badge>
-    </div>
-  </div>
-);
-
-// Component for displaying task dependencies
-// const TaskDependencyItem: React.FC<{ dependency: TaskDependency }> = ({
-//   dependency,
-// }) => (
-//   <div className="flex items-center gap-2 p-2 rounded-lg bg-red-950/10 border border-red-900/30">
-//     <GitBranch className="h-4 w-4 text-red-400" />
-//     <span className="text-sm text-red-200">{dependency.taskTitle}</span>
-//     <Badge variant="outline" className="bg-red-900/20 text-red-400">
-//       {dependency.type}
-//     </Badge>
-//   </div>
-// );
-
-// Task Priority Badge Component
-const TaskPriorityBadge: React.FC<{ priority: TaskPriority }> = ({
-  priority,
-}) => {
-  const colors: Record<TaskPriority, string> = {
-    high: "bg-red-500/20 text-red-400 border-red-500/30",
-    medium: "bg-amber-500/20 text-amber-400 border-amber-500/30",
-    low: "bg-emerald-500/20 text-emerald-400 border-emerald-500/30",
-  };
-  return (
-    <motion.div whileHover={{ scale: 1.05 }}>
-      <Badge variant="outline" className={`${colors[priority]} text-xs ml-2`}>
-        {priority}
-      </Badge>
-    </motion.div>
-  );
+const priorityColors: Record<TaskPriority, string> = {
+  high: "bg-red-500/[0.08] text-red-400 border-red-500/15",
+  medium: "bg-amber-500/[0.06] text-amber-400/80 border-amber-500/10",
+  low: "bg-white/[0.04] text-white/40 border-white/[0.06]",
 };
 
-// Task Item Component
-const TaskItem: React.FC<{ task: TodosInterface }> = ({ task }) => {
+const statusColors: Record<TaskStatus, { dot: string; text: string; bg: string }> = {
+  "to-do": { dot: "bg-amber-400", text: "text-amber-400", bg: "bg-amber-500/[0.08]" },
+  "in-progress": { dot: "bg-blue-400", text: "text-blue-400", bg: "bg-blue-500/[0.08]" },
+  done: { dot: "bg-emerald-400", text: "text-emerald-400", bg: "bg-emerald-500/[0.08]" },
+};
+
+// ════════════════════════════════════════
+// TaskItem — list view row
+// ════════════════════════════════════════
+const TaskItem: React.FC<{
+  task: TodosInterface;
+  onStatusChange: (id: number, status: TaskStatus) => void;
+}> = ({ task, onStatusChange }) => {
   const [isExpanded, setIsExpanded] = useState(false);
-  async function EditTask(todoStatus: string, todoID: number) {
-    const { error } = await supabase
-      .from("cwa_todos")
-      .update({ status: todoStatus })
-      .eq("todo_id", todoID);
-    if (error) {
-      await message(error.message, {
-        title: "Error Editing Todo Status",
-        kind: "error",
-      });
-    }
-  }
+
+  const nextStatus: TaskStatus | null =
+    task.status === "to-do" ? "in-progress" :
+    task.status === "in-progress" ? "done" : null;
 
   return (
     <motion.div
       layout
-      initial={{ opacity: 0, y: 10 }}
+      initial={{ opacity: 0, y: 6 }}
       animate={{ opacity: 1, y: 0 }}
-      exit={{ opacity: 0, y: -10 }}
-      className="rounded-lg bg-black/40 border border-red-950/20 
-                 hover:bg-red-950/10 hover:border-red-900/30 transition-all duration-200"
+      exit={{ opacity: 0, y: -6 }}
+      className="bg-white/[0.015] border border-white/[0.04] hover:border-red-500/10 rounded-sm transition-all duration-300 overflow-hidden group"
     >
-      {/* Task Header */}
-      <div className="p-4 cursor-pointer">
-        <div className="flex items-start gap-4 w-full">
-          <div className="p-2 rounded-lg bg-zinc-900/20 mt-1">
-            <Activity className="h-4 w-4 text-red-500" />
+      {/* Header row */}
+      <div
+        className="px-4 py-3 flex items-center gap-3 cursor-pointer"
+        onClick={() => setIsExpanded(!isExpanded)}
+      >
+        {/* Status dot */}
+        <div className={`h-1.5 w-1.5 rounded-full ${statusColors[task.status as TaskStatus]?.dot || "bg-white/20"} shrink-0`} />
+
+        {/* Title + priority */}
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className="text-[13px] font-medium text-white/80 truncate">
+              {task.title}
+            </span>
+            {task.priority && (
+              <span className={`text-[9px] uppercase tracking-wider px-1.5 py-0.5 rounded-sm border ${priorityColors[task.priority]}`}>
+                {task.priority}
+              </span>
+            )}
           </div>
-          <div className="flex-1">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center">
-                <span
-                  className="text-sm font-bold text-white"
-                  onClick={() => setIsExpanded(!isExpanded)}
-                >
-                  {task.title}
-                </span>
-                <TaskPriorityBadge priority={task.priority} />
-              </div>
-              <div className="flex items-center gap-3">
-                {task.status === "to-do" && (
-                  <motion.button
-                    whileHover={{ scale: 1.05 }}
-                    whileTap={{ scale: 0.95 }}
-                    className="text-amber-50/70 hover:text-amber-50 hover:bg-red-900/20 px-3 py-1 rounded"
-                    onClick={() => EditTask("in-progress", task.todo_id)}
-                  >
-                    Start
-                  </motion.button>
-                )}
 
-                {task.status === "in-progress" && (
-                  <motion.button
-                    whileHover={{ scale: 1.05 }}
-                    whileTap={{ scale: 0.95 }}
-                    className="text-amber-50/70 hover:text-amber-50 hover:bg-red-900/20 px-3 py-1 rounded"
-                    onClick={() => EditTask("done", task.todo_id)}
-                  >
-                    Finish
-                  </motion.button>
-                )}
-
-                {isExpanded ? (
-                  <ChevronUp className="h-4 w-4 text-red-400" />
-                ) : (
-                  <ChevronDown className="h-4 w-4 text-red-400" />
-                )}
-              </div>
-            </div>
-            <div className="flex items-center gap-4 mt-1">
-              <div className="flex items-center gap-1 text-xs text-slate-400">
-                <Calendar className="h-3 w-3" />
-                {task.deadline}
-              </div>
-              <div className="flex items-center gap-1 text-xs text-slate-400">
-                <Clock className="h-3 w-3" />
-                {task.status}
-              </div>
-              <div className="flex items-center gap-1 text-xs text-slate-400">
-                <div className="w-4 h-4 rounded-full bg-red-900/30 flex items-center justify-center text-[10px]">
-                  {/* Need to fix the name display */}
-                  {/* {task.assignee} */}
-                </div>
-                {task.assignee}
-              </div>
-            </div>
+          {/* Meta row */}
+          <div className="flex items-center gap-3 mt-1 text-[11px] text-white/25">
+            {task.deadline && (
+              <span className="flex items-center gap-1">
+                <Calendar className="h-3 w-3" /> {task.deadline}
+              </span>
+            )}
+            {task.assignee && task.assignee.length > 0 && (
+              <span className="flex items-center gap-1">
+                <Users className="h-3 w-3" />
+                {Array.isArray(task.assignee) ? task.assignee.join(", ") : task.assignee}
+              </span>
+            )}
+            {task.label && (
+              <span className="flex items-center gap-1">
+                <Flag className="h-3 w-3" /> {task.label}
+              </span>
+            )}
           </div>
         </div>
+
+        {/* Actions */}
+        <div className="flex items-center gap-2 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
+          {nextStatus && (
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                onStatusChange(task.todo_id, nextStatus);
+              }}
+              className={`text-[11px] px-2.5 py-1 rounded-sm transition-colors ${
+                nextStatus === "in-progress"
+                  ? "bg-blue-500/[0.08] hover:bg-blue-500/[0.15] text-blue-400 border border-blue-500/15"
+                  : "bg-emerald-500/[0.08] hover:bg-emerald-500/[0.15] text-emerald-400 border border-emerald-500/15"
+              }`}
+            >
+              {nextStatus === "in-progress" ? "Start" : "Finish"}
+            </button>
+          )}
+        </div>
+
+        <ChevronRight
+          className={`h-3.5 w-3.5 text-white/20 transition-transform shrink-0 ${isExpanded ? "rotate-90" : ""}`}
+        />
       </div>
 
-      {/* Expanded Details */}
+      {/* Expanded details */}
       <AnimatePresence>
         {isExpanded && (
           <motion.div
             initial={{ opacity: 0, height: 0 }}
             animate={{ opacity: 1, height: "auto" }}
             exit={{ opacity: 0, height: 0 }}
-            className="border-t border-red-950/20 p-4 space-y-4"
+            className="border-t border-white/[0.04] overflow-hidden"
           >
-            {/* Description and Vision */}
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <h4 className="text-sm font-medium text-red-200">
-                  Description
-                </h4>
-                <p className="text-sm text-slate-400">{task.description}</p>
+            <div className="px-4 py-3 space-y-2">
+              {task.description ? (
+                <div>
+                  <p className="text-[10px] text-white/20 uppercase tracking-wider mb-1">Description</p>
+                  <p className="text-[12px] text-white/60 leading-relaxed">{task.description}</p>
+                </div>
+              ) : (
+                <p className="text-[11px] text-white/20 italic">No description</p>
+              )}
+
+              <div className="flex items-center justify-between pt-2">
+                <span className="text-[10px] text-white/15">
+                  Created {task.created_at ? new Date(task.created_at).toLocaleDateString() : "—"}
+                </span>
+                {task.priorityOrder && (
+                  <span className="text-[10px] text-white/15">
+                    Priority order: {task.priorityOrder}
+                  </span>
+                )}
               </div>
             </div>
           </motion.div>
@@ -268,182 +160,350 @@ const TaskItem: React.FC<{ task: TodosInterface }> = ({ task }) => {
   );
 };
 
-// Main TaskSettings Component
+// ════════════════════════════════════════
+// KanbanCard — compact card for Kanban view
+// ════════════════════════════════════════
+const KanbanCard: React.FC<{
+  task: TodosInterface;
+  onStatusChange: (id: number, status: TaskStatus) => void;
+}> = ({ task, onStatusChange }) => {
+  const nextStatus: TaskStatus | null =
+    task.status === "to-do" ? "in-progress" :
+    task.status === "in-progress" ? "done" : null;
+
+  return (
+    <motion.div
+      layout
+      initial={{ opacity: 0, scale: 0.98 }}
+      animate={{ opacity: 1, scale: 1 }}
+      exit={{ opacity: 0, scale: 0.98 }}
+      className="bg-white/[0.02] border border-white/[0.04] hover:border-red-500/10 rounded-sm p-3 transition-all group"
+    >
+      <div className="flex items-start justify-between mb-1.5 gap-2">
+        <h4 className="text-[12px] font-medium text-white/80 leading-snug flex-1">
+          {task.title}
+        </h4>
+        {task.priority && (
+          <span className={`text-[9px] uppercase tracking-wider px-1.5 py-0.5 rounded-sm border shrink-0 ${priorityColors[task.priority]}`}>
+            {task.priority}
+          </span>
+        )}
+      </div>
+      {task.description && (
+        <p className="text-[11px] text-white/30 leading-snug mb-2 line-clamp-2">
+          {task.description}
+        </p>
+      )}
+
+      <div className="flex items-center gap-2 text-[10px] text-white/25 mb-2">
+        {task.deadline && (
+          <span className="flex items-center gap-0.5">
+            <Calendar className="h-2.5 w-2.5" /> {task.deadline}
+          </span>
+        )}
+        {task.assignee && (
+          <span className="flex items-center gap-0.5">
+            <Users className="h-2.5 w-2.5" />
+            {Array.isArray(task.assignee) ? task.assignee[0] : task.assignee}
+          </span>
+        )}
+      </div>
+
+      {nextStatus && (
+        <div className="pt-2 border-t border-white/[0.04] opacity-0 group-hover:opacity-100 transition-opacity">
+          <button
+            onClick={() => onStatusChange(task.todo_id, nextStatus)}
+            className="w-full text-[10px] text-red-400 hover:text-red-300 flex items-center justify-center gap-0.5"
+          >
+            {nextStatus === "in-progress" ? "Start" : "Mark done"}
+            <ChevronRight className="h-2.5 w-2.5" />
+          </button>
+        </div>
+      )}
+    </motion.div>
+  );
+};
+
+// ════════════════════════════════════════
+// MAIN COMPONENT
+// ════════════════════════════════════════
 const TaskSettings: React.FC = () => {
-  const { data: AllEmployees, error: EmployeesError } = Employees();
-  if (EmployeesError) {
-    console.log("Error fetching Employees for ToDo", EmployeesError.message);
-  }
-  const { data: user, error: activeUserError } = ActiveUser();
-  if (activeUserError) {
-    console.log(
-      "Error fetching Active User for Tasks",
-      activeUserError.message
-    );
-  }
-  const {
-    data: todos,
-    error: TodoError,
-    refetch: refetchTodos,
-  } = Todos(user[0]?.username);
-  if (TodoError) {
-    console.log("Error fetching Todos Data:", TodoError.message);
-  }
+  const { data: AllEmployees } = Employees();
+  const { data: user } = ActiveUser();
+  const { data: todos, refetch: refetchTodos } = Todos(user?.[0]?.username);
 
-  const [selectedTab, setSelectedTab] = useState<TaskStatus>("to-do");
+  const [statusFilter, setStatusFilter] = useState<"all" | TaskStatus>("all");
+  const [priorityFilter, setPriorityFilter] = useState<"all" | TaskPriority>("all");
   const [searchQuery, setSearchQuery] = useState("");
+  const [view, setView] = useState<"list" | "kanban">("list");
 
-  // Add null checks and defaults
+  // Proper realtime subscription with cleanup
+  useEffect(() => {
+    const channel = supabase
+      .channel("task-realtime")
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "cwa_todos" },
+        () => refetchTodos()
+      )
+      .subscribe();
+    return () => { channel.unsubscribe(); };
+  }, [refetchTodos]);
+
   const todosList = todos || [];
-  const todoCount = todosList.length > 0 ? todosList[0]?.todoCount || 0 : 0;
-  const inProgressCount =
-    todosList.length > 0 ? todosList[0]?.inProgressCount || 0 : 0;
-  const doneCount = todosList.length > 0 ? todosList[0]?.doneCount || 0 : 0;
-  const allCount = todosList.length > 0 ? todosList[0]?.allCount || 0 : 0;
 
-  //updated it so thaat it filters using localtask rather than just normal task
-  const filteredTasks = todos!.filter((task) => {
+  // Stats from embedded counts in query result
+  const todoCount = todosList.length > 0 ? todosList[0]?.todoCount || 0 : 0;
+  const inProgressCount = todosList.length > 0 ? todosList[0]?.inProgressCount || 0 : 0;
+  const doneCount = todosList.length > 0 ? todosList[0]?.doneCount || 0 : 0;
+  const allCount = todosList.length > 0 ? todosList[0]?.allCount || 0 : todosList.length;
+  const completionPct = allCount > 0 ? (doneCount / allCount) * 100 : 0;
+
+  // Status change handler
+  const handleStatusChange = async (id: number, status: TaskStatus) => {
+    const { error } = await supabase
+      .from("cwa_todos")
+      .update({ status })
+      .eq("todo_id", id);
+    if (error) {
+      await message(error.message, { title: "Error updating task", kind: "error" });
+    }
+  };
+
+  // Filtered tasks
+  const filtered = todosList.filter((task) => {
     const matchesSearch =
       task?.title?.toLowerCase().includes(searchQuery.toLowerCase()) ||
       task?.description?.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesStatus = task?.status === selectedTab;
-    return matchesSearch && matchesStatus;
+    const matchesStatus = statusFilter === "all" || task?.status === statusFilter;
+    const matchesPriority = priorityFilter === "all" || task?.priority === priorityFilter;
+    return matchesSearch && matchesStatus && matchesPriority;
   });
 
-  supabase
-    .channel("all-todos")
-    .on(
-      "postgres_changes",
-      { event: "*", schema: "public", table: "cwa_todos" },
-      () => refetchTodos()
-    )
-    .subscribe();
-
-  useEffect(() => {
-    refetchTodos();
-  }, [selectedTab]);
-
   return (
-    <div className="min-h-screen bg-black  py-6 px-8">
-      <div className="mb-6">
-        <h2 className="text-3xl font-bold tracking-tight text-white">Tasks</h2>
-        <p className="text-slate-200">{allCount} total tasks</p>
-      </div>
-      <div className="justify-self-end">
-        <AddTodo Users={AllEmployees || []} />
-      </div>
-      {/* Stats Overview */}
-      <div className="grid grid-cols-1 lg:grid-cols-4 gap-4 mb-6">
-        <Card className="bg-zinc-950 high-dpi:bg-zinc-950/20 rounded-xs border-red-950/20">
-          <CardContent className="p-4">
-            <div className="flex items-center gap-2 text-red-200/60">
-              <CheckCircle className="h-4 w-4 text-red-900" />
-              <span className="text-sm">Completed</span>
+    <div className="min-h-screen bg-black overflow-y-auto">
+      {/* Header */}
+      <div className="px-8 pt-7 pb-2">
+        <div className="flex items-end justify-between">
+          <div className="flex items-center gap-3">
+            <div className="p-2.5 rounded-sm bg-red-500/[0.08] border border-red-500/15">
+              <ClipboardList className="h-5 w-5 text-red-400" />
             </div>
-            <p className="text-2xl font-bold text-red-200 mt-2">{doneCount}</p>
-          </CardContent>
-        </Card>
-        <Card className="bg-zinc-950 high-dpi:bg-zinc-950/20 rounded-xs border-red-950/20">
-          <CardContent className="p-4">
-            <div className="flex items-center gap-2 text-red-200/60">
-              <Clock className="h-4 w-4 text-blue-900" />
-              <span className="text-sm">In Progress</span>
+            <div>
+              <h1 className="text-[24px] font-bold text-white tracking-tight">Tasks</h1>
+              <p className="text-[12px] text-white/20 mt-0.5">
+                {allCount} total · {doneCount} completed
+              </p>
             </div>
-            <p className="text-2xl font-bold text-red-200 mt-2">
-              {inProgressCount}
-            </p>
-          </CardContent>
-        </Card>
-        <Card className="bg-zinc-950 high-dpi:bg-zinc-950/20 rounded-xs border-red-950/20">
-          <CardContent className="p-4">
-            <div className="flex items-center gap-2 text-red-200/60">
-              <AlertCircle className="h-4 w-4 text-purple-900" />
-              <span className="text-sm">To Do</span>
+          </div>
+
+          <div className="flex items-center gap-2">
+            {/* View toggle */}
+            <div className="flex items-center bg-white/[0.02] border border-white/[0.04] rounded-sm p-0.5">
+              <button
+                onClick={() => setView("list")}
+                className={`p-1.5 rounded-sm transition-colors ${
+                  view === "list" ? "bg-red-500/[0.1] text-red-400" : "text-white/25 hover:text-white/50"
+                }`}
+                title="List view"
+              >
+                <List className="h-3.5 w-3.5" />
+              </button>
+              <button
+                onClick={() => setView("kanban")}
+                className={`p-1.5 rounded-sm transition-colors ${
+                  view === "kanban" ? "bg-red-500/[0.1] text-red-400" : "text-white/25 hover:text-white/50"
+                }`}
+                title="Kanban view"
+              >
+                <LayoutGrid className="h-3.5 w-3.5" />
+              </button>
             </div>
-            <p className="text-2xl font-bold text-red-200 mt-2">{todoCount}</p>
-          </CardContent>
-        </Card>
-        <Card className="bg-zinc-950 high-dpi:bg-zinc-950/20 rounded-xs border-red-950/20">
-          <CardContent className="p-4">
-            <div className="flex items-center gap-2 text-red-200/60">
-              <Activity className="h-4 w-4 text-green-900" />
-              <span className="text-sm">Total Tasks</span>
-            </div>
-            <p className="text-2xl font-bold text-red-200 mt-2">{allCount}</p>
-          </CardContent>
-        </Card>
+
+            <AddTodo Users={AllEmployees || []} />
+          </div>
+        </div>
       </div>
 
-      {/* Task List */}
-      <Card className="bg-zinc-950 high-dpi:bg-zinc-950/20 rounded-xs border-red-950/20">
-        <CardHeader className="flex flex-row items-center justify-between">
-          <CardTitle className="text-red-200">Task Management</CardTitle>
-          <Input
+      {/* Stats strip */}
+      <div className="px-8 pt-5">
+        <div className="bg-[#0a0a0a] border border-white/[0.04] rounded-sm overflow-hidden">
+          <div className="flex">
+            {/* Progress */}
+            <div className="flex-1 px-5 py-4 border-r border-white/[0.04]">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-[10px] text-white/20 uppercase tracking-[0.12em] font-medium">
+                  Completion
+                </span>
+                <span className="text-[18px] font-bold text-white tracking-tight">
+                  {completionPct.toFixed(0)}%
+                </span>
+              </div>
+              <div className="h-1.5 w-full bg-white/[0.04] rounded-full overflow-hidden">
+                <motion.div
+                  initial={{ width: 0 }}
+                  animate={{ width: `${completionPct}%` }}
+                  transition={{ duration: 0.6, ease: "easeOut" }}
+                  className="h-full bg-gradient-to-r from-red-600 to-red-500 rounded-full"
+                />
+              </div>
+              <p className="text-[11px] text-white/30 mt-2">
+                {doneCount} of {allCount} tasks done
+              </p>
+            </div>
+
+            <div className="px-5 py-4 border-r border-white/[0.04] min-w-[110px]">
+              <div className="flex items-center gap-1.5 mb-1">
+                <AlertCircle className="h-3 w-3 text-amber-500/60" />
+                <span className="text-[10px] text-white/20 uppercase tracking-[0.12em]">To Do</span>
+              </div>
+              <p className="text-xl font-bold text-amber-400 tracking-tight">{todoCount}</p>
+            </div>
+            <div className="px-5 py-4 border-r border-white/[0.04] min-w-[110px]">
+              <div className="flex items-center gap-1.5 mb-1">
+                <Clock className="h-3 w-3 text-blue-500/60" />
+                <span className="text-[10px] text-white/20 uppercase tracking-[0.12em]">Active</span>
+              </div>
+              <p className="text-xl font-bold text-blue-400 tracking-tight">{inProgressCount}</p>
+            </div>
+            <div className="px-5 py-4 border-r border-white/[0.04] min-w-[110px]">
+              <div className="flex items-center gap-1.5 mb-1">
+                <CheckCircle className="h-3 w-3 text-emerald-500/60" />
+                <span className="text-[10px] text-white/20 uppercase tracking-[0.12em]">Done</span>
+              </div>
+              <p className="text-xl font-bold text-emerald-400 tracking-tight">{doneCount}</p>
+            </div>
+            <div className="px-5 py-4 min-w-[110px]">
+              <div className="flex items-center gap-1.5 mb-1">
+                <Activity className="h-3 w-3 text-red-500/60" />
+                <span className="text-[10px] text-white/20 uppercase tracking-[0.12em]">Total</span>
+              </div>
+              <p className="text-xl font-bold text-white tracking-tight">{allCount}</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Filter bar */}
+      <div className="px-8 pt-4">
+        <div className="flex items-center gap-2 flex-wrap">
+          {/* Status pills */}
+          <div className="flex items-center bg-white/[0.02] border border-white/[0.04] rounded-sm p-0.5">
+            {(["all", "to-do", "in-progress", "done"] as const).map((s) => {
+              const counts: Record<string, number> = { all: allCount, "to-do": todoCount, "in-progress": inProgressCount, done: doneCount };
+              const labels: Record<string, string> = { all: "All", "to-do": "To Do", "in-progress": "Active", done: "Done" };
+              return (
+                <button
+                  key={s}
+                  onClick={() => setStatusFilter(s)}
+                  className={`px-3 py-1 rounded-sm text-[11px] font-medium transition-all ${
+                    statusFilter === s
+                      ? "bg-red-500/[0.1] text-red-400"
+                      : "text-white/25 hover:text-white/50"
+                  }`}
+                >
+                  {labels[s]} ({counts[s]})
+                </button>
+              );
+            })}
+          </div>
+
+          {/* Priority pills */}
+          <div className="flex items-center bg-white/[0.02] border border-white/[0.04] rounded-sm p-0.5">
+            {(["all", "high", "medium", "low"] as const).map((p) => (
+              <button
+                key={p}
+                onClick={() => setPriorityFilter(p)}
+                className={`px-2.5 py-1 rounded-sm text-[11px] font-medium transition-all ${
+                  priorityFilter === p
+                    ? "bg-red-500/[0.1] text-red-400"
+                    : "text-white/25 hover:text-white/50"
+                }`}
+              >
+                {p === "all" ? "Any priority" : p}
+              </button>
+            ))}
+          </div>
+
+          {/* Search */}
+          <input
+            type="text"
             placeholder="Search tasks..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-[300px] bg-black/40 border-red-950/20 text-red-200 
-                   placeholder:text-red-200/40 focus:border-red-900"
+            className="flex-1 max-w-xs px-3 py-1.5 bg-white/[0.02] border border-white/[0.04] rounded-sm text-[12px] text-white/60 placeholder:text-white/15 focus:outline-none focus:border-white/[0.08]"
           />
-        </CardHeader>
-        <CardContent>
-          <Tabs defaultValue="to-do" className="mb-6">
-            <TabsList className="bg-black/40 border border-red-950/20">
-              <TabsTrigger
-                value="to-do"
-                onClick={() => setSelectedTab("to-do")}
-                className="data-[state=active]:bg-red-900/20 data-[state=active]:text-red-200 data-[state=active]:border-red-800 data-[state=active]:border"
-              >
-                To Do ({todoCount})
-              </TabsTrigger>
-              <TabsTrigger
-                value="in-progress"
-                onClick={() => setSelectedTab("in-progress")}
-                className="data-[state=active]:bg-blue-900/60 data-[state=active]:text-blue-400 data-[state=active]:border-blue-800 data-[state=active]:border"
-              >
-                In Progress ({inProgressCount})
-              </TabsTrigger>
-              <TabsTrigger
-                value="done"
-                onClick={() => setSelectedTab("done")}
-                className="data-[state=active]:bg-green-900/20 data-[state=active]:text-green-600 data-[state=active]:border data-[status=active]:border-green-900"
-              >
-                Done ({doneCount})
-              </TabsTrigger>
-            </TabsList>
-          </Tabs>
-          <ScrollArea className="h-[600px] pr-4">
-            <AnimatePresence mode="wait">
-              <motion.div
-                key={selectedTab}
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -20 }}
-                className="space-y-4"
-              >
-                {filteredTasks.length > 0 ? (
-                  filteredTasks.map((task) => (
-                    <TaskItem key={task.todo_id} task={task} />
-                  ))
-                ) : (
-                  <div className="flex flex-col items-center justify center py-10">
-                    <AlertCircle className="h-12 w-12 text-red-400/50 mb-4" />
-                    <h3 className="text-lg font-medium text-red-200">
-                      {" "}
-                      No tasks found
-                    </h3>
-                    <p className="text-sm text-redd-200/60 mt-2">
-                      {searchQuery
-                        ? "Try a different search term"
-                        : "Add a new task to get started"}
-                    </p>
-                  </div>
-                )}
-              </motion.div>
-            </AnimatePresence>
+
+          {searchQuery && (
+            <button onClick={() => setSearchQuery("")} className="p-1.5 rounded-sm bg-white/[0.02] text-white/30 hover:text-white/60">
+              <X className="h-3 w-3" />
+            </button>
+          )}
+        </div>
+      </div>
+
+      {/* Task display */}
+      <div className="px-8 py-5 pb-10">
+        {filtered.length === 0 ? (
+          <div className="bg-[#0a0a0a] border border-white/[0.04] rounded-sm py-16 text-center">
+            <ClipboardList className="h-10 w-10 text-white/[0.05] mx-auto mb-3" />
+            <p className="text-[14px] text-white/30 font-medium mb-1">
+              {allCount === 0 ? "No tasks yet" : "No tasks match your filters"}
+            </p>
+            <p className="text-[12px] text-white/15">
+              {allCount === 0 ? "Create one to get started" : "Try different filters or clear search"}
+            </p>
+          </div>
+        ) : view === "list" ? (
+          <ScrollArea className="h-[calc(100vh-340px)]">
+            <div className="space-y-2 pr-3">
+              <AnimatePresence>
+                {filtered.map((task) => (
+                  <TaskItem key={task.todo_id} task={task} onStatusChange={handleStatusChange} />
+                ))}
+              </AnimatePresence>
+            </div>
           </ScrollArea>
-        </CardContent>
-      </Card>
+        ) : (
+          // Kanban view — 3 columns
+          <div className="grid grid-cols-3 gap-4">
+            {(["to-do", "in-progress", "done"] as TaskStatus[]).map((status) => {
+              const colTasks = filtered.filter((t) => t.status === status);
+              const c = statusColors[status];
+              const label = status === "to-do" ? "To Do" : status === "in-progress" ? "Active" : "Done";
+
+              return (
+                <div key={status} className="bg-[#0a0a0a] border border-white/[0.04] rounded-sm overflow-hidden">
+                  <div className="px-3 py-2.5 border-b border-white/[0.04] flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <div className={`h-1.5 w-1.5 rounded-full ${c.dot}`} />
+                      <span className={`text-[11px] uppercase tracking-wider font-medium ${c.text}`}>
+                        {label}
+                      </span>
+                    </div>
+                    <span className="text-[11px] text-white/30">{colTasks.length}</span>
+                  </div>
+                  <ScrollArea className="h-[calc(100vh-400px)]">
+                    <div className="p-2 space-y-2">
+                      <AnimatePresence>
+                        {colTasks.length === 0 ? (
+                          <div className="text-[11px] text-white/15 text-center py-6">
+                            Empty
+                          </div>
+                        ) : (
+                          colTasks.map((task) => (
+                            <KanbanCard key={task.todo_id} task={task} onStatusChange={handleStatusChange} />
+                          ))
+                        )}
+                      </AnimatePresence>
+                    </div>
+                  </ScrollArea>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
     </div>
   );
 };
