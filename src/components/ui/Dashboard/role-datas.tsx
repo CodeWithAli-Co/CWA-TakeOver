@@ -15,6 +15,7 @@ import {
   Clock,
   GraduationCap,
   User,
+  Languages,
 } from "lucide-react";
 import { title } from "process";
 
@@ -699,6 +700,12 @@ export const cooData = {
       isActive: false,
       icon: Clock,
     },
+    {
+      title: "Arabic Learning",
+      url: "/arabic",
+      isActive: false,
+      icon: Languages,
+    },
     // {
     //   title: "BioTech",
     //   url: "/bio",
@@ -866,6 +873,12 @@ export const ceoData = {
       url: "/trainingplan",
       isActive: false,
       icon: GraduationCap,
+    },
+    {
+      title: "Arabic Learning",
+      url: "/arabic",
+      isActive: false,
+      icon: Languages,
     },
     {
       title: "Settings",
