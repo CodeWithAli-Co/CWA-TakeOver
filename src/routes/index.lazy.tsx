@@ -21,44 +21,14 @@ import { ActiveUser } from "@/stores/query";
 import { CompanyCard } from "@/MyComponents/HomeDashboard/Components/companyCard";
 import { ActivityFeed } from "@/MyComponents/HomeDashboard/Components/activityFeed";
 import { TeamPresence } from "@/MyComponents/HomeDashboard/Components/teamPresence";
+import { CWADashboard } from "@/MyComponents/Dashboard/CWADashboard";
+import { SimplicityDashboard } from "@/MyComponents/Dashboard/SimplicityDashboard";
 
 const getGreeting = () => {
   const hour = new Date().getHours();
   if (hour < 12) return "Good morning";
   if (hour < 17) return "Good afternoon";
   return "Good evening";
-};
-
-// ── Company Selector Tabs ──
-const CompanyTabs = () => {
-  const { activeCompany, setActiveCompany } = useCompanyFilter();
-
-  const tabs: { key: CompanyFilter; label: string; dot?: string }[] = [
-    { key: "all", label: "All" },
-    { key: "codeWithAli", label: "CodeWithAli", dot: "bg-red-500" },
-    { key: "simplicityFunds", label: "Simplicity", dot: "bg-blue-500" },
-  ];
-
-  return (
-    <div className="flex items-center gap-1 bg-white/[0.02] border border-white/[0.04] rounded-sm p-0.5 w-fit">
-      {tabs.map((tab) => (
-        <button
-          key={tab.key}
-          onClick={() => setActiveCompany(tab.key)}
-          className={`px-3 py-1 rounded-sm text-[11px] font-medium transition-all duration-200 ${
-            activeCompany === tab.key
-              ? "bg-red-500/[0.1] text-red-400"
-              : "text-white/20 hover:text-white/40"
-          }`}
-        >
-          {tab.dot && (
-            <span className={`inline-block h-1.5 w-1.5 rounded-full mr-1.5 ${tab.dot}`} />
-          )}
-          {tab.label}
-        </button>
-      ))}
-    </div>
-  );
 };
 
 const Index = () => {
@@ -73,8 +43,13 @@ const Index = () => {
     day: "numeric",
   });
 
+  // Show the bento dashboards when a specific company is selected
+  const showCWADashboard = activeCompany === "codeWithAli";
+  const showSimplicityDashboard = activeCompany === "simplicityFunds";
+  const showOverview = activeCompany === "all";
+
   return (
-    <div className="min-h-screen bg-black overflow-y-auto">
+    <div className="min-h-screen bg-background overflow-y-auto transition-colors duration-500">
       {/* ── Header ── */}
       <div className="px-8 pt-7 pb-1">
         <div className="flex items-end justify-between">
@@ -82,16 +57,16 @@ const Index = () => {
             <motion.h1
               initial={{ opacity: 0, y: -8 }}
               animate={{ opacity: 1, y: 0 }}
-              className="text-[26px] font-bold text-white tracking-tight"
+              className="text-[26px] font-bold text-foreground tracking-tight"
             >
               {getGreeting()},{" "}
-              <span className="text-red-500">{username}</span>
+              <span className="text-primary">{username}</span>
             </motion.h1>
             <motion.p
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               transition={{ delay: 0.1 }}
-              className="text-[12px] text-white/20 mt-1 flex items-center gap-1.5"
+              className="text-[12px] text-muted-foreground mt-1 flex items-center gap-1.5"
             >
               <Clock className="h-3 w-3" />
               {currentDate}
@@ -125,106 +100,111 @@ const Index = () => {
         </div>
       </div>
 
-      {/* ── Company Tabs ── */}
-      <UserView userRole={[Role.CEO, Role.COO]}>
-        <div className="px-8 pt-4">
-          <CompanyTabs />
-        </div>
-      </UserView>
-
-      {/* ── Main Grid ── */}
+      {/* ── Main Content ── */}
       <div className="px-8 pt-4 pb-10 space-y-4">
         {/* Schedule image */}
         <UserView userRole={[Role.CEO, Role.COO]}>
           <img
             src="/schedule.png"
             alt="Schedule"
-            className={`${isShowing ? "w-full h-auto" : "h-0"} rounded-sm border border-white/[0.04] transition-all duration-300`}
+            className={`${isShowing ? "w-full h-auto" : "h-0"} rounded-sm border border-border transition-all duration-300`}
           />
         </UserView>
 
-        {/* ── Company Cards ── */}
-        <UserView userRole={[Role.CEO, Role.COO]}>
-          {activeCompany === "all" ? (
-            <div className="grid grid-cols-2 gap-4">
-              <CompanyCard name="CodeWithAli" description="Software agency & media" memberCount={7} projectCount={4} revenue="$671" status="active" accentPosition="left" companyKey="codeWithAli" />
-              <CompanyCard name="Simplicity" description="Fintech budgeting platform" memberCount={3} projectCount={2} revenue="$0" status="growing" accentPosition="right" companyKey="simplicityFunds" />
-            </div>
-          ) : (
-            <CompanyCard
-              name={activeCompany === "codeWithAli" ? "CodeWithAli" : "Simplicity"}
-              description={activeCompany === "codeWithAli" ? "Software agency & media" : "Fintech budgeting platform"}
-              memberCount={activeCompany === "codeWithAli" ? 7 : 3}
-              projectCount={activeCompany === "codeWithAli" ? 4 : 2}
-              revenue={activeCompany === "codeWithAli" ? "$671" : "$0"}
-              status={activeCompany === "codeWithAli" ? "active" : "growing"}
-              accentPosition="left"
-              companyKey={activeCompany}
-            />
-          )}
-        </UserView>
+        {/* ── Bento Dashboard: CWA ── */}
+        {showCWADashboard && (
+          <motion.div
+            key="cwa-dashboard"
+            initial={{ opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.35 }}
+          >
+            <CWADashboard />
+          </motion.div>
+        )}
 
-        {/* ── Stats strip (one unified card) ── */}
-        <UserView excludeRoles={[Role.Intern, Role.Member]}>
-          <CompanyStats />
-        </UserView>
+        {/* ── Bento Dashboard: Simplicity ── */}
+        {showSimplicityDashboard && (
+          <motion.div
+            key="simplicity-dashboard"
+            initial={{ opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.35 }}
+          >
+            <SimplicityDashboard />
+          </motion.div>
+        )}
 
-        {/* ── Row: Activity+Team (connected) | Meetings (fills column) ── */}
-        <div className="grid grid-cols-12 gap-4">
-          {/* Activity + Team — single card with internal divider */}
-          <div className="col-span-12 lg:col-span-7">
-            <div className="bg-[#0a0a0a] border border-white/[0.04] rounded-sm overflow-hidden h-full">
-              <div className="grid grid-cols-2 h-full">
-                {/* Activity side */}
-                <div className="border-r border-white/[0.04]">
-                  <div className="px-5 pt-4 pb-2">
-                    <span className="text-[11px] text-white/15 uppercase tracking-[0.15em] font-medium">
-                      Recent Activity
-                    </span>
-                  </div>
-                  <div className="px-5 pb-5">
-                    <ActivityFeed />
-                  </div>
-                </div>
-                {/* Team side */}
-                <div>
-                  <div className="px-5 pt-4 pb-2">
-                    <span className="text-[11px] text-white/15 uppercase tracking-[0.15em] font-medium">
-                      Team
-                    </span>
-                  </div>
-                  <div className="px-5 pb-5">
-                    <TeamPresence />
+        {/* ── Overview: "All" company view (original layout) ── */}
+        {showOverview && (
+          <>
+            {/* Company Cards */}
+            <UserView userRole={[Role.CEO, Role.COO]}>
+              <div className="grid grid-cols-2 gap-4">
+                <CompanyCard name="CodeWithAli" description="Software agency & media" memberCount={7} projectCount={4} revenue="$671" status="active" accentPosition="left" companyKey="codeWithAli" />
+                <CompanyCard name="Simplicity" description="Fintech budgeting platform" memberCount={3} projectCount={2} revenue="$0" status="growing" accentPosition="right" companyKey="simplicityFunds" />
+              </div>
+            </UserView>
+
+            {/* Stats strip */}
+            <UserView excludeRoles={[Role.Intern, Role.Member]}>
+              <CompanyStats />
+            </UserView>
+
+            {/* Row: Activity+Team | Meetings */}
+            <div className="grid grid-cols-12 gap-4">
+              <div className="col-span-12 lg:col-span-7">
+                <div className="bg-card border border-border rounded-sm overflow-hidden h-full">
+                  <div className="grid grid-cols-2 h-full">
+                    <div className="border-r border-border">
+                      <div className="px-5 pt-4 pb-2">
+                        <span className="text-[11px] text-muted-foreground uppercase tracking-[0.15em] font-medium">
+                          Recent Activity
+                        </span>
+                      </div>
+                      <div className="px-5 pb-5">
+                        <ActivityFeed />
+                      </div>
+                    </div>
+                    <div>
+                      <div className="px-5 pt-4 pb-2">
+                        <span className="text-[11px] text-muted-foreground uppercase tracking-[0.15em] font-medium">
+                          Team
+                        </span>
+                      </div>
+                      <div className="px-5 pb-5">
+                        <TeamPresence />
+                      </div>
+                    </div>
                   </div>
                 </div>
               </div>
+
+              <UserView userRole={[Role.CEO, Role.COO, Role.ProjectManager, Role.Marketing]}>
+                <div className="col-span-12 lg:col-span-5 h-full">
+                  <Meetings />
+                </div>
+              </UserView>
             </div>
-          </div>
 
-          {/* Meetings — fills remaining column, stretches to match */}
-          <UserView userRole={[Role.CEO, Role.COO, Role.ProjectManager, Role.Marketing]}>
-            <div className="col-span-12 lg:col-span-5 h-full">
-              <Meetings />
+            {/* Row: Tasks | Quotas */}
+            <div className="grid grid-cols-12 gap-4">
+              <div className="col-span-12 lg:col-span-5">
+                <TasksComponent />
+              </div>
+              <div className="col-span-12 lg:col-span-7">
+                <Quotas />
+              </div>
             </div>
-          </UserView>
-        </div>
 
-        {/* ── Row: Tasks | Quotas ── */}
-        <div className="grid grid-cols-12 gap-4">
-          <div className="col-span-12 lg:col-span-5">
-            <TasksComponent />
-          </div>
-          <div className="col-span-12 lg:col-span-7">
-            <Quotas />
-          </div>
-        </div>
-
-        {/* ── Storage ── */}
-        <UserView userRole={[Role.CEO, Role.COO]}>
-          <div className="max-w-md">
-            <StorageUsageChart />
-          </div>
-        </UserView>
+            {/* Storage */}
+            <UserView userRole={[Role.CEO, Role.COO]}>
+              <div className="max-w-md">
+                <StorageUsageChart />
+              </div>
+            </UserView>
+          </>
+        )}
       </div>
     </div>
   );

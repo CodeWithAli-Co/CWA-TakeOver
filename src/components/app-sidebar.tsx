@@ -23,6 +23,7 @@ import {
 } from "./ui/Dashboard/role-datas";
 import UserView, { Role } from "@/MyComponents/Reusables/userView";
 import { RolePreviewSelector } from "./ui/Dashboard/role-preview";
+import { CompanyToggle } from "@/MyComponents/CompanyToggle/CompanyToggle";
 
 function SidebarBrand() {
   const { state } = useSidebar();
@@ -58,6 +59,11 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
             <SidebarBrand />
             <SidebarTrigger className="text-white/20 hover:text-white/50 hover:bg-white/[0.04] rounded-sm h-6 w-6" />
           </div>
+
+          {/* Company Toggle — switches entire dashboard theme */}
+          <UserView userRole={[Role.CEO, Role.COO]}>
+            <CompanyToggle />
+          </UserView>
 
           {/* Role Preview — checks real role internally, never affected by preview */}
           <RolePreviewSelector />

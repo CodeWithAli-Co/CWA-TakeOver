@@ -1,4 +1,5 @@
 import { create } from "zustand";
+import { persist } from "zustand/middleware";
 
 interface AppState {
   broadcastID: string;
@@ -93,15 +94,42 @@ export const useRolePreview = create<RolePreviewState>()((set) => ({
 }));
 
 // Company Filter — scopes the entire dashboard to a single company or "all"
+// Persisted to localStorage so refresh doesn't reset the toggle.
+// Also applies [data-company] to <html> for the CSS theme system.
 export type CompanyFilter = "all" | "codeWithAli" | "simplicityFunds";
 interface CompanyFilterState {
   activeCompany: CompanyFilter;
   setActiveCompany: (company: CompanyFilter) => void;
 }
-export const useCompanyFilter = create<CompanyFilterState>()((set) => ({
-  activeCompany: "all",
-  setActiveCompany: (activeCompany: CompanyFilter) => set({ activeCompany }),
-}));
+
+const applyCompanyTheme = (company: CompanyFilter) => {
+  // "all" and "codeWithAli" both use the CWA theme; "simplicityFunds" uses the Simplicity theme
+  const themeKey = company === "simplicityFunds" ? "simplicityFunds" : "codeWithAli";
+  document.documentElement.setAttribute("data-company", themeKey);
+};
+
+export const useCompanyFilter = create<CompanyFilterState>()(
+  persist(
+    (set) => ({
+      activeCompany: "codeWithAli",
+      setActiveCompany: (activeCompany: CompanyFilter) => {
+        applyCompanyTheme(activeCompany);
+        set({ activeCompany });
+      },
+    }),
+    {
+      name: "cwa-company-filter",
+      onRehydrate: (_state, _options) => {
+        // After rehydration, apply the theme immediately
+        return (rehydratedState) => {
+          if (rehydratedState) {
+            applyCompanyTheme(rehydratedState.activeCompany);
+          }
+        };
+      },
+    }
+  )
+);
 
 // Display Schedule Pic. *This is prob getting removed after adding pop-up function/component
 interface SchedImgState {
