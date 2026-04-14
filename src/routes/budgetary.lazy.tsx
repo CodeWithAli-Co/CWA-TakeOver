@@ -32,7 +32,8 @@ import {
   ChevronRight,
   BookOpen,
 } from 'lucide-react'
-import { Resource, ResourcesStation } from '@/MyComponents/ResourceStation'
+import { PatternLibrary } from '@/MyComponents/Simplicity/PatternLibrary'
+import { ResourceHub } from '@/MyComponents/Simplicity/ResourceHub'
 
 // ============================================================================
 // TYPES
@@ -62,16 +63,8 @@ interface Decision {
   outcome?: string
 }
 
-interface CodePattern {
-  id: string
-  title: string
-  description: string
-  code: string
-  language: string
-  tags: string[]
-  usedIn: string[]
-  createdAt: number
-}
+// CodePattern interface removed — patterns now live in Supabase.
+// See src/MyComponents/Simplicity/simplicityQueries.ts for the new Pattern type.
 
 interface SystemStatus {
   name: string
@@ -157,61 +150,8 @@ const initialDecisions: Decision[] = [
 ]
 
 
-const initialPatterns: CodePattern[] = [
-  {
-    id: 'pattern-1',
-    title: 'SSR-Safe Zustand Storage',
-    description: 'Prevents localStorage errors during server-side rendering with Zustand persist middleware',
-    code: `// stores/ssrStorage.ts
-'use client';
-
-import { StateStorage } from 'zustand/middleware';
-
-export const ssrSafeStorage: StateStorage = {
-  getItem: (name) => {
-    if (typeof window === 'undefined') return null;
-    return localStorage.getItem(name);
-  },
-  setItem: (name, value) => {
-    if (typeof window === 'undefined') return;
-    localStorage.setItem(name, value);
-  },
-  removeItem: (name) => {
-    if (typeof window === 'undefined') return;
-    localStorage.removeItem(name);
-  },
-};
-
-// Usage in store:
-// storage: ssrSafeStorage,
-// skipHydration: true,`,
-    language: 'typescript',
-    tags: ['zustand', 'ssr', 'next.js', 'storage'],
-    usedIn: ['simplicity-web'],
-    createdAt: Date.now(),
-  },
-  {
-    id: 'pattern-2',
-    title: 'Next.js 15 Dynamic Route Params',
-    description: 'Handle async params in Next.js 15 with React.use()',
-    code: `"use client"
-
-import { use } from "react"
-
-interface PageProps {
-  params: Promise<{ slug: string }>
-}
-
-export default function Page({ params }: PageProps) {
-  const { slug } = use(params)
-  return <Component slug={slug} />
-}`,
-    language: 'typescript',
-    tags: ['next.js', 'routing', 'params'],
-    usedIn: ['simplicity-web'],
-    createdAt: Date.now(),
-  },
-]
+// initialPatterns dummy data removed — patterns are now loaded from Supabase
+// via the PatternLibrary component. See simplicityQueries.ts.
 
 const systemStatuses: SystemStatus[] = [
   { name: 'Supabase', status: 'operational', lastChecked: Date.now(), latency: 45 },
@@ -274,12 +214,6 @@ const checkConflict = (event1: ScheduleEvent, event2: ScheduleEvent): boolean =>
 
 const SimplicityMissionControl = () => {
 
-  const [resources, setResources] = useState<Resource[]>(() => {
-  const saved = loadState()
-  return saved?.resources || []
-})
-
-
   // ===== STATE =====
 const [activeStation, setActiveStation] = useState<
   'command' | 'focus' | 'decisions' | 'patterns' | 'warroom' | 'metrics' | 'schedule' | 'resources'
@@ -293,10 +227,7 @@ const [activeStation, setActiveStation] = useState<
     const saved = loadState()
     return saved?.decisions || initialDecisions
   })
-  const [patterns, setPatterns] = useState<CodePattern[]>(() => {
-    const saved = loadState()
-    return saved?.patterns || initialPatterns
-  })
+  // `patterns` state removed — PatternLibrary component manages its own data from Supabase
   const [scheduleEvents, setScheduleEvents] = useState<ScheduleEvent[]>(() => {
     const saved = loadState()
     return saved?.scheduleEvents || []
@@ -336,18 +267,10 @@ const [activeStation, setActiveStation] = useState<
     tags: '',
   })
 
-  // New Pattern Form
-  const [showNewPattern, setShowNewPattern] = useState(false)
-  const [newPattern, setNewPattern] = useState({
-    title: '',
-    description: '',
-    code: '',
-    language: 'typescript',
-    tags: '',
-  })
+  // New Pattern form state removed — PatternLibrary owns its own form
 
   // UI State
-  const [copiedId, setCopiedId] = useState<string | null>(null)
+  // copiedId state removed — PatternLibrary / ResourceHub manage their own copy state
   const [systemStatus] = useState<SystemStatus[]>(systemStatuses)
   const commandInputRef = useRef<HTMLInputElement>(null)
   const terminalRef = useRef<HTMLDivElement>(null)
@@ -378,10 +301,11 @@ const [activeStation, setActiveStation] = useState<
     }
   }, [focusSession?.status, focusTimeLeft])
 
-  // Persist State
+  // Persist State — resources and patterns now live in Supabase
+  // (see simplicityQueries.ts); only decisions/captures/schedule stay local.
 useEffect(() => {
-  saveState({ decisions, patterns, quickCaptures, scheduleEvents, resources })
-}, [decisions, patterns, quickCaptures, scheduleEvents, resources])
+  saveState({ decisions, quickCaptures, scheduleEvents })
+}, [decisions, quickCaptures, scheduleEvents])
 
   // Keyboard shortcuts
   useEffect(() => {
@@ -396,11 +320,10 @@ useEffect(() => {
         e.preventDefault()
         setShowCapture(true)
       }
-      // Escape = Close modals
+      // Escape = Close modals (PatternLibrary/ResourceHub handle their own ESC)
       if (e.key === 'Escape') {
         setShowCapture(false)
         setShowNewDecision(false)
-        setShowNewPattern(false)
         setShowNewEvent(false)
       }
     }
@@ -627,30 +550,7 @@ YC W26 Application Checklist
     setShowNewDecision(false)
   }
 
-  const handleAddPattern = () => {
-    if (!newPattern.title.trim() || !newPattern.code.trim()) return
-
-    const pattern: CodePattern = {
-      id: `pattern-${Date.now()}`,
-      title: newPattern.title,
-      description: newPattern.description,
-      code: newPattern.code,
-      language: newPattern.language,
-      tags: newPattern.tags.split(',').map(t => t.trim()).filter(Boolean),
-      usedIn: [],
-      createdAt: Date.now(),
-    }
-
-    setPatterns(prev => [pattern, ...prev])
-    setNewPattern({
-      title: '',
-      description: '',
-      code: '',
-      language: 'typescript',
-      tags: '',
-    })
-    setShowNewPattern(false)
-  }
+  // handleAddPattern removed — PatternLibrary handles its own add/edit/delete via Supabase
 
   const handleAddEvent = () => {
     if (!newEvent.title.trim()) return
@@ -694,11 +594,7 @@ YC W26 Application Checklist
     setScheduleEvents(prev => prev.filter(e => e.id !== eventId))
   }
 
-  const copyToClipboard = async (text: string, id: string) => {
-    await navigator.clipboard.writeText(text)
-    setCopiedId(id)
-    setTimeout(() => setCopiedId(null), 2000)
-  }
+  // copyToClipboard removed — inline in PatternLibrary/ResourceHub now
 
   const formatTime = (seconds: number) => {
     const mins = Math.floor(seconds / 60)
@@ -1269,69 +1165,10 @@ YC W26 Application Checklist
           )}
 
           {/* ===== PATTERNS STATION ===== */}
-          {activeStation === 'patterns' && (
-            <div className="flex-1 overflow-y-auto p-6 space-y-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <h2 className="text-xl font-bold">Code Pattern Library</h2>
-                  <p className="text-sm text-zinc-500">Reusable solutions across projects</p>
-                </div>
-                <button
-                  onClick={() => setShowNewPattern(true)}
-                  className="px-4 py-2 bg-teal-500 hover:bg-teal-600 rounded-lg flex items-center gap-2 transition-colors"
-                >
-                  <Plus size={18} />
-                  New Pattern
-                </button>
-              </div>
-
-              {/* Pattern Cards */}
-              <div className="grid grid-cols-1 gap-4">
-                {patterns.map((pattern) => (
-                  <motion.div
-                    key={pattern.id}
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    className="bg-zinc-900 border border-zinc-800 rounded-lg overflow-hidden"
-                  >
-                    <div className="p-4 border-b border-zinc-800 flex items-start justify-between">
-                      <div>
-                        <h3 className="font-bold text-zinc-100">{pattern.title}</h3>
-                        <p className="text-sm text-zinc-500 mt-1">{pattern.description}</p>
-                      </div>
-                      <button
-                        onClick={() => copyToClipboard(pattern.code, pattern.id)}
-                        className="p-2 hover:bg-zinc-800 rounded transition-colors"
-                      >
-                        {copiedId === pattern.id ? (
-                          <Check size={18} className="text-green-400" />
-                        ) : (
-                          <Copy size={18} className="text-zinc-400" />
-                        )}
-                      </button>
-                    </div>
-                    <pre className="p-4 text-sm overflow-x-auto bg-black/30">
-                      <code className="text-zinc-300">{pattern.code}</code>
-                    </pre>
-                    <div className="p-3 border-t border-zinc-800 flex items-center gap-2">
-                      <span className="text-xs text-zinc-500">{pattern.language}</span>
-                      <span className="text-zinc-700">•</span>
-                      {pattern.tags.map(tag => (
-                        <span key={tag} className="px-2 py-0.5 bg-zinc-800 rounded text-xs text-zinc-400">
-                          {tag}
-                        </span>
-                      ))}
-                    </div>
-                  </motion.div>
-                ))}
-              </div>
-            </div>
-          )}
+          {activeStation === 'patterns' && <PatternLibrary />}
 
           {/* ===== RESOURCES STATION ===== */}
-{activeStation === 'resources' && (
-  <ResourcesStation resources={resources} setResources={setResources} />
-)}
+          {activeStation === 'resources' && <ResourceHub />}
 
           {/* ===== WAR ROOM (YC) =====  */}
           {activeStation === 'warroom' && (
@@ -1834,92 +1671,7 @@ YC W26 Application Checklist
         )}
       </AnimatePresence>
 
-      {/* New Pattern Modal */}
-      <AnimatePresence>
-        {showNewPattern && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-4"
-            onClick={() => setShowNewPattern(false)}
-          >
-            <motion.div
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.95 }}
-              className="bg-zinc-900 border border-zinc-700 rounded-xl w-full max-w-2xl p-6 shadow-2xl max-h-[90vh] overflow-y-auto"
-              onClick={(e) => e.stopPropagation()}
-            >
-              <h3 className="text-xl font-bold mb-4">Add Code Pattern</h3>
-              
-              <div className="space-y-4">
-                <input
-                  type="text"
-                  value={newPattern.title}
-                  onChange={(e) => setNewPattern(prev => ({ ...prev, title: e.target.value }))}
-                  placeholder="Pattern Title"
-                  className="w-full px-4 py-3 bg-zinc-800 border border-zinc-700 rounded-lg outline-none focus:border-teal-500"
-                />
-                
-                <input
-                  type="text"
-                  value={newPattern.description}
-                  onChange={(e) => setNewPattern(prev => ({ ...prev, description: e.target.value }))}
-                  placeholder="Brief description"
-                  className="w-full px-4 py-3 bg-zinc-800 border border-zinc-700 rounded-lg outline-none focus:border-teal-500"
-                />
-                
-                <textarea
-                  value={newPattern.code}
-                  onChange={(e) => setNewPattern(prev => ({ ...prev, code: e.target.value }))}
-                  placeholder="// Paste your code here"
-                  className="w-full px-4 py-3 bg-zinc-800 border border-zinc-700 rounded-lg outline-none focus:border-teal-500 resize-none font-mono text-sm"
-                  rows={12}
-                />
-                
-                <div className="flex gap-4">
-                  <select
-                    value={newPattern.language}
-                    onChange={(e) => setNewPattern(prev => ({ ...prev, language: e.target.value }))}
-                    className="px-4 py-3 bg-zinc-800 border border-zinc-700 rounded-lg outline-none focus:border-teal-500"
-                  >
-                    <option value="typescript">TypeScript</option>
-                    <option value="javascript">JavaScript</option>
-                    <option value="css">CSS</option>
-                    <option value="sql">SQL</option>
-                    <option value="bash">Bash</option>
-                  </select>
-                  
-                  <input
-                    type="text"
-                    value={newPattern.tags}
-                    onChange={(e) => setNewPattern(prev => ({ ...prev, tags: e.target.value }))}
-                    placeholder="Tags (comma separated)"
-                    className="flex-1 px-4 py-3 bg-zinc-800 border border-zinc-700 rounded-lg outline-none focus:border-teal-500"
-                  />
-                </div>
-              </div>
-              
-              <div className="flex justify-end gap-3 mt-6">
-                <button
-                  onClick={() => setShowNewPattern(false)}
-                  className="px-4 py-2 text-zinc-400 hover:text-zinc-200"
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={handleAddPattern}
-                  disabled={!newPattern.title.trim() || !newPattern.code.trim()}
-                  className="px-6 py-2 bg-teal-500 hover:bg-teal-600 disabled:opacity-50 rounded-lg font-medium transition-colors"
-                >
-                  Save Pattern
-                </button>
-              </div>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+      {/* Old new-pattern modal removed — PatternLibrary has its own modal */}
     </div>
   )
 }
