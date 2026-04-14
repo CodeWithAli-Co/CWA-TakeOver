@@ -130,7 +130,7 @@ function Bot() {
               </Button>
               <Button
                 onClick={() => stopBot()}
-                className="bg-red-950 hover:bg-red-900 border border-red-700/50 text-red-400 shadow-lg shadow-red-800/20 transition-all duration-200"
+                className="bg-red-950 hover:bg-red-900 border border-red-700/50 text-primary shadow-lg shadow-red-800/20 transition-all duration-200"
                 size="lg"
               >
                 <Power className="mr-2 h-5 w-5" />

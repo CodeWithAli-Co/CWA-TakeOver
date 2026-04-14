@@ -77,20 +77,20 @@ const MetricCell: React.FC<{
   borderRight?: boolean;
   accent?: "red" | "blue";
 }> = ({ icon, label, value, trend, borderRight = true, accent = "red" }) => {
-  const accentBar = accent === "blue" ? "bg-blue-500/40" : "bg-red-500/40";
-  const accentColor = accent === "blue" ? "text-blue-500/60" : "text-red-500/60";
+  const accentBar = accent === "blue" ? "bg-blue-500/40" : "bg-primary/40";
+  const accentColor = accent === "blue" ? "text-blue-500/60" : "text-primary/60";
 
   return (
-    <div className={`flex-1 px-5 py-4 ${borderRight ? "border-r border-white/[0.04]" : ""} relative`}>
+    <div className={`flex-1 px-5 py-4 ${borderRight ? "border-r border-border" : ""} relative`}>
       <div className={`absolute left-0 top-3 bottom-3 w-[2px] ${accentBar}`} />
       <div className="flex items-center gap-1.5 mb-2">
         <span className={accentColor}>{icon}</span>
-        <span className="text-[10px] text-white/20 uppercase tracking-[0.12em] font-medium">{label}</span>
+        <span className="text-[10px] text-muted-foreground/60 uppercase tracking-[0.12em] font-medium">{label}</span>
       </div>
       <div className="flex items-baseline gap-2">
-        <p className="text-xl font-bold text-white tracking-tight">{value}</p>
+        <p className="text-xl font-bold text-foreground tracking-tight">{value}</p>
         {trend && (
-          <span className={`text-[10px] font-medium flex items-center gap-0.5 ${trend.positive ? "text-emerald-400/80" : "text-red-400"}`}>
+          <span className={`text-[10px] font-medium flex items-center gap-0.5 ${trend.positive ? "text-emerald-400/80" : "text-primary"}`}>
             {trend.positive ? <TrendingUp className="h-2.5 w-2.5" /> : <TrendingDown className="h-2.5 w-2.5" />}
             {Math.abs(trend.value).toFixed(1)}%
           </span>
@@ -130,7 +130,7 @@ const OverviewTab: React.FC<{
   return (
     <div className="space-y-4">
       {/* Metrics Strip */}
-      <div className="bg-[#0a0a0a] border border-white/[0.04] rounded-sm overflow-hidden">
+      <div className="bg-card border border-border rounded-sm overflow-hidden">
         <div className="flex">
           <MetricCell icon={<Wallet className="h-3 w-3" />} label="Bank" value={`$${bankBalance.toLocaleString()}`} />
           <MetricCell icon={<TrendingUp className="h-3 w-3" />} label="Revenue (annual)" value={`$${totalRevenueFromCategories.toLocaleString()}`} />
@@ -142,13 +142,13 @@ const OverviewTab: React.FC<{
 
       {/* Charts row 1 */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        <div className="bg-[#0a0a0a] border border-white/[0.04] rounded-sm p-5">
+        <div className="bg-card border border-border rounded-sm p-5">
           <div className="flex items-center justify-between mb-4">
             <div>
-              <p className="text-[11px] text-white/15 uppercase tracking-[0.15em] font-medium">Invoice Revenue</p>
-              <p className="text-[11px] text-white/30 mt-0.5">Last 6 months · paid + pending</p>
+              <p className="text-[11px] text-muted-foreground/40 uppercase tracking-[0.15em] font-medium">Invoice Revenue</p>
+              <p className="text-[11px] text-muted-foreground mt-0.5">Last 6 months · paid + pending</p>
             </div>
-            <span className="text-[18px] font-bold text-white">${totalPaid.toLocaleString()}</span>
+            <span className="text-[18px] font-bold text-foreground">${totalPaid.toLocaleString()}</span>
           </div>
           <div className="h-56">
             {monthlyChartData.length > 0 ? (
@@ -173,18 +173,18 @@ const OverviewTab: React.FC<{
                 </AreaChart>
               </ResponsiveContainer>
             ) : (
-              <div className="h-full flex items-center justify-center"><p className="text-[12px] text-white/15">No invoice data yet</p></div>
+              <div className="h-full flex items-center justify-center"><p className="text-[12px] text-muted-foreground/40">No invoice data yet</p></div>
             )}
           </div>
         </div>
 
-        <div className="bg-[#0a0a0a] border border-white/[0.04] rounded-sm p-5">
+        <div className="bg-card border border-border rounded-sm p-5">
           <div className="flex items-center justify-between mb-4">
             <div>
-              <p className="text-[11px] text-white/15 uppercase tracking-[0.15em] font-medium">Invoice Volume</p>
-              <p className="text-[11px] text-white/30 mt-0.5">Last 6 months · all invoices</p>
+              <p className="text-[11px] text-muted-foreground/40 uppercase tracking-[0.15em] font-medium">Invoice Volume</p>
+              <p className="text-[11px] text-muted-foreground mt-0.5">Last 6 months · all invoices</p>
             </div>
-            <span className="text-[18px] font-bold text-white">{invoices.length}</span>
+            <span className="text-[18px] font-bold text-foreground">{invoices.length}</span>
           </div>
           <div className="h-56">
             {monthlyChartData.length > 0 ? (
@@ -198,7 +198,7 @@ const OverviewTab: React.FC<{
                 </BarChart>
               </ResponsiveContainer>
             ) : (
-              <div className="h-full flex items-center justify-center"><p className="text-[12px] text-white/15">No invoice data yet</p></div>
+              <div className="h-full flex items-center justify-center"><p className="text-[12px] text-muted-foreground/40">No invoice data yet</p></div>
             )}
           </div>
         </div>
@@ -206,8 +206,8 @@ const OverviewTab: React.FC<{
 
       {/* Charts row 2 — pies */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        <div className="bg-[#0a0a0a] border border-white/[0.04] rounded-sm p-5">
-          <p className="text-[11px] text-white/15 uppercase tracking-[0.15em] font-medium mb-4">Revenue Sources</p>
+        <div className="bg-card border border-border rounded-sm p-5">
+          <p className="text-[11px] text-muted-foreground/40 uppercase tracking-[0.15em] font-medium mb-4">Revenue Sources</p>
           {revenueByCategory.length > 0 ? (
             <div className="grid grid-cols-2 gap-3">
               <div className="h-48">
@@ -225,20 +225,20 @@ const OverviewTab: React.FC<{
                   <div key={r.name} className="flex items-center justify-between text-[11px]">
                     <div className="flex items-center gap-1.5">
                       <div className="h-1.5 w-1.5 rounded-full" style={{ background: REVENUE_COLORS[r.name] || "#ef4444" }} />
-                      <span className="text-white/40 truncate">{r.name}</span>
+                      <span className="text-muted-foreground/70 truncate">{r.name}</span>
                     </div>
-                    <span className="text-white/60">${(r.value / 1000).toFixed(1)}k</span>
+                    <span className="text-foreground/60">${(r.value / 1000).toFixed(1)}k</span>
                   </div>
                 ))}
               </div>
             </div>
           ) : (
-            <div className="h-48 flex items-center justify-center"><p className="text-[12px] text-white/15">No revenue data yet</p></div>
+            <div className="h-48 flex items-center justify-center"><p className="text-[12px] text-muted-foreground/40">No revenue data yet</p></div>
           )}
         </div>
 
-        <div className="bg-[#0a0a0a] border border-white/[0.04] rounded-sm p-5">
-          <p className="text-[11px] text-white/15 uppercase tracking-[0.15em] font-medium mb-4">Expense Breakdown</p>
+        <div className="bg-card border border-border rounded-sm p-5">
+          <p className="text-[11px] text-muted-foreground/40 uppercase tracking-[0.15em] font-medium mb-4">Expense Breakdown</p>
           {expenseByCategory.length > 0 ? (
             <div className="grid grid-cols-2 gap-3">
               <div className="h-48">
@@ -256,45 +256,45 @@ const OverviewTab: React.FC<{
                   <div key={e.name} className="flex items-center justify-between text-[11px]">
                     <div className="flex items-center gap-1.5">
                       <div className="h-1.5 w-1.5 rounded-full" style={{ background: EXPENSE_COLORS[e.name] || "#ef4444" }} />
-                      <span className="text-white/40 truncate">{e.name}</span>
+                      <span className="text-muted-foreground/70 truncate">{e.name}</span>
                     </div>
-                    <span className="text-white/60">${(e.value / 1000).toFixed(1)}k</span>
+                    <span className="text-foreground/60">${(e.value / 1000).toFixed(1)}k</span>
                   </div>
                 ))}
               </div>
             </div>
           ) : (
-            <div className="h-48 flex items-center justify-center"><p className="text-[12px] text-white/15">No expense data yet</p></div>
+            <div className="h-48 flex items-center justify-center"><p className="text-[12px] text-muted-foreground/40">No expense data yet</p></div>
           )}
         </div>
       </div>
 
       {/* Recent Transactions */}
-      <div className="bg-[#0a0a0a] border border-white/[0.04] rounded-sm overflow-hidden">
-        <div className="px-5 pt-4 pb-3 flex items-center justify-between border-b border-white/[0.04]">
+      <div className="bg-card border border-border rounded-sm overflow-hidden">
+        <div className="px-5 pt-4 pb-3 flex items-center justify-between border-b border-border">
           <div className="flex items-center gap-3">
-            <div className="p-1.5 rounded-sm bg-white/[0.03]"><Receipt className="h-3.5 w-3.5 text-red-500/70" /></div>
+            <div className="p-1.5 rounded-sm bg-muted/40"><Receipt className="h-3.5 w-3.5 text-primary/70" /></div>
             <div>
-              <p className="text-[11px] text-white/15 uppercase tracking-[0.15em] font-medium">Recent Transactions</p>
-              <p className="text-[11px] text-white/20 mt-0.5">{invoices.length} total invoices</p>
+              <p className="text-[11px] text-muted-foreground/40 uppercase tracking-[0.15em] font-medium">Recent Transactions</p>
+              <p className="text-[11px] text-muted-foreground/60 mt-0.5">{invoices.length} total invoices</p>
             </div>
           </div>
-          <span className="text-[18px] font-bold text-white">${totalRevenue.toLocaleString()}</span>
+          <span className="text-[18px] font-bold text-foreground">${totalRevenue.toLocaleString()}</span>
         </div>
         <div>
-          <div className="grid grid-cols-[2fr_1.5fr_1fr_1fr] gap-4 px-5 py-2.5 border-b border-white/[0.04] text-[10px] text-white/20 uppercase tracking-[0.15em]">
+          <div className="grid grid-cols-[2fr_1.5fr_1fr_1fr] gap-4 px-5 py-2.5 border-b border-border text-[10px] text-muted-foreground/60 uppercase tracking-[0.15em]">
             <span>Invoice</span><span>Client</span><span className="text-right">Amount</span><span className="text-right">Status</span>
           </div>
           {invoices.length === 0 ? (
-            <div className="py-12 text-center"><p className="text-[13px] text-white/15">No invoices yet</p></div>
+            <div className="py-12 text-center"><p className="text-[13px] text-muted-foreground/40">No invoices yet</p></div>
           ) : (
             invoices.slice(0, 8).map((inv: InvoiceType, i) => (
-              <motion.div key={inv.invoice_id} initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: i * 0.03 }} className="grid grid-cols-[2fr_1.5fr_1fr_1fr] gap-4 items-center px-5 py-3 border-b border-white/[0.025] last:border-b-0 hover:bg-white/[0.015] transition-colors">
+              <motion.div key={inv.invoice_id} initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: i * 0.03 }} className="grid grid-cols-[2fr_1.5fr_1fr_1fr] gap-4 items-center px-5 py-3 border-b border-white/[0.025] last:border-b-0 hover:bg-card transition-colors">
                 <span className="text-[13px] font-medium text-white/75 truncate">{inv.invoice_title}</span>
-                <span className="text-[12px] text-white/40 truncate">{inv.client_name}</span>
-                <span className="text-[13px] font-medium text-right text-white/80">${Number(inv.outcome).toFixed(2)}</span>
+                <span className="text-[12px] text-muted-foreground/70 truncate">{inv.client_name}</span>
+                <span className="text-[13px] font-medium text-right text-foreground/80">${Number(inv.outcome).toFixed(2)}</span>
                 <div className="flex justify-end">
-                  <span className={`text-[10px] uppercase tracking-wider px-2 py-0.5 rounded-sm border ${inv.status === "paid" ? "bg-emerald-500/[0.08] text-emerald-400 border-emerald-500/15" : "bg-red-500/[0.08] text-red-400 border-red-500/15"}`}>{inv.status}</span>
+                  <span className={`text-[10px] uppercase tracking-wider px-2 py-0.5 rounded-sm border ${inv.status === "paid" ? "bg-emerald-500/[0.08] text-emerald-400 border-emerald-500/15" : "bg-primary/[0.08] text-primary border-primary/15"}`}>{inv.status}</span>
                 </div>
               </motion.div>
             ))
@@ -326,9 +326,9 @@ const CompaniesTab: React.FC<{
     bank: bankBalance * cwaShare,
     invoices: Math.round(invoices.length * cwaShare),
     color: "#ef4444",
-    bgColor: "bg-red-500/[0.06]",
-    borderColor: "border-red-500/15",
-    textColor: "text-red-400",
+    bgColor: "bg-primary/[0.06]",
+    borderColor: "border-primary/15",
+    textColor: "text-primary",
     accentBar: "bg-red-500",
   };
   const smp = {
@@ -360,7 +360,7 @@ const CompaniesTab: React.FC<{
     const margin = data.revenue > 0 ? (profit / data.revenue) * 100 : 0;
 
     return (
-      <div className="relative bg-[#0a0a0a] border border-white/[0.04] rounded-sm overflow-hidden">
+      <div className="relative bg-card border border-border rounded-sm overflow-hidden">
         <div className={`absolute left-0 top-0 bottom-0 w-[3px] ${data.accentBar}`} />
         <div className="p-6 space-y-5">
           {/* Header */}
@@ -370,8 +370,8 @@ const CompaniesTab: React.FC<{
                 <Building2 className={`h-4 w-4 ${data.textColor}`} />
               </div>
               <div>
-                <h3 className="text-[15px] font-semibold text-white/90">{name}</h3>
-                <p className="text-[11px] text-white/25">{description}</p>
+                <h3 className="text-[15px] font-semibold text-foreground">{name}</h3>
+                <p className="text-[11px] text-muted-foreground/50">{description}</p>
               </div>
             </div>
           </div>
@@ -379,17 +379,17 @@ const CompaniesTab: React.FC<{
           {/* Big numbers */}
           <div className="space-y-3">
             <div>
-              <p className="text-[10px] text-white/20 uppercase tracking-wider">Revenue</p>
+              <p className="text-[10px] text-muted-foreground/60 uppercase tracking-wider">Revenue</p>
               <p className={`text-3xl font-bold tracking-tight ${data.textColor}`}>${data.revenue.toLocaleString()}</p>
             </div>
             <div className="grid grid-cols-2 gap-3">
-              <div className="bg-white/[0.015] border border-white/[0.04] rounded-sm p-3">
-                <p className="text-[10px] text-white/20 uppercase tracking-wider">Expenses</p>
-                <p className="text-lg font-bold text-white/80 tracking-tight mt-1">${data.expenses.toLocaleString()}</p>
+              <div className="bg-card border border-border rounded-sm p-3">
+                <p className="text-[10px] text-muted-foreground/60 uppercase tracking-wider">Expenses</p>
+                <p className="text-lg font-bold text-foreground/80 tracking-tight mt-1">${data.expenses.toLocaleString()}</p>
               </div>
-              <div className="bg-white/[0.015] border border-white/[0.04] rounded-sm p-3">
-                <p className="text-[10px] text-white/20 uppercase tracking-wider">Bank</p>
-                <p className="text-lg font-bold text-white/80 tracking-tight mt-1">${data.bank.toLocaleString()}</p>
+              <div className="bg-card border border-border rounded-sm p-3">
+                <p className="text-[10px] text-muted-foreground/60 uppercase tracking-wider">Bank</p>
+                <p className="text-lg font-bold text-foreground/80 tracking-tight mt-1">${data.bank.toLocaleString()}</p>
               </div>
             </div>
           </div>
@@ -397,25 +397,25 @@ const CompaniesTab: React.FC<{
           {/* Profit + margin */}
           <div className={`p-4 rounded-sm border ${profitPositive ? "bg-emerald-500/[0.04] border-emerald-500/10" : "bg-red-500/[0.04] border-red-500/10"}`}>
             <div className="flex items-center justify-between mb-1">
-              <span className="text-[11px] text-white/30 uppercase tracking-wider">Net Profit</span>
-              <span className={`text-[11px] font-medium ${profitPositive ? "text-emerald-400" : "text-red-400"}`}>
+              <span className="text-[11px] text-muted-foreground uppercase tracking-wider">Net Profit</span>
+              <span className={`text-[11px] font-medium ${profitPositive ? "text-emerald-400" : "text-primary"}`}>
                 {margin.toFixed(1)}% margin
               </span>
             </div>
-            <p className={`text-2xl font-bold tracking-tight ${profitPositive ? "text-emerald-400" : "text-red-400"}`}>
+            <p className={`text-2xl font-bold tracking-tight ${profitPositive ? "text-emerald-400" : "text-primary"}`}>
               {profitPositive ? "+" : ""}${profit.toLocaleString()}
             </p>
           </div>
 
           {/* Quick stats */}
-          <div className="grid grid-cols-2 gap-3 pt-2 border-t border-white/[0.04]">
+          <div className="grid grid-cols-2 gap-3 pt-2 border-t border-border">
             <div>
-              <p className="text-[10px] text-white/20 uppercase tracking-wider">Invoices</p>
-              <p className="text-base font-semibold text-white/70 mt-0.5">{data.invoices}</p>
+              <p className="text-[10px] text-muted-foreground/60 uppercase tracking-wider">Invoices</p>
+              <p className="text-base font-semibold text-foreground/70 mt-0.5">{data.invoices}</p>
             </div>
             <div>
-              <p className="text-[10px] text-white/20 uppercase tracking-wider">Avg Invoice</p>
-              <p className="text-base font-semibold text-white/70 mt-0.5">${data.invoices > 0 ? Math.round(data.revenue / data.invoices).toLocaleString() : "0"}</p>
+              <p className="text-[10px] text-muted-foreground/60 uppercase tracking-wider">Avg Invoice</p>
+              <p className="text-base font-semibold text-foreground/70 mt-0.5">${data.invoices > 0 ? Math.round(data.revenue / data.invoices).toLocaleString() : "0"}</p>
             </div>
           </div>
         </div>
@@ -440,20 +440,20 @@ const CompaniesTab: React.FC<{
       </div>
 
       {/* Comparison chart */}
-      <div className="bg-[#0a0a0a] border border-white/[0.04] rounded-sm p-5">
+      <div className="bg-card border border-border rounded-sm p-5">
         <div className="flex items-center justify-between mb-4">
           <div>
-            <p className="text-[11px] text-white/15 uppercase tracking-[0.15em] font-medium">Side-by-Side Comparison</p>
-            <p className="text-[11px] text-white/30 mt-0.5">Annual financial metrics</p>
+            <p className="text-[11px] text-muted-foreground/40 uppercase tracking-[0.15em] font-medium">Side-by-Side Comparison</p>
+            <p className="text-[11px] text-muted-foreground mt-0.5">Annual financial metrics</p>
           </div>
           <div className="flex items-center gap-3 text-[10px]">
             <div className="flex items-center gap-1.5">
               <div className="h-1.5 w-1.5 rounded-full bg-red-500" />
-              <span className="text-white/40">CodeWithAli</span>
+              <span className="text-muted-foreground/70">CodeWithAli</span>
             </div>
             <div className="flex items-center gap-1.5">
               <div className="h-1.5 w-1.5 rounded-full bg-blue-500" />
-              <span className="text-white/40">Simplicity</span>
+              <span className="text-muted-foreground/70">Simplicity</span>
             </div>
           </div>
         </div>
@@ -504,10 +504,10 @@ const CashFlowTab: React.FC<{
       {/* Top row: Runway gauge + Burn metrics */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
         {/* Runway gauge */}
-        <div className="bg-[#0a0a0a] border border-white/[0.04] rounded-sm p-5">
+        <div className="bg-card border border-border rounded-sm p-5">
           <div className="flex items-center gap-2 mb-3">
-            <Gauge className="h-4 w-4 text-red-500/70" />
-            <p className="text-[11px] text-white/15 uppercase tracking-[0.15em] font-medium">Runway</p>
+            <Gauge className="h-4 w-4 text-primary/70" />
+            <p className="text-[11px] text-muted-foreground/40 uppercase tracking-[0.15em] font-medium">Runway</p>
           </div>
           <div className="h-44 relative">
             <ResponsiveContainer>
@@ -516,55 +516,55 @@ const CashFlowTab: React.FC<{
               </RadialBarChart>
             </ResponsiveContainer>
             <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none -mb-8">
-              <p className="text-3xl font-bold text-white tracking-tight">{runwayMonths.toFixed(1)}</p>
-              <p className="text-[11px] text-white/30">months</p>
+              <p className="text-3xl font-bold text-foreground tracking-tight">{runwayMonths.toFixed(1)}</p>
+              <p className="text-[11px] text-muted-foreground">months</p>
               <p className="text-[10px] uppercase tracking-wider mt-1" style={{ color: runwayColor }}>{runwayLabel}</p>
             </div>
           </div>
         </div>
 
         {/* Burn rate */}
-        <div className="bg-[#0a0a0a] border border-white/[0.04] rounded-sm p-5">
+        <div className="bg-card border border-border rounded-sm p-5">
           <div className="flex items-center gap-2 mb-3">
-            <Flame className="h-4 w-4 text-red-500/70" />
-            <p className="text-[11px] text-white/15 uppercase tracking-[0.15em] font-medium">Burn Rate</p>
+            <Flame className="h-4 w-4 text-primary/70" />
+            <p className="text-[11px] text-muted-foreground/40 uppercase tracking-[0.15em] font-medium">Burn Rate</p>
           </div>
-          <p className="text-3xl font-bold text-red-400 tracking-tight">${monthlyBurn.toLocaleString(undefined, { maximumFractionDigits: 0 })}</p>
-          <p className="text-[11px] text-white/30 mt-1">per month</p>
-          <div className="mt-4 pt-4 border-t border-white/[0.04] space-y-2">
+          <p className="text-3xl font-bold text-primary tracking-tight">${monthlyBurn.toLocaleString(undefined, { maximumFractionDigits: 0 })}</p>
+          <p className="text-[11px] text-muted-foreground mt-1">per month</p>
+          <div className="mt-4 pt-4 border-t border-border space-y-2">
             <div className="flex justify-between text-[11px]">
-              <span className="text-white/30">Daily</span>
-              <span className="text-white/70">${(monthlyBurn / 30).toFixed(0)}</span>
+              <span className="text-muted-foreground">Daily</span>
+              <span className="text-foreground/70">${(monthlyBurn / 30).toFixed(0)}</span>
             </div>
             <div className="flex justify-between text-[11px]">
-              <span className="text-white/30">Quarterly</span>
-              <span className="text-white/70">${(monthlyBurn * 3).toLocaleString(undefined, { maximumFractionDigits: 0 })}</span>
+              <span className="text-muted-foreground">Quarterly</span>
+              <span className="text-foreground/70">${(monthlyBurn * 3).toLocaleString(undefined, { maximumFractionDigits: 0 })}</span>
             </div>
             <div className="flex justify-between text-[11px]">
-              <span className="text-white/30">Annual</span>
-              <span className="text-white/70">${expenseTotal.toLocaleString()}</span>
+              <span className="text-muted-foreground">Annual</span>
+              <span className="text-foreground/70">${expenseTotal.toLocaleString()}</span>
             </div>
           </div>
         </div>
 
         {/* Profitability */}
-        <div className="bg-[#0a0a0a] border border-white/[0.04] rounded-sm p-5">
+        <div className="bg-card border border-border rounded-sm p-5">
           <div className="flex items-center gap-2 mb-3">
-            <TrendingUp className="h-4 w-4 text-red-500/70" />
-            <p className="text-[11px] text-white/15 uppercase tracking-[0.15em] font-medium">Income vs Burn</p>
+            <TrendingUp className="h-4 w-4 text-primary/70" />
+            <p className="text-[11px] text-muted-foreground/40 uppercase tracking-[0.15em] font-medium">Income vs Burn</p>
           </div>
-          <p className="text-3xl font-bold text-white tracking-tight">${(totalRevenueFromCategories / 12).toLocaleString(undefined, { maximumFractionDigits: 0 })}</p>
-          <p className="text-[11px] text-white/30 mt-1">monthly revenue</p>
-          <div className="mt-4 pt-4 border-t border-white/[0.04] space-y-2">
+          <p className="text-3xl font-bold text-foreground tracking-tight">${(totalRevenueFromCategories / 12).toLocaleString(undefined, { maximumFractionDigits: 0 })}</p>
+          <p className="text-[11px] text-muted-foreground mt-1">monthly revenue</p>
+          <div className="mt-4 pt-4 border-t border-border space-y-2">
             <div className="flex justify-between text-[11px]">
-              <span className="text-white/30">Net monthly</span>
-              <span className={(totalRevenueFromCategories - expenseTotal) >= 0 ? "text-emerald-400" : "text-red-400"}>
+              <span className="text-muted-foreground">Net monthly</span>
+              <span className={(totalRevenueFromCategories - expenseTotal) >= 0 ? "text-emerald-400" : "text-primary"}>
                 ${((totalRevenueFromCategories - expenseTotal) / 12).toLocaleString(undefined, { maximumFractionDigits: 0 })}
               </span>
             </div>
             <div className="flex justify-between text-[11px]">
-              <span className="text-white/30">Coverage</span>
-              <span className="text-white/70">
+              <span className="text-muted-foreground">Coverage</span>
+              <span className="text-foreground/70">
                 {monthlyBurn > 0 ? `${((totalRevenueFromCategories / 12) / monthlyBurn * 100).toFixed(0)}%` : "—"}
               </span>
             </div>
@@ -573,11 +573,11 @@ const CashFlowTab: React.FC<{
       </div>
 
       {/* Monthly cash flow chart */}
-      <div className="bg-[#0a0a0a] border border-white/[0.04] rounded-sm p-5">
+      <div className="bg-card border border-border rounded-sm p-5">
         <div className="flex items-center justify-between mb-4">
           <div>
-            <p className="text-[11px] text-white/15 uppercase tracking-[0.15em] font-medium">Cash Flow Trend</p>
-            <p className="text-[11px] text-white/30 mt-0.5">Last 6 months — paid invoices vs estimated burn</p>
+            <p className="text-[11px] text-muted-foreground/40 uppercase tracking-[0.15em] font-medium">Cash Flow Trend</p>
+            <p className="text-[11px] text-muted-foreground mt-0.5">Last 6 months — paid invoices vs estimated burn</p>
           </div>
         </div>
         <div className="h-72">
@@ -651,17 +651,17 @@ const ReportsTab: React.FC<{ invoices: InvoiceType[] }> = ({ invoices }) => {
   return (
     <div className="space-y-4">
       {/* Filters + export */}
-      <div className="bg-[#0a0a0a] border border-white/[0.04] rounded-sm p-4">
+      <div className="bg-card border border-border rounded-sm p-4">
         <div className="flex items-center gap-3 flex-wrap">
-          <div className="flex items-center gap-1.5 bg-white/[0.02] border border-white/[0.04] rounded-sm p-0.5">
+          <div className="flex items-center gap-1.5 bg-muted/30 border border-border rounded-sm p-0.5">
             {(["all", "paid", "pending"] as const).map(s => (
               <button
                 key={s}
                 onClick={() => setStatusFilter(s)}
                 className={`px-3 py-1 rounded-sm text-[11px] font-medium transition-all ${
                   statusFilter === s
-                    ? "bg-red-500/[0.1] text-red-400"
-                    : "text-white/25 hover:text-white/40"
+                    ? "bg-primary/10 text-primary"
+                    : "text-muted-foreground/50 hover:text-muted-foreground/70"
                 }`}
               >
                 {s === "all" ? `All (${invoices.length})` : s === "paid" ? `Paid (${paidCount})` : `Pending (${pendingCount})`}
@@ -673,12 +673,12 @@ const ReportsTab: React.FC<{ invoices: InvoiceType[] }> = ({ invoices }) => {
             placeholder="Search by title or client..."
             value={searchQuery}
             onChange={e => setSearchQuery(e.target.value)}
-            className="flex-1 px-3 py-1.5 bg-white/[0.02] border border-white/[0.04] rounded-sm text-[12px] text-white/60 placeholder:text-white/15 focus:outline-none focus:border-white/[0.08]"
+            className="flex-1 px-3 py-1.5 bg-muted/30 border border-border rounded-sm text-[12px] text-foreground/60 placeholder:text-muted-foreground/40 focus:outline-none focus:border-border"
           />
           <button
             onClick={exportCSV}
             disabled={filtered.length === 0}
-            className="flex items-center gap-1.5 px-3 py-1.5 bg-red-500/[0.08] hover:bg-red-500/[0.12] border border-red-500/15 text-red-400 text-[11px] rounded-sm transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+            className="flex items-center gap-1.5 px-3 py-1.5 bg-primary/[0.08] hover:bg-red-500/[0.12] border border-primary/15 text-primary text-[11px] rounded-sm transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
           >
             <Download className="h-3 w-3" /> Export CSV
           </button>
@@ -687,38 +687,38 @@ const ReportsTab: React.FC<{ invoices: InvoiceType[] }> = ({ invoices }) => {
 
       {/* Summary cards */}
       <div className="grid grid-cols-3 gap-4">
-        <div className="bg-[#0a0a0a] border border-white/[0.04] rounded-sm p-4">
-          <p className="text-[10px] text-white/20 uppercase tracking-wider">Showing</p>
-          <p className="text-2xl font-bold text-white tracking-tight mt-1">{filtered.length}</p>
-          <p className="text-[11px] text-white/30 mt-0.5">of {invoices.length} invoices</p>
+        <div className="bg-card border border-border rounded-sm p-4">
+          <p className="text-[10px] text-muted-foreground/60 uppercase tracking-wider">Showing</p>
+          <p className="text-2xl font-bold text-foreground tracking-tight mt-1">{filtered.length}</p>
+          <p className="text-[11px] text-muted-foreground mt-0.5">of {invoices.length} invoices</p>
         </div>
-        <div className="bg-[#0a0a0a] border border-white/[0.04] rounded-sm p-4">
-          <p className="text-[10px] text-white/20 uppercase tracking-wider">Total Value</p>
-          <p className="text-2xl font-bold text-red-400 tracking-tight mt-1">${filtered.reduce((s, i) => s + Number(i.outcome), 0).toLocaleString()}</p>
+        <div className="bg-card border border-border rounded-sm p-4">
+          <p className="text-[10px] text-muted-foreground/60 uppercase tracking-wider">Total Value</p>
+          <p className="text-2xl font-bold text-primary tracking-tight mt-1">${filtered.reduce((s, i) => s + Number(i.outcome), 0).toLocaleString()}</p>
         </div>
-        <div className="bg-[#0a0a0a] border border-white/[0.04] rounded-sm p-4">
-          <p className="text-[10px] text-white/20 uppercase tracking-wider">Avg Invoice</p>
-          <p className="text-2xl font-bold text-white tracking-tight mt-1">${filtered.length > 0 ? Math.round(filtered.reduce((s, i) => s + Number(i.outcome), 0) / filtered.length).toLocaleString() : "0"}</p>
+        <div className="bg-card border border-border rounded-sm p-4">
+          <p className="text-[10px] text-muted-foreground/60 uppercase tracking-wider">Avg Invoice</p>
+          <p className="text-2xl font-bold text-foreground tracking-tight mt-1">${filtered.length > 0 ? Math.round(filtered.reduce((s, i) => s + Number(i.outcome), 0) / filtered.length).toLocaleString() : "0"}</p>
         </div>
       </div>
 
       {/* Detailed table */}
-      <div className="bg-[#0a0a0a] border border-white/[0.04] rounded-sm overflow-hidden">
-        <div className="grid grid-cols-[2fr_1.5fr_1fr_1fr_1fr] gap-4 px-5 py-2.5 border-b border-white/[0.04] text-[10px] text-white/20 uppercase tracking-[0.15em]">
+      <div className="bg-card border border-border rounded-sm overflow-hidden">
+        <div className="grid grid-cols-[2fr_1.5fr_1fr_1fr_1fr] gap-4 px-5 py-2.5 border-b border-border text-[10px] text-muted-foreground/60 uppercase tracking-[0.15em]">
           <span>Invoice</span><span>Client</span><span>Date</span><span className="text-right">Amount</span><span className="text-right">Status</span>
         </div>
         <div className="max-h-[500px] overflow-y-auto">
           {filtered.length === 0 ? (
-            <div className="py-12 text-center"><p className="text-[13px] text-white/15">No invoices match your filters</p></div>
+            <div className="py-12 text-center"><p className="text-[13px] text-muted-foreground/40">No invoices match your filters</p></div>
           ) : (
             filtered.map((inv) => (
-              <div key={inv.invoice_id} className="grid grid-cols-[2fr_1.5fr_1fr_1fr_1fr] gap-4 items-center px-5 py-3 border-b border-white/[0.025] last:border-b-0 hover:bg-white/[0.015] transition-colors">
+              <div key={inv.invoice_id} className="grid grid-cols-[2fr_1.5fr_1fr_1fr_1fr] gap-4 items-center px-5 py-3 border-b border-white/[0.025] last:border-b-0 hover:bg-card transition-colors">
                 <span className="text-[13px] font-medium text-white/75 truncate">{inv.invoice_title}</span>
-                <span className="text-[12px] text-white/40 truncate">{inv.client_name}</span>
-                <span className="text-[11px] text-white/30">{new Date(inv.creation_date).toLocaleDateString()}</span>
-                <span className="text-[13px] font-medium text-right text-white/80">${Number(inv.outcome).toFixed(2)}</span>
+                <span className="text-[12px] text-muted-foreground/70 truncate">{inv.client_name}</span>
+                <span className="text-[11px] text-muted-foreground">{new Date(inv.creation_date).toLocaleDateString()}</span>
+                <span className="text-[13px] font-medium text-right text-foreground/80">${Number(inv.outcome).toFixed(2)}</span>
                 <div className="flex justify-end">
-                  <span className={`text-[10px] uppercase tracking-wider px-2 py-0.5 rounded-sm border ${inv.status === "paid" ? "bg-emerald-500/[0.08] text-emerald-400 border-emerald-500/15" : "bg-red-500/[0.08] text-red-400 border-red-500/15"}`}>{inv.status}</span>
+                  <span className={`text-[10px] uppercase tracking-wider px-2 py-0.5 rounded-sm border ${inv.status === "paid" ? "bg-emerald-500/[0.08] text-emerald-400 border-emerald-500/15" : "bg-primary/[0.08] text-primary border-primary/15"}`}>{inv.status}</span>
                 </div>
               </div>
             ))
@@ -789,30 +789,30 @@ const FinancialDashboardContent: React.FC = () => {
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center h-screen bg-black">
+      <div className="flex items-center justify-center h-screen bg-background">
         <div className="flex flex-col items-center gap-3">
-          <div className="h-6 w-6 border-2 border-red-500/30 border-t-red-500 rounded-full animate-spin" />
-          <p className="text-[12px] text-white/30">Loading financial data…</p>
+          <div className="h-6 w-6 border-2 border-primary/30 border-t-primary rounded-full animate-spin" />
+          <p className="text-[12px] text-muted-foreground">Loading financial data…</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-black overflow-y-auto">
+    <div className="min-h-screen bg-background overflow-y-auto transition-colors duration-500">
       {/* Header */}
       <div className="px-8 pt-7 pb-2">
         <div className="flex items-end justify-between">
           <div className="flex items-center gap-3">
-            <div className="p-2.5 rounded-sm bg-red-500/[0.08] border border-red-500/15">
-              <Wallet className="h-5 w-5 text-red-400" />
+            <div className="p-2.5 rounded-sm bg-primary/[0.08] border border-primary/15">
+              <Wallet className="h-5 w-5 text-primary" />
             </div>
             <div>
-              <h1 className="text-[24px] font-bold text-white tracking-tight">Finance</h1>
-              <p className="text-[12px] text-white/20 mt-0.5">Portfolio overview across CodeWithAli & Simplicity</p>
+              <h1 className="text-[24px] font-bold text-foreground tracking-tight">Finance</h1>
+              <p className="text-[12px] text-muted-foreground/60 mt-0.5">Portfolio overview across CodeWithAli & Simplicity</p>
             </div>
           </div>
-          <button onClick={() => refetch()} className="flex items-center gap-2 px-3 py-1.5 bg-white/[0.02] hover:bg-red-500/[0.06] border border-white/[0.04] hover:border-red-500/15 text-white/30 hover:text-red-400 rounded-sm text-[12px] transition-colors">
+          <button onClick={() => refetch()} className="flex items-center gap-2 px-3 py-1.5 bg-muted/30 hover:bg-primary/[0.06] border border-border hover:border-primary/15 text-muted-foreground hover:text-primary rounded-sm text-[12px] transition-colors">
             <RefreshCcw className="h-3 w-3" /> Refresh
           </button>
         </div>
@@ -821,17 +821,17 @@ const FinancialDashboardContent: React.FC = () => {
       {/* Top-level tabs */}
       <div className="px-8 pt-5">
         <Tabs value={tab} onValueChange={setTab}>
-          <TabsList className="bg-white/[0.02] border border-white/[0.04] rounded-sm h-9 p-0.5">
-            <TabsTrigger value="overview" className="data-[state=active]:bg-red-500/[0.1] data-[state=active]:text-red-400 text-white/30 rounded-sm text-[12px] h-7 px-4">
+          <TabsList className="bg-muted/30 border border-border rounded-sm h-9 p-0.5">
+            <TabsTrigger value="overview" className="data-[state=active]:bg-primary/10 data-[state=active]:text-primary text-muted-foreground rounded-sm text-[12px] h-7 px-4">
               <BarChart3 className="h-3.5 w-3.5 mr-1.5" /> Overview
             </TabsTrigger>
-            <TabsTrigger value="companies" className="data-[state=active]:bg-red-500/[0.1] data-[state=active]:text-red-400 text-white/30 rounded-sm text-[12px] h-7 px-4">
+            <TabsTrigger value="companies" className="data-[state=active]:bg-primary/10 data-[state=active]:text-primary text-muted-foreground rounded-sm text-[12px] h-7 px-4">
               <Building2 className="h-3.5 w-3.5 mr-1.5" /> Companies
             </TabsTrigger>
-            <TabsTrigger value="cashflow" className="data-[state=active]:bg-red-500/[0.1] data-[state=active]:text-red-400 text-white/30 rounded-sm text-[12px] h-7 px-4">
+            <TabsTrigger value="cashflow" className="data-[state=active]:bg-primary/10 data-[state=active]:text-primary text-muted-foreground rounded-sm text-[12px] h-7 px-4">
               <Flame className="h-3.5 w-3.5 mr-1.5" /> Cash Flow
             </TabsTrigger>
-            <TabsTrigger value="reports" className="data-[state=active]:bg-red-500/[0.1] data-[state=active]:text-red-400 text-white/30 rounded-sm text-[12px] h-7 px-4">
+            <TabsTrigger value="reports" className="data-[state=active]:bg-primary/10 data-[state=active]:text-primary text-muted-foreground rounded-sm text-[12px] h-7 px-4">
               <FileBarChart className="h-3.5 w-3.5 mr-1.5" /> Reports
             </TabsTrigger>
           </TabsList>
@@ -876,18 +876,18 @@ const FinancialDashboardContent: React.FC = () => {
         <div className="space-y-4 pb-10">
           <button
             onClick={() => setShowModeler(!showModeler)}
-            className="w-full flex items-center justify-between px-5 py-3 bg-[#0a0a0a] border border-white/[0.04] hover:border-red-500/15 rounded-sm transition-colors group"
+            className="w-full flex items-center justify-between px-5 py-3 bg-card border border-border hover:border-primary/15 rounded-sm transition-colors group"
           >
             <div className="flex items-center gap-3">
-              <div className="p-1.5 rounded-sm bg-red-500/[0.08]">
-                <Activity className="h-3.5 w-3.5 text-red-400" />
+              <div className="p-1.5 rounded-sm bg-primary/[0.08]">
+                <Activity className="h-3.5 w-3.5 text-primary" />
               </div>
               <div className="text-left">
-                <p className="text-[13px] font-medium text-white/80 group-hover:text-white transition-colors">Financial Modeler & Projections</p>
-                <p className="text-[11px] text-white/20">Advanced scenario modeling and multi-year projections</p>
+                <p className="text-[13px] font-medium text-foreground/80 group-hover:text-foreground transition-colors">Financial Modeler & Projections</p>
+                <p className="text-[11px] text-muted-foreground/60">Advanced scenario modeling and multi-year projections</p>
               </div>
             </div>
-            {showModeler ? <ChevronUp className="h-4 w-4 text-white/30" /> : <ChevronDown className="h-4 w-4 text-white/30" />}
+            {showModeler ? <ChevronUp className="h-4 w-4 text-muted-foreground" /> : <ChevronDown className="h-4 w-4 text-muted-foreground" />}
           </button>
 
           <AnimatePresence>

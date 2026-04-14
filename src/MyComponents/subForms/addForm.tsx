@@ -84,11 +84,11 @@ export const AddData = () => {
       <DialogContent className="max-w-lg">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <FolderClosed className="h-4 w-4 text-red-400" />
+            <FolderClosed className="h-4 w-4 text-primary" />
             Add New Account
           </DialogTitle>
           <DialogDescription className="flex items-center gap-2">
-            <Clock className="w-4 h-4 text-red-400" />
+            <Clock className="w-4 h-4 text-primary" />
             Add a new Account. Fill in the Account Details below.
           </DialogDescription>
         </DialogHeader>
@@ -110,7 +110,7 @@ export const AddData = () => {
                     htmlFor={field.name}
                     className="text-red-200 flex items-center gap-2"
                   >
-                    <Tags className="w-4 h-4 text-red-400" />
+                    <Tags className="w-4 h-4 text-primary" />
                     Platform Name
                   </Label>
                   <Input
@@ -119,7 +119,7 @@ export const AddData = () => {
                     autoComplete="off"
                     required
                     placeholder="Enter Platform Name"
-                    className="bg-black/40 border-red-950/30 text-red-200 
+                    className="bg-background/40 border-red-950/30 text-red-200 
                     focus:border-red-700 focus:ring-2 focus:ring-red-900/50 
                     transition-all duration-300"
                     value={field.state.value}
@@ -138,7 +138,7 @@ export const AddData = () => {
                     htmlFor={field.name}
                     className="text-red-200 flex items-center gap-2"
                   >
-                    <FolderClosed className="w-4 h-4 text-red-400" />
+                    <FolderClosed className="w-4 h-4 text-primary" />
                     Folder Name
                   </Label>
                   <Input
@@ -146,7 +146,7 @@ export const AddData = () => {
                     type="text"
                     autoComplete="off"
                     placeholder="Enter Platform Name"
-                    className={`bg-black/40 border-red-950/30 ${field.state.value === "default" ? "text-red-800/90" : "text-red-200"} 
+                    className={`bg-background/40 border-red-950/30 ${field.state.value === "default" ? "text-red-800/90" : "text-red-200"} 
                     focus:border-red-700 focus:ring-2 focus:ring-red-900/50 
                     transition-all duration-300 capitalize`}
                     value={field.state.value}
@@ -171,7 +171,7 @@ export const AddData = () => {
                     type="text"
                     autoComplete="off"
                     placeholder="Enter Username"
-                    className="bg-black/40 inline border-red-950/30 text-red-200 
+                    className="bg-background/40 inline border-red-950/30 text-red-200 
                   focus:border-red-700 focus:ring-2 focus:ring-red-900/50 
                   transition-all duration-300"
                     value={field.state.value}
@@ -194,7 +194,7 @@ export const AddData = () => {
                     type="email"
                     autoComplete="off"
                     placeholder="Enter Email"
-                    className="bg-black/40 inline border-red-950/30 text-red-200 
+                    className="bg-background/40 inline border-red-950/30 text-red-200 
                   focus:border-red-700 focus:ring-2 focus:ring-red-900/50 
                   transition-all duration-300"
                     value={field.state.value}
@@ -218,7 +218,7 @@ export const AddData = () => {
                     required
                     autoComplete="off"
                     placeholder="Enter Password"
-                    className="bg-black/40 inline border-red-950/30 text-red-200 
+                    className="bg-background/40 inline border-red-950/30 text-red-200 
                   focus:border-red-700 focus:ring-2 focus:ring-red-900/50 
                   transition-all duration-300"
                     value={field.state.value}
@@ -241,7 +241,7 @@ export const AddData = () => {
                     type="text"
                     autoComplete="off"
                     placeholder="Add Additional Info"
-                    className="bg-black/40 inline border-red-950/30 text-red-200 
+                    className="bg-background/40 inline border-red-950/30 text-red-200 
                   focus:border-red-700 focus:ring-2 focus:ring-red-900/50 
                   transition-all duration-300"
                     value={field.state.value}
@@ -310,7 +310,7 @@ export const AddData = () => {
                   disabled={!canSubmit}
                   className="bg-gradient-to-r from-red-950 to-red-900 
                   hover:from-red-900 hover:to-red-800 
-                  text-white border border-red-800/30 
+                  text-foreground border border-red-800/30 
                   disabled:opacity-50 disabled:cursor-not-allowed
                   transition-all duration-300 
                   hover:scale-[1.02] active:scale-[0.98]"

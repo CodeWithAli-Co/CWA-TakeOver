@@ -17,7 +17,7 @@ export const StatCard: React.FC<{
         <h3 className="text-sm text-white">{title}</h3>
         {icon}
       </div>
-      <div className="text-white font-bold text-xl">
+      <div className="text-foreground font-bold text-xl">
         {value} <span className="text-xs text-gray-400">/ {total}</span>
       </div>
       <div className="w-full bg-gray-700 rounded-full h-1.5 mt-2">
@@ -33,7 +33,7 @@ export const StatCard: React.FC<{
 // Loading State Component
 export const LoadingState: React.FC = () => {
   return (
-    <div className="flex flex-col items-center justify-center h-screen bg-black text-white">
+    <div className="flex flex-col items-center justify-center h-screen bg-background text-white">
       <RefreshCw className="animate-spin text-red-500 mb-4" size={48} />
       <p className="text-lg">Loading Schedule...</p>
     </div>
@@ -43,13 +43,13 @@ export const LoadingState: React.FC = () => {
 // Error State Component
 export const ErrorState: React.FC<{ retry: () => void }> = ({ retry }) => {
   return (
-    <div className="flex flex-col items-center justify-center h-screen bg-black text-white">
+    <div className="flex flex-col items-center justify-center h-screen bg-background text-white">
       <div className="text-center">
         <h2 className="text-2xl text-red-500 mb-4">Error Loading Schedule</h2>
         <p className="mb-6">Unable to retrieve schedule data. Please try again.</p>
         <button 
           onClick={retry}
-          className="bg-red-700 hover:bg-red-600 text-white px-4 py-2 rounded-md"
+          className="bg-red-700 hover:bg-primary text-foreground px-4 py-2 rounded-md"
         >
           Retry
         </button>

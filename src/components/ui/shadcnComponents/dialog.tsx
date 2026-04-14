@@ -1,12 +1,13 @@
 /**
- * Dialog — Void theme modal.
+ * Dialog — Theme-aware modal.
  *
  * - Overlay: bg-black/70 with backdrop blur for depth
- * - Content: bg-[#0a0a0a] with subtle white/[0.08] border, rounded-sm
- * - Title: text-white/90 font-semibold
- * - Description: text-white/30
- * - Close button: subtle white/30 → red-400 on hover
+ * - Content: bg-card with border, rounded-sm
+ * - Title: text-foreground font-semibold
+ * - Description: text-muted-foreground
+ * - Close button: subtle → primary on hover
  * - Keeps all Radix animations (fade + zoom + slide)
+ * - Automatically adapts to CWA (black/red) or Simplicity (zinc/teal) theme
  */
 
 "use client";
@@ -46,7 +47,7 @@ const DialogContent = React.forwardRef<
     <DialogPrimitive.Content
       ref={ref}
       className={cn(
-        "fixed left-[50%] top-[50%] z-50 grid w-full max-w-lg translate-x-[-50%] translate-y-[-50%] gap-4 bg-[#0a0a0a] border border-white/[0.08] rounded-sm p-6 shadow-2xl shadow-black/50 duration-200",
+        "fixed left-[50%] top-[50%] z-50 grid w-full max-w-lg translate-x-[-50%] translate-y-[-50%] gap-4 bg-card border border-border rounded-sm p-6 shadow-2xl shadow-black/50 duration-200 transition-colors",
         "data-[state=open]:animate-in data-[state=closed]:animate-out",
         "data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0",
         "data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95",
@@ -57,7 +58,7 @@ const DialogContent = React.forwardRef<
       {...props}
     >
       {children}
-      <DialogPrimitive.Close className="absolute right-3 top-3 p-1.5 rounded-sm text-white/30 hover:text-red-400 hover:bg-red-500/[0.08] transition-colors focus:outline-none focus:ring-1 focus:ring-red-500/30 disabled:pointer-events-none">
+      <DialogPrimitive.Close className="absolute right-3 top-3 p-1.5 rounded-sm text-muted-foreground hover:text-primary hover:bg-primary/[0.08] transition-colors focus:outline-none focus:ring-1 focus:ring-primary/30 disabled:pointer-events-none">
         <X className="h-3.5 w-3.5" />
         <span className="sr-only">Close</span>
       </DialogPrimitive.Close>
@@ -86,7 +87,7 @@ const DialogFooter = ({
 }: React.HTMLAttributes<HTMLDivElement>) => (
   <div
     className={cn(
-      "flex flex-col-reverse sm:flex-row sm:justify-end sm:space-x-2 pt-2 border-t border-white/[0.04] -mx-6 px-6 -mb-6 pb-6 mt-2",
+      "flex flex-col-reverse sm:flex-row sm:justify-end sm:space-x-2 pt-2 border-t border-border -mx-6 px-6 -mb-6 pb-6 mt-2",
       className
     )}
     {...props}
@@ -101,7 +102,7 @@ const DialogTitle = React.forwardRef<
   <DialogPrimitive.Title
     ref={ref}
     className={cn(
-      "text-[15px] font-semibold text-white/90 leading-none tracking-tight",
+      "text-[15px] font-semibold text-foreground leading-none tracking-tight",
       className
     )}
     {...props}
@@ -115,7 +116,7 @@ const DialogDescription = React.forwardRef<
 >(({ className, ...props }, ref) => (
   <DialogPrimitive.Description
     ref={ref}
-    className={cn("text-[12px] text-white/30 leading-relaxed", className)}
+    className={cn("text-[12px] text-muted-foreground leading-relaxed", className)}
     {...props}
   />
 ));

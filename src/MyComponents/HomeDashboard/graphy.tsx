@@ -26,7 +26,7 @@ const data = [
 const CustomTooltip = ({ active, payload, label }: any) => {
   if (active && payload && payload.length) {
     return (
-      <div className="rounded-lg border border-red-900/30 bg-black/60 p-2 shadow-sm backdrop-blur-sm">
+      <div className="rounded-lg border border-red-900/30 bg-background/60 p-2 shadow-sm backdrop-blur-sm">
         <div className="text-sm font-medium text-amber-50">{label}</div>
         {payload.map((entry: any, index: number) => (
           <div key={index} className="flex items-center gap-2">
@@ -47,7 +47,7 @@ const CustomTooltip = ({ active, payload, label }: any) => {
 
 export const PerformanceGraph = () => {
   return (
-    <Card className="bg-black/40 border-red-900/30">
+    <Card className="bg-background/40 border-red-900/30">
       <CardHeader className="flex flex-row items-center justify-between">
         <CardTitle className="text-amber-50">Performance Metrics</CardTitle>
         <div className="flex items-center gap-4">

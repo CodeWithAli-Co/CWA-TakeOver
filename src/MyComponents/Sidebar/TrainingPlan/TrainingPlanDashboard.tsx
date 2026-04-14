@@ -467,7 +467,7 @@ function DetailPanel({
       >
         <div className="flex gap-2 flex-wrap mb-3">
           {selWeek.topics.map((t) => (
-            <span key={t} className={`text-[10px] px-2 py-0.5 rounded-full border ${cfg.border} ${cfg.text} bg-black/20`}>{t}</span>
+            <span key={t} className={`text-[10px] px-2 py-0.5 rounded-full border ${cfg.border} ${cfg.text} bg-background/20`}>{t}</span>
           ))}
         </div>
         <ProgressBar pct={Math.round(done / Math.max(1, selWeek.tasks.length) * 100)} cfg={cfg} />
@@ -635,7 +635,7 @@ function WeekSchedule({ week, completedTasks, deferredTasks, onToggleTask, onDef
       <div className={`rounded-lg border p-4 ${cfg.bg} ${cfg.border}`}>
         <div className="flex items-center gap-3">
           <div
-            className="w-10 h-10 rounded-full flex items-center justify-center text-lg font-bold text-white border-2"
+            className="w-10 h-10 rounded-full flex items-center justify-center text-lg font-bold text-foreground border-2"
             style={{ background: cfg.nodeFill, borderColor: cfg.line }}
           >
             {week.weekNumber}
@@ -653,7 +653,7 @@ function WeekSchedule({ week, completedTasks, deferredTasks, onToggleTask, onDef
         </div>
         <div className="flex gap-2 flex-wrap mt-3">
           {week.topics.map((t) => (
-            <span key={t} className={`text-[10px] px-2 py-0.5 rounded-full border ${cfg.border} ${cfg.text} bg-black/30`}>{t}</span>
+            <span key={t} className={`text-[10px] px-2 py-0.5 rounded-full border ${cfg.border} ${cfg.text} bg-background/30`}>{t}</span>
           ))}
         </div>
       </div>
@@ -834,7 +834,7 @@ function TaskBoard({ week, completedTasks, deferredTasks, onToggleTask, onDeferT
   }, [week, completedTasks, deferredTasks, currentDay]);
 
   const colDef = [
-    { key: "today" as const, label: "Today", icon: <Target size={14} />, color: "text-red-400", border: "border-red-900/40", bg: "bg-red-950/10" },
+    { key: "today" as const, label: "Today", icon: <Target size={14} />, color: "text-primary", border: "border-red-900/40", bg: "bg-red-950/10" },
     { key: "thisWeek" as const, label: "This Week", icon: <Calendar size={14} />, color: "text-amber-400", border: "border-amber-900/40", bg: "bg-amber-950/10" },
     { key: "deferred" as const, label: "Deferred", icon: <SkipForward size={14} />, color: "text-zinc-400", border: "border-zinc-700/40", bg: "bg-zinc-900/20" },
     { key: "done" as const, label: "Completed", icon: <CheckCircle2 size={14} />, color: "text-green-400", border: "border-green-900/40", bg: "bg-green-950/10" },
@@ -849,7 +849,7 @@ function TaskBoard({ week, completedTasks, deferredTasks, onToggleTask, onDeferT
             <div className={`px-3 py-2.5 border-b ${col.border} flex items-center gap-2`}>
               <span className={col.color}>{col.icon}</span>
               <span className="text-amber-50/90 text-sm font-semibold">{col.label}</span>
-              <span className={`ml-auto text-xs rounded-full px-1.5 py-0.5 ${col.color} bg-black/30`}>{tasks.length}</span>
+              <span className={`ml-auto text-xs rounded-full px-1.5 py-0.5 ${col.color} bg-background/30`}>{tasks.length}</span>
             </div>
             <div className="flex-1 p-2 space-y-2 overflow-y-auto">
               <AnimatePresence>
@@ -1045,13 +1045,13 @@ export default function TrainingPlanDashboard() {
   }, [setCurrentWeekNum]);
 
   return (
-    <div className="min-h-screen bg-black text-amber-50 flex flex-col">
+    <div className="min-h-screen bg-background text-amber-50 flex flex-col">
       {/* ── Header ── */}
       <div className="bg-gradient-to-r from-red-950 via-zinc-950 to-black border-b border-red-900/20 flex-shrink-0">
         <div className="flex items-center gap-4 px-6 py-4">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-lg bg-red-900/40 border border-red-700/60 flex items-center justify-center">
-              <GraduationCap size={20} className="text-red-400" />
+              <GraduationCap size={20} className="text-primary" />
             </div>
             <div>
               <h1 className="text-xl font-bold text-amber-50">Training Plan</h1>

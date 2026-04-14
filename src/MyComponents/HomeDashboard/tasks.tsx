@@ -15,7 +15,7 @@ import {
 } from "@/components/ui/shadcnComponents/tabs";
 
 const priorityColors = {
-  high: "bg-red-500/[0.06] text-red-400/70 border-red-500/10",
+  high: "bg-red-500/[0.06] text-primary/70 border-red-500/10",
   medium: "bg-amber-500/[0.06] text-amber-400/70 border-amber-500/10",
   low: "bg-emerald-500/[0.06] text-emerald-400/70 border-emerald-500/10",
 };
@@ -37,30 +37,30 @@ const TaskItem = ({ task }: { task: any }) => {
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
-      className="flex items-center justify-between py-3 px-3 rounded-sm hover:bg-white/[0.02] transition-all duration-300 group"
+      className="flex items-center justify-between py-3 px-3 rounded-sm hover:bg-muted/30 transition-all duration-300 group"
     >
       <div className="flex items-center gap-3">
-        <div className="p-1.5 rounded-sm bg-white/[0.03] group-hover:bg-red-500/[0.04] transition-colors">
-          <Activity className="h-3.5 w-3.5 text-red-500/50" />
+        <div className="p-1.5 rounded-sm bg-muted/40 group-hover:bg-red-500/[0.04] transition-colors">
+          <Activity className="h-3.5 w-3.5 text-primary/50" />
         </div>
         <div>
           <div className="flex items-center">
-            <span className="text-[13px] font-medium text-white/65 group-hover:text-white/85 transition-colors">
+            <span className="text-[13px] font-medium text-white/65 group-hover:text-foreground/85 transition-colors">
               {task.title}
             </span>
             <TaskPriorityBadge priority={task.priority} />
             {/* Company badge */}
-            <span className="ml-2 text-[9px] text-white/10 uppercase tracking-wider bg-white/[0.02] px-1.5 py-0.5 rounded-sm border border-white/[0.03]">
+            <span className="ml-2 text-[9px] text-muted-foreground/30 uppercase tracking-wider bg-muted/30 px-1.5 py-0.5 rounded-sm border border-white/[0.03]">
               Both
             </span>
           </div>
-          {task.deadline && <span className="text-[11px] text-white/15">{task.deadline}</span>}
+          {task.deadline && <span className="text-[11px] text-muted-foreground/40">{task.deadline}</span>}
         </div>
       </div>
       {task.status === "to-do" && (
         <motion.button
           whileTap={{ scale: 0.95 }}
-          className="text-[11px] text-white/20 hover:text-white/60 bg-white/[0.03] hover:bg-red-500/[0.06] border border-white/[0.04] hover:border-red-500/10 px-3 py-1.5 rounded-sm transition-all duration-300 opacity-0 group-hover:opacity-100"
+          className="text-[11px] text-muted-foreground/60 hover:text-foreground/60 bg-muted/40 hover:bg-primary/[0.06] border border-border hover:border-primary/10 px-3 py-1.5 rounded-sm transition-all duration-300 opacity-0 group-hover:opacity-100"
           onClick={() => EditTask("in-progress", task.todo_id)}
         >
           Start
@@ -69,7 +69,7 @@ const TaskItem = ({ task }: { task: any }) => {
       {task.status === "in-progress" && (
         <motion.button
           whileTap={{ scale: 0.95 }}
-          className="text-[11px] text-white/20 hover:text-emerald-400/80 bg-white/[0.03] hover:bg-emerald-500/[0.06] border border-white/[0.04] hover:border-emerald-500/10 px-3 py-1.5 rounded-sm transition-all duration-300 opacity-0 group-hover:opacity-100"
+          className="text-[11px] text-muted-foreground/60 hover:text-emerald-400/80 bg-muted/40 hover:bg-emerald-500/[0.06] border border-border hover:border-emerald-500/10 px-3 py-1.5 rounded-sm transition-all duration-300 opacity-0 group-hover:opacity-100"
           onClick={() => EditTask("done", task.todo_id)}
         >
           Finish
@@ -116,15 +116,15 @@ export const TasksComponent = () => {
   const totalTasks = todos?.length || 0;
 
   return (
-    <div className="bg-[#0a0a0a] border border-white/[0.04] rounded-sm h-full overflow-hidden">
+    <div className="bg-card border border-border rounded-sm h-full overflow-hidden">
       <div className="px-5 pt-4 pb-3 flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <div className="p-2 rounded-sm bg-white/[0.03] border border-white/[0.04]">
-            <ListTodo className="h-4 w-4 text-red-500/70" />
+          <div className="p-2 rounded-sm bg-muted/40 border border-border">
+            <ListTodo className="h-4 w-4 text-primary/70" />
           </div>
           <div>
-            <span className="text-[11px] text-white/20 uppercase tracking-[0.15em] font-medium">Tasks</span>
-            <p className="text-[11px] text-white/10 mt-0.5">{totalTasks} total</p>
+            <span className="text-[11px] text-muted-foreground/60 uppercase tracking-[0.15em] font-medium">Tasks</span>
+            <p className="text-[11px] text-muted-foreground/30 mt-0.5">{totalTasks} total</p>
           </div>
         </div>
         <div className="flex items-center gap-2">
@@ -132,7 +132,7 @@ export const TasksComponent = () => {
             placeholder="Search..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-[120px] h-7 text-[11px] bg-white/[0.02] border-white/[0.04] text-white/50 placeholder:text-white/10 rounded-sm focus:border-red-500/15"
+            className="w-[120px] h-7 text-[11px] bg-muted/30 border-border text-muted-foreground/80 placeholder:text-muted-foreground/30 rounded-sm focus:border-primary/15"
           />
           <AddTodo Users={AllEmployees || []} homeDash />
         </div>
@@ -140,14 +140,14 @@ export const TasksComponent = () => {
 
       <div className="px-5 pb-5">
         <Tabs defaultValue="to-do" className="mb-3">
-          <TabsList className="bg-white/[0.02] border border-white/[0.04] rounded-sm h-7">
-            <TabsTrigger value="to-do" onClick={() => setSelectedTab("to-do")} className="data-[state=active]:bg-red-500/[0.08] data-[state=active]:text-red-400/80 text-white/20 rounded-sm text-[10px] h-5">
+          <TabsList className="bg-muted/30 border border-border rounded-sm h-7">
+            <TabsTrigger value="to-do" onClick={() => setSelectedTab("to-do")} className="data-[state=active]:bg-primary/[0.08] data-[state=active]:text-primary/80 text-muted-foreground/60 rounded-sm text-[10px] h-5">
               To Do ({todoCount})
             </TabsTrigger>
-            <TabsTrigger value="in-progress" onClick={() => setSelectedTab("in-progress")} className="data-[state=active]:bg-amber-500/[0.08] data-[state=active]:text-amber-400/80 text-white/20 rounded-sm text-[10px] h-5">
+            <TabsTrigger value="in-progress" onClick={() => setSelectedTab("in-progress")} className="data-[state=active]:bg-amber-500/[0.08] data-[state=active]:text-amber-400/80 text-muted-foreground/60 rounded-sm text-[10px] h-5">
               Active ({inProgressCount})
             </TabsTrigger>
-            <TabsTrigger value="done" onClick={() => setSelectedTab("done")} className="data-[state=active]:bg-emerald-500/[0.08] data-[state=active]:text-emerald-400/80 text-white/20 rounded-sm text-[10px] h-5">
+            <TabsTrigger value="done" onClick={() => setSelectedTab("done")} className="data-[state=active]:bg-emerald-500/[0.08] data-[state=active]:text-emerald-400/80 text-muted-foreground/60 rounded-sm text-[10px] h-5">
               Done ({doneCount})
             </TabsTrigger>
           </TabsList>
@@ -156,7 +156,7 @@ export const TasksComponent = () => {
         {filteredTasks.length === 0 ? (
           <div className="text-center py-8">
             <ListTodo className="h-6 w-6 text-white/[0.05] mx-auto mb-2" />
-            <p className="text-[12px] text-white/15">No {selectedTab} tasks</p>
+            <p className="text-[12px] text-muted-foreground/40">No {selectedTab} tasks</p>
           </div>
         ) : (
           <ScrollArea className="h-[340px]">

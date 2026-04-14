@@ -52,7 +52,7 @@ export function TeamSwitcher({
           </DropdownMenuTrigger>
           <DropdownMenuContent
             // this is where I changed the side-drop down menu bg to black
-            className="w-[--radix-dropdown-menu-trigger-width] min-w-56 rounded-lg bg-black text-white"
+            className="w-[--radix-dropdown-menu-trigger-width] min-w-56 rounded-lg bg-background text-white"
             align="start"
             side={isMobile ? "bottom" : "right"}
             sideOffset={4}

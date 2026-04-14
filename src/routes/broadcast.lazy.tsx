@@ -188,7 +188,7 @@ async function BroadcastManagement() {
   });
 
   return (
-    <div className="min-h-screen bg-black">
+    <div className="min-h-screen bg-background">
       <div className="p-6 space-y-6">
         {/* Header */}
         <div className="flex items-center justify-between">
@@ -222,7 +222,7 @@ async function BroadcastManagement() {
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Add Contact Form */}
-          <Card className="bg-black/40 border-red-900/30">
+          <Card className="bg-background/40 border-red-900/30">
             <CardHeader>
               <CardTitle className="text-amber-50">Add New Contact</CardTitle>
               <CardDescription className="text-amber-50/70">
@@ -245,7 +245,7 @@ async function BroadcastManagement() {
                         email: e.target.value,
                       }))
                     }
-                    className="bg-black/40 border-red-900/30 text-amber-50"
+                    className="bg-background/40 border-red-900/30 text-amber-50"
                     required
                   />
                 </div>
@@ -261,7 +261,7 @@ async function BroadcastManagement() {
                         firstName: e.target.value,
                       }))
                     }
-                    className="bg-black/40 border-red-900/30 text-amber-50"
+                    className="bg-background/40 border-red-900/30 text-amber-50"
                     required
                   />
                 </div>
@@ -277,7 +277,7 @@ async function BroadcastManagement() {
                         LastName: e.target.value,
                       }))
                     }
-                    className="bg-black/40 border-red-900/30 text-amber-50"
+                    className="bg-background/40 border-red-900/30 text-amber-50"
                     required
                   />
                 </div>
@@ -295,7 +295,7 @@ async function BroadcastManagement() {
           </Card>
 
           {/* Contact List */}
-          <Card className="bg-black/40 border-red-900/30 lg:col-span-2">
+          <Card className="bg-background/40 border-red-900/30 lg:col-span-2">
             <CardHeader>
               <div className="flex items-center justify-between">
                 <div>
@@ -309,7 +309,7 @@ async function BroadcastManagement() {
                     placeholder="Search contacts..."
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
-                    className="w-[200px] bg-black/40 border-red-900/30 text-amber-50"
+                    className="w-[200px] bg-background/40 border-red-900/30 text-amber-50"
                   />
                   <Button
                     variant="outline"
@@ -329,7 +329,7 @@ async function BroadcastManagement() {
                       initial={{ opacity: 0, y: 20 }}
                       animate={{ opacity: 1, y: 0 }}
                       transition={{ delay: i * 0.1 }}
-                      className="flex items-center justify-between p-3 rounded-lg bg-black/60 border border-red-900/30 hover:border-red-800/50"
+                      className="flex items-center justify-between p-3 rounded-lg bg-background/60 border border-red-900/30 hover:border-red-800/50"
                     >
                       <div className="flex items-center gap-3">
                         <div className="p-2 rounded-lg bg-red-900/20">
@@ -350,7 +350,7 @@ async function BroadcastManagement() {
                           className={
                             contact.status
                               ? "bg-emerald-500/20 text-emerald-400"
-                              : "bg-red-500/20 text-red-400"
+                              : "bg-red-500/20 text-primary"
                           }
                         >
                           {contact.status ? "Active" : "Inactive"}
@@ -367,7 +367,7 @@ async function BroadcastManagement() {
                           <Button
                             variant="ghost"
                             size="sm"
-                            className="text-amber-50/70 hover:text-red-400 hover:bg-red-900/20"
+                            className="text-amber-50/70 hover:text-primary hover:bg-red-900/20"
                             onClick={() => DelContact(contact.email)}
                           >
                             <Trash2 className="h-4 w-4" />
@@ -382,7 +382,7 @@ async function BroadcastManagement() {
           </Card>
 
           {/* Broadcast Stats */}
-          <Card className="bg-black/40 border-red-900/30 lg:col-span-3">
+          <Card className="bg-background/40 border-red-900/30 lg:col-span-3">
             <CardHeader>
               <CardTitle className="text-amber-50">
                 Broadcast Statistics
@@ -390,21 +390,21 @@ async function BroadcastManagement() {
             </CardHeader>
             <CardContent>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div className="p-4 rounded-lg bg-black/60 border border-red-900/30">
+                <div className="p-4 rounded-lg bg-background/60 border border-red-900/30">
                   <div className="flex justify-between items-center">
                     <h3 className="text-sm text-amber-50/70">Total Contacts</h3>
                     <Users className="h-4 w-4 text-red-500" />
                   </div>
                   <p className="text-2xl font-bold text-amber-50 mt-2">1,234</p>
                 </div>
-                <div className="p-4 rounded-lg bg-black/60 border border-red-900/30">
+                <div className="p-4 rounded-lg bg-background/60 border border-red-900/30">
                   <div className="flex justify-between items-center">
                     <h3 className="text-sm text-amber-50/70">Active Status</h3>
                     <CheckCircle className="h-4 w-4 text-emerald-500" />
                   </div>
                   <p className="text-2xl font-bold text-amber-50 mt-2">89%</p>
                 </div>
-                <div className="p-4 rounded-lg bg-black/60 border border-red-900/30">
+                <div className="p-4 rounded-lg bg-background/60 border border-red-900/30">
                   <div className="flex justify-between items-center">
                     <h3 className="text-sm text-amber-50/70">
                       Failed Deliveries

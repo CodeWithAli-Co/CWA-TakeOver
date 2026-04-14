@@ -106,9 +106,9 @@ export const MessageList: React.FC<Props> = ({
       <div className="flex-1 flex items-center justify-center">
         <div className="text-center max-w-xs">
           <div className="text-4xl mb-3">👋</div>
-          <p className="text-[14px] text-white/40 font-medium mb-1">Say hello!</p>
-          <p className="text-[12px] text-white/20">
-            Be the first to start the conversation in <span className="text-red-400">#{group}</span>
+          <p className="text-[14px] text-muted-foreground/70 font-medium mb-1">Say hello!</p>
+          <p className="text-[12px] text-muted-foreground/60">
+            Be the first to start the conversation in <span className="text-primary">#{group}</span>
           </p>
         </div>
       </div>
@@ -127,11 +127,11 @@ export const MessageList: React.FC<Props> = ({
     if (thisDay !== lastDay) {
       rendered.push(
         <div key={`day-${thisDay}-${i}`} className="flex items-center gap-3 px-5 my-4 select-none">
-          <div className="flex-1 h-px bg-white/[0.04]" />
-          <span className="text-[10px] text-white/30 uppercase tracking-[0.15em] font-medium px-2 py-0.5 rounded-sm bg-white/[0.02] border border-white/[0.04]">
+          <div className="flex-1 h-px bg-muted/50" />
+          <span className="text-[10px] text-muted-foreground uppercase tracking-[0.15em] font-medium px-2 py-0.5 rounded-sm bg-muted/30 border border-border">
             {formatDayLabel(msg.created_at)}
           </span>
-          <div className="flex-1 h-px bg-white/[0.04]" />
+          <div className="flex-1 h-px bg-muted/50" />
         </div>
       );
       lastDay = thisDay;

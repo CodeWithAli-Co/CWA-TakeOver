@@ -43,21 +43,21 @@ export function RolePreviewSelector() {
   if (previewRole) {
     return (
       <div className="mx-2 mb-1">
-        <div className="flex items-center gap-2 px-2.5 py-2 bg-red-500/[0.08] border border-red-500/20 rounded-sm">
-          <Eye className="h-3 w-3 text-red-400 shrink-0" />
+        <div className="flex items-center gap-2 px-2.5 py-2 bg-primary/[0.08] border border-primary/20 rounded-sm">
+          <Eye className="h-3 w-3 text-primary shrink-0" />
           {!isCollapsed && (
             <>
               <div className="flex-1 min-w-0">
-                <p className="text-[10px] text-red-400/60 uppercase tracking-wider leading-none">
+                <p className="text-[10px] text-primary/60 uppercase tracking-wider leading-none">
                   Viewing as
                 </p>
-                <p className="text-[12px] text-red-400 font-medium truncate">
+                <p className="text-[12px] text-primary font-medium truncate">
                   {previewRole}
                 </p>
               </div>
               <button
                 onClick={() => setPreviewRole(null)}
-                className="p-1 rounded-sm hover:bg-red-500/10 text-red-400/50 hover:text-red-400 transition-colors shrink-0"
+                className="p-1 rounded-sm hover:bg-red-500/10 text-primary/50 hover:text-primary transition-colors shrink-0"
               >
                 <X className="h-3 w-3" />
               </button>
@@ -66,7 +66,7 @@ export function RolePreviewSelector() {
           {isCollapsed && (
             <button
               onClick={() => setPreviewRole(null)}
-              className="p-0.5 rounded-sm hover:bg-red-500/10 text-red-400/50 hover:text-red-400 transition-colors"
+              className="p-0.5 rounded-sm hover:bg-red-500/10 text-primary/50 hover:text-primary transition-colors"
             >
               <X className="h-3 w-3" />
             </button>
@@ -83,11 +83,11 @@ export function RolePreviewSelector() {
           <button
             className={`flex items-center gap-2 ${
               isCollapsed ? "p-2" : "px-2.5 py-2 w-full"
-            } bg-white/[0.02] hover:bg-white/[0.04] border border-white/[0.04] hover:border-white/[0.07] rounded-sm transition-all duration-200 group`}
+            } bg-muted/30 hover:bg-muted/50 border border-border hover:border-white/[0.07] rounded-sm transition-all duration-200 group`}
           >
-            <Eye className="h-3.5 w-3.5 text-white/20 group-hover:text-white/40 transition-colors shrink-0" />
+            <Eye className="h-3.5 w-3.5 text-muted-foreground/60 group-hover:text-muted-foreground/70 transition-colors shrink-0" />
             {!isCollapsed && (
-              <span className="text-[11px] text-white/20 group-hover:text-white/40 transition-colors">
+              <span className="text-[11px] text-muted-foreground/60 group-hover:text-muted-foreground/70 transition-colors">
                 Preview Role
               </span>
             )}
@@ -96,19 +96,19 @@ export function RolePreviewSelector() {
         <DropdownMenuContent
           side="right"
           align="start"
-          className="bg-[#0a0a0a] border border-white/[0.06] rounded-sm w-48"
+          className="bg-card border border-border rounded-sm w-48"
         >
-          <DropdownMenuLabel className="text-[10px] text-white/20 uppercase tracking-wider font-medium px-2 py-1.5">
+          <DropdownMenuLabel className="text-[10px] text-muted-foreground/60 uppercase tracking-wider font-medium px-2 py-1.5">
             View dashboard as...
           </DropdownMenuLabel>
-          <DropdownMenuSeparator className="bg-white/[0.04]" />
+          <DropdownMenuSeparator className="bg-muted/50" />
           {previewableRoles.map((role) => (
             <DropdownMenuItem
               key={role.key}
               onClick={() => setPreviewRole(role.key)}
-              className="text-[12px] text-white/50 hover:text-white hover:bg-white/[0.04] cursor-pointer rounded-sm mx-1"
+              className="text-[12px] text-muted-foreground/80 hover:text-foreground hover:bg-muted/50 cursor-pointer rounded-sm mx-1"
             >
-              <Eye className="h-3 w-3 mr-2 text-white/15" />
+              <Eye className="h-3 w-3 mr-2 text-muted-foreground/40" />
               {role.label}
             </DropdownMenuItem>
           ))}

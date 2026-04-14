@@ -22,13 +22,13 @@ interface ActivityItem {
 
 const typeConfig = {
   task_done: { icon: CheckCircle2, color: "text-emerald-500/70" },
-  meeting: { icon: Calendar, color: "text-red-400/70" },
+  meeting: { icon: Calendar, color: "text-primary/70" },
   message: { icon: MessageSquare, color: "text-blue-400/70" },
   expense: { icon: DollarSign, color: "text-amber-400/70" },
   revenue: { icon: DollarSign, color: "text-emerald-400/70" },
   member: { icon: UserPlus, color: "text-purple-400/70" },
-  quota: { icon: FileText, color: "text-red-400/70" },
-  general: { icon: AlertCircle, color: "text-white/30" },
+  quota: { icon: FileText, color: "text-primary/70" },
+  general: { icon: AlertCircle, color: "text-muted-foreground" },
 };
 
 const companyBadge = {
@@ -135,33 +135,33 @@ export const ActivityFeed = () => {
                 className="flex items-start gap-3 py-2.5 group"
               >
                 <div className="flex flex-col items-center pt-0.5">
-                  <div className={`p-1.5 rounded-sm bg-white/[0.02] ${config.color}`}>
+                  <div className={`p-1.5 rounded-sm bg-muted/30 ${config.color}`}>
                     <Icon className="h-3 w-3" />
                   </div>
                   {i < filtered.length - 1 && (
-                    <div className="w-px h-full min-h-[16px] bg-white/[0.03] mt-1" />
+                    <div className="w-px h-full min-h-[16px] bg-muted/40 mt-1" />
                   )}
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2">
-                    <p className="text-[13px] text-white/50 leading-snug truncate group-hover:text-white/70 transition-colors flex-1">
+                    <p className="text-[13px] text-muted-foreground/80 leading-snug truncate group-hover:text-foreground/70 transition-colors flex-1">
                       {activity.description}
                     </p>
                     <div className="flex items-center gap-1 shrink-0">
                       <div className={`h-1 w-1 rounded-full ${badge.dot}`} />
-                      <span className="text-[9px] text-white/15 uppercase tracking-wider font-medium">
+                      <span className="text-[9px] text-muted-foreground/40 uppercase tracking-wider font-medium">
                         {badge.label}
                       </span>
                     </div>
                   </div>
-                  <span className="text-[11px] text-white/15 block">{formatTimeAgo(activity.timestamp)}</span>
+                  <span className="text-[11px] text-muted-foreground/40 block">{formatTimeAgo(activity.timestamp)}</span>
                 </div>
               </motion.div>
             );
           })
         ) : (
           <div className="py-6 text-center">
-            <p className="text-[12px] text-white/15">No recent activity</p>
+            <p className="text-[12px] text-muted-foreground/40">No recent activity</p>
           </div>
         )}
       </AnimatePresence>

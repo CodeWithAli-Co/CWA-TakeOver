@@ -112,11 +112,11 @@ export const NotificationSettings: React.FC<Props> = ({ className = "" }) => {
   );
 
   return (
-    <div className={`bg-[#0a0a0a] border border-white/[0.04] rounded-sm overflow-hidden ${className}`}>
-      <div className="px-5 py-4 border-b border-white/[0.04]">
+    <div className={`bg-card border border-border rounded-sm overflow-hidden ${className}`}>
+      <div className="px-5 py-4 border-b border-border">
         <div className="flex items-center gap-2.5">
-          <div className="p-1.5 rounded-sm bg-red-500/[0.08]">
-            <Bell className="h-3.5 w-3.5 text-red-400" />
+          <div className="p-1.5 rounded-sm bg-primary/[0.08]">
+            <Bell className="h-3.5 w-3.5 text-primary" />
           </div>
           <h3 className="text-[13px] font-semibold text-white/85">Notifications</h3>
         </div>
@@ -126,8 +126,8 @@ export const NotificationSettings: React.FC<Props> = ({ className = "" }) => {
         {/* Notifications enabled */}
         <div className="flex items-center justify-between">
           <div className="flex-1 min-w-0">
-            <p className="text-[12px] text-white/70 font-medium">Enable Notifications</p>
-            <p className="text-[11px] text-white/30 mt-0.5">
+            <p className="text-[12px] text-foreground/70 font-medium">Enable Notifications</p>
+            <p className="text-[11px] text-muted-foreground mt-0.5">
               Show OS notifications for new messages
             </p>
           </div>
@@ -137,11 +137,11 @@ export const NotificationSettings: React.FC<Props> = ({ className = "" }) => {
         {/* Sound */}
         <div className="flex items-center justify-between">
           <div className="flex-1 min-w-0">
-            <p className="text-[12px] text-white/70 font-medium flex items-center gap-1.5">
+            <p className="text-[12px] text-foreground/70 font-medium flex items-center gap-1.5">
               {prefs.enableSound ? <Volume2 className="h-3 w-3" /> : <VolumeX className="h-3 w-3" />}
               Notification Sound
             </p>
-            <p className="text-[11px] text-white/30 mt-0.5">
+            <p className="text-[11px] text-muted-foreground mt-0.5">
               Play a sound when notifications appear
             </p>
           </div>
@@ -149,13 +149,13 @@ export const NotificationSettings: React.FC<Props> = ({ className = "" }) => {
         </div>
 
         {/* Autostart */}
-        <div className="flex items-center justify-between pt-3 border-t border-white/[0.04]">
+        <div className="flex items-center justify-between pt-3 border-t border-border">
           <div className="flex-1 min-w-0">
-            <p className="text-[12px] text-white/70 font-medium flex items-center gap-1.5">
+            <p className="text-[12px] text-foreground/70 font-medium flex items-center gap-1.5">
               <Power className="h-3 w-3" />
               Launch on Startup
             </p>
-            <p className="text-[11px] text-white/30 mt-0.5">
+            <p className="text-[11px] text-muted-foreground mt-0.5">
               Start app in background when system boots
             </p>
           </div>
@@ -163,11 +163,11 @@ export const NotificationSettings: React.FC<Props> = ({ className = "" }) => {
         </div>
 
         {/* Info banner */}
-        <div className="flex items-start gap-2 p-3 bg-white/[0.02] border border-white/[0.04] rounded-sm">
-          <Info className="h-3.5 w-3.5 text-red-500/70 mt-0.5 shrink-0" />
+        <div className="flex items-start gap-2 p-3 bg-muted/30 border border-border rounded-sm">
+          <Info className="h-3.5 w-3.5 text-primary/70 mt-0.5 shrink-0" />
           <div>
-            <p className="text-[11px] text-white/50 leading-snug">
-              <strong className="text-white/70">Background mode:</strong>{" "}
+            <p className="text-[11px] text-muted-foreground/80 leading-snug">
+              <strong className="text-foreground/70">Background mode:</strong>{" "}
               When you close the window with the X, the app hides to the system tray
               instead of quitting. Notifications continue to work. Right-click the tray
               icon to fully quit.
@@ -178,7 +178,7 @@ export const NotificationSettings: React.FC<Props> = ({ className = "" }) => {
         {/* Quit fully button */}
         <button
           onClick={handleQuitFully}
-          className="w-full py-2 bg-white/[0.02] hover:bg-red-500/[0.06] border border-white/[0.04] hover:border-red-500/15 text-white/40 hover:text-red-400 text-[11px] font-medium rounded-sm transition-colors"
+          className="w-full py-2 bg-muted/30 hover:bg-primary/[0.06] border border-border hover:border-primary/15 text-muted-foreground/70 hover:text-primary text-[11px] font-medium rounded-sm transition-colors"
         >
           Quit App Fully
         </button>

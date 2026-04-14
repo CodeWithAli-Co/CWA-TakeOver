@@ -177,7 +177,7 @@ const ReportTypeIcon = ({ type }: { type: any }) => {
       return (
         <Badge
           variant="outline"
-          className="bg-red-500/20 text-red-400 border-red-500/30 flex items-center gap-1"
+          className="bg-red-500/20 text-primary border-primary/30 flex items-center gap-1"
         >
           <Shield className="h-3 w-3" />
           Security
@@ -241,7 +241,7 @@ const ReportFormatIcon = ({ format }: { format: any }) => {
       return (
         <Badge
           variant="outline"
-          className="bg-red-500/10 text-red-400 border-red-500/20 flex items-center gap-1"
+          className="bg-red-500/10 text-primary border-primary/20 flex items-center gap-1"
         >
           <FileText className="h-3 w-3" />
           PDF
@@ -295,7 +295,7 @@ const ScheduleBadge = ({ schedule }: { schedule: any }) => {
       return (
         <Badge
           variant="outline"
-          className="bg-gray-500/10 text-white border-red-900/20"
+          className="bg-gray-500/10 text-foreground border-red-900/20"
         >
           Manual
         </Badge>
@@ -304,7 +304,7 @@ const ScheduleBadge = ({ schedule }: { schedule: any }) => {
       return (
         <Badge
           variant="outline"
-          className="bg-blue-500/10 text-white border-red-900/20"
+          className="bg-blue-500/10 text-foreground border-red-900/20"
         >
           Daily
         </Badge>
@@ -313,7 +313,7 @@ const ScheduleBadge = ({ schedule }: { schedule: any }) => {
       return (
         <Badge
           variant="outline"
-          className="bg-green-500/10 text-white border-red-900/20"
+          className="bg-green-500/10 text-foreground border-red-900/20"
         >
           Weekly
         </Badge>
@@ -322,7 +322,7 @@ const ScheduleBadge = ({ schedule }: { schedule: any }) => {
       return (
         <Badge
           variant="outline"
-          className="bg-purple-500/10 text-white border-red-900/20"
+          className="bg-purple-500/10 text-foreground border-red-900/20"
         >
           Monthly
         </Badge>
@@ -389,7 +389,7 @@ const NewReportDialog = ({
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button className="bg-gradient-to-r from-red-950 to-red-900 hover:from-red-900 hover:to-red-800 text-white border border-red-800/30 shadow-lg shadow-red-950/20">
+        <Button className="bg-gradient-to-r from-red-950 to-red-900 hover:from-red-900 hover:to-red-800 text-foreground border border-red-800/30 shadow-lg shadow-red-950/20">
           <Plus className="h-4 w-4 mr-2" />
           New Report
         </Button>
@@ -397,14 +397,14 @@ const NewReportDialog = ({
       <DialogContent className="max-w-lg">
         <DialogHeader>
           <DialogTitle>Create New Report</DialogTitle>
-          <DialogDescription className="text-white/60">
+          <DialogDescription className="text-foreground/60">
             Configure a new report from a template or create a custom report.
           </DialogDescription>
         </DialogHeader>
 
         <div className="py-4 space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="template" className="text-white">
+            <Label htmlFor="template" className="text-foreground">
               Report Template
             </Label>
             <Select
@@ -417,12 +417,12 @@ const NewReportDialog = ({
               >
                 <SelectValue placeholder="Select a report template" />
               </SelectTrigger>
-              <SelectContent className="bg-black/95 border-red-950/30 text-white">
+              <SelectContent className="bg-background/95 border-red-950/30 text-white">
                 {templates.map((template: any) => (
                   <SelectItem
                     key={template.id}
                     value={template.id}
-                    className="text-white hover:bg-red-950/30"
+                    className="text-foreground hover:bg-red-950/30"
                   >
                     <div className="flex items-center gap-2">
                       <span>{template.name}</span>
@@ -435,13 +435,13 @@ const NewReportDialog = ({
           </div>
 
           {selectedTemplateData && (
-            <div className="p-3 bg-zinc-950 high-dpi:bg-zinc-950/20 rounded-xs border border-red-950/30 rounded-md text-sm text-white/70">
+            <div className="p-3 bg-zinc-950 high-dpi:bg-zinc-950/20 rounded-xs border border-red-950/30 rounded-md text-sm text-foreground/70">
               {selectedTemplateData.description}
             </div>
           )}
 
           <div className="space-y-2">
-            <Label htmlFor="report-name" className="text-white">
+            <Label htmlFor="report-name" className="text-foreground">
               Report Name
             </Label>
             <Input
@@ -449,13 +449,13 @@ const NewReportDialog = ({
               value={reportName}
               onChange={(e) => setReportName(e.target.value)}
               placeholder="Enter a descriptive name"
-              className="bg-zinc-950 high-dpi:bg-zinc-950/20 rounded-xs border-red-950/30 text-white placeholder:text-white/40"
+              className="bg-zinc-950 high-dpi:bg-zinc-950/20 rounded-xs border-red-950/30 text-foreground placeholder:text-muted-foreground/70"
             />
           </div>
 
           {selectedTemplateData && (
             <div className="space-y-2">
-              <Label htmlFor="format" className="text-white">
+              <Label htmlFor="format" className="text-foreground">
                 Report Format
               </Label>
               <Select value={reportFormat} onValueChange={setReportFormat}>
@@ -465,12 +465,12 @@ const NewReportDialog = ({
                 >
                   <SelectValue placeholder="Select format" />
                 </SelectTrigger>
-                <SelectContent className="bg-black/95 border-red-950/30 text-white">
+                <SelectContent className="bg-background/95 border-red-950/30 text-white">
                   {selectedTemplateData.availableFormats.map((format: any) => (
                     <SelectItem
                       key={format}
                       value={format}
-                      className="text-white hover:bg-red-950/30"
+                      className="text-foreground hover:bg-red-950/30"
                     >
                       <div className="flex items-center gap-2">
                         {format === "pdf" && <FileText className="h-4 w-4" />}
@@ -493,7 +493,7 @@ const NewReportDialog = ({
           )}
 
           <div className="space-y-2">
-            <Label htmlFor="schedule" className="text-white">
+            <Label htmlFor="schedule" className="text-foreground">
               Schedule
             </Label>
             <Select value={schedule} onValueChange={setSchedule}>
@@ -503,28 +503,28 @@ const NewReportDialog = ({
               >
                 <SelectValue placeholder="Select schedule" />
               </SelectTrigger>
-              <SelectContent className="bg-black/95 border-red-950/30 text-white">
+              <SelectContent className="bg-background/95 border-red-950/30 text-white">
                 <SelectItem
                   value="manual"
-                  className="text-white hover:bg-red-950/30"
+                  className="text-foreground hover:bg-red-950/30"
                 >
                   Manual Generation
                 </SelectItem>
                 <SelectItem
                   value="daily"
-                  className="text-white hover:bg-red-950/30"
+                  className="text-foreground hover:bg-red-950/30"
                 >
                   Daily
                 </SelectItem>
                 <SelectItem
                   value="weekly"
-                  className="text-white hover:bg-red-950/30"
+                  className="text-foreground hover:bg-red-950/30"
                 >
                   Weekly
                 </SelectItem>
                 <SelectItem
                   value="monthly"
-                  className="text-white hover:bg-red-950/30"
+                  className="text-foreground hover:bg-red-950/30"
                 >
                   Monthly
                 </SelectItem>
@@ -533,7 +533,7 @@ const NewReportDialog = ({
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="recipients" className="text-white">
+            <Label htmlFor="recipients" className="text-foreground">
               Email Recipients (comma-separated)
             </Label>
             <Input
@@ -541,7 +541,7 @@ const NewReportDialog = ({
               value={recipients}
               onChange={(e) => setRecipients(e.target.value)}
               placeholder="email1@example.com, email2@example.com"
-              className="bg-zinc-950 high-dpi:bg-zinc-950/20 rounded-xs border-red-950/30 text-white placeholder:text-white/40"
+              className="bg-zinc-950 high-dpi:bg-zinc-950/20 rounded-xs border-red-950/30 text-foreground placeholder:text-muted-foreground/70"
             />
           </div>
 
@@ -550,7 +550,7 @@ const NewReportDialog = ({
               id="notify"
               className="data-[state=checked]:bg-red-900 data-[state=checked]:border-red-900"
             />
-            <Label htmlFor="notify" className="text-white">
+            <Label htmlFor="notify" className="text-foreground">
               Notify me when report is generated
             </Label>
           </div>
@@ -560,14 +560,14 @@ const NewReportDialog = ({
           <Button
             variant="outline"
             onClick={() => setOpen(false)}
-            className="border-red-800/30 text-white hover:bg-red-950/20"
+            className="border-red-800/30 text-foreground hover:bg-red-950/20"
           >
             Cancel
           </Button>
           <Button
             onClick={handleSave}
             disabled={!reportName || !selectedTemplate || !reportFormat}
-            className="bg-gradient-to-r from-red-950 to-red-900 hover:from-red-900 hover:to-red-800 text-white border border-red-800/30 shadow-lg shadow-red-950/20"
+            className="bg-gradient-to-r from-red-950 to-red-900 hover:from-red-900 hover:to-red-800 text-foreground border border-red-800/30 shadow-lg shadow-red-950/20"
           >
             Create Report
           </Button>
@@ -592,10 +592,10 @@ const ReportCard = ({
       <CardHeader className="pb-2">
         <div className="flex justify-between items-start">
           <div>
-            <CardTitle className="text-white text-base font-medium">
+            <CardTitle className="text-foreground text-base font-medium">
               {report.name}
             </CardTitle>
-            <CardDescription className="text-white/60 text-xs">
+            <CardDescription className="text-foreground/60 text-xs">
               Last generated:{" "}
               {report.lastGenerated
                 ? new Date(report.lastGenerated).toLocaleString()
@@ -612,7 +612,7 @@ const ReportCard = ({
         </div>
 
         {report.recipients && report.recipients.length > 0 && (
-          <div className="mt-3 text-xs text-white/60">
+          <div className="mt-3 text-xs text-foreground/60">
             <span className="font-medium">Recipients:</span>{" "}
             {report.recipients.join(", ")}
           </div>
@@ -624,7 +624,7 @@ const ReportCard = ({
           variant="outline"
           onClick={() => onGenerate(report.id)}
           disabled={report.status === "generating"}
-          className="border-red-800/30 text-white hover:bg-red-950/20"
+          className="border-red-800/30 text-foreground hover:bg-red-950/20"
         >
           {report.status === "generating" ? (
             <RefreshCw className="h-4 w-4 animate-spin" />
@@ -637,7 +637,7 @@ const ReportCard = ({
           size="sm"
           variant="outline"
           onClick={() => onDelete(report.id)}
-          className="border-red-800/30 text-white hover:bg-red-700/20"
+          className="border-red-800/30 text-foreground hover:bg-red-700/20"
         >
           <Trash2 className="h-4 w-4" />
         </Button>
@@ -717,12 +717,12 @@ const ReportSettings = () => {
       {/* Filter and Search */}
       <div className="flex flex-col sm:flex-row gap-4">
         <div className="relative flex-grow">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-white/60" />
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-foreground/60" />
           <Input
             placeholder="Search reports..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-10 w-full bg-zinc-950 high-dpi:bg-zinc-950/20 rounded-xs border-red-950/30 text-white placeholder:text-white/40"
+            className="pl-10 w-full bg-zinc-950 high-dpi:bg-zinc-950/20 rounded-xs border-red-950/30 text-foreground placeholder:text-muted-foreground/70"
           />
         </div>
       </div>
@@ -733,45 +733,45 @@ const ReportSettings = () => {
         onValueChange={setActiveTab}
         className="space-y-6"
       >
-        <TabsList className="h-12 justify-start space-x-2 bg-zinc-950 high-dpi:bg-zinc-950/20 rounded-xs p-1 text-white/60 border border-red-950/20">
+        <TabsList className="h-12 justify-start space-x-2 bg-zinc-950 high-dpi:bg-zinc-950/20 rounded-xs p-1 text-foreground/60 border border-red-950/20">
           <TabsTrigger
             value="all"
-            className="data-[state=active]:bg-red-950/20 data-[state=active]:text-white hover:text-white transition-colors duration-200"
+            className="data-[state=active]:bg-red-950/20 data-[state=active]:text-foreground hover:text-foreground transition-colors duration-200"
           >
             <LineChart className="h-4 w-4 mr-2" />
             All Reports ({reports.length})
           </TabsTrigger>
           <TabsTrigger
             value="security"
-            className="data-[state=active]:bg-red-950/20 data-[state=active]:text-white hover:text-white transition-colors duration-200"
+            className="data-[state=active]:bg-red-950/20 data-[state=active]:text-foreground hover:text-foreground transition-colors duration-200"
           >
             <Shield className="h-4 w-4 mr-2" />
             Security ({reportCounts.security})
           </TabsTrigger>
           <TabsTrigger
             value="activity"
-            className="data-[state=active]:bg-red-950/20 data-[state=active]:text-white hover:text-white transition-colors duration-200"
+            className="data-[state=active]:bg-red-950/20 data-[state=active]:text-foreground hover:text-foreground transition-colors duration-200"
           >
             <Activity className="h-4 w-4 mr-2" />
             Activity ({reportCounts.activity})
           </TabsTrigger>
           <TabsTrigger
             value="performance"
-            className="data-[state=active]:bg-red-950/20 data-[state=active]:text-white hover:text-white transition-colors duration-200"
+            className="data-[state=active]:bg-red-950/20 data-[state=active]:text-foreground hover:text-foreground transition-colors duration-200"
           >
             <BarChart className="h-4 w-4 mr-2" />
             Performance ({reportCounts.performance})
           </TabsTrigger>
           <TabsTrigger
             value="audit"
-            className="data-[state=active]:bg-red-950/20 data-[state=active]:text-white hover:text-white transition-colors duration-200"
+            className="data-[state=active]:bg-red-950/20 data-[state=active]:text-foreground hover:text-foreground transition-colors duration-200"
           >
             <Clipboard className="h-4 w-4 mr-2" />
             Audit ({reportCounts.audit})
           </TabsTrigger>
           <TabsTrigger
             value="custom"
-            className="data-[state=active]:bg-red-950/20 data-[state=active]:text-white hover:text-white transition-colors duration-200"
+            className="data-[state=active]:bg-red-950/20 data-[state=active]:text-foreground hover:text-foreground transition-colors duration-200"
           >
             <Settings className="h-4 w-4 mr-2" />
             Custom ({reportCounts.custom})
@@ -789,10 +789,10 @@ const ReportSettings = () => {
             <TabsContent value="all" className="mt-4 space-y-4">
               <Card className="bg-zinc-950 high-dpi:bg-zinc-950/20  rounded-xs  border-red-950/30 backdrop-blur-sm">
                 <CardHeader className="pb-2">
-                  <CardTitle className="text-white text-lg">
+                  <CardTitle className="text-foreground text-lg">
                     All Reports
                   </CardTitle>
-                  <CardDescription className="text-white/60">
+                  <CardDescription className="text-foreground/60">
                     View and manage all your configured reports
                   </CardDescription>
                 </CardHeader>
@@ -811,10 +811,10 @@ const ReportSettings = () => {
                   ) : (
                     <div className="flex flex-col items-center justify-center text-center py-10">
                       <FileText className="h-16 w-16 text-red-900/30 mb-4" />
-                      <h3 className="text-lg font-medium text-white mb-1">
+                      <h3 className="text-lg font-medium text-foreground mb-1">
                         No reports found
                       </h3>
-                      <p className="text-sm text-white/60 mb-6">
+                      <p className="text-sm text-foreground/60 mb-6">
                         {searchQuery
                           ? "Try adjusting your search"
                           : "Create your first report to get started"}
@@ -833,10 +833,10 @@ const ReportSettings = () => {
             <TabsContent value="performance" className="mt-4 space-y-4">
               <Card className="bg-zinc-950 high-dpi:bg-zinc-950/20  rounded-xs  border-red-950/30 backdrop-blur-sm">
                 <CardHeader className="pb-2">
-                  <CardTitle className="text-white text-lg">
+                  <CardTitle className="text-foreground text-lg">
                     Performance Reports
                   </CardTitle>
-                  <CardDescription className="text-white/60">
+                  <CardDescription className="text-foreground/60">
                     Analyze system performance metrics
                   </CardDescription>
                 </CardHeader>
@@ -855,10 +855,10 @@ const ReportSettings = () => {
                   ) : (
                     <div className="flex flex-col items-center justify-center text-center py-10">
                       <BarChart className="h-16 w-16 text-red-900/30 mb-4" />
-                      <h3 className="text-lg font-medium text-white mb-1">
+                      <h3 className="text-lg font-medium text-foreground mb-1">
                         No performance reports found
                       </h3>
-                      <p className="text-sm text-white/60 mb-6">
+                      <p className="text-sm text-foreground/60 mb-6">
                         Create performance reports to monitor system metrics and
                         resources
                       </p>
@@ -876,10 +876,10 @@ const ReportSettings = () => {
             <TabsContent value="audit" className="mt-4 space-y-4">
               <Card className="bg-zinc-950 high-dpi:bg-zinc-950/20  rounded-xs  border-red-950/30 backdrop-blur-sm">
                 <CardHeader className="pb-2">
-                  <CardTitle className="text-white text-lg">
+                  <CardTitle className="text-foreground text-lg">
                     Audit Reports
                   </CardTitle>
-                  <CardDescription className="text-white/60">
+                  <CardDescription className="text-foreground/60">
                     Compliance and governance reporting
                   </CardDescription>
                 </CardHeader>
@@ -898,10 +898,10 @@ const ReportSettings = () => {
                   ) : (
                     <div className="flex flex-col items-center justify-center text-center py-10">
                       <Clipboard className="h-16 w-16 text-red-900/30 mb-4" />
-                      <h3 className="text-lg font-medium text-white mb-1">
+                      <h3 className="text-lg font-medium text-foreground mb-1">
                         No audit reports found
                       </h3>
-                      <p className="text-sm text-white/60 mb-6">
+                      <p className="text-sm text-foreground/60 mb-6">
                         Create audit reports for compliance and governance
                         requirements
                       </p>
@@ -919,10 +919,10 @@ const ReportSettings = () => {
             <TabsContent value="custom" className="mt-4 space-y-4">
               <Card className="bg-zinc-950 high-dpi:bg-zinc-950/20  rounded-xs  border-red-950/30 backdrop-blur-sm">
                 <CardHeader className="pb-2">
-                  <CardTitle className="text-white text-lg">
+                  <CardTitle className="text-foreground text-lg">
                     Custom Reports
                   </CardTitle>
-                  <CardDescription className="text-white/60">
+                  <CardDescription className="text-foreground/60">
                     Customized reports for specific needs
                   </CardDescription>
                 </CardHeader>
@@ -941,10 +941,10 @@ const ReportSettings = () => {
                   ) : (
                     <div className="flex flex-col items-center justify-center text-center py-10">
                       <Settings className="h-16 w-16 text-red-900/30 mb-4" />
-                      <h3 className="text-lg font-medium text-white mb-1">
+                      <h3 className="text-lg font-medium text-foreground mb-1">
                         No custom reports found
                       </h3>
-                      <p className="text-sm text-white/60 mb-6">
+                      <p className="text-sm text-foreground/60 mb-6">
                         Create custom reports tailored to your specific
                         requirements
                       </p>
@@ -964,8 +964,8 @@ const ReportSettings = () => {
       {/* Available Templates */}
       <Card className="bg-zinc-950 high-dpi:bg-zinc-950/20  rounded-xs  border-red-950/30 backdrop-blur-sm">
         <CardHeader>
-          <CardTitle className="text-white">Report Templates</CardTitle>
-          <CardDescription className="text-white/60">
+          <CardTitle className="text-foreground">Report Templates</CardTitle>
+          <CardDescription className="text-foreground/60">
             Available templates for generating new reports
           </CardDescription>
         </CardHeader>
@@ -978,14 +978,14 @@ const ReportSettings = () => {
               >
                 <CardHeader className="pb-2">
                   <div className="flex justify-between items-center">
-                    <CardTitle className="text-white text-base font-medium">
+                    <CardTitle className="text-foreground text-base font-medium">
                       {template.name}
                     </CardTitle>
                     <ReportTypeIcon type={template.type} />
                   </div>
                 </CardHeader>
                 <CardContent className="py-2">
-                  <p className="text-xs text-white/70 mb-3">
+                  <p className="text-xs text-foreground/70 mb-3">
                     {template.description}
                   </p>
                   <div className="flex flex-wrap gap-2">
@@ -998,7 +998,7 @@ const ReportSettings = () => {
                   <Button
                     size="sm"
                     variant="outline"
-                    className="w-full border-red-800/30 text-white hover:bg-red-950/20"
+                    className="w-full border-red-800/30 text-foreground hover:bg-red-950/20"
                     onClick={() => {
                       // Would typically open New Report dialog pre-filled with this template
                     }}
@@ -1016,8 +1016,8 @@ const ReportSettings = () => {
       {/* Global Report Settings */}
       <Card className="bg-zinc-950 high-dpi:bg-zinc-950/20  rounded-xs  border-red-950/30 backdrop-blur-sm">
         <CardHeader>
-          <CardTitle className="text-white">Report Settings</CardTitle>
-          <CardDescription className="text-white/60">
+          <CardTitle className="text-foreground">Report Settings</CardTitle>
+          <CardDescription className="text-foreground/60">
             Configure global reporting preferences
           </CardDescription>
         </CardHeader>
@@ -1027,7 +1027,7 @@ const ReportSettings = () => {
               <Label className="text-base text-white">
                 Email Notifications
               </Label>
-              <p className="text-sm text-white/60">
+              <p className="text-sm text-foreground/60">
                 Receive email notifications when reports are generated
               </p>
             </div>
@@ -1041,7 +1041,7 @@ const ReportSettings = () => {
               <Label className="text-base text-white">
                 Default Report Format
               </Label>
-              <p className="text-sm text-white/60">
+              <p className="text-sm text-foreground/60">
                 Set the default format for new reports
               </p>
             </div>
@@ -1049,28 +1049,28 @@ const ReportSettings = () => {
               <SelectTrigger className="w-[180px] bg-zinc-950 high-dpi:bg-zinc-950/20 rounded-xs border-red-950/30 text-white">
                 <SelectValue />
               </SelectTrigger>
-              <SelectContent className="bg-black/95 border-red-950/30 text-white">
+              <SelectContent className="bg-background/95 border-red-950/30 text-white">
                 <SelectItem
                   value="pdf"
-                  className="text-white hover:bg-red-950/30"
+                  className="text-foreground hover:bg-red-950/30"
                 >
                   PDF Document
                 </SelectItem>
                 <SelectItem
                   value="csv"
-                  className="text-white hover:bg-red-950/30"
+                  className="text-foreground hover:bg-red-950/30"
                 >
                   CSV Spreadsheet
                 </SelectItem>
                 <SelectItem
                   value="excel"
-                  className="text-white hover:bg-red-950/30"
+                  className="text-foreground hover:bg-red-950/30"
                 >
                   Excel Workbook
                 </SelectItem>
                 <SelectItem
                   value="json"
-                  className="text-white hover:bg-red-950/30"
+                  className="text-foreground hover:bg-red-950/30"
                 >
                   JSON Data
                 </SelectItem>
@@ -1085,7 +1085,7 @@ const ReportSettings = () => {
               <Label className="text-base text-white">
                 Report Retention Period
               </Label>
-              <p className="text-sm text-white/60">
+              <p className="text-sm text-foreground/60">
                 How long to keep generated reports in the system
               </p>
             </div>
@@ -1093,40 +1093,40 @@ const ReportSettings = () => {
               <SelectTrigger className="w-[180px] bg-zinc-950 high-dpi:bg-zinc-950/20 rounded-xs border-red-950/30 text-white">
                 <SelectValue />
               </SelectTrigger>
-              <SelectContent className="bg-black/95 border-red-950/30 text-white">
+              <SelectContent className="bg-background/95 border-red-950/30 text-white">
                 <SelectItem
                   value="30"
-                  className="text-white hover:bg-red-950/30"
+                  className="text-foreground hover:bg-red-950/30"
                 >
                   30 Days
                 </SelectItem>
                 <SelectItem
                   value="60"
-                  className="text-white hover:bg-red-950/30"
+                  className="text-foreground hover:bg-red-950/30"
                 >
                   60 Days
                 </SelectItem>
                 <SelectItem
                   value="90"
-                  className="text-white hover:bg-red-950/30"
+                  className="text-foreground hover:bg-red-950/30"
                 >
                   90 Days
                 </SelectItem>
                 <SelectItem
                   value="180"
-                  className="text-white hover:bg-red-950/30"
+                  className="text-foreground hover:bg-red-950/30"
                 >
                   180 Days
                 </SelectItem>
                 <SelectItem
                   value="365"
-                  className="text-white hover:bg-red-950/30"
+                  className="text-foreground hover:bg-red-950/30"
                 >
                   1 Year
                 </SelectItem>
                 <SelectItem
                   value="forever"
-                  className="text-white hover:bg-red-950/30"
+                  className="text-foreground hover:bg-red-950/30"
                 >
                   Forever
                 </SelectItem>
@@ -1141,7 +1141,7 @@ const ReportSettings = () => {
               <Label className="text-base text-white">
                 Automatic Report Generation
               </Label>
-              <p className="text-sm text-white/60">
+              <p className="text-sm text-foreground/60">
                 Allow scheduled reports to generate automatically
               </p>
             </div>
@@ -1152,7 +1152,7 @@ const ReportSettings = () => {
           </div>
         </CardContent>
         <CardFooter className="flex justify-end">
-          <Button className="bg-gradient-to-r from-red-950 to-red-900 hover:from-red-900 hover:to-red-800 text-white border border-red-800/30 shadow-lg shadow-red-950/20">
+          <Button className="bg-gradient-to-r from-red-950 to-red-900 hover:from-red-900 hover:to-red-800 text-foreground border border-red-800/30 shadow-lg shadow-red-950/20">
             Save Settings
           </Button>
         </CardFooter>

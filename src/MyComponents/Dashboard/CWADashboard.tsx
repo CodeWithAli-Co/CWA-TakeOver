@@ -65,11 +65,11 @@ function StatCard({
               {positive ? (
                 <ArrowUpRight className="h-3 w-3 text-emerald-400" />
               ) : (
-                <ArrowDownRight className="h-3 w-3 text-red-400" />
+                <ArrowDownRight className="h-3 w-3 text-primary" />
               )}
               <span
                 className={`text-[10px] font-medium ${
-                  positive ? "text-emerald-400" : "text-red-400"
+                  positive ? "text-emerald-400" : "text-primary"
                 }`}
               >
                 {change}

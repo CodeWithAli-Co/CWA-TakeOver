@@ -308,8 +308,8 @@ export const InvoiceRenderer: React.FC<{
   if (!invoice) {
     return (
       <div className="flex flex-col items-center justify-center h-full">
-        <h3 className="text-lg text-white/40 italic">No Invoice to Preview</h3>
-        <p className="text-sm text-white/30 mt-2">Please create an invoice first</p>
+        <h3 className="text-lg text-muted-foreground/70 italic">No Invoice to Preview</h3>
+        <p className="text-sm text-muted-foreground mt-2">Please create an invoice first</p>
       </div>
     );
   }
@@ -318,7 +318,7 @@ export const InvoiceRenderer: React.FC<{
     <div className="relative h-screen">
       <div
         onClick={() => downloadInvoice(invoice, invoiceName || "invoice.pdf")}
-        className="absolute right-5 top-5 flex justify-center items-center p-2 rounded-sm bg-red-500 text-white shadow-md hover:bg-red-600 transition-colors cursor-pointer z-10"
+        className="absolute right-5 top-5 flex justify-center items-center p-2 rounded-sm bg-red-500 text-foreground shadow-md hover:bg-primary transition-colors cursor-pointer z-10"
         title="Download Invoice"
       >
         <Download size={20} />

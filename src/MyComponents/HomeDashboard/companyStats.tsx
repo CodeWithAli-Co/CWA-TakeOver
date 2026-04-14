@@ -29,13 +29,13 @@ const StatCell = ({
   negative?: boolean;
   borderRight?: boolean;
 }) => (
-  <div className={`flex-1 px-5 py-4 ${borderRight ? "border-r border-white/[0.04]" : ""} group/cell`}>
+  <div className={`flex-1 px-5 py-4 ${borderRight ? "border-r border-border" : ""} group/cell`}>
     <div className="flex items-center gap-1.5 mb-2">
-      <Icon className={`h-3 w-3 ${negative ? "text-red-500/50" : highlight ? "text-emerald-500/50" : "text-white/15"}`} />
-      <span className="text-[10px] text-white/20 uppercase tracking-[0.12em]">{label}</span>
+      <Icon className={`h-3 w-3 ${negative ? "text-primary/50" : highlight ? "text-emerald-500/50" : "text-muted-foreground/40"}`} />
+      <span className="text-[10px] text-muted-foreground/60 uppercase tracking-[0.12em]">{label}</span>
     </div>
     <div className={`text-xl font-bold tracking-tight ${
-      negative ? "text-red-400/90" : highlight ? "text-white" : "text-white/90"
+      negative ? "text-primary/90" : highlight ? "text-foreground" : "text-foreground"
     }`}>
       {value}
     </div>
@@ -101,11 +101,11 @@ const CompanyStats = () => {
     <motion.div
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
-      className="bg-[#0a0a0a] border border-white/[0.04] rounded-sm overflow-hidden"
+      className="bg-card border border-border rounded-sm overflow-hidden"
     >
       {/* Primary financial stats — single connected row */}
       <UserView userRole={[Role.CEO, Role.COO]}>
-        <div className="flex border-b border-white/[0.04]">
+        <div className="flex border-b border-border">
           <StatCell icon={CircleDollarSign} label="Bank" value={`$${initialCapital}`} highlight />
           <StatCell icon={DollarSign} label="Expenses" value={`$${expenses}`} negative />
           <StatCell icon={BarChart3} label="Subscriptions" value={`$${subscription}`} />

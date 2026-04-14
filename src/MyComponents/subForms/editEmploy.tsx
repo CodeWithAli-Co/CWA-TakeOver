@@ -44,7 +44,7 @@ export const EditEmployee = (props: Props) => {
   return (
     <AnimatePresence mode="wait">
       <motion.div
-        className="fixed inset-0 flex items-center justify-center z-50 bg-black/70 backdrop-blur-[2px]"
+        className="fixed inset-0 flex items-center justify-center z-50 bg-background/70 backdrop-blur-[2px]"
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
@@ -58,13 +58,13 @@ export const EditEmployee = (props: Props) => {
           className="w-full max-w-md mx-4"
           onClick={(e) => e.stopPropagation()}
         >
-          <div className="bg-[#0a0a0a] border border-white/[0.08] rounded-sm shadow-2xl shadow-black/50">
+          <div className="bg-card border border-border rounded-sm shadow-2xl shadow-black/50">
             {/* Header */}
-            <div className="flex items-center justify-between px-6 py-4 border-b border-white/[0.04]">
+            <div className="flex items-center justify-between px-6 py-4 border-b border-border">
               <h2 className="text-[15px] font-semibold text-white/85">Edit User</h2>
               <button
                 onClick={handleClose}
-                className="p-1.5 rounded-sm text-white/20 hover:text-white/50 hover:bg-white/[0.04] transition-colors"
+                className="p-1.5 rounded-sm text-muted-foreground/60 hover:text-muted-foreground/80 hover:bg-muted/50 transition-colors"
               >
                 <X className="h-4 w-4" />
               </button>
@@ -85,7 +85,7 @@ export const EditEmployee = (props: Props) => {
                   children={(field) => (
                     <div className="space-y-2">
                       <label
-                        className="text-[11px] text-white/25 uppercase tracking-[0.12em] font-medium"
+                        className="text-[11px] text-muted-foreground/50 uppercase tracking-[0.12em] font-medium"
                         htmlFor={field.name}
                       >
                         Username
@@ -95,8 +95,8 @@ export const EditEmployee = (props: Props) => {
                         type="text"
                         autoComplete="off"
                         placeholder="Enter username"
-                        className="w-full px-3.5 py-2.5 bg-white/[0.02] border border-white/[0.06] text-white/80 rounded-sm text-[13px]
-                           placeholder:text-white/15 focus:border-red-500/20 focus:outline-none transition-colors"
+                        className="w-full px-3.5 py-2.5 bg-muted/30 border border-border text-foreground/80 rounded-sm text-[13px]
+                           placeholder:text-muted-foreground/40 focus:border-primary/20 focus:outline-none transition-colors"
                         value={field.state.value}
                         onChange={(e) => field.handleChange(e.target.value)}
                       />
@@ -109,7 +109,7 @@ export const EditEmployee = (props: Props) => {
                   children={(field) => (
                     <div className="space-y-2">
                       <label
-                        className="text-[11px] text-white/25 uppercase tracking-[0.12em] font-medium"
+                        className="text-[11px] text-muted-foreground/50 uppercase tracking-[0.12em] font-medium"
                         htmlFor={field.name}
                       >
                         Email
@@ -119,8 +119,8 @@ export const EditEmployee = (props: Props) => {
                         type="email"
                         autoComplete="off"
                         placeholder="Enter email"
-                        className="w-full px-3.5 py-2.5 bg-white/[0.02] border border-white/[0.06] text-white/80 rounded-sm text-[13px]
-                           placeholder:text-white/15 focus:border-red-500/20 focus:outline-none transition-colors"
+                        className="w-full px-3.5 py-2.5 bg-muted/30 border border-border text-foreground/80 rounded-sm text-[13px]
+                           placeholder:text-muted-foreground/40 focus:border-primary/20 focus:outline-none transition-colors"
                         value={field.state.value}
                         onChange={(e) => field.handleChange(e.target.value)}
                       />
@@ -134,7 +134,7 @@ export const EditEmployee = (props: Props) => {
                     <button
                       type="submit"
                       disabled={!canSubmit}
-                      className="w-full py-2.5 bg-red-600 hover:bg-red-500 text-white text-[13px] font-medium rounded-sm
+                      className="w-full py-2.5 bg-primary hover:bg-primary/80 text-foreground text-[13px] font-medium rounded-sm
                         disabled:opacity-30 disabled:cursor-not-allowed flex items-center justify-center gap-2 transition-colors"
                     >
                       <UserPlus className="h-3.5 w-3.5" />

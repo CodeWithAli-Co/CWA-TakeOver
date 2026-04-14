@@ -48,7 +48,7 @@ export const WeekGlance: React.FC<WeekGlanceProps> = ({ days, selectedDay }) => 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
         {upcomingEvents.slice(0, isAdminMode ? upcomingEvents.length : 6).map((item, index) => (
           <div key={index} className="flex flex-col">
-            <div className="text-xs text-red-400 mb-1 flex justify-between">
+            <div className="text-xs text-primary mb-1 flex justify-between">
               <span>{item.day.dayName}, {item.day.date}</span>
               {isAdminMode && item.employeeName && (
                 <span className="font-medium">{item.employeeName}</span>

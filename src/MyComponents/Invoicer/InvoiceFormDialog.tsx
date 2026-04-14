@@ -135,10 +135,10 @@ export const InvoiceFormDialog: React.FC<Props> = ({ open, onOpenChange, onCreat
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-2xl p-0 gap-0">
-        <DialogHeader className="px-6 py-4 border-b border-white/[0.04]">
-          <DialogTitle className="flex items-center gap-2 text-[15px] font-semibold text-white/85">
-            <div className="p-1.5 rounded-sm bg-red-500/[0.08]">
-              <FileText className="h-3.5 w-3.5 text-red-400" />
+        <DialogHeader className="px-6 py-4 border-b border-border">
+          <DialogTitle className="flex items-center gap-2 text-[15px] font-semibold text-foreground/85">
+            <div className="p-1.5 rounded-sm bg-primary/[0.08]">
+              <FileText className="h-3.5 w-3.5 text-primary" />
             </div>
             New Invoice
           </DialogTitle>
@@ -148,7 +148,7 @@ export const InvoiceFormDialog: React.FC<Props> = ({ open, onOpenChange, onCreat
           {/* Title + sender row */}
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-1.5">
-              <label className="text-[10px] text-white/25 uppercase tracking-[0.12em] font-medium">
+              <label className="text-[10px] text-muted-foreground/50 uppercase tracking-[0.12em] font-medium">
                 Invoice Title
               </label>
               <input
@@ -157,17 +157,17 @@ export const InvoiceFormDialog: React.FC<Props> = ({ open, onOpenChange, onCreat
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
                 placeholder="Web design — March 2025"
-                className="w-full px-3 py-2 bg-white/[0.02] border border-white/[0.06] rounded-sm text-[13px] text-white/80 placeholder:text-white/15 focus:outline-none focus:border-red-500/20"
+                className="w-full px-3 py-2 bg-muted/30 border border-border rounded-sm text-[13px] text-foreground/80 placeholder:text-muted-foreground/40 focus:outline-none focus:border-primary/20"
               />
             </div>
             <div className="space-y-1.5">
-              <label className="text-[10px] text-white/25 uppercase tracking-[0.12em] font-medium">
+              <label className="text-[10px] text-muted-foreground/50 uppercase tracking-[0.12em] font-medium">
                 Sender
               </label>
               <select
                 value={sender}
                 onChange={(e) => setSender(e.target.value)}
-                className="w-full px-3 py-2 bg-white/[0.02] border border-white/[0.06] rounded-sm text-[13px] text-white/80 focus:outline-none focus:border-red-500/20 cursor-pointer"
+                className="w-full px-3 py-2 bg-muted/30 border border-border rounded-sm text-[13px] text-foreground/80 focus:outline-none focus:border-primary/20 cursor-pointer"
               >
                 <option value="CodeWithAli">CodeWithAli</option>
                 <option value="Simplicity">Simplicity</option>
@@ -179,37 +179,37 @@ export const InvoiceFormDialog: React.FC<Props> = ({ open, onOpenChange, onCreat
 
           {/* Client info section */}
           <div>
-            <p className="text-[10px] text-white/15 uppercase tracking-[0.15em] font-medium mb-3">
+            <p className="text-[10px] text-muted-foreground/40 uppercase tracking-[0.15em] font-medium mb-3">
               Client Information
             </p>
             <div className="grid grid-cols-3 gap-3">
               <div className="space-y-1.5">
-                <label className="text-[10px] text-white/20">Client Name</label>
+                <label className="text-[10px] text-muted-foreground/60">Client Name</label>
                 <input
                   type="text"
                   required
                   value={clientName}
                   onChange={(e) => setClientName(e.target.value)}
-                  className="w-full px-3 py-2 bg-white/[0.02] border border-white/[0.06] rounded-sm text-[12px] text-white/70 focus:outline-none focus:border-red-500/20"
+                  className="w-full px-3 py-2 bg-muted/30 border border-border rounded-sm text-[12px] text-foreground/70 focus:outline-none focus:border-primary/20"
                 />
               </div>
               <div className="space-y-1.5">
-                <label className="text-[10px] text-white/20">Email</label>
+                <label className="text-[10px] text-muted-foreground/60">Email</label>
                 <input
                   type="email"
                   required
                   value={clientEmail}
                   onChange={(e) => setClientEmail(e.target.value)}
-                  className="w-full px-3 py-2 bg-white/[0.02] border border-white/[0.06] rounded-sm text-[12px] text-white/70 focus:outline-none focus:border-red-500/20"
+                  className="w-full px-3 py-2 bg-muted/30 border border-border rounded-sm text-[12px] text-foreground/70 focus:outline-none focus:border-primary/20"
                 />
               </div>
               <div className="space-y-1.5">
-                <label className="text-[10px] text-white/20">Location (optional)</label>
+                <label className="text-[10px] text-muted-foreground/60">Location (optional)</label>
                 <input
                   type="text"
                   value={clientLocation}
                   onChange={(e) => setClientLocation(e.target.value)}
-                  className="w-full px-3 py-2 bg-white/[0.02] border border-white/[0.06] rounded-sm text-[12px] text-white/70 focus:outline-none focus:border-red-500/20"
+                  className="w-full px-3 py-2 bg-muted/30 border border-border rounded-sm text-[12px] text-foreground/70 focus:outline-none focus:border-primary/20"
                 />
               </div>
             </div>
@@ -218,20 +218,20 @@ export const InvoiceFormDialog: React.FC<Props> = ({ open, onOpenChange, onCreat
           {/* Line items section */}
           <div>
             <div className="flex items-center justify-between mb-3">
-              <p className="text-[10px] text-white/15 uppercase tracking-[0.15em] font-medium">
+              <p className="text-[10px] text-muted-foreground/40 uppercase tracking-[0.15em] font-medium">
                 Line Items
               </p>
               <button
                 type="button"
                 onClick={addLine}
-                className="flex items-center gap-1 px-2 py-1 bg-red-500/[0.08] hover:bg-red-500/[0.12] border border-red-500/15 text-red-400 text-[10px] rounded-sm transition-colors"
+                className="flex items-center gap-1 px-2 py-1 bg-primary/[0.08] hover:bg-primary/80/[0.12] border border-primary/15 text-primary text-[10px] rounded-sm transition-colors"
               >
                 <Plus className="h-3 w-3" /> Add Line
               </button>
             </div>
 
             {/* Header row */}
-            <div className="grid grid-cols-[2.5fr_0.6fr_0.8fr_0.8fr_24px] gap-2 px-2 pb-1 text-[10px] text-white/15 uppercase tracking-wider">
+            <div className="grid grid-cols-[2.5fr_0.6fr_0.8fr_0.8fr_24px] gap-2 px-2 pb-1 text-[10px] text-muted-foreground/40 uppercase tracking-wider">
               <span>Description</span>
               <span className="text-right">Qty</span>
               <span className="text-right">Price</span>
@@ -254,34 +254,34 @@ export const InvoiceFormDialog: React.FC<Props> = ({ open, onOpenChange, onCreat
                       value={item.name}
                       onChange={(e) => updateLine(i, { name: e.target.value })}
                       placeholder="Item description"
-                      className="px-2.5 py-1.5 bg-white/[0.02] border border-white/[0.06] rounded-sm text-[12px] text-white/70 placeholder:text-white/15 focus:outline-none focus:border-red-500/20"
+                      className="px-2.5 py-1.5 bg-muted/30 border border-border rounded-sm text-[12px] text-foreground/70 placeholder:text-muted-foreground/40 focus:outline-none focus:border-primary/20"
                     />
                     <input
                       type="number"
                       value={item.qty}
                       onChange={(e) => updateLine(i, { qty: Number(e.target.value) })}
                       min={0}
-                      className="px-2 py-1.5 bg-white/[0.02] border border-white/[0.06] rounded-sm text-[12px] text-white/70 text-right focus:outline-none focus:border-red-500/20"
+                      className="px-2 py-1.5 bg-muted/30 border border-border rounded-sm text-[12px] text-foreground/70 text-right focus:outline-none focus:border-primary/20"
                     />
                     <div className="relative">
-                      <span className="absolute left-2 top-1/2 -translate-y-1/2 text-[11px] text-red-500/40">$</span>
+                      <span className="absolute left-2 top-1/2 -translate-y-1/2 text-[11px] text-primary/40">$</span>
                       <input
                         type="number"
                         value={item.price}
                         onChange={(e) => updateLine(i, { price: Number(e.target.value) })}
                         min={0}
                         step="0.01"
-                        className="w-full pl-5 pr-2 py-1.5 bg-white/[0.02] border border-white/[0.06] rounded-sm text-[12px] text-white/70 text-right focus:outline-none focus:border-red-500/20"
+                        className="w-full pl-5 pr-2 py-1.5 bg-muted/30 border border-border rounded-sm text-[12px] text-foreground/70 text-right focus:outline-none focus:border-primary/20"
                       />
                     </div>
-                    <div className="px-2 py-1.5 text-right text-[12px] text-red-400 font-medium">
+                    <div className="px-2 py-1.5 text-right text-[12px] text-primary font-medium">
                       ${item.total.toFixed(2)}
                     </div>
                     <button
                       type="button"
                       onClick={() => removeLine(i)}
                       disabled={lineItems.length === 1}
-                      className="p-1 rounded-sm text-white/15 hover:text-red-400 hover:bg-red-500/[0.06] disabled:opacity-20 disabled:cursor-not-allowed transition-colors"
+                      className="p-1 rounded-sm text-muted-foreground/40 hover:text-primary hover:bg-primary/[0.06] disabled:opacity-20 disabled:cursor-not-allowed transition-colors"
                     >
                       <Trash2 className="h-3 w-3" />
                     </button>
@@ -294,72 +294,72 @@ export const InvoiceFormDialog: React.FC<Props> = ({ open, onOpenChange, onCreat
           {/* Adjustments + notes */}
           <div className="grid grid-cols-3 gap-4">
             <div className="space-y-1.5">
-              <label className="text-[10px] text-white/25 uppercase tracking-[0.12em] font-medium">
+              <label className="text-[10px] text-muted-foreground/50 uppercase tracking-[0.12em] font-medium">
                 Adjustment
               </label>
               <div className="relative">
-                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[12px] text-red-500/40">$</span>
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[12px] text-primary/40">$</span>
                 <input
                   type="number"
                   step="0.01"
                   value={adjustment}
                   onChange={(e) => setAdjustment(e.target.value)}
-                  className="w-full pl-7 pr-3 py-2 bg-white/[0.02] border border-white/[0.06] rounded-sm text-[13px] text-white/70 focus:outline-none focus:border-red-500/20"
+                  className="w-full pl-7 pr-3 py-2 bg-muted/30 border border-border rounded-sm text-[13px] text-foreground/70 focus:outline-none focus:border-primary/20"
                 />
               </div>
             </div>
             <div className="space-y-1.5">
-              <label className="text-[10px] text-white/25 uppercase tracking-[0.12em] font-medium">
+              <label className="text-[10px] text-muted-foreground/50 uppercase tracking-[0.12em] font-medium">
                 Discount
               </label>
               <div className="relative">
-                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[12px] text-red-500/40">$</span>
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[12px] text-primary/40">$</span>
                 <input
                   type="number"
                   step="0.01"
                   value={discount}
                   onChange={(e) => setDiscount(e.target.value)}
-                  className="w-full pl-7 pr-3 py-2 bg-white/[0.02] border border-white/[0.06] rounded-sm text-[13px] text-white/70 focus:outline-none focus:border-red-500/20"
+                  className="w-full pl-7 pr-3 py-2 bg-muted/30 border border-border rounded-sm text-[13px] text-foreground/70 focus:outline-none focus:border-primary/20"
                 />
               </div>
             </div>
             <div className="space-y-1.5">
-              <label className="text-[10px] text-white/25 uppercase tracking-[0.12em] font-medium">
+              <label className="text-[10px] text-muted-foreground/50 uppercase tracking-[0.12em] font-medium">
                 Bank Account
               </label>
               <input
                 type="text"
                 value={bankAcc}
                 onChange={(e) => setBankAcc(e.target.value)}
-                className="w-full px-3 py-2 bg-white/[0.02] border border-white/[0.06] rounded-sm text-[13px] text-white/70 focus:outline-none focus:border-red-500/20"
+                className="w-full px-3 py-2 bg-muted/30 border border-border rounded-sm text-[13px] text-foreground/70 focus:outline-none focus:border-primary/20"
               />
             </div>
           </div>
 
           <div className="space-y-1.5">
-            <label className="text-[10px] text-white/25 uppercase tracking-[0.12em] font-medium">
+            <label className="text-[10px] text-muted-foreground/50 uppercase tracking-[0.12em] font-medium">
               Note
             </label>
             <textarea
               value={note}
               onChange={(e) => setNote(e.target.value)}
               rows={3}
-              className="w-full px-3 py-2 bg-white/[0.02] border border-white/[0.06] rounded-sm text-[13px] text-white/70 placeholder:text-white/15 focus:outline-none focus:border-red-500/20 resize-none"
+              className="w-full px-3 py-2 bg-muted/30 border border-border rounded-sm text-[13px] text-foreground/70 placeholder:text-muted-foreground/40 focus:outline-none focus:border-primary/20 resize-none"
               placeholder="Optional payment terms, thank you message, etc."
             />
           </div>
 
           {/* Footer with totals + submit */}
-          <div className="flex items-center justify-between pt-4 border-t border-white/[0.04]">
+          <div className="flex items-center justify-between pt-4 border-t border-border">
             <div className="space-y-0.5">
-              <div className="flex items-center gap-4 text-[11px] text-white/30">
-                <span>Subtotal: <span className="text-white/60">${subtotal.toFixed(2)}</span></span>
-                <span>Adjust: <span className="text-white/60">${Number(adjustment).toFixed(2)}</span></span>
-                <span>Discount: <span className="text-white/60">${Number(discount).toFixed(2)}</span></span>
+              <div className="flex items-center gap-4 text-[11px] text-muted-foreground">
+                <span>Subtotal: <span className="text-foreground/60">${subtotal.toFixed(2)}</span></span>
+                <span>Adjust: <span className="text-foreground/60">${Number(adjustment).toFixed(2)}</span></span>
+                <span>Discount: <span className="text-foreground/60">${Number(discount).toFixed(2)}</span></span>
               </div>
               <div className="flex items-baseline gap-2">
-                <span className="text-[10px] text-white/20 uppercase tracking-wider">Total Due</span>
-                <span className="text-2xl font-bold text-red-400 tracking-tight">
+                <span className="text-[10px] text-muted-foreground/60 uppercase tracking-wider">Total Due</span>
+                <span className="text-2xl font-bold text-primary tracking-tight">
                   ${outcome.toFixed(2)}
                 </span>
               </div>
@@ -368,14 +368,14 @@ export const InvoiceFormDialog: React.FC<Props> = ({ open, onOpenChange, onCreat
               <button
                 type="button"
                 onClick={() => onOpenChange(false)}
-                className="px-4 py-2 bg-white/[0.02] hover:bg-white/[0.04] border border-white/[0.04] text-white/40 hover:text-white/70 text-[12px] rounded-sm transition-colors"
+                className="px-4 py-2 bg-muted/30 hover:bg-muted/50 border border-border text-muted-foreground/70 hover:text-foreground/70 text-[12px] rounded-sm transition-colors"
               >
                 Cancel
               </button>
               <button
                 type="submit"
                 disabled={submitting || !title || lineItems.every((l) => !l.name)}
-                className="px-5 py-2 bg-red-600 hover:bg-red-500 text-white text-[12px] font-medium rounded-sm disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                className="px-5 py-2 bg-primary hover:bg-primary/80 text-foreground text-[12px] font-medium rounded-sm disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
               >
                 {submitting ? "Creating..." : "Create Invoice"}
               </button>

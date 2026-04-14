@@ -95,24 +95,24 @@ const CredentialCard: React.FC<{
       initial={{ opacity: 0, y: 8 }}
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, y: -8 }}
-      className={`bg-[#0a0a0a] border border-white/[0.04] hover:border-red-500/10 rounded-sm overflow-hidden transition-all duration-300 ${
-        expanded ? "ring-1 ring-red-500/10" : ""
+      className={`bg-card border border-border hover:border-primary/10 rounded-sm overflow-hidden transition-all duration-300 ${
+        expanded ? "ring-1 ring-primary/10" : ""
       }`}
     >
       {/* Header */}
       <div className="px-4 pt-4 pb-3 flex items-start justify-between gap-3">
         <div className="flex items-center gap-3 min-w-0 flex-1">
           <div
-            className={`h-10 w-10 rounded-sm overflow-hidden flex items-center justify-center text-white bg-gradient-to-br ${style.gradient} shrink-0`}
+            className={`h-10 w-10 rounded-sm overflow-hidden flex items-center justify-center text-foreground bg-gradient-to-br ${style.gradient} shrink-0`}
             style={{ boxShadow: `0 0 12px ${style.shadowColor}` }}
           >
             {getPlatformIcon(cred.platform_name)}
           </div>
           <div className="min-w-0">
-            <h3 className="capitalize text-[14px] font-semibold text-white/90 truncate">
+            <h3 className="capitalize text-[14px] font-semibold text-foreground truncate">
               {cred.platform_name}
             </h3>
-            <p className="text-[11px] text-white/30 truncate">
+            <p className="text-[11px] text-muted-foreground truncate">
               {cred.acc_username || cred.acc_email || "—"}
             </p>
           </div>
@@ -129,12 +129,12 @@ const CredentialCard: React.FC<{
         {cred.acc_username && (
           <div className="flex items-center justify-between gap-2 text-[12px] group/row">
             <div className="flex items-center gap-2 min-w-0">
-              <span className="text-[10px] text-white/20 uppercase tracking-wider w-16 shrink-0">User</span>
-              <span className="text-white/70 truncate select-text">{cred.acc_username}</span>
+              <span className="text-[10px] text-muted-foreground/60 uppercase tracking-wider w-16 shrink-0">User</span>
+              <span className="text-foreground/70 truncate select-text">{cred.acc_username}</span>
             </div>
             <button
               onClick={() => copy(cred.acc_username, "user")}
-              className="opacity-0 group-hover/row:opacity-100 p-1 rounded-sm hover:bg-white/[0.04] text-white/30 hover:text-white/70 transition-all"
+              className="opacity-0 group-hover/row:opacity-100 p-1 rounded-sm hover:bg-muted/50 text-muted-foreground hover:text-foreground/70 transition-all"
               title="Copy username"
             >
               {copiedField === "user"
@@ -156,12 +156,12 @@ const CredentialCard: React.FC<{
               {cred.acc_email && (
                 <div className="flex items-center justify-between gap-2 text-[12px] group/row">
                   <div className="flex items-center gap-2 min-w-0">
-                    <span className="text-[10px] text-white/20 uppercase tracking-wider w-16 shrink-0">Email</span>
-                    <span className="text-white/70 truncate select-text">{cred.acc_email}</span>
+                    <span className="text-[10px] text-muted-foreground/60 uppercase tracking-wider w-16 shrink-0">Email</span>
+                    <span className="text-foreground/70 truncate select-text">{cred.acc_email}</span>
                   </div>
                   <button
                     onClick={() => copy(cred.acc_email, "email")}
-                    className="opacity-0 group-hover/row:opacity-100 p-1 rounded-sm hover:bg-white/[0.04] text-white/30 hover:text-white/70 transition-all"
+                    className="opacity-0 group-hover/row:opacity-100 p-1 rounded-sm hover:bg-muted/50 text-muted-foreground hover:text-foreground/70 transition-all"
                     title="Copy email"
                   >
                     {copiedField === "email"
@@ -174,12 +174,12 @@ const CredentialCard: React.FC<{
               {decryptedPass && (
                 <div className="flex items-center justify-between gap-2 text-[12px] group/row">
                   <div className="flex items-center gap-2 min-w-0">
-                    <span className="text-[10px] text-white/20 uppercase tracking-wider w-16 shrink-0">Pass</span>
-                    <span className="text-red-400 font-mono truncate select-text">{decryptedPass}</span>
+                    <span className="text-[10px] text-muted-foreground/60 uppercase tracking-wider w-16 shrink-0">Pass</span>
+                    <span className="text-primary font-mono truncate select-text">{decryptedPass}</span>
                   </div>
                   <button
                     onClick={() => copy(decryptedPass, "pass")}
-                    className="opacity-0 group-hover/row:opacity-100 p-1 rounded-sm hover:bg-white/[0.04] text-white/30 hover:text-white/70 transition-all"
+                    className="opacity-0 group-hover/row:opacity-100 p-1 rounded-sm hover:bg-muted/50 text-muted-foreground hover:text-foreground/70 transition-all"
                     title="Copy password"
                   >
                     {copiedField === "pass"
@@ -191,8 +191,8 @@ const CredentialCard: React.FC<{
 
               {cred.acc_addinfo && (
                 <div className="flex items-start gap-2 text-[12px]">
-                  <span className="text-[10px] text-white/20 uppercase tracking-wider w-16 shrink-0 pt-0.5">Info</span>
-                  <span className="text-white/50 leading-snug">{cred.acc_addinfo}</span>
+                  <span className="text-[10px] text-muted-foreground/60 uppercase tracking-wider w-16 shrink-0 pt-0.5">Info</span>
+                  <span className="text-muted-foreground/80 leading-snug">{cred.acc_addinfo}</span>
                 </div>
               )}
             </motion.div>
@@ -201,10 +201,10 @@ const CredentialCard: React.FC<{
       </div>
 
       {/* Actions footer */}
-      <div className="px-3 py-2 border-t border-white/[0.04] flex items-center justify-between">
+      <div className="px-3 py-2 border-t border-border flex items-center justify-between">
         <button
           onClick={toggleReveal}
-          className="flex items-center gap-1.5 px-2.5 py-1 rounded-sm bg-white/[0.02] hover:bg-red-500/[0.06] border border-white/[0.04] hover:border-red-500/15 text-white/40 hover:text-red-400 text-[11px] transition-colors"
+          className="flex items-center gap-1.5 px-2.5 py-1 rounded-sm bg-muted/30 hover:bg-primary/[0.06] border border-border hover:border-primary/20 text-muted-foreground/70 hover:text-primary text-[11px] transition-colors"
         >
           {expanded
             ? <><EyeOff className="h-3 w-3" /> Hide</>
@@ -218,7 +218,7 @@ const CredentialCard: React.FC<{
               onClick={() => {
                 if (confirm(`Delete ${cred.platform_name}?`)) onDelete(cred.id);
               }}
-              className="p-1.5 rounded-sm text-white/20 hover:text-red-400 hover:bg-red-500/[0.06] transition-colors"
+              className="p-1.5 rounded-sm text-muted-foreground/60 hover:text-primary hover:bg-primary/[0.06] transition-colors"
               title="Delete"
             >
               <Trash2 className="h-3.5 w-3.5" />
@@ -286,15 +286,15 @@ export const CompanyCreds = ({
 
   if (isPending) {
     return (
-      <div className="min-h-screen bg-black flex items-center justify-center">
-        <div className="h-6 w-6 border-2 border-red-500/30 border-t-red-500 rounded-full animate-spin" />
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="h-6 w-6 border-2 border-primary/30 border-t-primary rounded-full animate-spin" />
       </div>
     );
   }
   if (error) {
     return (
-      <div className="min-h-screen bg-black flex items-center justify-center">
-        <p className="text-[13px] text-red-400/70">Error loading credentials</p>
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <p className="text-[13px] text-primary/70">Error loading credentials</p>
       </div>
     );
   }
@@ -302,17 +302,17 @@ export const CompanyCreds = ({
   const total = cwaCreds?.length || 0;
 
   return (
-    <div className="min-h-screen bg-black overflow-y-auto">
+    <div className="min-h-screen bg-background overflow-y-auto">
       {/* Header */}
       <div className="px-8 pt-7 pb-2">
         <div className="flex items-end justify-between">
           <div className="flex items-center gap-3">
-            <div className="p-2.5 rounded-sm bg-red-500/[0.08] border border-red-500/15">
-              <Lock className="h-5 w-5 text-red-400" />
+            <div className="p-2.5 rounded-sm bg-primary/[0.08] border border-primary/15">
+              <Lock className="h-5 w-5 text-primary" />
             </div>
             <div>
-              <h1 className="text-[24px] font-bold text-white tracking-tight">Account Management</h1>
-              <p className="text-[12px] text-white/20 mt-0.5">
+              <h1 className="text-[24px] font-bold text-foreground tracking-tight">Account Management</h1>
+              <p className="text-[12px] text-muted-foreground/60 mt-0.5">
                 {total} credential{total !== 1 ? "s" : ""} stored securely
               </p>
             </div>
@@ -322,7 +322,7 @@ export const CompanyCreds = ({
             <UserView userRole={["CEO", "COO"]}>
               <Link
                 to="/detailFolders"
-                className="flex items-center gap-1.5 px-3 py-1.5 bg-white/[0.02] hover:bg-red-500/[0.06] border border-white/[0.04] hover:border-red-500/15 text-white/40 hover:text-red-400 text-[11px] font-medium rounded-sm transition-colors"
+                className="flex items-center gap-1.5 px-3 py-1.5 bg-muted/30 hover:bg-primary/[0.06] border border-border hover:border-primary/20 text-muted-foreground/70 hover:text-primary text-[11px] font-medium rounded-sm transition-colors"
               >
                 <Folder className="h-3 w-3" />
                 CCC Folder
@@ -336,28 +336,28 @@ export const CompanyCreds = ({
 
       {/* Stats strip */}
       <div className="px-8 pt-5">
-        <div className="bg-[#0a0a0a] border border-white/[0.04] rounded-sm overflow-hidden">
+        <div className="bg-card border border-border rounded-sm overflow-hidden">
           <div className="flex">
-            <div className="flex-1 px-5 py-4 border-r border-white/[0.04]">
+            <div className="flex-1 px-5 py-4 border-r border-border">
               <div className="flex items-center gap-1.5 mb-1">
-                <Users className="h-3 w-3 text-red-500/60" />
-                <span className="text-[10px] text-white/20 uppercase tracking-[0.12em]">Total Accounts</span>
+                <Users className="h-3 w-3 text-primary/60" />
+                <span className="text-[10px] text-muted-foreground/60 uppercase tracking-[0.12em]">Total Accounts</span>
               </div>
-              <p className="text-xl font-bold text-white tracking-tight">{total}</p>
+              <p className="text-xl font-bold text-foreground tracking-tight">{total}</p>
             </div>
-            <div className="flex-1 px-5 py-4 border-r border-white/[0.04]">
+            <div className="flex-1 px-5 py-4 border-r border-border">
               <div className="flex items-center gap-1.5 mb-1">
                 <div className="h-2 w-2 rounded-full bg-emerald-400" />
-                <span className="text-[10px] text-white/20 uppercase tracking-[0.12em]">Active</span>
+                <span className="text-[10px] text-muted-foreground/60 uppercase tracking-[0.12em]">Active</span>
               </div>
               <p className="text-xl font-bold text-emerald-400 tracking-tight">{activeCount}</p>
             </div>
             <div className="flex-1 px-5 py-4">
               <div className="flex items-center gap-1.5 mb-1">
                 <div className="h-2 w-2 rounded-full bg-white/20" />
-                <span className="text-[10px] text-white/20 uppercase tracking-[0.12em]">Inactive</span>
+                <span className="text-[10px] text-muted-foreground/60 uppercase tracking-[0.12em]">Inactive</span>
               </div>
-              <p className="text-xl font-bold text-white/50 tracking-tight">{inactiveCount}</p>
+              <p className="text-xl font-bold text-muted-foreground/80 tracking-tight">{inactiveCount}</p>
             </div>
           </div>
         </div>
@@ -366,7 +366,7 @@ export const CompanyCreds = ({
       {/* Filter bar */}
       <div className="px-8 pt-4">
         <div className="flex items-center gap-2 flex-wrap">
-          <div className="flex items-center bg-white/[0.02] border border-white/[0.04] rounded-sm p-0.5">
+          <div className="flex items-center bg-muted/30 border border-border rounded-sm p-0.5">
             {(["all", "active", "inactive"] as const).map((s) => {
               const counts = { all: total, active: activeCount, inactive: inactiveCount };
               const labels = { all: "All", active: "Active", inactive: "Inactive" };
@@ -376,8 +376,8 @@ export const CompanyCreds = ({
                   onClick={() => setStatusFilter(s)}
                   className={`px-3 py-1 rounded-sm text-[11px] font-medium transition-all ${
                     statusFilter === s
-                      ? "bg-red-500/[0.1] text-red-400"
-                      : "text-white/25 hover:text-white/50"
+                      ? "bg-primary/10 text-primary"
+                      : "text-muted-foreground/50 hover:text-muted-foreground/80"
                   }`}
                 >
                   {labels[s]} ({counts[s]})
@@ -387,13 +387,13 @@ export const CompanyCreds = ({
           </div>
 
           <div className="relative flex-1 max-w-sm">
-            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-white/15" />
+            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground/40" />
             <input
               type="text"
               placeholder="Search platform, user, email..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-8 pr-3 py-1.5 bg-white/[0.02] border border-white/[0.04] rounded-sm text-[12px] text-white/60 placeholder:text-white/15 focus:outline-none focus:border-white/[0.08]"
+              className="w-full pl-8 pr-3 py-1.5 bg-muted/30 border border-border rounded-sm text-[12px] text-foreground/60 placeholder:text-muted-foreground/40 focus:outline-none focus:border-border"
             />
           </div>
         </div>
@@ -402,12 +402,12 @@ export const CompanyCreds = ({
       {/* Cards grid */}
       <div className="px-8 py-5 pb-10">
         {filtered.length === 0 ? (
-          <div className="bg-[#0a0a0a] border border-white/[0.04] rounded-sm py-16 text-center">
-            <Lock className="h-10 w-10 text-white/[0.05] mx-auto mb-3" />
-            <p className="text-[14px] text-white/30 font-medium mb-1">
+          <div className="bg-card border border-border rounded-sm py-16 text-center">
+            <Lock className="h-10 w-10 text-foreground/[0.05] mx-auto mb-3" />
+            <p className="text-[14px] text-muted-foreground font-medium mb-1">
               {total === 0 ? "No accounts yet" : "No accounts match"}
             </p>
-            <p className="text-[12px] text-white/15">
+            <p className="text-[12px] text-muted-foreground/40">
               {total === 0 ? "Click 'Add' to save your first credential" : "Try a different search or filter"}
             </p>
           </div>

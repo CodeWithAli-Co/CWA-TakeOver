@@ -20,7 +20,7 @@ export const Header: React.FC<HeaderProps> = ({
   setCurrentView
 }) => {
   return (
-    <header className="bg-black border-b border-red-900/40 py-2 px-4">
+    <header className="bg-background border-b border-red-900/40 py-2 px-4">
       <div className="flex items-center justify-between">
         {/* Logo and Title */}
         <div className="flex items-center">
@@ -30,9 +30,9 @@ export const Header: React.FC<HeaderProps> = ({
             aria-label={isSidebarOpen ? "Close sidebar" : "Open sidebar"}
           >
             {isSidebarOpen ? (
-              <X size={20} className="text-red-400" />
+              <X size={20} className="text-primary" />
             ) : (
-              <Menu size={20} className="text-red-400" />
+              <Menu size={20} className="text-primary" />
             )}
           </button>
           <h1 className="text-xl font-bold bg-gradient-to-r from-red-400 to-red-600 bg-clip-text text-transparent truncate">
@@ -68,7 +68,7 @@ export const Header: React.FC<HeaderProps> = ({
             onClick={() => setIsAdminMode(!isAdminMode)}
             className={`px-3 py-1 text-xs rounded-md 
               ${isAdminMode 
-                ? "bg-green-800 text-white hover:bg-green-700" 
+                ? "bg-green-800 text-foreground hover:bg-green-700" 
                 : "bg-gray-800 text-gray-300 hover:bg-gray-700"} 
               hidden sm:block transition-colors duration-150`}
             aria-label={isAdminMode ? "Switch to employee mode" : "Switch to admin mode"}
@@ -79,17 +79,17 @@ export const Header: React.FC<HeaderProps> = ({
             className="relative p-1.5 rounded-full hover:bg-red-900/30 transition-colors duration-150"
             aria-label="Notifications"
           >
-            <Bell size={18} className="text-red-400" />
-            <span className="absolute top-0 right-0 w-2 h-2 bg-red-600 rounded-full"></span>
+            <Bell size={18} className="text-primary" />
+            <span className="absolute top-0 right-0 w-2 h-2 bg-primary rounded-full"></span>
           </button>
           <button 
             className="p-1.5 rounded-full hover:bg-red-900/30 transition-colors duration-150"
             aria-label="Settings"
           >
-            <Settings size={18} className="text-red-400" />
+            <Settings size={18} className="text-primary" />
           </button>
           <div className="h-8 w-8 bg-red-800 rounded-full flex items-center justify-center">
-            <span className="text-white text-sm font-medium">CU</span>
+            <span className="text-foreground text-sm font-medium">CU</span>
           </div>
         </div>
       </div>

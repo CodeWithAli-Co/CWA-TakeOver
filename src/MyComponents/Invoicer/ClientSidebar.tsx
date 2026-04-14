@@ -45,15 +45,15 @@ export const ClientSidebar = () => {
   };
 
   return (
-    <div className="bg-[#0a0a0a] border border-white/[0.04] rounded-sm h-full flex flex-col overflow-hidden">
+    <div className="bg-card border border-border rounded-sm h-full flex flex-col overflow-hidden">
       {/* Header */}
-      <div className="px-4 pt-4 pb-3 border-b border-white/[0.04]">
+      <div className="px-4 pt-4 pb-3 border-b border-border">
         <div className="flex items-center justify-between mb-3">
           <div className="flex items-center gap-2">
-            <div className="p-1.5 rounded-sm bg-red-500/[0.08]">
-              <Users className="h-3.5 w-3.5 text-red-400" />
+            <div className="p-1.5 rounded-sm bg-primary/[0.08]">
+              <Users className="h-3.5 w-3.5 text-primary" />
             </div>
-            <span className="text-[11px] text-white/15 uppercase tracking-[0.15em] font-medium">
+            <span className="text-[11px] text-muted-foreground/40 uppercase tracking-[0.15em] font-medium">
               Clients
             </span>
           </div>
@@ -61,8 +61,8 @@ export const ClientSidebar = () => {
             onClick={() => setShowAdd(!showAdd)}
             className={`p-1.5 rounded-sm transition-colors ${
               showAdd
-                ? "bg-red-500/[0.1] text-red-400"
-                : "bg-white/[0.02] text-white/30 hover:text-red-400 hover:bg-red-500/[0.06]"
+                ? "bg-primary/10 text-primary"
+                : "bg-muted/30 text-muted-foreground hover:text-primary hover:bg-primary/[0.06]"
             }`}
             title={showAdd ? "Cancel" : "Add Client"}
           >
@@ -72,13 +72,13 @@ export const ClientSidebar = () => {
 
         {/* Search */}
         <div className="relative">
-          <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3 w-3 text-white/15" />
+          <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3 w-3 text-muted-foreground/40" />
           <input
             type="text"
             placeholder="Search clients..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full pl-7 pr-2 py-1.5 bg-white/[0.02] border border-white/[0.04] rounded-sm text-[12px] text-white/60 placeholder:text-white/15 focus:outline-none focus:border-white/[0.08]"
+            className="w-full pl-7 pr-2 py-1.5 bg-muted/30 border border-border rounded-sm text-[12px] text-foreground/60 placeholder:text-muted-foreground/40 focus:outline-none focus:border-border"
           />
         </div>
       </div>
@@ -89,7 +89,7 @@ export const ClientSidebar = () => {
           initial={{ opacity: 0, height: 0 }}
           animate={{ opacity: 1, height: "auto" }}
           exit={{ opacity: 0, height: 0 }}
-          className="border-b border-white/[0.04] overflow-hidden"
+          className="border-b border-border overflow-hidden"
         >
           <form
             onSubmit={(e) => {
@@ -102,14 +102,14 @@ export const ClientSidebar = () => {
               name="clientName"
               children={(field) => (
                 <div className="relative">
-                  <User className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3 w-3 text-red-500/40" />
+                  <User className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3 w-3 text-primary/40" />
                   <input
                     type="text"
                     required
                     placeholder="Client name"
                     value={field.state.value}
                     onChange={(e) => field.handleChange(Capitalize(e.target.value))}
-                    className="w-full pl-7 pr-2 py-1.5 bg-white/[0.02] border border-white/[0.06] rounded-sm text-[12px] text-white/70 placeholder:text-white/15 focus:outline-none focus:border-red-500/20"
+                    className="w-full pl-7 pr-2 py-1.5 bg-muted/30 border border-border rounded-sm text-[12px] text-foreground/70 placeholder:text-muted-foreground/40 focus:outline-none focus:border-primary/20"
                   />
                 </div>
               )}
@@ -118,21 +118,21 @@ export const ClientSidebar = () => {
               name="clientEmail"
               children={(field) => (
                 <div className="relative">
-                  <Mail className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3 w-3 text-red-500/40" />
+                  <Mail className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3 w-3 text-primary/40" />
                   <input
                     type="email"
                     required
                     placeholder="client@email.com"
                     value={field.state.value}
                     onChange={(e) => field.handleChange(e.target.value)}
-                    className="w-full pl-7 pr-2 py-1.5 bg-white/[0.02] border border-white/[0.06] rounded-sm text-[12px] text-white/70 placeholder:text-white/15 focus:outline-none focus:border-red-500/20"
+                    className="w-full pl-7 pr-2 py-1.5 bg-muted/30 border border-border rounded-sm text-[12px] text-foreground/70 placeholder:text-muted-foreground/40 focus:outline-none focus:border-primary/20"
                   />
                 </div>
               )}
             />
             <button
               type="submit"
-              className="w-full py-1.5 bg-red-600 hover:bg-red-500 text-white text-[11px] font-medium rounded-sm transition-colors"
+              className="w-full py-1.5 bg-primary hover:bg-primary/80 text-foreground text-[11px] font-medium rounded-sm transition-colors"
             >
               Add Client
             </button>
@@ -144,7 +144,7 @@ export const ClientSidebar = () => {
       <div className="flex-1 overflow-y-auto py-2 px-2">
         {filtered.length === 0 ? (
           <div className="text-center py-12">
-            <p className="text-[12px] text-white/15">
+            <p className="text-[12px] text-muted-foreground/40">
               {clients?.length === 0 ? "No clients yet" : "No matches"}
             </p>
           </div>
@@ -158,25 +158,25 @@ export const ClientSidebar = () => {
                 whileTap={{ scale: 0.98 }}
                 className={`w-full text-left px-3 py-2.5 rounded-sm mb-1 transition-all duration-200 group ${
                   isSelected
-                    ? "bg-red-500/[0.08] border border-red-500/15"
-                    : "bg-transparent border border-transparent hover:bg-white/[0.02] hover:border-white/[0.04]"
+                    ? "bg-primary/[0.08] border border-primary/15"
+                    : "bg-transparent border border-transparent hover:bg-muted/30 hover:border-border"
                 }`}
               >
                 <div className="flex items-center gap-2.5">
                   <div className={`h-7 w-7 rounded-sm flex items-center justify-center text-[10px] font-medium ${
                     isSelected
-                      ? "bg-red-500/[0.15] text-red-400"
-                      : "bg-white/[0.04] text-white/40"
+                      ? "bg-primary/15 text-primary"
+                      : "bg-muted/50 text-muted-foreground/70"
                   }`}>
                     {client.name.slice(0, 2).toUpperCase()}
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className={`text-[12px] font-medium truncate ${
-                      isSelected ? "text-white/90" : "text-white/60 group-hover:text-white/80"
+                      isSelected ? "text-foreground" : "text-foreground/60 group-hover:text-foreground/80"
                     }`}>
                       {client.name}
                     </p>
-                    <p className="text-[10px] text-white/20 truncate">
+                    <p className="text-[10px] text-muted-foreground/60 truncate">
                       {client.email}
                     </p>
                   </div>
@@ -188,8 +188,8 @@ export const ClientSidebar = () => {
       </div>
 
       {/* Footer count */}
-      <div className="px-4 py-2 border-t border-white/[0.04]">
-        <p className="text-[10px] text-white/15">
+      <div className="px-4 py-2 border-t border-border">
+        <p className="text-[10px] text-muted-foreground/40">
           {filtered.length} of {clients?.length || 0} clients
         </p>
       </div>

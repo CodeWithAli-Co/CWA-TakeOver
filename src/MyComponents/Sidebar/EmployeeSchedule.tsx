@@ -5,7 +5,7 @@ import { CalendarCheck } from "lucide-react";
 // Header component - updated to use AdminModeToggle
 const Header = ({ isSidebarOpen, setIsSidebarOpen, isAdminMode, setIsAdminMode, currentView, setCurrentView }) => {
   return (
-    <header className="bg-black border-b border-red-900/40 py-2 px-4">
+    <header className="bg-background border-b border-red-900/40 py-2 px-4">
       <div className="flex items-center justify-between">
         <h1 className="text-xl font-bold bg-gradient-to-r from-red-400 to-red-600 bg-clip-text text-transparent">
           {isAdminMode ? "Admin: Schedule Management" : "Employee Schedule"}
@@ -88,7 +88,7 @@ if (isError) return <ErrorState retry={() => setScheduleData(generateScheduleDat
 if (!scheduleData || selectedDay === null) return <LoadingState />;
 
   return (
-    <div className="flex flex-col h-screen bg-black">
+    <div className="flex flex-col h-screen bg-background">
       {/* Header Component */}
       <Header 
         isSidebarOpen={isSidebarOpen}
@@ -100,9 +100,9 @@ if (!scheduleData || selectedDay === null) return <LoadingState />;
       />
 
       {/* Week Navigator */}
-      <div className="bg-black border-b border-red-900/40 px-4 py-3 flex justify-between items-center">
+      <div className="bg-background border-b border-red-900/40 px-4 py-3 flex justify-between items-center">
         <button
-          className="p-1 rounded-md hover:bg-red-900/30 text-red-400"
+          className="p-1 rounded-md hover:bg-red-900/30 text-primary"
           onClick={goToPreviousWeek}
           aria-label="Previous week"
         >
@@ -119,7 +119,7 @@ if (!scheduleData || selectedDay === null) return <LoadingState />;
               : ""}{" "}
             {scheduleData.weekRange.end.date}
           </h2>
-          <div className="text-xs text-red-400">
+          <div className="text-xs text-primary">
             {weekOffset === 0
               ? "Current Week"
               : weekOffset < 0
@@ -129,7 +129,7 @@ if (!scheduleData || selectedDay === null) return <LoadingState />;
         </div>
 
         <button
-          className="p-1 rounded-md hover:bg-red-900/30 text-red-400"
+          className="p-1 rounded-md hover:bg-red-900/30 text-primary"
           onClick={goToNextWeek}
           aria-label="Next week"
         >
@@ -175,7 +175,7 @@ if (!scheduleData || selectedDay === null) return <LoadingState />;
             {/* Weekly Schedule Grid */}
             <div className="mt-6 border border-red-900/30 rounded-lg overflow-hidden mb-6">
               <div className="bg-red-900/20 border-b border-red-900/30 px-4 py-2">
-                <h3 className="text-white font-medium">Weekly Schedule Overview</h3>
+                <h3 className="text-foreground font-medium">Weekly Schedule Overview</h3>
               </div>
               
               {/* Calendar Header */}
@@ -185,8 +185,8 @@ if (!scheduleData || selectedDay === null) return <LoadingState />;
                     key={index} 
                     className={`text-center py-2 ${day.isToday ? 'bg-red-900/30' : ''} ${index < 6 ? 'border-r border-red-900/30' : ''}`}
                   >
-                    <div className="text-red-400 text-sm">{day.shortName}</div>
-                    <div className="text-white font-medium">{day.date}</div>
+                    <div className="text-primary text-sm">{day.shortName}</div>
+                    <div className="text-foreground font-medium">{day.date}</div>
                   </div>
                 ))}
               </div>
@@ -240,7 +240,7 @@ if (!scheduleData || selectedDay === null) return <LoadingState />;
                           </div>
                         ))
                     ) : (
-                      <div className="text-center py-6 text-red-400/50 text-xs">
+                      <div className="text-center py-6 text-primary/50 text-xs">
                         No shifts
                       </div>
                     )}
@@ -305,7 +305,7 @@ if (!scheduleData || selectedDay === null) return <LoadingState />;
 
       {/* "Today" quick-jump button */}
       <button
-        className="fixed top-2 right-40 bg-red-700 text-white rounded-full p-2 shadow-lg"
+        className="fixed top-2 right-40 bg-red-700 text-foreground rounded-full p-2 shadow-lg"
         onClick={goToToday}
         aria-label="Jump to today"
       >

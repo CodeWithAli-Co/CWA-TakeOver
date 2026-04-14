@@ -54,21 +54,21 @@ export const QuotaItem = ({
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
-      className="p-4 rounded-sm bg-white/[0.015] border border-white/[0.03] hover:border-red-500/10 transition-all duration-400 mb-2.5 group"
+      className="p-4 rounded-sm bg-card border border-white/[0.03] hover:border-primary/10 transition-all duration-400 mb-2.5 group"
     >
       <div className="flex items-start justify-between">
         <div>
           <div className="flex items-center gap-2 mb-1">
-            <h3 className="text-[13px] font-medium text-white/70">{quota.title}</h3>
+            <h3 className="text-[13px] font-medium text-foreground/70">{quota.title}</h3>
             <Badge variant="outline" className={`${statusColors[quota.status]} text-[10px]`}>
               {quota.status}
             </Badge>
           </div>
           {quota.description && (
-            <p className="text-[11px] text-white/20 mb-1.5">{quota.description}</p>
+            <p className="text-[11px] text-muted-foreground/60 mb-1.5">{quota.description}</p>
           )}
           {quota.deadline && (
-            <div className="flex items-center gap-1 text-[11px] text-white/15">
+            <div className="flex items-center gap-1 text-[11px] text-muted-foreground/40">
               <Calendar className="h-2.5 w-2.5" />
               <span>Due: {quota.deadline}</span>
             </div>
@@ -87,14 +87,14 @@ export const QuotaItem = ({
           <motion.button
             whileTap={{ scale: 0.9 }}
             onClick={() => onEdit(quota)}
-            className="p-1.5 rounded-lg bg-white/[0.03] text-white/20 hover:text-white/60 transition-colors"
+            className="p-1.5 rounded-lg bg-muted/40 text-muted-foreground/60 hover:text-foreground/60 transition-colors"
           >
             <Edit className="h-3 w-3" />
           </motion.button>
           <motion.button
             whileTap={{ scale: 0.9 }}
             onClick={() => onDelete(quota.id)}
-            className="p-1.5 rounded-lg bg-red-500/[0.04] text-red-400/40 hover:text-red-400 transition-colors"
+            className="p-1.5 rounded-lg bg-red-500/[0.04] text-primary/40 hover:text-primary transition-colors"
           >
             <Trash className="h-3 w-3" />
           </motion.button>
@@ -145,37 +145,37 @@ export const QuotaFormDialog = ({
   return (
     <DialogContent className="max-w-lg">
       <DialogHeader>
-        <DialogTitle className="text-white/90">
+        <DialogTitle className="text-foreground">
           {editingQuota ? "Edit Quota" : "Add Weekly Quota"}
         </DialogTitle>
       </DialogHeader>
       <form onSubmit={handleSubmit}>
         <div className="space-y-4 py-4">
           <div className="space-y-2">
-            <label className="text-[12px] font-medium text-white/30">Title</label>
+            <label className="text-[12px] font-medium text-muted-foreground">Title</label>
             <Input
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               placeholder="Enter Quota Title"
-              className="bg-white/[0.02] border-white/[0.06] text-white placeholder:text-white/15 rounded-sm focus:border-red-500/20"
+              className="bg-muted/30 border-border text-foreground placeholder:text-muted-foreground/40 rounded-sm focus:border-primary/20"
               required
             />
           </div>
           <div className="space-y-2">
-            <label className="text-[12px] font-medium text-white/30">Description</label>
+            <label className="text-[12px] font-medium text-muted-foreground">Description</label>
             <Textarea
               value={description}
               onChange={(e) => setDescription(e.target.value)}
-              className="bg-white/[0.02] border-white/[0.06] text-white placeholder:text-white/15 rounded-sm focus:border-red-500/20"
+              className="bg-muted/30 border-border text-foreground placeholder:text-muted-foreground/40 rounded-sm focus:border-primary/20"
             />
           </div>
           <div className="space-y-2">
-            <label className="text-[12px] font-medium text-white/30">Status</label>
+            <label className="text-[12px] font-medium text-muted-foreground">Status</label>
             <Select value={status} onValueChange={setStatus}>
-              <SelectTrigger className="bg-white/[0.02] border-white/[0.06] text-white rounded-sm">
+              <SelectTrigger className="bg-muted/30 border-border text-foreground rounded-sm">
                 <SelectValue />
               </SelectTrigger>
-              <SelectContent className="bg-[#0f0f0f] border-white/[0.06] text-white rounded-sm">
+              <SelectContent className="bg-[#0f0f0f] border-border text-foreground rounded-sm">
                 <SelectItem value="pending">Pending</SelectItem>
                 <SelectItem value="in-progress">In-progress</SelectItem>
                 <SelectItem value="completed">Completed</SelectItem>
@@ -183,17 +183,17 @@ export const QuotaFormDialog = ({
             </Select>
           </div>
           <div className="space-y-2">
-            <label className="text-[12px] font-medium text-white/30">Deadline</label>
+            <label className="text-[12px] font-medium text-muted-foreground">Deadline</label>
             <Input
               type="date"
               value={deadline}
               onChange={(e) => setDeadline(e.target.value)}
-              className="bg-white/[0.02] border-white/[0.06] text-white rounded-sm focus:border-red-500/20"
+              className="bg-muted/30 border-border text-foreground rounded-sm focus:border-primary/20"
             />
           </div>
         </div>
         <DialogFooter>
-          <Button className="bg-red-600 hover:bg-red-500 text-white rounded-sm" type="submit">
+          <Button className="bg-primary hover:bg-primary/80 text-foreground rounded-sm" type="submit">
             {editingQuota ? "Update" : "Add"} Quota
           </Button>
         </DialogFooter>
@@ -282,21 +282,21 @@ export default function Quotas() {
   const completedQuotas = quotas.filter((q) => q.status === "completed").length;
 
   return (
-    <div className="bg-[#0a0a0a] border border-white/[0.04] rounded-sm h-full overflow-hidden">
+    <div className="bg-card border border-border rounded-sm h-full overflow-hidden">
       {/* Header */}
       <div className="px-6 pt-5 pb-4 flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <div className="p-2 rounded-sm bg-white/[0.03] border border-white/[0.04]">
-            <Target className="h-4 w-4 text-red-500/70" />
+          <div className="p-2 rounded-sm bg-muted/40 border border-border">
+            <Target className="h-4 w-4 text-primary/70" />
           </div>
           <div>
-            <span className="text-[11px] text-white/20 uppercase tracking-[0.15em] font-medium">
+            <span className="text-[11px] text-muted-foreground/60 uppercase tracking-[0.15em] font-medium">
               Weekly Quotas
             </span>
-            <p className="text-[11px] text-white/10 mt-0.5">{dateRangeText}</p>
+            <p className="text-[11px] text-muted-foreground/30 mt-0.5">{dateRangeText}</p>
             <div className="flex items-center gap-1 mt-0.5">
               <div className="h-1 w-1 rounded-full bg-white/15" />
-              <span className="text-[9px] text-white/10 uppercase tracking-wider">Both companies</span>
+              <span className="text-[9px] text-muted-foreground/30 uppercase tracking-wider">Both companies</span>
             </div>
           </div>
         </div>
@@ -307,7 +307,7 @@ export default function Quotas() {
               onClick={[previousWeek, currentWeek, nextWeek][i]}
               variant="outline"
               size="sm"
-              className="bg-white/[0.02] border-white/[0.04] text-white/20 hover:text-white/50 hover:bg-white/[0.04] rounded-lg text-[11px] h-7 px-2.5"
+              className="bg-muted/30 border-border text-muted-foreground/60 hover:text-muted-foreground/80 hover:bg-muted/50 rounded-lg text-[11px] h-7 px-2.5"
             >
               {label}
             </Button>
@@ -321,13 +321,13 @@ export default function Quotas() {
             placeholder="Search quotas..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-[200px] h-7 text-[12px] bg-white/[0.02] border-white/[0.04] text-white/60 placeholder:text-white/15 rounded-lg focus:border-red-500/15"
+            className="w-[200px] h-7 text-[12px] bg-muted/30 border-border text-foreground/60 placeholder:text-muted-foreground/40 rounded-lg focus:border-primary/15"
           />
           <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
             <DialogTrigger asChild>
               <Button
                 onClick={() => setEditingQuota(null)}
-                className="bg-red-600 hover:bg-red-500 text-white rounded-sm h-7 text-[11px] px-3"
+                className="bg-primary hover:bg-primary/80 text-foreground rounded-sm h-7 text-[11px] px-3"
               >
                 <Plus className="h-3 w-3 mr-1" />
                 Add
@@ -338,14 +338,14 @@ export default function Quotas() {
         </div>
 
         <Tabs defaultValue="pending" value={selectedStatus} onValueChange={setSelectedStatus} className="mb-4">
-          <TabsList className="bg-white/[0.02] border border-white/[0.04] rounded-sm h-8">
-            <TabsTrigger value="pending" className="data-[state=active]:bg-amber-500/[0.08] data-[state=active]:text-amber-400/80 text-white/20 rounded-lg text-[11px] h-6">
+          <TabsList className="bg-muted/30 border border-border rounded-sm h-8">
+            <TabsTrigger value="pending" className="data-[state=active]:bg-amber-500/[0.08] data-[state=active]:text-amber-400/80 text-muted-foreground/60 rounded-lg text-[11px] h-6">
               Pending ({pendingQuotas})
             </TabsTrigger>
-            <TabsTrigger value="in-progress" className="data-[state=active]:bg-blue-500/[0.08] data-[state=active]:text-blue-400/80 text-white/20 rounded-lg text-[11px] h-6">
+            <TabsTrigger value="in-progress" className="data-[state=active]:bg-blue-500/[0.08] data-[state=active]:text-blue-400/80 text-muted-foreground/60 rounded-lg text-[11px] h-6">
               Active ({inProgressQuotas})
             </TabsTrigger>
-            <TabsTrigger value="completed" className="data-[state=active]:bg-emerald-500/[0.08] data-[state=active]:text-emerald-400/80 text-white/20 rounded-lg text-[11px] h-6">
+            <TabsTrigger value="completed" className="data-[state=active]:bg-emerald-500/[0.08] data-[state=active]:text-emerald-400/80 text-muted-foreground/60 rounded-lg text-[11px] h-6">
               Done ({completedQuotas})
             </TabsTrigger>
           </TabsList>
@@ -360,7 +360,7 @@ export default function Quotas() {
             ) : (
               <div className="flex flex-col items-center justify-center py-16">
                 <Target className="h-8 w-8 text-white/[0.06] mb-3" />
-                <p className="text-[13px] text-white/15">No {selectedStatus} quotas this week</p>
+                <p className="text-[13px] text-muted-foreground/40">No {selectedStatus} quotas this week</p>
               </div>
             )}
           </AnimatePresence>
@@ -368,7 +368,7 @@ export default function Quotas() {
       </div>
 
       <div className="px-6 py-3 border-t border-white/[0.03]">
-        <p className="text-[11px] text-white/10">Track weekly goals across both companies.</p>
+        <p className="text-[11px] text-muted-foreground/30">Track weekly goals across both companies.</p>
       </div>
     </div>
   );

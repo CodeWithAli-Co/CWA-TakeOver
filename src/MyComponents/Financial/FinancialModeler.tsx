@@ -33,11 +33,11 @@ import {
 
 // ── Empty state for item lists ──
 const EmptyItems: React.FC<{ type: "expense" | "revenue"; onAdd: () => void }> = ({ type, onAdd }) => (
-  <div className="text-center py-12 border border-dashed border-white/[0.06] rounded-sm">
-    <p className="text-[13px] text-white/15 mb-3">No {type}s yet</p>
+  <div className="text-center py-12 border border-dashed border-border rounded-sm">
+    <p className="text-[13px] text-muted-foreground/40 mb-3">No {type}s yet</p>
     <button
       onClick={onAdd}
-      className="text-[12px] text-red-400 hover:text-red-300 transition-colors"
+      className="text-[12px] text-primary hover:text-red-300 transition-colors"
     >
       + Add your first {type}
     </button>
@@ -46,9 +46,9 @@ const EmptyItems: React.FC<{ type: "expense" | "revenue"; onAdd: () => void }> =
 
 // ── Quick metric card ──
 const MetricCard: React.FC<{ label: string; value: string; accent?: boolean }> = ({ label, value, accent }) => (
-  <div className={`bg-white/[0.015] border border-white/[0.04] rounded-sm p-3 ${accent ? "border-l-2 border-l-red-500" : ""}`}>
-    <p className="text-[10px] text-white/20 uppercase tracking-wider">{label}</p>
-    <p className="text-lg font-bold text-white/80 tracking-tight mt-1">{value}</p>
+  <div className={`bg-card border border-border rounded-sm p-3 ${accent ? "border-l-2 border-l-red-500" : ""}`}>
+    <p className="text-[10px] text-muted-foreground/60 uppercase tracking-wider">{label}</p>
+    <p className="text-lg font-bold text-foreground/80 tracking-tight mt-1">{value}</p>
   </div>
 );
 
@@ -82,33 +82,33 @@ const FinancialModeler: React.FC = () => {
   const totalAnnualRevenue = revenuePieData.reduce((sum, r) => sum + r.value, 0);
 
   return (
-    <div className="bg-[#0a0a0a] border border-white/[0.04] rounded-sm overflow-hidden">
+    <div className="bg-card border border-border rounded-sm overflow-hidden">
       {/* Header */}
-      <div className="px-6 pt-5 pb-4 flex items-center justify-between border-b border-white/[0.04]">
+      <div className="px-6 pt-5 pb-4 flex items-center justify-between border-b border-border">
         <div className="flex items-center gap-3">
-          <div className="p-2 rounded-sm bg-red-500/[0.08] border border-red-500/15">
-            <Sparkles className="h-4 w-4 text-red-400" />
+          <div className="p-2 rounded-sm bg-primary/[0.08] border border-primary/15">
+            <Sparkles className="h-4 w-4 text-primary" />
           </div>
           <div>
-            <h2 className="text-[14px] font-semibold text-white/85">Financial Modeler</h2>
-            <p className="text-[11px] text-white/20">Configure inputs to model business scenarios</p>
+            <h2 className="text-[14px] font-semibold text-foreground/85">Financial Modeler</h2>
+            <p className="text-[11px] text-muted-foreground/60">Configure inputs to model business scenarios</p>
           </div>
         </div>
       </div>
 
       <div className="p-6">
         <Tabs value={tab} onValueChange={setTab}>
-          <TabsList className="bg-white/[0.02] border border-white/[0.04] rounded-sm h-8 mb-5">
-            <TabsTrigger value="base" className="data-[state=active]:bg-red-500/[0.08] data-[state=active]:text-red-400 text-white/25 rounded-sm text-[11px] h-6">
+          <TabsList className="bg-muted/30 border border-border rounded-sm h-8 mb-5">
+            <TabsTrigger value="base" className="data-[state=active]:bg-primary/[0.08] data-[state=active]:text-primary text-muted-foreground/50 rounded-sm text-[11px] h-6">
               <DollarSign className="h-3 w-3 mr-1.5" /> Base
             </TabsTrigger>
-            <TabsTrigger value="expenses" className="data-[state=active]:bg-red-500/[0.08] data-[state=active]:text-red-400 text-white/25 rounded-sm text-[11px] h-6">
+            <TabsTrigger value="expenses" className="data-[state=active]:bg-primary/[0.08] data-[state=active]:text-primary text-muted-foreground/50 rounded-sm text-[11px] h-6">
               <CreditCard className="h-3 w-3 mr-1.5" /> Expenses ({state.expenses.length})
             </TabsTrigger>
-            <TabsTrigger value="revenue" className="data-[state=active]:bg-red-500/[0.08] data-[state=active]:text-red-400 text-white/25 rounded-sm text-[11px] h-6">
+            <TabsTrigger value="revenue" className="data-[state=active]:bg-primary/[0.08] data-[state=active]:text-primary text-muted-foreground/50 rounded-sm text-[11px] h-6">
               <TrendingUp className="h-3 w-3 mr-1.5" /> Revenue ({state.revenues.length})
             </TabsTrigger>
-            <TabsTrigger value="personnel" className="data-[state=active]:bg-red-500/[0.08] data-[state=active]:text-red-400 text-white/25 rounded-sm text-[11px] h-6">
+            <TabsTrigger value="personnel" className="data-[state=active]:bg-primary/[0.08] data-[state=active]:text-primary text-muted-foreground/50 rounded-sm text-[11px] h-6">
               <Users className="h-3 w-3 mr-1.5" /> Personnel
             </TabsTrigger>
           </TabsList>
@@ -163,14 +163,14 @@ const FinancialModeler: React.FC = () => {
           <TabsContent value="expenses" className="space-y-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-[13px] text-white/60 font-medium">
-                  ${totalAnnualExpenses.toLocaleString()}<span className="text-white/20 text-[11px] ml-1">/year</span>
+                <p className="text-[13px] text-foreground/60 font-medium">
+                  ${totalAnnualExpenses.toLocaleString()}<span className="text-muted-foreground/60 text-[11px] ml-1">/year</span>
                 </p>
-                <p className="text-[11px] text-white/20">{state.expenses.length} expense items</p>
+                <p className="text-[11px] text-muted-foreground/60">{state.expenses.length} expense items</p>
               </div>
               <button
                 onClick={actions.addExpense}
-                className="flex items-center gap-1.5 px-3 py-1.5 bg-red-500/[0.08] hover:bg-red-500/[0.12] border border-red-500/15 text-red-400 text-[11px] rounded-sm transition-colors"
+                className="flex items-center gap-1.5 px-3 py-1.5 bg-primary/[0.08] hover:bg-red-500/[0.12] border border-primary/15 text-primary text-[11px] rounded-sm transition-colors"
               >
                 <Plus className="h-3 w-3" /> Add Expense
               </button>
@@ -197,8 +197,8 @@ const FinancialModeler: React.FC = () => {
 
               {/* Category pie */}
               {expensePieData.length > 0 && (
-                <div className="bg-white/[0.015] border border-white/[0.04] rounded-sm p-4">
-                  <p className="text-[10px] text-white/20 uppercase tracking-wider mb-3">By Category</p>
+                <div className="bg-card border border-border rounded-sm p-4">
+                  <p className="text-[10px] text-muted-foreground/60 uppercase tracking-wider mb-3">By Category</p>
                   <div className="h-48">
                     <ResponsiveContainer>
                       <PieChart>
@@ -231,9 +231,9 @@ const FinancialModeler: React.FC = () => {
                       <div key={e.name} className="flex items-center justify-between text-[11px]">
                         <div className="flex items-center gap-1.5">
                           <div className="h-1.5 w-1.5 rounded-full" style={{ background: getCategoryColor(e.name, true) }} />
-                          <span className="text-white/40">{e.name}</span>
+                          <span className="text-muted-foreground/70">{e.name}</span>
                         </div>
-                        <span className="text-white/60">${(e.value / 1000).toFixed(1)}k</span>
+                        <span className="text-foreground/60">${(e.value / 1000).toFixed(1)}k</span>
                       </div>
                     ))}
                   </div>
@@ -246,14 +246,14 @@ const FinancialModeler: React.FC = () => {
           <TabsContent value="revenue" className="space-y-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-[13px] text-red-400 font-medium">
-                  ${totalAnnualRevenue.toLocaleString()}<span className="text-white/20 text-[11px] ml-1">/year</span>
+                <p className="text-[13px] text-primary font-medium">
+                  ${totalAnnualRevenue.toLocaleString()}<span className="text-muted-foreground/60 text-[11px] ml-1">/year</span>
                 </p>
-                <p className="text-[11px] text-white/20">{state.revenues.length} revenue streams</p>
+                <p className="text-[11px] text-muted-foreground/60">{state.revenues.length} revenue streams</p>
               </div>
               <button
                 onClick={actions.addRevenue}
-                className="flex items-center gap-1.5 px-3 py-1.5 bg-red-500/[0.08] hover:bg-red-500/[0.12] border border-red-500/15 text-red-400 text-[11px] rounded-sm transition-colors"
+                className="flex items-center gap-1.5 px-3 py-1.5 bg-primary/[0.08] hover:bg-red-500/[0.12] border border-primary/15 text-primary text-[11px] rounded-sm transition-colors"
               >
                 <Plus className="h-3 w-3" /> Add Revenue
               </button>
@@ -278,8 +278,8 @@ const FinancialModeler: React.FC = () => {
               </div>
 
               {revenuePieData.length > 0 && (
-                <div className="bg-white/[0.015] border border-white/[0.04] rounded-sm p-4">
-                  <p className="text-[10px] text-white/20 uppercase tracking-wider mb-3">By Category</p>
+                <div className="bg-card border border-border rounded-sm p-4">
+                  <p className="text-[10px] text-muted-foreground/60 uppercase tracking-wider mb-3">By Category</p>
                   <div className="h-48">
                     <ResponsiveContainer>
                       <PieChart>
@@ -305,9 +305,9 @@ const FinancialModeler: React.FC = () => {
                       <div key={r.name} className="flex items-center justify-between text-[11px]">
                         <div className="flex items-center gap-1.5">
                           <div className="h-1.5 w-1.5 rounded-full" style={{ background: getCategoryColor(r.name, false) }} />
-                          <span className="text-white/40">{r.name}</span>
+                          <span className="text-muted-foreground/70">{r.name}</span>
                         </div>
-                        <span className="text-white/60">${(r.value / 1000).toFixed(1)}k</span>
+                        <span className="text-foreground/60">${(r.value / 1000).toFixed(1)}k</span>
                       </div>
                     ))}
                   </div>
@@ -345,7 +345,7 @@ const FinancialModeler: React.FC = () => {
             </div>
 
             {personnelData.length > 0 && (
-              <div className="bg-white/[0.015] border border-white/[0.04] rounded-sm p-4">
+              <div className="bg-card border border-border rounded-sm p-4">
                 <SectionHeader icon={<Clock className="h-4 w-4" />} title="Personnel Cost Projection" subtitle={`Over ${state.years} year${state.years !== 1 ? "s" : ""}`} />
                 <div className="h-56">
                   <ResponsiveContainer>

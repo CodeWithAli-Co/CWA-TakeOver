@@ -146,7 +146,7 @@ export const AddShiftModal: React.FC = () => {
   const getShiftTypeInfo = (type: string) => {
     switch (type) {
       case 'shift':
-        return { icon: <Briefcase size={16} />, label: 'Regular Shift', color: 'text-red-400' };
+        return { icon: <Briefcase size={16} />, label: 'Regular Shift', color: 'text-primary' };
       case 'training':
         return { icon: <Calendar size={16} />, label: 'Training', color: 'text-emerald-400' };
       case 'break':
@@ -156,7 +156,7 @@ export const AddShiftModal: React.FC = () => {
       case 'meeting':
         return { icon: <Users size={16} />, label: 'Meeting', color: 'text-purple-400' };
       default:
-        return { icon: <Briefcase size={16} />, label: 'Shift', color: 'text-red-400' };
+        return { icon: <Briefcase size={16} />, label: 'Shift', color: 'text-primary' };
     }
   };
 
@@ -275,7 +275,7 @@ export const AddShiftModal: React.FC = () => {
 
         {/* Employee Selection */}
         <div className="mb-6">
-          <h3 className="text-white text-sm font-medium mb-3">
+          <h3 className="text-foreground text-sm font-medium mb-3">
             {isEditMode ? "Employee" : "Select Employees"}
           </h3>
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 max-h-40 overflow-y-auto p-1">
@@ -292,16 +292,16 @@ export const AddShiftModal: React.FC = () => {
                 <div className="mr-2">
                   <Checkbox 
                     checked={selectedEmployees.includes(employee.id)}
-                    className="data-[state=checked]:bg-red-600 data-[state=checked]:border-red-600"
+                    className="data-[state=checked]:bg-primary data-[state=checked]:border-red-600"
                   />
                 </div>
                 <div className="flex items-center">
                   <div className="w-6 h-6 rounded-full bg-red-800 flex items-center justify-center mr-2">
-                    <span className="text-white text-xs">
+                    <span className="text-foreground text-xs">
                       {employee.avatar}
                     </span>
                   </div>
-                  <span className="text-white text-sm truncate">{employee.name}</span>
+                  <span className="text-foreground text-sm truncate">{employee.name}</span>
                 </div>
               </div>
             ))}
@@ -311,7 +311,7 @@ export const AddShiftModal: React.FC = () => {
               <Button
                 onClick={clearSelectedEmployees}
                 variant="ghost"
-                className="text-xs text-red-400 hover:text-red-300 hover:bg-transparent"
+                className="text-xs text-primary hover:text-red-300 hover:bg-transparent"
               >
                 Clear Selection
               </Button>
@@ -322,7 +322,7 @@ export const AddShiftModal: React.FC = () => {
         {/* Day and Time Selection */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div>
-            <h3 className="text-white text-sm font-medium mb-3">
+            <h3 className="text-foreground text-sm font-medium mb-3">
               {isEditMode ? "Day" : "Select Days"}
             </h3>
             <div className="space-y-2 max-h-72 overflow-y-auto pr-1">
@@ -339,20 +339,20 @@ export const AddShiftModal: React.FC = () => {
                   <div className="mr-2">
                     <Checkbox 
                       checked={selectedDays.includes(index)}
-                      className="data-[state=checked]:bg-red-600 data-[state=checked]:border-red-600"
+                      className="data-[state=checked]:bg-primary data-[state=checked]:border-red-600"
                     />
                   </div>
-                  <span className="text-white text-sm">{day}</span>
+                  <span className="text-foreground text-sm">{day}</span>
                 </div>
               ))}
             </div>
           </div>
 
           <div>
-            <h3 className="text-white text-sm font-medium mb-3">Shift Details</h3>
+            <h3 className="text-foreground text-sm font-medium mb-3">Shift Details</h3>
             <div className="space-y-4">
               <div>
-                <Label htmlFor="shift-type" className="text-red-400 text-xs">
+                <Label htmlFor="shift-type" className="text-primary text-xs">
                   Shift Type
                 </Label>
                 
@@ -362,7 +362,7 @@ export const AddShiftModal: React.FC = () => {
                     <Button
                       id="shift-type" 
                       variant="outline"
-                      className="w-full justify-between mt-1 bg-black border border-red-900 text-white hover:bg-red-950"
+                      className="w-full justify-between mt-1 bg-background border border-red-900 text-foreground hover:bg-red-950"
                     >
                       <div className="flex items-center gap-2">
                         <span className={shiftTypeInfo.color}>{shiftTypeInfo.icon}</span>
@@ -372,7 +372,7 @@ export const AddShiftModal: React.FC = () => {
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent 
-                    className="w-[200px] bg-black border border-red-900 text-white"
+                    className="w-[200px] bg-background border border-red-900 text-white"
                     align="start"
                   >
                     <DropdownMenuLabel className="text-red-300">Shift Types</DropdownMenuLabel>
@@ -382,7 +382,7 @@ export const AddShiftModal: React.FC = () => {
                         className="flex items-center gap-2 cursor-pointer hover:bg-red-900 focus:bg-red-900"
                         onClick={() => setShiftType("shift")}
                       >
-                        <Briefcase size={16} className="text-red-400" />
+                        <Briefcase size={16} className="text-primary" />
                         <span>Regular Shift</span>
                         {shiftType === "shift" && (
                           <Check size={16} className="ml-auto text-green-500" />
@@ -440,7 +440,7 @@ export const AddShiftModal: React.FC = () => {
               {shiftType !== "off" && (
                 <>
                   <div>
-                    <Label htmlFor="start-time" className="text-red-400 text-xs">
+                    <Label htmlFor="start-time" className="text-primary text-xs">
                       Start Time
                     </Label>
                     <Input
@@ -448,11 +448,11 @@ export const AddShiftModal: React.FC = () => {
                       type="time"
                       value={startTime}
                       onChange={(e) => setStartTime(e.target.value)}
-                      className="bg-black border border-red-900 text-white mt-1"
+                      className="bg-background border border-red-900 text-foreground mt-1"
                     />
                   </div>
                   <div>
-                    <Label htmlFor="end-time" className="text-red-400 text-xs">
+                    <Label htmlFor="end-time" className="text-primary text-xs">
                       End Time
                     </Label>
                     <Input
@@ -460,7 +460,7 @@ export const AddShiftModal: React.FC = () => {
                       type="time"
                       value={endTime}
                       onChange={(e) => setEndTime(e.target.value)}
-                      className="bg-black border border-red-900 text-white mt-1"
+                      className="bg-background border border-red-900 text-foreground mt-1"
                     />
                   </div>
                 </>
@@ -496,7 +496,7 @@ export const AddShiftModal: React.FC = () => {
                     />
                     <Label 
                       htmlFor="request-change" 
-                      className="text-white text-xs cursor-pointer"
+                      className="text-foreground text-xs cursor-pointer"
                     >
                       {isEditMode ? "Mark as a schedule change request" : "Request schedule change"}
                     </Label>
@@ -515,7 +515,7 @@ export const AddShiftModal: React.FC = () => {
                         value={requestReason}
                         onChange={(e) => setRequestReason(e.target.value)}
                         placeholder="Please provide a reason for this schedule change..."
-                        className="bg-black border border-yellow-700/50 text-white text-xs h-16 min-h-[64px]"
+                        className="bg-background border border-yellow-700/50 text-foreground text-xs h-16 min-h-[64px]"
                       />
                     </div>
                   )}
@@ -531,7 +531,7 @@ export const AddShiftModal: React.FC = () => {
             <Button
               onClick={handleDeleteShift}
               variant="destructive"
-              className="bg-red-900/60 hover:bg-red-800 text-white flex items-center"
+              className="bg-red-900/60 hover:bg-red-800 text-foreground flex items-center"
             >
               <Trash2 size={16} className="mr-1" />
               Delete
@@ -542,7 +542,7 @@ export const AddShiftModal: React.FC = () => {
             <Button
               onClick={handleClose}
               variant="outline"
-              className="bg-gray-800 hover:bg-gray-700 text-white border-gray-700"
+              className="bg-gray-800 hover:bg-gray-700 text-foreground border-gray-700"
             >
               Cancel
             </Button>

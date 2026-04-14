@@ -12,7 +12,7 @@ interface Props {
 
 export const ReactionPicker: React.FC<Props> = ({ onPick }) => {
   return (
-    <div className="flex items-center gap-0.5 p-1 bg-[#0f0f0f] border border-white/[0.06] rounded-sm shadow-lg">
+    <div className="flex items-center gap-0.5 p-1 bg-[#0f0f0f] border border-border rounded-sm shadow-lg">
       {QUICK_REACTIONS.map((emoji) => (
         <button
           key={emoji}

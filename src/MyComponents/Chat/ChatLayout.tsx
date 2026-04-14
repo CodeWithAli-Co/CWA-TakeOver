@@ -86,7 +86,7 @@ export const ChatLayout = () => {
   const memberCount = (activeGroup as any)?.subscribers?.length || 0;
 
   return (
-    <div className="flex h-[100dvh] w-full bg-black overflow-hidden">
+    <div className="flex h-[100dvh] w-full bg-background overflow-hidden">
       {/* Sidebar */}
       <ChatSidebar groups={allGroups} employees={AllEmployees || []} />
 
@@ -128,21 +128,21 @@ export const ChatLayout = () => {
               className="flex-1 flex items-center justify-center"
             >
               <div className="text-center max-w-sm">
-                <div className="h-12 w-12 rounded-sm bg-red-500/[0.08] border border-red-500/15 mx-auto mb-4 flex items-center justify-center">
-                  <MessageSquare className="h-5 w-5 text-red-400" />
+                <div className="h-12 w-12 rounded-sm bg-primary/[0.08] border border-primary/15 mx-auto mb-4 flex items-center justify-center">
+                  <MessageSquare className="h-5 w-5 text-primary" />
                 </div>
-                <p className="text-[14px] text-white/40 font-medium mb-1">No conversation selected</p>
-                <p className="text-[12px] text-white/20 mb-4">
+                <p className="text-[14px] text-muted-foreground/70 font-medium mb-1">No conversation selected</p>
+                <p className="text-[12px] text-muted-foreground/60 mb-4">
                   Pick a conversation from the sidebar or start a new one
                 </p>
                 <Dialog>
                   <DialogTrigger asChild>
-                    <button className="px-4 py-2 bg-red-500/[0.1] hover:bg-red-500/[0.15] border border-red-500/20 text-red-400 text-[12px] font-medium rounded-sm transition-colors">
+                    <button className="px-4 py-2 bg-primary/10 hover:bg-primary/80/[0.15] border border-primary/20 text-primary text-[12px] font-medium rounded-sm transition-colors">
                       Start New Conversation
                     </button>
                   </DialogTrigger>
                   <DialogContent className="max-w-md">
-                    <DialogTitle className="text-white/85">New Conversation</DialogTitle>
+                    <DialogTitle className="text-foreground/85">New Conversation</DialogTitle>
                     <AddDMGroup Users={AllEmployees || []} />
                   </DialogContent>
                 </Dialog>

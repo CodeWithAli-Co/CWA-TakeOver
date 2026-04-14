@@ -70,7 +70,7 @@ const EVENT_COLORS = {
   shift: "bg-red-950/50 border-red-900/50 hover:bg-red-900/40",
   meeting: "bg-zinc-800 border-zinc-700 hover:bg-zinc-700",
   break: "bg-zinc-900 border-zinc-800 hover:bg-zinc-800",
-  off: "bg-black border-zinc-900 hover:bg-zinc-950",
+  off: "bg-background border-zinc-900 hover:bg-zinc-950",
 };
 
 const EmployeeSchedule: React.FC = () => {
@@ -224,7 +224,7 @@ const EmployeeSchedule: React.FC = () => {
   const totalMeetings = events.filter(e => e.type === "meeting").length;
 
   return (
-    <div className="min-h-screen bg-black">
+    <div className="min-h-screen bg-background">
       {/* Header */}
       <header className="border-b border-zinc-900 bg-zinc-950/50 backdrop-blur-xl sticky top-0 z-40">
         <div className="max-w-[1600px] mx-auto px-6 py-4">
@@ -233,7 +233,7 @@ const EmployeeSchedule: React.FC = () => {
             <div className="flex items-center gap-4">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 bg-gradient-to-br from-red-950 to-red-900 rounded-lg flex items-center justify-center">
-                  <Calendar className="w-5 h-5 text-red-400" />
+                  <Calendar className="w-5 h-5 text-primary" />
                 </div>
                 <div>
                   <h1 className="text-lg font-bold text-zinc-100">Schedule</h1>
@@ -266,7 +266,7 @@ const EmployeeSchedule: React.FC = () => {
           <div className="bg-zinc-950 border border-zinc-900 rounded-xl p-5 hover:border-zinc-800 transition-colors">
             <div className="flex items-start justify-between mb-3">
               <div className="p-2.5 bg-red-950/30 border border-red-900/30 rounded-lg">
-                <Zap className="w-5 h-5 text-red-400" />
+                <Zap className="w-5 h-5 text-primary" />
               </div>
               <span className="text-xs font-medium text-zinc-500 uppercase tracking-wider">Total</span>
             </div>
@@ -416,7 +416,7 @@ const EmployeeSchedule: React.FC = () => {
             {weekDays.map((day) => (
               <div
                 key={day}
-                className="p-4 text-center text-xs font-bold text-zinc-500 uppercase tracking-wider bg-black"
+                className="p-4 text-center text-xs font-bold text-zinc-500 uppercase tracking-wider bg-background"
               >
                 {day}
               </div>
@@ -429,7 +429,7 @@ const EmployeeSchedule: React.FC = () => {
               <div
                 key={index}
                 className={`min-h-[140px] border-r border-b border-zinc-900 p-3 ${
-                  !day.isCurrentMonth ? "bg-zinc-950/50" : "bg-black"
+                  !day.isCurrentMonth ? "bg-zinc-950/50" : "bg-background"
                 } ${
                   day.isToday
                     ? "bg-red-950/10 border-red-900/30"
@@ -503,7 +503,7 @@ const EmployeeSchedule: React.FC = () => {
                           </DropdownMenuItem>
                           <DropdownMenuItem
                             onClick={() => handleDeleteEvent(event.id)}
-                            className="text-red-400 focus:bg-red-950/50 focus:text-red-300"
+                            className="text-primary focus:bg-red-950/50 focus:text-red-300"
                           >
                             <Trash2 className="w-4 h-4 mr-2" />
                             Delete

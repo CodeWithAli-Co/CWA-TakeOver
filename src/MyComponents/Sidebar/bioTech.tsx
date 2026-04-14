@@ -212,7 +212,7 @@ function BiotechDashboard() {
   const isTablet = windowWidth >= 768 && windowWidth < 1024;
 
   return (
-    <div className="min-h-screen bg-black/95 text-white">
+    <div className="min-h-screen bg-background/95 text-white">
       <div className="w-full max-w-[1400px] mx-auto p-4">
         {/* Header with title and actions */}
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
@@ -239,7 +239,7 @@ function BiotechDashboard() {
                     <Bell className="h-4 w-4" />
                   </Button>
                 </TooltipTrigger>
-                <TooltipContent className="bg-black border-red-900">
+                <TooltipContent className="bg-background border-red-900">
                   Notifications
                 </TooltipContent>
               </Tooltip>
@@ -255,7 +255,7 @@ function BiotechDashboard() {
                     <Settings className="h-4 w-4" />
                   </Button>
                 </TooltipTrigger>
-                <TooltipContent className="bg-black border-red-900">
+                <TooltipContent className="bg-background border-red-900">
                   Settings
                 </TooltipContent>
               </Tooltip>
@@ -271,7 +271,7 @@ function BiotechDashboard() {
                     <HelpCircle className="h-4 w-4" />
                   </Button>
                 </TooltipTrigger>
-                <TooltipContent className="bg-black border-red-900">
+                <TooltipContent className="bg-background border-red-900">
                   Help & Resources
                 </TooltipContent>
               </Tooltip>
@@ -279,7 +279,7 @@ function BiotechDashboard() {
             <Button
               size={isMobile ? "sm" : "default"}
               className="bg-gradient-to-r from-red-950 to-red-900 hover:from-red-900 hover:to-red-800
-                     text-white border border-red-800/30 shadow-lg shadow-red-950/20"
+                     text-foreground border border-red-800/30 shadow-lg shadow-red-950/20"
             >
               <Plus className="mr-2 h-4 w-4" />
               {!isMobile ? "New Experiment" : "New"}
@@ -294,7 +294,7 @@ function BiotechDashboard() {
           className="space-y-4 md:space-y-6"
         >
           <TabsList 
-            className="h-12 w-full justify-start space-x-2 bg-black/40 p-1 text-red-200/60 border border-red-950/20 overflow-x-auto flex-nowrap"
+            className="h-12 w-full justify-start space-x-2 bg-background/40 p-1 text-red-200/60 border border-red-950/20 overflow-x-auto flex-nowrap"
           >
             <TabsTrigger
               value="dashboard"
@@ -380,10 +380,10 @@ function BiotechDashboard() {
                   <>
                     {/* Stats Cards */}
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                      <Card className="bg-black/60 border-red-950/30 backdrop-blur-sm hover:bg-black/70 transition-colors">
+                      <Card className="bg-background/60 border-red-950/30 backdrop-blur-sm hover:bg-background/70 transition-colors">
                         <CardHeader className="p-4 pb-2">
-                          <CardTitle className="text-lg text-white flex items-center gap-2">
-                            <FlaskConical className="h-4 w-4 text-red-400" />
+                          <CardTitle className="text-lg text-foreground flex items-center gap-2">
+                            <FlaskConical className="h-4 w-4 text-primary" />
                             Experiments
                           </CardTitle>
                         </CardHeader>
@@ -403,10 +403,10 @@ function BiotechDashboard() {
                         </CardContent>
                       </Card>
 
-                      <Card className="bg-black/60 border-red-950/30 backdrop-blur-sm hover:bg-black/70 transition-colors">
+                      <Card className="bg-background/60 border-red-950/30 backdrop-blur-sm hover:bg-background/70 transition-colors">
                         <CardHeader className="p-4 pb-2">
-                          <CardTitle className="text-lg text-white flex items-center gap-2">
-                            <Beaker className="h-4 w-4 text-red-400" />
+                          <CardTitle className="text-lg text-foreground flex items-center gap-2">
+                            <Beaker className="h-4 w-4 text-primary" />
                             Assays
                           </CardTitle>
                         </CardHeader>
@@ -426,10 +426,10 @@ function BiotechDashboard() {
                         </CardContent>
                       </Card>
 
-                      <Card className="bg-black/60 border-red-950/30 backdrop-blur-sm hover:bg-black/70 transition-colors">
+                      <Card className="bg-background/60 border-red-950/30 backdrop-blur-sm hover:bg-background/70 transition-colors">
                         <CardHeader className="p-4 pb-2">
-                          <CardTitle className="text-lg text-white flex items-center gap-2">
-                            <Clipboard className="h-4 w-4 text-red-400" />
+                          <CardTitle className="text-lg text-foreground flex items-center gap-2">
+                            <Clipboard className="h-4 w-4 text-primary" />
                             Samples
                           </CardTitle>
                         </CardHeader>
@@ -449,10 +449,10 @@ function BiotechDashboard() {
                         </CardContent>
                       </Card>
 
-                      <Card className="bg-black/60 border-red-950/30 backdrop-blur-sm hover:bg-black/70 transition-colors">
+                      <Card className="bg-background/60 border-red-950/30 backdrop-blur-sm hover:bg-background/70 transition-colors">
                         <CardHeader className="p-4 pb-2">
-                          <CardTitle className="text-lg text-white flex items-center gap-2">
-                            <AlarmClock className="h-4 w-4 text-red-400" />
+                          <CardTitle className="text-lg text-foreground flex items-center gap-2">
+                            <AlarmClock className="h-4 w-4 text-primary" />
                             Upcoming
                           </CardTitle>
                         </CardHeader>
@@ -476,10 +476,10 @@ function BiotechDashboard() {
                     {/* Charts & Activity */}
                     <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
                       {/* Growth Chart */}
-                      <Card className="bg-black/60 border-red-950/30 backdrop-blur-sm col-span-1 lg:col-span-2">
+                      <Card className="bg-background/60 border-red-950/30 backdrop-blur-sm col-span-1 lg:col-span-2">
                         <CardHeader className="p-4 pb-2">
-                          <CardTitle className="text-lg text-white flex items-center gap-2">
-                            <BarChart3 className="h-4 w-4 text-red-400" />
+                          <CardTitle className="text-lg text-foreground flex items-center gap-2">
+                            <BarChart3 className="h-4 w-4 text-primary" />
                             Cell Growth Analysis
                           </CardTitle>
                           <CardDescription className="text-red-200/60 text-xs">
@@ -540,10 +540,10 @@ function BiotechDashboard() {
                       </Card>
 
                       {/* Recent Activity */}
-                      <Card className="bg-black/60 border-red-950/30 backdrop-blur-sm">
+                      <Card className="bg-background/60 border-red-950/30 backdrop-blur-sm">
                         <CardHeader className="p-4 pb-2">
-                          <CardTitle className="text-lg text-white flex items-center gap-2">
-                            <Atom className="h-4 w-4 text-red-400" />
+                          <CardTitle className="text-lg text-foreground flex items-center gap-2">
+                            <Atom className="h-4 w-4 text-primary" />
                             Recent Activity
                           </CardTitle>
                           <CardDescription className="text-red-200/60 text-xs">
@@ -553,23 +553,23 @@ function BiotechDashboard() {
                         <CardContent className="p-4 pt-2">
                           <div className="space-y-4">
                             <div className="border-l-2 border-red-700 pl-4 py-1">
-                              <p className="text-white text-sm font-medium">PCR Results Uploaded</p>
+                              <p className="text-foreground text-sm font-medium">PCR Results Uploaded</p>
                               <p className="text-red-200/60 text-xs">Today, 10:45 AM by Dr. Chen</p>
                             </div>
                             <div className="border-l-2 border-red-700 pl-4 py-1">
-                              <p className="text-white text-sm font-medium">Sample Storage Alert</p>
+                              <p className="text-foreground text-sm font-medium">Sample Storage Alert</p>
                               <p className="text-red-200/60 text-xs">Today, 09:30 AM - Freezer B temperature</p>
                             </div>
                             <div className="border-l-2 border-red-700 pl-4 py-1">
-                              <p className="text-white text-sm font-medium">Experiment Protocol Update</p>
+                              <p className="text-foreground text-sm font-medium">Experiment Protocol Update</p>
                               <p className="text-red-200/60 text-xs">Yesterday, 4:15 PM by Dr. Rodriguez</p>
                             </div>
                             <div className="border-l-2 border-red-700 pl-4 py-1">
-                              <p className="text-white text-sm font-medium">Cell Culture Started</p>
+                              <p className="text-foreground text-sm font-medium">Cell Culture Started</p>
                               <p className="text-red-200/60 text-xs">Yesterday, 2:00 PM by Lab Technician</p>
                             </div>
                             <div className="border-l-2 border-red-700 pl-4 py-1">
-                              <p className="text-white text-sm font-medium">Sequencing Results Available</p>
+                              <p className="text-foreground text-sm font-medium">Sequencing Results Available</p>
                               <p className="text-red-200/60 text-xs">Feb 26, 11:30 AM - 94% quality score</p>
                             </div>
                           </div>
@@ -578,11 +578,11 @@ function BiotechDashboard() {
                     </div>
 
                     {/* Recent Experiments */}
-                    <Card className="bg-black/60 border-red-950/30 backdrop-blur-sm">
+                    <Card className="bg-background/60 border-red-950/30 backdrop-blur-sm">
                       <CardHeader className="p-4 pb-2">
                         <div className="flex justify-between items-center">
-                          <CardTitle className="text-lg text-white flex items-center gap-2">
-                            <FlaskConical className="h-4 w-4 text-red-400" />
+                          <CardTitle className="text-lg text-foreground flex items-center gap-2">
+                            <FlaskConical className="h-4 w-4 text-primary" />
                             Recent Experiments
                           </CardTitle>
                           <Button
@@ -647,7 +647,7 @@ function BiotechDashboard() {
                                         <Filter className="h-4 w-4" />
                                       </Button>
                                     </DropdownMenuTrigger>
-                                    <DropdownMenuContent align="end" className="bg-black/90 border-red-950/30 text-red-200">
+                                    <DropdownMenuContent align="end" className="bg-background/90 border-red-950/30 text-red-200">
                                       <DropdownMenuItem className="hover:bg-red-950/20 cursor-pointer">View Details</DropdownMenuItem>
                                       <DropdownMenuItem className="hover:bg-red-950/20 cursor-pointer">Edit Experiment</DropdownMenuItem>
                                       <DropdownMenuItem className="hover:bg-red-950/20 cursor-pointer">Download Data</DropdownMenuItem>
@@ -667,12 +667,12 @@ function BiotechDashboard() {
 
               {/* Experiments Tab */}
               <TabsContent value="experiments" className="space-y-4">
-                <Card className="bg-black/60 border-red-950/30 backdrop-blur-sm">
+                <Card className="bg-background/60 border-red-950/30 backdrop-blur-sm">
                   <CardHeader className="p-4 pb-2">
                     <div className="flex flex-col md:flex-row justify-between md:items-center">
                       <div>
-                        <CardTitle className="text-lg text-white flex items-center gap-2">
-                          <FlaskConical className="h-4 w-4 text-red-400" />
+                        <CardTitle className="text-lg text-foreground flex items-center gap-2">
+                          <FlaskConical className="h-4 w-4 text-primary" />
                           Experiment Management
                         </CardTitle>
                         <CardDescription className="text-red-200/60 text-xs">
@@ -691,7 +691,7 @@ function BiotechDashboard() {
                         <Button
                           size="sm"
                           className="text-xs bg-gradient-to-r from-red-950 to-red-900 hover:from-red-900 hover:to-red-800
-                                  text-white border border-red-800/30"
+                                  text-foreground border border-red-800/30"
                         >
                           <Plus className="h-4 w-4 mr-1" />
                           New Experiment
@@ -705,16 +705,16 @@ function BiotechDashboard() {
                         <Search className="absolute left-2 top-1/2 transform -translate-y-1/2 h-4 w-4 text-red-200/60" />
                         <Input
                           placeholder="Search experiments..."
-                          className="pl-8 bg-black/40 border-red-950/30 text-white focus:border-red-500 focus:ring-red-500/20"
+                          className="pl-8 bg-background/40 border-red-950/30 text-foreground focus:border-red-500 focus:ring-red-500/20"
                           value={searchQuery}
                           onChange={(e) => setSearchQuery(e.target.value)}
                         />
                       </div>
                       <Select value={experimentFilter} onValueChange={setExperimentFilter}>
-                        <SelectTrigger className="w-full md:w-[180px] bg-black/40 border-red-950/30 text-white">
+                        <SelectTrigger className="w-full md:w-[180px] bg-background/40 border-red-950/30 text-white">
                           <SelectValue placeholder="Filter by status" />
                         </SelectTrigger>
-                        <SelectContent className="bg-black/90 border-red-950/30 text-red-200">
+                        <SelectContent className="bg-background/90 border-red-950/30 text-red-200">
                           <SelectItem value="all">All Experiments</SelectItem>
                           <SelectItem value="inProgress">In Progress</SelectItem>
                           <SelectItem value="completed">Completed</SelectItem>
@@ -774,7 +774,7 @@ function BiotechDashboard() {
                                           <Bookmark className="h-4 w-4" />
                                         </Button>
                                       </TooltipTrigger>
-                                      <TooltipContent className="bg-black border-red-900">Save</TooltipContent>
+                                      <TooltipContent className="bg-background border-red-900">Save</TooltipContent>
                                     </Tooltip>
                                   </TooltipProvider>
                                   <TooltipProvider>
@@ -788,7 +788,7 @@ function BiotechDashboard() {
                                           <Share2 className="h-4 w-4" />
                                         </Button>
                                       </TooltipTrigger>
-                                      <TooltipContent className="bg-black border-red-900">Share</TooltipContent>
+                                      <TooltipContent className="bg-background border-red-900">Share</TooltipContent>
                                     </Tooltip>
                                   </TooltipProvider>
                                   <DropdownMenu>
@@ -802,7 +802,7 @@ function BiotechDashboard() {
                                         <Filter className="h-4 w-4" />
                                       </Button>
                                     </DropdownMenuTrigger>
-                                    <DropdownMenuContent align="end" className="bg-black/90 border-red-950/30 text-red-200">
+                                    <DropdownMenuContent align="end" className="bg-background/90 border-red-950/30 text-red-200">
                                       <DropdownMenuItem className="hover:bg-red-950/20 cursor-pointer">View Details</DropdownMenuItem>
                                       <DropdownMenuItem className="hover:bg-red-950/20 cursor-pointer">Edit Experiment</DropdownMenuItem>
                                       <DropdownMenuItem className="hover:bg-red-950/20 cursor-pointer">Duplicate</DropdownMenuItem>
@@ -823,12 +823,12 @@ function BiotechDashboard() {
 
               {/* Assays Tab */}
               <TabsContent value="assays" className="space-y-4">
-                <Card className="bg-black/60 border-red-950/30 backdrop-blur-sm">
+                <Card className="bg-background/60 border-red-950/30 backdrop-blur-sm">
                   <CardHeader className="p-4 pb-2">
                     <div className="flex flex-col md:flex-row justify-between md:items-center">
                       <div>
-                        <CardTitle className="text-lg text-white flex items-center gap-2">
-                          <Beaker className="h-4 w-4 text-red-400" />
+                        <CardTitle className="text-lg text-foreground flex items-center gap-2">
+                          <Beaker className="h-4 w-4 text-primary" />
                           Assay Management
                         </CardTitle>
                         <CardDescription className="text-red-200/60 text-xs">
@@ -839,7 +839,7 @@ function BiotechDashboard() {
                         <Button
                           size="sm"
                           className="text-xs bg-gradient-to-r from-red-950 to-red-900 hover:from-red-900 hover:to-red-800
-                                  text-white border border-red-800/30"
+                                  text-foreground border border-red-800/30"
                         >
                           <Plus className="h-4 w-4 mr-1" />
                           New Assay
@@ -890,7 +890,7 @@ function BiotechDashboard() {
                                       <Filter className="h-4 w-4" />
                                     </Button>
                                   </DropdownMenuTrigger>
-                                  <DropdownMenuContent align="end" className="bg-black/90 border-red-950/30 text-red-200">
+                                  <DropdownMenuContent align="end" className="bg-background/90 border-red-950/30 text-red-200">
                                     <DropdownMenuItem className="hover:bg-red-950/20 cursor-pointer">View Details</DropdownMenuItem>
                                     <DropdownMenuItem className="hover:bg-red-950/20 cursor-pointer">Edit Assay</DropdownMenuItem>
                                     <DropdownMenuItem className="hover:bg-red-950/20 cursor-pointer">Record Results</DropdownMenuItem>
@@ -909,12 +909,12 @@ function BiotechDashboard() {
 
               {/* Sample Management Tab */}
               <TabsContent value="samples" className="space-y-4">
-                <Card className="bg-black/60 border-red-950/30 backdrop-blur-sm">
+                <Card className="bg-background/60 border-red-950/30 backdrop-blur-sm">
                   <CardHeader className="p-4 pb-2">
                     <div className="flex flex-col md:flex-row justify-between md:items-center">
                       <div>
-                        <CardTitle className="text-lg text-white flex items-center gap-2">
-                          <Clipboard className="h-4 w-4 text-red-400" />
+                        <CardTitle className="text-lg text-foreground flex items-center gap-2">
+                          <Clipboard className="h-4 w-4 text-primary" />
                           Sample Inventory
                         </CardTitle>
                         <CardDescription className="text-red-200/60 text-xs">
@@ -925,7 +925,7 @@ function BiotechDashboard() {
                         <Button
                           size="sm"
                           className="text-xs bg-gradient-to-r from-red-950 to-red-900 hover:from-red-900 hover:to-red-800
-                                  text-white border border-red-800/30"
+                                  text-foreground border border-red-800/30"
                         >
                           <Plus className="h-4 w-4 mr-1" />
                           Add Sample
@@ -935,41 +935,41 @@ function BiotechDashboard() {
                   </CardHeader>
                   <CardContent className="p-4">
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
-                      <Card className="bg-black/40 border-red-950/30 p-3">
+                      <Card className="bg-background/40 border-red-950/30 p-3">
                         <div className="flex items-center gap-2">
                           <ThermometerSnowflake className="h-8 w-8 text-blue-400" />
                           <div>
-                            <p className="text-white font-medium">Freezer Status</p>
+                            <p className="text-foreground font-medium">Freezer Status</p>
                             <p className="text-xs text-blue-300">All units operational</p>
                           </div>
                         </div>
                       </Card>
                       
-                      <Card className="bg-black/40 border-red-950/30 p-3">
+                      <Card className="bg-background/40 border-red-950/30 p-3">
                         <div className="flex items-center gap-2">
                           <Atom className="h-8 w-8 text-green-400" />
                           <div>
-                            <p className="text-white font-medium">Cell Lines</p>
+                            <p className="text-foreground font-medium">Cell Lines</p>
                             <p className="text-xs text-green-300">12 active cultures</p>
                           </div>
                         </div>
                       </Card>
                       
-                      <Card className="bg-black/40 border-red-950/30 p-3">
+                      <Card className="bg-background/40 border-red-950/30 p-3">
                         <div className="flex items-center gap-2">
                           <PieChart className="h-8 w-8 text-yellow-400" />
                           <div>
-                            <p className="text-white font-medium">Storage Capacity</p>
+                            <p className="text-foreground font-medium">Storage Capacity</p>
                             <p className="text-xs text-yellow-300">72% utilized</p>
                           </div>
                         </div>
                       </Card>
                       
-                      <Card className="bg-black/40 border-red-950/30 p-3">
+                      <Card className="bg-background/40 border-red-950/30 p-3">
                         <div className="flex items-center gap-2">
-                          <AlarmClock className="h-8 w-8 text-red-400" />
+                          <AlarmClock className="h-8 w-8 text-primary" />
                           <div>
-                            <p className="text-white font-medium">Expiring Soon</p>
+                            <p className="text-foreground font-medium">Expiring Soon</p>
                             <p className="text-xs text-red-300">3 samples this month</p>
                           </div>
                         </div>
@@ -1014,7 +1014,7 @@ function BiotechDashboard() {
                                       <Filter className="h-4 w-4" />
                                     </Button>
                                   </DropdownMenuTrigger>
-                                  <DropdownMenuContent align="end" className="bg-black/90 border-red-950/30 text-red-200">
+                                  <DropdownMenuContent align="end" className="bg-background/90 border-red-950/30 text-red-200">
                                     <DropdownMenuItem className="hover:bg-red-950/20 cursor-pointer">View Details</DropdownMenuItem>
                                     <DropdownMenuItem className="hover:bg-red-950/20 cursor-pointer">Update Status</DropdownMenuItem>
                                     <DropdownMenuItem className="hover:bg-red-950/20 cursor-pointer">Move Location</DropdownMenuItem>
@@ -1034,10 +1034,10 @@ function BiotechDashboard() {
 
               {/* Sequencing Tab */}
               <TabsContent value="sequencing" className="space-y-4">
-                <Card className="bg-black/60 border-red-950/30 backdrop-blur-sm">
+                <Card className="bg-background/60 border-red-950/30 backdrop-blur-sm">
                   <CardHeader className="p-4">
-                    <CardTitle className="text-lg text-white flex items-center gap-2">
-                      <Dna className="h-4 w-4 text-red-400" />
+                    <CardTitle className="text-lg text-foreground flex items-center gap-2">
+                      <Dna className="h-4 w-4 text-primary" />
                       Dna/RNA Sequencing
                     </CardTitle>
                     <CardDescription className="text-red-200/60 text-xs">
@@ -1046,14 +1046,14 @@ function BiotechDashboard() {
                   </CardHeader>
                   <CardContent className="p-4">
                     <div className="text-center py-12">
-                      <Dna className="h-16 w-16 mx-auto text-red-400 mb-4" />
-                      <h3 className="text-lg font-medium text-white mb-2">Sequencing Module</h3>
+                      <Dna className="h-16 w-16 mx-auto text-primary mb-4" />
+                      <h3 className="text-lg font-medium text-foreground mb-2">Sequencing Module</h3>
                       <p className="text-red-200/60 max-w-md mx-auto mb-6">
                         Track sample preparation, manage sequencing runs, and analyze genomic data.
                       </p>
                       <Button
                         className="bg-gradient-to-r from-red-950 to-red-900 hover:from-red-900 hover:to-red-800
-                                  text-white border border-red-800/30"
+                                  text-foreground border border-red-800/30"
                       >
                         Set Up Sequencing
                       </Button>
@@ -1064,10 +1064,10 @@ function BiotechDashboard() {
 
               {/* Data Analysis Tab */}
               <TabsContent value="analysis" className="space-y-4">
-                <Card className="bg-black/60 border-red-950/30 backdrop-blur-sm">
+                <Card className="bg-background/60 border-red-950/30 backdrop-blur-sm">
                   <CardHeader className="p-4">
-                    <CardTitle className="text-lg text-white flex items-center gap-2">
-                      <FileSpreadsheet className="h-4 w-4 text-red-400" />
+                    <CardTitle className="text-lg text-foreground flex items-center gap-2">
+                      <FileSpreadsheet className="h-4 w-4 text-primary" />
                       Data Analysis & Visualization
                     </CardTitle>
                     <CardDescription className="text-red-200/60 text-xs">
@@ -1076,14 +1076,14 @@ function BiotechDashboard() {
                   </CardHeader>
                   <CardContent className="p-4">
                     <div className="text-center py-12">
-                      <FileSpreadsheet className="h-16 w-16 mx-auto text-red-400 mb-4" />
-                      <h3 className="text-lg font-medium text-white mb-2">Analytics Module</h3>
+                      <FileSpreadsheet className="h-16 w-16 mx-auto text-primary mb-4" />
+                      <h3 className="text-lg font-medium text-foreground mb-2">Analytics Module</h3>
                       <p className="text-red-200/60 max-w-md mx-auto mb-6">
                         Import data, run statistical analyses, and create custom visualizations for your research.
                       </p>
                       <Button
                         className="bg-gradient-to-r from-red-950 to-red-900 hover:from-red-900 hover:to-red-800
-                                  text-white border border-red-800/30"
+                                  text-foreground border border-red-800/30"
                       >
                         Import Data
                       </Button>
@@ -1094,10 +1094,10 @@ function BiotechDashboard() {
 
               {/* Schedule Tab */}
               <TabsContent value="calendar" className="space-y-4">
-                <Card className="bg-black/60 border-red-950/30 backdrop-blur-sm">
+                <Card className="bg-background/60 border-red-950/30 backdrop-blur-sm">
                   <CardHeader className="p-4">
-                    <CardTitle className="text-lg text-white flex items-center gap-2">
-                      <Calendar className="h-4 w-4 text-red-400" />
+                    <CardTitle className="text-lg text-foreground flex items-center gap-2">
+                      <Calendar className="h-4 w-4 text-primary" />
                       Lab Schedule
                     </CardTitle>
                     <CardDescription className="text-red-200/60 text-xs">
@@ -1106,14 +1106,14 @@ function BiotechDashboard() {
                   </CardHeader>
                   <CardContent className="p-4">
                     <div className="text-center py-12">
-                      <Calendar className="h-16 w-16 mx-auto text-red-400 mb-4" />
-                      <h3 className="text-lg font-medium text-white mb-2">Calendar Module</h3>
+                      <Calendar className="h-16 w-16 mx-auto text-primary mb-4" />
+                      <h3 className="text-lg font-medium text-foreground mb-2">Calendar Module</h3>
                       <p className="text-red-200/60 max-w-md mx-auto mb-6">
                         Schedule equipment time, coordinate team activities, and set experiment reminders.
                       </p>
                       <Button
                         className="bg-gradient-to-r from-red-950 to-red-900 hover:from-red-900 hover:to-red-800
-                                  text-white border border-red-800/30"
+                                  text-foreground border border-red-800/30"
                       >
                         Book Equipment
                       </Button>

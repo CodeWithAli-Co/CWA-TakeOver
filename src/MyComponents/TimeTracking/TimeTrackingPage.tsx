@@ -40,7 +40,7 @@ import { useWeeklyStats, useTimeEntriesByDateRange } from "@/stores/timeTracking
 // Loading component
 const LoadingState = ({ className }: { className?: string }) => (
   <div className={cn("flex items-center justify-center", className)}>
-    <Loader2 className="h-6 w-6 animate-spin text-white/30" />
+    <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
   </div>
 );
 
@@ -61,8 +61,8 @@ const BentoCard = ({
     transition={{ duration: 0.2 }}
     onClick={onClick}
     className={cn(
-      "relative overflow-hidden rounded-2xl border border-white/[0.08] bg-white/[0.02] backdrop-blur-xl",
-      "hover:border-white/[0.15] hover:bg-white/[0.04] transition-all duration-300",
+      "relative overflow-hidden rounded-2xl border border-border bg-muted/30 backdrop-blur-xl",
+      "hover:border-white/[0.15] hover:bg-muted/50 transition-all duration-300",
       onClick && "cursor-pointer",
       className
     )}
@@ -79,9 +79,9 @@ const SectionHeader = ({ icon: Icon, title, action }: { icon: any; title: string
   <div className="flex items-center justify-between mb-4">
     <div className="flex items-center gap-2">
       <div className="p-1.5 rounded-lg bg-white/[0.05]">
-        <Icon className="h-4 w-4 text-white/70" />
+        <Icon className="h-4 w-4 text-foreground/70" />
       </div>
-      <h3 className="text-sm font-medium text-white/70 uppercase tracking-wider">{title}</h3>
+      <h3 className="text-sm font-medium text-foreground/70 uppercase tracking-wider">{title}</h3>
     </div>
     {action}
   </div>
@@ -106,16 +106,16 @@ export const TimeTrackingPage = () => {
             animate={{ opacity: 1, y: 0 }}
             className="flex items-center gap-3 mb-2"
           >
-            <div className="p-2 rounded-xl bg-gradient-to-br from-red-500/20 to-orange-500/20 border border-red-500/20">
-              <Timer className="h-6 w-6 text-red-400" />
+            <div className="p-2 rounded-xl bg-gradient-to-br from-red-500/20 to-orange-500/20 border border-primary/20">
+              <Timer className="h-6 w-6 text-primary" />
             </div>
-            <h1 className="text-3xl font-bold text-white tracking-tight">Time Tracking</h1>
+            <h1 className="text-3xl font-bold text-foreground tracking-tight">Time Tracking</h1>
           </motion.div>
           <motion.p
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ delay: 0.1 }}
-            className="text-white/40 text-sm"
+            className="text-muted-foreground/70 text-sm"
           >
             Track work hours and generate proof of work for YC application
           </motion.p>
@@ -142,8 +142,8 @@ export const TimeTrackingPage = () => {
             className={cn(
               "flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition-all",
               activeTab === tab.id
-                ? "bg-white/10 text-white border border-white/10"
-                : "text-white/50 hover:text-white/70 hover:bg-white/[0.03]"
+                ? "bg-white/10 text-foreground border border-white/10"
+                : "text-muted-foreground/80 hover:text-foreground/70 hover:bg-muted/40"
             )}
           >
             <tab.icon className="h-4 w-4" />
@@ -163,7 +163,7 @@ export const TimeTrackingPage = () => {
           whileHover={{ scale: 1.02 }}
           whileTap={{ scale: 0.98 }}
           onClick={() => setShowAddEntry(true)}
-          className="flex items-center gap-2 px-4 py-2 rounded-xl bg-gradient-to-r from-red-500 to-orange-500 text-white text-sm font-medium shadow-lg shadow-red-500/20"
+          className="flex items-center gap-2 px-4 py-2 rounded-xl bg-gradient-to-r from-red-500 to-orange-500 text-foreground text-sm font-medium shadow-lg shadow-red-500/20"
         >
           <Plus className="h-4 w-4" />
           Log Time
@@ -212,13 +212,13 @@ export const TimeTrackingPage = () => {
                     <div className="flex items-center gap-1">
                       <button
                         onClick={() => setSelectedMonth(new Date(selectedMonth.setMonth(selectedMonth.getMonth() - 1)))}
-                        className="p-1 rounded-lg hover:bg-white/10 text-white/50 hover:text-white transition-colors"
+                        className="p-1 rounded-lg hover:bg-white/10 text-muted-foreground/80 hover:text-foreground transition-colors"
                       >
                         <ChevronLeft className="h-4 w-4" />
                       </button>
                       <button
                         onClick={() => setSelectedMonth(new Date(selectedMonth.setMonth(selectedMonth.getMonth() + 1)))}
-                        className="p-1 rounded-lg hover:bg-white/10 text-white/50 hover:text-white transition-colors"
+                        className="p-1 rounded-lg hover:bg-white/10 text-muted-foreground/80 hover:text-foreground transition-colors"
                       >
                         <ChevronRight className="h-4 w-4" />
                       </button>
@@ -246,7 +246,7 @@ export const TimeTrackingPage = () => {
                   action={
                     <button
                       onClick={() => setActiveTab("entries")}
-                      className="text-xs text-white/40 hover:text-white/70 transition-colors"
+                      className="text-xs text-muted-foreground/70 hover:text-foreground/70 transition-colors"
                     >
                       View All
                     </button>
@@ -307,7 +307,7 @@ export const TimeTrackingPage = () => {
         <DialogContent className="max-w-lg">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              <Timer className="h-4 w-4 text-red-400" />
+              <Timer className="h-4 w-4 text-primary" />
               Log Time Entry
             </DialogTitle>
           </DialogHeader>
@@ -323,7 +323,7 @@ export const TimeTrackingPage = () => {
         <DialogContent className="max-w-lg">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              <Timer className="h-4 w-4 text-red-400" />
+              <Timer className="h-4 w-4 text-primary" />
               Edit Time Entry
             </DialogTitle>
           </DialogHeader>
@@ -341,7 +341,7 @@ export const TimeTrackingPage = () => {
         whileHover={{ scale: 1.1 }}
         whileTap={{ scale: 0.9 }}
         onClick={() => setShowAddEntry(true)}
-        className="fixed bottom-6 right-6 lg:hidden p-4 rounded-full bg-gradient-to-r from-red-500 to-orange-500 text-white shadow-2xl shadow-red-500/30"
+        className="fixed bottom-6 right-6 lg:hidden p-4 rounded-full bg-gradient-to-r from-red-500 to-orange-500 text-foreground shadow-2xl shadow-red-500/30"
       >
         <Plus className="h-6 w-6" />
       </motion.button>
@@ -357,7 +357,7 @@ const WeeklyStatsCharts = ({ type }: { type: "company" | "category" }) => {
     return stats.by_company.length > 0 ? (
       <CompanyPieChart data={stats.by_company} />
     ) : (
-      <div className="h-48 flex items-center justify-center text-white/30 text-sm">
+      <div className="h-48 flex items-center justify-center text-muted-foreground text-sm">
         No data this week
       </div>
     );
@@ -366,7 +366,7 @@ const WeeklyStatsCharts = ({ type }: { type: "company" | "category" }) => {
   return stats.by_category.length > 0 ? (
     <CategoryBarChart data={stats.by_category} />
   ) : (
-    <div className="h-48 flex items-center justify-center text-white/30 text-sm">
+    <div className="h-48 flex items-center justify-center text-muted-foreground text-sm">
       No data this week
     </div>
   );

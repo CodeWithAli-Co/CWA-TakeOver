@@ -25,9 +25,9 @@ export type TaskPriority = "high" | "medium" | "low";
 export type TaskStatus = "to-do" | "in-progress" | "done";
 
 const priorityColors: Record<TaskPriority, string> = {
-  high: "bg-red-500/[0.08] text-red-400 border-red-500/15",
+  high: "bg-primary/[0.08] text-primary border-primary/15",
   medium: "bg-amber-500/[0.06] text-amber-400/80 border-amber-500/10",
-  low: "bg-white/[0.04] text-white/40 border-white/[0.06]",
+  low: "bg-muted/50 text-muted-foreground/70 border-border",
 };
 
 const statusColors: Record<TaskStatus, { dot: string; text: string; bg: string }> = {
@@ -55,7 +55,7 @@ const TaskItem: React.FC<{
       initial={{ opacity: 0, y: 6 }}
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, y: -6 }}
-      className="bg-white/[0.015] border border-white/[0.04] hover:border-red-500/10 rounded-sm transition-all duration-300 overflow-hidden group"
+      className="bg-card border border-border hover:border-primary/10 rounded-sm transition-all duration-300 overflow-hidden group"
     >
       {/* Header row */}
       <div
@@ -68,7 +68,7 @@ const TaskItem: React.FC<{
         {/* Title + priority */}
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 flex-wrap">
-            <span className="text-[13px] font-medium text-white/80 truncate">
+            <span className="text-[13px] font-medium text-foreground/80 truncate">
               {task.title}
             </span>
             {task.priority && (
@@ -79,7 +79,7 @@ const TaskItem: React.FC<{
           </div>
 
           {/* Meta row */}
-          <div className="flex items-center gap-3 mt-1 text-[11px] text-white/25">
+          <div className="flex items-center gap-3 mt-1 text-[11px] text-muted-foreground/50">
             {task.deadline && (
               <span className="flex items-center gap-1">
                 <Calendar className="h-3 w-3" /> {task.deadline}
@@ -119,7 +119,7 @@ const TaskItem: React.FC<{
         </div>
 
         <ChevronRight
-          className={`h-3.5 w-3.5 text-white/20 transition-transform shrink-0 ${isExpanded ? "rotate-90" : ""}`}
+          className={`h-3.5 w-3.5 text-muted-foreground/60 transition-transform shrink-0 ${isExpanded ? "rotate-90" : ""}`}
         />
       </div>
 
@@ -130,24 +130,24 @@ const TaskItem: React.FC<{
             initial={{ opacity: 0, height: 0 }}
             animate={{ opacity: 1, height: "auto" }}
             exit={{ opacity: 0, height: 0 }}
-            className="border-t border-white/[0.04] overflow-hidden"
+            className="border-t border-border overflow-hidden"
           >
             <div className="px-4 py-3 space-y-2">
               {task.description ? (
                 <div>
-                  <p className="text-[10px] text-white/20 uppercase tracking-wider mb-1">Description</p>
-                  <p className="text-[12px] text-white/60 leading-relaxed">{task.description}</p>
+                  <p className="text-[10px] text-muted-foreground/60 uppercase tracking-wider mb-1">Description</p>
+                  <p className="text-[12px] text-foreground/60 leading-relaxed">{task.description}</p>
                 </div>
               ) : (
-                <p className="text-[11px] text-white/20 italic">No description</p>
+                <p className="text-[11px] text-muted-foreground/60 italic">No description</p>
               )}
 
               <div className="flex items-center justify-between pt-2">
-                <span className="text-[10px] text-white/15">
+                <span className="text-[10px] text-muted-foreground/40">
                   Created {task.created_at ? new Date(task.created_at).toLocaleDateString() : "—"}
                 </span>
                 {task.priorityOrder && (
-                  <span className="text-[10px] text-white/15">
+                  <span className="text-[10px] text-muted-foreground/40">
                     Priority order: {task.priorityOrder}
                   </span>
                 )}
@@ -177,10 +177,10 @@ const KanbanCard: React.FC<{
       initial={{ opacity: 0, scale: 0.98 }}
       animate={{ opacity: 1, scale: 1 }}
       exit={{ opacity: 0, scale: 0.98 }}
-      className="bg-white/[0.02] border border-white/[0.04] hover:border-red-500/10 rounded-sm p-3 transition-all group"
+      className="bg-muted/30 border border-border hover:border-primary/10 rounded-sm p-3 transition-all group"
     >
       <div className="flex items-start justify-between mb-1.5 gap-2">
-        <h4 className="text-[12px] font-medium text-white/80 leading-snug flex-1">
+        <h4 className="text-[12px] font-medium text-foreground/80 leading-snug flex-1">
           {task.title}
         </h4>
         {task.priority && (
@@ -190,12 +190,12 @@ const KanbanCard: React.FC<{
         )}
       </div>
       {task.description && (
-        <p className="text-[11px] text-white/30 leading-snug mb-2 line-clamp-2">
+        <p className="text-[11px] text-muted-foreground leading-snug mb-2 line-clamp-2">
           {task.description}
         </p>
       )}
 
-      <div className="flex items-center gap-2 text-[10px] text-white/25 mb-2">
+      <div className="flex items-center gap-2 text-[10px] text-muted-foreground/50 mb-2">
         {task.deadline && (
           <span className="flex items-center gap-0.5">
             <Calendar className="h-2.5 w-2.5" /> {task.deadline}
@@ -210,10 +210,10 @@ const KanbanCard: React.FC<{
       </div>
 
       {nextStatus && (
-        <div className="pt-2 border-t border-white/[0.04] opacity-0 group-hover:opacity-100 transition-opacity">
+        <div className="pt-2 border-t border-border opacity-0 group-hover:opacity-100 transition-opacity">
           <button
             onClick={() => onStatusChange(task.todo_id, nextStatus)}
-            className="w-full text-[10px] text-red-400 hover:text-red-300 flex items-center justify-center gap-0.5"
+            className="w-full text-[10px] text-primary hover:text-red-300 flex items-center justify-center gap-0.5"
           >
             {nextStatus === "in-progress" ? "Start" : "Mark done"}
             <ChevronRight className="h-2.5 w-2.5" />
@@ -281,17 +281,17 @@ const TaskSettings: React.FC = () => {
   });
 
   return (
-    <div className="min-h-screen bg-black overflow-y-auto">
+    <div className="min-h-screen bg-background overflow-y-auto">
       {/* Header */}
       <div className="px-8 pt-7 pb-2">
         <div className="flex items-end justify-between">
           <div className="flex items-center gap-3">
-            <div className="p-2.5 rounded-sm bg-red-500/[0.08] border border-red-500/15">
-              <ClipboardList className="h-5 w-5 text-red-400" />
+            <div className="p-2.5 rounded-sm bg-primary/[0.08] border border-primary/15">
+              <ClipboardList className="h-5 w-5 text-primary" />
             </div>
             <div>
-              <h1 className="text-[24px] font-bold text-white tracking-tight">Tasks</h1>
-              <p className="text-[12px] text-white/20 mt-0.5">
+              <h1 className="text-[24px] font-bold text-foreground tracking-tight">Tasks</h1>
+              <p className="text-[12px] text-muted-foreground/60 mt-0.5">
                 {allCount} total · {doneCount} completed
               </p>
             </div>
@@ -299,11 +299,11 @@ const TaskSettings: React.FC = () => {
 
           <div className="flex items-center gap-2">
             {/* View toggle */}
-            <div className="flex items-center bg-white/[0.02] border border-white/[0.04] rounded-sm p-0.5">
+            <div className="flex items-center bg-muted/30 border border-border rounded-sm p-0.5">
               <button
                 onClick={() => setView("list")}
                 className={`p-1.5 rounded-sm transition-colors ${
-                  view === "list" ? "bg-red-500/[0.1] text-red-400" : "text-white/25 hover:text-white/50"
+                  view === "list" ? "bg-primary/10 text-primary" : "text-muted-foreground/50 hover:text-muted-foreground/80"
                 }`}
                 title="List view"
               >
@@ -312,7 +312,7 @@ const TaskSettings: React.FC = () => {
               <button
                 onClick={() => setView("kanban")}
                 className={`p-1.5 rounded-sm transition-colors ${
-                  view === "kanban" ? "bg-red-500/[0.1] text-red-400" : "text-white/25 hover:text-white/50"
+                  view === "kanban" ? "bg-primary/10 text-primary" : "text-muted-foreground/50 hover:text-muted-foreground/80"
                 }`}
                 title="Kanban view"
               >
@@ -327,19 +327,19 @@ const TaskSettings: React.FC = () => {
 
       {/* Stats strip */}
       <div className="px-8 pt-5">
-        <div className="bg-[#0a0a0a] border border-white/[0.04] rounded-sm overflow-hidden">
+        <div className="bg-card border border-border rounded-sm overflow-hidden">
           <div className="flex">
             {/* Progress */}
-            <div className="flex-1 px-5 py-4 border-r border-white/[0.04]">
+            <div className="flex-1 px-5 py-4 border-r border-border">
               <div className="flex items-center justify-between mb-2">
-                <span className="text-[10px] text-white/20 uppercase tracking-[0.12em] font-medium">
+                <span className="text-[10px] text-muted-foreground/60 uppercase tracking-[0.12em] font-medium">
                   Completion
                 </span>
-                <span className="text-[18px] font-bold text-white tracking-tight">
+                <span className="text-[18px] font-bold text-foreground tracking-tight">
                   {completionPct.toFixed(0)}%
                 </span>
               </div>
-              <div className="h-1.5 w-full bg-white/[0.04] rounded-full overflow-hidden">
+              <div className="h-1.5 w-full bg-muted/50 rounded-full overflow-hidden">
                 <motion.div
                   initial={{ width: 0 }}
                   animate={{ width: `${completionPct}%` }}
@@ -347,38 +347,38 @@ const TaskSettings: React.FC = () => {
                   className="h-full bg-gradient-to-r from-red-600 to-red-500 rounded-full"
                 />
               </div>
-              <p className="text-[11px] text-white/30 mt-2">
+              <p className="text-[11px] text-muted-foreground mt-2">
                 {doneCount} of {allCount} tasks done
               </p>
             </div>
 
-            <div className="px-5 py-4 border-r border-white/[0.04] min-w-[110px]">
+            <div className="px-5 py-4 border-r border-border min-w-[110px]">
               <div className="flex items-center gap-1.5 mb-1">
                 <AlertCircle className="h-3 w-3 text-amber-500/60" />
-                <span className="text-[10px] text-white/20 uppercase tracking-[0.12em]">To Do</span>
+                <span className="text-[10px] text-muted-foreground/60 uppercase tracking-[0.12em]">To Do</span>
               </div>
               <p className="text-xl font-bold text-amber-400 tracking-tight">{todoCount}</p>
             </div>
-            <div className="px-5 py-4 border-r border-white/[0.04] min-w-[110px]">
+            <div className="px-5 py-4 border-r border-border min-w-[110px]">
               <div className="flex items-center gap-1.5 mb-1">
                 <Clock className="h-3 w-3 text-blue-500/60" />
-                <span className="text-[10px] text-white/20 uppercase tracking-[0.12em]">Active</span>
+                <span className="text-[10px] text-muted-foreground/60 uppercase tracking-[0.12em]">Active</span>
               </div>
               <p className="text-xl font-bold text-blue-400 tracking-tight">{inProgressCount}</p>
             </div>
-            <div className="px-5 py-4 border-r border-white/[0.04] min-w-[110px]">
+            <div className="px-5 py-4 border-r border-border min-w-[110px]">
               <div className="flex items-center gap-1.5 mb-1">
                 <CheckCircle className="h-3 w-3 text-emerald-500/60" />
-                <span className="text-[10px] text-white/20 uppercase tracking-[0.12em]">Done</span>
+                <span className="text-[10px] text-muted-foreground/60 uppercase tracking-[0.12em]">Done</span>
               </div>
               <p className="text-xl font-bold text-emerald-400 tracking-tight">{doneCount}</p>
             </div>
             <div className="px-5 py-4 min-w-[110px]">
               <div className="flex items-center gap-1.5 mb-1">
-                <Activity className="h-3 w-3 text-red-500/60" />
-                <span className="text-[10px] text-white/20 uppercase tracking-[0.12em]">Total</span>
+                <Activity className="h-3 w-3 text-primary/60" />
+                <span className="text-[10px] text-muted-foreground/60 uppercase tracking-[0.12em]">Total</span>
               </div>
-              <p className="text-xl font-bold text-white tracking-tight">{allCount}</p>
+              <p className="text-xl font-bold text-foreground tracking-tight">{allCount}</p>
             </div>
           </div>
         </div>
@@ -388,7 +388,7 @@ const TaskSettings: React.FC = () => {
       <div className="px-8 pt-4">
         <div className="flex items-center gap-2 flex-wrap">
           {/* Status pills */}
-          <div className="flex items-center bg-white/[0.02] border border-white/[0.04] rounded-sm p-0.5">
+          <div className="flex items-center bg-muted/30 border border-border rounded-sm p-0.5">
             {(["all", "to-do", "in-progress", "done"] as const).map((s) => {
               const counts: Record<string, number> = { all: allCount, "to-do": todoCount, "in-progress": inProgressCount, done: doneCount };
               const labels: Record<string, string> = { all: "All", "to-do": "To Do", "in-progress": "Active", done: "Done" };
@@ -398,8 +398,8 @@ const TaskSettings: React.FC = () => {
                   onClick={() => setStatusFilter(s)}
                   className={`px-3 py-1 rounded-sm text-[11px] font-medium transition-all ${
                     statusFilter === s
-                      ? "bg-red-500/[0.1] text-red-400"
-                      : "text-white/25 hover:text-white/50"
+                      ? "bg-primary/10 text-primary"
+                      : "text-muted-foreground/50 hover:text-muted-foreground/80"
                   }`}
                 >
                   {labels[s]} ({counts[s]})
@@ -409,15 +409,15 @@ const TaskSettings: React.FC = () => {
           </div>
 
           {/* Priority pills */}
-          <div className="flex items-center bg-white/[0.02] border border-white/[0.04] rounded-sm p-0.5">
+          <div className="flex items-center bg-muted/30 border border-border rounded-sm p-0.5">
             {(["all", "high", "medium", "low"] as const).map((p) => (
               <button
                 key={p}
                 onClick={() => setPriorityFilter(p)}
                 className={`px-2.5 py-1 rounded-sm text-[11px] font-medium transition-all ${
                   priorityFilter === p
-                    ? "bg-red-500/[0.1] text-red-400"
-                    : "text-white/25 hover:text-white/50"
+                    ? "bg-primary/10 text-primary"
+                    : "text-muted-foreground/50 hover:text-muted-foreground/80"
                 }`}
               >
                 {p === "all" ? "Any priority" : p}
@@ -431,11 +431,11 @@ const TaskSettings: React.FC = () => {
             placeholder="Search tasks..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="flex-1 max-w-xs px-3 py-1.5 bg-white/[0.02] border border-white/[0.04] rounded-sm text-[12px] text-white/60 placeholder:text-white/15 focus:outline-none focus:border-white/[0.08]"
+            className="flex-1 max-w-xs px-3 py-1.5 bg-muted/30 border border-border rounded-sm text-[12px] text-foreground/60 placeholder:text-muted-foreground/40 focus:outline-none focus:border-border"
           />
 
           {searchQuery && (
-            <button onClick={() => setSearchQuery("")} className="p-1.5 rounded-sm bg-white/[0.02] text-white/30 hover:text-white/60">
+            <button onClick={() => setSearchQuery("")} className="p-1.5 rounded-sm bg-muted/30 text-muted-foreground hover:text-foreground/60">
               <X className="h-3 w-3" />
             </button>
           )}
@@ -445,12 +445,12 @@ const TaskSettings: React.FC = () => {
       {/* Task display */}
       <div className="px-8 py-5 pb-10">
         {filtered.length === 0 ? (
-          <div className="bg-[#0a0a0a] border border-white/[0.04] rounded-sm py-16 text-center">
+          <div className="bg-card border border-border rounded-sm py-16 text-center">
             <ClipboardList className="h-10 w-10 text-white/[0.05] mx-auto mb-3" />
-            <p className="text-[14px] text-white/30 font-medium mb-1">
+            <p className="text-[14px] text-muted-foreground font-medium mb-1">
               {allCount === 0 ? "No tasks yet" : "No tasks match your filters"}
             </p>
-            <p className="text-[12px] text-white/15">
+            <p className="text-[12px] text-muted-foreground/40">
               {allCount === 0 ? "Create one to get started" : "Try different filters or clear search"}
             </p>
           </div>
@@ -473,21 +473,21 @@ const TaskSettings: React.FC = () => {
               const label = status === "to-do" ? "To Do" : status === "in-progress" ? "Active" : "Done";
 
               return (
-                <div key={status} className="bg-[#0a0a0a] border border-white/[0.04] rounded-sm overflow-hidden">
-                  <div className="px-3 py-2.5 border-b border-white/[0.04] flex items-center justify-between">
+                <div key={status} className="bg-card border border-border rounded-sm overflow-hidden">
+                  <div className="px-3 py-2.5 border-b border-border flex items-center justify-between">
                     <div className="flex items-center gap-2">
                       <div className={`h-1.5 w-1.5 rounded-full ${c.dot}`} />
                       <span className={`text-[11px] uppercase tracking-wider font-medium ${c.text}`}>
                         {label}
                       </span>
                     </div>
-                    <span className="text-[11px] text-white/30">{colTasks.length}</span>
+                    <span className="text-[11px] text-muted-foreground">{colTasks.length}</span>
                   </div>
                   <ScrollArea className="h-[calc(100vh-400px)]">
                     <div className="p-2 space-y-2">
                       <AnimatePresence>
                         {colTasks.length === 0 ? (
-                          <div className="text-[11px] text-white/15 text-center py-6">
+                          <div className="text-[11px] text-muted-foreground/40 text-center py-6">
                             Empty
                           </div>
                         ) : (

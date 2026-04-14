@@ -24,25 +24,31 @@ import {
 import UserView, { Role } from "@/MyComponents/Reusables/userView";
 import { RolePreviewSelector } from "./ui/Dashboard/role-preview";
 import { CompanyToggle } from "@/MyComponents/CompanyToggle/CompanyToggle";
+import { useCompanyFilter } from "@/stores/store";
 
 function SidebarBrand() {
   const { state } = useSidebar();
   const isCollapsed = state === "collapsed";
+  const { activeCompany } = useCompanyFilter();
+  const isSimplicity = activeCompany === "simplicityFunds";
 
   return (
     <div className="flex items-center gap-3 px-2 py-1">
       <img
-        src="/codewithali_logo.png"
-        alt="CWA"
+        src={isSimplicity ? "/simplicity_logo.png" : "/codewithali_logo.png"}
+        alt={isSimplicity ? "Simplicity" : "CWA"}
         className="h-7 w-7 rounded-sm object-contain shrink-0"
+        onError={(e) => {
+          (e.target as HTMLImageElement).src = "/codewithali_logo.png";
+        }}
       />
       {!isCollapsed && (
         <div className="flex flex-col min-w-0">
-          <span className="text-[13px] font-semibold text-white/85 tracking-tight truncate">
-            CWA Manager
+          <span className="text-[13px] font-semibold text-foreground/85 tracking-tight truncate transition-colors duration-300">
+            {isSimplicity ? "Simplicity" : "CWA Manager"}
           </span>
-          <span className="text-[10px] text-white/20 leading-none">
-            v1.2.1
+          <span className="text-[10px] text-muted-foreground leading-none">
+            {isSimplicity ? "Funds Admin" : "v1.2.1"}
           </span>
         </div>
       )}
@@ -57,7 +63,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
         <SidebarHeader className="space-y-2">
           <div className="flex items-center justify-between">
             <SidebarBrand />
-            <SidebarTrigger className="text-white/20 hover:text-white/50 hover:bg-white/[0.04] rounded-sm h-6 w-6" />
+            <SidebarTrigger className="text-muted-foreground/60 hover:text-muted-foreground/80 hover:bg-muted/50 rounded-sm h-6 w-6" />
           </div>
 
           {/* Company Toggle — switches entire dashboard theme */}

@@ -80,24 +80,24 @@ export const MessageBubble: React.FC<Props> = ({
 
   return (
     <div
-      className={`group relative flex gap-3 px-5 hover:bg-white/[0.015] transition-colors ${
+      className={`group relative flex gap-3 px-5 hover:bg-card transition-colors ${
         isGrouped ? "py-0.5" : "pt-3 pb-1 mt-1"
       }`}
     >
       {/* Avatar column (36px) */}
       <div className="w-9 shrink-0 flex items-start justify-center pt-0.5">
         {!isGrouped ? (
-          <Avatar className="h-9 w-9 rounded-sm border border-white/[0.06]">
+          <Avatar className="h-9 w-9 rounded-sm border border-border">
             <AvatarImage
               src={`https://tqaytmvihogvhhvwgbwm.supabase.co/storage/v1/object/public/avatars//${msg.userAvatar}`}
             />
-            <AvatarFallback className="bg-white/[0.04] text-white/40 text-[10px] rounded-sm font-medium">
+            <AvatarFallback className="bg-muted/50 text-muted-foreground/70 text-[10px] rounded-sm font-medium">
               {msg.sent_by?.slice(0, 2)?.toUpperCase()}
             </AvatarFallback>
           </Avatar>
         ) : (
           // Grouped: show timestamp in avatar slot on hover
-          <span className="text-[9px] text-white/15 opacity-0 group-hover:opacity-100 transition-opacity pt-1 font-medium tabular-nums">
+          <span className="text-[9px] text-muted-foreground/40 opacity-0 group-hover:opacity-100 transition-opacity pt-1 font-medium tabular-nums">
             {formatExactTime(msg.created_at)}
           </span>
         )}
@@ -108,10 +108,10 @@ export const MessageBubble: React.FC<Props> = ({
         {/* Header (only on first of group) */}
         {!isGrouped && (
           <div className="flex items-baseline gap-2 mb-1">
-            <span className={`text-[13px] font-semibold ${isOwn ? "text-red-400" : "text-white/90"}`}>
+            <span className={`text-[13px] font-semibold ${isOwn ? "text-primary" : "text-foreground"}`}>
               {msg.sent_by}
             </span>
-            <span className="text-[10px] text-white/25" title={formatExactTime(msg.created_at)}>
+            <span className="text-[10px] text-muted-foreground/50" title={formatExactTime(msg.created_at)}>
               {formatRelative(msg.created_at)}
             </span>
           </div>
@@ -123,20 +123,20 @@ export const MessageBubble: React.FC<Props> = ({
             initial={{ opacity: 0, y: -4 }}
             animate={{ opacity: 1, y: 0 }}
             onClick={() => onJumpTo?.(replyTarget.msg_id)}
-            className="mb-1.5 flex items-stretch gap-2 hover:bg-white/[0.03] rounded-sm transition-colors text-left max-w-md overflow-hidden group/reply"
+            className="mb-1.5 flex items-stretch gap-2 hover:bg-muted/40 rounded-sm transition-colors text-left max-w-md overflow-hidden group/reply"
           >
-            <div className="w-0.5 bg-red-500/40 group-hover/reply:bg-red-500/60 rounded-full shrink-0" />
+            <div className="w-0.5 bg-primary/40 group-hover/reply:bg-red-500/60 rounded-full shrink-0" />
             <div className="py-1 pr-2 min-w-0">
-              <p className="text-[10px] text-red-400/70 font-medium mb-0.5">
+              <p className="text-[10px] text-primary/70 font-medium mb-0.5">
                 ↳ {replyTarget.sent_by}
               </p>
-              <p className="text-[11px] text-white/40 truncate">{replyTarget.message}</p>
+              <p className="text-[11px] text-muted-foreground/70 truncate">{replyTarget.message}</p>
             </div>
           </motion.button>
         )}
 
         {/* Message body */}
-        <div className="text-[13.5px] text-white/85 break-words leading-relaxed whitespace-pre-wrap">
+        <div className="text-[13.5px] text-foreground/85 break-words leading-relaxed whitespace-pre-wrap">
           {msg.message}
         </div>
 
@@ -152,14 +152,14 @@ export const MessageBubble: React.FC<Props> = ({
                   onClick={() => onReact(msg.msg_id, emoji)}
                   className={`flex items-center gap-1 px-1.5 py-0.5 rounded-full border transition-colors ${
                     userReacted
-                      ? "bg-red-500/[0.12] border-red-500/25 hover:bg-red-500/[0.15]"
-                      : "bg-white/[0.04] border-white/[0.06] hover:bg-white/[0.08]"
+                      ? "bg-red-500/[0.12] border-red-500/25 hover:bg-primary/80/[0.15]"
+                      : "bg-muted/50 border-border hover:bg-white/[0.08]"
                   }`}
                   title={users.join(", ")}
                 >
                   <span className="text-[12px] leading-none">{emoji}</span>
                   <span className={`text-[10px] font-medium tabular-nums ${
-                    userReacted ? "text-red-300" : "text-white/50"
+                    userReacted ? "text-red-300" : "text-muted-foreground/80"
                   }`}>
                     {users.length}
                   </span>
@@ -168,7 +168,7 @@ export const MessageBubble: React.FC<Props> = ({
             })}
             <button
               onClick={() => setShowPicker(!showPicker)}
-              className="flex items-center justify-center h-[22px] w-[22px] rounded-full border border-white/[0.06] bg-white/[0.02] hover:bg-white/[0.06] text-white/30 hover:text-white/60 transition-colors opacity-0 group-hover:opacity-100"
+              className="flex items-center justify-center h-[22px] w-[22px] rounded-full border border-border bg-muted/30 hover:bg-white/[0.06] text-muted-foreground hover:text-foreground/60 transition-colors opacity-0 group-hover:opacity-100"
               title="Add reaction"
             >
               <Smile className="h-3 w-3" />
@@ -180,7 +180,7 @@ export const MessageBubble: React.FC<Props> = ({
         {isOwn && readBy.length > 0 && (
           <div className="flex items-center gap-1 mt-1">
             <CheckCheck className="h-3 w-3 text-emerald-400/60" />
-            <span className="text-[10px] text-white/25">
+            <span className="text-[10px] text-muted-foreground/50">
               Seen by {readBy.length === 1 ? readBy[0] : `${readBy.length} people`}
             </span>
           </div>
@@ -192,23 +192,23 @@ export const MessageBubble: React.FC<Props> = ({
         {showPicker ? (
           <ReactionPicker onPick={handleReactClick} />
         ) : (
-          <div className="flex items-center gap-0.5 bg-[#0f0f0f] border border-white/[0.08] rounded-sm p-0.5 shadow-lg shadow-black/50">
+          <div className="flex items-center gap-0.5 bg-[#0f0f0f] border border-border rounded-sm p-0.5 shadow-lg shadow-black/50">
             <button
               onClick={() => setShowPicker(true)}
-              className="p-1.5 rounded-sm hover:bg-white/[0.06] text-white/40 hover:text-white/80 transition-colors"
+              className="p-1.5 rounded-sm hover:bg-white/[0.06] text-muted-foreground/70 hover:text-foreground/80 transition-colors"
               title="Add reaction"
             >
               <Smile className="h-3.5 w-3.5" />
             </button>
             <button
               onClick={() => onReply(msg)}
-              className="p-1.5 rounded-sm hover:bg-white/[0.06] text-white/40 hover:text-white/80 transition-colors"
+              className="p-1.5 rounded-sm hover:bg-white/[0.06] text-muted-foreground/70 hover:text-foreground/80 transition-colors"
               title="Reply"
             >
               <Reply className="h-3.5 w-3.5" />
             </button>
             <button
-              className="p-1.5 rounded-sm hover:bg-white/[0.06] text-white/40 hover:text-white/80 transition-colors"
+              className="p-1.5 rounded-sm hover:bg-white/[0.06] text-muted-foreground/70 hover:text-foreground/80 transition-colors"
               title="More"
             >
               <MoreVertical className="h-3.5 w-3.5" />

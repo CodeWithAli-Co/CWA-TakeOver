@@ -25,9 +25,9 @@ import { CustomTooltip } from "./FinancialComponents";
 
 // ── Single metric tile ──
 const MetricTile: React.FC<{ label: string; value: string; accent?: boolean }> = ({ label, value, accent }) => (
-  <div className={`bg-white/[0.015] border border-white/[0.04] rounded-sm p-4 ${accent ? "border-l-2 border-l-red-500" : ""}`}>
-    <p className="text-[10px] text-white/20 uppercase tracking-[0.12em] font-medium">{label}</p>
-    <p className="text-xl font-bold text-white tracking-tight mt-1">{value}</p>
+  <div className={`bg-card border border-border rounded-sm p-4 ${accent ? "border-l-2 border-l-red-500" : ""}`}>
+    <p className="text-[10px] text-muted-foreground/60 uppercase tracking-[0.12em] font-medium">{label}</p>
+    <p className="text-xl font-bold text-foreground tracking-tight mt-1">{value}</p>
   </div>
 );
 
@@ -48,23 +48,23 @@ const FinancialProjections: React.FC = () => {
 
   if (projections.length <= 1) {
     return (
-      <div className="bg-[#0a0a0a] border border-white/[0.04] rounded-sm p-12 text-center">
-        <p className="text-[13px] text-white/15">No projections yet — configure the modeler above</p>
+      <div className="bg-card border border-border rounded-sm p-12 text-center">
+        <p className="text-[13px] text-muted-foreground/40">No projections yet — configure the modeler above</p>
       </div>
     );
   }
 
   return (
-    <div className="bg-[#0a0a0a] border border-white/[0.04] rounded-sm overflow-hidden">
+    <div className="bg-card border border-border rounded-sm overflow-hidden">
       {/* Header */}
-      <div className="px-6 pt-5 pb-4 flex items-center justify-between border-b border-white/[0.04]">
+      <div className="px-6 pt-5 pb-4 flex items-center justify-between border-b border-border">
         <div className="flex items-center gap-3">
-          <div className="p-2 rounded-sm bg-red-500/[0.08] border border-red-500/15">
-            <LineIcon className="h-4 w-4 text-red-400" />
+          <div className="p-2 rounded-sm bg-primary/[0.08] border border-primary/15">
+            <LineIcon className="h-4 w-4 text-primary" />
           </div>
           <div>
-            <h2 className="text-[14px] font-semibold text-white/85">Projections</h2>
-            <p className="text-[11px] text-white/20">
+            <h2 className="text-[14px] font-semibold text-foreground/85">Projections</h2>
+            <p className="text-[11px] text-muted-foreground/60">
               {state.years}-year financial outlook
             </p>
           </div>
@@ -82,14 +82,14 @@ const FinancialProjections: React.FC = () => {
         </div>
 
         <Tabs value={tab} onValueChange={setTab}>
-          <TabsList className="bg-white/[0.02] border border-white/[0.04] rounded-sm h-8">
-            <TabsTrigger value="overview" className="data-[state=active]:bg-red-500/[0.08] data-[state=active]:text-red-400 text-white/25 rounded-sm text-[11px] h-6">
+          <TabsList className="bg-muted/30 border border-border rounded-sm h-8">
+            <TabsTrigger value="overview" className="data-[state=active]:bg-primary/[0.08] data-[state=active]:text-primary text-muted-foreground/50 rounded-sm text-[11px] h-6">
               <BarChart3 className="h-3 w-3 mr-1.5" /> Overview
             </TabsTrigger>
-            <TabsTrigger value="cashflow" className="data-[state=active]:bg-red-500/[0.08] data-[state=active]:text-red-400 text-white/25 rounded-sm text-[11px] h-6">
+            <TabsTrigger value="cashflow" className="data-[state=active]:bg-primary/[0.08] data-[state=active]:text-primary text-muted-foreground/50 rounded-sm text-[11px] h-6">
               <TrendingUp className="h-3 w-3 mr-1.5" /> Cash Flow
             </TabsTrigger>
-            <TabsTrigger value="detail" className="data-[state=active]:bg-red-500/[0.08] data-[state=active]:text-red-400 text-white/25 rounded-sm text-[11px] h-6">
+            <TabsTrigger value="detail" className="data-[state=active]:bg-primary/[0.08] data-[state=active]:text-primary text-muted-foreground/50 rounded-sm text-[11px] h-6">
               <TableIcon className="h-3 w-3 mr-1.5" /> Detail
             </TabsTrigger>
           </TabsList>
@@ -97,21 +97,21 @@ const FinancialProjections: React.FC = () => {
           {/* ── OVERVIEW ── */}
           <TabsContent value="overview" className="space-y-4 mt-4">
             {/* Revenue vs Expenses */}
-            <div className="bg-white/[0.015] border border-white/[0.04] rounded-sm p-4">
+            <div className="bg-card border border-border rounded-sm p-4">
               <div className="flex items-center justify-between mb-3">
-                <p className="text-[12px] text-white/60 font-medium">Revenue vs Expenses</p>
+                <p className="text-[12px] text-foreground/60 font-medium">Revenue vs Expenses</p>
                 <div className="flex items-center gap-3 text-[10px]">
                   <div className="flex items-center gap-1.5">
                     <div className="h-1.5 w-1.5 rounded-full bg-red-500" />
-                    <span className="text-white/30">Revenue</span>
+                    <span className="text-muted-foreground">Revenue</span>
                   </div>
                   <div className="flex items-center gap-1.5">
                     <div className="h-1.5 w-1.5 rounded-full bg-white/40" />
-                    <span className="text-white/30">Expenses</span>
+                    <span className="text-muted-foreground">Expenses</span>
                   </div>
                   <div className="flex items-center gap-1.5">
                     <div className="h-1.5 w-1.5 rounded-full bg-red-300" />
-                    <span className="text-white/30">Profit</span>
+                    <span className="text-muted-foreground">Profit</span>
                   </div>
                 </div>
               </div>
@@ -131,8 +131,8 @@ const FinancialProjections: React.FC = () => {
             </div>
 
             {/* Cumulative profit */}
-            <div className="bg-white/[0.015] border border-white/[0.04] rounded-sm p-4">
-              <p className="text-[12px] text-white/60 font-medium mb-3">Cumulative Profit Trend</p>
+            <div className="bg-card border border-border rounded-sm p-4">
+              <p className="text-[12px] text-foreground/60 font-medium mb-3">Cumulative Profit Trend</p>
               <div className="h-56">
                 <ResponsiveContainer>
                   <AreaChart data={chartData}>
@@ -156,8 +156,8 @@ const FinancialProjections: React.FC = () => {
 
           {/* ── CASH FLOW ── */}
           <TabsContent value="cashflow" className="space-y-4 mt-4">
-            <div className="bg-white/[0.015] border border-white/[0.04] rounded-sm p-4">
-              <p className="text-[12px] text-white/60 font-medium mb-3">Cash Position Over Time</p>
+            <div className="bg-card border border-border rounded-sm p-4">
+              <p className="text-[12px] text-foreground/60 font-medium mb-3">Cash Position Over Time</p>
               <div className="h-72">
                 <ResponsiveContainer>
                   <AreaChart data={chartData}>
@@ -177,8 +177,8 @@ const FinancialProjections: React.FC = () => {
               </div>
             </div>
 
-            <div className="bg-white/[0.015] border border-white/[0.04] rounded-sm p-4">
-              <p className="text-[12px] text-white/60 font-medium mb-3">ROI Growth</p>
+            <div className="bg-card border border-border rounded-sm p-4">
+              <p className="text-[12px] text-foreground/60 font-medium mb-3">ROI Growth</p>
               <div className="h-56">
                 <ResponsiveContainer>
                   <LineChart data={chartData}>
@@ -196,8 +196,8 @@ const FinancialProjections: React.FC = () => {
 
           {/* ── DETAIL TABLE ── */}
           <TabsContent value="detail" className="mt-4">
-            <div className="bg-white/[0.015] border border-white/[0.04] rounded-sm overflow-hidden">
-              <div className="grid grid-cols-7 gap-2 px-4 py-2.5 border-b border-white/[0.04] text-[10px] text-white/20 uppercase tracking-wider">
+            <div className="bg-card border border-border rounded-sm overflow-hidden">
+              <div className="grid grid-cols-7 gap-2 px-4 py-2.5 border-b border-border text-[10px] text-muted-foreground/60 uppercase tracking-wider">
                 <span>Year</span>
                 <span className="text-right">Revenue</span>
                 <span className="text-right">Expenses</span>
@@ -208,16 +208,16 @@ const FinancialProjections: React.FC = () => {
               </div>
               <div className="max-h-[400px] overflow-y-auto">
                 {chartData.map((row) => (
-                  <div key={row.year} className="grid grid-cols-7 gap-2 px-4 py-2.5 border-b border-white/[0.025] text-[12px] hover:bg-white/[0.015] transition-colors">
-                    <span className="text-red-400 font-medium">Year {row.year}</span>
-                    <span className="text-right text-white/70">${row.Revenue.toLocaleString()}</span>
-                    <span className="text-right text-white/40">${row.Expenses.toLocaleString()}</span>
-                    <span className={`text-right font-medium ${row.Profit >= 0 ? "text-red-400" : "text-white/30"}`}>
+                  <div key={row.year} className="grid grid-cols-7 gap-2 px-4 py-2.5 border-b border-white/[0.025] text-[12px] hover:bg-card transition-colors">
+                    <span className="text-primary font-medium">Year {row.year}</span>
+                    <span className="text-right text-foreground/70">${row.Revenue.toLocaleString()}</span>
+                    <span className="text-right text-muted-foreground/70">${row.Expenses.toLocaleString()}</span>
+                    <span className={`text-right font-medium ${row.Profit >= 0 ? "text-primary" : "text-muted-foreground"}`}>
                       ${row.Profit.toLocaleString()}
                     </span>
-                    <span className="text-right text-white/30">${Math.round(projections[row.year].taxAmount).toLocaleString()}</span>
-                    <span className="text-right text-white/70">${row.Cash.toLocaleString()}</span>
-                    <span className="text-right text-white/40">{row.ROI}%</span>
+                    <span className="text-right text-muted-foreground">${Math.round(projections[row.year].taxAmount).toLocaleString()}</span>
+                    <span className="text-right text-foreground/70">${row.Cash.toLocaleString()}</span>
+                    <span className="text-right text-muted-foreground/70">{row.ROI}%</span>
                   </div>
                 ))}
               </div>

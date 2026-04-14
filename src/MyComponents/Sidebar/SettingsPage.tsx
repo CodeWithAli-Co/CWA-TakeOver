@@ -147,7 +147,7 @@ export default function SettingsPage() {
 
   return (
     // Main container - no padding or position adjustments to respect app layout
-    <div className="min-h-screen bg-black/95 flex">
+    <div className="min-h-screen bg-background/95 flex">
       {/* Content container - full width with overflow control */}
       <div className="w-full max-w-[1400px] overflow-x-auto">
         <div className="w-full px-4 py-4">
@@ -179,7 +179,7 @@ export default function SettingsPage() {
                   <DropdownMenuTrigger asChild>
                     <Button
                       variant="outline"
-                      className="w-full justify-between bg-black/40 text-white border border-red-950/20"
+                      className="w-full justify-between bg-background/40 text-foreground border border-red-950/20"
                     >
                       <div className="flex items-center">
                         {(() => {
@@ -200,7 +200,7 @@ export default function SettingsPage() {
                       <Menu className="h-4 w-4 ml-2" />
                     </Button>
                   </DropdownMenuTrigger>
-                  <DropdownMenuContent className="w-[94vw] max-w-md bg-black/90 border-red-950/30 text-white">
+                  <DropdownMenuContent className="w-[94vw] max-w-md bg-background/90 border-red-950/30 text-white">
                     {settingsTabs.map((tab) => (
                       <DropdownMenuItem
                         key={tab.value}
@@ -219,13 +219,13 @@ export default function SettingsPage() {
             {/* Tablet & desktop horizontal tabs with scroll capability */}
             {!isMobile && (
               <div className="overflow-x-auto">
-                <TabsList className="h-12 w-full justify-start space-x-2 bg-black/40 p-1 text-white border border-red-950/20 flex-nowrap">
+                <TabsList className="h-12 w-full justify-start space-x-2 bg-background/40 p-1 text-foreground border border-red-950/20 flex-nowrap">
                   {settingsTabs.map((tab) => (
                     <TabsTrigger
                       key={tab.value}
                       value={tab.value}
-                      className="data-[state=active]:bg-red-950/20 data-[state=active]:text-white 
-                              hover:text-white transition-colors duration-200 flex items-center space-x-2 px-3 py-2 whitespace-nowrap"
+                      className="data-[state=active]:bg-red-950/20 data-[state=active]:text-foreground 
+                              hover:text-foreground transition-colors duration-200 flex items-center space-x-2 px-3 py-2 whitespace-nowrap"
                     >
                       <tab.icon className="h-4 w-4" />
                       <span className={isTablet ? "hidden lg:inline" : ""}>
@@ -269,14 +269,14 @@ export default function SettingsPage() {
                                 name="name"
                                 render={({ field }) => (
                                   <FormItem>
-                                    <FormLabel className="text-white">
+                                    <FormLabel className="text-foreground">
                                       <UserCircle className="h-4 w-4 inline mr-2" />
                                       Name
                                     </FormLabel>
                                     <FormControl>
                                       <Input
                                         {...field}
-                                        className="bg-black/40 border-red-950/30 text-white 
+                                        className="bg-background/40 border-red-950/30 text-foreground 
                                                 focus:border-red-500 focus:ring-red-500/20"
                                       />
                                     </FormControl>
@@ -296,7 +296,7 @@ export default function SettingsPage() {
                                 render={({ field }) => (
                                   <FormItem className="flex flex-col sm:flex-row justify-between sm:items-center space-y-2 sm:space-y-0">
                                     <div>
-                                      <FormLabel className="text-white">
+                                      <FormLabel className="text-foreground">
                                         <Bell className="h-4 w-4 inline mr-2" />
                                         Email Notifications
                                       </FormLabel>
@@ -326,7 +326,7 @@ export default function SettingsPage() {
                                 render={({ field }) => (
                                   <FormItem className="flex flex-col sm:flex-row justify-between sm:items-center space-y-2 sm:space-y-0">
                                     <div>
-                                      <FormLabel className="text-white">
+                                      <FormLabel className="text-foreground">
                                         <Moon className="h-4 w-4 inline mr-2" />
                                         Dark Mode
                                       </FormLabel>
@@ -355,7 +355,7 @@ export default function SettingsPage() {
                         <div className="xl:col-span-1 flex flex-col items-center justify-start">
                           <UploadAvatar
                             className="bg-gradient-to-r from-red-950 to-red-900 hover:from-red-900 hover:to-red-800
-                       text-white border border-red-800/30 shadow-lg shadow-red-950/20 p-2"
+                       text-foreground border border-red-800/30 shadow-lg shadow-red-950/20 p-2"
                           />
                         </div>
                       </div>
@@ -367,21 +367,21 @@ export default function SettingsPage() {
                 <UserView userRole={["ProjectManager", "COO", "CEO"]}>
                   {/* Teams & Projects Tab */}
                   <TabsContent value="teams" className="space-y-4">
-                    <Card className="bg-black/60 border-red-950/30 backdrop-blur-sm p-4 sm:p-6  rounded-xs">
+                    <Card className="bg-background/60 border-red-950/30 backdrop-blur-sm p-4 sm:p-6  rounded-xs">
                       <TeamsAndProjects />
                     </Card>
                   </TabsContent>
 
                   {/* Company Tab */}
                   <TabsContent value="company" className="space-y-4">
-                    <Card className="bg-black/60 border-red-950/30 backdrop-blur-sm p-4 sm:p-6  rounded-xs">
+                    <Card className="bg-background/60 border-red-950/30 backdrop-blur-sm p-4 sm:p-6  rounded-xs">
                       <CompanySettings />
                     </Card>
                   </TabsContent>
 
                   {/* Reports Tab */}
                   <TabsContent value="reports" className="space-y-4">
-                    <Card className="bg-black/60 border-red-950/30 backdrop-blur-sm p-4 sm:p-6 rounded-xs">
+                    <Card className="bg-background/60 border-red-950/30 backdrop-blur-sm p-4 sm:p-6 rounded-xs">
                       <ReportSettings />
                     </Card>
                   </TabsContent>

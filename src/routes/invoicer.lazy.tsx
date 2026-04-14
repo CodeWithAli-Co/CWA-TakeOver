@@ -1,14 +1,9 @@
 /**
  * invoicer.lazy.tsx — Unified invoicer page.
  *
- * Replaces 4 old routes (invoiceClients, invoicer, middle, invoicePreview)
- * with a single 3-pane layout:
- *
- *   ┌──────────┬───────────────┬──────────────┐
- *   │ Clients  │ Invoices      │ Preview      │
- *   │          │ for selected  │ (collapsible)│
- *   │ + add    │ client        │              │
- *   └──────────┴───────────────┴──────────────┘
+ * Company-aware:
+ *   • CWA / All → 3-pane client invoicer (original layout)
+ *   • Simplicity → Subscription payments view (Stripe data)
  */
 
 import { useState } from "react";
@@ -19,26 +14,35 @@ import { ClientSidebar } from "@/MyComponents/Invoicer/ClientSidebar";
 import { InvoiceList } from "@/MyComponents/Invoicer/InvoiceList";
 import { InvoiceFormDialog } from "@/MyComponents/Invoicer/InvoiceFormDialog";
 import { InvoicePreviewPane } from "@/MyComponents/Invoicer/InvoicePreviewPane";
+import { SimplicityPayments } from "@/MyComponents/Invoicer/SimplicityPayments";
 import { useClientStore } from "@/stores/invoiceStore";
 import { Invoices } from "@/stores/invoiceQuery";
+import { useCompanyFilter } from "@/stores/store";
 
 function Invoicer() {
+  const { activeCompany } = useCompanyFilter();
   const { name } = useClientStore();
   const [selectedInvoiceId, setSelectedInvoiceId] = useState<number | null>(null);
   const [showCreateForm, setShowCreateForm] = useState(false);
   const { refetch } = Invoices(name);
 
+  // ── Simplicity view: subscription payments ──
+  if (activeCompany === "simplicityFunds") {
+    return <SimplicityPayments />;
+  }
+
+  // ── CWA / All view: client invoicer ──
   return (
-    <div className="min-h-screen bg-black overflow-hidden flex flex-col">
+    <div className="min-h-screen bg-background overflow-hidden flex flex-col transition-colors duration-500">
       {/* Page header */}
       <div className="px-8 pt-6 pb-3 flex items-end justify-between">
         <div className="flex items-center gap-3">
-          <div className="p-2.5 rounded-sm bg-red-500/[0.08] border border-red-500/15">
-            <Receipt className="h-5 w-5 text-red-400" />
+          <div className="p-2.5 rounded-sm bg-primary/[0.08] border border-primary/15">
+            <Receipt className="h-5 w-5 text-primary" />
           </div>
           <div>
-            <h1 className="text-[24px] font-bold text-white tracking-tight">Invoicer</h1>
-            <p className="text-[12px] text-white/20 mt-0.5">
+            <h1 className="text-[24px] font-bold text-foreground tracking-tight">Invoicer</h1>
+            <p className="text-[12px] text-muted-foreground mt-0.5">
               Create, send, and track client invoices
             </p>
           </div>

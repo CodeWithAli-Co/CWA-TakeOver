@@ -114,22 +114,22 @@ export const MessageComposer: React.FC<Props> = ({
   };
 
   return (
-    <div className="border-t border-white/[0.04] bg-[#0a0a0a]">
+    <div className="border-t border-border bg-card">
       {/* Reply quote pill */}
       {replyingTo && (
-        <div className="px-5 pt-3 pb-2 flex items-start justify-between gap-3 border-b border-white/[0.04] bg-white/[0.015]">
+        <div className="px-5 pt-3 pb-2 flex items-start justify-between gap-3 border-b border-border bg-card">
           <div className="flex gap-2.5 min-w-0 flex-1">
             <div className="w-0.5 bg-red-500/50 rounded-full shrink-0 my-0.5" />
             <div className="min-w-0">
-              <p className="text-[10px] text-red-400/80 font-medium mb-0.5">
+              <p className="text-[10px] text-primary/80 font-medium mb-0.5">
                 Replying to <span className="text-red-300">{replyingTo.sentBy}</span>
               </p>
-              <p className="text-[11px] text-white/50 truncate">{replyingTo.preview}</p>
+              <p className="text-[11px] text-muted-foreground/80 truncate">{replyingTo.preview}</p>
             </div>
           </div>
           <button
             onClick={() => setReplyingTo(null)}
-            className="p-1 rounded-sm text-white/30 hover:text-white/70 hover:bg-white/[0.04]"
+            className="p-1 rounded-sm text-muted-foreground hover:text-foreground/70 hover:bg-muted/50"
           >
             <X className="h-3.5 w-3.5" />
           </button>
@@ -137,10 +137,10 @@ export const MessageComposer: React.FC<Props> = ({
       )}
 
       <form onSubmit={handleSubmit} className="px-5 py-3">
-        <div className="flex items-end gap-2 bg-white/[0.03] border border-white/[0.06] rounded-md focus-within:border-red-500/25 focus-within:bg-white/[0.04] transition-all">
+        <div className="flex items-end gap-2 bg-muted/40 border border-border rounded-md focus-within:border-red-500/25 focus-within:bg-muted/50 transition-all">
           <button
             type="button"
-            className="p-2.5 text-white/25 hover:text-white/60 transition-colors"
+            className="p-2.5 text-muted-foreground/50 hover:text-foreground/60 transition-colors"
             title="Attach"
           >
             <Paperclip className="h-4 w-4" />
@@ -152,11 +152,11 @@ export const MessageComposer: React.FC<Props> = ({
             onKeyDown={handleKeyDown}
             placeholder={`Message #${group}`}
             rows={1}
-            className="flex-1 bg-transparent py-2.5 text-[13.5px] text-white/85 placeholder:text-white/20 focus:outline-none resize-none max-h-32"
+            className="flex-1 bg-transparent py-2.5 text-[13.5px] text-foreground/85 placeholder:text-muted-foreground/60 focus:outline-none resize-none max-h-32"
           />
           <button
             type="button"
-            className="p-2.5 text-white/25 hover:text-white/60 transition-colors"
+            className="p-2.5 text-muted-foreground/50 hover:text-foreground/60 transition-colors"
             title="Emoji"
           >
             <Smile className="h-4 w-4" />
@@ -164,14 +164,14 @@ export const MessageComposer: React.FC<Props> = ({
           <button
             type="submit"
             disabled={!text.trim()}
-            className="p-2 mr-1 my-1 rounded-sm bg-red-600 hover:bg-red-500 active:scale-95 text-white disabled:bg-white/[0.04] disabled:text-white/20 disabled:cursor-not-allowed transition-all"
+            className="p-2 mr-1 my-1 rounded-sm bg-primary hover:bg-primary/80 active:scale-95 text-foreground disabled:bg-muted/50 disabled:text-muted-foreground/60 disabled:cursor-not-allowed transition-all"
             title="Send message (Enter)"
           >
             <Send className="h-3.5 w-3.5" />
           </button>
         </div>
-        <p className="text-[10px] text-white/15 mt-1.5 px-1">
-          Press <kbd className="px-1 py-0.5 bg-white/[0.04] rounded text-white/40 text-[9px] border border-white/[0.06]">Enter</kbd> to send · <kbd className="px-1 py-0.5 bg-white/[0.04] rounded text-white/40 text-[9px] border border-white/[0.06]">Shift+Enter</kbd> for newline
+        <p className="text-[10px] text-muted-foreground/40 mt-1.5 px-1">
+          Press <kbd className="px-1 py-0.5 bg-muted/50 rounded text-muted-foreground/70 text-[9px] border border-border">Enter</kbd> to send · <kbd className="px-1 py-0.5 bg-muted/50 rounded text-muted-foreground/70 text-[9px] border border-border">Shift+Enter</kbd> for newline
         </p>
       </form>
     </div>

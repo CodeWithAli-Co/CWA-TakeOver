@@ -616,7 +616,7 @@ YC W26 Application Checklist
   const getCaptureIcon = (type: QuickCapture['type']) => {
     switch (type) {
       case 'thought': return <Brain size={14} />
-      case 'bug': return <Bug size={14} className="text-red-400" />
+      case 'bug': return <Bug size={14} className="text-primary" />
       case 'idea': return <Lightbulb size={14} className="text-yellow-400" />
       case 'todo': return <CheckCircle size={14} className="text-blue-400" />
       case 'blocker': return <AlertTriangle size={14} className="text-orange-400" />
@@ -719,7 +719,7 @@ YC W26 Application Checklist
               {/* Terminal Output */}
               <div
                 ref={terminalRef}
-                className="flex-1 overflow-y-auto p-4 space-y-4 bg-black/50"
+                className="flex-1 overflow-y-auto p-4 space-y-4 bg-background/50"
               >
                 {/* Welcome Message */}
                 {commandHistory.length === 0 && (
@@ -745,7 +745,7 @@ YC W26 Application Checklist
                       <span className="text-zinc-300">{entry.command}</span>
                     </div>
                     <pre className={`text-sm pl-4 whitespace-pre-wrap ${
-                      entry.status === 'error' ? 'text-red-400' : 'text-zinc-400'
+                      entry.status === 'error' ? 'text-primary' : 'text-zinc-400'
                     }`}>
                       {entry.output}
                     </pre>
@@ -869,7 +869,7 @@ YC W26 Application Checklist
                               <span>{event.duration}min</span>
                               <button
                                 onClick={() => deleteEvent(event.id)}
-                                className="hover:text-red-400"
+                                className="hover:text-primary"
                               >
                                 <X size={12} />
                               </button>
@@ -946,7 +946,7 @@ YC W26 Application Checklist
                             </div>
                             <button
                               onClick={() => deleteEvent(event.id)}
-                              className="text-zinc-500 hover:text-red-400 transition-colors"
+                              className="text-zinc-500 hover:text-primary transition-colors"
                             >
                               <X size={16} />
                             </button>
@@ -1409,7 +1409,7 @@ YC W26 Application Checklist
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-start justify-center pt-32 z-50"
+            className="fixed inset-0 bg-background/70 backdrop-blur-sm flex items-start justify-center pt-32 z-50"
             onClick={() => setShowCapture(false)}
           >
             <motion.div
@@ -1477,7 +1477,7 @@ YC W26 Application Checklist
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-4"
+            className="fixed inset-0 bg-background/70 backdrop-blur-sm flex items-center justify-center z-50 p-4"
             onClick={() => setShowNewEvent(false)}
           >
             <motion.div
@@ -1576,7 +1576,7 @@ YC W26 Application Checklist
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-4"
+            className="fixed inset-0 bg-background/70 backdrop-blur-sm flex items-center justify-center z-50 p-4"
             onClick={() => setShowNewDecision(false)}
           >
             <motion.div

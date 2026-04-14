@@ -19,9 +19,9 @@ export const WeekNavigator: React.FC<WeekNavigatorProps> = ({
   goToCurrentWeek
 }) => {
   return (
-    <div className="bg-black border-b border-red-900/40 px-4 py-3 flex justify-between items-center">
+    <div className="bg-background border-b border-red-900/40 px-4 py-3 flex justify-between items-center">
       <button
-        className="p-1 rounded-md hover:bg-red-900/30 text-red-400 transition-colors duration-150"
+        className="p-1 rounded-md hover:bg-red-900/30 text-primary transition-colors duration-150"
         onClick={goToPreviousWeek}
         aria-label="Previous week"
       >
@@ -38,7 +38,7 @@ export const WeekNavigator: React.FC<WeekNavigatorProps> = ({
             : ""}{" "}
           {weekRange.end.date}
         </h2>
-        <div className="text-xs text-red-400">
+        <div className="text-xs text-primary">
           {weekOffset === 0
             ? "Current Week"
             : weekOffset < 0
@@ -58,7 +58,7 @@ export const WeekNavigator: React.FC<WeekNavigatorProps> = ({
           </button>
         )}
         <button
-          className="p-1 rounded-md hover:bg-red-900/30 text-red-400 transition-colors duration-150"
+          className="p-1 rounded-md hover:bg-red-900/30 text-primary transition-colors duration-150"
           onClick={goToNextWeek}
           aria-label="Next week"
         >

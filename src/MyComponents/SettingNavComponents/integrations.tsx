@@ -76,7 +76,7 @@ const IntegrationCard = ({
               className={`${
                 isEnabled
                   ? "bg-emerald-500/20 text-emerald-400"
-                  : "bg-red-500/20 text-red-400"
+                  : "bg-red-500/20 text-primary"
               }`}
             >
               {isEnabled ? "Connected" : "Disconnected"}
@@ -243,7 +243,7 @@ export const IntegrationsSettings = () => {
                         <Badge
                           key={j}
                           variant="outline"
-                          className="bg-red-900/20 text-red-400 text-xs"
+                          className="bg-red-900/20 text-primary text-xs"
                         >
                           {event}
                         </Badge>
@@ -255,7 +255,7 @@ export const IntegrationsSettings = () => {
                     className={
                       webhook.status === "active"
                         ? "bg-emerald-500/20 text-emerald-400"
-                        : "bg-red-500/20 text-red-400"
+                        : "bg-red-500/20 text-primary"
                     }
                   >
                     {webhook.status}

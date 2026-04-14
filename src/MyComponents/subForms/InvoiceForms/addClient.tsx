@@ -52,7 +52,7 @@ export const AddClient = () => {
                         <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
                           <User
                             size={16}
-                            className="text-red-500/50 group-hover:text-red-500 transition-colors duration-200"
+                            className="text-primary/50 group-hover:text-red-500 transition-colors duration-200"
                           />
                         </div>
 
@@ -60,7 +60,7 @@ export const AddClient = () => {
                           name={field.name}
                           autoComplete="off"
                           required
-                          className="pl-10 pr-4 py-3 w-full bg-black border border-red-900/30 rounded-md text-white 
+                          className="pl-10 pr-4 py-3 w-full bg-background border border-red-900/30 rounded-md text-foreground 
                         focus:outline-none focus:ring-1 focus:ring-red-900/30 focus:border-red-500 
                         transition-all duration-200 placeholder:text-gray-600"
                           value={field.state.value}
@@ -90,7 +90,7 @@ export const AddClient = () => {
                         <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
                           <Mail
                             size={16}
-                            className="bg-black text-red-500/50  group-hover:text-red-500 transition-colors duration-200"
+                            className="bg-background text-primary/50  group-hover:text-red-500 transition-colors duration-200"
                           />
                         </div>
 
@@ -98,7 +98,7 @@ export const AddClient = () => {
                           name={field.name}
                           autoComplete="off"
                           required
-                          className="pl-10 pr-4 py-3 w-full bg-black border border-red-900/30 rounded-md text-white 
+                          className="pl-10 pr-4 py-3 w-full bg-background border border-red-900/30 rounded-md text-foreground 
                         focus:outline-none focus:ring-1 focus:ring-red-900/30 focus:border-red-500 
                         transition-all duration-200 placeholder:text-gray-600"
                           value={field.state.value}
@@ -118,7 +118,7 @@ export const AddClient = () => {
                   type="submit"
                   disabled={!canSubmit}
                   className="bg-red-950/20 hover:bg-red-900/20
-                text-white border border-red-700/40 shadow-lg shadow-red-950/20 px-5 py-4 text-lg font-medium ml-[65px]"
+                text-foreground border border-red-700/40 shadow-lg shadow-red-950/20 px-5 py-4 text-lg font-medium ml-[65px]"
                 >
                   <div className="relative flex items-center justify-center text-gray-200 ">
                     {!canSubmit ? (

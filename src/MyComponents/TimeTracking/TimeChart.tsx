@@ -34,7 +34,7 @@ import { useWeeklyStats } from "@/stores/timeTrackingQueries";
 const CustomTooltip = ({ active, payload, label }: any) => {
   if (active && payload && payload.length) {
     return (
-      <div className="bg-black/90 border border-red-900/30 rounded-lg p-3 shadow-lg">
+      <div className="bg-background/90 border border-red-900/30 rounded-lg p-3 shadow-lg">
         <p className="text-amber-50 font-medium mb-1">{label}</p>
         {payload.map((entry: any, index: number) => (
           <p key={index} className="text-sm" style={{ color: entry.color }}>
@@ -106,7 +106,7 @@ export const WeeklyBarChart = ({ weekOffset = 0, onWeekChange }: WeeklyChartProp
               <ChevronRight className="h-4 w-4" />
             </Button>
           </div>
-          <Badge className="bg-red-900/30 text-red-400">{formatHours(stats.total_hours)}</Badge>
+          <Badge className="bg-red-900/30 text-primary">{formatHours(stats.total_hours)}</Badge>
         </CardTitle>
       </CardHeader>
       <CardContent>
@@ -294,7 +294,7 @@ interface CalendarHeatmapProps {
 
 export const CalendarHeatmap = ({ data, month }: CalendarHeatmapProps) => {
   const getIntensity = (hours: number): string => {
-    if (hours === 0) return "bg-black/40";
+    if (hours === 0) return "bg-background/40";
     if (hours < 2) return "bg-red-900/30";
     if (hours < 4) return "bg-red-900/50";
     if (hours < 6) return "bg-red-800/60";
@@ -366,7 +366,7 @@ export const CalendarHeatmap = ({ data, month }: CalendarHeatmapProps) => {
         <div className="flex items-center justify-center gap-2 mt-4">
           <span className="text-amber-50/50 text-xs">Less</span>
           <div className="flex gap-1">
-            {["bg-black/40", "bg-red-900/30", "bg-red-900/50", "bg-red-800/60", "bg-red-700/70", "bg-red-600/80"].map(
+            {["bg-background/40", "bg-red-900/30", "bg-red-900/50", "bg-red-800/60", "bg-red-700/70", "bg-red-600/80"].map(
               (color, i) => (
                 <div key={i} className={`h-3 w-3 rounded-sm ${color}`} />
               )

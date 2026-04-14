@@ -31,7 +31,7 @@ export const TypingIndicator: React.FC<Props> = ({ group, currentUsername }) => 
       initial={{ opacity: 0, y: 4 }}
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0 }}
-      className="flex items-center gap-2 px-4 py-1.5 text-[11px] text-white/40"
+      className="flex items-center gap-2 px-4 py-1.5 text-[11px] text-muted-foreground/70"
     >
       <span>{text}</span>
       <div className="flex items-center gap-0.5">

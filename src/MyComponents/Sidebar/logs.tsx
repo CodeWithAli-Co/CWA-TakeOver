@@ -6,8 +6,8 @@
  *   - LinkedIn, Calendly, Upwork, Indeed, Hostinger (placeholder stubs)
  *
  * Restyled from the old red-950 theme to match the rest of the app:
- *   bg-black page, bg-[#0a0a0a] cards, red-500 accents, rounded-sm.
- * Old `bg-black/60 border-red-950/30 backdrop-blur-sm` cyberpunk patterns
+ *   bg-background page, bg-card cards, red-500 accents, rounded-sm.
+ * Old `bg-background/60 border-red-950/30 backdrop-blur-sm` cyberpunk patterns
  * are replaced with the unified Void palette.
  */
 
@@ -60,9 +60,9 @@ const LinkedInActivityCard: React.FC<{ data: typeof mockLinkedInData[0] }> = ({ 
   <motion.div
     initial={{ opacity: 0, y: 6 }}
     animate={{ opacity: 1, y: 0 }}
-    className="bg-[#0a0a0a] border border-white/[0.04] rounded-sm overflow-hidden hover:border-red-500/10 transition-colors"
+    className="bg-card border border-border rounded-sm overflow-hidden hover:border-primary/10 transition-colors"
   >
-    <div className="px-4 py-3 flex items-start gap-3 border-b border-white/[0.04]">
+    <div className="px-4 py-3 flex items-start gap-3 border-b border-border">
       <div className="h-9 w-9 rounded-sm bg-blue-500/[0.08] border border-blue-500/15 flex items-center justify-center shrink-0">
         <Linkedin className="h-4 w-4 text-blue-400" />
       </div>
@@ -73,13 +73,13 @@ const LinkedInActivityCard: React.FC<{ data: typeof mockLinkedInData[0] }> = ({ 
             App
           </span>
         </div>
-        <span className="text-[11px] text-white/25">{data.timestamp}</span>
+        <span className="text-[11px] text-muted-foreground/50">{data.timestamp}</span>
       </div>
     </div>
     <div className="px-4 py-3">
       <p className="text-[13px] font-medium text-white/75">{data.activity.type}</p>
-      <p className="text-[12px] text-white/50 mt-0.5">{data.activity.user}</p>
-      <p className="text-[11px] text-white/30 mt-1">{data.activity.details}</p>
+      <p className="text-[12px] text-muted-foreground/80 mt-0.5">{data.activity.user}</p>
+      <p className="text-[11px] text-muted-foreground mt-1">{data.activity.details}</p>
     </div>
   </motion.div>
 );
@@ -89,9 +89,9 @@ const CalendlyEventCard: React.FC<{ data: typeof mockCalendlyData[0] }> = ({ dat
   <motion.div
     initial={{ opacity: 0, y: 6 }}
     animate={{ opacity: 1, y: 0 }}
-    className="bg-[#0a0a0a] border border-white/[0.04] rounded-sm overflow-hidden hover:border-red-500/10 transition-colors"
+    className="bg-card border border-border rounded-sm overflow-hidden hover:border-primary/10 transition-colors"
   >
-    <div className="px-4 py-3 flex items-start gap-3 border-b border-white/[0.04]">
+    <div className="px-4 py-3 flex items-start gap-3 border-b border-border">
       <div className="h-9 w-9 rounded-sm bg-amber-500/[0.08] border border-amber-500/15 flex items-center justify-center shrink-0">
         <CalendarIcon className="h-4 w-4 text-amber-400" />
       </div>
@@ -102,13 +102,13 @@ const CalendlyEventCard: React.FC<{ data: typeof mockCalendlyData[0] }> = ({ dat
             App
           </span>
         </div>
-        <span className="text-[11px] text-white/25">{data.timestamp}</span>
+        <span className="text-[11px] text-muted-foreground/50">{data.timestamp}</span>
       </div>
     </div>
     <div className="px-4 py-3 space-y-1">
       <p className="text-[13px] font-medium text-white/75">{data.event.type}</p>
-      <p className="text-[12px] text-white/50">With: <span className="text-white/70">{data.event.with}</span></p>
-      <div className="flex items-center gap-3 text-[11px] text-white/30 mt-1">
+      <p className="text-[12px] text-muted-foreground/80">With: <span className="text-foreground/70">{data.event.with}</span></p>
+      <div className="flex items-center gap-3 text-[11px] text-muted-foreground mt-1">
         <span>{data.event.time}</span>
         <span>·</span>
         <span>{data.event.duration}</span>
@@ -123,10 +123,10 @@ const EmptyIntegration: React.FC<{
   icon: React.ElementType;
   message?: string;
 }> = ({ name, icon: Icon, message }) => (
-  <div className="bg-[#0a0a0a] border border-white/[0.04] rounded-sm py-16 text-center">
+  <div className="bg-card border border-border rounded-sm py-16 text-center">
     <Icon className="h-10 w-10 text-white/[0.05] mx-auto mb-3" />
-    <p className="text-[14px] text-white/30 font-medium mb-1">{name} integration not connected</p>
-    <p className="text-[12px] text-white/15">
+    <p className="text-[14px] text-muted-foreground font-medium mb-1">{name} integration not connected</p>
+    <p className="text-[12px] text-muted-foreground/40">
       {message || "Configure a webhook endpoint in Settings to start streaming activity"}
     </p>
   </div>
@@ -139,18 +139,18 @@ function ModLogsPage() {
   const [activeTab, setActiveTab] = useState<string>("github");
 
   return (
-    <div className="min-h-screen bg-black overflow-y-auto">
+    <div className="min-h-screen bg-background overflow-y-auto">
       {/* Header */}
       <div className="px-8 pt-7 pb-2">
         <div className="flex items-end justify-between">
           <div className="flex items-center gap-3">
-            <div className="p-2.5 rounded-sm bg-red-500/[0.08] border border-red-500/15">
-              <GitCommit className="h-5 w-5 text-red-400" />
+            <div className="p-2.5 rounded-sm bg-primary/[0.08] border border-primary/15">
+              <GitCommit className="h-5 w-5 text-primary" />
             </div>
             <div className="flex items-center gap-3">
               <div>
-                <h1 className="text-[24px] font-bold text-white tracking-tight">Mod Logs</h1>
-                <p className="text-[12px] text-white/20 mt-0.5">
+                <h1 className="text-[24px] font-bold text-foreground tracking-tight">Mod Logs</h1>
+                <p className="text-[12px] text-muted-foreground/60 mt-0.5">
                   Aggregated webhooks from connected services
                 </p>
               </div>
@@ -164,15 +164,15 @@ function ModLogsPage() {
 
       {/* Tab pills */}
       <div className="px-8 pt-5">
-        <div className="flex items-center gap-1 bg-white/[0.02] border border-white/[0.04] rounded-sm p-0.5 w-fit overflow-x-auto">
+        <div className="flex items-center gap-1 bg-muted/30 border border-border rounded-sm p-0.5 w-fit overflow-x-auto">
           {TABS.map(({ key, label, icon: Icon }) => (
             <button
               key={key}
               onClick={() => setActiveTab(key)}
               className={`flex items-center gap-1.5 px-3 py-1.5 rounded-sm text-[11px] font-medium whitespace-nowrap transition-all ${
                 activeTab === key
-                  ? "bg-red-500/[0.1] text-red-400"
-                  : "text-white/25 hover:text-white/50"
+                  ? "bg-primary/10 text-primary"
+                  : "text-muted-foreground/50 hover:text-muted-foreground/80"
               }`}
             >
               <Icon className="h-3 w-3" />
@@ -194,11 +194,11 @@ function ModLogsPage() {
             <>
               <div className="flex items-center justify-between mb-4">
                 <div className="flex items-center gap-2">
-                  <Github className="h-4 w-4 text-white/40" />
+                  <Github className="h-4 w-4 text-muted-foreground/70" />
                   <h2 className="text-[14px] font-semibold text-white/85">GitHub Activity</h2>
                 </div>
                 <button
-                  className="flex items-center gap-1.5 px-3 py-1.5 bg-white/[0.02] hover:bg-white/[0.04] border border-white/[0.04] text-white/40 hover:text-white/70 text-[11px] rounded-sm transition-colors"
+                  className="flex items-center gap-1.5 px-3 py-1.5 bg-muted/30 hover:bg-muted/50 border border-border text-muted-foreground/70 hover:text-foreground/70 text-[11px] rounded-sm transition-colors"
                   title="Refresh"
                 >
                   <RefreshCw className="h-3 w-3" />
@@ -213,10 +213,10 @@ function ModLogsPage() {
             <>
               <div className="flex items-center justify-between mb-4">
                 <div className="flex items-center gap-2">
-                  <Linkedin className="h-4 w-4 text-white/40" />
+                  <Linkedin className="h-4 w-4 text-muted-foreground/70" />
                   <h2 className="text-[14px] font-semibold text-white/85">LinkedIn Activity</h2>
                 </div>
-                <button className="flex items-center gap-1.5 px-3 py-1.5 bg-white/[0.02] hover:bg-white/[0.04] border border-white/[0.04] text-white/40 hover:text-white/70 text-[11px] rounded-sm transition-colors">
+                <button className="flex items-center gap-1.5 px-3 py-1.5 bg-muted/30 hover:bg-muted/50 border border-border text-muted-foreground/70 hover:text-foreground/70 text-[11px] rounded-sm transition-colors">
                   <RefreshCw className="h-3 w-3" /> Refresh
                 </button>
               </div>
@@ -234,10 +234,10 @@ function ModLogsPage() {
             <>
               <div className="flex items-center justify-between mb-4">
                 <div className="flex items-center gap-2">
-                  <CalendarIcon className="h-4 w-4 text-white/40" />
+                  <CalendarIcon className="h-4 w-4 text-muted-foreground/70" />
                   <h2 className="text-[14px] font-semibold text-white/85">Calendly Events</h2>
                 </div>
-                <button className="flex items-center gap-1.5 px-3 py-1.5 bg-white/[0.02] hover:bg-white/[0.04] border border-white/[0.04] text-white/40 hover:text-white/70 text-[11px] rounded-sm transition-colors">
+                <button className="flex items-center gap-1.5 px-3 py-1.5 bg-muted/30 hover:bg-muted/50 border border-border text-muted-foreground/70 hover:text-foreground/70 text-[11px] rounded-sm transition-colors">
                   <RefreshCw className="h-3 w-3" /> Refresh
                 </button>
               </div>

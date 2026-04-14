@@ -178,13 +178,13 @@ const TeamAvatars = ({ avatars, max = 4 }: { avatars: any; max?: number }) => {
       {displayedAvatars.map((avatar: any, idx: any) => (
         <Avatar
           key={idx}
-          className="h-7 w-7 border-2 border-black/40 bg-red-900 text-white text-xs"
+          className="h-7 w-7 border-2 border-black/40 bg-red-900 text-foreground text-xs"
         >
           <AvatarFallback>{avatar}</AvatarFallback>
         </Avatar>
       ))}
       {remaining > 0 && (
-        <Avatar className="h-7 w-7 border-2 border-black/40 bg-red-950 text-white text-xs">
+        <Avatar className="h-7 w-7 border-2 border-black/40 bg-red-950 text-foreground text-xs">
           <AvatarFallback>+{remaining}</AvatarFallback>
         </Avatar>
       )}
@@ -196,7 +196,7 @@ const TeamAvatars = ({ avatars, max = 4 }: { avatars: any; max?: number }) => {
 const TeamCard = ({ team }: { team: any }) => (
   <motion.div
     whileHover={{ scale: 1.01 }}
-    className="rounded-lg bg-black/40 border border-red-900/30 overflow-hidden hover:bg-red-950/10 hover:border-red-900/50 transition-all"
+    className="rounded-lg bg-background/40 border border-red-900/30 overflow-hidden hover:bg-red-950/10 hover:border-red-900/50 transition-all"
   >
     <div className="p-4">
       <div className="flex justify-between items-start mb-3">
@@ -206,7 +206,7 @@ const TeamCard = ({ team }: { team: any }) => (
             <Button
               variant="ghost"
               size="icon"
-              className="text-white/60 hover:text-white hover:bg-red-950/20"
+              className="text-foreground/60 hover:text-foreground hover:bg-red-950/20"
             >
               <MoreHorizontal className="h-4 w-4" />
             </Button>
@@ -221,21 +221,21 @@ const TeamCard = ({ team }: { team: any }) => (
               <UserPlus className="h-4 w-4 mr-2" /> Add Member
             </DropdownMenuItem>
             <DropdownMenuSeparator className="bg-red-950/30" />
-            <DropdownMenuItem className="text-red-400 hover:bg-red-950/40">
+            <DropdownMenuItem className="text-primary hover:bg-red-950/40">
               <Trash className="h-4 w-4 mr-2" /> Delete Team
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
       </div>
-      <p className="text-white/60 text-sm mb-4">{team.description}</p>
+      <p className="text-foreground/60 text-sm mb-4">{team.description}</p>
       <div className="flex justify-between items-center">
         <div className="flex items-center gap-4">
-          <div className="flex items-center text-white/60 text-sm">
-            <Users2 className="h-4 w-4 mr-1 text-red-400" />
+          <div className="flex items-center text-foreground/60 text-sm">
+            <Users2 className="h-4 w-4 mr-1 text-primary" />
             {team.members} Members
           </div>
-          <div className="flex items-center text-white/60 text-sm">
-            <Briefcase className="h-4 w-4 mr-1 text-red-400" />
+          <div className="flex items-center text-foreground/60 text-sm">
+            <Briefcase className="h-4 w-4 mr-1 text-primary" />
             {team.projects} Projects
           </div>
         </div>
@@ -252,27 +252,27 @@ const ProjectCard = ({ project }: { project: any }) => {
   return (
     <motion.div
       whileHover={{ scale: 1.01 }}
-      className="rounded-lg bg-black/40 border border-red-900/30 overflow-hidden hover:bg-red-950/10 hover:border-red-900/50 transition-all"
+      className="rounded-lg bg-background/40 border border-red-900/30 overflow-hidden hover:bg-red-950/10 hover:border-red-900/50 transition-all"
     >
       <div className="p-4">
         <div className="flex justify-between items-start mb-3">
           <h3 className="text-lg font-semibold text-white">{project.name}</h3>
           <StatusBadge status={project.status} />
         </div>
-        <p className="text-white/60 text-sm mb-4">{project.description}</p>
+        <p className="text-foreground/60 text-sm mb-4">{project.description}</p>
 
         <div className="space-y-3">
           <div className="flex justify-between text-sm mb-1">
-            <span className="text-white/70">Team: {project.team}</span>
-            <span className="text-white/70">
+            <span className="text-foreground/70">Team: {project.team}</span>
+            <span className="text-foreground/70">
               Deadline: {project.deadline}
             </span>
           </div>
 
           <div>
             <div className="flex justify-between text-sm mb-1">
-              <span className="text-white/70">Completion</span>
-              <span className="text-white">{project.completion}%</span>
+              <span className="text-foreground/70">Completion</span>
+              <span className="text-foreground">{project.completion}%</span>
             </div>
             <div className="h-2 bg-red-950/20 rounded-full overflow-hidden">
               <motion.div
@@ -304,7 +304,7 @@ const CreateTeamDialog = () => {
       <DialogTrigger asChild>
         <Button
           className="group relative overflow-hidden bg-gradient-to-r from-red-950 to-red-900 
-          hover:from-red-900 hover:to-red-800 text-white border border-red-800/30 
+          hover:from-red-900 hover:to-red-800 text-foreground border border-red-800/30 
           shadow-lg shadow-red-950/20 transition-all duration-300 
           hover:scale-[1.02] active:scale-[0.98]"
         >
@@ -315,10 +315,10 @@ const CreateTeamDialog = () => {
       </DialogTrigger>
       <DialogContent className="max-w-lg">
         <DialogHeader>
-          <DialogTitle className="text-white text-xl">
+          <DialogTitle className="text-foreground text-xl">
             Create New Team
           </DialogTitle>
-          <DialogDescription className="text-white/60">
+          <DialogDescription className="text-foreground/60">
             Create a new team and add members to collaborate on projects.
           </DialogDescription>
         </DialogHeader>
@@ -326,14 +326,14 @@ const CreateTeamDialog = () => {
           <div className="grid gap-2">
             <label className="text-sm text-white">Team Name</label>
             <Input
-              className="bg-black/40 border-red-950/30 text-white"
+              className="bg-background/40 border-red-950/30 text-white"
               placeholder="Enter team name..."
             />
           </div>
           <div className="grid gap-2">
             <label className="text-sm text-white">Description</label>
             <Input
-              className="bg-black/40 border-red-950/30 text-white"
+              className="bg-background/40 border-red-950/30 text-white"
               placeholder="Team description..."
             />
           </div>
@@ -341,13 +341,13 @@ const CreateTeamDialog = () => {
             <label className="text-sm text-white">Initial Members</label>
             <div className="flex items-center gap-2">
               <Input
-                className="bg-black/40 border-red-950/30 text-white"
+                className="bg-background/40 border-red-950/30 text-white"
                 placeholder="Search members..."
               />
               <Button
                 size="icon"
                 variant="outline"
-                className="border-red-950/30 text-white hover:bg-red-950/20"
+                className="border-red-950/30 text-foreground hover:bg-red-950/20"
               >
                 <Plus className="h-4 w-4" />
               </Button>
@@ -358,13 +358,13 @@ const CreateTeamDialog = () => {
           <Button
             variant="outline"
             onClick={() => setOpen(false)}
-            className="border-red-800/30 text-white hover:bg-red-950/20"
+            className="border-red-800/30 text-foreground hover:bg-red-950/20"
           >
             Cancel
           </Button>
           <Button
             className="bg-gradient-to-r from-red-950 to-red-900 hover:from-red-900 hover:to-red-800 
-            text-white border border-red-800/30"
+            text-foreground border border-red-800/30"
             onClick={() => setOpen(false)}
           >
             Create Team
@@ -384,7 +384,7 @@ const CreateProjectDialog = () => {
       <DialogTrigger asChild>
         <Button
           className="group relative overflow-hidden bg-gradient-to-r from-red-950 to-red-900 
-          hover:from-red-900 hover:to-red-800 text-white border border-red-800/30 
+          hover:from-red-900 hover:to-red-800 text-foreground border border-red-800/30 
           shadow-lg shadow-red-950/20 transition-all duration-300 
           hover:scale-[1.02] active:scale-[0.98]"
         >
@@ -395,10 +395,10 @@ const CreateProjectDialog = () => {
       </DialogTrigger>
       <DialogContent className="max-w-lg">
         <DialogHeader>
-          <DialogTitle className="text-white text-xl">
+          <DialogTitle className="text-foreground text-xl">
             Create New Project
           </DialogTitle>
-          <DialogDescription className="text-white/60">
+          <DialogDescription className="text-foreground/60">
             Add a new project and assign it to a team.
           </DialogDescription>
         </DialogHeader>
@@ -406,28 +406,28 @@ const CreateProjectDialog = () => {
           <div className="grid gap-2">
             <label className="text-sm text-white">Project Name</label>
             <Input
-              className="bg-black/40 border-red-950/30 text-white"
+              className="bg-background/40 border-red-950/30 text-white"
               placeholder="Enter project name..."
             />
           </div>
           <div className="grid gap-2">
             <label className="text-sm text-white">Description</label>
             <Input
-              className="bg-black/40 border-red-950/30 text-white"
+              className="bg-background/40 border-red-950/30 text-white"
               placeholder="Project description..."
             />
           </div>
           <div className="grid gap-2">
             <label className="text-sm text-white">Assign Team</label>
             <Input
-              className="bg-black/40 border-red-950/30 text-white"
+              className="bg-background/40 border-red-950/30 text-white"
               placeholder="Select team..."
             />
           </div>
           <div className="grid gap-2">
             <label className="text-sm text-white">Deadline</label>
             <Input
-              className="bg-black/40 border-red-950/30 text-white"
+              className="bg-background/40 border-red-950/30 text-white"
               type="date"
             />
           </div>
@@ -436,13 +436,13 @@ const CreateProjectDialog = () => {
           <Button
             variant="outline"
             onClick={() => setOpen(false)}
-            className="border-red-800/30 text-white hover:bg-red-950/20"
+            className="border-red-800/30 text-foreground hover:bg-red-950/20"
           >
             Cancel
           </Button>
           <Button
             className="bg-gradient-to-r from-red-950 to-red-900 hover:from-red-900 hover:to-red-800 
-            text-white border border-red-800/30"
+            text-foreground border border-red-800/30"
             onClick={() => setOpen(false)}
           >
             Create Project
@@ -463,11 +463,11 @@ const TeamsAndProjects = () => {
         <CardHeader>
           <div className="flex justify-between items-center">
             <div>
-              <CardTitle className="text-white flex items-center">
+              <CardTitle className="text-foreground flex items-center">
                 <Users2 className="h-5 w-5 mr-2 text-red-500" />
                 Teams & Projects
               </CardTitle>
-              <CardDescription className="text-white/60">
+              <CardDescription className="text-foreground/60">
                 Manage your teams and project assignments
               </CardDescription>
             </div>
@@ -487,27 +487,27 @@ const TeamsAndProjects = () => {
             className="space-y-6"
           >
             <div className="flex justify-between items-center">
-              <TabsList className="bg-black/40 border border-red-950/20">
+              <TabsList className="bg-background/40 border border-red-950/20">
                 <TabsTrigger
                   value="teams"
-                  className="data-[state=active]:bg-red-950/20 data-[state=active]:text-white hover:text-white text-white/60"
+                  className="data-[state=active]:bg-red-950/20 data-[state=active]:text-foreground hover:text-foreground text-foreground/60"
                 >
                   <Users2 className="h-4 w-4 mr-2" />
                   Teams
                 </TabsTrigger>
                 <TabsTrigger
                   value="projects"
-                  className="data-[state=active]:bg-red-950/20 data-[state=active]:text-white hover:text-white text-white/60"
+                  className="data-[state=active]:bg-red-950/20 data-[state=active]:text-foreground hover:text-foreground text-foreground/60"
                 >
                   <Briefcase className="h-4 w-4 mr-2" />
                   Projects
                 </TabsTrigger>
               </TabsList>
               <div className="relative">
-                <Search className="h-4 w-4 absolute left-3 top-3 text-white/60" />
+                <Search className="h-4 w-4 absolute left-3 top-3 text-foreground/60" />
                 <Input
                   placeholder={`Search ${activeTab}...`}
-                  className="bg-black/40 border-red-950/30 text-white pl-10 w-[250px]"
+                  className="bg-background/40 border-red-950/30 text-foreground pl-10 w-[250px]"
                 />
               </div>
             </div>

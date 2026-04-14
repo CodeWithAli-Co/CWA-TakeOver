@@ -357,9 +357,9 @@ export const TimeReportGenerator = () => {
   };
 
   const inputClass =
-    "w-full px-3 py-2 bg-black/40 border border-red-900/30 text-amber-50 rounded-lg focus:border-red-500 focus:outline-none hover:bg-black/60 transition-colors";
+    "w-full px-3 py-2 bg-background/40 border border-red-900/30 text-amber-50 rounded-lg focus:border-red-500 focus:outline-none hover:bg-background/60 transition-colors";
   const selectClass =
-    "w-full px-3 py-2 bg-black/40 border border-red-900/30 text-amber-50 rounded-lg focus:border-red-500 focus:outline-none hover:bg-black/60 transition-colors appearance-none cursor-pointer";
+    "w-full px-3 py-2 bg-background/40 border border-red-900/30 text-amber-50 rounded-lg focus:border-red-500 focus:outline-none hover:bg-background/60 transition-colors appearance-none cursor-pointer";
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -405,11 +405,11 @@ export const TimeReportGenerator = () => {
               value={selectedCompany}
               onChange={(e) => setSelectedCompany(e.target.value)}
             >
-              <option value="" className="bg-black">
+              <option value="" className="bg-background">
                 All Companies
               </option>
               {COMPANIES.map((c) => (
-                <option key={c.id} value={c.id} className="bg-black">
+                <option key={c.id} value={c.id} className="bg-background">
                   {c.name}
                 </option>
               ))}
@@ -423,7 +423,7 @@ export const TimeReportGenerator = () => {
                 type="checkbox"
                 checked={includeDescriptions}
                 onChange={(e) => setIncludeDescriptions(e.target.checked)}
-                className="w-4 h-4 rounded border-red-900/30 bg-black/40 text-red-500 focus:ring-red-500"
+                className="w-4 h-4 rounded border-red-900/30 bg-background/40 text-red-500 focus:ring-red-500"
               />
               <span className="text-amber-50/70 text-sm group-hover:text-amber-50 transition-colors">
                 Include detailed entries
@@ -435,7 +435,7 @@ export const TimeReportGenerator = () => {
                 type="checkbox"
                 checked={redactSensitive}
                 onChange={(e) => setRedactSensitive(e.target.checked)}
-                className="w-4 h-4 rounded border-red-900/30 bg-black/40 text-red-500 focus:ring-red-500"
+                className="w-4 h-4 rounded border-red-900/30 bg-background/40 text-red-500 focus:ring-red-500"
               />
               <span className="text-amber-50/70 text-sm group-hover:text-amber-50 transition-colors">
                 Redact sensitive information
@@ -497,7 +497,7 @@ export const TimeReportGenerator = () => {
               <BarChart3 className="h-5 w-5 text-red-500" />
               Report Preview
             </div>
-            <Badge className="bg-red-900/30 text-red-400">{entries.length} entries</Badge>
+            <Badge className="bg-red-900/30 text-primary">{entries.length} entries</Badge>
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -511,19 +511,19 @@ export const TimeReportGenerator = () => {
             <div className="space-y-6">
               {/* Summary Cards */}
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                <div className="bg-black/40 border border-red-900/30 rounded-lg p-4">
+                <div className="bg-background/40 border border-red-900/30 rounded-lg p-4">
                   <p className="text-amber-50/60 text-xs">Total Hours</p>
                   <p className="text-amber-50 text-2xl font-bold">{formatHours(totalHours)}</p>
                 </div>
-                <div className="bg-black/40 border border-red-900/30 rounded-lg p-4">
+                <div className="bg-background/40 border border-red-900/30 rounded-lg p-4">
                   <p className="text-amber-50/60 text-xs">Billable Hours</p>
                   <p className="text-green-400 text-2xl font-bold">{formatHours(billableHours)}</p>
                 </div>
-                <div className="bg-black/40 border border-red-900/30 rounded-lg p-4">
+                <div className="bg-background/40 border border-red-900/30 rounded-lg p-4">
                   <p className="text-amber-50/60 text-xs">Days Worked</p>
                   <p className="text-amber-50 text-2xl font-bold">{new Set(entries.map((e) => e.date)).size}</p>
                 </div>
-                <div className="bg-black/40 border border-red-900/30 rounded-lg p-4">
+                <div className="bg-background/40 border border-red-900/30 rounded-lg p-4">
                   <p className="text-amber-50/60 text-xs">Avg Hours/Day</p>
                   <p className="text-amber-50 text-2xl font-bold">
                     {formatHours(totalHours / (new Set(entries.map((e) => e.date)).size || 1))}
@@ -532,7 +532,7 @@ export const TimeReportGenerator = () => {
               </div>
 
               {/* Category Breakdown */}
-              <div className="bg-black/40 border border-red-900/30 rounded-lg p-4">
+              <div className="bg-background/40 border border-red-900/30 rounded-lg p-4">
                 <h4 className="text-amber-50 font-medium mb-3">Hours by Category</h4>
                 <div className="space-y-2">
                   {Object.entries(
@@ -547,7 +547,7 @@ export const TimeReportGenerator = () => {
                     .sort((a, b) => b[1] - a[1])
                     .map(([category, minutes]) => (
                       <div key={category} className="flex items-center gap-3">
-                        <div className="flex-1 bg-black/40 rounded-full h-2 overflow-hidden">
+                        <div className="flex-1 bg-background/40 rounded-full h-2 overflow-hidden">
                           <motion.div
                             initial={{ width: 0 }}
                             animate={{ width: `${(minutes / (totalHours * 60)) * 100}%` }}
@@ -565,7 +565,7 @@ export const TimeReportGenerator = () => {
               </div>
 
               {/* Sample Entries Preview */}
-              <div className="bg-black/40 border border-red-900/30 rounded-lg p-4">
+              <div className="bg-background/40 border border-red-900/30 rounded-lg p-4">
                 <h4 className="text-amber-50 font-medium mb-3">Recent Entries (Preview)</h4>
                 <div className="space-y-2 max-h-[200px] overflow-y-auto">
                   {entries.slice(0, 10).map((entry) => (
@@ -574,7 +574,7 @@ export const TimeReportGenerator = () => {
                         <span className="text-amber-50/50 text-xs">{format(parseISO(entry.date), "MMM d")}</span>
                         <span className="text-amber-50 text-sm truncate max-w-[300px]">{entry.description}</span>
                       </div>
-                      <Badge className="bg-red-900/20 text-red-400">{formatDuration(entry.duration_minutes)}</Badge>
+                      <Badge className="bg-red-900/20 text-primary">{formatDuration(entry.duration_minutes)}</Badge>
                     </div>
                   ))}
                 </div>
@@ -639,7 +639,7 @@ export const ExportButtons = () => {
           Export
         </Button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent className="bg-black/90 border border-red-900/30 text-amber-50/70">
+      <DropdownMenuContent className="bg-background/90 border border-red-900/30 text-amber-50/70">
         <PDFDownloadLink
           document={<TimeReportPDF entries={monthEntries} config={reportConfig} />}
           fileName={`time-report-${today}.pdf`}

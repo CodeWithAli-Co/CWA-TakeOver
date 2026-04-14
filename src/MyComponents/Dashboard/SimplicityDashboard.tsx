@@ -66,11 +66,11 @@ function StatCard({
               {positive ? (
                 <ArrowUpRight className="h-3 w-3 text-emerald-400" />
               ) : (
-                <ArrowDownRight className="h-3 w-3 text-red-400" />
+                <ArrowDownRight className="h-3 w-3 text-primary" />
               )}
               <span
                 className={`text-[10px] font-medium ${
-                  positive ? "text-emerald-400" : "text-red-400"
+                  positive ? "text-emerald-400" : "text-primary"
                 }`}
               >
                 {change}
@@ -353,10 +353,10 @@ function SimplicityDashboardContent() {
           </div>
           <div className="flex items-center justify-between py-1">
             <div className="flex items-center gap-2">
-              <ArrowDownRight className="h-3.5 w-3.5 text-red-400" />
+              <ArrowDownRight className="h-3.5 w-3.5 text-primary" />
               <span className="text-sm text-foreground">Total Expenses</span>
             </div>
-            <span className="text-sm font-semibold text-red-400 tabular-nums">
+            <span className="text-sm font-semibold text-primary tabular-nums">
               {fmt(totalMonthlyExpense)}
             </span>
           </div>
@@ -369,7 +369,7 @@ function SimplicityDashboardContent() {
               className={`text-sm font-semibold tabular-nums ${
                 totalMonthlyIncome - totalMonthlyExpense >= 0
                   ? "text-emerald-400"
-                  : "text-red-400"
+                  : "text-primary"
               }`}
             >
               {fmt(Math.abs(totalMonthlyIncome - totalMonthlyExpense))}

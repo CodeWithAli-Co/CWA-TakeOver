@@ -82,8 +82,8 @@ export const TimeEntryList = ({
   const totalMinutes = displayEntries.reduce((sum, e) => sum + e.duration_minutes, 0);
 
   const inputStyles = cn(
-    "px-3 py-2 rounded-lg text-sm text-white placeholder:text-white/30",
-    "bg-white/[0.03] border border-white/[0.08]",
+    "px-3 py-2 rounded-lg text-sm text-foreground placeholder:text-muted-foreground",
+    "bg-muted/40 border border-border",
     "focus:border-white/20 focus:outline-none transition-all"
   );
 
@@ -92,19 +92,19 @@ export const TimeEntryList = ({
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <h3 className="text-sm font-medium text-white/70 uppercase tracking-wider flex items-center gap-2">
+          <h3 className="text-sm font-medium text-foreground/70 uppercase tracking-wider flex items-center gap-2">
             <Clock className="h-4 w-4" />
             Entries
           </h3>
-          <span className="text-xs px-2 py-0.5 rounded-full bg-white/[0.05] text-white/50">
+          <span className="text-xs px-2 py-0.5 rounded-full bg-white/[0.05] text-muted-foreground/80">
             {displayEntries.length}
           </span>
         </div>
 
         <div className="flex items-center gap-3">
           {totalMinutes > 0 && (
-            <span className="text-sm text-white/50">
-              Total: <span className="text-white font-medium">{formatDuration(totalMinutes)}</span>
+            <span className="text-sm text-muted-foreground/80">
+              Total: <span className="text-foreground font-medium">{formatDuration(totalMinutes)}</span>
             </span>
           )}
           {showFilters && (
@@ -114,7 +114,7 @@ export const TimeEntryList = ({
                 "flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm transition-all",
                 showFilterPanel || hasActiveFilters
                   ? "bg-white/10 text-white"
-                  : "text-white/50 hover:text-white hover:bg-white/[0.05]"
+                  : "text-muted-foreground/80 hover:text-foreground hover:bg-white/[0.05]"
               )}
             >
               <Filter className="h-3.5 w-3.5" />
@@ -136,11 +136,11 @@ export const TimeEntryList = ({
             transition={{ duration: 0.2 }}
             className="overflow-hidden"
           >
-            <div className="p-4 rounded-xl bg-white/[0.02] border border-white/[0.06] space-y-3">
+            <div className="p-4 rounded-xl bg-muted/30 border border-border space-y-3">
               <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                 {/* Search */}
                 <div className="col-span-2 relative">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-white/30" />
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                   <input
                     type="text"
                     placeholder="Search..."
@@ -178,7 +178,7 @@ export const TimeEntryList = ({
               {hasActiveFilters && (
                 <button
                   onClick={clearFilters}
-                  className="flex items-center gap-1.5 text-xs text-white/40 hover:text-white transition-colors"
+                  className="flex items-center gap-1.5 text-xs text-muted-foreground/70 hover:text-foreground transition-colors"
                 >
                   <X className="h-3 w-3" />
                   Clear filters
@@ -193,8 +193,8 @@ export const TimeEntryList = ({
       <div className={cn("space-y-2", !compact && "max-h-[500px] overflow-y-auto pr-1")}>
         {displayEntries.length === 0 ? (
           <div className="py-12 text-center">
-            <Clock className="h-10 w-10 mx-auto text-white/10 mb-3" />
-            <p className="text-white/30 text-sm">No entries yet</p>
+            <Clock className="h-10 w-10 mx-auto text-muted-foreground/30 mb-3" />
+            <p className="text-muted-foreground text-sm">No entries yet</p>
           </div>
         ) : (
           displayEntries.map((entry, index) => {
@@ -214,10 +214,10 @@ export const TimeEntryList = ({
                   onClick={() => !compact && setExpandedEntry(isExpanded ? null : entry.id)}
                   className={cn(
                     "p-4 rounded-xl border transition-all duration-200",
-                    "bg-white/[0.01] border-white/[0.06]",
-                    "hover:bg-white/[0.03] hover:border-white/[0.1]",
+                    "bg-white/[0.01] border-border",
+                    "hover:bg-muted/40 hover:border-white/[0.1]",
                     !compact && "cursor-pointer",
-                    isExpanded && "bg-white/[0.03] border-white/[0.1]"
+                    isExpanded && "bg-muted/40 border-white/[0.1]"
                   )}
                 >
                   <div className="flex items-center gap-4">
@@ -226,7 +226,7 @@ export const TimeEntryList = ({
                       <p className="text-lg font-semibold text-white">
                         {formatDuration(entry.duration_minutes)}
                       </p>
-                      <p className="text-[10px] text-white/30 uppercase tracking-wider">
+                      <p className="text-[10px] text-muted-foreground uppercase tracking-wider">
                         {format(parseISO(entry.start_time), "HH:mm")} - {format(parseISO(entry.end_time), "HH:mm")}
                       </p>
                     </div>
@@ -266,14 +266,14 @@ export const TimeEntryList = ({
                       </div>
 
                       <p className={cn(
-                        "text-sm text-white/70",
+                        "text-sm text-foreground/70",
                         !isExpanded && "line-clamp-1"
                       )}>
                         {entry.description}
                       </p>
 
                       {!compact && (
-                        <p className="text-[10px] text-white/30 mt-1">
+                        <p className="text-[10px] text-muted-foreground mt-1">
                           {format(parseISO(entry.date), "EEE, MMM d")}
                         </p>
                       )}
@@ -285,7 +285,7 @@ export const TimeEntryList = ({
                         <DropdownMenuTrigger asChild>
                           <button
                             onClick={(e) => e.stopPropagation()}
-                            className="p-2 rounded-lg hover:bg-white/10 text-white/40 hover:text-white transition-colors"
+                            className="p-2 rounded-lg hover:bg-white/10 text-muted-foreground/70 hover:text-foreground transition-colors"
                           >
                             <MoreHorizontal className="h-4 w-4" />
                           </button>
@@ -297,7 +297,7 @@ export const TimeEntryList = ({
                                 e.stopPropagation();
                                 onEditEntry(entry);
                               }}
-                              className="text-white/70 hover:text-white hover:bg-white/10 cursor-pointer"
+                              className="text-foreground/70 hover:text-foreground hover:bg-white/10 cursor-pointer"
                             >
                               <Edit2 className="h-4 w-4 mr-2" />
                               Edit
@@ -308,7 +308,7 @@ export const TimeEntryList = ({
                               e.stopPropagation();
                               handleDelete(entry.id);
                             }}
-                            className="text-red-400 hover:text-red-300 hover:bg-red-500/10 cursor-pointer"
+                            className="text-primary hover:text-red-300 hover:bg-red-500/10 cursor-pointer"
                           >
                             <Trash2 className="h-4 w-4 mr-2" />
                             Delete
@@ -328,10 +328,10 @@ export const TimeEntryList = ({
                         transition={{ duration: 0.2 }}
                         className="overflow-hidden"
                       >
-                        <div className="mt-4 pt-4 border-t border-white/[0.06] space-y-3">
+                        <div className="mt-4 pt-4 border-t border-border space-y-3">
                           {/* Full Description */}
-                          <div className="p-3 rounded-lg bg-white/[0.02]">
-                            <p className="text-sm text-white/70 whitespace-pre-wrap">
+                          <div className="p-3 rounded-lg bg-muted/30">
+                            <p className="text-sm text-foreground/70 whitespace-pre-wrap">
                               {entry.description}
                             </p>
                           </div>
@@ -342,7 +342,7 @@ export const TimeEntryList = ({
                               {entry.tags.map((tag) => (
                                 <span
                                   key={tag}
-                                  className="text-xs px-2 py-1 rounded-md bg-white/[0.05] text-white/50"
+                                  className="text-xs px-2 py-1 rounded-md bg-white/[0.05] text-muted-foreground/80"
                                 >
                                   {tag}
                                 </span>
@@ -351,7 +351,7 @@ export const TimeEntryList = ({
                           )}
 
                           {/* Meta */}
-                          <div className="flex items-center justify-between text-[10px] text-white/30">
+                          <div className="flex items-center justify-between text-[10px] text-muted-foreground">
                             <span>Created {format(parseISO(entry.created_at), "MMM d, h:mm a")}</span>
                             {entry.project && (
                               <span>Project: {entry.project.name}</span>

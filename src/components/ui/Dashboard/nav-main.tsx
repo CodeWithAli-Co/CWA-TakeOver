@@ -50,18 +50,18 @@ export function NavMain({
                   <SidebarMenuButton
                     tooltip={item.title}
                     onClick={() => navigate({ to: item.url })}
-                    className="hover:bg-white/[0.04] text-white/50 hover:text-white/80 rounded-sm transition-colors data-[active=true]:bg-red-500/[0.08] data-[active=true]:text-red-400"
+                    className="hover:bg-muted/50 text-muted-foreground/80 hover:text-foreground/80 rounded-sm transition-colors data-[active=true]:bg-primary/[0.08] data-[active=true]:text-primary"
                   >
-                    {item.icon && <item.icon className="h-4 w-4 text-white/20" />}
+                    {item.icon && <item.icon className="h-4 w-4 text-muted-foreground/60" />}
                     <span className="text-[13px]">{item.title}</span>
-                    <ChevronRight className="ml-auto h-3.5 w-3.5 text-white/15 transition-transform duration-200 group-data-[state=open]/collapsible:rotate-90" />
+                    <ChevronRight className="ml-auto h-3.5 w-3.5 text-muted-foreground/40 transition-transform duration-200 group-data-[state=open]/collapsible:rotate-90" />
                   </SidebarMenuButton>
                 </CollapsibleTrigger>
                 <CollapsibleContent>
-                  <SidebarMenuSub className="border-l border-white/[0.04] ml-4">
+                  <SidebarMenuSub className="border-l border-border ml-4">
                     {item.items?.map((subItem) => (
                       <SidebarMenuSubItem key={subItem.title}>
-                        <SidebarMenuSubButton asChild className="hover:bg-white/[0.03] text-white/35 hover:text-white/60 rounded-sm">
+                        <SidebarMenuSubButton asChild className="hover:bg-muted/40 text-muted-foreground/60 hover:text-foreground/60 rounded-sm">
                           <Link to={subItem.url}>
                             <span className="text-[12px]">{subItem.title}</span>
                           </Link>
@@ -77,11 +77,11 @@ export function NavMain({
               <SidebarMenuButton
                 tooltip={item.title}
                 onClick={() => navigate({ to: item.url })}
-                className="hover:bg-white/[0.04] text-white/50 hover:text-white/80 rounded-sm transition-colors data-[active=true]:bg-red-500/[0.08] data-[active=true]:text-red-400"
+                className="hover:bg-muted/50 text-muted-foreground/80 hover:text-foreground/80 rounded-sm transition-colors data-[active=true]:bg-primary/[0.08] data-[active=true]:text-primary"
               >
                 {item.icon && (
                   <span className="relative">
-                    <item.icon className="h-4 w-4 text-white/20" />
+                    <item.icon className="h-4 w-4 text-muted-foreground/60" />
                     {item.title === "Chat" && totalUnread > 0 && (
                       <span className="absolute -top-1 -right-1">
                         <UnreadBadge count={totalUnread} />

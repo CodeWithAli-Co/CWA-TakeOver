@@ -151,11 +151,11 @@ export const AddMeeting = () => {
       <DialogContent className="max-w-lg">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <Calendar className="h-4 w-4 text-red-400" />
+            <Calendar className="h-4 w-4 text-primary" />
             Add New Meeting
           </DialogTitle>
           <DialogDescription className="text-red-200/60 flex items-center gap-2">
-            <Clock className="w-4 h-4 text-red-400" />
+            <Clock className="w-4 h-4 text-primary" />
             Add a new meeting to the schedule. Fill in the meeting details
             below.
           </DialogDescription>
@@ -178,7 +178,7 @@ export const AddMeeting = () => {
                     htmlFor={field.name}
                     className="text-red-200 flex items-center gap-2"
                   >
-                    <Tags className="w-4 h-4 text-red-400" />
+                    <Tags className="w-4 h-4 text-primary" />
                     Title
                   </Label>
                   <Input
@@ -187,7 +187,7 @@ export const AddMeeting = () => {
                     autoComplete="off"
                     required
                     placeholder="Task title"
-                    className="bg-black/40 border-red-950/30 text-red-200 
+                    className="bg-background/40 border-red-950/30 text-red-200 
                     focus:border-red-700 focus:ring-2 focus:ring-red-900/50 
                     transition-all duration-300"
                     value={field.state.value}
@@ -210,7 +210,7 @@ export const AddMeeting = () => {
                     type="text"
                     autoComplete="off"
                     placeholder="Enter Time ( e.g. 11:00AM - 2:00PM )"
-                    className="bg-black/40 inline border-red-950/30 text-red-200 
+                    className="bg-background/40 inline border-red-950/30 text-red-200 
                   focus:border-red-700 focus:ring-2 focus:ring-red-900/50 
                   transition-all duration-300"
                     value={field.state.value}
@@ -235,7 +235,7 @@ export const AddMeeting = () => {
                       autoComplete="off"
                       required
                       placeholder="Enter Date ( e.g. May, 11 2025 )"
-                      className="bg-black/40 inline border-red-950/30 text-red-200 
+                      className="bg-background/40 inline border-red-950/30 text-red-200 
                   focus:border-red-700 focus:ring-2 focus:ring-red-900/50 
                   transition-all duration-300"
                       value={field.state.value}
@@ -254,7 +254,7 @@ export const AddMeeting = () => {
                       htmlFor={field.name}
                       className="text-red-200 flex items-center gap-2"
                     >
-                      <PersonStanding className="w-4 h-4 text-red-400" />
+                      <PersonStanding className="w-4 h-4 text-primary" />
                       Attendees
                     </Label>
                     <Select
@@ -263,14 +263,14 @@ export const AddMeeting = () => {
                       onValueChange={(value) => field.handleChange(value)}
                     >
                       <SelectTrigger
-                        className="bg-black/40 border-red-950/30 
+                        className="bg-background/40 border-red-950/30 
                         text-red-200 focus:border-red-700 
                         focus:ring-2 focus:ring-red-900/50"
                       >
                         <SelectValue placeholder="Select Number of Attendees" />
                       </SelectTrigger>
                       <SelectContent
-                        className="bg-black border-red-950/30 
+                        className="bg-background border-red-950/30 
                         text-red-200"
                       >
                         {["1", "2", "3", "4", "5"].map((attendees) => (
@@ -304,14 +304,14 @@ export const AddMeeting = () => {
                       onValueChange={(value) => field.handleChange(value)}
                     >
                       <SelectTrigger
-                        className="bg-black/40 border-red-950/30 
+                        className="bg-background/40 border-red-950/30 
                         text-red-200 focus:border-red-700 
                         focus:ring-2 focus:ring-red-900/50"
                       >
                         <SelectValue placeholder="Select Meeting Type" />
                       </SelectTrigger>
                       <SelectContent
-                        className="bg-black border-red-950/30 
+                        className="bg-background border-red-950/30 
                         text-red-200"
                       >
                         {["in-person", "online", "hybrid"].map((type) => (
@@ -344,7 +344,7 @@ export const AddMeeting = () => {
                           htmlFor={field.name}
                           className="text-red-200 flex items-center gap-2"
                         >
-                          <Map className="w-4 h-4 text-red-400" />
+                          <Map className="w-4 h-4 text-primary" />
                           Location
                         </Label>
                         <Input
@@ -353,7 +353,7 @@ export const AddMeeting = () => {
                           autoComplete="off"
                           required
                           placeholder="Physical Location for Meeting"
-                          className="bg-black/40 border-red-950/30 text-red-200 
+                          className="bg-background/40 border-red-950/30 text-red-200 
                     focus:border-red-700 focus:ring-2 focus:ring-red-900/50 
                     transition-all duration-300"
                           value={field.state.value}
@@ -381,7 +381,7 @@ export const AddMeeting = () => {
                           htmlFor={field.name}
                           className="text-red-200 flex items-center gap-2"
                         >
-                          <Link className="w-4 h-4 text-red-400" />
+                          <Link className="w-4 h-4 text-primary" />
                           URL Location
                         </Label>
                         <Input
@@ -390,7 +390,7 @@ export const AddMeeting = () => {
                           autoComplete="off"
                           required
                           placeholder="Online Meeting Link"
-                          className="bg-black/40 border-red-950/30 text-red-200 
+                          className="bg-background/40 border-red-950/30 text-red-200 
                     focus:border-red-700 focus:ring-2 focus:ring-red-900/50 
                     transition-all duration-300"
                           value={field.state.value}
@@ -428,7 +428,7 @@ export const AddMeeting = () => {
                   disabled={!canSubmit}
                   className="bg-gradient-to-r from-red-950 to-red-900 
                   hover:from-red-900 hover:to-red-800 
-                  text-white border border-red-800/30 
+                  text-foreground border border-red-800/30 
                   disabled:opacity-50 disabled:cursor-not-allowed
                   transition-all duration-300 
                   hover:scale-[1.02] active:scale-[0.98]"

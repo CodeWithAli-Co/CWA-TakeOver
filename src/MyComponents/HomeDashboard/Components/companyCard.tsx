@@ -51,27 +51,27 @@ export const CompanyCard = ({
       />
 
       <div
-        className={`h-full bg-[#0a0a0a] border rounded-sm p-6 transition-all duration-300 overflow-hidden ${
+        className={`h-full bg-card border rounded-sm p-6 transition-all duration-300 overflow-hidden ${
           isSelected
-            ? "border-red-500/20"
-            : "border-white/[0.04] hover:border-white/[0.08]"
+            ? "border-primary/20"
+            : "border-border hover:border-border"
         }`}
       >
         <div className="relative space-y-5">
           {/* Header */}
           <div className="flex items-start justify-between">
             <div className="flex items-center gap-3">
-              <div className="p-2.5 rounded-sm bg-white/[0.03] border border-white/[0.04]">
-                <Building2 className="h-5 w-5 text-red-500" />
+              <div className="p-2.5 rounded-sm bg-muted/40 border border-border">
+                <Building2 className="h-5 w-5 text-primary" />
               </div>
               <div>
-                <h3 className="text-white font-semibold text-lg tracking-tight">{name}</h3>
-                <p className="text-[13px] text-white/25 mt-0.5">{description}</p>
+                <h3 className="text-foreground font-semibold text-lg tracking-tight">{name}</h3>
+                <p className="text-[13px] text-muted-foreground/50 mt-0.5">{description}</p>
               </div>
             </div>
             <div className="flex items-center gap-1.5">
               <div className={`h-1.5 w-1.5 rounded-full ${s.dot} animate-pulse`} />
-              <span className="text-[11px] text-white/25 uppercase tracking-wider font-medium">
+              <span className="text-[11px] text-muted-foreground/50 uppercase tracking-wider font-medium">
                 {s.label}
               </span>
             </div>
@@ -81,52 +81,52 @@ export const CompanyCard = ({
           <div className="grid grid-cols-3 gap-4">
             <div className="space-y-1">
               <div className="flex items-center gap-1.5">
-                <Users className="h-3 w-3 text-white/15" />
-                <span className="text-[11px] text-white/20 uppercase tracking-wider">Team</span>
+                <Users className="h-3 w-3 text-muted-foreground/40" />
+                <span className="text-[11px] text-muted-foreground/60 uppercase tracking-wider">Team</span>
               </div>
-              <p className="text-2xl font-bold text-white tracking-tight">{memberCount}</p>
+              <p className="text-2xl font-bold text-foreground tracking-tight">{memberCount}</p>
             </div>
             <div className="space-y-1">
               <div className="flex items-center gap-1.5">
-                <FolderKanban className="h-3 w-3 text-white/15" />
-                <span className="text-[11px] text-white/20 uppercase tracking-wider">Projects</span>
+                <FolderKanban className="h-3 w-3 text-muted-foreground/40" />
+                <span className="text-[11px] text-muted-foreground/60 uppercase tracking-wider">Projects</span>
               </div>
-              <p className="text-2xl font-bold text-white tracking-tight">{projectCount}</p>
+              <p className="text-2xl font-bold text-foreground tracking-tight">{projectCount}</p>
             </div>
             <div className="space-y-1">
               <div className="flex items-center gap-1.5">
-                <TrendingUp className="h-3 w-3 text-white/15" />
-                <span className="text-[11px] text-white/20 uppercase tracking-wider">Revenue</span>
+                <TrendingUp className="h-3 w-3 text-muted-foreground/40" />
+                <span className="text-[11px] text-muted-foreground/60 uppercase tracking-wider">Revenue</span>
               </div>
-              <p className="text-2xl font-bold text-white tracking-tight">{revenue}</p>
+              <p className="text-2xl font-bold text-foreground tracking-tight">{revenue}</p>
             </div>
           </div>
 
           {/* Footer */}
-          <div className="pt-4 border-t border-white/[0.04] flex items-center justify-between">
+          <div className="pt-4 border-t border-border flex items-center justify-between">
             <div className="flex items-center gap-2">
               <div className="flex -space-x-1.5">
                 {[...Array(Math.min(memberCount, 4))].map((_, i) => (
                   <div
                     key={i}
-                    className="h-6 w-6 rounded-full bg-white/[0.04] border border-white/[0.06] flex items-center justify-center"
+                    className="h-6 w-6 rounded-full bg-muted/50 border border-border flex items-center justify-center"
                   >
-                    <span className="text-[9px] text-white/30 font-medium">
+                    <span className="text-[9px] text-muted-foreground font-medium">
                       {String.fromCharCode(65 + i)}
                     </span>
                   </div>
                 ))}
                 {memberCount > 4 && (
-                  <div className="h-6 w-6 rounded-full bg-white/[0.03] border border-white/[0.04] flex items-center justify-center">
-                    <span className="text-[9px] text-white/20">+{memberCount - 4}</span>
+                  <div className="h-6 w-6 rounded-full bg-muted/40 border border-border flex items-center justify-center">
+                    <span className="text-[9px] text-muted-foreground/60">+{memberCount - 4}</span>
                   </div>
                 )}
               </div>
-              <span className="text-[11px] text-white/15">members</span>
+              <span className="text-[11px] text-muted-foreground/40">members</span>
             </div>
             <motion.div
               whileHover={{ x: 2 }}
-              className="flex items-center gap-1 text-[11px] text-white/15 hover:text-red-400 transition-colors"
+              className="flex items-center gap-1 text-[11px] text-muted-foreground/40 hover:text-primary transition-colors"
             >
               {isSelected ? "Selected" : "Select"}
               <ArrowUpRight className="h-3 w-3" />

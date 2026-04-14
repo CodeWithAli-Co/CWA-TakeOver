@@ -11,7 +11,7 @@
  *   - Search by title, description, or tags
  *
  * Design:
- *   - Void theme (bg-[#0a0a0a] cards, white/opacity text, red-500 accents)
+ *   - Void theme (bg-card cards, white/opacity text, red-500 accents)
  *   - Card header: title + language badge + favorite + actions
  *   - Code block with copy button in top-right
  *   - Footer: tags + created date
@@ -155,15 +155,15 @@ export const PatternLibrary = () => {
   return (
     <div className="flex-1 overflow-hidden flex flex-col">
       {/* Header */}
-      <div className="px-6 pt-5 pb-3 border-b border-white/[0.04]">
+      <div className="px-6 pt-5 pb-3 border-b border-border">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="p-2 rounded-sm bg-red-500/[0.08] border border-red-500/15">
-              <Code2 className="h-4 w-4 text-red-400" />
+            <div className="p-2 rounded-sm bg-primary/[0.08] border border-primary/15">
+              <Code2 className="h-4 w-4 text-primary" />
             </div>
             <div>
-              <h2 className="text-[16px] font-semibold text-white tracking-tight">Code Pattern Library</h2>
-              <p className="text-[11px] text-white/20 mt-0.5">
+              <h2 className="text-[16px] font-semibold text-foreground tracking-tight">Code Pattern Library</h2>
+              <p className="text-[11px] text-muted-foreground/60 mt-0.5">
                 {patterns.length} pattern{patterns.length !== 1 ? "s" : ""} across {availableLanguages.length} language{availableLanguages.length !== 1 ? "s" : ""}
               </p>
             </div>
@@ -171,7 +171,7 @@ export const PatternLibrary = () => {
 
           <button
             onClick={openNewForm}
-            className="flex items-center gap-1.5 px-3 py-1.5 bg-red-500/[0.1] hover:bg-red-500/[0.15] border border-red-500/20 text-red-400 text-[11px] font-medium rounded-sm transition-colors"
+            className="flex items-center gap-1.5 px-3 py-1.5 bg-primary/10 hover:bg-primary/15 border border-primary/20 text-primary text-[11px] font-medium rounded-sm transition-colors"
           >
             <Plus className="h-3 w-3" /> New Pattern
           </button>
@@ -180,14 +180,14 @@ export const PatternLibrary = () => {
 
       {/* Language tabs — only appear for languages with patterns */}
       {patterns.length > 0 && (
-        <div className="px-6 py-3 border-b border-white/[0.04]">
+        <div className="px-6 py-3 border-b border-border">
           <div className="flex items-center gap-1 overflow-x-auto">
             <button
               onClick={() => setActiveTab("all")}
               className={`px-3 py-1.5 rounded-sm text-[11px] font-medium whitespace-nowrap transition-colors ${
                 activeTab === "all"
-                  ? "bg-red-500/[0.1] text-red-400 border border-red-500/20"
-                  : "bg-white/[0.02] text-white/30 hover:text-white/60 border border-white/[0.04]"
+                  ? "bg-primary/10 text-primary border border-primary/20"
+                  : "bg-muted/30 text-muted-foreground hover:text-foreground/60 border border-border"
               }`}
             >
               <Sparkles className="h-3 w-3 inline mr-1" />
@@ -199,8 +199,8 @@ export const PatternLibrary = () => {
                 onClick={() => setActiveTab(lang)}
                 className={`px-3 py-1.5 rounded-sm text-[11px] font-medium whitespace-nowrap transition-colors ${
                   activeTab === lang
-                    ? "bg-red-500/[0.1] text-red-400 border border-red-500/20"
-                    : "bg-white/[0.02] text-white/30 hover:text-white/60 border border-white/[0.04]"
+                    ? "bg-primary/10 text-primary border border-primary/20"
+                    : "bg-muted/30 text-muted-foreground hover:text-foreground/60 border border-border"
                 }`}
               >
                 {getLanguageLabel(lang)} ({countByLanguage[lang] || 0})
@@ -213,13 +213,13 @@ export const PatternLibrary = () => {
       {/* Search */}
       <div className="px-6 py-3">
         <div className="relative max-w-md">
-          <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-white/15" />
+          <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground/40" />
           <input
             type="text"
             placeholder="Search by title, description, or tag..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full pl-8 pr-3 py-1.5 bg-white/[0.02] border border-white/[0.04] rounded-sm text-[12px] text-white/60 placeholder:text-white/15 focus:outline-none focus:border-white/[0.08]"
+            className="w-full pl-8 pr-3 py-1.5 bg-muted/30 border border-border rounded-sm text-[12px] text-foreground/60 placeholder:text-muted-foreground/40 focus:outline-none focus:border-border"
           />
         </div>
       </div>
@@ -227,14 +227,14 @@ export const PatternLibrary = () => {
       {/* Pattern cards */}
       <div className="flex-1 overflow-y-auto px-6 pb-6 space-y-3">
         {filtered.length === 0 ? (
-          <div className="bg-[#0a0a0a] border border-white/[0.04] rounded-sm py-16 text-center">
+          <div className="bg-card border border-border rounded-sm py-16 text-center">
             <Code2 className="h-10 w-10 text-white/[0.05] mx-auto mb-3" />
-            <p className="text-[14px] text-white/30 font-medium mb-1">
+            <p className="text-[14px] text-muted-foreground font-medium mb-1">
               {patterns.length === 0
                 ? "No patterns yet"
                 : "No patterns match"}
             </p>
-            <p className="text-[12px] text-white/15">
+            <p className="text-[12px] text-muted-foreground/40">
               {patterns.length === 0
                 ? "Click 'New Pattern' to save your first one"
                 : "Try a different tab or search term"}
@@ -248,14 +248,14 @@ export const PatternLibrary = () => {
                 initial={{ opacity: 0, y: 8 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -8 }}
-                className="bg-[#0a0a0a] border border-white/[0.04] rounded-sm overflow-hidden group hover:border-red-500/10 transition-colors"
+                className="bg-card border border-border rounded-sm overflow-hidden group hover:border-primary/10 transition-colors"
               >
                 {/* Header */}
-                <div className="px-4 py-3 border-b border-white/[0.04] flex items-start justify-between gap-3">
+                <div className="px-4 py-3 border-b border-border flex items-start justify-between gap-3">
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 mb-0.5">
                       <h3 className="text-[13px] font-semibold text-white/85">{pattern.title}</h3>
-                      <span className="text-[9px] uppercase tracking-wider px-1.5 py-0.5 rounded-sm bg-red-500/[0.06] text-red-400/80 border border-red-500/10">
+                      <span className="text-[9px] uppercase tracking-wider px-1.5 py-0.5 rounded-sm bg-red-500/[0.06] text-primary/80 border border-red-500/10">
                         {getLanguageLabel(pattern.language)}
                       </span>
                       {pattern.favorite && (
@@ -263,7 +263,7 @@ export const PatternLibrary = () => {
                       )}
                     </div>
                     {pattern.description && (
-                      <p className="text-[11px] text-white/40 leading-snug">{pattern.description}</p>
+                      <p className="text-[11px] text-muted-foreground/70 leading-snug">{pattern.description}</p>
                     )}
                   </div>
 
@@ -271,28 +271,28 @@ export const PatternLibrary = () => {
                   <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                     <button
                       onClick={() => toggleFavorite(pattern)}
-                      className="p-1.5 rounded-sm hover:bg-white/[0.04] text-white/30 hover:text-amber-400 transition-colors"
+                      className="p-1.5 rounded-sm hover:bg-muted/50 text-muted-foreground hover:text-amber-400 transition-colors"
                       title="Favorite"
                     >
                       <Star className={`h-3.5 w-3.5 ${pattern.favorite ? "fill-amber-400 text-amber-400" : ""}`} />
                     </button>
                     <button
                       onClick={() => openEditForm(pattern)}
-                      className="p-1.5 rounded-sm hover:bg-white/[0.04] text-white/30 hover:text-white/70 transition-colors"
+                      className="p-1.5 rounded-sm hover:bg-muted/50 text-muted-foreground hover:text-foreground/70 transition-colors"
                       title="Edit"
                     >
                       <Edit className="h-3.5 w-3.5" />
                     </button>
                     <button
                       onClick={() => handleDelete(pattern.id)}
-                      className="p-1.5 rounded-sm hover:bg-red-500/[0.06] text-white/30 hover:text-red-400 transition-colors"
+                      className="p-1.5 rounded-sm hover:bg-primary/[0.06] text-muted-foreground hover:text-primary transition-colors"
                       title="Delete"
                     >
                       <Trash2 className="h-3.5 w-3.5" />
                     </button>
                     <button
                       onClick={() => copyToClipboard(pattern.code, pattern.id)}
-                      className="p-1.5 rounded-sm hover:bg-white/[0.04] text-white/30 hover:text-white/70 transition-colors"
+                      className="p-1.5 rounded-sm hover:bg-muted/50 text-muted-foreground hover:text-foreground/70 transition-colors"
                       title="Copy code"
                     >
                       {copiedId === pattern.id
@@ -304,15 +304,15 @@ export const PatternLibrary = () => {
                 </div>
 
                 {/* Code */}
-                <div className="bg-black/40 relative">
+                <div className="bg-background/40 relative">
                   <CodeBlock code={pattern.code} language={pattern.language} />
                 </div>
 
                 {/* Footer tags */}
                 {pattern.tags.length > 0 && (
-                  <div className="px-4 py-2 border-t border-white/[0.04] flex items-center gap-1.5 flex-wrap">
+                  <div className="px-4 py-2 border-t border-border flex items-center gap-1.5 flex-wrap">
                     {pattern.tags.map((tag) => (
-                      <span key={tag} className="px-1.5 py-0.5 bg-white/[0.03] rounded-sm text-[10px] text-white/40">
+                      <span key={tag} className="px-1.5 py-0.5 bg-muted/40 rounded-sm text-[10px] text-muted-foreground/70">
                         {tag}
                       </span>
                     ))}
@@ -331,7 +331,7 @@ export const PatternLibrary = () => {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-4"
+            className="fixed inset-0 bg-background/70 backdrop-blur-sm flex items-center justify-center z-50 p-4"
             onClick={() => setShowForm(false)}
           >
             <motion.div
@@ -339,16 +339,16 @@ export const PatternLibrary = () => {
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.97 }}
               onClick={(e) => e.stopPropagation()}
-              className="bg-[#0a0a0a] border border-white/[0.08] rounded-sm w-full max-w-2xl max-h-[90vh] overflow-y-auto shadow-2xl shadow-black/50"
+              className="bg-card border border-border rounded-sm w-full max-w-2xl max-h-[90vh] overflow-y-auto shadow-2xl shadow-black/50"
             >
               {/* Modal header */}
-              <div className="px-6 py-4 border-b border-white/[0.04] flex items-center justify-between">
-                <h3 className="text-[15px] font-semibold text-white/90">
+              <div className="px-6 py-4 border-b border-border flex items-center justify-between">
+                <h3 className="text-[15px] font-semibold text-foreground">
                   {editingPattern ? "Edit Pattern" : "New Pattern"}
                 </h3>
                 <button
                   onClick={() => setShowForm(false)}
-                  className="p-1.5 rounded-sm text-white/30 hover:text-white/70 hover:bg-white/[0.04]"
+                  className="p-1.5 rounded-sm text-muted-foreground hover:text-foreground/70 hover:bg-muted/50"
                 >
                   <X className="h-4 w-4" />
                 </button>
@@ -357,7 +357,7 @@ export const PatternLibrary = () => {
               {/* Form body */}
               <div className="p-6 space-y-4">
                 <div>
-                  <label className="text-[10px] text-white/25 uppercase tracking-[0.12em] font-medium">
+                  <label className="text-[10px] text-muted-foreground/50 uppercase tracking-[0.12em] font-medium">
                     Title
                   </label>
                   <input
@@ -365,12 +365,12 @@ export const PatternLibrary = () => {
                     value={formTitle}
                     onChange={(e) => setFormTitle(e.target.value)}
                     placeholder="e.g. SSR-safe Zustand store"
-                    className="w-full mt-1.5 px-3 py-2 bg-white/[0.02] border border-white/[0.06] text-white/80 rounded-sm text-[13px] placeholder:text-white/15 focus:outline-none focus:border-red-500/20"
+                    className="w-full mt-1.5 px-3 py-2 bg-muted/30 border border-border text-foreground/80 rounded-sm text-[13px] placeholder:text-muted-foreground/40 focus:outline-none focus:border-primary/20"
                   />
                 </div>
 
                 <div>
-                  <label className="text-[10px] text-white/25 uppercase tracking-[0.12em] font-medium">
+                  <label className="text-[10px] text-muted-foreground/50 uppercase tracking-[0.12em] font-medium">
                     Description
                   </label>
                   <input
@@ -378,30 +378,30 @@ export const PatternLibrary = () => {
                     value={formDesc}
                     onChange={(e) => setFormDesc(e.target.value)}
                     placeholder="Brief explanation of what this pattern solves"
-                    className="w-full mt-1.5 px-3 py-2 bg-white/[0.02] border border-white/[0.06] text-white/80 rounded-sm text-[13px] placeholder:text-white/15 focus:outline-none focus:border-red-500/20"
+                    className="w-full mt-1.5 px-3 py-2 bg-muted/30 border border-border text-foreground/80 rounded-sm text-[13px] placeholder:text-muted-foreground/40 focus:outline-none focus:border-primary/20"
                   />
                 </div>
 
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label className="text-[10px] text-white/25 uppercase tracking-[0.12em] font-medium">
+                    <label className="text-[10px] text-muted-foreground/50 uppercase tracking-[0.12em] font-medium">
                       Language
                     </label>
                     <select
                       value={formLanguage}
                       onChange={(e) => setFormLanguage(e.target.value)}
-                      className="w-full mt-1.5 px-3 py-2 bg-white/[0.02] border border-white/[0.06] text-white/80 rounded-sm text-[13px] focus:outline-none focus:border-red-500/20 cursor-pointer"
+                      className="w-full mt-1.5 px-3 py-2 bg-muted/30 border border-border text-foreground/80 rounded-sm text-[13px] focus:outline-none focus:border-primary/20 cursor-pointer"
                     >
                       {SUPPORTED_LANGUAGES.map((l) => (
                         <option key={l.key} value={l.key}>{l.label}</option>
                       ))}
                     </select>
-                    <p className="text-[10px] text-white/15 mt-1">
+                    <p className="text-[10px] text-muted-foreground/40 mt-1">
                       A tab appears for each language used
                     </p>
                   </div>
                   <div>
-                    <label className="text-[10px] text-white/25 uppercase tracking-[0.12em] font-medium">
+                    <label className="text-[10px] text-muted-foreground/50 uppercase tracking-[0.12em] font-medium">
                       Tags
                     </label>
                     <input
@@ -409,17 +409,17 @@ export const PatternLibrary = () => {
                       value={formTags}
                       onChange={(e) => setFormTags(e.target.value)}
                       placeholder="comma, separated, tags"
-                      className="w-full mt-1.5 px-3 py-2 bg-white/[0.02] border border-white/[0.06] text-white/80 rounded-sm text-[13px] placeholder:text-white/15 focus:outline-none focus:border-red-500/20"
+                      className="w-full mt-1.5 px-3 py-2 bg-muted/30 border border-border text-foreground/80 rounded-sm text-[13px] placeholder:text-muted-foreground/40 focus:outline-none focus:border-primary/20"
                     />
                   </div>
                 </div>
 
                 <div>
                   <div className="flex items-center justify-between mb-1.5">
-                    <label className="text-[10px] text-white/25 uppercase tracking-[0.12em] font-medium">
+                    <label className="text-[10px] text-muted-foreground/50 uppercase tracking-[0.12em] font-medium">
                       Code
                     </label>
-                    <span className="text-[10px] text-white/15">
+                    <span className="text-[10px] text-muted-foreground/40">
                       {formCode.length} chars · tab to indent
                     </span>
                   </div>
@@ -442,7 +442,7 @@ export const PatternLibrary = () => {
                     }}
                     placeholder="// Paste your code here. Formatting is applied on save."
                     rows={14}
-                    className="w-full px-3 py-2 bg-black/40 border border-white/[0.06] text-white/85 rounded-sm text-[12.5px] placeholder:text-white/15 focus:outline-none focus:border-red-500/20 font-mono leading-relaxed resize-y"
+                    className="w-full px-3 py-2 bg-background/40 border border-border text-white/85 rounded-sm text-[12.5px] placeholder:text-muted-foreground/40 focus:outline-none focus:border-primary/20 font-mono leading-relaxed resize-y"
                     spellCheck={false}
                   />
                 </div>
@@ -450,10 +450,10 @@ export const PatternLibrary = () => {
                 {/* Live preview of formatted code */}
                 {formCode.trim() && (
                   <div>
-                    <p className="text-[10px] text-white/25 uppercase tracking-[0.12em] font-medium mb-1.5">
+                    <p className="text-[10px] text-muted-foreground/50 uppercase tracking-[0.12em] font-medium mb-1.5">
                       Preview (syntax highlighted)
                     </p>
-                    <div className="bg-black/40 rounded-sm border border-white/[0.04] max-h-[200px] overflow-y-auto">
+                    <div className="bg-background/40 rounded-sm border border-border max-h-[200px] overflow-y-auto">
                       <CodeBlock code={formCode} language={formLanguage} />
                     </div>
                   </div>
@@ -461,17 +461,17 @@ export const PatternLibrary = () => {
               </div>
 
               {/* Footer */}
-              <div className="px-6 py-4 border-t border-white/[0.04] flex items-center justify-end gap-2">
+              <div className="px-6 py-4 border-t border-border flex items-center justify-end gap-2">
                 <button
                   onClick={() => setShowForm(false)}
-                  className="px-4 py-2 bg-white/[0.02] hover:bg-white/[0.04] border border-white/[0.04] text-white/40 hover:text-white/70 text-[12px] rounded-sm transition-colors"
+                  className="px-4 py-2 bg-muted/30 hover:bg-muted/50 border border-border text-muted-foreground/70 hover:text-foreground/70 text-[12px] rounded-sm transition-colors"
                 >
                   Cancel
                 </button>
                 <button
                   onClick={handleSave}
                   disabled={submitting || !formTitle.trim() || !formCode.trim()}
-                  className="px-5 py-2 bg-red-600 hover:bg-red-500 text-white text-[12px] font-medium rounded-sm disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                  className="px-5 py-2 bg-primary hover:bg-primary/80 text-foreground text-[12px] font-medium rounded-sm disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
                 >
                   {submitting ? "Saving..." : editingPattern ? "Save Changes" : "Create Pattern"}
                 </button>

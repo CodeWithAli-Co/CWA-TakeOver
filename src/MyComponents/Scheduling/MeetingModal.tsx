@@ -166,7 +166,7 @@ export const MeetingModal: React.FC<MeetingModalProps> = ({
         {/* Meeting Details */}
         <div className="space-y-4">
           <div>
-            <Label htmlFor="meeting-title" className="text-white text-sm">
+            <Label htmlFor="meeting-title" className="text-foreground text-sm">
               Meeting Title*
             </Label>
             <Input
@@ -175,13 +175,13 @@ export const MeetingModal: React.FC<MeetingModalProps> = ({
               value={meetingTitle}
               onChange={(e) => setMeetingTitle(e.target.value)}
               placeholder="Enter meeting title"
-              className="bg-black border border-blue-900 text-white focus:border-blue-600 focus:ring-1 focus:ring-blue-600 mt-1"
+              className="bg-background border border-blue-900 text-foreground focus:border-blue-600 focus:ring-1 focus:ring-blue-600 mt-1"
             />
           </div>
           
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <Label htmlFor="date-picker" className="text-white text-sm">
+              <Label htmlFor="date-picker" className="text-foreground text-sm">
                 Date*
               </Label>
               <div className="relative">
@@ -193,13 +193,13 @@ export const MeetingModal: React.FC<MeetingModalProps> = ({
                   type="date"
                   value={meetingDate}
                   onChange={(e) => setMeetingDate(e.target.value)}
-                  className="bg-black border border-blue-900 text-white pl-10 focus:border-blue-600 focus:ring-1 focus:ring-blue-600 mt-1 w-full"
+                  className="bg-background border border-blue-900 text-foreground pl-10 focus:border-blue-600 focus:ring-1 focus:ring-blue-600 mt-1 w-full"
                 />
               </div>
             </div>
             
             <div>
-              <Label htmlFor="meeting-location" className="text-white text-sm">
+              <Label htmlFor="meeting-location" className="text-foreground text-sm">
                 Location
               </Label>
               <div className="flex items-center mt-1">
@@ -210,7 +210,7 @@ export const MeetingModal: React.FC<MeetingModalProps> = ({
                   value={meetingLocation}
                   onChange={(e) => setMeetingLocation(e.target.value)}
                   placeholder="Conference room, Zoom, etc."
-                  className="bg-black border border-blue-900 text-white pl-9 focus:border-blue-600 focus:ring-1 focus:ring-blue-600"
+                  className="bg-background border border-blue-900 text-foreground pl-9 focus:border-blue-600 focus:ring-1 focus:ring-blue-600"
                 />
               </div>
             </div>
@@ -218,7 +218,7 @@ export const MeetingModal: React.FC<MeetingModalProps> = ({
           
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <Label htmlFor="start-time" className="text-white text-sm">
+              <Label htmlFor="start-time" className="text-foreground text-sm">
                 Start Time*
               </Label>
               
@@ -228,7 +228,7 @@ export const MeetingModal: React.FC<MeetingModalProps> = ({
                   <Button
                     id="start-time"
                     variant="outline"
-                    className="w-full justify-between mt-1 bg-black border border-blue-900 text-white hover:bg-blue-950/50"
+                    className="w-full justify-between mt-1 bg-background border border-blue-900 text-foreground hover:bg-blue-950/50"
                   >
                     <div className="flex items-center gap-2">
                       <Clock size={16} className="text-blue-400" />
@@ -263,7 +263,7 @@ export const MeetingModal: React.FC<MeetingModalProps> = ({
             </div>
             
             <div>
-              <Label htmlFor="end-time" className="text-white text-sm">
+              <Label htmlFor="end-time" className="text-foreground text-sm">
                 End Time*
               </Label>
               
@@ -273,7 +273,7 @@ export const MeetingModal: React.FC<MeetingModalProps> = ({
                   <Button
                     id="end-time"
                     variant="outline"
-                    className="w-full justify-between mt-1 bg-black border border-blue-900 text-white hover:bg-blue-950/50"
+                    className="w-full justify-between mt-1 bg-background border border-blue-900 text-foreground hover:bg-blue-950/50"
                   >
                     <div className="flex items-center gap-2">
                       <Clock size={16} className="text-blue-400" />
@@ -309,7 +309,7 @@ export const MeetingModal: React.FC<MeetingModalProps> = ({
           </div>
           
           <div>
-            <Label htmlFor="meeting-description" className="text-white text-sm">
+            <Label htmlFor="meeting-description" className="text-foreground text-sm">
               Description
             </Label>
             <Textarea
@@ -317,7 +317,7 @@ export const MeetingModal: React.FC<MeetingModalProps> = ({
               value={meetingDescription}
               onChange={(e) => setMeetingDescription(e.target.value)}
               placeholder="Meeting agenda, preparation instructions, etc."
-              className="bg-black border border-blue-900 text-white h-20 min-h-[80px] focus:border-blue-600 focus:ring-1 focus:ring-blue-600 mt-1"
+              className="bg-background border border-blue-900 text-foreground h-20 min-h-[80px] focus:border-blue-600 focus:ring-1 focus:ring-blue-600 mt-1"
             />
           </div>
           
@@ -330,7 +330,7 @@ export const MeetingModal: React.FC<MeetingModalProps> = ({
             />
             <Label 
               htmlFor="required-attendance" 
-              className="text-white text-sm cursor-pointer"
+              className="text-foreground text-sm cursor-pointer"
             >
               Attendance required
             </Label>
@@ -339,7 +339,7 @@ export const MeetingModal: React.FC<MeetingModalProps> = ({
 
         {/* Employee Selection */}
         <div className="my-6">
-          <h3 className="text-white text-sm font-medium mb-3 flex items-center">
+          <h3 className="text-foreground text-sm font-medium mb-3 flex items-center">
             <Users size={16} className="mr-1" />
             Invite Employees*
           </h3>
@@ -362,11 +362,11 @@ export const MeetingModal: React.FC<MeetingModalProps> = ({
                 </div>
                 <div className="flex items-center">
                   <div className="w-6 h-6 rounded-full bg-blue-800 flex items-center justify-center mr-2">
-                    <span className="text-white text-xs">
+                    <span className="text-foreground text-xs">
                       {employee.avatar || employee.name.charAt(0)}
                     </span>
                   </div>
-                  <span className="text-white text-sm truncate">{employee.name}</span>
+                  <span className="text-foreground text-sm truncate">{employee.name}</span>
                 </div>
               </div>
             ))}
@@ -387,13 +387,13 @@ export const MeetingModal: React.FC<MeetingModalProps> = ({
           <Button
             onClick={handleClose}
             variant="outline"
-            className="bg-gray-800 hover:bg-gray-700 text-white border-gray-700"
+            className="bg-gray-800 hover:bg-gray-700 text-foreground border-gray-700"
           >
             Cancel
           </Button>
           <Button 
             onClick={handleCreateMeeting}
-            className="bg-blue-800 hover:bg-blue-700 text-white flex items-center gap-1"
+            className="bg-blue-800 hover:bg-blue-700 text-foreground flex items-center gap-1"
             disabled={!isFormValid}
           >
             <Clock size={14} />

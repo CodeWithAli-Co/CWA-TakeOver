@@ -53,7 +53,7 @@ const MetricCard = ({
               ? "bg-emerald-500/20 text-emerald-400"
               : status === "warning"
                 ? "bg-amber-500/20 text-amber-400"
-                : "bg-red-500/20 text-red-400"
+                : "bg-red-500/20 text-primary"
           }
         `}
       >
@@ -113,7 +113,7 @@ export const DeveloperResourceHub = () => {
             Developer Resource Hub
           </CardTitle>
           <div className="flex gap-2">
-            <Badge variant="outline" className="bg-red-900/20 text-red-400">
+            <Badge variant="outline" className="bg-red-900/20 text-primary">
               Live Updates
             </Badge>
             <Button

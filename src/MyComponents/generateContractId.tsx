@@ -9,7 +9,7 @@
  *
  * All the original logic (TanStack Form, feature array helpers, AI generator,
  * email flow) is preserved. The light/white theme is replaced with the Void
- * palette: bg-black page, bg-[#0a0a0a] cards, red-500 accents, white-opacity
+ * palette: bg-background page, bg-card cards, red-500 accents, white-opacity
  * typography. The print view retains a light background internally so printed
  * output still looks clean on paper.
  */
@@ -53,19 +53,19 @@ const SectionCard: React.FC<{
   accent?: "red" | "blue" | "amber";
 }> = ({ icon, title, subtitle, children, accent = "red" }) => {
   const accents = {
-    red: "bg-red-500/[0.08] text-red-400 border-red-500/15",
+    red: "bg-primary/[0.08] text-primary border-primary/15",
     blue: "bg-blue-500/[0.08] text-blue-400 border-blue-500/15",
     amber: "bg-amber-500/[0.08] text-amber-400 border-amber-500/15",
   };
   return (
-    <div className="bg-[#0a0a0a] border border-white/[0.04] rounded-sm overflow-hidden">
-      <div className="px-5 py-3 border-b border-white/[0.04] flex items-center gap-3">
+    <div className="bg-card border border-border rounded-sm overflow-hidden">
+      <div className="px-5 py-3 border-b border-border flex items-center gap-3">
         <div className={`p-1.5 rounded-sm border ${accents[accent]}`}>
           {icon}
         </div>
         <div>
-          <h2 className="text-[14px] font-semibold text-white/85">{title}</h2>
-          {subtitle && <p className="text-[11px] text-white/25">{subtitle}</p>}
+          <h2 className="text-[14px] font-semibold text-foreground/85">{title}</h2>
+          {subtitle && <p className="text-[11px] text-muted-foreground/50">{subtitle}</p>}
         </div>
       </div>
       <div className="p-5 space-y-4">{children}</div>
@@ -75,14 +75,14 @@ const SectionCard: React.FC<{
 
 // ── Void input styles ──
 const inputBase =
-  "w-full px-3 py-2 bg-white/[0.02] border border-white/[0.06] text-white/80 rounded-sm text-[13px] placeholder:text-white/15 focus:outline-none focus:border-red-500/20 transition-colors";
+  "w-full px-3 py-2 bg-muted/30 border border-border text-foreground/80 rounded-sm text-[13px] placeholder:text-muted-foreground/40 focus:outline-none focus:border-primary/20 transition-colors";
 
 const Field: React.FC<{ label: string; children: React.ReactNode }> = ({
   label,
   children,
 }) => (
   <div>
-    <label className="text-[10px] text-white/25 uppercase tracking-[0.12em] font-medium block mb-1.5">
+    <label className="text-[10px] text-muted-foreground/50 uppercase tracking-[0.12em] font-medium block mb-1.5">
       {label}
     </label>
     {children}
@@ -311,26 +311,26 @@ export default function NexusContractGenerator(): JSX.Element {
     const contractId = generateContractId();
     return (
       <>
-        <div className="min-h-screen bg-black overflow-y-auto">
+        <div className="min-h-screen bg-background overflow-y-auto">
           {/* Action bar */}
-          <div className="px-8 py-4 border-b border-white/[0.04] bg-[#0a0a0a] sticky top-0 z-10 no-print">
+          <div className="px-8 py-4 border-b border-border bg-card sticky top-0 z-10 no-print">
             <div className="max-w-5xl mx-auto flex items-center justify-between flex-wrap gap-3">
               <div className="flex items-center gap-2">
                 <button
                   onClick={() => setShowContract(false)}
-                  className="flex items-center gap-1.5 px-3 py-1.5 bg-white/[0.02] hover:bg-white/[0.04] border border-white/[0.04] text-white/50 hover:text-white/80 text-[12px] rounded-sm transition-colors"
+                  className="flex items-center gap-1.5 px-3 py-1.5 bg-muted/30 hover:bg-muted/50 border border-border text-muted-foreground/80 hover:text-foreground/80 text-[12px] rounded-sm transition-colors"
                 >
                   <ArrowLeft className="h-3.5 w-3.5" /> Back to Editor
                 </button>
                 <button
                   onClick={exportToPDF}
-                  className="flex items-center gap-1.5 px-3 py-1.5 bg-white/[0.02] hover:bg-white/[0.04] border border-white/[0.04] text-white/50 hover:text-white/80 text-[12px] rounded-sm transition-colors"
+                  className="flex items-center gap-1.5 px-3 py-1.5 bg-muted/30 hover:bg-muted/50 border border-border text-muted-foreground/80 hover:text-foreground/80 text-[12px] rounded-sm transition-colors"
                 >
                   <Printer className="h-3.5 w-3.5" /> Print / PDF
                 </button>
                 <button
                   onClick={saveContract}
-                  className="flex items-center gap-1.5 px-3 py-1.5 bg-white/[0.02] hover:bg-white/[0.04] border border-white/[0.04] text-white/50 hover:text-white/80 text-[12px] rounded-sm transition-colors"
+                  className="flex items-center gap-1.5 px-3 py-1.5 bg-muted/30 hover:bg-muted/50 border border-border text-muted-foreground/80 hover:text-foreground/80 text-[12px] rounded-sm transition-colors"
                 >
                   <Save className="h-3.5 w-3.5" /> Save
                 </button>
@@ -343,7 +343,7 @@ export default function NexusContractGenerator(): JSX.Element {
                       emailStatus.includes("success")
                         ? "bg-emerald-500/[0.08] text-emerald-400 border-emerald-500/15"
                         : emailStatus.includes("Failed")
-                          ? "bg-red-500/[0.08] text-red-400 border-red-500/15"
+                          ? "bg-primary/[0.08] text-primary border-primary/15"
                           : "bg-blue-500/[0.08] text-blue-400 border-blue-500/15"
                     }`}
                   >
@@ -353,7 +353,7 @@ export default function NexusContractGenerator(): JSX.Element {
                 <button
                   onClick={emailContract}
                   disabled={isSending || !form.getFieldValue("clientEmail")}
-                  className="flex items-center gap-1.5 px-3 py-1.5 bg-red-500/[0.1] hover:bg-red-500/[0.15] border border-red-500/20 text-red-400 text-[12px] font-medium rounded-sm disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                  className="flex items-center gap-1.5 px-3 py-1.5 bg-primary/10 hover:bg-primary/15 border border-primary/20 text-primary text-[12px] font-medium rounded-sm disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
                 >
                   <Mail className="h-3.5 w-3.5" />
                   {isSending ? "Sending..." : "Email to Client"}
@@ -366,22 +366,22 @@ export default function NexusContractGenerator(): JSX.Element {
           <div className="max-w-4xl mx-auto px-6 py-8">
             <div
               ref={contractRef}
-              className="bg-[#0a0a0a] border border-white/[0.04] rounded-sm p-10 text-white/80 print-contract"
+              className="bg-card border border-border rounded-sm p-10 text-foreground/80 print-contract"
             >
               {/* Header */}
-              <div className="text-center pb-6 mb-8 border-b border-white/[0.06]">
-                <h1 className="text-3xl font-bold text-white tracking-tight mb-2">
+              <div className="text-center pb-6 mb-8 border-b border-border">
+                <h1 className="text-3xl font-bold text-foreground tracking-tight mb-2">
                   {form.getFieldValue("projectTitle").toUpperCase() || "PROFESSIONAL SERVICES"}
                 </h1>
-                <h2 className="text-xl font-semibold text-red-400 mb-3">
+                <h2 className="text-xl font-semibold text-primary mb-3">
                   {getContractTypeTitle()}
                 </h2>
-                <div className="flex items-center justify-center gap-3 text-[12px] text-white/40">
-                  <span>Contract ID: <strong className="text-white/70">{contractId}</strong></span>
+                <div className="flex items-center justify-center gap-3 text-[12px] text-muted-foreground/70">
+                  <span>Contract ID: <strong className="text-foreground/70">{contractId}</strong></span>
                   <span>·</span>
-                  <span>Date: <strong className="text-white/70">{currentDate}</strong></span>
+                  <span>Date: <strong className="text-foreground/70">{currentDate}</strong></span>
                 </div>
-                <div className="inline-flex items-center gap-1.5 mt-3 px-3 py-1 bg-red-500/[0.08] border border-red-500/15 text-red-400 text-[11px] rounded-sm">
+                <div className="inline-flex items-center gap-1.5 mt-3 px-3 py-1 bg-primary/[0.08] border border-primary/15 text-primary text-[11px] rounded-sm">
                   <FileText className="h-3 w-3" />
                   {getContractTypeBadge()}
                 </div>
@@ -389,62 +389,62 @@ export default function NexusContractGenerator(): JSX.Element {
 
               {/* Parties */}
               <section className="mb-8">
-                <h2 className="text-[14px] font-bold mb-4 flex items-center gap-2 text-red-400">
+                <h2 className="text-[14px] font-bold mb-4 flex items-center gap-2 text-primary">
                   <Users className="h-4 w-4" />
                   Contracting Parties
                 </h2>
                 <div className="grid md:grid-cols-2 gap-4">
-                  <div className="bg-white/[0.015] p-4 rounded-sm border border-white/[0.06]">
-                    <h3 className="text-[12px] font-semibold mb-2 text-white/80 uppercase tracking-wider">
+                  <div className="bg-card p-4 rounded-sm border border-border">
+                    <h3 className="text-[12px] font-semibold mb-2 text-foreground/80 uppercase tracking-wider">
                       Service Provider
                     </h3>
-                    <p className="text-white/70 text-[13px] font-semibold">Convergent</p>
-                    <p className="text-white/50 text-[12px]">Professional Development Services</p>
-                    <p className="text-white/50 text-[12px]">San Jose, California, United States</p>
-                    <p className="text-white/50 text-[12px]">contact@convergent.dev</p>
-                    <p className="text-[11px] mt-2 text-red-400 font-medium">CEO: Ali Alibrahimi</p>
+                    <p className="text-foreground/70 text-[13px] font-semibold">Convergent</p>
+                    <p className="text-muted-foreground/80 text-[12px]">Professional Development Services</p>
+                    <p className="text-muted-foreground/80 text-[12px]">San Jose, California, United States</p>
+                    <p className="text-muted-foreground/80 text-[12px]">contact@convergent.dev</p>
+                    <p className="text-[11px] mt-2 text-primary font-medium">CEO: Ali Alibrahimi</p>
                   </div>
-                  <div className="bg-white/[0.015] p-4 rounded-sm border border-white/[0.06]">
-                    <h3 className="text-[12px] font-semibold mb-2 text-white/80 uppercase tracking-wider">
+                  <div className="bg-card p-4 rounded-sm border border-border">
+                    <h3 className="text-[12px] font-semibold mb-2 text-foreground/80 uppercase tracking-wider">
                       Client
                     </h3>
-                    <p className="text-white/70 text-[13px] font-semibold">
+                    <p className="text-foreground/70 text-[13px] font-semibold">
                       {form.getFieldValue("clientName") || "Client Name"}
                     </p>
                     {form.getFieldValue("clientCompany") && (
-                      <p className="text-white/50 text-[12px]">{form.getFieldValue("clientCompany")}</p>
+                      <p className="text-muted-foreground/80 text-[12px]">{form.getFieldValue("clientCompany")}</p>
                     )}
-                    <p className="text-white/50 text-[12px]">{form.getFieldValue("clientEmail") || "client@email.com"}</p>
-                    <p className="text-white/50 text-[12px]">{form.getFieldValue("clientPhone") || "+1 (xxx) xxx-xxxx"}</p>
-                    <p className="text-[11px] mt-2 text-white/50">{form.getFieldValue("clientAddress") || "Client Address"}</p>
-                    <p className="text-[11px] mt-2 text-red-400 font-medium">Role: Project Owner</p>
+                    <p className="text-muted-foreground/80 text-[12px]">{form.getFieldValue("clientEmail") || "client@email.com"}</p>
+                    <p className="text-muted-foreground/80 text-[12px]">{form.getFieldValue("clientPhone") || "+1 (xxx) xxx-xxxx"}</p>
+                    <p className="text-[11px] mt-2 text-muted-foreground/80">{form.getFieldValue("clientAddress") || "Client Address"}</p>
+                    <p className="text-[11px] mt-2 text-primary font-medium">Role: Project Owner</p>
                   </div>
                 </div>
               </section>
 
               {/* Project overview */}
               <section className="mb-8">
-                <h2 className="text-[14px] font-bold mb-4 flex items-center gap-2 text-red-400">
+                <h2 className="text-[14px] font-bold mb-4 flex items-center gap-2 text-primary">
                   <Code className="h-4 w-4" />
                   Project Overview
                 </h2>
-                <div className="bg-white/[0.015] p-5 rounded-sm border border-white/[0.06]">
-                  <h3 className="font-semibold text-[15px] mb-3 text-white/85">
+                <div className="bg-card p-5 rounded-sm border border-border">
+                  <h3 className="font-semibold text-[15px] mb-3 text-foreground/85">
                     {form.getFieldValue("projectTitle") || "Project Title"}
                   </h3>
-                  <div className="space-y-2 text-[13px] text-white/60">
+                  <div className="space-y-2 text-[13px] text-foreground/60">
                     <p>
-                      <strong className="text-white/80">Description:</strong>{" "}
+                      <strong className="text-foreground/80">Description:</strong>{" "}
                       {form.getFieldValue("projectDescription") || "Project description will be detailed here."}
                     </p>
                     {form.getFieldValue("businessModel") && (
-                      <p><strong className="text-white/80">Business Model:</strong> {form.getFieldValue("businessModel")}</p>
+                      <p><strong className="text-foreground/80">Business Model:</strong> {form.getFieldValue("businessModel")}</p>
                     )}
                     {form.getFieldValue("targetMarket") && (
-                      <p><strong className="text-white/80">Target Market:</strong> {form.getFieldValue("targetMarket")}</p>
+                      <p><strong className="text-foreground/80">Target Market:</strong> {form.getFieldValue("targetMarket")}</p>
                     )}
                     {form.getFieldValue("revenueStreams") && (
-                      <p><strong className="text-white/80">Revenue Streams:</strong> {form.getFieldValue("revenueStreams")}</p>
+                      <p><strong className="text-foreground/80">Revenue Streams:</strong> {form.getFieldValue("revenueStreams")}</p>
                     )}
                   </div>
                 </div>
@@ -452,31 +452,31 @@ export default function NexusContractGenerator(): JSX.Element {
 
               {/* Deliverables */}
               <section className="mb-8">
-                <h2 className="text-[14px] font-bold mb-4 flex items-center gap-2 text-red-400">
+                <h2 className="text-[14px] font-bold mb-4 flex items-center gap-2 text-primary">
                   <CheckCircle className="h-4 w-4" />
                   Development Deliverables
                 </h2>
                 <div className="grid md:grid-cols-2 gap-4">
-                  <div className="bg-white/[0.015] p-4 rounded-sm border border-white/[0.06]">
-                    <h3 className="text-[11px] uppercase tracking-wider font-semibold mb-3 text-white/70">
+                  <div className="bg-card p-4 rounded-sm border border-border">
+                    <h3 className="text-[11px] uppercase tracking-wider font-semibold mb-3 text-foreground/70">
                       Core Features
                     </h3>
                     <ul className="space-y-1.5">
                       {form.getFieldValue("coreFeatures").filter((f) => f.trim()).map((item, i) => (
-                        <li key={i} className="flex items-start gap-2 text-[12px] text-white/60">
-                          <CheckCircle className="h-3 w-3 text-red-400 mt-0.5 shrink-0" />
+                        <li key={i} className="flex items-start gap-2 text-[12px] text-foreground/60">
+                          <CheckCircle className="h-3 w-3 text-primary mt-0.5 shrink-0" />
                           {item}
                         </li>
                       ))}
                     </ul>
                   </div>
-                  <div className="bg-white/[0.015] p-4 rounded-sm border border-white/[0.06]">
-                    <h3 className="text-[11px] uppercase tracking-wider font-semibold mb-3 text-white/70">
+                  <div className="bg-card p-4 rounded-sm border border-border">
+                    <h3 className="text-[11px] uppercase tracking-wider font-semibold mb-3 text-foreground/70">
                       Advanced Features
                     </h3>
                     <ul className="space-y-1.5">
                       {form.getFieldValue("advancedFeatures").filter((f) => f.trim()).map((item, i) => (
-                        <li key={i} className="flex items-start gap-2 text-[12px] text-white/60">
+                        <li key={i} className="flex items-start gap-2 text-[12px] text-foreground/60">
                           <CheckCircle className="h-3 w-3 text-blue-400 mt-0.5 shrink-0" />
                           {item}
                         </li>
@@ -488,39 +488,39 @@ export default function NexusContractGenerator(): JSX.Element {
 
               {/* Financial */}
               <section className="mb-8">
-                <h2 className="text-[14px] font-bold mb-4 flex items-center gap-2 text-red-400">
+                <h2 className="text-[14px] font-bold mb-4 flex items-center gap-2 text-primary">
                   <DollarSign className="h-4 w-4" />
                   Financial Structure
                 </h2>
-                <div className="bg-white/[0.015] p-5 rounded-sm border border-white/[0.06]">
+                <div className="bg-card p-5 rounded-sm border border-border">
                   <div className="grid md:grid-cols-2 gap-4 mb-4">
                     <div className="text-center">
-                      <div className="text-2xl font-bold text-red-400">
+                      <div className="text-2xl font-bold text-primary">
                         {form.getFieldValue("initialPayment") || "$TBD"}
                       </div>
-                      <div className="text-[11px] text-white/30 mt-0.5">Initial Development (One-time)</div>
+                      <div className="text-[11px] text-muted-foreground mt-0.5">Initial Development (One-time)</div>
                     </div>
                     <div className="text-center">
                       <div className="text-2xl font-bold text-blue-400">
                         {form.getFieldValue("monthlyMaintenance") || "$TBD"}
                       </div>
-                      <div className="text-[11px] text-white/30 mt-0.5">Monthly Maintenance</div>
+                      <div className="text-[11px] text-muted-foreground mt-0.5">Monthly Maintenance</div>
                     </div>
                   </div>
 
                   {form.getFieldValue("contractType") === "partnership" &&
                     form.getFieldValue("revenueSharing") && (
-                      <div className="text-center border-t border-white/[0.06] pt-4">
+                      <div className="text-center border-t border-border pt-4">
                         <div className="text-lg font-bold text-purple-400">
                           {form.getFieldValue("revenueSharing")}
                         </div>
-                        <div className="text-[11px] text-white/30">Revenue Sharing Structure</div>
+                        <div className="text-[11px] text-muted-foreground">Revenue Sharing Structure</div>
                       </div>
                     )}
 
-                  <div className="border-t border-white/[0.06] pt-4 mt-4">
-                    <h4 className="text-[12px] font-semibold mb-2 text-white/80">Payment Terms</h4>
-                    <ul className="text-[11px] text-white/50 space-y-1">
+                  <div className="border-t border-border pt-4 mt-4">
+                    <h4 className="text-[12px] font-semibold mb-2 text-foreground/80">Payment Terms</h4>
+                    <ul className="text-[11px] text-muted-foreground/80 space-y-1">
                       <li>• 50% of development fee due upon contract signing</li>
                       <li>• 50% due upon project completion and launch</li>
                       <li>• Monthly maintenance billed in advance</li>
@@ -546,9 +546,9 @@ export default function NexusContractGenerator(): JSX.Element {
               )}
 
               {/* Signatures */}
-              <section className="pt-6 border-t border-white/[0.06]">
-                <h2 className="text-[14px] font-bold mb-4 text-center text-white/85">Contract Execution</h2>
-                <p className="text-center text-[12px] text-white/40 mb-6">
+              <section className="pt-6 border-t border-border">
+                <h2 className="text-[14px] font-bold mb-4 text-center text-foreground/85">Contract Execution</h2>
+                <p className="text-center text-[12px] text-muted-foreground/70 mb-6">
                   Please review this agreement carefully. If you agree, sign below and return via email.
                 </p>
 
@@ -556,40 +556,40 @@ export default function NexusContractGenerator(): JSX.Element {
                   <div className="text-center">
                     <div className="border-2 border-dashed border-white/[0.1] p-5 rounded-sm min-h-[140px] flex flex-col justify-between">
                       <div>
-                        <h3 className="text-[11px] uppercase tracking-wider font-semibold mb-2 text-white/70">
+                        <h3 className="text-[11px] uppercase tracking-wider font-semibold mb-2 text-foreground/70">
                           Client Signature
                         </h3>
-                        <div className="h-14 flex items-center justify-center text-white/20 text-[12px]">
+                        <div className="h-14 flex items-center justify-center text-muted-foreground/60 text-[12px]">
                           _________________________
                         </div>
                       </div>
                       <div>
-                        <p className="text-[12px] mt-2 text-white/60">{form.getFieldValue("clientName") || "Client Name"}</p>
-                        <p className="text-[10px] text-white/30">Date: _______________</p>
+                        <p className="text-[12px] mt-2 text-foreground/60">{form.getFieldValue("clientName") || "Client Name"}</p>
+                        <p className="text-[10px] text-muted-foreground">Date: _______________</p>
                       </div>
                     </div>
                   </div>
                   <div className="text-center">
                     <div className="border-2 border-dashed border-white/[0.1] p-5 rounded-sm min-h-[140px] flex flex-col justify-between">
                       <div>
-                        <h3 className="text-[11px] uppercase tracking-wider font-semibold mb-2 text-white/70">
+                        <h3 className="text-[11px] uppercase tracking-wider font-semibold mb-2 text-foreground/70">
                           Convergent Representative
                         </h3>
-                        <div className="h-14 flex items-center justify-center text-white/20 text-[12px]">
+                        <div className="h-14 flex items-center justify-center text-muted-foreground/60 text-[12px]">
                           _________________________
                         </div>
                       </div>
                       <div>
-                        <p className="text-[12px] mt-2 text-white/60">Ali Alibrahimi</p>
-                        <p className="text-[10px] text-white/30">CEO, Convergent</p>
-                        <p className="text-[10px] text-white/30">Date: _______________</p>
+                        <p className="text-[12px] mt-2 text-foreground/60">Ali Alibrahimi</p>
+                        <p className="text-[10px] text-muted-foreground">CEO, Convergent</p>
+                        <p className="text-[10px] text-muted-foreground">Date: _______________</p>
                       </div>
                     </div>
                   </div>
                 </div>
 
                 <div className="mt-6 text-center">
-                  <div className="inline-flex items-center gap-1.5 text-[11px] text-white/30">
+                  <div className="inline-flex items-center gap-1.5 text-[11px] text-muted-foreground">
                     <Calendar className="h-3 w-3" />
                     Contract Generated: {currentDate}
                   </div>
@@ -597,10 +597,10 @@ export default function NexusContractGenerator(): JSX.Element {
               </section>
 
               {/* Footer */}
-              <div className="mt-8 pt-4 border-t border-white/[0.06] text-center text-[10px] text-white/30">
+              <div className="mt-8 pt-4 border-t border-border text-center text-[10px] text-muted-foreground">
                 <p>Contract ID: {contractId} · Generated: {currentDate}</p>
                 <p>Convergent Professional Services · San Jose, CA · contact@convergent.dev</p>
-                <p className="mt-1 text-red-400/50 font-medium tracking-wider uppercase">
+                <p className="mt-1 text-primary/50 font-medium tracking-wider uppercase">
                   Confidential Business Agreement
                 </p>
               </div>
@@ -634,17 +634,17 @@ export default function NexusContractGenerator(): JSX.Element {
   // EDITOR VIEW (default)
   // ══════════════════════════════════════════════════════════════════
   return (
-    <div className="min-h-screen bg-black overflow-y-auto">
+    <div className="min-h-screen bg-background overflow-y-auto">
       {/* Header */}
       <div className="px-8 pt-7 pb-2">
         <div className="flex items-end justify-between flex-wrap gap-3">
           <div className="flex items-center gap-3">
-            <div className="p-2.5 rounded-sm bg-red-500/[0.08] border border-red-500/15">
-              <FileText className="h-5 w-5 text-red-400" />
+            <div className="p-2.5 rounded-sm bg-primary/[0.08] border border-primary/15">
+              <FileText className="h-5 w-5 text-primary" />
             </div>
             <div>
-              <h1 className="text-[24px] font-bold text-white tracking-tight">Contract Generator</h1>
-              <p className="text-[12px] text-white/20 mt-0.5">
+              <h1 className="text-[24px] font-bold text-foreground tracking-tight">Contract Generator</h1>
+              <p className="text-[12px] text-muted-foreground/60 mt-0.5">
                 Build service agreements with auto-generated terms and pricing
               </p>
             </div>
@@ -653,14 +653,14 @@ export default function NexusContractGenerator(): JSX.Element {
           <div className="flex items-center gap-2">
             <button
               onClick={loadClientFromDB}
-              className="flex items-center gap-1.5 px-3 py-1.5 bg-white/[0.02] hover:bg-white/[0.04] border border-white/[0.04] text-white/40 hover:text-white/70 text-[11px] font-medium rounded-sm transition-colors"
+              className="flex items-center gap-1.5 px-3 py-1.5 bg-muted/30 hover:bg-muted/50 border border-border text-muted-foreground/70 hover:text-foreground/70 text-[11px] font-medium rounded-sm transition-colors"
             >
               <Database className="h-3 w-3" /> Load Client
             </button>
             <button
               onClick={generateFromAI}
               disabled={isGenerating || !form.getFieldValue("projectTitle")}
-              className="flex items-center gap-1.5 px-3 py-1.5 bg-red-500/[0.1] hover:bg-red-500/[0.15] border border-red-500/20 text-red-400 text-[11px] font-medium rounded-sm disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+              className="flex items-center gap-1.5 px-3 py-1.5 bg-primary/10 hover:bg-primary/15 border border-primary/20 text-primary text-[11px] font-medium rounded-sm disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
             >
               {isGenerating ? (
                 <>
@@ -866,8 +866,8 @@ export default function NexusContractGenerator(): JSX.Element {
                       onClick={() => field.handleChange(key)}
                       className={`flex items-center justify-center gap-1.5 px-3 py-2 rounded-sm text-[12px] font-medium transition-all border ${
                         field.state.value === key
-                          ? "bg-red-500/[0.1] text-red-400 border-red-500/20"
-                          : "bg-white/[0.02] text-white/40 border-white/[0.04] hover:text-white/70"
+                          ? "bg-primary/10 text-primary border-primary/20"
+                          : "bg-muted/30 text-muted-foreground/70 border-border hover:text-foreground/70"
                       }`}
                     >
                       <Icon className="h-3 w-3" />
@@ -953,11 +953,11 @@ export default function NexusContractGenerator(): JSX.Element {
             {/* Core Features */}
             <div>
               <div className="flex items-center justify-between mb-2">
-                <h3 className="text-[11px] text-white/40 uppercase tracking-wider font-medium">Core Features</h3>
+                <h3 className="text-[11px] text-muted-foreground/70 uppercase tracking-wider font-medium">Core Features</h3>
                 <button
                   type="button"
                   onClick={() => addFeature("coreFeatures")}
-                  className="flex items-center gap-1 px-2 py-0.5 bg-red-500/[0.08] hover:bg-red-500/[0.12] border border-red-500/15 text-red-400 text-[10px] rounded-sm transition-colors"
+                  className="flex items-center gap-1 px-2 py-0.5 bg-primary/[0.08] hover:bg-red-500/[0.12] border border-primary/15 text-primary text-[10px] rounded-sm transition-colors"
                 >
                   <Plus className="h-2.5 w-2.5" /> Add
                 </button>
@@ -979,7 +979,7 @@ export default function NexusContractGenerator(): JSX.Element {
                           <button
                             type="button"
                             onClick={() => removeFeature("coreFeatures", i)}
-                            className="p-2 text-white/20 hover:text-red-400 hover:bg-red-500/[0.06] rounded-sm transition-colors"
+                            className="p-2 text-muted-foreground/60 hover:text-primary hover:bg-primary/[0.06] rounded-sm transition-colors"
                           >
                             <Minus className="h-3 w-3" />
                           </button>
@@ -994,7 +994,7 @@ export default function NexusContractGenerator(): JSX.Element {
             {/* Advanced Features */}
             <div>
               <div className="flex items-center justify-between mb-2">
-                <h3 className="text-[11px] text-white/40 uppercase tracking-wider font-medium">Advanced Features</h3>
+                <h3 className="text-[11px] text-muted-foreground/70 uppercase tracking-wider font-medium">Advanced Features</h3>
                 <button
                   type="button"
                   onClick={() => addFeature("advancedFeatures")}
@@ -1020,7 +1020,7 @@ export default function NexusContractGenerator(): JSX.Element {
                           <button
                             type="button"
                             onClick={() => removeFeature("advancedFeatures", i)}
-                            className="p-2 text-white/20 hover:text-red-400 hover:bg-red-500/[0.06] rounded-sm transition-colors"
+                            className="p-2 text-muted-foreground/60 hover:text-primary hover:bg-primary/[0.06] rounded-sm transition-colors"
                           >
                             <Minus className="h-3 w-3" />
                           </button>
@@ -1059,7 +1059,7 @@ export default function NexusContractGenerator(): JSX.Element {
         <div className="flex justify-end pt-2">
           <button
             type="submit"
-            className="flex items-center gap-2 px-5 py-2.5 bg-red-600 hover:bg-red-500 text-white text-[13px] font-medium rounded-sm transition-colors"
+            className="flex items-center gap-2 px-5 py-2.5 bg-primary hover:bg-primary/80 text-foreground text-[13px] font-medium rounded-sm transition-colors"
           >
             <FileText className="h-4 w-4" />
             Generate Contract Preview

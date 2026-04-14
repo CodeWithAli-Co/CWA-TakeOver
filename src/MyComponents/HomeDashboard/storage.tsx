@@ -38,33 +38,33 @@ export const StorageUsageChart = () => {
   setTimeout(() => setWidth(percentage), 500);
 
   return (
-    <div className="bg-[#0a0a0a] border border-white/[0.04] rounded-sm h-full overflow-hidden">
+    <div className="bg-card border border-border rounded-sm h-full overflow-hidden">
       {/* Header */}
       <div className="px-6 pt-5 pb-4 flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <div className="p-2 rounded-sm bg-white/[0.03] border border-white/[0.04]">
-            <Database className="h-4 w-4 text-red-500/70" />
+          <div className="p-2 rounded-sm bg-muted/40 border border-border">
+            <Database className="h-4 w-4 text-primary/70" />
           </div>
-          <span className="text-[11px] text-white/20 uppercase tracking-[0.15em] font-medium">
+          <span className="text-[11px] text-muted-foreground/60 uppercase tracking-[0.15em] font-medium">
             Storage
           </span>
         </div>
-        <span className="text-[11px] text-white/15 font-medium">{percentage.toFixed(1)}%</span>
+        <span className="text-[11px] text-muted-foreground/40 font-medium">{percentage.toFixed(1)}%</span>
       </div>
 
       <div className="px-6 pb-6 space-y-5">
         {/* Usage numbers */}
         <div>
-          <div className="text-2xl font-bold text-white tracking-tight">
+          <div className="text-2xl font-bold text-foreground tracking-tight">
             {formatStorage(DBUsed)}
           </div>
-          <p className="text-[11px] text-white/15 mt-0.5">
+          <p className="text-[11px] text-muted-foreground/40 mt-0.5">
             of {formatStorageLimit(STORAGE_LIMIT)} · {formatStorage(STORAGE_LIMIT - DBUsed)} free
           </p>
         </div>
 
         {/* Bar */}
-        <div className="h-2 w-full bg-white/[0.03] rounded-full overflow-hidden">
+        <div className="h-2 w-full bg-muted/40 rounded-full overflow-hidden">
           <motion.div
             initial={{ width: "0%" }}
             animate={{ width: `${width}%` }}
@@ -84,9 +84,9 @@ export const StorageUsageChart = () => {
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-1.5">
             <div className="h-1.5 w-1.5 rounded-full bg-red-500" />
-            <span className="text-[11px] text-white/15">Database</span>
+            <span className="text-[11px] text-muted-foreground/40">Database</span>
           </div>
-          <span className="text-[11px] text-white/10">{TIER} tier</span>
+          <span className="text-[11px] text-muted-foreground/30">{TIER} tier</span>
         </div>
       </div>
     </div>

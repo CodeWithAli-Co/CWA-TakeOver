@@ -79,7 +79,7 @@ const MultiSelectField = ({ options }: { options: Option[] }) => {
   const { setOptionValue } = useChatStore();
   return (
     <div className="space-y-1.5">
-      <label className="text-[10px] text-white/25 uppercase tracking-[0.12em] font-medium">
+      <label className="text-[10px] text-muted-foreground/50 uppercase tracking-[0.12em] font-medium">
         Subscribers
       </label>
       <Select
@@ -128,7 +128,7 @@ export const AddDMGroup = (props: Subscribers) => {
         name="groupName"
         children={(field) => (
           <div className="space-y-1.5">
-            <label className="text-[10px] text-white/25 uppercase tracking-[0.12em] font-medium">
+            <label className="text-[10px] text-muted-foreground/50 uppercase tracking-[0.12em] font-medium">
               Group Name
             </label>
             <input
@@ -136,7 +136,7 @@ export const AddDMGroup = (props: Subscribers) => {
               placeholder="e.g. Design Team"
               value={field.state.value}
               onChange={(e) => field.handleChange(Capitalize(e.target.value))}
-              className="w-full px-3 py-2 bg-white/[0.02] border border-white/[0.06] text-white/80 rounded-sm text-[13px] placeholder:text-white/15 focus:outline-none focus:border-red-500/20 transition-colors"
+              className="w-full px-3 py-2 bg-muted/30 border border-border text-foreground/80 rounded-sm text-[13px] placeholder:text-muted-foreground/40 focus:outline-none focus:border-primary/20 transition-colors"
             />
           </div>
         )}
@@ -150,7 +150,7 @@ export const AddDMGroup = (props: Subscribers) => {
           <button
             type="submit"
             disabled={!canSubmit}
-            className="w-full py-2 bg-red-600 hover:bg-red-500 text-white text-[12px] font-medium rounded-sm disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+            className="w-full py-2 bg-primary hover:bg-primary/80 text-foreground text-[12px] font-medium rounded-sm disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
           >
             Create Group
           </button>

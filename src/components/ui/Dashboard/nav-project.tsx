@@ -37,40 +37,40 @@ export function NavProjects({
 
   return (
     <SidebarGroup className="group-data-[collapsible=icon]:hidden">
-      <SidebarGroupLabel className="text-[10px] text-white/15 uppercase tracking-[0.15em] font-medium">
+      <SidebarGroupLabel className="text-[10px] text-muted-foreground/40 uppercase tracking-[0.15em] font-medium">
         Projects
       </SidebarGroupLabel>
       <SidebarMenu>
         {projects.map((item) => (
           <SidebarMenuItem key={item.name}>
-            <SidebarMenuButton asChild className="hover:bg-white/[0.04] text-white/50 hover:text-white/80 rounded-sm">
+            <SidebarMenuButton asChild className="hover:bg-muted/50 text-muted-foreground/80 hover:text-foreground/80 rounded-sm">
               <Link to={item.url} draggable={false}>
-                <item.icon className="h-4 w-4 text-white/20" />
+                <item.icon className="h-4 w-4 text-muted-foreground/60" />
                 <span className="text-[13px]">{item.name}</span>
               </Link>
             </SidebarMenuButton>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <SidebarMenuAction showOnHover className="text-white/15 hover:text-white/40 hover:bg-white/[0.04] rounded-sm">
+                <SidebarMenuAction showOnHover className="text-muted-foreground/40 hover:text-muted-foreground/70 hover:bg-muted/50 rounded-sm">
                   <MoreHorizontal className="h-3.5 w-3.5" />
                   <span className="sr-only">More</span>
                 </SidebarMenuAction>
               </DropdownMenuTrigger>
               <DropdownMenuContent
-                className="w-48 bg-[#0a0a0a] border border-white/[0.06] rounded-sm"
+                className="w-48 bg-card border border-border rounded-sm"
                 side={isMobile ? "bottom" : "right"}
                 align={isMobile ? "end" : "start"}
               >
-                <DropdownMenuItem className="text-white/50 hover:text-white hover:bg-white/[0.04] cursor-pointer rounded-sm text-[12px]">
-                  <Folder className="h-3.5 w-3.5 mr-2 text-white/20" />
+                <DropdownMenuItem className="text-muted-foreground/80 hover:text-foreground hover:bg-muted/50 cursor-pointer rounded-sm text-[12px]">
+                  <Folder className="h-3.5 w-3.5 mr-2 text-muted-foreground/60" />
                   <span>View Project</span>
                 </DropdownMenuItem>
-                <DropdownMenuItem className="text-white/50 hover:text-white hover:bg-white/[0.04] cursor-pointer rounded-sm text-[12px]">
-                  <Forward className="h-3.5 w-3.5 mr-2 text-white/20" />
+                <DropdownMenuItem className="text-muted-foreground/80 hover:text-foreground hover:bg-muted/50 cursor-pointer rounded-sm text-[12px]">
+                  <Forward className="h-3.5 w-3.5 mr-2 text-muted-foreground/60" />
                   <span>Share Project</span>
                 </DropdownMenuItem>
-                <DropdownMenuSeparator className="bg-white/[0.04]" />
-                <DropdownMenuItem className="text-red-400/60 hover:text-red-400 hover:bg-red-500/[0.06] cursor-pointer rounded-sm text-[12px]">
+                <DropdownMenuSeparator className="bg-muted/50" />
+                <DropdownMenuItem className="text-primary/60 hover:text-primary hover:bg-primary/[0.06] cursor-pointer rounded-sm text-[12px]">
                   <Trash2 className="h-3.5 w-3.5 mr-2" />
                   <span>Delete Project</span>
                 </DropdownMenuItem>

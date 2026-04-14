@@ -105,8 +105,8 @@ export const TimeEntryForm = ({ onSuccess, defaultDate, compact = false }: TimeE
 
   // Modern input styles
   const inputStyles = cn(
-    "w-full px-4 py-3 rounded-xl text-white placeholder:text-white/30",
-    "bg-white/[0.03] border border-white/[0.08]",
+    "w-full px-4 py-3 rounded-xl text-foreground placeholder:text-muted-foreground",
+    "bg-muted/40 border border-border",
     "focus:border-white/20 focus:bg-white/[0.05] focus:outline-none",
     "transition-all duration-200"
   );
@@ -117,7 +117,7 @@ export const TimeEntryForm = ({ onSuccess, defaultDate, compact = false }: TimeE
     "[&>option]:bg-zinc-900 [&>option]:text-white"
   );
 
-  const labelStyles = "text-xs font-medium text-white/50 uppercase tracking-wider mb-2 block";
+  const labelStyles = "text-xs font-medium text-muted-foreground/80 uppercase tracking-wider mb-2 block";
 
   return (
     <div className="space-y-5">
@@ -125,14 +125,14 @@ export const TimeEntryForm = ({ onSuccess, defaultDate, compact = false }: TimeE
       {!compact && (
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <Clock className="h-5 w-5 text-white/50" />
-            <span className="text-white/70 font-medium">Log Time</span>
+            <Clock className="h-5 w-5 text-muted-foreground/80" />
+            <span className="text-foreground/70 font-medium">Log Time</span>
           </div>
           {calculatedDuration > 0 && (
             <motion.div
               initial={{ scale: 0.9, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
-              className="px-3 py-1.5 rounded-full bg-gradient-to-r from-red-500/20 to-orange-500/20 border border-red-500/20"
+              className="px-3 py-1.5 rounded-full bg-gradient-to-r from-red-500/20 to-orange-500/20 border border-primary/20"
             >
               <span className="text-sm font-semibold text-white">{formatDuration(calculatedDuration)}</span>
             </motion.div>
@@ -258,7 +258,7 @@ export const TimeEntryForm = ({ onSuccess, defaultDate, compact = false }: TimeE
                 "w-full px-4 py-3 rounded-xl border transition-all duration-200 text-sm font-medium",
                 isBillable
                   ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-400"
-                  : "bg-white/[0.03] border-white/[0.08] text-white/40"
+                  : "bg-muted/40 border-border text-muted-foreground/70"
               )}
             >
               {isBillable ? "Yes" : "No"}
@@ -331,7 +331,7 @@ export const TimeEntryForm = ({ onSuccess, defaultDate, compact = false }: TimeE
               <button
                 type="button"
                 onClick={addTag}
-                className="px-4 rounded-xl bg-white/[0.05] border border-white/[0.08] text-white/50 hover:text-white hover:bg-white/[0.08] transition-colors"
+                className="px-4 rounded-xl bg-white/[0.05] border border-border text-muted-foreground/80 hover:text-foreground hover:bg-white/[0.08] transition-colors"
               >
                 Add
               </button>
@@ -343,11 +343,11 @@ export const TimeEntryForm = ({ onSuccess, defaultDate, compact = false }: TimeE
                     key={tag}
                     initial={{ scale: 0.9, opacity: 0 }}
                     animate={{ scale: 1, opacity: 1 }}
-                    className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/[0.05] border border-white/[0.08] text-white/70 text-sm"
+                    className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/[0.05] border border-border text-foreground/70 text-sm"
                   >
                     {tag}
                     <X
-                      className="h-3 w-3 cursor-pointer hover:text-red-400 transition-colors"
+                      className="h-3 w-3 cursor-pointer hover:text-primary transition-colors"
                       onClick={() => removeTag(tag)}
                     />
                   </motion.span>
@@ -367,7 +367,7 @@ export const TimeEntryForm = ({ onSuccess, defaultDate, compact = false }: TimeE
               whileHover={{ scale: 1.01 }}
               whileTap={{ scale: 0.99 }}
               className={cn(
-                "w-full py-3.5 rounded-xl font-medium text-white transition-all duration-300",
+                "w-full py-3.5 rounded-xl font-medium text-foreground transition-all duration-300",
                 "bg-gradient-to-r from-red-500 to-orange-500",
                 "hover:shadow-lg hover:shadow-red-500/20",
                 "disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:shadow-none",

@@ -57,7 +57,7 @@ const SOCIAL_MEDIA = [
 ];
 export const CompanySettings = () => {
   return (
-    <div className="min-h-screen bg-black ">
+    <div className="min-h-screen bg-background ">
       <div className="space-y-6 max-w-8xl mx-auto ">
         {/* Header */}
         <div className="flex items-center justify-between">
@@ -89,7 +89,7 @@ export const CompanySettings = () => {
                   <img
                     src="/codewithali_logo_full.png"
                     alt="Company Logo"
-                    className="h-22 w-22 text-red-500/70"
+                    className="h-22 w-22 text-primary/70"
                   />
                 </div>
               </div>
@@ -106,7 +106,7 @@ export const CompanySettings = () => {
                 <div className="grid gap-2">
                   <label className="text-sm text-amber-50/70">Website</label>
                   <Input
-                    className="bg-zinc-950 high-dpi:bg-zinc-950/20 rounded-xs border-red-900/40 text-white hover:border-red-900  disabled:opacity-100"
+                    className="bg-zinc-950 high-dpi:bg-zinc-950/20 rounded-xs border-red-900/40 text-foreground hover:border-red-900  disabled:opacity-100"
                     //   placeholder="https://"
                     defaultValue="https://www.codewithali.com/"
                     disabled
@@ -165,7 +165,7 @@ export const CompanySettings = () => {
                           <span className="bg-zinc-950 high-dpi:bg-zinc-950/20 rounded-xs px-3 py-1 rounded-l border border-gray-700 text-gray-200 hover:border-red-900 ">
                             20:00
                           </span>
-                          <span className="bg-red-500/20 text-red-400 px-2 py-1 text-sm font-medium rounded-r border-y border-r border-gray-700 hover:border-amber-50/70">
+                          <span className="bg-red-500/20 text-primary px-2 py-1 text-sm font-medium rounded-r border-y border-r border-gray-700 hover:border-amber-50/70">
                             PM
                           </span>
                         </div>
@@ -208,7 +208,7 @@ export const CompanySettings = () => {
                       initial={{ opacity: 0, y: 10 }}
                       animate={{ opacity: 1, y: 0 }}
                       transition={{ delay: i * 0.1 }}
-                      className="flex items-center justify-between p-3 rounded-lg bg-black/60 border border-red-900/40 hover:border-red-900"
+                      className="flex items-center justify-between p-3 rounded-lg bg-background/60 border border-red-900/40 hover:border-red-900"
                     >
                       <div className="flex items-center gap-3">
                         <div className="p-2 rounded-lg bg-red-900/20">
@@ -291,16 +291,16 @@ export const CompanySettings = () => {
                   Industry Type
                 </label>
                 <select className="bg-zinc-950 high-dpi:bg-zinc-950/20 rounded-xs border-red-900/40 text-amber-50 rounded-lg p-2">
-                  <option value="software" className="bg-black">
+                  <option value="software" className="bg-background">
                     Software Development
                   </option>
-                  <option value="ecommerce" className="bg-black">
+                  <option value="ecommerce" className="bg-background">
                     E-Commerce
                   </option>
-                  <option value="biotech" className="bg-black">
+                  <option value="biotech" className="bg-background">
                     Bio-Tech
                   </option>
-                  <option value="ai" className="bg-black">
+                  <option value="ai" className="bg-background">
                     Artificial Intelligence
                   </option>
                 </select>
@@ -349,7 +349,7 @@ export const CompanySettings = () => {
                   <h3 className="text-sm text-amber-50 mb-2">
                     Location Status
                   </h3>
-                  <div className="p-3 rounded-lg bg-black/60 border border-red-900/40  hover:border-red-900">
+                  <div className="p-3 rounded-lg bg-background/60 border border-red-900/40  hover:border-red-900">
                     <div className="flex items-center gap-2 mb-2">
                       <Globe className="h-4 w-4 text-red-500" />
                       <span className="text-amber-50">Remote Operations</span>
@@ -364,7 +364,7 @@ export const CompanySettings = () => {
                     Employee Count
                   </h3>
 
-                  <div className="p-3 rounded-lg bg-black/60 border border-red-900/40   hover:border-red-900">
+                  <div className="p-3 rounded-lg bg-background/60 border border-red-900/40   hover:border-red-900">
                     <div className="flex items-center gap-2">
                       <Users className="h-4 w-4 text-red-500" />
                       <span className="text-amber-50">
@@ -396,7 +396,7 @@ export const CompanySettings = () => {
             <CardContent>
               <div className="space-y-6">
                 <div className="grid gap-4">
-                  <div className="flex items-center justify-between p-3 rounded-lg bg-black/60 border border-red-900/40">
+                  <div className="flex items-center justify-between p-3 rounded-lg bg-background/60 border border-red-900/40">
                     <div className="flex items-center gap-3">
                       <Shield className="h-5 w-5 text-red-500" />
                       <div>
@@ -415,7 +415,7 @@ export const CompanySettings = () => {
                       }
                     />
                   </div>
-                  <div className="flex items-center justify-between p-3 rounded-lg bg-black/60 border border-red-900/40">
+                  <div className="flex items-center justify-between p-3 rounded-lg bg-background/60 border border-red-900/40">
                     <div className="flex items-center gap-3">
                       <FileText className="h-5 w-5 text-red-500" />
                       <div>
@@ -514,7 +514,7 @@ export const CompanySettings = () => {
                       <motion.div
                         key={item.type}
                         whileHover={{ scale: 1.01 }}
-                        className="flex items-center justify-between p-3 rounded-lg bg-black/60 border border-red-900/40"
+                        className="flex items-center justify-between p-3 rounded-lg bg-background/60 border border-red-900/40"
                       >
                         <span className="text-sm text-amber-50">
                           {item.type}
@@ -561,7 +561,7 @@ export const CompanySettings = () => {
                       <motion.div
                         key={kpi.metric}
                         whileHover={{ scale: 1.01 }}
-                        className="flex items-center justify-between p-3 rounded-lg bg-black/60 border border-red-900/40"
+                        className="flex items-center justify-between p-3 rounded-lg bg-background/60 border border-red-900/40"
                       >
                         <div className="flex items-center gap-2">
                           <div

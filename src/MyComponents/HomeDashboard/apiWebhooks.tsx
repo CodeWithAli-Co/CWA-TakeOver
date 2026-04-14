@@ -12,7 +12,7 @@ const ApiWebhooks = () => {
   return (
     <>
       {/* API Health & Webhooks */}
-      <Card className="bg-black/40 border-red-900/30 lg:col-span-2">
+      <Card className="bg-background/40 border-red-900/30 lg:col-span-2">
         <CardHeader>
           <CardTitle className="text-amber-50">API & Webhook Status</CardTitle>
         </CardHeader>
@@ -20,7 +20,7 @@ const ApiWebhooks = () => {
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
             <motion.div
               whileHover={{ scale: 1.02 }}
-              className="p-4 rounded-lg bg-black/60 border border-red-900/30"
+              className="p-4 rounded-lg bg-background/60 border border-red-900/30"
             >
               <div className="flex items-center justify-between">
                 <div className="p-2 rounded-lg bg-emerald-500/20">
@@ -41,13 +41,13 @@ const ApiWebhooks = () => {
 
             <motion.div
               whileHover={{ scale: 1.02 }}
-              className="p-4 rounded-lg bg-black/60 border border-red-900/30"
+              className="p-4 rounded-lg bg-background/60 border border-red-900/30"
             >
               <div className="flex items-center justify-between">
                 <div className="p-2 rounded-lg bg-red-500/20">
                   <AlertCircle className="h-4 w-4 text-red-500" />
                 </div>
-                <Badge variant="outline" className="bg-red-500/20 text-red-400">
+                <Badge variant="outline" className="bg-red-500/20 text-primary">
                   Issues
                 </Badge>
               </div>
@@ -61,7 +61,7 @@ const ApiWebhooks = () => {
 
             <motion.div
               whileHover={{ scale: 1.02 }}
-              className="p-4 rounded-lg bg-black/60 border border-red-900/30"
+              className="p-4 rounded-lg bg-background/60 border border-red-900/30"
             >
               <div className="flex items-center justify-between">
                 <div className="p-2 rounded-lg bg-amber-500/20">
@@ -82,7 +82,7 @@ const ApiWebhooks = () => {
 
             <motion.div
               whileHover={{ scale: 1.02 }}
-              className="p-4 rounded-lg bg-black/60 border border-red-900/30"
+              className="p-4 rounded-lg bg-background/60 border border-red-900/30"
             >
               <div className="flex items-center justify-between">
                 <div className="p-2 rounded-lg bg-emerald-500/20">

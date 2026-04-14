@@ -191,15 +191,15 @@ export const ResourceHub = () => {
   return (
     <div className="flex-1 overflow-hidden flex flex-col">
       {/* Header */}
-      <div className="px-6 pt-5 pb-3 border-b border-white/[0.04]">
+      <div className="px-6 pt-5 pb-3 border-b border-border">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="p-2 rounded-sm bg-red-500/[0.08] border border-red-500/15">
-              <BookOpen className="h-4 w-4 text-red-400" />
+            <div className="p-2 rounded-sm bg-primary/[0.08] border border-primary/15">
+              <BookOpen className="h-4 w-4 text-primary" />
             </div>
             <div>
-              <h2 className="text-[16px] font-semibold text-white tracking-tight">Resource Hub</h2>
-              <p className="text-[11px] text-white/20 mt-0.5">
+              <h2 className="text-[16px] font-semibold text-foreground tracking-tight">Resource Hub</h2>
+              <p className="text-[11px] text-muted-foreground/60 mt-0.5">
                 {resources.length} saved · {counts.readlater} queued · {counts.favorites} starred
               </p>
             </div>
@@ -207,7 +207,7 @@ export const ResourceHub = () => {
 
           <button
             onClick={openNewForm}
-            className="flex items-center gap-1.5 px-3 py-1.5 bg-red-500/[0.1] hover:bg-red-500/[0.15] border border-red-500/20 text-red-400 text-[11px] font-medium rounded-sm transition-colors"
+            className="flex items-center gap-1.5 px-3 py-1.5 bg-primary/10 hover:bg-primary/15 border border-primary/20 text-primary text-[11px] font-medium rounded-sm transition-colors"
           >
             <Plus className="h-3 w-3" /> New Resource
           </button>
@@ -215,9 +215,9 @@ export const ResourceHub = () => {
       </div>
 
       {/* Quick filters + search */}
-      <div className="px-6 py-3 border-b border-white/[0.04] flex items-center gap-2 flex-wrap">
+      <div className="px-6 py-3 border-b border-border flex items-center gap-2 flex-wrap">
         {/* Status filter pills */}
-        <div className="flex items-center bg-white/[0.02] border border-white/[0.04] rounded-sm p-0.5">
+        <div className="flex items-center bg-muted/30 border border-border rounded-sm p-0.5">
           {([
             { key: "all", label: "All", icon: Sparkles },
             { key: "readlater", label: "Read Later", icon: Clock },
@@ -231,8 +231,8 @@ export const ResourceHub = () => {
                 onClick={() => setActiveFilter(f.key)}
                 className={`flex items-center gap-1 px-2.5 py-1 rounded-sm text-[11px] font-medium transition-colors ${
                   activeFilter === f.key
-                    ? "bg-red-500/[0.1] text-red-400"
-                    : "text-white/25 hover:text-white/50"
+                    ? "bg-primary/10 text-primary"
+                    : "text-muted-foreground/50 hover:text-muted-foreground/80"
                 }`}
               >
                 <Icon className="h-3 w-3" />
@@ -246,7 +246,7 @@ export const ResourceHub = () => {
         <select
           value={typeFilter}
           onChange={(e) => setTypeFilter(e.target.value)}
-          className="px-2.5 py-1.5 bg-white/[0.02] border border-white/[0.04] rounded-sm text-[11px] text-white/60 focus:outline-none focus:border-white/[0.08] cursor-pointer"
+          className="px-2.5 py-1.5 bg-muted/30 border border-border rounded-sm text-[11px] text-foreground/60 focus:outline-none focus:border-border cursor-pointer"
         >
           <option value="all">All types</option>
           {RESOURCE_TYPES.map((t) => (
@@ -256,13 +256,13 @@ export const ResourceHub = () => {
 
         {/* Search */}
         <div className="relative flex-1 max-w-sm">
-          <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-white/15" />
+          <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground/40" />
           <input
             type="text"
             placeholder="Search resources..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full pl-8 pr-3 py-1.5 bg-white/[0.02] border border-white/[0.04] rounded-sm text-[12px] text-white/60 placeholder:text-white/15 focus:outline-none focus:border-white/[0.08]"
+            className="w-full pl-8 pr-3 py-1.5 bg-muted/30 border border-border rounded-sm text-[12px] text-foreground/60 placeholder:text-muted-foreground/40 focus:outline-none focus:border-border"
           />
         </div>
       </div>
@@ -270,12 +270,12 @@ export const ResourceHub = () => {
       {/* Resource list */}
       <div className="flex-1 overflow-y-auto px-6 pb-6 pt-3 space-y-2">
         {filtered.length === 0 ? (
-          <div className="bg-[#0a0a0a] border border-white/[0.04] rounded-sm py-16 text-center">
+          <div className="bg-card border border-border rounded-sm py-16 text-center">
             <BookOpen className="h-10 w-10 text-white/[0.05] mx-auto mb-3" />
-            <p className="text-[14px] text-white/30 font-medium mb-1">
+            <p className="text-[14px] text-muted-foreground font-medium mb-1">
               {resources.length === 0 ? "No resources yet" : "No resources match"}
             </p>
-            <p className="text-[12px] text-white/15">
+            <p className="text-[12px] text-muted-foreground/40">
               {resources.length === 0 ? "Click 'New Resource' to bookmark a link" : "Try a different filter"}
             </p>
           </div>
@@ -289,8 +289,8 @@ export const ResourceHub = () => {
                   initial={{ opacity: 0, y: 6 }}
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, y: -6 }}
-                  className={`bg-[#0a0a0a] border rounded-sm overflow-hidden group hover:border-red-500/10 transition-colors ${
-                    resource.completed ? "border-white/[0.02] opacity-60" : "border-white/[0.04]"
+                  className={`bg-card border rounded-sm overflow-hidden group hover:border-primary/10 transition-colors ${
+                    resource.completed ? "border-white/[0.02] opacity-60" : "border-border"
                   }`}
                 >
                   <div className="p-4 flex items-start gap-3">
@@ -309,9 +309,9 @@ export const ResourceHub = () => {
                     {/* Content */}
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 mb-1 flex-wrap">
-                        <Icon className="h-3.5 w-3.5 text-red-500/70 shrink-0" />
+                        <Icon className="h-3.5 w-3.5 text-primary/70 shrink-0" />
                         <h3 className={`text-[13px] font-medium ${
-                          resource.completed ? "text-white/40 line-through" : "text-white/85"
+                          resource.completed ? "text-muted-foreground/70 line-through" : "text-white/85"
                         }`}>
                           {resource.title}
                         </h3>
@@ -330,26 +330,26 @@ export const ResourceHub = () => {
                         href={resource.url}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="text-[11px] text-red-400/70 hover:text-red-400 truncate flex items-center gap-1 mb-1"
+                        className="text-[11px] text-primary/70 hover:text-primary truncate flex items-center gap-1 mb-1"
                       >
                         <ExternalLink className="h-2.5 w-2.5 shrink-0" />
                         <span className="truncate">{resource.url}</span>
                       </a>
 
                       {resource.description && (
-                        <p className="text-[12px] text-white/40 leading-snug mb-2">
+                        <p className="text-[12px] text-muted-foreground/70 leading-snug mb-2">
                           {resource.description}
                         </p>
                       )}
 
                       {resource.notes && (
-                        <div className="bg-white/[0.015] border-l-2 border-amber-500/30 px-2 py-1 mb-2 rounded-sm">
-                          <p className="text-[11px] text-white/50 italic">{resource.notes}</p>
+                        <div className="bg-card border-l-2 border-amber-500/30 px-2 py-1 mb-2 rounded-sm">
+                          <p className="text-[11px] text-muted-foreground/80 italic">{resource.notes}</p>
                         </div>
                       )}
 
                       {resource.snippet && (
-                        <div className="mb-2 bg-black/40 rounded-sm border border-white/[0.04] max-h-[150px] overflow-y-auto">
+                        <div className="mb-2 bg-background/40 rounded-sm border border-border max-h-[150px] overflow-y-auto">
                           <CodeBlock code={resource.snippet} language="typescript" />
                         </div>
                       )}
@@ -357,7 +357,7 @@ export const ResourceHub = () => {
                       {resource.tags.length > 0 && (
                         <div className="flex items-center gap-1 flex-wrap">
                           {resource.tags.map((tag) => (
-                            <span key={tag} className="px-1.5 py-0.5 bg-white/[0.03] rounded-sm text-[10px] text-white/40">
+                            <span key={tag} className="px-1.5 py-0.5 bg-muted/40 rounded-sm text-[10px] text-muted-foreground/70">
                               {tag}
                             </span>
                           ))}
@@ -369,8 +369,8 @@ export const ResourceHub = () => {
                     <div className="flex items-center gap-1 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
                       <button
                         onClick={() => toggleReadLater(resource)}
-                        className={`p-1.5 rounded-sm hover:bg-white/[0.04] transition-colors ${
-                          resource.read_later ? "text-blue-400" : "text-white/30 hover:text-blue-400"
+                        className={`p-1.5 rounded-sm hover:bg-muted/50 transition-colors ${
+                          resource.read_later ? "text-blue-400" : "text-muted-foreground hover:text-blue-400"
                         }`}
                         title="Read later"
                       >
@@ -378,21 +378,21 @@ export const ResourceHub = () => {
                       </button>
                       <button
                         onClick={() => toggleFavorite(resource)}
-                        className="p-1.5 rounded-sm hover:bg-white/[0.04] text-white/30 hover:text-amber-400 transition-colors"
+                        className="p-1.5 rounded-sm hover:bg-muted/50 text-muted-foreground hover:text-amber-400 transition-colors"
                         title="Favorite"
                       >
                         <Star className={`h-3.5 w-3.5 ${resource.favorite ? "fill-amber-400 text-amber-400" : ""}`} />
                       </button>
                       <button
                         onClick={() => openEditForm(resource)}
-                        className="p-1.5 rounded-sm hover:bg-white/[0.04] text-white/30 hover:text-white/70 transition-colors"
+                        className="p-1.5 rounded-sm hover:bg-muted/50 text-muted-foreground hover:text-foreground/70 transition-colors"
                         title="Edit"
                       >
                         <Edit className="h-3.5 w-3.5" />
                       </button>
                       <button
                         onClick={() => handleDelete(resource.id)}
-                        className="p-1.5 rounded-sm hover:bg-red-500/[0.06] text-white/30 hover:text-red-400 transition-colors"
+                        className="p-1.5 rounded-sm hover:bg-primary/[0.06] text-muted-foreground hover:text-primary transition-colors"
                         title="Delete"
                       >
                         <Trash2 className="h-3.5 w-3.5" />
@@ -413,7 +413,7 @@ export const ResourceHub = () => {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-4"
+            className="fixed inset-0 bg-background/70 backdrop-blur-sm flex items-center justify-center z-50 p-4"
             onClick={() => setShowForm(false)}
           >
             <motion.div
@@ -421,15 +421,15 @@ export const ResourceHub = () => {
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.97 }}
               onClick={(e) => e.stopPropagation()}
-              className="bg-[#0a0a0a] border border-white/[0.08] rounded-sm w-full max-w-lg max-h-[90vh] overflow-y-auto shadow-2xl shadow-black/50"
+              className="bg-card border border-border rounded-sm w-full max-w-lg max-h-[90vh] overflow-y-auto shadow-2xl shadow-black/50"
             >
-              <div className="px-6 py-4 border-b border-white/[0.04] flex items-center justify-between">
-                <h3 className="text-[15px] font-semibold text-white/90">
+              <div className="px-6 py-4 border-b border-border flex items-center justify-between">
+                <h3 className="text-[15px] font-semibold text-foreground">
                   {editingResource ? "Edit Resource" : "New Resource"}
                 </h3>
                 <button
                   onClick={() => setShowForm(false)}
-                  className="p-1.5 rounded-sm text-white/30 hover:text-white/70 hover:bg-white/[0.04]"
+                  className="p-1.5 rounded-sm text-muted-foreground hover:text-foreground/70 hover:bg-muted/50"
                 >
                   <X className="h-4 w-4" />
                 </button>
@@ -437,7 +437,7 @@ export const ResourceHub = () => {
 
               <div className="p-6 space-y-4">
                 <div>
-                  <label className="text-[10px] text-white/25 uppercase tracking-[0.12em] font-medium">
+                  <label className="text-[10px] text-muted-foreground/50 uppercase tracking-[0.12em] font-medium">
                     Title
                   </label>
                   <input
@@ -445,12 +445,12 @@ export const ResourceHub = () => {
                     value={formTitle}
                     onChange={(e) => setFormTitle(e.target.value)}
                     placeholder="What is this?"
-                    className="w-full mt-1.5 px-3 py-2 bg-white/[0.02] border border-white/[0.06] text-white/80 rounded-sm text-[13px] placeholder:text-white/15 focus:outline-none focus:border-red-500/20"
+                    className="w-full mt-1.5 px-3 py-2 bg-muted/30 border border-border text-foreground/80 rounded-sm text-[13px] placeholder:text-muted-foreground/40 focus:outline-none focus:border-primary/20"
                   />
                 </div>
 
                 <div>
-                  <label className="text-[10px] text-white/25 uppercase tracking-[0.12em] font-medium">
+                  <label className="text-[10px] text-muted-foreground/50 uppercase tracking-[0.12em] font-medium">
                     URL
                   </label>
                   <input
@@ -458,12 +458,12 @@ export const ResourceHub = () => {
                     value={formUrl}
                     onChange={(e) => setFormUrl(e.target.value)}
                     placeholder="https://..."
-                    className="w-full mt-1.5 px-3 py-2 bg-white/[0.02] border border-white/[0.06] text-white/80 rounded-sm text-[13px] placeholder:text-white/15 focus:outline-none focus:border-red-500/20"
+                    className="w-full mt-1.5 px-3 py-2 bg-muted/30 border border-border text-foreground/80 rounded-sm text-[13px] placeholder:text-muted-foreground/40 focus:outline-none focus:border-primary/20"
                   />
                 </div>
 
                 <div>
-                  <label className="text-[10px] text-white/25 uppercase tracking-[0.12em] font-medium">
+                  <label className="text-[10px] text-muted-foreground/50 uppercase tracking-[0.12em] font-medium">
                     Description
                   </label>
                   <textarea
@@ -471,19 +471,19 @@ export const ResourceHub = () => {
                     onChange={(e) => setFormDesc(e.target.value)}
                     placeholder="What does it cover?"
                     rows={2}
-                    className="w-full mt-1.5 px-3 py-2 bg-white/[0.02] border border-white/[0.06] text-white/80 rounded-sm text-[13px] placeholder:text-white/15 focus:outline-none focus:border-red-500/20 resize-none"
+                    className="w-full mt-1.5 px-3 py-2 bg-muted/30 border border-border text-foreground/80 rounded-sm text-[13px] placeholder:text-muted-foreground/40 focus:outline-none focus:border-primary/20 resize-none"
                   />
                 </div>
 
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label className="text-[10px] text-white/25 uppercase tracking-[0.12em] font-medium">
+                    <label className="text-[10px] text-muted-foreground/50 uppercase tracking-[0.12em] font-medium">
                       Type
                     </label>
                     <select
                       value={formType}
                       onChange={(e) => setFormType(e.target.value)}
-                      className="w-full mt-1.5 px-3 py-2 bg-white/[0.02] border border-white/[0.06] text-white/80 rounded-sm text-[13px] focus:outline-none focus:border-red-500/20 cursor-pointer"
+                      className="w-full mt-1.5 px-3 py-2 bg-muted/30 border border-border text-foreground/80 rounded-sm text-[13px] focus:outline-none focus:border-primary/20 cursor-pointer"
                     >
                       {RESOURCE_TYPES.map((t) => (
                         <option key={t.key} value={t.key}>{t.label}</option>
@@ -491,7 +491,7 @@ export const ResourceHub = () => {
                     </select>
                   </div>
                   <div>
-                    <label className="text-[10px] text-white/25 uppercase tracking-[0.12em] font-medium">
+                    <label className="text-[10px] text-muted-foreground/50 uppercase tracking-[0.12em] font-medium">
                       Category
                     </label>
                     <input
@@ -499,13 +499,13 @@ export const ResourceHub = () => {
                       value={formCategory}
                       onChange={(e) => setFormCategory(e.target.value)}
                       placeholder="e.g. react, billing"
-                      className="w-full mt-1.5 px-3 py-2 bg-white/[0.02] border border-white/[0.06] text-white/80 rounded-sm text-[13px] placeholder:text-white/15 focus:outline-none focus:border-red-500/20"
+                      className="w-full mt-1.5 px-3 py-2 bg-muted/30 border border-border text-foreground/80 rounded-sm text-[13px] placeholder:text-muted-foreground/40 focus:outline-none focus:border-primary/20"
                     />
                   </div>
                 </div>
 
                 <div>
-                  <label className="text-[10px] text-white/25 uppercase tracking-[0.12em] font-medium">
+                  <label className="text-[10px] text-muted-foreground/50 uppercase tracking-[0.12em] font-medium">
                     Tags
                   </label>
                   <input
@@ -513,12 +513,12 @@ export const ResourceHub = () => {
                     value={formTags}
                     onChange={(e) => setFormTags(e.target.value)}
                     placeholder="comma, separated, tags"
-                    className="w-full mt-1.5 px-3 py-2 bg-white/[0.02] border border-white/[0.06] text-white/80 rounded-sm text-[13px] placeholder:text-white/15 focus:outline-none focus:border-red-500/20"
+                    className="w-full mt-1.5 px-3 py-2 bg-muted/30 border border-border text-foreground/80 rounded-sm text-[13px] placeholder:text-muted-foreground/40 focus:outline-none focus:border-primary/20"
                   />
                 </div>
 
                 <div>
-                  <label className="text-[10px] text-white/25 uppercase tracking-[0.12em] font-medium">
+                  <label className="text-[10px] text-muted-foreground/50 uppercase tracking-[0.12em] font-medium">
                     Personal notes (optional)
                   </label>
                   <textarea
@@ -526,12 +526,12 @@ export const ResourceHub = () => {
                     onChange={(e) => setFormNotes(e.target.value)}
                     placeholder="Your thoughts, things to remember..."
                     rows={2}
-                    className="w-full mt-1.5 px-3 py-2 bg-white/[0.02] border border-white/[0.06] text-white/80 rounded-sm text-[13px] placeholder:text-white/15 focus:outline-none focus:border-red-500/20 resize-none"
+                    className="w-full mt-1.5 px-3 py-2 bg-muted/30 border border-border text-foreground/80 rounded-sm text-[13px] placeholder:text-muted-foreground/40 focus:outline-none focus:border-primary/20 resize-none"
                   />
                 </div>
 
                 <div>
-                  <label className="text-[10px] text-white/25 uppercase tracking-[0.12em] font-medium">
+                  <label className="text-[10px] text-muted-foreground/50 uppercase tracking-[0.12em] font-medium">
                     Code snippet (optional)
                   </label>
                   <textarea
@@ -539,23 +539,23 @@ export const ResourceHub = () => {
                     onChange={(e) => setFormSnippet(e.target.value)}
                     placeholder="// Paste a short code example"
                     rows={6}
-                    className="w-full mt-1.5 px-3 py-2 bg-black/40 border border-white/[0.06] text-white/85 rounded-sm text-[12.5px] placeholder:text-white/15 focus:outline-none focus:border-red-500/20 font-mono leading-relaxed resize-y"
+                    className="w-full mt-1.5 px-3 py-2 bg-background/40 border border-border text-white/85 rounded-sm text-[12.5px] placeholder:text-muted-foreground/40 focus:outline-none focus:border-primary/20 font-mono leading-relaxed resize-y"
                     spellCheck={false}
                   />
                 </div>
               </div>
 
-              <div className="px-6 py-4 border-t border-white/[0.04] flex items-center justify-end gap-2">
+              <div className="px-6 py-4 border-t border-border flex items-center justify-end gap-2">
                 <button
                   onClick={() => setShowForm(false)}
-                  className="px-4 py-2 bg-white/[0.02] hover:bg-white/[0.04] border border-white/[0.04] text-white/40 hover:text-white/70 text-[12px] rounded-sm transition-colors"
+                  className="px-4 py-2 bg-muted/30 hover:bg-muted/50 border border-border text-muted-foreground/70 hover:text-foreground/70 text-[12px] rounded-sm transition-colors"
                 >
                   Cancel
                 </button>
                 <button
                   onClick={handleSave}
                   disabled={submitting || !formTitle.trim() || !formUrl.trim()}
-                  className="px-5 py-2 bg-red-600 hover:bg-red-500 text-white text-[12px] font-medium rounded-sm disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                  className="px-5 py-2 bg-primary hover:bg-primary/80 text-foreground text-[12px] font-medium rounded-sm disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
                 >
                   {submitting ? "Saving..." : editingResource ? "Save Changes" : "Add Resource"}
                 </button>

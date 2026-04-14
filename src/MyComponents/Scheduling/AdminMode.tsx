@@ -56,7 +56,7 @@ export const AdminModeToggle: React.FC<{
       variant="outline" 
       size="sm"
       className={`px-3 py-1 text-xs rounded-md transition-colors duration-150 ${
-        isAdminMode ? "bg-green-800 text-white hover:bg-green-700 border-green-700" : "bg-gray-800 text-gray-300 hover:bg-gray-700 border-gray-700"
+        isAdminMode ? "bg-green-800 text-foreground hover:bg-green-700 border-green-700" : "bg-gray-800 text-gray-300 hover:bg-gray-700 border-gray-700"
       }`}
       aria-label={isAdminMode ? "Switch to employee mode" : "Switch to admin mode"}
     >
@@ -103,19 +103,19 @@ export const AdminModeComponent: React.FC<AdminModeProps> = ({
   return (
     <div className="bg-blue-900/30 border border-blue-900 rounded-lg p-4 my-4">
       <div className="flex flex-wrap items-center gap-3 mb-3">
-        <label className="text-white text-sm">Select Employee:</label>
+        <label className="text-foreground text-sm">Select Employee:</label>
         
         {/* shadcn/ui DropdownMenu */}
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button 
               variant="outline" 
-              className="w-[200px] justify-between bg-red-950 border border-red-700 text-white hover:bg-red-900 hover:border-red-600"
+              className="w-[200px] justify-between bg-red-950 border border-red-700 text-foreground hover:bg-red-900 hover:border-red-600"
             >
               {selectedEmployee ? (
                 <div className="flex items-center">
                   <div className="h-5 w-5 rounded-full bg-red-800 flex items-center justify-center mr-2">
-                    <span className="text-white text-xs">{selectedEmployee.avatar}</span>
+                    <span className="text-foreground text-xs">{selectedEmployee.avatar}</span>
                   </div>
                   <span>{selectedEmployee.name}</span>
                 </div>
@@ -127,10 +127,10 @@ export const AdminModeComponent: React.FC<AdminModeProps> = ({
           </DropdownMenuTrigger>
           <DropdownMenuContent 
           // kinda want the comments to be hidden
-            className="w-[200px] bg-black border border-red-700 text-white"
+            className="w-[200px] bg-background border border-red-700 text-white"
             align="start"
           >
-            <DropdownMenuLabel className="text-white">Employees</DropdownMenuLabel>
+            <DropdownMenuLabel className="text-foreground">Employees</DropdownMenuLabel>
             <DropdownMenuSeparator className="bg-red-950" />
             <DropdownMenuGroup className="max-h-64 overflow-y-auto">
               {employees.map((employee) => (
@@ -144,7 +144,7 @@ export const AdminModeComponent: React.FC<AdminModeProps> = ({
                   <div className="flex items-center justify-between w-full">
                     <div className="flex items-center">
                       <div className="h-6 w-6 rounded-full bg-red-800 flex items-center justify-center mr-2">
-                        <span className="text-white text-xs">{employee.avatar}</span>
+                        <span className="text-foreground text-xs">{employee.avatar}</span>
                       </div>
                       <span>{employee.name}</span>
                     </div>
@@ -161,7 +161,7 @@ export const AdminModeComponent: React.FC<AdminModeProps> = ({
         <div className="ml-auto flex flex-wrap gap-2 mt-2 sm:mt-0">
           <Button
             onClick={() => setShowMeetingModal(true)}
-            className="px-3 py-1.5 bg-blue-700 hover:bg-blue-600 text-white text-sm rounded-md flex items-center gap-1 transition-colors duration-150"
+            className="px-3 py-1.5 bg-blue-700 hover:bg-blue-600 text-foreground text-sm rounded-md flex items-center gap-1 transition-colors duration-150"
             aria-label="Create meeting"
           >
             <Users size={16} />
@@ -174,7 +174,7 @@ export const AdminModeComponent: React.FC<AdminModeProps> = ({
               setEditingEvent(null); // Ensure we're creating a new shift
               setShowAddShiftModal(true);
             }}
-            className="px-3 py-1.5 bg-red-900/50 hover:bg-red-600 text-white text-sm rounded-md flex items-center gap-1 transition-colors duration-150"
+            className="px-3 py-1.5 bg-red-900/50 hover:bg-primary text-foreground text-sm rounded-md flex items-center gap-1 transition-colors duration-150"
             aria-label="Add shift"
           >
             <Plus size={16} />
@@ -193,7 +193,7 @@ export const AdminModeComponent: React.FC<AdminModeProps> = ({
         
         <Button 
           variant="outline"
-          className="px-2 py-1 text-xs bg-red-900/50 hover:bg-red-800 text-white rounded border-red-700/40"
+          className="px-2 py-1 text-xs bg-red-900/50 hover:bg-red-800 text-foreground rounded border-red-700/40"
         >
           Review Requests
         </Button>

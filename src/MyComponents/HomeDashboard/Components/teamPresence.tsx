@@ -80,31 +80,31 @@ export const TeamPresence = () => {
             <img
               src={member.avatarUrl}
               alt={member.username}
-              className="h-7 w-7 rounded-full object-cover border border-white/[0.06]"
+              className="h-7 w-7 rounded-full object-cover border border-border"
               onError={(e) => {
                 (e.target as HTMLImageElement).src = "/default_avatar.png";
               }}
             />
-            <div className="absolute -bottom-0.5 -right-0.5 h-2 w-2 rounded-full bg-[#0a0a0a] flex items-center justify-center">
+            <div className="absolute -bottom-0.5 -right-0.5 h-2 w-2 rounded-full bg-card flex items-center justify-center">
               <div className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
             </div>
           </div>
           <div className="flex-1 min-w-0">
-            <p className="text-[13px] text-white/60 font-medium truncate group-hover:text-white/80 transition-colors">
+            <p className="text-[13px] text-foreground/60 font-medium truncate group-hover:text-foreground/80 transition-colors">
               {member.username}
             </p>
-            <p className="text-[11px] text-white/15">{member.role}</p>
+            <p className="text-[11px] text-muted-foreground/40">{member.role}</p>
           </div>
           <div className="flex items-center gap-1 shrink-0">
             <div className={`h-1 w-1 rounded-full ${companyDot[member.company]}`} />
-            <span className="text-[9px] text-white/15 uppercase tracking-wider">
+            <span className="text-[9px] text-muted-foreground/40 uppercase tracking-wider">
               {companyLabel[member.company]}
             </span>
           </div>
         </motion.div>
       ))}
       {filtered.length === 0 && (
-        <p className="text-[12px] text-white/15 text-center py-4">No team members</p>
+        <p className="text-[12px] text-muted-foreground/40 text-center py-4">No team members</p>
       )}
     </div>
   );

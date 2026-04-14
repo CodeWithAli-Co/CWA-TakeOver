@@ -10,7 +10,7 @@
  *   - DynamicItem     (expense/revenue row editor)
  *
  * All components follow the Void design language:
- *   bg-[#0a0a0a], border-white/[0.04], rounded-sm, red-500 accents.
+ *   bg-card, border-border, rounded-sm, red-500 accents.
  */
 
 import React from "react";
@@ -35,13 +35,13 @@ export const NumericField: React.FC<NumericFieldProps> = ({
   prefix, suffix, min, max, step = 1,
 }) => (
   <div className="space-y-1.5">
-    <label className="flex items-center gap-1.5 text-[11px] text-white/25 uppercase tracking-[0.12em] font-medium">
-      {Icon && <Icon className="h-3 w-3 text-red-500/50" />}
+    <label className="flex items-center gap-1.5 text-[11px] text-muted-foreground/50 uppercase tracking-[0.12em] font-medium">
+      {Icon && <Icon className="h-3 w-3 text-primary/50" />}
       {label}
     </label>
     <div className="relative flex items-center">
       {prefix && (
-        <span className="absolute left-3 text-[12px] text-red-500/50 font-medium">{prefix}</span>
+        <span className="absolute left-3 text-[12px] text-primary/50 font-medium">{prefix}</span>
       )}
       <input
         type="number"
@@ -50,14 +50,14 @@ export const NumericField: React.FC<NumericFieldProps> = ({
         min={min}
         max={max}
         step={step}
-        className={`w-full ${prefix ? "pl-7" : "pl-3"} ${suffix ? "pr-8" : "pr-3"} py-2 bg-white/[0.02] border border-white/[0.06] text-white/80 rounded-sm text-[13px] focus:border-red-500/20 focus:outline-none transition-colors`}
+        className={`w-full ${prefix ? "pl-7" : "pl-3"} ${suffix ? "pr-8" : "pr-3"} py-2 bg-muted/30 border border-border text-foreground/80 rounded-sm text-[13px] focus:border-primary/20 focus:outline-none transition-colors`}
       />
       {suffix && (
-        <span className="absolute right-3 text-[12px] text-white/20">{suffix}</span>
+        <span className="absolute right-3 text-[12px] text-muted-foreground/60">{suffix}</span>
       )}
     </div>
     {description && (
-      <p className="text-[11px] text-white/15">{description}</p>
+      <p className="text-[11px] text-muted-foreground/40">{description}</p>
     )}
   </div>
 );
@@ -71,11 +71,11 @@ export const GrowthRateField: React.FC<GrowthRateFieldProps> = ({
 }) => (
   <div className="space-y-1.5">
     <div className="flex items-center justify-between">
-      <label className="flex items-center gap-1.5 text-[11px] text-white/25 uppercase tracking-[0.12em] font-medium">
-        {Icon && <Icon className="h-3 w-3 text-red-500/50" />}
+      <label className="flex items-center gap-1.5 text-[11px] text-muted-foreground/50 uppercase tracking-[0.12em] font-medium">
+        {Icon && <Icon className="h-3 w-3 text-primary/50" />}
         {label}
       </label>
-      <span className="text-[13px] text-red-400 font-medium">{value}%</span>
+      <span className="text-[13px] text-primary font-medium">{value}%</span>
     </div>
     <input
       type="range"
@@ -85,12 +85,12 @@ export const GrowthRateField: React.FC<GrowthRateFieldProps> = ({
       onChange={(e) => onChange(Number(e.target.value))}
       className="w-full h-1 bg-white/[0.06] rounded-full appearance-none cursor-pointer accent-red-500"
     />
-    <div className="flex justify-between text-[10px] text-white/10">
+    <div className="flex justify-between text-[10px] text-muted-foreground/30">
       <span>{min}%</span>
       <span>0%</span>
       <span>{max}%</span>
     </div>
-    {description && <p className="text-[11px] text-white/15">{description}</p>}
+    {description && <p className="text-[11px] text-muted-foreground/40">{description}</p>}
   </div>
 );
 
@@ -102,10 +102,10 @@ export const YearSelector: React.FC<YearSelectorProps> = ({ years, setYears }) =
   return (
     <div className="space-y-2">
       <div className="flex items-center justify-between">
-        <label className="text-[11px] text-white/25 uppercase tracking-[0.12em] font-medium">
+        <label className="text-[11px] text-muted-foreground/50 uppercase tracking-[0.12em] font-medium">
           Projection Period
         </label>
-        <span className="text-[13px] text-red-400 font-medium">{years} year{years !== 1 ? "s" : ""}</span>
+        <span className="text-[13px] text-primary font-medium">{years} year{years !== 1 ? "s" : ""}</span>
       </div>
       <input
         type="range"
@@ -122,8 +122,8 @@ export const YearSelector: React.FC<YearSelectorProps> = ({ years, setYears }) =
             onClick={() => setYears(y)}
             className={`flex-1 py-1 text-[11px] rounded-sm border transition-colors ${
               years === y
-                ? "bg-red-500/[0.1] text-red-400 border-red-500/20"
-                : "bg-white/[0.02] text-white/25 border-white/[0.04] hover:text-white/40"
+                ? "bg-primary/10 text-primary border-primary/20"
+                : "bg-muted/30 text-muted-foreground/50 border-border hover:text-muted-foreground/70"
             }`}
           >
             {y}yr
@@ -139,10 +139,10 @@ export const YearSelector: React.FC<YearSelectorProps> = ({ years, setYears }) =
 // ═══════════════════════════════════════════
 export const SectionHeader: React.FC<SectionHeaderProps> = ({ icon, title, subtitle }) => (
   <div className="flex items-center gap-2 mb-4">
-    <span className="text-red-500/70">{icon}</span>
+    <span className="text-primary/70">{icon}</span>
     <div>
-      <h3 className="text-[14px] font-semibold text-white/80">{title}</h3>
-      {subtitle && <p className="text-[11px] text-white/25">{subtitle}</p>}
+      <h3 className="text-[14px] font-semibold text-foreground/80">{title}</h3>
+      {subtitle && <p className="text-[11px] text-muted-foreground/50">{subtitle}</p>}
     </div>
   </div>
 );
@@ -153,10 +153,10 @@ export const SectionHeader: React.FC<SectionHeaderProps> = ({ icon, title, subti
 export const CustomTooltip: React.FC<CustomTooltipProps> = ({ active, payload, label }) => {
   if (!active || !payload) return null;
   return (
-    <div className="bg-[#0a0a0a] border border-white/[0.08] rounded-sm px-3 py-2 shadow-xl">
-      <p className="text-[11px] text-red-400 font-medium mb-1">Year {label}</p>
+    <div className="bg-card border border-border rounded-sm px-3 py-2 shadow-xl">
+      <p className="text-[11px] text-primary font-medium mb-1">Year {label}</p>
       {payload.map((entry: any, i: number) => (
-        <p key={i} className="text-[12px] text-white/60" style={{ color: entry.color }}>
+        <p key={i} className="text-[12px] text-foreground/60" style={{ color: entry.color }}>
           {entry.name}: ${Number(entry.value).toLocaleString(undefined, { maximumFractionDigits: 0 })}
         </p>
       ))}
@@ -190,7 +190,7 @@ export const DynamicItem: React.FC<DynamicItemProps> = ({
       initial={{ opacity: 0, y: 6 }}
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, y: -6 }}
-      className="bg-white/[0.015] border border-white/[0.04] rounded-sm p-4 space-y-3 group"
+      className="bg-card border border-border rounded-sm p-4 space-y-3 group"
     >
       <div className="flex items-center justify-between">
         {/* Name input */}
@@ -198,18 +198,18 @@ export const DynamicItem: React.FC<DynamicItemProps> = ({
           type="text"
           value={item.name}
           onChange={(e) => onChange({ ...item, name: e.target.value })}
-          className="bg-transparent text-[13px] text-white/70 font-medium border-none focus:outline-none w-48"
+          className="bg-transparent text-[13px] text-foreground/70 font-medium border-none focus:outline-none w-48"
           placeholder="Item name"
         />
         <div className="flex items-center gap-3">
           {/* Annual display */}
-          <span className="text-[11px] text-red-400/70">
+          <span className="text-[11px] text-primary/70">
             ${annual.toLocaleString()}/yr
           </span>
           {/* Delete */}
           <button
             onClick={onDelete}
-            className="p-1 rounded-sm text-white/10 hover:text-red-400/70 hover:bg-red-500/[0.06] transition-colors opacity-0 group-hover:opacity-100"
+            className="p-1 rounded-sm text-muted-foreground/30 hover:text-primary/70 hover:bg-primary/[0.06] transition-colors opacity-0 group-hover:opacity-100"
           >
             <Trash2 className="h-3.5 w-3.5" />
           </button>
@@ -219,39 +219,39 @@ export const DynamicItem: React.FC<DynamicItemProps> = ({
       <div className="grid grid-cols-4 gap-3">
         {/* Amount */}
         <div>
-          <label className="text-[10px] text-white/15 uppercase tracking-wider">Amount</label>
+          <label className="text-[10px] text-muted-foreground/40 uppercase tracking-wider">Amount</label>
           <div className="relative mt-1">
             <span className="absolute left-2 top-1/2 -translate-y-1/2 text-[11px] text-red-500/40">$</span>
             <input
               type="number"
               value={item.amount}
               onChange={(e) => onChange({ ...item, amount: Number(e.target.value) })}
-              className="w-full pl-6 pr-2 py-1.5 bg-white/[0.02] border border-white/[0.06] text-white/60 rounded-sm text-[12px] focus:border-red-500/20 focus:outline-none"
+              className="w-full pl-6 pr-2 py-1.5 bg-muted/30 border border-border text-foreground/60 rounded-sm text-[12px] focus:border-primary/20 focus:outline-none"
             />
           </div>
         </div>
 
         {/* Growth */}
         <div>
-          <label className="text-[10px] text-white/15 uppercase tracking-wider">Growth</label>
+          <label className="text-[10px] text-muted-foreground/40 uppercase tracking-wider">Growth</label>
           <div className="relative mt-1">
             <input
               type="number"
               value={item.growth}
               onChange={(e) => onChange({ ...item, growth: Number(e.target.value) })}
-              className="w-full pl-2 pr-6 py-1.5 bg-white/[0.02] border border-white/[0.06] text-white/60 rounded-sm text-[12px] focus:border-red-500/20 focus:outline-none"
+              className="w-full pl-2 pr-6 py-1.5 bg-muted/30 border border-border text-foreground/60 rounded-sm text-[12px] focus:border-primary/20 focus:outline-none"
             />
-            <span className="absolute right-2 top-1/2 -translate-y-1/2 text-[11px] text-white/15">%</span>
+            <span className="absolute right-2 top-1/2 -translate-y-1/2 text-[11px] text-muted-foreground/40">%</span>
           </div>
         </div>
 
         {/* Frequency */}
         <div>
-          <label className="text-[10px] text-white/15 uppercase tracking-wider">Frequency</label>
+          <label className="text-[10px] text-muted-foreground/40 uppercase tracking-wider">Frequency</label>
           <select
             value={item.frequency}
             onChange={(e) => onChange({ ...item, frequency: e.target.value as any })}
-            className="w-full mt-1 px-2 py-1.5 bg-white/[0.02] border border-white/[0.06] text-white/50 rounded-sm text-[12px] focus:border-red-500/20 focus:outline-none appearance-none cursor-pointer"
+            className="w-full mt-1 px-2 py-1.5 bg-muted/30 border border-border text-muted-foreground/80 rounded-sm text-[12px] focus:border-primary/20 focus:outline-none appearance-none cursor-pointer"
           >
             <option value="monthly">Monthly</option>
             <option value="quarterly">Quarterly</option>
@@ -262,11 +262,11 @@ export const DynamicItem: React.FC<DynamicItemProps> = ({
 
         {/* Category */}
         <div>
-          <label className="text-[10px] text-white/15 uppercase tracking-wider">Category</label>
+          <label className="text-[10px] text-muted-foreground/40 uppercase tracking-wider">Category</label>
           <select
             value={item.category}
             onChange={(e) => onChange({ ...item, category: e.target.value })}
-            className="w-full mt-1 px-2 py-1.5 bg-white/[0.02] border border-white/[0.06] text-white/50 rounded-sm text-[12px] focus:border-red-500/20 focus:outline-none appearance-none cursor-pointer"
+            className="w-full mt-1 px-2 py-1.5 bg-muted/30 border border-border text-muted-foreground/80 rounded-sm text-[12px] focus:border-primary/20 focus:outline-none appearance-none cursor-pointer"
           >
             {categories.map((cat) => (
               <option key={cat} value={cat}>{cat}</option>
@@ -279,11 +279,11 @@ export const DynamicItem: React.FC<DynamicItemProps> = ({
       {type === "revenue" && "clients" in item && (
         <div className="grid grid-cols-2 gap-3">
           <div>
-            <label className="text-[10px] text-white/15 uppercase tracking-wider">Revenue Type</label>
+            <label className="text-[10px] text-muted-foreground/40 uppercase tracking-wider">Revenue Type</label>
             <select
               value={(item as RevenueItem).revenueType}
               onChange={(e) => onChange({ ...item, revenueType: e.target.value as any })}
-              className="w-full mt-1 px-2 py-1.5 bg-white/[0.02] border border-white/[0.06] text-white/50 rounded-sm text-[12px] focus:border-red-500/20 focus:outline-none appearance-none cursor-pointer"
+              className="w-full mt-1 px-2 py-1.5 bg-muted/30 border border-border text-muted-foreground/80 rounded-sm text-[12px] focus:border-primary/20 focus:outline-none appearance-none cursor-pointer"
             >
               <option value="one-time">One-time</option>
               <option value="recurring">Recurring</option>
@@ -291,13 +291,13 @@ export const DynamicItem: React.FC<DynamicItemProps> = ({
             </select>
           </div>
           <div>
-            <label className="text-[10px] text-white/15 uppercase tracking-wider">Clients</label>
+            <label className="text-[10px] text-muted-foreground/40 uppercase tracking-wider">Clients</label>
             <input
               type="number"
               value={(item as RevenueItem).clients}
               onChange={(e) => onChange({ ...item, clients: Number(e.target.value) })}
               min={0}
-              className="w-full mt-1 px-2 py-1.5 bg-white/[0.02] border border-white/[0.06] text-white/60 rounded-sm text-[12px] focus:border-red-500/20 focus:outline-none"
+              className="w-full mt-1 px-2 py-1.5 bg-muted/30 border border-border text-foreground/60 rounded-sm text-[12px] focus:border-primary/20 focus:outline-none"
             />
           </div>
         </div>

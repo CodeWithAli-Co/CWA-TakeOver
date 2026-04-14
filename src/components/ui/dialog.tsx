@@ -1,8 +1,8 @@
 /**
  * Dialog — Void theme modal.
  *
- * - Overlay: bg-black/70 with backdrop blur for depth
- * - Content: bg-[#0a0a0a] with subtle white/[0.08] border, rounded-sm
+ * - Overlay: bg-background/70 with backdrop blur for depth
+ * - Content: bg-card with subtle white/[0.08] border, rounded-sm
  * - Title: text-white/90 font-semibold
  * - Description: text-white/30
  * - Close button: subtle white/30 → red-400 on hover
@@ -29,7 +29,7 @@ const DialogOverlay = React.forwardRef<
   <DialogPrimitive.Overlay
     ref={ref}
     className={cn(
-      "fixed inset-0 z-50 bg-black/70 backdrop-blur-[2px] data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0",
+      "fixed inset-0 z-50 bg-background/70 backdrop-blur-[2px] data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0",
       className
     )}
     {...props}
@@ -46,7 +46,7 @@ const DialogContent = React.forwardRef<
     <DialogPrimitive.Content
       ref={ref}
       className={cn(
-        "fixed left-[50%] top-[50%] z-50 grid w-full max-w-lg translate-x-[-50%] translate-y-[-50%] gap-4 bg-[#0a0a0a] border border-white/[0.08] rounded-sm p-6 shadow-2xl shadow-black/50 duration-200",
+        "fixed left-[50%] top-[50%] z-50 grid w-full max-w-lg translate-x-[-50%] translate-y-[-50%] gap-4 bg-card border border-white/[0.08] rounded-sm p-6 shadow-2xl shadow-black/50 duration-200",
         "data-[state=open]:animate-in data-[state=closed]:animate-out",
         "data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0",
         "data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95",

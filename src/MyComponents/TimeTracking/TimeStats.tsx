@@ -34,21 +34,21 @@ const StatCard = ({ title, value, subtitle, icon, gradient, delay = 0 }: StatCar
     {/* Gradient border effect */}
     <div className={cn("absolute -inset-[1px] rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-500", gradient)} />
 
-    <div className="relative bg-white/[0.02] backdrop-blur-sm border border-white/[0.06] rounded-2xl p-5 h-full hover:bg-white/[0.04] transition-all duration-300">
+    <div className="relative bg-muted/30 backdrop-blur-sm border border-border rounded-2xl p-5 h-full hover:bg-muted/50 transition-all duration-300">
       <div className="flex items-start justify-between mb-3">
         <div className={cn("p-2 rounded-xl", gradient.replace("bg-gradient-to-r", "bg-gradient-to-br").replace("via-", "to-"))}>
           {icon}
         </div>
         {subtitle && (
-          <span className="text-[10px] uppercase tracking-wider text-white/30 font-medium">
+          <span className="text-[10px] uppercase tracking-wider text-muted-foreground font-medium">
             {subtitle}
           </span>
         )}
       </div>
 
       <div className="space-y-1">
-        <p className="text-2xl font-bold text-white tracking-tight">{value}</p>
-        <p className="text-xs text-white/40">{title}</p>
+        <p className="text-2xl font-bold text-foreground tracking-tight">{value}</p>
+        <p className="text-xs text-muted-foreground/70">{title}</p>
       </div>
     </div>
   </motion.div>
@@ -74,7 +74,7 @@ const FeaturedStat = ({ title, value, subtitle, icon, gradient, metric }: Featur
     {/* Background gradient */}
     <div className={cn("absolute inset-0 opacity-20", gradient)} />
 
-    <div className="relative bg-white/[0.02] backdrop-blur-sm border border-white/[0.08] rounded-2xl p-6">
+    <div className="relative bg-muted/30 backdrop-blur-sm border border-border rounded-2xl p-6">
       <div className="flex items-center justify-between mb-4">
         <div className={cn("p-3 rounded-xl", gradient.replace("bg-gradient-to-r", "bg-gradient-to-br"))}>
           {icon}
@@ -82,7 +82,7 @@ const FeaturedStat = ({ title, value, subtitle, icon, gradient, metric }: Featur
         {metric && (
           <div className={cn(
             "flex items-center gap-1 text-xs font-medium px-2 py-1 rounded-full",
-            metric.positive ? "bg-emerald-500/10 text-emerald-400" : "bg-white/5 text-white/50"
+            metric.positive ? "bg-emerald-500/10 text-emerald-400" : "bg-white/5 text-muted-foreground/80"
           )}>
             <TrendingUp className={cn("h-3 w-3", !metric.positive && "rotate-180")} />
             {metric.value}
@@ -91,9 +91,9 @@ const FeaturedStat = ({ title, value, subtitle, icon, gradient, metric }: Featur
       </div>
 
       <div>
-        <p className="text-4xl font-bold text-white tracking-tight mb-1">{value}</p>
-        <p className="text-sm text-white/50">{title}</p>
-        <p className="text-xs text-white/30 mt-2">{subtitle}</p>
+        <p className="text-4xl font-bold text-foreground tracking-tight mb-1">{value}</p>
+        <p className="text-sm text-muted-foreground/80">{title}</p>
+        <p className="text-xs text-muted-foreground mt-2">{subtitle}</p>
       </div>
     </div>
   </motion.div>
@@ -180,19 +180,19 @@ export const QuickStatsBar = () => {
     <motion.div
       initial={{ opacity: 0, x: 20 }}
       animate={{ opacity: 1, x: 0 }}
-      className="flex items-center gap-6 px-5 py-3 rounded-2xl bg-white/[0.03] border border-white/[0.06] backdrop-blur-sm"
+      className="flex items-center gap-6 px-5 py-3 rounded-2xl bg-muted/40 border border-border backdrop-blur-sm"
     >
       <div className="flex items-center gap-2">
         <div className="w-2 h-2 rounded-full bg-red-400 animate-pulse" />
-        <span className="text-white/50 text-xs">Today</span>
-        <span className="text-white font-semibold text-sm">{formatHours(stats.total_hours_today)}</span>
+        <span className="text-muted-foreground/80 text-xs">Today</span>
+        <span className="text-foreground font-semibold text-sm">{formatHours(stats.total_hours_today)}</span>
       </div>
 
       <div className="w-px h-4 bg-white/10" />
 
       <div className="flex items-center gap-2">
-        <span className="text-white/50 text-xs">Week</span>
-        <span className="text-white font-semibold text-sm">{formatHours(stats.total_hours_this_week)}</span>
+        <span className="text-muted-foreground/80 text-xs">Week</span>
+        <span className="text-foreground font-semibold text-sm">{formatHours(stats.total_hours_this_week)}</span>
       </div>
 
       <div className="w-px h-4 bg-white/10" />
@@ -221,7 +221,7 @@ export const TimeStatsCompact = () => {
   return (
     <div className="space-y-3">
       <div className="flex items-center justify-between">
-        <h3 className="text-sm font-medium text-white/70 uppercase tracking-wider flex items-center gap-2">
+        <h3 className="text-sm font-medium text-foreground/70 uppercase tracking-wider flex items-center gap-2">
           <Clock className="h-4 w-4" />
           Stats
         </h3>
@@ -237,12 +237,12 @@ export const TimeStatsCompact = () => {
         {items.map((item) => (
           <div
             key={item.label}
-            className="flex items-center justify-between py-2 px-3 rounded-xl bg-white/[0.02] border border-white/[0.04]"
+            className="flex items-center justify-between py-2 px-3 rounded-xl bg-muted/30 border border-border"
           >
-            <span className="text-white/50 text-sm">{item.label}</span>
+            <span className="text-muted-foreground/80 text-sm">{item.label}</span>
             <span className={cn(
               "font-medium",
-              item.highlight ? "text-emerald-400" : "text-white"
+              item.highlight ? "text-emerald-400" : "text-foreground"
             )}>
               {item.value}
             </span>

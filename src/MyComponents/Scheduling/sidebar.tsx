@@ -45,9 +45,9 @@ export const Sidebar: React.FC<SidebarProps> = ({
   if (!isSidebarOpen) {
     // Bottom navigation for mobile when sidebar is closed
     return (
-      <div className="fixed bottom-0 left-0 right-0 bg-black border-t border-red-900/40 flex justify-around p-2 lg:hidden z-20">
+      <div className="fixed bottom-0 left-0 right-0 bg-background border-t border-red-900/40 flex justify-around p-2 lg:hidden z-20">
         <button
-          className={`p-2 rounded-md flex flex-col items-center ${sidebarView === "schedule" && !isSidebarOpen ? "text-red-400" : "text-red-400/70"}`}
+          className={`p-2 rounded-md flex flex-col items-center ${sidebarView === "schedule" && !isSidebarOpen ? "text-primary" : "text-primary/70"}`}
           onClick={() => {
             setSidebarView("schedule");
             setIsSidebarOpen(true);
@@ -58,7 +58,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
           <span className="text-xs mt-1">Schedule</span>
         </button>
         <button
-          className="p-2 rounded-md flex flex-col items-center text-red-400/70"
+          className="p-2 rounded-md flex flex-col items-center text-primary/70"
           onClick={goToToday}
           aria-label="Go to today"
         >
@@ -66,7 +66,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
           <span className="text-xs mt-1">Today</span>
         </button>
         <button
-          className={`p-2 rounded-md flex flex-col items-center ${sidebarView === "team" && !isSidebarOpen ? "text-red-400" : "text-red-400/70"}`}
+          className={`p-2 rounded-md flex flex-col items-center ${sidebarView === "team" && !isSidebarOpen ? "text-primary" : "text-primary/70"}`}
           onClick={() => {
             setSidebarView("team");
             setIsSidebarOpen(true);
@@ -77,7 +77,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
           <span className="text-xs mt-1">Team</span>
         </button>
         <button
-          className={`p-2 rounded-md flex flex-col items-center ${isAdminMode ? "text-green-400" : "text-red-400/70"}`}
+          className={`p-2 rounded-md flex flex-col items-center ${isAdminMode ? "text-green-400" : "text-primary/70"}`}
           onClick={() => setIsAdminMode(!isAdminMode)}
           aria-label={isAdminMode ? "Switch to employee mode" : "Switch to admin mode"}
         >
@@ -91,17 +91,17 @@ export const Sidebar: React.FC<SidebarProps> = ({
   }
 
   return (
-    <div className="w-52 lg:w-64 border-l border-red-900/40 bg-black/90 flex flex-col fixed inset-y-0 right-0 top-14 bottom-0 lg:static z-20 transform transition-transform duration-200 ease-in-out">
+    <div className="w-52 lg:w-64 border-l border-red-900/40 bg-background/90 flex flex-col fixed inset-y-0 right-0 top-14 bottom-0 lg:static z-20 transform transition-transform duration-200 ease-in-out">
       {/* Sidebar Navigation */}
       <div className="flex border-b border-red-900/40">
         <button
-          className={`flex-1 py-3 text-center text-sm ${sidebarView === "schedule" ? "text-red-300 border-b-2 border-red-700" : "text-red-400/70 hover:text-red-300"}`}
+          className={`flex-1 py-3 text-center text-sm ${sidebarView === "schedule" ? "text-red-300 border-b-2 border-red-700" : "text-primary/70 hover:text-red-300"}`}
           onClick={() => setSidebarView("schedule")}
         >
           Schedule
         </button>
         <button
-          className={`flex-1 py-3 text-center text-sm ${sidebarView === "team" ? "text-red-300 border-b-2 border-red-700" : "text-red-400/70 hover:text-red-300"}`}
+          className={`flex-1 py-3 text-center text-sm ${sidebarView === "team" ? "text-red-300 border-b-2 border-red-700" : "text-primary/70 hover:text-red-300"}`}
           onClick={() => setSidebarView("team")}
         >
           Team
@@ -138,25 +138,25 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
             {/* Schedule Summary */}
             <div className="pt-3 border-t border-red-900/30">
-              <h3 className="text-red-400 text-xs font-medium uppercase mb-2">
+              <h3 className="text-primary text-xs font-medium uppercase mb-2">
                 This Week
               </h3>
               <div className="space-y-2">
                 <div className="text-sm flex justify-between">
                   <span className="text-red-300/80">Total Hours:</span>
-                  <span className="text-white font-medium">
+                  <span className="text-foreground font-medium">
                     {scheduleStats.hoursThisWeek} hrs
                   </span>
                 </div>
                 <div className="text-sm flex justify-between">
                   <span className="text-red-300/80">Shifts:</span>
-                  <span className="text-white font-medium">
+                  <span className="text-foreground font-medium">
                     {scheduleStats.totalShifts}
                   </span>
                 </div>
                 <div className="text-sm flex justify-between">
                   <span className="text-red-300/80">Breaks:</span>
-                  <span className="text-white font-medium">
+                  <span className="text-foreground font-medium">
                     {scheduleStats.upcomingBreaks}
                   </span>
                 </div>
@@ -166,11 +166,11 @@ export const Sidebar: React.FC<SidebarProps> = ({
             {/* Quick Notes */}
             <div className="pt-3 border-t border-red-900/30">
               <div className="flex items-center justify-between mb-2">
-                <h3 className="text-red-400 text-xs font-medium uppercase">
+                <h3 className="text-primary text-xs font-medium uppercase">
                   Notes
                 </h3>
                 <button 
-                  className="text-red-400 hover:text-red-300 p-1 rounded-full hover:bg-red-900/30"
+                  className="text-primary hover:text-red-300 p-1 rounded-full hover:bg-red-900/30"
                   aria-label="Notes information"
                 >
                   <Info size={14} />
@@ -185,7 +185,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
         ) : (
           <div className="space-y-4">
             {/* Team Members On Shift */}
-            <h3 className="text-red-400 text-xs font-medium uppercase mb-2">
+            <h3 className="text-primary text-xs font-medium uppercase mb-2">
               Coworkers This Week
             </h3>
             <div className="space-y-2 max-h-80 overflow-y-auto">
@@ -206,7 +206,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 >
                   <div className="flex items-center">
                     <div className="w-7 h-7 rounded-full bg-red-800 flex items-center justify-center mr-2">
-                      <span className="text-white text-xs">
+                      <span className="text-foreground text-xs">
                         {coworker.avatar}
                       </span>
                     </div>
@@ -223,15 +223,15 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
             {/* Team Lead */}
             <div className="pt-3 border-t border-red-900/30">
-              <h3 className="text-red-400 text-xs font-medium uppercase mb-2">
+              <h3 className="text-primary text-xs font-medium uppercase mb-2">
                 Shift Manager
               </h3>
               <div className="flex items-center p-2 bg-red-950/30 rounded-md">
                 <div className="w-8 h-8 rounded-full bg-red-700 flex items-center justify-center mr-3">
-                  <User size={16} className="text-white" />
+                  <User size={16} className="text-foreground" />
                 </div>
                 <div>
-                  <div className="text-white text-sm font-medium">
+                  <div className="text-foreground text-sm font-medium">
                     Sarah Thompson
                   </div>
                   <div className="text-red-300/80 text-xs">
@@ -247,7 +247,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
       {/* Request Schedule Change Button */}
       <div className="p-3 border-t border-red-900/40">
         <button
-          className="w-full py-2 bg-red-800 hover:bg-red-700 text-white rounded-md text-sm transition-colors duration-150"
+          className="w-full py-2 bg-red-800 hover:bg-red-700 text-foreground rounded-md text-sm transition-colors duration-150"
           onClick={() => isAdminMode && setShowAddShiftModal(true)}
         >
           {isAdminMode ? "Update Schedule" : "Request Schedule Change"}

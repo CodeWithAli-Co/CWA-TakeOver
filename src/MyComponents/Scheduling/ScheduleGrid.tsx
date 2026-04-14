@@ -34,11 +34,11 @@ export const ScheduleGrid: React.FC<ScheduleGridProps> = ({
     // Create event badge based on time of day
     const renderEventBadge = () => {
       if (event.title.includes("Morning")) {
-        return <span className="ml-2 px-2 py-0.5 text-xs bg-green-700 text-white rounded">low</span>;
+        return <span className="ml-2 px-2 py-0.5 text-xs bg-green-700 text-foreground rounded">low</span>;
       } else if (event.title.includes("Afternoon")) {
-        return <span className="ml-2 px-2 py-0.5 text-xs bg-yellow-600 text-white rounded">medium</span>;
+        return <span className="ml-2 px-2 py-0.5 text-xs bg-yellow-600 text-foreground rounded">medium</span>;
       } else if (event.title.includes("Evening")) {
-        return <span className="ml-2 px-2 py-0.5 text-xs bg-red-700 text-white rounded">high</span>;
+        return <span className="ml-2 px-2 py-0.5 text-xs bg-red-700 text-foreground rounded">high</span>;
       }
       return null;
     };
@@ -87,7 +87,7 @@ export const ScheduleGrid: React.FC<ScheduleGridProps> = ({
   return (
     <div className="mt-6 border border-red-900/30 rounded-lg overflow-hidden mb-6">
       <div className="bg-red-900/20 border-b border-red-900/30 px-4 py-2">
-        <h3 className="text-white font-medium">Weekly Schedule Overview</h3>
+        <h3 className="text-foreground font-medium">Weekly Schedule Overview</h3>
       </div>
       
       {/* Calendar Header */}
@@ -98,8 +98,8 @@ export const ScheduleGrid: React.FC<ScheduleGridProps> = ({
             className={`text-center py-2 ${day.isToday ? 'bg-red-900/30' : ''} 
               ${index < 6 ? 'border-r border-red-900/30' : ''}`}
           >
-            <div className="text-red-400 text-sm">{day.shortName}</div>
-            <div className="text-white font-medium">{day.date}</div>
+            <div className="text-primary text-sm">{day.shortName}</div>
+            <div className="text-foreground font-medium">{day.date}</div>
           </div>
         ))}
       </div>
@@ -126,7 +126,7 @@ export const ScheduleGrid: React.FC<ScheduleGridProps> = ({
                 .filter(event => isAdminMode || event.employeeId === 0)
                 .map((event, eventIndex) => renderEvent(event, eventIndex))
             ) : (
-              <div className="text-center py-6 text-red-400/50 text-xs">
+              <div className="text-center py-6 text-primary/50 text-xs">
                 No shifts
               </div>
             )}

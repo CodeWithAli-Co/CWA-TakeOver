@@ -39,9 +39,9 @@ const CommitDetail: React.FC<GitHubCommitDetail> = ({ id, message, author }) => 
     <div className="flex items-start space-x-2 py-1 text-sm">
       <div className="flex-shrink-0 w-16 font-mono text-red-300">{id.substring(0, 7)}</div>
       <div className="flex-grow">
-        <span className="text-white">{message}</span>
+        <span className="text-foreground">{message}</span>
         {author && (
-          <span className="text-red-400 ml-2">- {author}</span>
+          <span className="text-primary ml-2">- {author}</span>
         )}
       </div>
     </div>
@@ -240,12 +240,12 @@ const GitHubWebhookComponent: React.FC<GitHubWebhookComponentProps> = ({
   const displayData = activeTab === "recent" ? recentWebhookData : allWebhookData;
 
   if (loading && displayData.length === 0) {
-    return <div className="text-white text-center py-8">Loading GitHub webhook data...</div>;
+    return <div className="text-foreground text-center py-8">Loading GitHub webhook data...</div>;
   }
 
   if (error && displayData.length === 0) {
     return (
-      <div className="text-red-400 text-center py-8">
+      <div className="text-primary text-center py-8">
         <div>Error: {error}</div>
         <Button 
           onClick={fetchWebhooks} 
@@ -328,13 +328,13 @@ const GitHubWebhookComponent: React.FC<GitHubWebhookComponentProps> = ({
           <TabsList className="bg-transparent">
             <TabsTrigger 
               value="recent" 
-              className="data-[state=active]:bg-red-950/30 data-[state=active]:text-white data-[state=active]:shadow-none"
+              className="data-[state=active]:bg-red-950/30 data-[state=active]:text-foreground data-[state=active]:shadow-none"
             >
               Recent ({recentWebhookData.length})
             </TabsTrigger>
             <TabsTrigger 
               value="all" 
-              className="data-[state=active]:bg-red-950/30 data-[state=active]:text-white data-[state=active]:shadow-none"
+              className="data-[state=active]:bg-red-950/30 data-[state=active]:text-foreground data-[state=active]:shadow-none"
             >
               All History ({allWebhookData.length})
             </TabsTrigger>
@@ -374,8 +374,8 @@ const CommitsList = ({ webhookData }: { webhookData: GitHubCommitGroup[] }) => {
     <div className="space-y-6">
       {sortedDates.map(date => (
         <div key={date} className="space-y-4">
-          <div className="sticky top-0 bg-black/80 backdrop-blur-sm py-2 border-b border-red-950/30 z-10">
-            <h3 className="text-white font-medium">
+          <div className="sticky top-0 bg-background/80 backdrop-blur-sm py-2 border-b border-red-950/30 z-10">
+            <h3 className="text-foreground font-medium">
               {date === new Date().toLocaleDateString() ? "Today" : date}
             </h3>
           </div>
@@ -384,14 +384,14 @@ const CommitsList = ({ webhookData }: { webhookData: GitHubCommitGroup[] }) => {
             {groupedByDate[date]
               .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
               .map((event) => (
-                <Card key={event.id} className="bg-black/60 border-red-950/30 overflow-hidden backdrop-blur-sm">
+                <Card key={event.id} className="bg-background/60 border-red-950/30 overflow-hidden backdrop-blur-sm">
                   <CardHeader className="p-4 flex flex-row items-center space-x-2">
                     <div className="h-10 w-10 rounded-full overflow-hidden flex-shrink-0 bg-gray-800">
                       <Github className="h-full w-full p-2 text-white" />
                     </div>
                     <div className="flex-grow">
                       <CardTitle className="text-lg flex items-center">
-                        <span className="text-white truncate max-w-xs">{event.repo}</span>
+                        <span className="text-foreground truncate max-w-xs">{event.repo}</span>
                         <Badge className="ml-2 bg-blue-600 hover:bg-blue-700 text-xs">
                           {event.branch}
                         </Badge>

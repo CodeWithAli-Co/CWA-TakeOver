@@ -51,7 +51,7 @@ export const EditIntern = (props: Props) => {
   return (
     <AnimatePresence mode="wait">
       <motion.div
-        className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-[2px]"
+        className="fixed inset-0 z-50 flex items-center justify-center bg-background/70 backdrop-blur-[2px]"
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
@@ -65,15 +65,15 @@ export const EditIntern = (props: Props) => {
           className="w-full max-w-md mx-4"
           onClick={(e) => e.stopPropagation()}
         >
-          <Card className="bg-[#0a0a0a] border border-white/[0.08] rounded-sm shadow-2xl shadow-black/50">
-            <CardHeader className="relative border-b border-white/[0.04] px-6 py-4">
+          <Card className="bg-card border border-border rounded-sm shadow-2xl shadow-black/50">
+            <CardHeader className="relative border-b border-border px-6 py-4">
               <button
                 onClick={handleClose}
-                className="absolute right-3 top-3 p-1.5 rounded-sm text-white/30 hover:text-red-400 hover:bg-red-500/[0.08] transition-colors"
+                className="absolute right-3 top-3 p-1.5 rounded-sm text-muted-foreground hover:text-primary hover:bg-primary/[0.08] transition-colors"
               >
                 <X className="h-3.5 w-3.5" />
               </button>
-              <CardTitle className="text-[15px] font-semibold text-white/90 tracking-tight">
+              <CardTitle className="text-[15px] font-semibold text-foreground tracking-tight">
                 Edit User
               </CardTitle>
             </CardHeader>
@@ -104,8 +104,8 @@ export const EditIntern = (props: Props) => {
                           id="username"
                           autoComplete="off"
                           placeholder="Enter username"
-                          className="w-full px-3 py-2 bg-black/40 border border-red-900/30 text-amber-50 rounded-lg
-                             focus:border-red-500 focus:outline-none hover:bg-black/60 transition-colors"
+                          className="w-full px-3 py-2 bg-background/40 border border-red-900/30 text-amber-50 rounded-lg
+                             focus:border-red-500 focus:outline-none hover:bg-background/60 transition-colors"
                           value={field.state.value}
                           onChange={(e) => field.handleChange(e.target.value)}
                         />
@@ -129,8 +129,8 @@ export const EditIntern = (props: Props) => {
                           id="email"
                           autoComplete="off"
                           placeholder="Enter email"
-                          className="w-full px-3 py-2 bg-black/40 border border-red-900/30 text-amber-50 rounded-lg
-                             focus:border-red-500 focus:outline-none hover:bg-black/60 transition-colors"
+                          className="w-full px-3 py-2 bg-background/40 border border-red-900/30 text-amber-50 rounded-lg
+                             focus:border-red-500 focus:outline-none hover:bg-background/60 transition-colors"
                           value={field.state.value}
                           onChange={(e) => field.handleChange(e.target.value)}
                         />
@@ -145,7 +145,7 @@ export const EditIntern = (props: Props) => {
                     <button
                       type="submit"
                       className="w-full bg-gradient-to-r from-red-950 to-black hover:from-red-900 
-                      hover:to-red-950 text-white border border-red-900/30
+                      hover:to-red-950 text-foreground border border-red-900/30
                       shadow-lg shadow-red-950/20 disabled:opacity-50"
                       disabled={!canSubmit}
                     >

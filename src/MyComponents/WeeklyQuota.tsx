@@ -62,9 +62,9 @@ const statusColors: Record<QuotaStatus, string> = {
 };
 
 const priorityColors: Record<QuotaPriority, string> = {
-  high: "bg-red-500/[0.08] text-red-400 border-red-500/15",
+  high: "bg-primary/[0.08] text-primary border-primary/15",
   medium: "bg-amber-500/[0.06] text-amber-400/80 border-amber-500/10",
-  low: "bg-white/[0.04] text-white/40 border-white/[0.06]",
+  low: "bg-muted/50 text-muted-foreground/70 border-border",
 };
 
 // ════════════════════════════════════════
@@ -81,12 +81,12 @@ const QuotaItem: React.FC<{
       initial={{ opacity: 0, y: 6 }}
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, y: -6 }}
-      className="p-4 rounded-sm bg-white/[0.015] border border-white/[0.04] hover:border-red-500/10 transition-all duration-300 group"
+      className="p-4 rounded-sm bg-card border border-border hover:border-primary/10 transition-all duration-300 group"
     >
       <div className="flex items-start justify-between">
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 mb-1.5 flex-wrap">
-            <h3 className="text-[13px] font-medium text-white/80">{quota.title}</h3>
+            <h3 className="text-[13px] font-medium text-foreground/80">{quota.title}</h3>
             <Badge variant="outline" className={`${statusColors[quota.status]} text-[10px]`}>
               {quota.status}
             </Badge>
@@ -96,16 +96,16 @@ const QuotaItem: React.FC<{
               </Badge>
             )}
             {quota.carried_from_week && (
-              <span className="flex items-center gap-1 text-[10px] text-white/30 bg-white/[0.02] px-1.5 py-0.5 rounded-sm">
+              <span className="flex items-center gap-1 text-[10px] text-muted-foreground bg-muted/30 px-1.5 py-0.5 rounded-sm">
                 <RotateCw className="h-2.5 w-2.5" /> carried over
               </span>
             )}
           </div>
           {quota.description && (
-            <p className="text-[12px] text-white/40 mb-2 leading-snug">{quota.description}</p>
+            <p className="text-[12px] text-muted-foreground/70 mb-2 leading-snug">{quota.description}</p>
           )}
           {quota.deadline && (
-            <div className="flex items-center gap-1 text-[11px] text-white/25">
+            <div className="flex items-center gap-1 text-[11px] text-muted-foreground/50">
               <Calendar className="h-3 w-3" />
               <span>Due: {quota.deadline}</span>
             </div>
@@ -124,14 +124,14 @@ const QuotaItem: React.FC<{
           )}
           <button
             onClick={() => onEdit(quota)}
-            className="p-1.5 rounded-sm bg-white/[0.04] text-white/30 hover:text-white/70 transition-colors"
+            className="p-1.5 rounded-sm bg-muted/50 text-muted-foreground hover:text-foreground/70 transition-colors"
             title="Edit"
           >
             <Edit className="h-3.5 w-3.5" />
           </button>
           <button
             onClick={() => onDelete(quota.id)}
-            className="p-1.5 rounded-sm bg-red-500/[0.04] text-red-400/50 hover:text-red-400 transition-colors"
+            className="p-1.5 rounded-sm bg-red-500/[0.04] text-primary/50 hover:text-primary transition-colors"
             title="Delete"
           >
             <Trash className="h-3.5 w-3.5" />
@@ -160,10 +160,10 @@ const KanbanCard: React.FC<{
       initial={{ opacity: 0, scale: 0.98 }}
       animate={{ opacity: 1, scale: 1 }}
       exit={{ opacity: 0, scale: 0.98 }}
-      className="p-3 rounded-sm bg-white/[0.02] border border-white/[0.04] hover:border-red-500/10 transition-all group"
+      className="p-3 rounded-sm bg-muted/30 border border-border hover:border-primary/10 transition-all group"
     >
       <div className="flex items-start justify-between mb-2">
-        <h4 className="text-[12px] font-medium text-white/80 flex-1 leading-snug">{quota.title}</h4>
+        <h4 className="text-[12px] font-medium text-foreground/80 flex-1 leading-snug">{quota.title}</h4>
         {quota.priority && (
           <span className={`text-[9px] uppercase tracking-wider px-1.5 py-0.5 rounded-sm border ml-1.5 ${priorityColors[quota.priority]}`}>
             {quota.priority}
@@ -171,26 +171,26 @@ const KanbanCard: React.FC<{
         )}
       </div>
       {quota.description && (
-        <p className="text-[11px] text-white/30 leading-snug mb-2">{quota.description}</p>
+        <p className="text-[11px] text-muted-foreground leading-snug mb-2">{quota.description}</p>
       )}
       {quota.deadline && (
-        <div className="flex items-center gap-1 text-[10px] text-white/25 mb-2">
+        <div className="flex items-center gap-1 text-[10px] text-muted-foreground/50 mb-2">
           <Calendar className="h-2.5 w-2.5" /> {quota.deadline}
         </div>
       )}
-      <div className="flex items-center justify-between pt-2 border-t border-white/[0.04] opacity-0 group-hover:opacity-100 transition-opacity">
+      <div className="flex items-center justify-between pt-2 border-t border-border opacity-0 group-hover:opacity-100 transition-opacity">
         <div className="flex gap-1">
-          <button onClick={() => onEdit(quota)} className="p-1 rounded-sm hover:bg-white/[0.04] text-white/30 hover:text-white/70" title="Edit">
+          <button onClick={() => onEdit(quota)} className="p-1 rounded-sm hover:bg-muted/50 text-muted-foreground hover:text-foreground/70" title="Edit">
             <Edit className="h-3 w-3" />
           </button>
-          <button onClick={() => onDelete(quota.id)} className="p-1 rounded-sm hover:bg-red-500/[0.06] text-white/30 hover:text-red-400" title="Delete">
+          <button onClick={() => onDelete(quota.id)} className="p-1 rounded-sm hover:bg-primary/80/[0.06] text-muted-foreground hover:text-primary" title="Delete">
             <Trash className="h-3 w-3" />
           </button>
         </div>
         {nextStatus && (
           <button
             onClick={() => onStatusChange(quota.id, nextStatus)}
-            className="text-[10px] text-red-400 hover:text-red-300 flex items-center gap-0.5"
+            className="text-[10px] text-primary hover:text-red-300 flex items-center gap-0.5"
           >
             Move <ChevronRight className="h-2.5 w-2.5" />
           </button>
@@ -249,32 +249,32 @@ export const QuotaFormDialog: React.FC<{
       >
         <div className="space-y-4 py-4">
           <div className="space-y-2">
-            <label className="text-[11px] text-white/30 uppercase tracking-wider">Title</label>
+            <label className="text-[11px] text-muted-foreground uppercase tracking-wider">Title</label>
             <Input
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               placeholder="What needs to be done?"
-              className="bg-white/[0.02] border-white/[0.06] text-white rounded-sm placeholder:text-white/15 focus:border-red-500/20"
+              className="bg-muted/30 border-border text-foreground rounded-sm placeholder:text-muted-foreground/40 focus:border-primary/20"
               required
             />
           </div>
           <div className="space-y-2">
-            <label className="text-[11px] text-white/30 uppercase tracking-wider">Description</label>
+            <label className="text-[11px] text-muted-foreground uppercase tracking-wider">Description</label>
             <Textarea
               value={description}
               onChange={(e) => setDescription(e.target.value)}
-              className="bg-white/[0.02] border-white/[0.06] text-white rounded-sm placeholder:text-white/15 focus:border-red-500/20"
+              className="bg-muted/30 border-border text-foreground rounded-sm placeholder:text-muted-foreground/40 focus:border-primary/20"
               placeholder="Optional details..."
             />
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-2">
-              <label className="text-[11px] text-white/30 uppercase tracking-wider">Status</label>
+              <label className="text-[11px] text-muted-foreground uppercase tracking-wider">Status</label>
               <Select value={status} onValueChange={(v) => setStatus(v as QuotaStatus)}>
-                <SelectTrigger className="bg-white/[0.02] border-white/[0.06] text-white rounded-sm">
+                <SelectTrigger className="bg-muted/30 border-border text-foreground rounded-sm">
                   <SelectValue />
                 </SelectTrigger>
-                <SelectContent className="bg-[#0f0f0f] border-white/[0.06] text-white rounded-sm">
+                <SelectContent className="bg-[#0f0f0f] border-border text-foreground rounded-sm">
                   <SelectItem value="pending">Pending</SelectItem>
                   <SelectItem value="in-progress">In Progress</SelectItem>
                   <SelectItem value="completed">Completed</SelectItem>
@@ -282,12 +282,12 @@ export const QuotaFormDialog: React.FC<{
               </Select>
             </div>
             <div className="space-y-2">
-              <label className="text-[11px] text-white/30 uppercase tracking-wider">Priority</label>
+              <label className="text-[11px] text-muted-foreground uppercase tracking-wider">Priority</label>
               <Select value={priority} onValueChange={(v) => setPriority(v as QuotaPriority)}>
-                <SelectTrigger className="bg-white/[0.02] border-white/[0.06] text-white rounded-sm">
+                <SelectTrigger className="bg-muted/30 border-border text-foreground rounded-sm">
                   <SelectValue />
                 </SelectTrigger>
-                <SelectContent className="bg-[#0f0f0f] border-white/[0.06] text-white rounded-sm">
+                <SelectContent className="bg-[#0f0f0f] border-border text-foreground rounded-sm">
                   <SelectItem value="low">Low</SelectItem>
                   <SelectItem value="medium">Medium</SelectItem>
                   <SelectItem value="high">High</SelectItem>
@@ -296,17 +296,17 @@ export const QuotaFormDialog: React.FC<{
             </div>
           </div>
           <div className="space-y-2">
-            <label className="text-[11px] text-white/30 uppercase tracking-wider">Deadline</label>
+            <label className="text-[11px] text-muted-foreground uppercase tracking-wider">Deadline</label>
             <Input
               type="date"
               value={deadline}
               onChange={(e) => setDeadline(e.target.value)}
-              className="bg-white/[0.02] border-white/[0.06] text-white rounded-sm focus:border-red-500/20"
+              className="bg-muted/30 border-border text-foreground rounded-sm focus:border-primary/20"
             />
           </div>
         </div>
         <DialogFooter>
-          <Button className="bg-red-600 hover:bg-red-500 text-white rounded-sm" type="submit">
+          <Button className="bg-primary hover:bg-primary/80 text-foreground rounded-sm" type="submit">
             {editingQuota ? "Update" : "Add"} Quota
           </Button>
         </DialogFooter>
@@ -433,39 +433,39 @@ export const WeeklyQuotas = () => {
   const pctDelta = completionPct - lastPct;
 
   return (
-    <div className="min-h-screen bg-black overflow-y-auto">
+    <div className="min-h-screen bg-background overflow-y-auto">
       {/* Header */}
       <div className="px-8 pt-7 pb-2">
         <div className="flex items-end justify-between">
           <div className="flex items-center gap-3">
-            <div className="p-2.5 rounded-sm bg-red-500/[0.08] border border-red-500/15">
-              <Target className="h-5 w-5 text-red-400" />
+            <div className="p-2.5 rounded-sm bg-primary/[0.08] border border-primary/15">
+              <Target className="h-5 w-5 text-primary" />
             </div>
             <div>
-              <h1 className="text-[24px] font-bold text-white tracking-tight">Weekly Quotas</h1>
-              <p className="text-[12px] text-white/20 mt-0.5">{dateRangeText}</p>
+              <h1 className="text-[24px] font-bold text-foreground tracking-tight">Weekly Quotas</h1>
+              <p className="text-[12px] text-muted-foreground/60 mt-0.5">{dateRangeText}</p>
             </div>
           </div>
 
           <div className="flex items-center gap-2">
             {/* Week nav */}
-            <div className="flex items-center bg-white/[0.02] border border-white/[0.04] rounded-sm">
+            <div className="flex items-center bg-muted/30 border border-border rounded-sm">
               <button
                 onClick={() => setSelectedWeek(subWeeks(selectedWeek, 1))}
-                className="p-2 text-white/30 hover:text-white/70 hover:bg-white/[0.04] rounded-sm"
+                className="p-2 text-muted-foreground hover:text-foreground/70 hover:bg-muted/50 rounded-sm"
                 title="Previous week"
               >
                 <ChevronLeft className="h-3.5 w-3.5" />
               </button>
               <button
                 onClick={() => setSelectedWeek(new Date())}
-                className="px-3 py-1.5 text-[11px] text-white/40 hover:text-white border-x border-white/[0.04]"
+                className="px-3 py-1.5 text-[11px] text-muted-foreground/70 hover:text-foreground border-x border-border"
               >
                 Today
               </button>
               <button
                 onClick={() => setSelectedWeek(addWeeks(selectedWeek, 1))}
-                className="p-2 text-white/30 hover:text-white/70 hover:bg-white/[0.04] rounded-sm"
+                className="p-2 text-muted-foreground hover:text-foreground/70 hover:bg-muted/50 rounded-sm"
                 title="Next week"
               >
                 <ChevronRight className="h-3.5 w-3.5" />
@@ -473,11 +473,11 @@ export const WeeklyQuotas = () => {
             </div>
 
             {/* View toggle */}
-            <div className="flex items-center bg-white/[0.02] border border-white/[0.04] rounded-sm p-0.5">
+            <div className="flex items-center bg-muted/30 border border-border rounded-sm p-0.5">
               <button
                 onClick={() => setView("list")}
                 className={`p-1.5 rounded-sm transition-colors ${
-                  view === "list" ? "bg-red-500/[0.1] text-red-400" : "text-white/25 hover:text-white/50"
+                  view === "list" ? "bg-primary/10 text-primary" : "text-muted-foreground/50 hover:text-muted-foreground/80"
                 }`}
                 title="List view"
               >
@@ -486,7 +486,7 @@ export const WeeklyQuotas = () => {
               <button
                 onClick={() => setView("kanban")}
                 className={`p-1.5 rounded-sm transition-colors ${
-                  view === "kanban" ? "bg-red-500/[0.1] text-red-400" : "text-white/25 hover:text-white/50"
+                  view === "kanban" ? "bg-primary/10 text-primary" : "text-muted-foreground/50 hover:text-muted-foreground/80"
                 }`}
                 title="Kanban view"
               >
@@ -499,7 +499,7 @@ export const WeeklyQuotas = () => {
               <DialogTrigger asChild>
                 <button
                   onClick={() => setEditingQuota(null)}
-                  className="flex items-center gap-1.5 px-3 py-1.5 bg-red-500/[0.1] hover:bg-red-500/[0.15] border border-red-500/20 text-red-400 text-[11px] font-medium rounded-sm transition-colors"
+                  className="flex items-center gap-1.5 px-3 py-1.5 bg-primary/10 hover:bg-primary/80/[0.15] border border-primary/20 text-primary text-[11px] font-medium rounded-sm transition-colors"
                 >
                   <Plus className="h-3 w-3" /> Add Quota
                 </button>
@@ -512,19 +512,19 @@ export const WeeklyQuotas = () => {
 
       {/* Summary card with progress bar */}
       <div className="px-8 pt-5">
-        <div className="bg-[#0a0a0a] border border-white/[0.04] rounded-sm overflow-hidden">
+        <div className="bg-card border border-border rounded-sm overflow-hidden">
           <div className="flex">
             {/* Progress + main metric */}
-            <div className="flex-1 px-5 py-4 border-r border-white/[0.04]">
+            <div className="flex-1 px-5 py-4 border-r border-border">
               <div className="flex items-center justify-between mb-2">
-                <span className="text-[10px] text-white/20 uppercase tracking-[0.12em] font-medium">
+                <span className="text-[10px] text-muted-foreground/60 uppercase tracking-[0.12em] font-medium">
                   This Week's Progress
                 </span>
-                <span className="text-[18px] font-bold text-white tracking-tight">
+                <span className="text-[18px] font-bold text-foreground tracking-tight">
                   {completionPct.toFixed(0)}%
                 </span>
               </div>
-              <div className="h-1.5 w-full bg-white/[0.04] rounded-full overflow-hidden">
+              <div className="h-1.5 w-full bg-muted/50 rounded-full overflow-hidden">
                 <motion.div
                   initial={{ width: 0 }}
                   animate={{ width: `${completionPct}%` }}
@@ -532,39 +532,39 @@ export const WeeklyQuotas = () => {
                   className="h-full bg-gradient-to-r from-red-600 to-red-500 rounded-full"
                 />
               </div>
-              <p className="text-[11px] text-white/30 mt-2">
+              <p className="text-[11px] text-muted-foreground mt-2">
                 {completed} of {total} {total === 1 ? "quota" : "quotas"} completed
               </p>
             </div>
 
             {/* Status cells */}
-            <div className="px-5 py-4 border-r border-white/[0.04] min-w-[100px]">
-              <span className="text-[10px] text-white/20 uppercase tracking-[0.12em]">Pending</span>
+            <div className="px-5 py-4 border-r border-border min-w-[100px]">
+              <span className="text-[10px] text-muted-foreground/60 uppercase tracking-[0.12em]">Pending</span>
               <p className="text-xl font-bold text-amber-400 tracking-tight mt-1">{pending}</p>
             </div>
-            <div className="px-5 py-4 border-r border-white/[0.04] min-w-[100px]">
-              <span className="text-[10px] text-white/20 uppercase tracking-[0.12em]">Active</span>
+            <div className="px-5 py-4 border-r border-border min-w-[100px]">
+              <span className="text-[10px] text-muted-foreground/60 uppercase tracking-[0.12em]">Active</span>
               <p className="text-xl font-bold text-blue-400 tracking-tight mt-1">{inProgress}</p>
             </div>
-            <div className="px-5 py-4 border-r border-white/[0.04] min-w-[100px]">
-              <span className="text-[10px] text-white/20 uppercase tracking-[0.12em]">Done</span>
+            <div className="px-5 py-4 border-r border-border min-w-[100px]">
+              <span className="text-[10px] text-muted-foreground/60 uppercase tracking-[0.12em]">Done</span>
               <p className="text-xl font-bold text-emerald-400 tracking-tight mt-1">{completed}</p>
             </div>
 
             {/* Week vs week */}
             <div className="px-5 py-4 min-w-[150px]">
               <div className="flex items-center gap-1.5 mb-1">
-                <TrendingUp className="h-3 w-3 text-red-500/60" />
-                <span className="text-[10px] text-white/20 uppercase tracking-[0.12em]">vs Last Week</span>
+                <TrendingUp className="h-3 w-3 text-primary/60" />
+                <span className="text-[10px] text-muted-foreground/60 uppercase tracking-[0.12em]">vs Last Week</span>
               </div>
               <div className="flex items-baseline gap-2">
                 <p className={`text-xl font-bold tracking-tight ${
-                  pctDelta >= 0 ? "text-emerald-400" : "text-red-400"
+                  pctDelta >= 0 ? "text-emerald-400" : "text-primary"
                 }`}>
                   {pctDelta >= 0 ? "+" : ""}{pctDelta.toFixed(0)}%
                 </p>
               </div>
-              <p className="text-[11px] text-white/30 mt-0.5">
+              <p className="text-[11px] text-muted-foreground mt-0.5">
                 Last: {lastPct.toFixed(0)}% ({lastCompleted}/{lastTotal})
               </p>
             </div>
@@ -576,7 +576,7 @@ export const WeeklyQuotas = () => {
       <div className="px-8 pt-4">
         <div className="flex items-center gap-2 flex-wrap">
           {/* Status pills */}
-          <div className="flex items-center bg-white/[0.02] border border-white/[0.04] rounded-sm p-0.5">
+          <div className="flex items-center bg-muted/30 border border-border rounded-sm p-0.5">
             {(["all", "pending", "in-progress", "completed"] as const).map((s) => {
               const counts: Record<string, number> = { all: total, pending, "in-progress": inProgress, completed };
               return (
@@ -585,8 +585,8 @@ export const WeeklyQuotas = () => {
                   onClick={() => setStatusFilter(s)}
                   className={`px-3 py-1 rounded-sm text-[11px] font-medium transition-all ${
                     statusFilter === s
-                      ? "bg-red-500/[0.1] text-red-400"
-                      : "text-white/25 hover:text-white/50"
+                      ? "bg-primary/10 text-primary"
+                      : "text-muted-foreground/50 hover:text-muted-foreground/80"
                   }`}
                 >
                   {s === "all" ? "All" : s === "pending" ? "Pending" : s === "in-progress" ? "Active" : "Done"} ({counts[s]})
@@ -601,11 +601,11 @@ export const WeeklyQuotas = () => {
             placeholder="Search quotas..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="flex-1 max-w-xs px-3 py-1.5 bg-white/[0.02] border border-white/[0.04] rounded-sm text-[12px] text-white/60 placeholder:text-white/15 focus:outline-none focus:border-white/[0.08]"
+            className="flex-1 max-w-xs px-3 py-1.5 bg-muted/30 border border-border rounded-sm text-[12px] text-foreground/60 placeholder:text-muted-foreground/40 focus:outline-none focus:border-border"
           />
 
           {searchQuery && (
-            <button onClick={() => setSearchQuery("")} className="p-1.5 rounded-sm bg-white/[0.02] text-white/30 hover:text-white/60">
+            <button onClick={() => setSearchQuery("")} className="p-1.5 rounded-sm bg-muted/30 text-muted-foreground hover:text-foreground/60">
               <X className="h-3 w-3" />
             </button>
           )}
@@ -615,12 +615,12 @@ export const WeeklyQuotas = () => {
       {/* Quotas display */}
       <div className="px-8 py-5 pb-10">
         {filtered.length === 0 ? (
-          <div className="bg-[#0a0a0a] border border-white/[0.04] rounded-sm py-16 text-center">
+          <div className="bg-card border border-border rounded-sm py-16 text-center">
             <Target className="h-10 w-10 text-white/[0.05] mx-auto mb-3" />
-            <p className="text-[14px] text-white/30 font-medium mb-1">
+            <p className="text-[14px] text-muted-foreground font-medium mb-1">
               {quotas.length === 0 ? "No quotas this week" : "No quotas match your filters"}
             </p>
-            <p className="text-[12px] text-white/15">
+            <p className="text-[12px] text-muted-foreground/40">
               {quotas.length === 0 ? "Add a goal to get started" : "Try a different filter or search term"}
             </p>
           </div>
@@ -650,20 +650,20 @@ export const WeeklyQuotas = () => {
               };
               const c = colColors[status];
               return (
-                <div key={status} className="bg-[#0a0a0a] border border-white/[0.04] rounded-sm overflow-hidden">
-                  <div className="px-3 py-2.5 border-b border-white/[0.04] flex items-center justify-between">
+                <div key={status} className="bg-card border border-border rounded-sm overflow-hidden">
+                  <div className="px-3 py-2.5 border-b border-border flex items-center justify-between">
                     <div className="flex items-center gap-2">
                       <div className={`h-1.5 w-1.5 rounded-full ${c.dot}`} />
                       <span className={`text-[11px] uppercase tracking-wider font-medium ${c.text}`}>
                         {status === "in-progress" ? "Active" : status}
                       </span>
                     </div>
-                    <span className="text-[11px] text-white/30">{colQuotas.length}</span>
+                    <span className="text-[11px] text-muted-foreground">{colQuotas.length}</span>
                   </div>
                   <div className="p-2 space-y-1.5 min-h-[200px]">
                     <AnimatePresence>
                       {colQuotas.length === 0 ? (
-                        <div className="text-[11px] text-white/15 text-center py-6">
+                        <div className="text-[11px] text-muted-foreground/40 text-center py-6">
                           No quotas
                         </div>
                       ) : (
