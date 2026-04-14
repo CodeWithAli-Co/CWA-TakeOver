@@ -776,6 +776,12 @@ export const ceoData = {
       isActive: false,
       icon: Home,
     },
+    {
+      title: "Personal Life",
+      url: "/personal",
+      isActive: false,
+      icon: User,
+    },
         {
       title: "Contract",
       url: "/contractGenerator",

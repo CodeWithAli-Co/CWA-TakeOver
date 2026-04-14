@@ -289,170 +289,133 @@ const PersonalLifeManager: React.FC = () => {
   });
 
   return (
-    <div className="min-h-screen bg-zinc-950 text-white p-6">
+    <div className="min-h-screen bg-black text-white overflow-y-auto">
       {/* Header */}
-      <div className="mb-6">
-        <h1 className="text-3xl font-bold mb-2">Personal Life Manager</h1>
-        <p className="text-zinc-400">
-          Manage your daily schedule and find halal restaurants
-        </p>
+      <div className="px-8 pt-7 pb-2">
+        <div className="flex items-end justify-between">
+          <div className="flex items-center gap-3">
+            <div className="p-2.5 rounded-sm bg-red-500/[0.08] border border-red-500/15">
+              <Heart className="h-5 w-5 text-red-400" />
+            </div>
+            <div>
+              <h1 className="text-[24px] font-bold text-white tracking-tight">Personal Life</h1>
+              <p className="text-[12px] text-white/20 mt-0.5">
+                Your schedule, reminders, and favorite places
+              </p>
+            </div>
+          </div>
+        </div>
       </div>
 
       {/* Tabs */}
       <Tabs
         value={activeTab}
         onValueChange={(v) => setActiveTab(v as "schedule" | "restaurants")}
+        className="px-8"
       >
-        <TabsList className="mb-6 bg-zinc-900">
-          <TabsTrigger value="schedule" className="flex items-center gap-2">
-            <Calendar className="w-4 h-4" />
-            Personal Schedule
+        <TabsList className="mt-5 bg-white/[0.02] border border-white/[0.04] rounded-sm h-9 p-0.5">
+          <TabsTrigger
+            value="schedule"
+            className="data-[state=active]:bg-red-500/[0.1] data-[state=active]:text-red-400 text-white/30 rounded-sm text-[12px] h-7 px-4 flex items-center gap-1.5"
+          >
+            <Calendar className="h-3.5 w-3.5" />
+            Schedule
           </TabsTrigger>
-          <TabsTrigger value="restaurants" className="flex items-center gap-2">
-            <Utensils className="w-4 h-4" />
-            Halal Restaurants
+          <TabsTrigger
+            value="restaurants"
+            className="data-[state=active]:bg-red-500/[0.1] data-[state=active]:text-red-400 text-white/30 rounded-sm text-[12px] h-7 px-4 flex items-center gap-1.5"
+          >
+            <Utensils className="h-3.5 w-3.5" />
+            Restaurants
           </TabsTrigger>
         </TabsList>
 
         {/* Schedule Tab */}
-        <TabsContent value="schedule" className="space-y-6">
-          {/* Stats Row */}
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-            <div className="bg-zinc-900 rounded-lg p-4 border border-zinc-800">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-zinc-400">Today's Activities</p>
-                  <p className="text-2xl font-bold">
-                    {todaysActivities.length}
-                  </p>
+        <TabsContent value="schedule" className="space-y-4 mt-4">
+          {/* Unified stats strip */}
+          <div className="bg-[#0a0a0a] border border-white/[0.04] rounded-sm overflow-hidden">
+            <div className="flex">
+              <div className="flex-1 px-5 py-4 border-r border-white/[0.04]">
+                <div className="flex items-center gap-1.5 mb-1">
+                  <Calendar className="h-3 w-3 text-red-500/60" />
+                  <span className="text-[10px] text-white/20 uppercase tracking-[0.12em]">Today</span>
                 </div>
-                <Calendar className="w-8 h-8 text-blue-500" />
+                <p className="text-xl font-bold text-white tracking-tight">{todaysActivities.length}</p>
               </div>
-            </div>
-
-            <div className="bg-zinc-900 rounded-lg p-4 border border-zinc-800">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-zinc-400">Completed</p>
-                  <p className="text-2xl font-bold">
-                    {todaysActivities.filter((a) => a.completed).length}
-                  </p>
+              <div className="flex-1 px-5 py-4 border-r border-white/[0.04]">
+                <div className="flex items-center gap-1.5 mb-1">
+                  <Check className="h-3 w-3 text-emerald-500/60" />
+                  <span className="text-[10px] text-white/20 uppercase tracking-[0.12em]">Completed</span>
                 </div>
-                <Check className="w-8 h-8 text-green-500" />
+                <p className="text-xl font-bold text-emerald-400 tracking-tight">{todaysActivities.filter((a) => a.completed).length}</p>
               </div>
-            </div>
-
-            <div className="bg-zinc-900 rounded-lg p-4 border border-zinc-800">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-zinc-400">Upcoming</p>
-                  <p className="text-2xl font-bold">
-                    {upcomingActivities.length}
-                  </p>
+              <div className="flex-1 px-5 py-4 border-r border-white/[0.04]">
+                <div className="flex items-center gap-1.5 mb-1">
+                  <Clock className="h-3 w-3 text-amber-500/60" />
+                  <span className="text-[10px] text-white/20 uppercase tracking-[0.12em]">Upcoming</span>
                 </div>
-                <Clock className="w-8 h-8 text-orange-500" />
+                <p className="text-xl font-bold text-amber-400 tracking-tight">{upcomingActivities.length}</p>
               </div>
-            </div>
-
-            <div className="bg-zinc-900 rounded-lg p-4 border border-zinc-800">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-zinc-400">With Reminders</p>
-                  <p className="text-2xl font-bold">
-                    {activities.filter((a) => a.reminder_minutes).length}
-                  </p>
+              <div className="flex-1 px-5 py-4">
+                <div className="flex items-center gap-1.5 mb-1">
+                  <Bell className="h-3 w-3 text-purple-500/60" />
+                  <span className="text-[10px] text-white/20 uppercase tracking-[0.12em]">Reminders</span>
                 </div>
-                <Bell className="w-8 h-8 text-purple-500" />
+                <p className="text-xl font-bold text-purple-400 tracking-tight">{activities.filter((a) => a.reminder_minutes).length}</p>
               </div>
             </div>
           </div>
 
-          {/* Controls */}
-          <div className="flex items-center justify-between flex-wrap gap-4">
-            <div className="flex items-center gap-2">
-              <Button
-                onClick={() => {
-                  setEditingActivity(null);
-                  setIsAddActivityOpen(true);
-                }}
-                className="bg-red-600 hover:bg-red-700"
-              >
-                <Plus className="w-4 h-4 mr-2" />
-                Add Activity
-              </Button>
-            </div>
+          {/* Controls bar */}
+          <div className="flex items-center justify-between flex-wrap gap-2">
+            <button
+              onClick={() => {
+                setEditingActivity(null);
+                setIsAddActivityOpen(true);
+              }}
+              className="flex items-center gap-1.5 px-3 py-1.5 bg-red-500/[0.1] hover:bg-red-500/[0.15] border border-red-500/20 text-red-400 text-[11px] font-medium rounded-sm transition-colors"
+            >
+              <Plus className="h-3 w-3" /> Add Activity
+            </button>
 
-            {/* Week Navigation */}
-            <div className="flex items-center gap-2">
-              <Button
-                variant="outline"
-                size="sm"
+            {/* Week nav — compact pill group */}
+            <div className="flex items-center bg-white/[0.02] border border-white/[0.04] rounded-sm">
+              <button
                 onClick={() => {
                   const newDate = new Date(selectedDate);
                   newDate.setDate(newDate.getDate() - 7);
                   setSelectedDate(newDate);
                 }}
-                className="border-zinc-700"
+                className="p-2 text-white/30 hover:text-white/70 hover:bg-white/[0.04] rounded-sm"
+                title="Previous week"
               >
-                <ChevronLeft className="w-4 h-4" />
-                Previous Week
-              </Button>
-
-              <Button
-                variant="outline"
-                size="sm"
+                <ChevronLeft className="h-3.5 w-3.5" />
+              </button>
+              <button
                 onClick={() => setSelectedDate(new Date())}
-                className="border-zinc-700"
+                className="px-3 py-1.5 text-[11px] text-white/40 hover:text-white border-x border-white/[0.04]"
               >
-                Today
-              </Button>
-
-              <Button
-                variant="outline"
-                size="sm"
+                {(() => {
+                  const days = getWeekDays(selectedDate);
+                  return `${days[0].toLocaleDateString("en-US", { month: "short", day: "numeric" })} – ${days[6].toLocaleDateString("en-US", { month: "short", day: "numeric" })}`;
+                })()}
+              </button>
+              <button
                 onClick={() => {
                   const newDate = new Date(selectedDate);
                   newDate.setDate(newDate.getDate() + 7);
                   setSelectedDate(newDate);
                 }}
-                className="border-zinc-700"
+                className="p-2 text-white/30 hover:text-white/70 hover:bg-white/[0.04] rounded-sm"
+                title="Next week"
               >
-                Next Week
-                <ChevronRight className="w-4 h-4" />
-              </Button>
+                <ChevronRight className="h-3.5 w-3.5" />
+              </button>
             </div>
           </div>
 
-          {/* Week Range Display */}
-          {(() => {
-            const weekDays = getWeekDays(selectedDate);
-            const weekStart = weekDays[0];
-            const weekEnd = weekDays[6];
-            return (
-              <div className="bg-zinc-900/50 rounded-lg p-4 border border-zinc-800">
-                <p className="text-center text-zinc-400">
-                  Week of{" "}
-                  <span className="font-bold text-white">
-                    {weekStart.toLocaleDateString("en-US", {
-                      month: "short",
-                      day: "numeric",
-                    })}
-                  </span>
-                  {" - "}
-                  <span className="font-bold text-white">
-                    {weekEnd.toLocaleDateString("en-US", {
-                      month: "short",
-                      day: "numeric",
-                      year: "numeric",
-                    })}
-                  </span>
-                </p>
-              </div>
-            );
-          })()}
-
           {/* Week Schedule */}
-          <div className="space-y-4">
+          <div className="space-y-3 pb-6">
             {getWeekDays(selectedDate).map((date) => {
               const dayActivities = getActivityForDate(activities, date);
               const isToday = isSameDay(date, new Date());
@@ -460,49 +423,49 @@ const PersonalLifeManager: React.FC = () => {
               return (
                 <div
                   key={date.toISOString()}
-                  className={`bg-zinc-900 rounded-lg border overflow-hidden ${
-                    isToday
-                      ? "border-red-600 ring-2 ring-red-600/20"
-                      : "border-zinc-800"
+                  className={`bg-[#0a0a0a] border rounded-sm overflow-hidden transition-colors ${
+                    isToday ? "border-red-500/20" : "border-white/[0.04]"
                   }`}
                 >
                   <div
-                    className={`p-4 border-b ${isToday ? "border-red-600/50 bg-red-950/20" : "border-zinc-800"}`}
+                    className={`px-5 py-3 flex items-center justify-between border-b ${
+                      isToday ? "border-red-500/10 bg-red-500/[0.03]" : "border-white/[0.04]"
+                    }`}
                   >
-                    <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      {isToday && (
+                        <div className="h-1.5 w-1.5 rounded-full bg-red-500 animate-pulse" />
+                      )}
                       <div>
-                        <h2 className="text-xl font-bold flex items-center gap-2">
-                          {date.toLocaleDateString("en-US", {
-                            weekday: "long",
-                          })}
+                        <h2 className="text-[13px] font-semibold text-white/85 flex items-center gap-2">
+                          {date.toLocaleDateString("en-US", { weekday: "long" })}
                           {isToday && (
-                            <span className="text-xs px-2 py-1 bg-red-600 rounded-full">
+                            <span className="text-[9px] uppercase tracking-wider px-1.5 py-0.5 rounded-sm bg-red-500/[0.1] text-red-400 border border-red-500/15">
                               Today
                             </span>
                           )}
                         </h2>
-                        <p className="text-sm text-zinc-400">
+                        <p className="text-[11px] text-white/25 mt-0.5">
                           {date.toLocaleDateString("en-US", {
-                            year: "numeric",
-                            month: "long",
+                            month: "short",
                             day: "numeric",
+                            year: "numeric",
                           })}
                         </p>
                       </div>
-                      <div className="text-right">
-                        <p className="text-2xl font-bold">
-                          {dayActivities.length}
-                        </p>
-                        <p className="text-xs text-zinc-400">activities</p>
-                      </div>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-[16px] font-bold text-white tracking-tight">{dayActivities.length}</p>
+                      <p className="text-[10px] text-white/25 uppercase tracking-wider">
+                        {dayActivities.length === 1 ? "activity" : "activities"}
+                      </p>
                     </div>
                   </div>
 
-                  <div className="divide-y divide-zinc-800">
+                  <div className="divide-y divide-white/[0.025]">
                     {dayActivities.length === 0 ? (
-                      <div className="p-8 text-center text-zinc-400">
-                        <Calendar className="w-8 h-8 mx-auto mb-2 opacity-50" />
-                        <p className="text-sm">No activities scheduled</p>
+                      <div className="py-6 text-center">
+                        <p className="text-[12px] text-white/20">No activities scheduled</p>
                       </div>
                     ) : (
                       dayActivities.map((activity) => (
@@ -526,24 +489,25 @@ const PersonalLifeManager: React.FC = () => {
         </TabsContent>
 
         {/* Restaurants Tab */}
-        <TabsContent value="restaurants" className="space-y-6">
-          {/* Search and Filter */}
-          <div className="flex flex-col sm:flex-row gap-4">
-            <div className="flex-1 relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400" />
-              <Input
+        <TabsContent value="restaurants" className="space-y-4 mt-4 pb-6">
+          {/* Search and Filter bar */}
+          <div className="flex flex-col sm:flex-row gap-2 items-stretch sm:items-center flex-wrap">
+            <div className="flex-1 relative min-w-[200px]">
+              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-white/15" />
+              <input
+                type="text"
                 placeholder="Search restaurants..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-10 bg-zinc-900 border-zinc-800"
+                className="w-full pl-8 pr-3 py-2 bg-white/[0.02] border border-white/[0.04] rounded-sm text-[12px] text-white/60 placeholder:text-white/15 focus:outline-none focus:border-white/[0.08]"
               />
             </div>
 
             <Select value={selectedCuisine} onValueChange={setSelectedCuisine}>
-              <SelectTrigger className="w-full sm:w-[200px] bg-zinc-900 border-zinc-800">
+              <SelectTrigger className="w-full sm:w-[180px] bg-white/[0.02] border-white/[0.04] rounded-sm text-[12px] text-white/60 h-9">
                 <SelectValue placeholder="All Cuisines" />
               </SelectTrigger>
-              <SelectContent>
+              <SelectContent className="bg-[#0a0a0a] border-white/[0.06] rounded-sm">
                 <SelectItem value="all">All Cuisines</SelectItem>
                 {Object.entries(CUISINE_TYPES).map(([key, value]) => (
                   <SelectItem key={key} value={key}>
@@ -553,35 +517,38 @@ const PersonalLifeManager: React.FC = () => {
               </SelectContent>
             </Select>
 
-            <Button
-              variant={showOnlyFavorites ? "default" : "outline"}
+            <button
               onClick={() => setShowOnlyFavorites(!showOnlyFavorites)}
-              className={showOnlyFavorites ? "bg-red-600 hover:bg-red-700" : ""}
+              className={`flex items-center gap-1.5 px-3 py-2 rounded-sm text-[11px] font-medium transition-colors ${
+                showOnlyFavorites
+                  ? "bg-red-500/[0.1] text-red-400 border border-red-500/20"
+                  : "bg-white/[0.02] text-white/30 border border-white/[0.04] hover:text-white/60"
+              }`}
             >
-              <Heart
-                className={`w-4 h-4 mr-2 ${showOnlyFavorites ? "fill-current" : ""}`}
-              />
+              <Heart className={`h-3 w-3 ${showOnlyFavorites ? "fill-current" : ""}`} />
               Favorites
-            </Button>
+            </button>
 
-            <Button
+            <button
               onClick={() => {
                 setEditingRestaurant(null);
                 setIsAddRestaurantOpen(true);
               }}
-              className="bg-red-600 hover:bg-red-700"
+              className="flex items-center gap-1.5 px-3 py-2 bg-red-500/[0.1] hover:bg-red-500/[0.15] border border-red-500/20 text-red-400 text-[11px] font-medium rounded-sm transition-colors"
             >
-              <Plus className="w-4 h-4 mr-2" />
-              Add
-            </Button>
+              <Plus className="h-3 w-3" /> Add Restaurant
+            </button>
           </div>
 
           {/* Restaurants Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
             {filteredRestaurants.length === 0 ? (
-              <div className="col-span-full p-12 text-center text-zinc-400 bg-zinc-900 rounded-lg border border-zinc-800">
-                <Utensils className="w-12 h-12 mx-auto mb-2 opacity-50" />
-                <p>No restaurants found</p>
+              <div className="col-span-full bg-[#0a0a0a] border border-white/[0.04] rounded-sm py-16 text-center">
+                <Utensils className="h-10 w-10 text-white/[0.05] mx-auto mb-3" />
+                <p className="text-[14px] text-white/30 font-medium mb-1">No restaurants found</p>
+                <p className="text-[12px] text-white/15">
+                  {restaurants.length === 0 ? "Add your first halal spot" : "Try a different filter"}
+                </p>
               </div>
             ) : (
               filteredRestaurants.map((restaurant) => (
@@ -636,7 +603,7 @@ const PersonalLifeManager: React.FC = () => {
   );
 };
 
-// Activity Card Component
+// Activity Card Component — Void theme
 const ActivityCard: React.FC<{
   activity: PersonalActivity;
   onToggleComplete: (activity: PersonalActivity) => void;
@@ -646,83 +613,82 @@ const ActivityCard: React.FC<{
   const activityType = ACTIVITY_TYPES[activity.type];
 
   return (
-    <div className="p-4 hover:bg-zinc-800/50 transition-colors">
-      <div className="flex items-start gap-4">
-        {/* Time */}
-        <div className="text-sm font-mono text-zinc-400 min-w-[80px]">
+    <div className="px-5 py-3 hover:bg-white/[0.015] transition-colors group">
+      <div className="flex items-start gap-3">
+        {/* Time column */}
+        <div className="text-[11px] font-mono text-white/30 min-w-[60px] pt-1 tabular-nums">
           {formatTime(activity.time)}
         </div>
 
-        {/* Icon and Content */}
-        <div className="flex-1">
-          <div className="flex items-start gap-3">
-            <div
-              className={`p-2 rounded-lg ${activityType.darkColor} ${activityType.textColor} flex-shrink-0`}
+        {/* Icon */}
+        <div
+          className={`p-1.5 rounded-sm ${activityType.darkColor} ${activityType.textColor} shrink-0 mt-0.5`}
+        >
+          {ACTIVITY_ICONS[activity.type]}
+        </div>
+
+        {/* Content */}
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2 mb-0.5 flex-wrap">
+            <h3
+              className={`text-[13px] font-medium ${
+                activity.completed ? "line-through text-white/30" : "text-white/80"
+              }`}
             >
-              {ACTIVITY_ICONS[activity.type]}
-            </div>
+              {activity.title}
+            </h3>
+            {activity.reminder_minutes ? (
+              <Bell className="h-3 w-3 text-amber-400/70" />
+            ) : null}
+          </div>
 
-            <div className="flex-1">
-              <div className="flex items-center gap-2 mb-1">
-                <h3
-                  className={`font-medium ${activity.completed ? "line-through text-zinc-500" : ""}`}
-                >
-                  {activity.title}
-                </h3>
-                {activity.reminder_minutes && (
-                  <Bell className="w-3 h-3 text-yellow-500" />
-                )}
-              </div>
+          {activity.description && (
+            <p className="text-[11px] text-white/40 leading-snug mb-1">
+              {activity.description}
+            </p>
+          )}
 
-              {activity.description && (
-                <p className="text-sm text-zinc-400 mb-2">
-                  {activity.description}
-                </p>
-              )}
+          {activity.notes && (
+            <p className="text-[10px] text-white/25 italic">{activity.notes}</p>
+          )}
 
-              {activity.notes && (
-                <p className="text-xs text-zinc-500 italic">{activity.notes}</p>
-              )}
-
-              <div className="flex items-center gap-2 mt-2 text-xs text-zinc-500">
-                <Clock className="w-3 h-3" />
-                <span>{activity.duration} min</span>
-                {activity.is_recurring && (
-                  <>
-                    <span>•</span>
-                    <span>Recurring</span>
-                  </>
-                )}
-              </div>
-            </div>
+          <div className="flex items-center gap-2 mt-1.5 text-[10px] text-white/25">
+            <span className="flex items-center gap-0.5">
+              <Clock className="h-2.5 w-2.5" /> {activity.duration}m
+            </span>
+            {activity.is_recurring && (
+              <>
+                <span>·</span>
+                <span>Recurring</span>
+              </>
+            )}
           </div>
         </div>
 
         {/* Actions */}
-        <div className="flex items-center gap-2">
-          <Button
-            variant="ghost"
-            size="sm"
+        <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+          <button
             onClick={() => onToggleComplete(activity)}
-            className={activity.completed ? "text-green-500" : "text-zinc-400"}
+            className={`p-1.5 rounded-sm hover:bg-white/[0.04] transition-colors ${
+              activity.completed ? "text-emerald-400" : "text-white/30 hover:text-emerald-400"
+            }`}
+            title={activity.completed ? "Mark incomplete" : "Mark complete"}
           >
-            <Check className="w-4 h-4" />
-          </Button>
+            <Check className="h-3.5 w-3.5" />
+          </button>
 
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="sm" className="text-zinc-400">
-                <Edit className="w-4 h-4" />
-              </Button>
+              <button className="p-1.5 rounded-sm hover:bg-white/[0.04] text-white/30 hover:text-white/70 transition-colors">
+                <Edit className="h-3.5 w-3.5" />
+              </button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent>
-              <DropdownMenuItem onClick={onEdit}>
-                <Edit className="w-4 h-4 mr-2" />
-                Edit
+            <DropdownMenuContent className="bg-[#0a0a0a] border-white/[0.06] rounded-sm">
+              <DropdownMenuItem onClick={onEdit} className="text-[12px]">
+                <Edit className="h-3 w-3 mr-2" /> Edit
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={onDelete} className="text-red-500">
-                <Trash2 className="w-4 h-4 mr-2" />
-                Delete
+              <DropdownMenuItem onClick={onDelete} className="text-[12px] text-red-400">
+                <Trash2 className="h-3 w-3 mr-2" /> Delete
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
@@ -742,51 +708,50 @@ const RestaurantCard: React.FC<{
   const cuisineInfo = CUISINE_TYPES[restaurant.cuisine];
 
   return (
-    <div className="bg-zinc-900 rounded-lg border border-zinc-800 p-4 hover:border-zinc-700 transition-colors">
+    <div className="bg-[#0a0a0a] border border-white/[0.04] hover:border-red-500/10 rounded-sm p-4 transition-all group">
       {/* Header */}
-      <div className="flex items-start justify-between mb-3">
-        <div className="flex-1">
-          <div className="flex items-center gap-2 mb-1">
-            <span className="text-2xl">{cuisineInfo.icon}</span>
-            <h3 className="font-bold">{restaurant.name}</h3>
+      <div className="flex items-start justify-between mb-3 gap-2">
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2 mb-0.5">
+            <span className="text-xl">{cuisineInfo.icon}</span>
+            <h3 className="text-[14px] font-semibold text-white/85 truncate">{restaurant.name}</h3>
           </div>
-          <p className="text-sm text-zinc-400">{cuisineInfo.label}</p>
+          <p className="text-[11px] text-white/30">{cuisineInfo.label}</p>
         </div>
 
-        <Button
-          variant="ghost"
-          size="sm"
+        <button
           onClick={() => onToggleFavorite(restaurant)}
-          className={restaurant.is_favorite ? "text-red-500" : "text-zinc-400"}
+          className={`p-1.5 rounded-sm hover:bg-white/[0.04] transition-colors shrink-0 ${
+            restaurant.is_favorite ? "text-red-400" : "text-white/30 hover:text-red-400"
+          }`}
+          title={restaurant.is_favorite ? "Unfavorite" : "Favorite"}
         >
-          <Heart
-            className={`w-5 h-5 ${restaurant.is_favorite ? "fill-current" : ""}`}
-          />
-        </Button>
+          <Heart className={`h-4 w-4 ${restaurant.is_favorite ? "fill-current" : ""}`} />
+        </button>
       </div>
 
       {/* Details */}
-      <div className="space-y-2 mb-3">
-        <div className="flex items-start gap-2 text-sm text-zinc-400">
-          <MapPin className="w-4 h-4 flex-shrink-0 mt-0.5" />
-          <span>{restaurant.address}</span>
+      <div className="space-y-1.5 mb-3">
+        <div className="flex items-start gap-1.5 text-[12px] text-white/50">
+          <MapPin className="h-3 w-3 shrink-0 mt-0.5 text-white/20" />
+          <span className="leading-snug">{restaurant.address}</span>
         </div>
 
         {restaurant.phone_number && (
-          <div className="flex items-center gap-2 text-sm text-zinc-400">
-            <Phone className="w-4 h-4 flex-shrink-0" />
+          <div className="flex items-center gap-1.5 text-[12px] text-white/50">
+            <Phone className="h-3 w-3 shrink-0 text-white/20" />
             <span>{restaurant.phone_number}</span>
           </div>
         )}
 
         {restaurant.website && (
-          <div className="flex items-center gap-2 text-sm text-zinc-400">
-            <Globe className="w-4 h-4 flex-shrink-0" />
+          <div className="flex items-center gap-1.5 text-[12px]">
+            <Globe className="h-3 w-3 shrink-0 text-white/20" />
             <a
               href={restaurant.website}
               target="_blank"
               rel="noopener noreferrer"
-              className="hover:text-blue-400 underline"
+              className="text-red-400/70 hover:text-red-400 truncate"
             >
               Website
             </a>
@@ -794,7 +759,7 @@ const RestaurantCard: React.FC<{
         )}
 
         {restaurant.price_range && (
-          <div className="text-sm text-green-400 font-medium">
+          <div className="text-[12px] text-emerald-400 font-medium">
             {restaurant.price_range}
           </div>
         )}
@@ -802,7 +767,9 @@ const RestaurantCard: React.FC<{
 
       {/* Notes */}
       {restaurant.notes && (
-        <p className="text-sm text-zinc-500 mb-3 italic">{restaurant.notes}</p>
+        <div className="bg-white/[0.015] border-l-2 border-amber-500/30 px-2 py-1 mb-3 rounded-sm">
+          <p className="text-[11px] text-white/50 italic leading-snug">{restaurant.notes}</p>
+        </div>
       )}
 
       {/* Tags */}
@@ -811,7 +778,7 @@ const RestaurantCard: React.FC<{
           {restaurant.tags.map((tag) => (
             <span
               key={tag}
-              className="text-xs px-2 py-1 bg-zinc-800 rounded-full text-zinc-400"
+              className="text-[10px] px-1.5 py-0.5 bg-white/[0.03] rounded-sm text-white/40"
             >
               {tag}
             </span>
@@ -820,19 +787,20 @@ const RestaurantCard: React.FC<{
       )}
 
       {/* Actions */}
-      <div className="flex items-center gap-2 pt-3 border-t border-zinc-800">
-        <Button variant="outline" size="sm" onClick={onEdit} className="flex-1">
-          <Edit className="w-3 h-3 mr-1" />
-          Edit
-        </Button>
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={onDelete}
-          className="text-red-500 border-red-900"
+      <div className="flex items-center gap-1.5 pt-3 border-t border-white/[0.04] opacity-0 group-hover:opacity-100 transition-opacity">
+        <button
+          onClick={onEdit}
+          className="flex-1 flex items-center justify-center gap-1 py-1.5 bg-white/[0.02] hover:bg-white/[0.04] border border-white/[0.04] text-white/40 hover:text-white/80 text-[11px] rounded-sm transition-colors"
         >
-          <Trash2 className="w-3 h-3" />
-        </Button>
+          <Edit className="h-3 w-3" /> Edit
+        </button>
+        <button
+          onClick={onDelete}
+          className="px-2.5 py-1.5 bg-white/[0.02] hover:bg-red-500/[0.06] border border-white/[0.04] hover:border-red-500/15 text-white/40 hover:text-red-400 rounded-sm transition-colors"
+          title="Delete"
+        >
+          <Trash2 className="h-3 w-3" />
+        </button>
       </div>
     </div>
   );
@@ -897,7 +865,7 @@ const ActivityModal: React.FC<{
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="bg-zinc-900 border-zinc-800 text-white max-w-2xl">
+      <DialogContent className="bg-[#0a0a0a] border-white/[0.06] text-white max-w-2xl rounded-sm">
         <DialogHeader>
           <DialogTitle>
             {activity ? "Edit Activity" : "Add Activity"}
@@ -914,7 +882,7 @@ const ActivityModal: React.FC<{
                 setFormData({ ...formData, title: e.target.value })
               }
               placeholder="Activity title"
-              className="bg-zinc-800 border-zinc-700"
+              className="bg-white/[0.02] border-white/[0.06] text-white/80 rounded-sm focus:border-red-500/20"
             />
           </div>
 
@@ -930,7 +898,7 @@ const ActivityModal: React.FC<{
                 })
               }
             >
-              <SelectTrigger className="bg-zinc-800 border-zinc-700">
+              <SelectTrigger className="bg-white/[0.02] border-white/[0.06] text-white/80 rounded-sm focus:border-red-500/20">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -953,7 +921,7 @@ const ActivityModal: React.FC<{
                 onChange={(e) =>
                   setFormData({ ...formData, time: e.target.value })
                 }
-                className="bg-zinc-800 border-zinc-700"
+                className="bg-white/[0.02] border-white/[0.06] text-white/80 rounded-sm focus:border-red-500/20"
               />
             </div>
             <div>
@@ -967,7 +935,7 @@ const ActivityModal: React.FC<{
                     duration: parseInt(e.target.value),
                   })
                 }
-                className="bg-zinc-800 border-zinc-700"
+                className="bg-white/[0.02] border-white/[0.06] text-white/80 rounded-sm focus:border-red-500/20"
               />
             </div>
           </div>
@@ -981,7 +949,7 @@ const ActivityModal: React.FC<{
                 setFormData({ ...formData, description: e.target.value })
               }
               placeholder="Activity description"
-              className="bg-zinc-800 border-zinc-700"
+              className="bg-white/[0.02] border-white/[0.06] text-white/80 rounded-sm focus:border-red-500/20"
               rows={3}
             />
           </div>
@@ -1018,8 +986,8 @@ const ActivityModal: React.FC<{
                       }}
                       className={
                         isSelected
-                          ? "bg-red-600 hover:bg-red-700"
-                          : "border-zinc-700"
+                          ? "bg-red-600 hover:bg-red-500 rounded-sm"
+                          : "border-white/[0.06]"
                       }
                     >
                       {day}
@@ -1043,7 +1011,7 @@ const ActivityModal: React.FC<{
                 })
               }
               placeholder="0 for no reminder"
-              className="bg-zinc-800 border-zinc-700"
+              className="bg-white/[0.02] border-white/[0.06] text-white/80 rounded-sm focus:border-red-500/20"
             />
           </div>
 
@@ -1056,7 +1024,7 @@ const ActivityModal: React.FC<{
                 setFormData({ ...formData, notes: e.target.value })
               }
               placeholder="Additional notes"
-              className="bg-zinc-800 border-zinc-700"
+              className="bg-white/[0.02] border-white/[0.06] text-white/80 rounded-sm focus:border-red-500/20"
               rows={2}
             />
           </div>
@@ -1068,7 +1036,7 @@ const ActivityModal: React.FC<{
           </Button>
           <Button
             onClick={handleSubmit}
-            className="bg-red-600 hover:bg-red-700"
+            className="bg-red-600 hover:bg-red-500 rounded-sm"
           >
             {activity ? "Update" : "Add"} Activity
           </Button>
@@ -1156,7 +1124,7 @@ const RestaurantModal: React.FC<{
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="bg-zinc-900 border-zinc-800 text-white max-w-2xl">
+      <DialogContent className="bg-[#0a0a0a] border-white/[0.06] text-white max-w-2xl rounded-sm">
         <DialogHeader>
           <DialogTitle>
             {restaurant ? "Edit Restaurant" : "Add Restaurant"}
@@ -1173,7 +1141,7 @@ const RestaurantModal: React.FC<{
                 setFormData({ ...formData, name: e.target.value })
               }
               placeholder="Restaurant name"
-              className="bg-zinc-800 border-zinc-700"
+              className="bg-white/[0.02] border-white/[0.06] text-white/80 rounded-sm focus:border-red-500/20"
             />
           </div>
 
@@ -1189,7 +1157,7 @@ const RestaurantModal: React.FC<{
                 })
               }
             >
-              <SelectTrigger className="bg-zinc-800 border-zinc-700">
+              <SelectTrigger className="bg-white/[0.02] border-white/[0.06] text-white/80 rounded-sm focus:border-red-500/20">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -1211,7 +1179,7 @@ const RestaurantModal: React.FC<{
                 setFormData({ ...formData, address: e.target.value })
               }
               placeholder="Full address"
-              className="bg-zinc-800 border-zinc-700"
+              className="bg-white/[0.02] border-white/[0.06] text-white/80 rounded-sm focus:border-red-500/20"
             />
           </div>
 
@@ -1224,7 +1192,7 @@ const RestaurantModal: React.FC<{
                 setFormData({ ...formData, phone_number: e.target.value })
               }
               placeholder="Phone number"
-              className="bg-zinc-800 border-zinc-700"
+              className="bg-white/[0.02] border-white/[0.06] text-white/80 rounded-sm focus:border-red-500/20"
             />
           </div>
 
@@ -1237,7 +1205,7 @@ const RestaurantModal: React.FC<{
                 setFormData({ ...formData, website: e.target.value })
               }
               placeholder="https://..."
-              className="bg-zinc-800 border-zinc-700"
+              className="bg-white/[0.02] border-white/[0.06] text-white/80 rounded-sm focus:border-red-500/20"
             />
           </div>
 
@@ -1253,7 +1221,7 @@ const RestaurantModal: React.FC<{
                 })
               }
             >
-              <SelectTrigger className="bg-zinc-800 border-zinc-700">
+              <SelectTrigger className="bg-white/[0.02] border-white/[0.06] text-white/80 rounded-sm focus:border-red-500/20">
                 <SelectValue placeholder="Select price range" />
               </SelectTrigger>
               <SelectContent>
@@ -1274,7 +1242,7 @@ const RestaurantModal: React.FC<{
                 setFormData({ ...formData, notes: e.target.value })
               }
               placeholder="Additional notes, recommendations, etc."
-              className="bg-zinc-800 border-zinc-700"
+              className="bg-white/[0.02] border-white/[0.06] text-white/80 rounded-sm focus:border-red-500/20"
               rows={3}
             />
           </div>
@@ -1288,7 +1256,7 @@ const RestaurantModal: React.FC<{
                 onChange={(e) => setTagInput(e.target.value)}
                 onKeyPress={(e) => e.key === "Enter" && addTag()}
                 placeholder="Add tag (e.g., halal-certified)"
-                className="bg-zinc-800 border-zinc-700"
+                className="bg-white/[0.02] border-white/[0.06] text-white/80 rounded-sm focus:border-red-500/20"
               />
               <Button onClick={addTag} variant="outline">
                 Add
@@ -1298,7 +1266,7 @@ const RestaurantModal: React.FC<{
               {formData.tags?.map((tag) => (
                 <span
                   key={tag}
-                  className="text-xs px-2 py-1 bg-zinc-800 rounded-full text-zinc-400 flex items-center gap-1"
+                  className="text-xs px-2 py-1 bg-white/[0.04] rounded-sm text-white/50 flex items-center gap-1"
                 >
                   {tag}
                   <X
@@ -1328,7 +1296,7 @@ const RestaurantModal: React.FC<{
           </Button>
           <Button
             onClick={handleSubmit}
-            className="bg-red-600 hover:bg-red-700"
+            className="bg-red-600 hover:bg-red-500 rounded-sm"
           >
             {restaurant ? "Update" : "Add"} Restaurant
           </Button>
