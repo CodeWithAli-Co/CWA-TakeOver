@@ -104,6 +104,7 @@ export interface ReadingActivity {
   question: string;
   choices: string[];
   correctIndex: number;
+  explain?: string;
 }
 
 export interface DialogueActivity {
@@ -113,6 +114,7 @@ export interface DialogueActivity {
   question: string;
   choices: string[];
   correctIndex: number;
+  explain?: string;
 }
 
 export type Activity =

@@ -93,7 +93,7 @@ export function DialogueActivity({
         </div>
       </div>
 
-      <FeedbackBanner state={state} onNext={cb.onNext} />
+      <FeedbackBanner state={state} onNext={cb.onNext} explain={activity.explain} />
     </div>
   );
 }
