@@ -143,7 +143,7 @@ export const QuotaFormDialog = ({
   };
 
   return (
-    <DialogContent className="bg-[#0a0a0a] border-white/[0.06] text-white rounded-sm">
+    <DialogContent className="max-w-lg">
       <DialogHeader>
         <DialogTitle className="text-white/90">
           {editingQuota ? "Edit Quota" : "Add Weekly Quota"}

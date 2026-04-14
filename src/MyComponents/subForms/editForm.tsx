@@ -117,16 +117,13 @@ export const EditData = (props: Props) => {
           </Button>
         </motion.div>
       </DialogTrigger>
-      <DialogContent
-        className="sm:max-w-[600px] bg-black/95 border-red-950/30 
-        shadow-2xl shadow-red-950/40 rounded-xl"
-      >
+      <DialogContent className="max-w-lg">
         <DialogHeader>
-          <DialogTitle className="text-red-200 flex items-center gap-2">
-            <FolderClosed className="w-6 h-6 text-red-500" />
+          <DialogTitle className="flex items-center gap-2">
+            <FolderClosed className="h-4 w-4 text-red-400" />
             Edit Account
           </DialogTitle>
-          <DialogDescription className="text-red-200/60 flex items-center gap-2">
+          <DialogDescription className="flex items-center gap-2">
             <Pen className="w-4 h-4 text-red-400" />
             Edit an Account
           </DialogDescription>

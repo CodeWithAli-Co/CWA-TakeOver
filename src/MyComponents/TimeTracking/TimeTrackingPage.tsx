@@ -304,10 +304,10 @@ export const TimeTrackingPage = () => {
 
       {/* Add Entry Dialog */}
       <Dialog open={showAddEntry} onOpenChange={setShowAddEntry}>
-        <DialogContent className="bg-zinc-950/95 backdrop-blur-xl border-white/10 max-w-2xl">
+        <DialogContent className="max-w-lg">
           <DialogHeader>
-            <DialogTitle className="text-white flex items-center gap-2">
-              <Timer className="h-5 w-5 text-red-400" />
+            <DialogTitle className="flex items-center gap-2">
+              <Timer className="h-4 w-4 text-red-400" />
               Log Time Entry
             </DialogTitle>
           </DialogHeader>
@@ -320,10 +320,10 @@ export const TimeTrackingPage = () => {
 
       {/* Edit Entry Dialog */}
       <Dialog open={!!editingEntry} onOpenChange={(open) => !open && setEditingEntry(null)}>
-        <DialogContent className="bg-zinc-950/95 backdrop-blur-xl border-white/10 max-w-2xl">
+        <DialogContent className="max-w-lg">
           <DialogHeader>
-            <DialogTitle className="text-white flex items-center gap-2">
-              <Timer className="h-5 w-5 text-red-400" />
+            <DialogTitle className="flex items-center gap-2">
+              <Timer className="h-4 w-4 text-red-400" />
               Edit Time Entry
             </DialogTitle>
           </DialogHeader>

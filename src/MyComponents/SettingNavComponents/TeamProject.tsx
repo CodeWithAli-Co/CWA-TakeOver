@@ -211,7 +211,7 @@ const TeamCard = ({ team }: { team: any }) => (
               <MoreHorizontal className="h-4 w-4" />
             </Button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent className="bg-black/95 border-red-950/30 text-white">
+          <DropdownMenuContent className="max-w-lg">
             <DropdownMenuLabel>Team Actions</DropdownMenuLabel>
             <DropdownMenuSeparator className="bg-red-950/30" />
             <DropdownMenuItem className="hover:bg-red-950/30">
@@ -313,7 +313,7 @@ const CreateTeamDialog = () => {
           Create Team
         </Button>
       </DialogTrigger>
-      <DialogContent className="bg-black/95 border-red-950/30 text-white">
+      <DialogContent className="max-w-lg">
         <DialogHeader>
           <DialogTitle className="text-white text-xl">
             Create New Team
@@ -393,7 +393,7 @@ const CreateProjectDialog = () => {
           New Project
         </Button>
       </DialogTrigger>
-      <DialogContent className="bg-black/95 border-red-950/30 text-white">
+      <DialogContent className="max-w-lg">
         <DialogHeader>
           <DialogTitle className="text-white text-xl">
             Create New Project

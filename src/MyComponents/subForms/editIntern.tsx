@@ -51,32 +51,29 @@ export const EditIntern = (props: Props) => {
   return (
     <AnimatePresence mode="wait">
       <motion.div
-        className="fixed inset-0 flex items-center justify-center backdrop-blur-sm"
+        className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-[2px]"
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
         onClick={handleClose}
       >
         <motion.div
-          initial={{ opacity: 0, scale: 0.95 }}
-          animate={{ opacity: 1, scale: 1 }}
-          exit={{ opacity: 0, scale: 0.95 }}
-          transition={{ type: "spring", damping: 20, stiffness: 300 }}
+          initial={{ opacity: 0, scale: 0.97, y: 8 }}
+          animate={{ opacity: 1, scale: 1, y: 0 }}
+          exit={{ opacity: 0, scale: 0.97, y: 8 }}
+          transition={{ type: "spring", damping: 25, stiffness: 350 }}
           className="w-full max-w-md mx-4"
           onClick={(e) => e.stopPropagation()}
         >
-          <Card className="bg-black border-red-800/30  shadow-xl shadow-red-800/20">
-            <CardHeader className="relative border-b border-red-950/20">
-              <motion.button
-                whileHover={{ scale: 1.1 }}
-                whileTap={{ scale: 0.9 }}
+          <Card className="bg-[#0a0a0a] border border-white/[0.08] rounded-sm shadow-2xl shadow-black/50">
+            <CardHeader className="relative border-b border-white/[0.04] px-6 py-4">
+              <button
                 onClick={handleClose}
-                className="absolute right-4 top-4 p-1 rounded-full text-red-500 
-                         hover:text-red-400 hover:bg-red-950/20 transition-colors"
+                className="absolute right-3 top-3 p-1.5 rounded-sm text-white/30 hover:text-red-400 hover:bg-red-500/[0.08] transition-colors"
               >
-                <X size={20} />
-              </motion.button>
-              <CardTitle className="text-2xl font-semibold text-white text-center">
+                <X className="h-3.5 w-3.5" />
+              </button>
+              <CardTitle className="text-[15px] font-semibold text-white/90 tracking-tight">
                 Edit User
               </CardTitle>
             </CardHeader>

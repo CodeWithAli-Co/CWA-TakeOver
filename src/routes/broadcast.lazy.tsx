@@ -421,9 +421,9 @@ async function BroadcastManagement() {
 
       {/* Edit Contact Dialog */}
       <Dialog>
-        <DialogContent className="bg-black/95 border-red-900/30">
+        <DialogContent className="max-w-md">
           <DialogHeader>
-            <DialogTitle className="text-amber-50">Edit Contact</DialogTitle>
+            <DialogTitle>Edit Contact</DialogTitle>
           </DialogHeader>
           {/* Add your edit form content here */}
         </DialogContent>

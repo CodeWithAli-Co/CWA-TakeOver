@@ -394,9 +394,9 @@ const NewReportDialog = ({
           New Report
         </Button>
       </DialogTrigger>
-      <DialogContent className="sm:max-w-[600px] bg-black/95 border-red-950/30 text-white">
+      <DialogContent className="max-w-lg">
         <DialogHeader>
-          <DialogTitle className="text-white">Create New Report</DialogTitle>
+          <DialogTitle>Create New Report</DialogTitle>
           <DialogDescription className="text-white/60">
             Configure a new report from a template or create a custom report.
           </DialogDescription>

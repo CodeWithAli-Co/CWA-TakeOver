@@ -155,9 +155,9 @@ export const MeetingModal: React.FC<MeetingModalProps> = ({
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && handleClose()}>
-      <DialogContent className="bg-black border border-blue-900/40 rounded-lg w-full max-w-2xl max-h-[90vh] overflow-auto p-4 sm:p-6">
+      <DialogContent className="max-w-lg max-h-[90vh] overflow-auto">
         <DialogHeader>
-          <DialogTitle className="text-xl font-bold text-blue-400 flex items-center">
+          <DialogTitle className="flex items-center gap-2">
             <Users size={20} className="mr-2" />
             Create Meeting
           </DialogTitle>

@@ -125,17 +125,14 @@ export const AddTodo = (props: Users) => {
           )}
         </Button>
       </DialogTrigger>
-      <DialogContent
-        className="sm:max-w-[600px] bg-black/95 border-red-950/30 
-        shadow-xl shadow-red-950/40 rounded-xl"
-      >
+      <DialogContent className="max-w-lg">
         <DialogHeader>
-          <DialogTitle className="text-red-200 flex items-center gap-2">
-            <Flame className="w-6 h-6 text-red-500" />
+          <DialogTitle className="flex items-center gap-2">
+            <Flame className="h-4 w-4 text-red-400" />
             Create New Task
           </DialogTitle>
-          <DialogDescription className="text-red-200/60 flex items-center gap-2">
-            <Clock className="w-4 h-4 text-red-400" />
+          <DialogDescription className="flex items-center gap-2">
+            <Clock className="h-3 w-3" />
             Add a new task to your project. Fill in the task details below.
           </DialogDescription>
         </DialogHeader>

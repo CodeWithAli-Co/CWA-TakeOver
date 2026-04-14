@@ -44,7 +44,7 @@ export const EditEmployee = (props: Props) => {
   return (
     <AnimatePresence mode="wait">
       <motion.div
-        className="fixed inset-0 flex items-center justify-center z-50"
+        className="fixed inset-0 flex items-center justify-center z-50 bg-black/70 backdrop-blur-[2px]"
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
@@ -58,7 +58,7 @@ export const EditEmployee = (props: Props) => {
           className="w-full max-w-md mx-4"
           onClick={(e) => e.stopPropagation()}
         >
-          <div className="bg-[#0a0a0a] border border-white/[0.06] rounded-sm shadow-2xl shadow-black/50">
+          <div className="bg-[#0a0a0a] border border-white/[0.08] rounded-sm shadow-2xl shadow-black/50">
             {/* Header */}
             <div className="flex items-center justify-between px-6 py-4 border-b border-white/[0.04]">
               <h2 className="text-[15px] font-semibold text-white/85">Edit User</h2>

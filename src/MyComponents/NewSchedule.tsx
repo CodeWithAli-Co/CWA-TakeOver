@@ -615,9 +615,9 @@ const EventModal: React.FC<EventModalProps> = ({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-lg bg-zinc-950 border-zinc-800">
+      <DialogContent className="max-w-lg">
         <DialogHeader>
-          <DialogTitle className="text-xl font-bold text-zinc-100">
+          <DialogTitle>
             {event ? "Edit Event" : "New Event"}
           </DialogTitle>
         </DialogHeader>

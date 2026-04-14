@@ -219,7 +219,7 @@ export const EditMeeting = ({ meetingID, open, setOpen, onComplete }: EditMeetin
   if (isLoading) {
     return (
       <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className="sm:max-w-[600px] bg-black/95 border-red-950/30 shadow-2xl shadow-red-950/40 rounded-xl">
+        <DialogContent className="max-w-lg">
           <DialogHeader>
             <DialogTitle className="text-red-200">Loading meeting data...</DialogTitle>
           </DialogHeader>
@@ -230,13 +230,10 @@ export const EditMeeting = ({ meetingID, open, setOpen, onComplete }: EditMeetin
 
  return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogContent
-        className="sm:max-w-[600px] bg-black/95 border-red-950/30 
-        shadow-2xl shadow-red-950/40 rounded-xl"
-      >
+      <DialogContent className="max-w-lg">
         <DialogHeader>
-          <DialogTitle className="text-red-200 flex items-center gap-2">
-            <Calendar className="w-6 h-6 text-red-500" />
+          <DialogTitle className="flex items-center gap-2">
+            <Calendar className="h-4 w-4 text-red-400" />
             Edit Meeting
           </DialogTitle>
           <DialogDescription className="text-red-200/60 flex items-center gap-2">

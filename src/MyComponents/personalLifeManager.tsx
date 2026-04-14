@@ -865,7 +865,7 @@ const ActivityModal: React.FC<{
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="bg-[#0a0a0a] border-white/[0.06] text-white max-w-2xl rounded-sm">
+      <DialogContent className="max-w-lg">
         <DialogHeader>
           <DialogTitle>
             {activity ? "Edit Activity" : "Add Activity"}
@@ -1124,7 +1124,7 @@ const RestaurantModal: React.FC<{
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="bg-[#0a0a0a] border-white/[0.06] text-white max-w-2xl rounded-sm">
+      <DialogContent className="max-w-lg">
         <DialogHeader>
           <DialogTitle>
             {restaurant ? "Edit Restaurant" : "Add Restaurant"}

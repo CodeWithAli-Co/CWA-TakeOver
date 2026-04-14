@@ -141,7 +141,7 @@ export const ChatLayout = () => {
                       Start New Conversation
                     </button>
                   </DialogTrigger>
-                  <DialogContent className="bg-[#0a0a0a] border-white/[0.06] rounded-sm">
+                  <DialogContent className="max-w-md">
                     <DialogTitle className="text-white/85">New Conversation</DialogTitle>
                     <AddDMGroup Users={AllEmployees || []} />
                   </DialogContent>

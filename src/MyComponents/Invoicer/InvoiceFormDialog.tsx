@@ -134,7 +134,7 @@ export const InvoiceFormDialog: React.FC<Props> = ({ open, onOpenChange, onCreat
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="bg-[#0a0a0a] border border-white/[0.06] rounded-sm max-w-4xl p-0 gap-0">
+      <DialogContent className="max-w-2xl p-0 gap-0">
         <DialogHeader className="px-6 py-4 border-b border-white/[0.04]">
           <DialogTitle className="flex items-center gap-2 text-[15px] font-semibold text-white/85">
             <div className="p-1.5 rounded-sm bg-red-500/[0.08]">

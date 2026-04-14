@@ -67,7 +67,7 @@ export const ChatSidebar: React.FC<Props> = ({ groups, employees }) => {
                 <Plus className="h-3.5 w-3.5" />
               </button>
             </DialogTrigger>
-            <DialogContent className="bg-[#0a0a0a] border-white/[0.06] rounded-sm">
+            <DialogContent className="max-w-md">
               <DialogTitle className="text-white/85">New Conversation</DialogTitle>
               <AddDMGroup Users={employees || []} />
             </DialogContent>

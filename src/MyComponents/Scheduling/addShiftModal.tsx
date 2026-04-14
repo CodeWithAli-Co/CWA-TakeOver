@@ -259,9 +259,9 @@ export const AddShiftModal: React.FC = () => {
   
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && handleClose()}>
-      <DialogContent className="bg-black border border-red-900/40 rounded-lg w-full max-w-2xl max-h-[90vh] overflow-auto p-4 sm:p-6">
+      <DialogContent className="max-w-lg max-h-[90vh] overflow-auto">
         <DialogHeader>
-          <DialogTitle className="text-xl font-bold text-red-400 flex items-center">
+          <DialogTitle className="flex items-center gap-2">
             {isEditMode ? (
               <>
                 <Edit2 size={20} className="mr-2" />

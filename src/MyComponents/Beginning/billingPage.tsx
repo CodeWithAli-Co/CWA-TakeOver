@@ -434,9 +434,9 @@ const BillingPage = () => {
 
       {/* Upgrade Modal */}
       <Dialog open={showUpgradeModal} onOpenChange={setShowUpgradeModal}>
-        <DialogContent className="max-w-md  bg-zinc-900 border  border-zinc-800 border  border-zinc-800-white/20">
+        <DialogContent className="max-w-md">
           <DialogHeader>
-            <DialogTitle className="text-black ">
+            <DialogTitle>
               Change subscription
             </DialogTitle>
             <DialogDescription>

@@ -421,7 +421,7 @@ export const ResourceHub = () => {
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.97 }}
               onClick={(e) => e.stopPropagation()}
-              className="bg-[#0a0a0a] border border-white/[0.06] rounded-sm w-full max-w-2xl max-h-[90vh] overflow-y-auto shadow-2xl"
+              className="bg-[#0a0a0a] border border-white/[0.08] rounded-sm w-full max-w-lg max-h-[90vh] overflow-y-auto shadow-2xl shadow-black/50"
             >
               <div className="px-6 py-4 border-b border-white/[0.04] flex items-center justify-between">
                 <h3 className="text-[15px] font-semibold text-white/90">
