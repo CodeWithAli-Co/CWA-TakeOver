@@ -1,379 +1,259 @@
-import React, { useState } from "react";
+/**
+ * logs.tsx — Mod Logs page (Void theme).
+ *
+ * Admin-only activity feed aggregating webhooks from multiple services:
+ *   - GitHub (live via GitHubWebhookComponent)
+ *   - LinkedIn, Calendly, Upwork, Indeed, Hostinger (placeholder stubs)
+ *
+ * Restyled from the old red-950 theme to match the rest of the app:
+ *   bg-black page, bg-[#0a0a0a] cards, red-500 accents, rounded-sm.
+ * Old `bg-black/60 border-red-950/30 backdrop-blur-sm` cyberpunk patterns
+ * are replaced with the unified Void palette.
+ */
+
+import { useState } from "react";
 import { motion } from "framer-motion";
 import {
-  UserCircle,
-  Github,
-  GitCommit,
-  Briefcase,
-  CalendarIcon,
-  Globe,
-  Linkedin,
-  Network,
+  Github, GitCommit, Briefcase, Calendar as CalendarIcon, Globe,
+  Linkedin, Network, RefreshCw, Shield, UserCircle,
 } from "lucide-react";
-
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/shadcnComponents/card";
-import { Badge } from "@/components/ui/shadcnComponents/badge";
-import { Button } from "@/components/ui/shadcnComponents/button";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/shadcnComponents/tabs";
 import GitHubWebhookComponent from "../Webhooks/GithubHook";
-// In ModLogsPage component, import the GitHubWebhookComponent
 
-
-// Mock data to match the Discord webhook format - replace with your API call
-const mockCommitData = [
-  {
-    id: "github_1",
-    type: "GitHub",
-    appBadge: true,
-    timestamp: "Yesterday at 7:27 AM",
-    commits: [
-      {
-        author: "blazehp",
-        authorAvatar: "/avatars/blazehp.png",
-        repo: "Budgetary:blaze",
-        commitCount: 1,
-        commitId: "8a45495",
-        message: "Added Neon DB to Project",
-      }
-    ]
-  },
-  // ... other mock data items
-];
-
-// Mock data for other service types
+// ── Placeholder mock data (LinkedIn / Calendly tabs until real APIs wired) ──
 const mockLinkedInData = [
   {
     id: "linkedin_1",
-    type: "LinkedIn",
-    appBadge: true,
     timestamp: "Today at 10:15 AM",
     activity: {
-      type: "Connection",
+      type: "Connection Request",
       user: "John Developer",
-      details: "New connection request"
-    }
-  }
+      details: "New connection request from a senior engineer",
+    },
+  },
 ];
 
 const mockCalendlyData = [
   {
     id: "calendly_1",
-    type: "Calendly",
-    appBadge: true,
     timestamp: "Today at 9:30 AM",
     event: {
       type: "Meeting Scheduled",
       with: "Jane Client",
       time: "Tomorrow at 2:00 PM",
-      duration: "30 minutes"
-    }
-  }
+      duration: "30 minutes",
+    },
+  },
 ];
 
-interface CommitDetailProps {
-  commitId: string;
-  message: string;
-  author?: string;
-}
+// ── Tab configuration ──
+const TABS = [
+  { key: "github", label: "GitHub", icon: Github },
+  { key: "linkedin", label: "LinkedIn", icon: Linkedin },
+  { key: "calendly", label: "Calendly", icon: CalendarIcon },
+  { key: "upwork", label: "Upwork", icon: Briefcase },
+  { key: "indeed", label: "Indeed", icon: Network },
+  { key: "hostinger", label: "Hostinger", icon: Globe },
+] as const;
 
-const CommitDetail: React.FC<CommitDetailProps> = ({ commitId, message, author }) => {
-  return (
-    <div className="flex items-start space-x-2 py-1 text-sm">
-      <div className="flex-shrink-0 w-16 font-mono text-red-300">{commitId.substring(0, 7)}</div>
-      <div className="flex-grow">
-        <span className="text-white">{message}</span>
-        {author && author !== "blazehp" && (
-          <span className="text-red-400 ml-2">- {author}</span>
-        )}
+// ── LinkedIn activity card ──
+const LinkedInActivityCard: React.FC<{ data: typeof mockLinkedInData[0] }> = ({ data }) => (
+  <motion.div
+    initial={{ opacity: 0, y: 6 }}
+    animate={{ opacity: 1, y: 0 }}
+    className="bg-[#0a0a0a] border border-white/[0.04] rounded-sm overflow-hidden hover:border-red-500/10 transition-colors"
+  >
+    <div className="px-4 py-3 flex items-start gap-3 border-b border-white/[0.04]">
+      <div className="h-9 w-9 rounded-sm bg-blue-500/[0.08] border border-blue-500/15 flex items-center justify-center shrink-0">
+        <Linkedin className="h-4 w-4 text-blue-400" />
+      </div>
+      <div className="flex-1 min-w-0">
+        <div className="flex items-center gap-2">
+          <h3 className="text-[13px] font-medium text-white/85">LinkedIn</h3>
+          <span className="text-[9px] uppercase tracking-wider px-1.5 py-0.5 rounded-sm bg-blue-500/[0.08] text-blue-400/80 border border-blue-500/10">
+            App
+          </span>
+        </div>
+        <span className="text-[11px] text-white/25">{data.timestamp}</span>
       </div>
     </div>
-  );
-};
+    <div className="px-4 py-3">
+      <p className="text-[13px] font-medium text-white/75">{data.activity.type}</p>
+      <p className="text-[12px] text-white/50 mt-0.5">{data.activity.user}</p>
+      <p className="text-[11px] text-white/30 mt-1">{data.activity.details}</p>
+    </div>
+  </motion.div>
+);
 
-interface CommitGroupProps {
-  data: typeof mockCommitData[0];
-}
+// ── Calendly event card ──
+const CalendlyEventCard: React.FC<{ data: typeof mockCalendlyData[0] }> = ({ data }) => (
+  <motion.div
+    initial={{ opacity: 0, y: 6 }}
+    animate={{ opacity: 1, y: 0 }}
+    className="bg-[#0a0a0a] border border-white/[0.04] rounded-sm overflow-hidden hover:border-red-500/10 transition-colors"
+  >
+    <div className="px-4 py-3 flex items-start gap-3 border-b border-white/[0.04]">
+      <div className="h-9 w-9 rounded-sm bg-amber-500/[0.08] border border-amber-500/15 flex items-center justify-center shrink-0">
+        <CalendarIcon className="h-4 w-4 text-amber-400" />
+      </div>
+      <div className="flex-1 min-w-0">
+        <div className="flex items-center gap-2">
+          <h3 className="text-[13px] font-medium text-white/85">Calendly</h3>
+          <span className="text-[9px] uppercase tracking-wider px-1.5 py-0.5 rounded-sm bg-amber-500/[0.08] text-amber-400/80 border border-amber-500/10">
+            App
+          </span>
+        </div>
+        <span className="text-[11px] text-white/25">{data.timestamp}</span>
+      </div>
+    </div>
+    <div className="px-4 py-3 space-y-1">
+      <p className="text-[13px] font-medium text-white/75">{data.event.type}</p>
+      <p className="text-[12px] text-white/50">With: <span className="text-white/70">{data.event.with}</span></p>
+      <div className="flex items-center gap-3 text-[11px] text-white/30 mt-1">
+        <span>{data.event.time}</span>
+        <span>·</span>
+        <span>{data.event.duration}</span>
+      </div>
+    </div>
+  </motion.div>
+);
 
-const CommitGroup: React.FC<CommitGroupProps> = ({ data }) => {
-  return (
-    <Card className="mb-4 bg-black/60 border-red-950/30 overflow-hidden backdrop-blur-sm">
-      <CardHeader className="p-4 flex flex-row items-center space-x-2">
-        <div className="h-10 w-10 rounded-full overflow-hidden flex-shrink-0 bg-gray-800">
-          <Github className="h-full w-full p-2 text-white" />
-        </div>
-        <div className="flex-grow">
-          <CardTitle className="text-lg flex items-center">
-            {data.type}
-            {data.appBadge && (
-              <Badge className="ml-2 bg-blue-600 hover:bg-blue-700 text-xs">APP</Badge>
-            )}
-            <span className="text-xs text-red-300 ml-auto">{data.timestamp}</span>
-          </CardTitle>
-        </div>
-      </CardHeader>
+// ── Empty state for unimplemented integrations ──
+const EmptyIntegration: React.FC<{
+  name: string;
+  icon: React.ElementType;
+  message?: string;
+}> = ({ name, icon: Icon, message }) => (
+  <div className="bg-[#0a0a0a] border border-white/[0.04] rounded-sm py-16 text-center">
+    <Icon className="h-10 w-10 text-white/[0.05] mx-auto mb-3" />
+    <p className="text-[14px] text-white/30 font-medium mb-1">{name} integration not connected</p>
+    <p className="text-[12px] text-white/15">
+      {message || "Configure a webhook endpoint in Settings to start streaming activity"}
+    </p>
+  </div>
+);
 
-      <CardContent className="p-0">
-        {data.commits.map((commit, i) => (
-          <div key={i} className="border-t border-red-950/30 p-4">
-            <div className="flex items-center mb-2">
-              <div className="h-8 w-8 rounded-full overflow-hidden flex-shrink-0 bg-gray-800 mr-2">
-                {commit.authorAvatar ? (
-                  <img src={commit.authorAvatar} alt={commit.author} className="h-full w-full object-cover" />
-                ) : (
-                  <UserCircle className="h-full w-full p-1 text-gray-400" />
-                )}
-              </div>
-              <div className="font-medium text-white">{commit.author}</div>
-            </div>
-            
-            <div className="pl-10">
-              <div className="text-blue-400 hover:underline mb-2">
-                [{commit.repo}] {commit.commitCount} new {commit.commitCount === 1 ? 'commit' : 'commits'}
-              </div>
-              
-              {/* Single commit */}
-              {commit.commitId && (
-                <CommitDetail commitId={commit.commitId} message={commit.message} />
-              )}
-              
-              {/* Multiple commits */}
-              {commit.commitDetails && commit.commitDetails.map((detail: any, idx: any) => (
-                <CommitDetail 
-                  key={idx} 
-                  commitId={detail.commitId} 
-                  message={detail.message}
-                  author={detail.author}
-                />
-              ))}
-            </div>
-          </div>
-        ))}
-      </CardContent>
-    </Card>
-  );
-};
-
-// LinkedIn Activity Component
-const LinkedInActivity = ({ data }: {data: any}) => {
-  return (
-    <Card className="mb-4 bg-black/60 border-red-950/30 overflow-hidden backdrop-blur-sm">
-      <CardHeader className="p-4 flex flex-row items-center space-x-2">
-        <div className="h-10 w-10 rounded-full overflow-hidden flex-shrink-0 bg-gray-800">
-          <Linkedin className="h-full w-full p-2 text-white" />
-        </div>
-        <div className="flex-grow">
-          <CardTitle className="text-lg flex items-center">
-            {data.type}
-            {data.appBadge && (
-              <Badge className="ml-2 bg-blue-600 hover:bg-blue-700 text-xs">APP</Badge>
-            )}
-            <span className="text-xs text-red-300 ml-auto">{data.timestamp}</span>
-          </CardTitle>
-        </div>
-      </CardHeader>
-
-      <CardContent className="p-4">
-        <div className="text-white">
-          <div className="font-medium">{data.activity.type}</div>
-          <div className="text-gray-300 mt-1">{data.activity.user}</div>
-          <div className="text-gray-400 mt-2">{data.activity.details}</div>
-        </div>
-      </CardContent>
-    </Card>
-  );
-};
-
-// Calendly Event Component
-const CalendlyEvent = ({ data }: {data: any}) => {
-  return (
-    <Card className="mb-4 bg-black/60 border-red-950/30 overflow-hidden backdrop-blur-sm">
-      <CardHeader className="p-4 flex flex-row items-center space-x-2">
-        <div className="h-10 w-10 rounded-full overflow-hidden flex-shrink-0 bg-gray-800">
-          <CalendarIcon className="h-full w-full p-2 text-white" />
-        </div>
-        <div className="flex-grow">
-          <CardTitle className="text-lg flex items-center">
-            {data.type}
-            {data.appBadge && (
-              <Badge className="ml-2 bg-blue-600 hover:bg-blue-700 text-xs">APP</Badge>
-            )}
-            <span className="text-xs text-red-300 ml-auto">{data.timestamp}</span>
-          </CardTitle>
-        </div>
-      </CardHeader>
-
-      <CardContent className="p-4">
-        <div className="text-white">
-          <div className="font-medium">{data.event.type}</div>
-          <div className="text-gray-300 mt-1">With: {data.event.with}</div>
-          <div className="text-gray-400 mt-2">
-            <div>{data.event.time}</div>
-            <div>{data.event.duration}</div>
-          </div>
-        </div>
-      </CardContent>
-    </Card>
-  );
-};
-
+// ══════════════════════════════════════════════════════════════════
+// MAIN PAGE
+// ══════════════════════════════════════════════════════════════════
 function ModLogsPage() {
-  const [activeTab, setActiveTab] = useState("github");
+  const [activeTab, setActiveTab] = useState<string>("github");
 
   return (
-    <div className="min-h-screen bg-black/95">
-      {/* Navigation Bar */}
-      <nav className="fixed top-0 left-0 right-0 bg-black/80 backdrop-blur-md border-b border-red-950/40 z-50">
-        <div className="container mx-auto px-4 py-2">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center">
-              <GitCommit className="h-6 w-6 mr-2 text-red-500" />
-              <h1 className="text-xl font-bold text-white">Mod Logs</h1>
-              <Badge className="ml-3 bg-red-900/60 border border-red-800 text-red-100">Admin Only</Badge>
+    <div className="min-h-screen bg-black overflow-y-auto">
+      {/* Header */}
+      <div className="px-8 pt-7 pb-2">
+        <div className="flex items-end justify-between">
+          <div className="flex items-center gap-3">
+            <div className="p-2.5 rounded-sm bg-red-500/[0.08] border border-red-500/15">
+              <GitCommit className="h-5 w-5 text-red-400" />
+            </div>
+            <div className="flex items-center gap-3">
+              <div>
+                <h1 className="text-[24px] font-bold text-white tracking-tight">Mod Logs</h1>
+                <p className="text-[12px] text-white/20 mt-0.5">
+                  Aggregated webhooks from connected services
+                </p>
+              </div>
+              <span className="flex items-center gap-1 px-2 py-0.5 rounded-sm bg-amber-500/[0.08] border border-amber-500/15 text-amber-400 text-[10px] uppercase tracking-wider font-medium">
+                <Shield className="h-2.5 w-2.5" /> Admin only
+              </span>
             </div>
           </div>
         </div>
-      </nav>
+      </div>
 
-      <div className="container mx-auto px-4 py-8 max-w-5xl pt-20">
+      {/* Tab pills */}
+      <div className="px-8 pt-5">
+        <div className="flex items-center gap-1 bg-white/[0.02] border border-white/[0.04] rounded-sm p-0.5 w-fit overflow-x-auto">
+          {TABS.map(({ key, label, icon: Icon }) => (
+            <button
+              key={key}
+              onClick={() => setActiveTab(key)}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-sm text-[11px] font-medium whitespace-nowrap transition-all ${
+                activeTab === key
+                  ? "bg-red-500/[0.1] text-red-400"
+                  : "text-white/25 hover:text-white/50"
+              }`}
+            >
+              <Icon className="h-3 w-3" />
+              {label}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Tab content */}
+      <div className="px-8 py-5 pb-10">
         <motion.div
-          initial={{ opacity: 0, y: 20 }}
+          initial={{ opacity: 0, y: 8 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.3 }}
+          transition={{ duration: 0.2 }}
+          key={activeTab}
         >
-          {/* Service Selector Tabs */}
-          <Tabs 
-            value={activeTab} 
-            onValueChange={setActiveTab}
-            className="mb-6"
-          >
-            <TabsList className="h-12 bg-black/40 p-1 text-red-200/60 border border-red-950/20 flex-nowrap overflow-x-auto">
-              <TabsTrigger 
-                value="github" 
-                className="data-[state=active]:bg-red-950/20 data-[state=active]:text-red-200 hover:text-red-200 transition-colors duration-200 flex items-center gap-2"
-              >
-                <Github className="h-4 w-4" />
-                <span>GitHub</span>
-              </TabsTrigger>
-              <TabsTrigger 
-                value="linkedin" 
-                className="data-[state=active]:bg-red-950/20 data-[state=active]:text-red-200 hover:text-red-200 transition-colors duration-200 flex items-center gap-2"
-              >
-                <Linkedin className="h-4 w-4" />
-                <span>LinkedIn</span>
-              </TabsTrigger>
-              <TabsTrigger 
-                value="calendly" 
-                className="data-[state=active]:bg-red-950/20 data-[state=active]:text-red-200 hover:text-red-200 transition-colors duration-200 flex items-center gap-2"
-              >
-                <CalendarIcon className="h-4 w-4" />
-                <span>Calendly</span>
-              </TabsTrigger>
-              <TabsTrigger 
-                value="upwork" 
-                className="data-[state=active]:bg-red-950/20 data-[state=active]:text-red-200 hover:text-red-200 transition-colors duration-200 flex items-center gap-2"
-              >
-                <Briefcase className="h-4 w-4" />
-                <span>Upwork</span>
-              </TabsTrigger>
-              <TabsTrigger 
-                value="indeed" 
-                className="data-[state=active]:bg-red-950/20 data-[state=active]:text-red-200 hover:text-red-200 transition-colors duration-200 flex items-center gap-2"
-              >
-                <Network className="h-4 w-4" />
-                <span>Indeed</span>
-              </TabsTrigger>
-              <TabsTrigger 
-                value="hostinger" 
-                className="data-[state=active]:bg-red-950/20 data-[state=active]:text-red-200 hover:text-red-200 transition-colors duration-200 flex items-center gap-2"
-              >
-                <Globe className="h-4 w-4" />
-                <span>Hostinger</span>
-              </TabsTrigger>
-            </TabsList>
-
-            {/* Tab Content */}
-            <TabsContent value="github" className="mt-4">
-              <div className="flex justify-between items-center mb-4">
-                <div className="flex items-center">
-                  <Github className="h-6 w-6 mr-2 text-red-300" />
-                  <h2 className="text-xl font-semibold text-white">GitHub Activity</h2>
+          {activeTab === "github" && (
+            <>
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center gap-2">
+                  <Github className="h-4 w-4 text-white/40" />
+                  <h2 className="text-[14px] font-semibold text-white/85">GitHub Activity</h2>
                 </div>
-                <Button 
-                  className="bg-red-900 hover:bg-red-800 text-sm"
-                  size="sm"
+                <button
+                  className="flex items-center gap-1.5 px-3 py-1.5 bg-white/[0.02] hover:bg-white/[0.04] border border-white/[0.04] text-white/40 hover:text-white/70 text-[11px] rounded-sm transition-colors"
+                  title="Refresh"
                 >
+                  <RefreshCw className="h-3 w-3" />
                   Refresh
-                </Button>
+                </button>
               </div>
               <GitHubWebhookComponent />
-            </TabsContent>
+            </>
+          )}
 
-            <TabsContent value="linkedin" className="mt-4">
-              <div className="flex justify-between items-center mb-4">
-                <div className="flex items-center">
-                  <Linkedin className="h-6 w-6 mr-2 text-red-300" />
-                  <h2 className="text-xl font-semibold text-white">LinkedIn Activity</h2>
+          {activeTab === "linkedin" && (
+            <>
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center gap-2">
+                  <Linkedin className="h-4 w-4 text-white/40" />
+                  <h2 className="text-[14px] font-semibold text-white/85">LinkedIn Activity</h2>
                 </div>
-                <Button 
-                  className="bg-red-900 hover:bg-red-800 text-sm"
-                  size="sm"
-                >
-                  Refresh
-                </Button>
+                <button className="flex items-center gap-1.5 px-3 py-1.5 bg-white/[0.02] hover:bg-white/[0.04] border border-white/[0.04] text-white/40 hover:text-white/70 text-[11px] rounded-sm transition-colors">
+                  <RefreshCw className="h-3 w-3" /> Refresh
+                </button>
               </div>
-              {mockLinkedInData.length > 0 ? (
-                mockLinkedInData.map((item) => (
-                  <LinkedInActivity key={item.id} data={item} />
-                ))
-              ) : (
-                <div className="text-gray-400 text-center py-8">
-                  No LinkedIn activity available
-                </div>
-              )}
-            </TabsContent>
+              <div className="space-y-2">
+                {mockLinkedInData.length > 0 ? (
+                  mockLinkedInData.map((item) => <LinkedInActivityCard key={item.id} data={item} />)
+                ) : (
+                  <EmptyIntegration name="LinkedIn" icon={Linkedin} />
+                )}
+              </div>
+            </>
+          )}
 
-            <TabsContent value="calendly" className="mt-4">
-              <div className="flex justify-between items-center mb-4">
-                <div className="flex items-center">
-                  <CalendarIcon className="h-6 w-6 mr-2 text-red-300" />
-                  <h2 className="text-xl font-semibold text-white">Calendly Events</h2>
+          {activeTab === "calendly" && (
+            <>
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center gap-2">
+                  <CalendarIcon className="h-4 w-4 text-white/40" />
+                  <h2 className="text-[14px] font-semibold text-white/85">Calendly Events</h2>
                 </div>
-                <Button 
-                  className="bg-red-900 hover:bg-red-800 text-sm"
-                  size="sm"
-                >
-                  Refresh
-                </Button>
+                <button className="flex items-center gap-1.5 px-3 py-1.5 bg-white/[0.02] hover:bg-white/[0.04] border border-white/[0.04] text-white/40 hover:text-white/70 text-[11px] rounded-sm transition-colors">
+                  <RefreshCw className="h-3 w-3" /> Refresh
+                </button>
               </div>
-              {mockCalendlyData.length > 0 ? (
-                mockCalendlyData.map((item) => (
-                  <CalendlyEvent key={item.id} data={item} />
-                ))
-              ) : (
-                <div className="text-gray-400 text-center py-8">
-                  No Calendly events available
-                </div>
-              )}
-            </TabsContent>
-            
-            <TabsContent value="upwork" className="mt-4">
-              <div className="text-gray-400 text-center py-8">
-                No Upwork activity available
+              <div className="space-y-2">
+                {mockCalendlyData.length > 0 ? (
+                  mockCalendlyData.map((item) => <CalendlyEventCard key={item.id} data={item} />)
+                ) : (
+                  <EmptyIntegration name="Calendly" icon={CalendarIcon} />
+                )}
               </div>
-            </TabsContent>
-            
-            <TabsContent value="indeed" className="mt-4">
-              <div className="text-gray-400 text-center py-8">
-                No Indeed activity available
-              </div>
-            </TabsContent>
-            
-            <TabsContent value="hostinger" className="mt-4">
-              <div className="text-gray-400 text-center py-8">
-                No Hostinger activity available
-              </div>
-            </TabsContent>
-          </Tabs>
+            </>
+          )}
+
+          {activeTab === "upwork" && <EmptyIntegration name="Upwork" icon={Briefcase} />}
+          {activeTab === "indeed" && <EmptyIntegration name="Indeed" icon={Network} />}
+          {activeTab === "hostinger" && <EmptyIntegration name="Hostinger" icon={Globe} />}
         </motion.div>
       </div>
     </div>

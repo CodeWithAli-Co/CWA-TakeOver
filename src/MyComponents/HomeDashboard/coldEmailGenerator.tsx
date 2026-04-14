@@ -27,30 +27,25 @@ interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
   children: React.ReactNode;
 }
 
-const Button: React.FC<ButtonProps> = ({ 
-  children, 
-  onClick, 
-  disabled, 
-  className = "", 
-  variant = "default", 
-  size = "default", 
-  type = "button", 
-  ...props 
+// ── Local Button (Void theme) ──
+const Button: React.FC<ButtonProps> = ({
+  children, onClick, disabled, className = "",
+  variant = "default", size = "default", type = "button", ...props
 }) => {
-  const baseClasses = "inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500 focus-visible:ring-offset-2 disabled:opacity-50 disabled:pointer-events-none ring-offset-background";
-  
+  const baseClasses = "inline-flex items-center justify-center rounded-sm text-[12px] font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-red-500/30 disabled:opacity-30 disabled:pointer-events-none";
+
   const variants = {
-    default: "bg-red-600 text-white hover:bg-red-700",
-    outline: "border border-red-950 hover:bg-red-900/20 hover:text-red-300 text-white",
-    ghost: "hover:bg-red-900/20 hover:text-red-300 text-white",
+    default: "bg-red-600 text-white hover:bg-red-500",
+    outline: "bg-white/[0.02] border border-white/[0.04] hover:bg-white/[0.04] hover:border-white/[0.08] text-white/60 hover:text-white/85",
+    ghost: "hover:bg-white/[0.04] text-white/60 hover:text-white/85",
   };
-  
+
   const sizes = {
-    default: "h-10 py-2 px-4",
-    sm: "h-9 px-3 rounded-md",
-    lg: "h-11 px-8 rounded-md",
+    default: "h-9 py-1.5 px-3",
+    sm: "h-7 px-2.5 text-[11px]",
+    lg: "h-10 px-5 text-[13px]",
   };
-  
+
   return (
     <button
       type={type}
@@ -64,43 +59,43 @@ const Button: React.FC<ButtonProps> = ({
   );
 };
 
-// Card components with proper typing
+// ── Local Card primitives (Void theme) ──
 interface CardProps extends React.HTMLAttributes<HTMLDivElement> {
   children: React.ReactNode;
   ref?: RefObject<HTMLDivElement | null>;
 }
 
 const Card: React.FC<CardProps> = ({ children, className = "", ...props }) => (
-  <div className={`rounded-lg border border-red-950 bg-card text-card-foreground shadow-sm ${className}`} {...props}>
+  <div className={`bg-[#0a0a0a] border border-white/[0.04] rounded-sm overflow-hidden ${className}`} {...props}>
     {children}
   </div>
 );
 
 const CardHeader: React.FC<CardProps> = ({ children, className = "", ...props }) => (
-  <div className={`flex flex-col space-y-1.5 p-6 ${className}`} {...props}>
+  <div className={`px-5 pt-4 pb-3 border-b border-white/[0.04] ${className}`} {...props}>
     {children}
   </div>
 );
 
 const CardTitle: React.FC<CardProps> = ({ children, className = "", ...props }) => (
-  <h3 className={`text-2xl font-semibold leading-none tracking-tight ${className}`} {...props}>
+  <h3 className={`text-[14px] font-semibold text-white/85 tracking-tight ${className}`} {...props}>
     {children}
   </h3>
 );
 
 const CardContent: React.FC<CardProps> = ({ children, className = "", ...props }) => (
-  <div className={`p-6 pt-0 ${className}`} {...props}>
+  <div className={`p-5 ${className}`} {...props}>
     {children}
   </div>
 );
 
-// Input components with proper typing
+// ── Local Input primitives (Void theme) ──
 interface InputProps extends React.InputHTMLAttributes<HTMLInputElement> {}
 
 const Input: React.FC<InputProps> = ({ className = "", type = "text", ...props }) => (
   <input
     type={type}
-    className={`flex h-10 w-full rounded-md border border-red-950 bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 ${className}`}
+    className={`w-full px-3 py-2 bg-white/[0.02] border border-white/[0.06] text-white/80 rounded-sm text-[13px] placeholder:text-white/15 focus:outline-none focus:border-red-500/20 transition-colors disabled:opacity-30 ${className}`}
     {...props}
   />
 );
@@ -110,7 +105,7 @@ interface LabelProps extends React.LabelHTMLAttributes<HTMLLabelElement> {
 }
 
 const Label: React.FC<LabelProps> = ({ children, className = "", ...props }) => (
-  <label className={`text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 ${className}`} {...props}>
+  <label className={`text-[10px] text-white/25 uppercase tracking-[0.12em] font-medium block mb-1.5 ${className}`} {...props}>
     {children}
   </label>
 );
@@ -119,12 +114,12 @@ interface TextareaProps extends React.TextareaHTMLAttributes<HTMLTextAreaElement
 
 const Textarea: React.FC<TextareaProps> = ({ className = "", ...props }) => (
   <textarea
-    className={`flex min-h-[80px] w-full rounded-md border border-red-950 bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 ${className}`}
+    className={`w-full px-3 py-2 bg-white/[0.02] border border-white/[0.06] text-white/80 rounded-sm text-[13px] placeholder:text-white/15 focus:outline-none focus:border-red-500/20 transition-colors resize-y ${className}`}
     {...props}
   />
 );
 
-// Enhanced Select component with proper typing
+// ── Local Select (Void theme) ──
 interface SelectProps extends React.SelectHTMLAttributes<HTMLSelectElement> {
   children: React.ReactNode;
   onValueChange?: (value: string) => void;
@@ -136,7 +131,7 @@ const Select: React.FC<SelectProps> = ({ children, value, onValueChange, ...prop
       <select
         value={value}
         onChange={(e) => onValueChange?.(e.target.value)}
-        className="flex h-10 w-full items-center justify-between rounded-md border border-red-950 bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+        className="w-full px-3 py-2 bg-white/[0.02] border border-white/[0.06] text-white/80 rounded-sm text-[13px] focus:outline-none focus:border-red-500/20 transition-colors cursor-pointer appearance-none pr-8"
         {...props}
       >
         {children}
@@ -159,14 +154,14 @@ interface BadgeProps {
 
 const Badge: React.FC<BadgeProps> = ({ children, className = "", variant = "default" }) => {
   const variants = {
-    default: "bg-red-600 text-white",
-    secondary: "bg-red-800 text-red-100",
-    destructive: "bg-red-700 text-white",
-    outline: "text-red-300 border border-red-950",
+    default: "bg-red-500/[0.08] text-red-400 border-red-500/15",
+    secondary: "bg-white/[0.04] text-white/60 border-white/[0.06]",
+    destructive: "bg-red-500/[0.1] text-red-400 border-red-500/20",
+    outline: "bg-transparent text-white/50 border-white/[0.08]",
   };
-  
+
   return (
-    <div className={`inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 ${variants[variant]} ${className}`}>
+    <div className={`inline-flex items-center rounded-sm border px-2 py-0.5 text-[10px] font-medium uppercase tracking-wider ${variants[variant]} ${className}`}>
       {children}
     </div>
   );
@@ -202,7 +197,7 @@ interface TabsListProps extends Partial<TabsContextType> {
 }
 
 const TabsList: React.FC<TabsListProps> = ({ children, className = "", activeTab, setActiveTab }) => (
-  <div className={`inline-flex h-10 items-center justify-center rounded-md bg-red-950 border border-red-950 p-1 text-red-200 ${className}`}>
+  <div className={`inline-flex items-center bg-white/[0.02] border border-white/[0.04] rounded-sm p-0.5 ${className}`}>
     {React.Children.map(children, child =>
       React.isValidElement(child) ? React.cloneElement(child, { activeTab, setActiveTab } as any) : child
     )}
@@ -218,8 +213,10 @@ interface TabsTriggerProps extends Partial<TabsContextType> {
 const TabsTrigger: React.FC<TabsTriggerProps> = ({ children, value, className = "", activeTab, setActiveTab }) => (
   <button
     type="button"
-    className={`inline-flex items-center justify-center whitespace-nowrap rounded-sm px-3 py-1.5 text-sm font-medium ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500 focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 ${
-      activeTab === value ? 'bg-red-600 text-white shadow-sm' : 'text-red-200 hover:bg-red-800'
+    className={`inline-flex items-center justify-center whitespace-nowrap rounded-sm px-3 py-1.5 text-[11px] font-medium transition-all ${
+      activeTab === value
+        ? "bg-red-500/[0.1] text-red-400"
+        : "text-white/25 hover:text-white/50"
     } ${className}`}
     onClick={() => setActiveTab?.(value)}
   >
@@ -577,50 +574,59 @@ const EnhancedColdEmailGenerator: React.FC = () => {
 
   if (!showPreview) {
     return (
-      <div className="min-h-screen bg-black p-6">
-        <div className="max-w-6xl mx-auto">
-          {/* Header */}
-          <div className="text-center mb-8">
-            <h1 className="text-4xl font-bold text-white mb-4">
-              AI-Powered Cold Email Generator
-            </h1>
-            <p className="text-xl text-white">
-              Advanced personalization with pain point & competitor analysis
-            </p>
+      <div className="min-h-screen bg-black overflow-y-auto">
+        {/* Void header */}
+        <div className="px-8 pt-7 pb-2">
+          <div className="flex items-center gap-3">
+            <div className="p-2.5 rounded-sm bg-red-500/[0.08] border border-red-500/15">
+              <Brain className="h-5 w-5 text-red-400" />
+            </div>
+            <div>
+              <h1 className="text-[24px] font-bold text-white tracking-tight">Cold Email Generator</h1>
+              <p className="text-[12px] text-white/20 mt-0.5">
+                AI-powered personalization with pain point + competitor analysis
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <div className="px-8 pt-5 pb-10 max-w-6xl mx-auto space-y-4">
+          {/* Campaign Stats — unified strip */}
+          <div className="bg-[#0a0a0a] border border-white/[0.04] rounded-sm overflow-hidden">
+            <div className="flex">
+              <div className="flex-1 px-5 py-4 border-r border-white/[0.04]">
+                <div className="flex items-center gap-1.5 mb-1">
+                  <Send className="h-3 w-3 text-red-500/60" />
+                  <span className="text-[10px] text-white/20 uppercase tracking-[0.12em]">Emails Sent</span>
+                </div>
+                <p className="text-xl font-bold text-white tracking-tight">{campaignStats.emailsSent}</p>
+              </div>
+              <div className="flex-1 px-5 py-4 border-r border-white/[0.04]">
+                <div className="flex items-center gap-1.5 mb-1">
+                  <BarChart className="h-3 w-3 text-emerald-500/60" />
+                  <span className="text-[10px] text-white/20 uppercase tracking-[0.12em]">Open Rate</span>
+                </div>
+                <p className="text-xl font-bold text-emerald-400 tracking-tight">{campaignStats.openRate}%</p>
+              </div>
+              <div className="flex-1 px-5 py-4 border-r border-white/[0.04]">
+                <div className="flex items-center gap-1.5 mb-1">
+                  <TrendingUp className="h-3 w-3 text-amber-500/60" />
+                  <span className="text-[10px] text-white/20 uppercase tracking-[0.12em]">Reply Rate</span>
+                </div>
+                <p className="text-xl font-bold text-amber-400 tracking-tight">{campaignStats.replyRate}%</p>
+              </div>
+              <div className="flex-1 px-5 py-4">
+                <div className="flex items-center gap-1.5 mb-1">
+                  <Users className="h-3 w-3 text-purple-500/60" />
+                  <span className="text-[10px] text-white/20 uppercase tracking-[0.12em]">Meetings</span>
+                </div>
+                <p className="text-xl font-bold text-purple-400 tracking-tight">{campaignStats.meetings}</p>
+              </div>
+            </div>
           </div>
 
-          {/* Campaign Stats Dashboard */}
-          <Card className="mb-8 bg-zinc-950 border-red-950">
-            <CardHeader>
-              <CardTitle className="text-white flex items-center gap-2">
-                <BarChart className="w-5 h-5 text-red-400" />
-                Campaign Performance
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                <div className="text-center p-4 bg-zinc-900 rounded-lg border border-red-950">
-                  <div className="text-2xl font-bold text-white">{campaignStats.emailsSent}</div>
-                  <div className="text-sm text-gray-300">Emails Sent</div>
-                </div>
-                <div className="text-center p-4 bg-zinc-900 rounded-lg border border-red-950">
-                  <div className="text-2xl font-bold text-green-400">{campaignStats.openRate}%</div>
-                  <div className="text-sm text-gray-300">Open Rate</div>
-                </div>
-                <div className="text-center p-4 bg-zinc-900 rounded-lg border border-red-950">
-                  <div className="text-2xl font-bold text-yellow-400">{campaignStats.replyRate}%</div>
-                  <div className="text-sm text-gray-300">Reply Rate</div>
-                </div>
-                <div className="text-center p-4 bg-zinc-900 rounded-lg border border-red-950">
-                  <div className="text-2xl font-bold text-purple-400">{campaignStats.meetings}</div>
-                  <div className="text-sm text-gray-300">Meetings Booked</div>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
           <Tabs defaultValue="single" className="w-full">
-            <TabsList className="grid w-full grid-cols-3 bg-zinc-950 border border-red-950">
+            <TabsList className="grid w-full grid-cols-3 bg-white/[0.02] border border-white/[0.04]">
               <TabsTrigger value="single">Single Email</TabsTrigger>
               <TabsTrigger value="bulk">Bulk Campaign</TabsTrigger>
               <TabsTrigger value="analytics">Analytics</TabsTrigger>
@@ -628,14 +634,14 @@ const EnhancedColdEmailGenerator: React.FC = () => {
 
             <TabsContent value="single" className="space-y-6">
               {/* Quick Actions */}
-              <Card className="bg-zinc-950 border-red-950">
+              <Card className="bg-[#0a0a0a] border-white/[0.04]">
                 <CardContent className="p-4">
                   <div className="flex gap-3 justify-center">
-                    <Button onClick={loadSampleData} variant="outline" className="border-red-950 text-white">
+                    <Button onClick={loadSampleData} variant="outline" className="border-white/[0.04] text-white/70">
                       <Database className="w-4 h-4 mr-2" />
                       Load Sample Data
                     </Button>
-                    <Button onClick={handleSubmit} disabled={isGenerating} className="bg-red-600 hover:bg-red-700">
+                    <Button onClick={handleSubmit} disabled={isGenerating} className="bg-red-600 hover:bg-red-500">
                       <Brain className="w-4 h-4 mr-2" />
                       {isGenerating ? "Generating..." : "Generate AI Email"}
                     </Button>
@@ -645,7 +651,7 @@ const EnhancedColdEmailGenerator: React.FC = () => {
 
               <div className="grid lg:grid-cols-2 gap-6">
                 {/* Lead Information */}
-                <Card className="bg-zinc-950 border-red-950">
+                <Card className="bg-[#0a0a0a] border-white/[0.04]">
                   <CardHeader>
                     <CardTitle className="text-white flex items-center gap-2">
                       <Target className="w-5 h-5 text-red-400" />
@@ -662,7 +668,7 @@ const EnhancedColdEmailGenerator: React.FC = () => {
                               placeholder="Acme Corp"
                               value={field.state.value}
                               onChange={(e) => field.handleChange(e.target.value)}
-                              className="bg-black border-red-950 text-white"
+                              className="bg-white/[0.02] border border-white/[0.06] text-white/80 rounded-sm focus:border-red-500/20"
                             />
                           </div>
                         )}
@@ -700,7 +706,7 @@ const EnhancedColdEmailGenerator: React.FC = () => {
                               placeholder="John Smith"
                               value={field.state.value}
                               onChange={(e) => field.handleChange(e.target.value)}
-                              className="bg-black border-red-950 text-white"
+                              className="bg-white/[0.02] border border-white/[0.06] text-white/80 rounded-sm focus:border-red-500/20"
                             />
                           </div>
                         )}
@@ -715,7 +721,7 @@ const EnhancedColdEmailGenerator: React.FC = () => {
                               type="email"
                               value={field.state.value}
                               onChange={(e) => field.handleChange(e.target.value)}
-                              className="bg-black border-red-950 text-white"
+                              className="bg-white/[0.02] border border-white/[0.06] text-white/80 rounded-sm focus:border-red-500/20"
                             />
                           </div>
                         )}
@@ -748,7 +754,7 @@ const EnhancedColdEmailGenerator: React.FC = () => {
                               placeholder="acmecorp.com"
                               value={field.state.value}
                               onChange={(e) => field.handleChange(e.target.value)}
-                              className="bg-black border-red-950 text-white"
+                              className="bg-white/[0.02] border border-white/[0.06] text-white/80 rounded-sm focus:border-red-500/20"
                             />
                           </div>
                         )}
@@ -763,7 +769,7 @@ const EnhancedColdEmailGenerator: React.FC = () => {
                             placeholder="Recently raised funding, expanded to new location, etc."
                             value={field.state.value}
                             onChange={(e) => field.handleChange(e.target.value)}
-                            className="bg-black border-red-950 text-white"
+                            className="bg-white/[0.02] border border-white/[0.06] text-white/80 rounded-sm focus:border-red-500/20"
                             rows={2}
                           />
                         </div>
@@ -789,7 +795,7 @@ const EnhancedColdEmailGenerator: React.FC = () => {
                                     newPainPoints[index] = e.target.value;
                                     field.handleChange(newPainPoints);
                                   }}
-                                  className="bg-black border-red-950 text-white"
+                                  className="bg-white/[0.02] border border-white/[0.06] text-white/80 rounded-sm focus:border-red-500/20"
                                 />
                                 <Button
                                   type="button"
@@ -797,7 +803,7 @@ const EnhancedColdEmailGenerator: React.FC = () => {
                                   size="sm"
                                   onClick={() => removePainPoint(index)}
                                   disabled={field.state.value.length === 1}
-                                  className="border-red-950 hover:bg-red-900/20"
+                                  className="border-white/[0.04] hover:bg-red-500/[0.06] hover:border-red-500/15 text-white/40 hover:text-red-400"
                                 >
                                   <Minus className="w-4 h-4" />
                                 </Button>
@@ -837,7 +843,7 @@ const EnhancedColdEmailGenerator: React.FC = () => {
                                     newCompetitors[index] = e.target.value;
                                     field.handleChange(newCompetitors);
                                   }}
-                                  className="bg-black border-red-950 text-white"
+                                  className="bg-white/[0.02] border border-white/[0.06] text-white/80 rounded-sm focus:border-red-500/20"
                                 />
                                 <Button
                                   type="button"
@@ -845,7 +851,7 @@ const EnhancedColdEmailGenerator: React.FC = () => {
                                   size="sm"
                                   onClick={() => removeCompetitor(index)}
                                   disabled={field.state.value.length === 1}
-                                  className="border-red-950 hover:bg-red-900/20"
+                                  className="border-white/[0.04] hover:bg-red-500/[0.06] hover:border-red-500/15 text-white/40 hover:text-red-400"
                                 >
                                   <Minus className="w-4 h-4" />
                                 </Button>
@@ -869,7 +875,7 @@ const EnhancedColdEmailGenerator: React.FC = () => {
                 </Card>
 
                 {/* Enhanced Email Settings */}
-                <Card className="bg-zinc-950 border-red-950">
+                <Card className="bg-[#0a0a0a] border-white/[0.04]">
                   <CardHeader>
                     <CardTitle className="text-white flex items-center gap-2">
                       <Settings className="w-5 h-5 text-red-400" />
@@ -1038,7 +1044,7 @@ const EnhancedColdEmailGenerator: React.FC = () => {
             </TabsContent>
 
             <TabsContent value="bulk" className="space-y-6">
-              <Card className="bg-zinc-950 border-red-950">
+              <Card className="bg-[#0a0a0a] border-white/[0.04]">
                 <CardHeader>
                   <CardTitle className="text-white flex items-center gap-2">
                     <Users className="w-5 h-5 text-red-400" />
@@ -1052,7 +1058,7 @@ const EnhancedColdEmailGenerator: React.FC = () => {
                         <Upload className="w-4 h-4 mr-2" />
                         Import CSV
                       </Button>
-                      <Button variant="outline" className="border-red-950 text-white">
+                      <Button variant="outline" className="border-white/[0.04] text-white/70">
                         <Filter className="w-4 h-4 mr-2" />
                         Filter Leads
                       </Button>
@@ -1073,7 +1079,7 @@ const EnhancedColdEmailGenerator: React.FC = () => {
             </TabsContent>
 
             <TabsContent value="analytics" className="space-y-6">
-              <Card className="bg-zinc-950 border-red-950">
+              <Card className="bg-[#0a0a0a] border-white/[0.04]">
                 <CardHeader>
                   <CardTitle className="text-white flex items-center gap-2">
                     <TrendingUp className="w-5 h-5 text-red-400" />
@@ -1098,12 +1104,12 @@ const EnhancedColdEmailGenerator: React.FC = () => {
 
   // Email Preview Page
   return (
-    <div className="min-h-screen bg-gradient-to-br from-black via-red-900 to-black p-6">
-      <div className="max-w-6xl mx-auto">
+    <div className="min-h-screen bg-black overflow-y-auto">
+      <div className="max-w-6xl mx-auto p-6">
         {/* Action Bar */}
-        <div className="flex justify-between items-center mb-6 bg-zinc-950 rounded-lg p-4 border border-red-950">
+        <div className="flex justify-between items-center mb-6 bg-[#0a0a0a] border border-white/[0.04] rounded-sm p-4">
           <div className="flex gap-3">
-            <Button onClick={() => setShowPreview(false)} variant="outline" className="border-red-950 text-white">
+            <Button onClick={() => setShowPreview(false)} variant="outline" className="border-white/[0.04] text-white/70">
               ← Back to Generator
             </Button>
             <Button onClick={copyToClipboard} variant="outline" className="border-yellow-500 text-yellow-300">
@@ -1122,7 +1128,7 @@ const EnhancedColdEmailGenerator: React.FC = () => {
         <div className="grid lg:grid-cols-3 gap-6">
           {/* Email Preview */}
           <div className="lg:col-span-2">
-            <Card className="bg-white text-white border-red-950">
+            <Card className="bg-[#0a0a0a] border border-white/[0.04]">
               <CardContent className="p-8" ref={emailPreviewRef}>
                 <div className="border-b border-red-950 pb-4 mb-6">
                   <div className="flex items-center justify-between mb-2">
@@ -1164,7 +1170,7 @@ const EnhancedColdEmailGenerator: React.FC = () => {
 
           {/* Enhanced Analysis Panel */}
           <div className="space-y-6">
-            <Card className="bg-zinc-950 border-red-950">
+            <Card className="bg-[#0a0a0a] border-white/[0.04]">
               <CardHeader>
                 <CardTitle className="text-white text-sm">AI Analysis Results</CardTitle>
               </CardHeader>
@@ -1194,7 +1200,7 @@ const EnhancedColdEmailGenerator: React.FC = () => {
               </CardContent>
             </Card>
 
-            <Card className="bg-zinc-950 border-red-950">
+            <Card className="bg-[#0a0a0a] border-white/[0.04]">
               <CardHeader>
                 <CardTitle className="text-white text-sm">Quick Actions</CardTitle>
               </CardHeader>
