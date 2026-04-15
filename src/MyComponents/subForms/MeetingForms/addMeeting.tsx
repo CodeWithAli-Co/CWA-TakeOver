@@ -31,7 +31,7 @@ import { motion } from "framer-motion";
 import { useState } from "react";
 import supabase from "@/MyComponents/supabase";
 import { message } from "@tauri-apps/plugin-dialog";
-import { MeetingsQuery } from "@/stores/query";
+import { MeetingsQuery, getActiveCompanyLabel } from "@/stores/query";
 
 export const AddMeeting = () => {
   const [open, setOpen] = useState(false);
@@ -58,6 +58,7 @@ export const AddMeeting = () => {
               attendees: value.attendees,
               meeting_type: value.meetingType,
               location: value.location,
+              company: getActiveCompanyLabel(),
             });
 
             if (error) {
@@ -82,6 +83,7 @@ export const AddMeeting = () => {
                 attendees: value.attendees,
                 meeting_type: value.meetingType,
                 location: value.url_location,
+                company: getActiveCompanyLabel(),
               });
 
             if (onlineError) {
@@ -109,6 +111,7 @@ export const AddMeeting = () => {
                   address: value.location,
                   url: value.url_location,
                 },
+                company: getActiveCompanyLabel(),
               });
 
             if (hybridError) {
@@ -154,7 +157,7 @@ export const AddMeeting = () => {
             <Calendar className="h-4 w-4 text-primary" />
             Add New Meeting
           </DialogTitle>
-          <DialogDescription className="text-red-200/60 flex items-center gap-2">
+          <DialogDescription className="text-muted-foreground flex items-center gap-2">
             <Clock className="w-4 h-4 text-primary" />
             Add a new meeting to the schedule. Fill in the meeting details
             below.
@@ -176,7 +179,7 @@ export const AddMeeting = () => {
                 <div className="grid gap-2">
                   <Label
                     htmlFor={field.name}
-                    className="text-red-200 flex items-center gap-2"
+                    className="text-foreground/70 flex items-center gap-2"
                   >
                     <Tags className="w-4 h-4 text-primary" />
                     Title
@@ -187,8 +190,8 @@ export const AddMeeting = () => {
                     autoComplete="off"
                     required
                     placeholder="Task title"
-                    className="bg-background/40 border-red-950/30 text-red-200 
-                    focus:border-red-700 focus:ring-2 focus:ring-red-900/50 
+                    className="bg-background/40 border-border text-foreground/70 
+                    focus:border-primary/30 focus:ring-2 focus:ring-primary/20 
                     transition-all duration-300"
                     value={field.state.value}
                     onChange={(e) => field.handleChange(e.target.value)}
@@ -202,7 +205,7 @@ export const AddMeeting = () => {
               name="time"
               children={(field) => (
                 <div className="grid gap-2">
-                  <Label htmlFor={field.name} className="text-red-200">
+                  <Label htmlFor={field.name} className="text-foreground/70">
                     Time
                   </Label>
                   <Input
@@ -210,8 +213,8 @@ export const AddMeeting = () => {
                     type="text"
                     autoComplete="off"
                     placeholder="Enter Time ( e.g. 11:00AM - 2:00PM )"
-                    className="bg-background/40 inline border-red-950/30 text-red-200 
-                  focus:border-red-700 focus:ring-2 focus:ring-red-900/50 
+                    className="bg-background/40 inline border-border text-foreground/70 
+                  focus:border-primary/30 focus:ring-2 focus:ring-primary/20 
                   transition-all duration-300"
                     value={field.state.value}
                     onChange={(e) => field.handleChange(e.target.value)}
@@ -226,7 +229,7 @@ export const AddMeeting = () => {
                 name="date"
                 children={(field) => (
                   <div className="grid gap-2">
-                    <Label htmlFor={field.name} className="text-red-200">
+                    <Label htmlFor={field.name} className="text-foreground/70">
                       Date
                     </Label>
                     <Input
@@ -235,8 +238,8 @@ export const AddMeeting = () => {
                       autoComplete="off"
                       required
                       placeholder="Enter Date ( e.g. May, 11 2025 )"
-                      className="bg-background/40 inline border-red-950/30 text-red-200 
-                  focus:border-red-700 focus:ring-2 focus:ring-red-900/50 
+                      className="bg-background/40 inline border-border text-foreground/70 
+                  focus:border-primary/30 focus:ring-2 focus:ring-primary/20 
                   transition-all duration-300"
                       value={field.state.value}
                       onChange={(e) => field.handleChange(e.target.value)}
@@ -252,7 +255,7 @@ export const AddMeeting = () => {
                   <div className="grid gap-2">
                     <Label
                       htmlFor={field.name}
-                      className="text-red-200 flex items-center gap-2"
+                      className="text-foreground/70 flex items-center gap-2"
                     >
                       <PersonStanding className="w-4 h-4 text-primary" />
                       Attendees
@@ -263,22 +266,22 @@ export const AddMeeting = () => {
                       onValueChange={(value) => field.handleChange(value)}
                     >
                       <SelectTrigger
-                        className="bg-background/40 border-red-950/30 
-                        text-red-200 focus:border-red-700 
-                        focus:ring-2 focus:ring-red-900/50"
+                        className="bg-background/40 border-border 
+                        text-foreground/70 focus:border-primary/30 
+                        focus:ring-2 focus:ring-primary/20"
                       >
                         <SelectValue placeholder="Select Number of Attendees" />
                       </SelectTrigger>
                       <SelectContent
-                        className="bg-background border-red-950/30 
-                        text-red-200"
+                        className="bg-background border-border 
+                        text-foreground/70"
                       >
                         {["1", "2", "3", "4", "5"].map((attendees) => (
                           <SelectItem
                             key={attendees}
                             value={attendees}
-                            className="text-red-200 
-                            hover:bg-red-950/30 focus:bg-red-950/40"
+                            className="text-foreground/70 
+                            hover:bg-primary/[0.12] focus:bg-primary/[0.15]"
                           >
                             {attendees.charAt(0).toUpperCase() +
                               attendees.slice(1)}
@@ -295,7 +298,7 @@ export const AddMeeting = () => {
                 name="meetingType"
                 children={(field) => (
                   <div className="grid gap-2">
-                    <Label htmlFor={field.name} className="text-red-200">
+                    <Label htmlFor={field.name} className="text-foreground/70">
                       Type
                     </Label>
                     <Select
@@ -304,22 +307,22 @@ export const AddMeeting = () => {
                       onValueChange={(value) => field.handleChange(value)}
                     >
                       <SelectTrigger
-                        className="bg-background/40 border-red-950/30 
-                        text-red-200 focus:border-red-700 
-                        focus:ring-2 focus:ring-red-900/50"
+                        className="bg-background/40 border-border 
+                        text-foreground/70 focus:border-primary/30 
+                        focus:ring-2 focus:ring-primary/20"
                       >
                         <SelectValue placeholder="Select Meeting Type" />
                       </SelectTrigger>
                       <SelectContent
-                        className="bg-background border-red-950/30 
-                        text-red-200"
+                        className="bg-background border-border 
+                        text-foreground/70"
                       >
                         {["in-person", "online", "hybrid"].map((type) => (
                           <SelectItem
                             key={type}
                             value={type}
-                            className="text-red-200 
-                            hover:bg-red-950/30 focus:bg-red-950/40"
+                            className="text-foreground/70 
+                            hover:bg-primary/[0.12] focus:bg-primary/[0.15]"
                           >
                             {type.charAt(0).toUpperCase() + type.slice(1)}
                           </SelectItem>
@@ -342,7 +345,7 @@ export const AddMeeting = () => {
                       <div className="grid gap-2">
                         <Label
                           htmlFor={field.name}
-                          className="text-red-200 flex items-center gap-2"
+                          className="text-foreground/70 flex items-center gap-2"
                         >
                           <Map className="w-4 h-4 text-primary" />
                           Location
@@ -353,8 +356,8 @@ export const AddMeeting = () => {
                           autoComplete="off"
                           required
                           placeholder="Physical Location for Meeting"
-                          className="bg-background/40 border-red-950/30 text-red-200 
-                    focus:border-red-700 focus:ring-2 focus:ring-red-900/50 
+                          className="bg-background/40 border-border text-foreground/70 
+                    focus:border-primary/30 focus:ring-2 focus:ring-primary/20 
                     transition-all duration-300"
                           value={field.state.value}
                           onChange={(e) => field.handleChange(e.target.value)}
@@ -379,7 +382,7 @@ export const AddMeeting = () => {
                       <div className="grid gap-2">
                         <Label
                           htmlFor={field.name}
-                          className="text-red-200 flex items-center gap-2"
+                          className="text-foreground/70 flex items-center gap-2"
                         >
                           <Link className="w-4 h-4 text-primary" />
                           URL Location
@@ -390,8 +393,8 @@ export const AddMeeting = () => {
                           autoComplete="off"
                           required
                           placeholder="Online Meeting Link"
-                          className="bg-background/40 border-red-950/30 text-red-200 
-                    focus:border-red-700 focus:ring-2 focus:ring-red-900/50 
+                          className="bg-background/40 border-border text-foreground/70 
+                    focus:border-primary/30 focus:ring-2 focus:ring-primary/20 
                     transition-all duration-300"
                           value={field.state.value}
                           onChange={(e) => field.handleChange(e.target.value)}
@@ -414,8 +417,8 @@ export const AddMeeting = () => {
                 setOpen(false);
                 form.reset();
               }}
-              className="border-red-800/30 text-red-200 
-              hover:bg-red-950/20 hover:text-red-100 
+              className="border-primary/15 text-foreground/70 
+              hover:bg-primary/10 hover:text-foreground/80 
               transition-all duration-300"
             >
               Cancel
@@ -426,9 +429,9 @@ export const AddMeeting = () => {
                 <Button
                   type="submit"
                   disabled={!canSubmit}
-                  className="bg-gradient-to-r from-red-950 to-red-900 
-                  hover:from-red-900 hover:to-red-800 
-                  text-foreground border border-red-800/30 
+                  className="bg-primary 
+                  hover:bg-primary/80 
+                  text-foreground border border-primary/15 
                   disabled:opacity-50 disabled:cursor-not-allowed
                   transition-all duration-300 
                   hover:scale-[1.02] active:scale-[0.98]"

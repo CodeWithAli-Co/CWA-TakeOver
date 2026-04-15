@@ -27,7 +27,7 @@ export const AddEmployee = () => {
 
   return (
     // Work on this later to make it so only invited people can use the app
-    <Card className="bg-red-950/10 border-red-900/20 mb-8">
+    <Card className="bg-primary/[0.06] border-primary/15 mb-8">
       <CardContent className="pt-6">
         <form
           onSubmit={(e) => {
@@ -42,7 +42,7 @@ export const AddEmployee = () => {
               children={(field) => (
                 <div className="flex flex-col space-y-2">
                   <label
-                    className="text-amber-50/70 text-sm font-medium"
+                    className="text-muted-foreground text-sm font-medium"
                     htmlFor={field.name}
                   >
                     Username
@@ -53,8 +53,8 @@ export const AddEmployee = () => {
                     id="username"
                     autoComplete="off"
                     placeholder="Enter username"
-                    className="w-full px-3 py-2 bg-background/40 border border-red-900/30 text-amber-50 rounded-lg
-                             focus:border-red-500 focus:outline-none hover:bg-background/60 transition-colors"
+                    className="w-full px-3 py-2 bg-background/40 border border-border text-foreground rounded-lg
+                             focus:border-primary/30 focus:outline-none hover:bg-background/60 transition-colors"
                     required
                     value={field.state.value}
                     onChange={(e) => field.handleChange(e.target.value)}
@@ -68,7 +68,7 @@ export const AddEmployee = () => {
               children={(field) => (
                 <div className="flex flex-col space-y-2">
                   <label
-                    className="text-amber-50/70 text-sm font-medium"
+                    className="text-muted-foreground text-sm font-medium"
                     htmlFor={field.name}
                   >
                     Email
@@ -79,8 +79,8 @@ export const AddEmployee = () => {
                     id="email"
                     autoComplete="off"
                     placeholder="Enter email"
-                    className="w-full px-3 py-2 bg-background/40 border border-red-900/30 text-amber-50 rounded-lg
-                             focus:border-red-500 focus:outline-none hover:bg-background/60 transition-colors"
+                    className="w-full px-3 py-2 bg-background/40 border border-border text-foreground rounded-lg
+                             focus:border-primary/30 focus:outline-none hover:bg-background/60 transition-colors"
                     required
                     value={field.state.value}
                     onChange={(e) => field.handleChange(e.target.value)}
@@ -94,44 +94,44 @@ export const AddEmployee = () => {
               children={(field) => (
                 <div className="flex flex-col space-y-2">
                   <label
-                    className="text-amber-50/70 text-sm font-medium"
+                    className="text-muted-foreground text-sm font-medium"
                     htmlFor={field.name}
                   >
                     Role
                   </label>
                   <select
                     name={field.name}
-                    className="w-full px-3 py-2 bg-background/40 border border-red-900/30 text-amber-50 rounded-lg
-                             focus:border-red-500 focus:outline-none hover:bg-background/60 transition-colors"
+                    className="w-full px-3 py-2 bg-background/40 border border-border text-foreground rounded-lg
+                             focus:border-primary/30 focus:outline-none hover:bg-background/60 transition-colors"
                     onChange={(e) => field.handleChange(e.target.value)}
                   >
                     <option
                       value="Intern"
-                      className="bg-background text-amber-50 border-red-900/20"
+                      className="bg-background text-foreground border-primary/15"
                     >
                       Intern
                     </option>
                     <option
                       value="Member"
-                      className="bg-background text-amber-50 border-red-900/20"
+                      className="bg-background text-foreground border-primary/15"
                     >
                       Member
                     </option>
                     <option
                       value="Marketing Specialist"
-                      className="bg-background text-amber-50 border-red-900/20"
+                      className="bg-background text-foreground border-primary/15"
                     >
                       Marketing Specialist
                     </option>
                     <option
                       value="Admin"
-                      className="bg-background text-amber-50 border-red-900/20"
+                      className="bg-background text-foreground border-primary/15"
                     >
                       Admin
                     </option>
                     <option
                       value="Project Manager"
-                      className="bg-background text-amber-50 border-red-900/20"
+                      className="bg-background text-foreground border-primary/15"
                     >
                       Project Manager
                     </option>
@@ -146,7 +146,7 @@ export const AddEmployee = () => {
             children={([canSubmit]) => (
               <button
                 type="submit"
-                className="mt-8 px-4 py-2 flex items-center bg-red-900 hover:bg-red-800 text-amber-50 rounded-lg transition-colors"
+                className="mt-8 px-4 py-2 flex items-center bg-primary hover:bg-primary/80 text-foreground rounded-lg transition-colors"
                 disabled={!canSubmit}
               >
                 <UserPlus className="w-4 h-4 mr-2" />

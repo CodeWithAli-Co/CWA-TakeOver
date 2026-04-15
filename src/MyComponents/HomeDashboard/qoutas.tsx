@@ -23,6 +23,8 @@ import {
   SelectValue,
 } from "@/components/ui/shadcnComponents/select";
 import supabase from "@/MyComponents/supabase";
+import { getActiveCompanyLabel } from "@/stores/query";
+import { useCompanyFilter } from "@/stores/store";
 import { format, startOfWeek, endOfWeek, addWeeks, subWeeks } from "date-fns";
 import {
   Tabs,
@@ -212,6 +214,7 @@ export default function Quotas() {
 
   const { data: activeUser } = ActiveUser();
   const currentUser = activeUser?.[0];
+  const { activeCompany } = useCompanyFilter();
 
   const startDate = startOfWeek(selectedWeek, { weekStartsOn: 1 });
   const endDate = endOfWeek(selectedWeek, { weekStartsOn: 1 });
@@ -220,12 +223,17 @@ export default function Quotas() {
   useEffect(() => {
     const loadQuotas = async () => {
       if (!currentUser) return;
-      const { data, error } = await supabase
+      let query = supabase
         .from("weekly_quotas")
         .select("*")
         .gte("week_start", format(startDate, "yyyy-MM-dd"))
         .lte("week_end", format(endDate, "yyyy-MM-dd"))
         .order("created_at", { ascending: false });
+      if (activeCompany !== "all") {
+        const label = activeCompany === "simplicityFunds" ? "simplicity" : "CodeWithAli";
+        query = query.eq("company", label);
+      }
+      const { data, error } = await query;
       if (error) { console.error("Error loading Quotas", error); return; }
       setQuotas(data || []);
     };
@@ -236,7 +244,7 @@ export default function Quotas() {
       .on("postgres_changes", { event: "*", schema: "public", table: "weekly_quotas" }, () => loadQuotas())
       .subscribe();
     return () => { subscription.unsubscribe(); };
-  }, [currentUser, selectedWeek]);
+  }, [currentUser, selectedWeek, activeCompany]);
 
   const previousWeek = () => setSelectedWeek(subWeeks(selectedWeek, 1));
   const nextWeek = () => setSelectedWeek(addWeeks(selectedWeek, 1));
@@ -257,6 +265,7 @@ export default function Quotas() {
         title: quotaData.title, description: quotaData.description, status: quotaData.status,
         deadline: quotaData.deadline, user_id: currentUser.supa_id, week_start, week_end,
         created_at: new Date().toISOString(), updated_at: new Date().toISOString(),
+        company: getActiveCompanyLabel(),
       });
     }
   };
@@ -296,7 +305,7 @@ export default function Quotas() {
             <p className="text-[11px] text-muted-foreground/30 mt-0.5">{dateRangeText}</p>
             <div className="flex items-center gap-1 mt-0.5">
               <div className="h-1 w-1 rounded-full bg-white/15" />
-              <span className="text-[9px] text-muted-foreground/30 uppercase tracking-wider">Both companies</span>
+              <span className="text-[9px] text-muted-foreground/30 uppercase tracking-wider">{activeCompany === "all" ? "Both companies" : activeCompany === "simplicityFunds" ? "Simplicity" : "CodeWithAli"}</span>
             </div>
           </div>
         </div>

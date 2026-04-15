@@ -175,7 +175,7 @@ export const MeetingModal: React.FC<MeetingModalProps> = ({
               value={meetingTitle}
               onChange={(e) => setMeetingTitle(e.target.value)}
               placeholder="Enter meeting title"
-              className="bg-background border border-blue-900 text-foreground focus:border-blue-600 focus:ring-1 focus:ring-blue-600 mt-1"
+              className="bg-background border border-border text-foreground focus:border-primary/30 focus:ring-1 focus:ring-primary/30 mt-1"
             />
           </div>
           
@@ -186,14 +186,14 @@ export const MeetingModal: React.FC<MeetingModalProps> = ({
               </Label>
               <div className="relative">
                 <div className="absolute left-3 top-1/2 transform -translate-y-1/2 pointer-events-none">
-                  <CalendarIcon className="h-4 w-4 text-blue-400" />
+                  <CalendarIcon className="h-4 w-4 text-primary" />
                 </div>
                 <Input
                   id="date-picker"
                   type="date"
                   value={meetingDate}
                   onChange={(e) => setMeetingDate(e.target.value)}
-                  className="bg-background border border-blue-900 text-foreground pl-10 focus:border-blue-600 focus:ring-1 focus:ring-blue-600 mt-1 w-full"
+                  className="bg-background border border-border text-foreground pl-10 focus:border-primary/30 focus:ring-1 focus:ring-primary/30 mt-1 w-full"
                 />
               </div>
             </div>
@@ -203,14 +203,14 @@ export const MeetingModal: React.FC<MeetingModalProps> = ({
                 Location
               </Label>
               <div className="flex items-center mt-1">
-                <MapPin size={16} className="text-blue-400 absolute ml-3" />
+                <MapPin size={16} className="text-primary absolute ml-3" />
                 <Input
                   id="meeting-location"
                   type="text"
                   value={meetingLocation}
                   onChange={(e) => setMeetingLocation(e.target.value)}
                   placeholder="Conference room, Zoom, etc."
-                  className="bg-background border border-blue-900 text-foreground pl-9 focus:border-blue-600 focus:ring-1 focus:ring-blue-600"
+                  className="bg-background border border-border text-foreground pl-9 focus:border-primary/30 focus:ring-1 focus:ring-primary/30"
                 />
               </div>
             </div>
@@ -228,29 +228,29 @@ export const MeetingModal: React.FC<MeetingModalProps> = ({
                   <Button
                     id="start-time"
                     variant="outline"
-                    className="w-full justify-between mt-1 bg-background border border-blue-900 text-foreground hover:bg-blue-950/50"
+                    className="w-full justify-between mt-1 bg-background border border-border text-foreground hover:bg-primary/10"
                   >
                     <div className="flex items-center gap-2">
-                      <Clock size={16} className="text-blue-400" />
+                      <Clock size={16} className="text-primary" />
                       <span>{startTime}</span>
                     </div>
                     <ChevronDown size={16} className="opacity-70" />
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent
-                  className="w-[180px] bg-gray-950 border border-blue-900 text-white"
+                  className="w-[180px] bg-card border border-border text-foreground"
                   align="start"
                 >
-                  <DropdownMenuLabel className="text-blue-300">Start Time</DropdownMenuLabel>
-                  <DropdownMenuSeparator className="bg-blue-900/30" />
+                  <DropdownMenuLabel className="text-primary/80">Start Time</DropdownMenuLabel>
+                  <DropdownMenuSeparator className="bg-border" />
                   <div className="max-h-[300px] overflow-y-auto">
                     {timeOptions.map((time) => (
                       <DropdownMenuItem
                         key={time}
-                        className="flex items-center gap-2 cursor-pointer hover:bg-blue-900/40 focus:bg-blue-900/40"
+                        className="flex items-center gap-2 cursor-pointer hover:bg-primary/[0.15] focus:bg-primary/[0.15]"
                         onClick={() => setStartTime(time)}
                       >
-                        <Clock size={16} className="text-blue-400" />
+                        <Clock size={16} className="text-primary" />
                         <span>{time}</span>
                         {startTime === time && (
                           <Check size={16} className="ml-auto text-green-500" />
@@ -273,29 +273,29 @@ export const MeetingModal: React.FC<MeetingModalProps> = ({
                   <Button
                     id="end-time"
                     variant="outline"
-                    className="w-full justify-between mt-1 bg-background border border-blue-900 text-foreground hover:bg-blue-950/50"
+                    className="w-full justify-between mt-1 bg-background border border-border text-foreground hover:bg-primary/10"
                   >
                     <div className="flex items-center gap-2">
-                      <Clock size={16} className="text-blue-400" />
+                      <Clock size={16} className="text-primary" />
                       <span>{endTime}</span>
                     </div>
                     <ChevronDown size={16} className="opacity-70" />
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent
-                  className="w-[180px] bg-gray-950 border border-blue-900 text-white"
+                  className="w-[180px] bg-card border border-border text-foreground"
                   align="start"
                 >
-                  <DropdownMenuLabel className="text-blue-300">End Time</DropdownMenuLabel>
-                  <DropdownMenuSeparator className="bg-blue-900/30" />
+                  <DropdownMenuLabel className="text-primary/80">End Time</DropdownMenuLabel>
+                  <DropdownMenuSeparator className="bg-border" />
                   <div className="max-h-[300px] overflow-y-auto">
                     {timeOptions.map((time) => (
                       <DropdownMenuItem
                         key={time}
-                        className="flex items-center gap-2 cursor-pointer hover:bg-blue-900/40 focus:bg-blue-900/40"
+                        className="flex items-center gap-2 cursor-pointer hover:bg-primary/[0.15] focus:bg-primary/[0.15]"
                         onClick={() => setEndTime(time)}
                       >
-                        <Clock size={16} className="text-blue-400" />
+                        <Clock size={16} className="text-primary" />
                         <span>{time}</span>
                         {endTime === time && (
                           <Check size={16} className="ml-auto text-green-500" />
@@ -317,7 +317,7 @@ export const MeetingModal: React.FC<MeetingModalProps> = ({
               value={meetingDescription}
               onChange={(e) => setMeetingDescription(e.target.value)}
               placeholder="Meeting agenda, preparation instructions, etc."
-              className="bg-background border border-blue-900 text-foreground h-20 min-h-[80px] focus:border-blue-600 focus:ring-1 focus:ring-blue-600 mt-1"
+              className="bg-background border border-border text-foreground h-20 min-h-[80px] focus:border-primary/30 focus:ring-1 focus:ring-primary/30 mt-1"
             />
           </div>
           
@@ -326,7 +326,7 @@ export const MeetingModal: React.FC<MeetingModalProps> = ({
               id="required-attendance"
               checked={isRequired}
               onCheckedChange={(checked) => setIsRequired(!!checked)}
-              className="data-[state=checked]:bg-blue-600 data-[state=checked]:border-blue-600"
+              className="data-[state=checked]:bg-primary data-[state=checked]:border-primary"
             />
             <Label 
               htmlFor="required-attendance" 
@@ -350,18 +350,18 @@ export const MeetingModal: React.FC<MeetingModalProps> = ({
                 onClick={() => toggleEmployeeSelection(employee.id)}
                 className={`flex items-center p-2 rounded-md cursor-pointer transition-colors duration-150 ${
                   selectedEmployees.includes(employee.id)
-                    ? "bg-blue-900/40 border border-blue-500"
-                    : "hover:bg-gray-800 border border-gray-700"
+                    ? "bg-primary/[0.15] border border-primary"
+                    : "hover:bg-muted/50 border border-border"
                 }`}
               >
                 <div className="mr-2">
                   <Checkbox 
                     checked={selectedEmployees.includes(employee.id)}
-                    className="data-[state=checked]:bg-blue-600 data-[state=checked]:border-blue-600"
+                    className="data-[state=checked]:bg-primary data-[state=checked]:border-primary"
                   />
                 </div>
                 <div className="flex items-center">
-                  <div className="w-6 h-6 rounded-full bg-blue-800 flex items-center justify-center mr-2">
+                  <div className="w-6 h-6 rounded-full bg-primary flex items-center justify-center mr-2">
                     <span className="text-foreground text-xs">
                       {employee.avatar || employee.name.charAt(0)}
                     </span>
@@ -375,7 +375,7 @@ export const MeetingModal: React.FC<MeetingModalProps> = ({
             <Button
               onClick={clearSelectedEmployees}
               variant="ghost"
-              className="text-xs text-blue-400 hover:text-blue-300 hover:bg-transparent"
+              className="text-xs text-primary hover:text-primary/80 hover:bg-transparent"
             >
               Clear Selection
             </Button>
@@ -387,13 +387,13 @@ export const MeetingModal: React.FC<MeetingModalProps> = ({
           <Button
             onClick={handleClose}
             variant="outline"
-            className="bg-gray-800 hover:bg-gray-700 text-foreground border-gray-700"
+            className="bg-muted/50 hover:bg-muted/70 text-foreground border-border"
           >
             Cancel
           </Button>
           <Button 
             onClick={handleCreateMeeting}
-            className="bg-blue-800 hover:bg-blue-700 text-foreground flex items-center gap-1"
+            className="bg-primary hover:bg-primary/80 text-foreground flex items-center gap-1"
             disabled={!isFormValid}
           >
             <Clock size={14} />

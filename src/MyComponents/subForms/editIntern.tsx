@@ -93,7 +93,7 @@ export const EditIntern = (props: Props) => {
                     children={(field) => (
                       <div className="space-y-2">
                         <label
-                          className="text-amber-50/70 text-sm font-medium"
+                          className="text-muted-foreground text-sm font-medium"
                           htmlFor={field.name}
                         >
                           Username
@@ -104,8 +104,8 @@ export const EditIntern = (props: Props) => {
                           id="username"
                           autoComplete="off"
                           placeholder="Enter username"
-                          className="w-full px-3 py-2 bg-background/40 border border-red-900/30 text-amber-50 rounded-lg
-                             focus:border-red-500 focus:outline-none hover:bg-background/60 transition-colors"
+                          className="w-full px-3 py-2 bg-background/40 border border-border text-foreground rounded-lg
+                             focus:border-primary/30 focus:outline-none hover:bg-background/60 transition-colors"
                           value={field.state.value}
                           onChange={(e) => field.handleChange(e.target.value)}
                         />
@@ -118,7 +118,7 @@ export const EditIntern = (props: Props) => {
                     children={(field) => (
                       <div className="space-y-2">
                         <label
-                          className="text-amber-50/70 text-sm font-medium"
+                          className="text-muted-foreground text-sm font-medium"
                           htmlFor={field.name}
                         >
                           Email
@@ -129,8 +129,8 @@ export const EditIntern = (props: Props) => {
                           id="email"
                           autoComplete="off"
                           placeholder="Enter email"
-                          className="w-full px-3 py-2 bg-background/40 border border-red-900/30 text-amber-50 rounded-lg
-                             focus:border-red-500 focus:outline-none hover:bg-background/60 transition-colors"
+                          className="w-full px-3 py-2 bg-background/40 border border-border text-foreground rounded-lg
+                             focus:border-primary/30 focus:outline-none hover:bg-background/60 transition-colors"
                           value={field.state.value}
                           onChange={(e) => field.handleChange(e.target.value)}
                         />
@@ -144,9 +144,9 @@ export const EditIntern = (props: Props) => {
                   children={([canSubmit]) => (
                     <button
                       type="submit"
-                      className="w-full bg-gradient-to-r from-red-950 to-black hover:from-red-900 
-                      hover:to-red-950 text-foreground border border-red-900/30
-                      shadow-lg shadow-red-950/20 disabled:opacity-50"
+                      className="w-full bg-primary hover:bg-primary/80 
+                      hover:to-red-950 text-foreground border border-border
+                      shadow-lg shadow-primary/10 disabled:opacity-50"
                       disabled={!canSubmit}
                     >
                       <UserPlus className="w-4 h-4 mr-2" />

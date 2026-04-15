@@ -22,6 +22,7 @@ import {
 import { useClientStore } from "@/stores/invoiceStore";
 import { InvoiceType, LineItem } from "@/stores/invoiceQuery";
 import supabase from "@/MyComponents/supabase";
+import { getActiveCompanyLabel } from "@/stores/query";
 
 interface Props {
   open: boolean;
@@ -117,6 +118,7 @@ export const InvoiceFormDialog: React.FC<Props> = ({ open, onOpenChange, onCreat
       outcome,
       creation_date: Date.now(),
       status: "pending",
+      company: getActiveCompanyLabel(),
     } as Omit<InvoiceType, "invoice_id">;
 
     const { error } = await supabase.from("invoices").insert(payload);

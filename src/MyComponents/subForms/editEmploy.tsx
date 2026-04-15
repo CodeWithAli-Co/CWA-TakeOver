@@ -61,7 +61,7 @@ export const EditEmployee = (props: Props) => {
           <div className="bg-card border border-border rounded-sm shadow-2xl shadow-black/50">
             {/* Header */}
             <div className="flex items-center justify-between px-6 py-4 border-b border-border">
-              <h2 className="text-[15px] font-semibold text-white/85">Edit User</h2>
+              <h2 className="text-[15px] font-semibold text-foreground">Edit User</h2>
               <button
                 onClick={handleClose}
                 className="p-1.5 rounded-sm text-muted-foreground/60 hover:text-muted-foreground/80 hover:bg-muted/50 transition-colors"

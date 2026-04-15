@@ -21,6 +21,12 @@ const TimetrackingLazyImport = createFileRoute('/timetracking')()
 const TaskLazyImport = createFileRoute('/task')()
 const SettingsLazyImport = createFileRoute('/settings')()
 const ScheduleLazyImport = createFileRoute('/schedule')()
+const SUsersLazyImport = createFileRoute('/s-users')()
+const SOverridesLazyImport = createFileRoute('/s-overrides')()
+const SFinanceOpsLazyImport = createFileRoute('/s-finance-ops')()
+const SDevConsoleLazyImport = createFileRoute('/s-dev-console')()
+const SBroadcastLazyImport = createFileRoute('/s-broadcast')()
+const SAnalyticsLazyImport = createFileRoute('/s-analytics')()
 const QuotaLazyImport = createFileRoute('/quota')()
 const PersonalLazyImport = createFileRoute('/personal')()
 const ModlogsLazyImport = createFileRoute('/mod_logs')()
@@ -71,6 +77,42 @@ const ScheduleLazyRoute = ScheduleLazyImport.update({
   path: '/schedule',
   getParentRoute: () => rootRoute,
 } as any).lazy(() => import('./routes/schedule.lazy').then((d) => d.Route))
+
+const SUsersLazyRoute = SUsersLazyImport.update({
+  id: '/s-users',
+  path: '/s-users',
+  getParentRoute: () => rootRoute,
+} as any).lazy(() => import('./routes/s-users.lazy').then((d) => d.Route))
+
+const SOverridesLazyRoute = SOverridesLazyImport.update({
+  id: '/s-overrides',
+  path: '/s-overrides',
+  getParentRoute: () => rootRoute,
+} as any).lazy(() => import('./routes/s-overrides.lazy').then((d) => d.Route))
+
+const SFinanceOpsLazyRoute = SFinanceOpsLazyImport.update({
+  id: '/s-finance-ops',
+  path: '/s-finance-ops',
+  getParentRoute: () => rootRoute,
+} as any).lazy(() => import('./routes/s-finance-ops.lazy').then((d) => d.Route))
+
+const SDevConsoleLazyRoute = SDevConsoleLazyImport.update({
+  id: '/s-dev-console',
+  path: '/s-dev-console',
+  getParentRoute: () => rootRoute,
+} as any).lazy(() => import('./routes/s-dev-console.lazy').then((d) => d.Route))
+
+const SBroadcastLazyRoute = SBroadcastLazyImport.update({
+  id: '/s-broadcast',
+  path: '/s-broadcast',
+  getParentRoute: () => rootRoute,
+} as any).lazy(() => import('./routes/s-broadcast.lazy').then((d) => d.Route))
+
+const SAnalyticsLazyRoute = SAnalyticsLazyImport.update({
+  id: '/s-analytics',
+  path: '/s-analytics',
+  getParentRoute: () => rootRoute,
+} as any).lazy(() => import('./routes/s-analytics.lazy').then((d) => d.Route))
 
 const QuotaLazyRoute = QuotaLazyImport.update({
   id: '/quota',
@@ -307,6 +349,48 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof QuotaLazyImport
       parentRoute: typeof rootRoute
     }
+    '/s-analytics': {
+      id: '/s-analytics'
+      path: '/s-analytics'
+      fullPath: '/s-analytics'
+      preLoaderRoute: typeof SAnalyticsLazyImport
+      parentRoute: typeof rootRoute
+    }
+    '/s-broadcast': {
+      id: '/s-broadcast'
+      path: '/s-broadcast'
+      fullPath: '/s-broadcast'
+      preLoaderRoute: typeof SBroadcastLazyImport
+      parentRoute: typeof rootRoute
+    }
+    '/s-dev-console': {
+      id: '/s-dev-console'
+      path: '/s-dev-console'
+      fullPath: '/s-dev-console'
+      preLoaderRoute: typeof SDevConsoleLazyImport
+      parentRoute: typeof rootRoute
+    }
+    '/s-finance-ops': {
+      id: '/s-finance-ops'
+      path: '/s-finance-ops'
+      fullPath: '/s-finance-ops'
+      preLoaderRoute: typeof SFinanceOpsLazyImport
+      parentRoute: typeof rootRoute
+    }
+    '/s-overrides': {
+      id: '/s-overrides'
+      path: '/s-overrides'
+      fullPath: '/s-overrides'
+      preLoaderRoute: typeof SOverridesLazyImport
+      parentRoute: typeof rootRoute
+    }
+    '/s-users': {
+      id: '/s-users'
+      path: '/s-users'
+      fullPath: '/s-users'
+      preLoaderRoute: typeof SUsersLazyImport
+      parentRoute: typeof rootRoute
+    }
     '/schedule': {
       id: '/schedule'
       path: '/schedule'
@@ -372,6 +456,12 @@ export interface FileRoutesByFullPath {
   '/mod_logs': typeof ModlogsLazyRoute
   '/personal': typeof PersonalLazyRoute
   '/quota': typeof QuotaLazyRoute
+  '/s-analytics': typeof SAnalyticsLazyRoute
+  '/s-broadcast': typeof SBroadcastLazyRoute
+  '/s-dev-console': typeof SDevConsoleLazyRoute
+  '/s-finance-ops': typeof SFinanceOpsLazyRoute
+  '/s-overrides': typeof SOverridesLazyRoute
+  '/s-users': typeof SUsersLazyRoute
   '/schedule': typeof ScheduleLazyRoute
   '/settings': typeof SettingsLazyRoute
   '/task': typeof TaskLazyRoute
@@ -398,6 +488,12 @@ export interface FileRoutesByTo {
   '/mod_logs': typeof ModlogsLazyRoute
   '/personal': typeof PersonalLazyRoute
   '/quota': typeof QuotaLazyRoute
+  '/s-analytics': typeof SAnalyticsLazyRoute
+  '/s-broadcast': typeof SBroadcastLazyRoute
+  '/s-dev-console': typeof SDevConsoleLazyRoute
+  '/s-finance-ops': typeof SFinanceOpsLazyRoute
+  '/s-overrides': typeof SOverridesLazyRoute
+  '/s-users': typeof SUsersLazyRoute
   '/schedule': typeof ScheduleLazyRoute
   '/settings': typeof SettingsLazyRoute
   '/task': typeof TaskLazyRoute
@@ -425,6 +521,12 @@ export interface FileRoutesById {
   '/mod_logs': typeof ModlogsLazyRoute
   '/personal': typeof PersonalLazyRoute
   '/quota': typeof QuotaLazyRoute
+  '/s-analytics': typeof SAnalyticsLazyRoute
+  '/s-broadcast': typeof SBroadcastLazyRoute
+  '/s-dev-console': typeof SDevConsoleLazyRoute
+  '/s-finance-ops': typeof SFinanceOpsLazyRoute
+  '/s-overrides': typeof SOverridesLazyRoute
+  '/s-users': typeof SUsersLazyRoute
   '/schedule': typeof ScheduleLazyRoute
   '/settings': typeof SettingsLazyRoute
   '/task': typeof TaskLazyRoute
@@ -453,6 +555,12 @@ export interface FileRouteTypes {
     | '/mod_logs'
     | '/personal'
     | '/quota'
+    | '/s-analytics'
+    | '/s-broadcast'
+    | '/s-dev-console'
+    | '/s-finance-ops'
+    | '/s-overrides'
+    | '/s-users'
     | '/schedule'
     | '/settings'
     | '/task'
@@ -478,6 +586,12 @@ export interface FileRouteTypes {
     | '/mod_logs'
     | '/personal'
     | '/quota'
+    | '/s-analytics'
+    | '/s-broadcast'
+    | '/s-dev-console'
+    | '/s-finance-ops'
+    | '/s-overrides'
+    | '/s-users'
     | '/schedule'
     | '/settings'
     | '/task'
@@ -503,6 +617,12 @@ export interface FileRouteTypes {
     | '/mod_logs'
     | '/personal'
     | '/quota'
+    | '/s-analytics'
+    | '/s-broadcast'
+    | '/s-dev-console'
+    | '/s-finance-ops'
+    | '/s-overrides'
+    | '/s-users'
     | '/schedule'
     | '/settings'
     | '/task'
@@ -530,6 +650,12 @@ export interface RootRouteChildren {
   ModlogsLazyRoute: typeof ModlogsLazyRoute
   PersonalLazyRoute: typeof PersonalLazyRoute
   QuotaLazyRoute: typeof QuotaLazyRoute
+  SAnalyticsLazyRoute: typeof SAnalyticsLazyRoute
+  SBroadcastLazyRoute: typeof SBroadcastLazyRoute
+  SDevConsoleLazyRoute: typeof SDevConsoleLazyRoute
+  SFinanceOpsLazyRoute: typeof SFinanceOpsLazyRoute
+  SOverridesLazyRoute: typeof SOverridesLazyRoute
+  SUsersLazyRoute: typeof SUsersLazyRoute
   ScheduleLazyRoute: typeof ScheduleLazyRoute
   SettingsLazyRoute: typeof SettingsLazyRoute
   TaskLazyRoute: typeof TaskLazyRoute
@@ -556,6 +682,12 @@ const rootRouteChildren: RootRouteChildren = {
   ModlogsLazyRoute: ModlogsLazyRoute,
   PersonalLazyRoute: PersonalLazyRoute,
   QuotaLazyRoute: QuotaLazyRoute,
+  SAnalyticsLazyRoute: SAnalyticsLazyRoute,
+  SBroadcastLazyRoute: SBroadcastLazyRoute,
+  SDevConsoleLazyRoute: SDevConsoleLazyRoute,
+  SFinanceOpsLazyRoute: SFinanceOpsLazyRoute,
+  SOverridesLazyRoute: SOverridesLazyRoute,
+  SUsersLazyRoute: SUsersLazyRoute,
   ScheduleLazyRoute: ScheduleLazyRoute,
   SettingsLazyRoute: SettingsLazyRoute,
   TaskLazyRoute: TaskLazyRoute,
@@ -591,6 +723,12 @@ export const routeTree = rootRoute
         "/mod_logs",
         "/personal",
         "/quota",
+        "/s-analytics",
+        "/s-broadcast",
+        "/s-dev-console",
+        "/s-finance-ops",
+        "/s-overrides",
+        "/s-users",
         "/schedule",
         "/settings",
         "/task",
@@ -649,6 +787,24 @@ export const routeTree = rootRoute
     },
     "/quota": {
       "filePath": "quota.lazy.tsx"
+    },
+    "/s-analytics": {
+      "filePath": "s-analytics.lazy.tsx"
+    },
+    "/s-broadcast": {
+      "filePath": "s-broadcast.lazy.tsx"
+    },
+    "/s-dev-console": {
+      "filePath": "s-dev-console.lazy.tsx"
+    },
+    "/s-finance-ops": {
+      "filePath": "s-finance-ops.lazy.tsx"
+    },
+    "/s-overrides": {
+      "filePath": "s-overrides.lazy.tsx"
+    },
+    "/s-users": {
+      "filePath": "s-users.lazy.tsx"
     },
     "/schedule": {
       "filePath": "schedule.lazy.tsx"

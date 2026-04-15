@@ -3,6 +3,7 @@ import { useForm } from "@tanstack/react-form";
 import { Loader2, Mail, Send, User } from "lucide-react";
 import Capitalize from "@/MyComponents/Reusables/capitalize";
 import supabase from "@/MyComponents/supabase";
+import { getActiveCompanyLabel } from "@/stores/query";
 
 export const AddClient = () => {
   const form = useForm({
@@ -13,7 +14,8 @@ export const AddClient = () => {
     onSubmit: async ({ value }) => {
       await supabase.from("clients").insert({
         name: value.clientName,
-        email: value.clientEmail
+        email: value.clientEmail,
+        company: getActiveCompanyLabel(),
       })
       
       form.reset();

@@ -1,6 +1,7 @@
 import { useForm } from "@tanstack/react-form";
 import supabase from "../supabase";
 import { invoke } from "@tauri-apps/api/core";
+import { getActiveCompanyLabel } from "@/stores/query";
 import { motion } from "framer-motion";
 import { Clock, FolderClosed, Plus, Tags } from "lucide-react";
 import { Input } from "@/components/ui/shadcnComponents/input";
@@ -50,6 +51,7 @@ export const AddData = () => {
           acc_addinfo: value.AddInfo,
           active: value.Active,
           folder: value.folder,
+          company: getActiveCompanyLabel(),
         });
         if (error) {
           await message(error.message, {
@@ -74,7 +76,7 @@ export const AddData = () => {
         >
           <Button
             size={"default"}
-            className="relative bg-gradient-to-r rounded-xs from-red-950/10 via-red-950 to-red-950/20 hover:from-red-950/5 hover:via-red-950 to:red-950/10 active:from-950/10  active:to-red-950/10 w-auto h-auto px-4 py-2 transform transition-all ease-out border border-red-900 group   duration-300"
+            className="relative bg-gradient-to-r rounded-xs from-red-950/10 via-red-950 to-red-950/20 hover:from-red-950/5 hover:via-red-950 to:red-950/10  w-auto h-auto px-4 py-2 transform transition-all ease-out border border-primary/20 group   duration-300"
           >
             <Plus className="h-4 w-4 mr-1" />
             Add Account
@@ -108,7 +110,7 @@ export const AddData = () => {
                 <div className="grid gap-2">
                   <Label
                     htmlFor={field.name}
-                    className="text-red-200 flex items-center gap-2"
+                    className="text-foreground/70 flex items-center gap-2"
                   >
                     <Tags className="w-4 h-4 text-primary" />
                     Platform Name
@@ -119,8 +121,8 @@ export const AddData = () => {
                     autoComplete="off"
                     required
                     placeholder="Enter Platform Name"
-                    className="bg-background/40 border-red-950/30 text-red-200 
-                    focus:border-red-700 focus:ring-2 focus:ring-red-900/50 
+                    className="bg-background/40 border-border text-foreground/70 
+                    focus:border-primary/30 focus:ring-2 focus:ring-primary/20 
                     transition-all duration-300"
                     value={field.state.value}
                     onChange={(e) => field.handleChange(e.target.value)}
@@ -136,7 +138,7 @@ export const AddData = () => {
                 <div className="grid gap-2">
                   <Label
                     htmlFor={field.name}
-                    className="text-red-200 flex items-center gap-2"
+                    className="text-foreground/70 flex items-center gap-2"
                   >
                     <FolderClosed className="w-4 h-4 text-primary" />
                     Folder Name
@@ -146,8 +148,8 @@ export const AddData = () => {
                     type="text"
                     autoComplete="off"
                     placeholder="Enter Platform Name"
-                    className={`bg-background/40 border-red-950/30 ${field.state.value === "default" ? "text-red-800/90" : "text-red-200"} 
-                    focus:border-red-700 focus:ring-2 focus:ring-red-900/50 
+                    className={`bg-background/40 border-border ${field.state.value === "default" ? "text-muted-foreground" : "text-foreground/70"} 
+                    focus:border-primary/30 focus:ring-2 focus:ring-primary/20 
                     transition-all duration-300 capitalize`}
                     value={field.state.value}
                     onChange={(e) =>
@@ -163,7 +165,7 @@ export const AddData = () => {
               name="Username"
               children={(field) => (
                 <div className="grid gap-2">
-                  <Label htmlFor={field.name} className="text-red-200">
+                  <Label htmlFor={field.name} className="text-foreground/70">
                     Username
                   </Label>
                   <Input
@@ -171,8 +173,8 @@ export const AddData = () => {
                     type="text"
                     autoComplete="off"
                     placeholder="Enter Username"
-                    className="bg-background/40 inline border-red-950/30 text-red-200 
-                  focus:border-red-700 focus:ring-2 focus:ring-red-900/50 
+                    className="bg-background/40 inline border-border text-foreground/70 
+                  focus:border-primary/30 focus:ring-2 focus:ring-primary/20 
                   transition-all duration-300"
                     value={field.state.value}
                     onChange={(e) => field.handleChange(e.target.value)}
@@ -186,7 +188,7 @@ export const AddData = () => {
               name="Email"
               children={(field) => (
                 <div className="grid gap-2">
-                  <Label htmlFor={field.name} className="text-red-200">
+                  <Label htmlFor={field.name} className="text-foreground/70">
                     Email
                   </Label>
                   <Input
@@ -194,8 +196,8 @@ export const AddData = () => {
                     type="email"
                     autoComplete="off"
                     placeholder="Enter Email"
-                    className="bg-background/40 inline border-red-950/30 text-red-200 
-                  focus:border-red-700 focus:ring-2 focus:ring-red-900/50 
+                    className="bg-background/40 inline border-border text-foreground/70 
+                  focus:border-primary/30 focus:ring-2 focus:ring-primary/20 
                   transition-all duration-300"
                     value={field.state.value}
                     onChange={(e) => field.handleChange(e.target.value)}
@@ -209,7 +211,7 @@ export const AddData = () => {
               name="Password"
               children={(field) => (
                 <div className="grid gap-2">
-                  <Label htmlFor={field.name} className="text-red-200">
+                  <Label htmlFor={field.name} className="text-foreground/70">
                     Password
                   </Label>
                   <Input
@@ -218,8 +220,8 @@ export const AddData = () => {
                     required
                     autoComplete="off"
                     placeholder="Enter Password"
-                    className="bg-background/40 inline border-red-950/30 text-red-200 
-                  focus:border-red-700 focus:ring-2 focus:ring-red-900/50 
+                    className="bg-background/40 inline border-border text-foreground/70 
+                  focus:border-primary/30 focus:ring-2 focus:ring-primary/20 
                   transition-all duration-300"
                     value={field.state.value}
                     onChange={(e) => field.handleChange(e.target.value)}
@@ -233,7 +235,7 @@ export const AddData = () => {
               name="AddInfo"
               children={(field) => (
                 <div className="grid gap-2">
-                  <Label htmlFor={field.name} className="text-red-200">
+                  <Label htmlFor={field.name} className="text-foreground/70">
                     Additional Info
                   </Label>
                   <Input
@@ -241,8 +243,8 @@ export const AddData = () => {
                     type="text"
                     autoComplete="off"
                     placeholder="Add Additional Info"
-                    className="bg-background/40 inline border-red-950/30 text-red-200 
-                  focus:border-red-700 focus:ring-2 focus:ring-red-900/50 
+                    className="bg-background/40 inline border-border text-foreground/70 
+                  focus:border-primary/30 focus:ring-2 focus:ring-primary/20 
                   transition-all duration-300"
                     value={field.state.value}
                     onChange={(e) => field.handleChange(e.target.value)}
@@ -256,7 +258,7 @@ export const AddData = () => {
               name="Active"
               children={(field) => (
                 <div className="space-y-2">
-                  <Label className="text-red-200">Status</Label>
+                  <Label className="text-foreground/70">Status</Label>
                   <RadioGroup
                     defaultValue="true"
                     onValueChange={(value) => field.handleChange(value)}
@@ -266,9 +268,9 @@ export const AddData = () => {
                       <RadioGroupItem
                         value="true"
                         id="active"
-                        className="text-red-500 border-red-950/30"
+                        className="text-primary border-border"
                       />
-                      <Label htmlFor="active" className="text-red-200">
+                      <Label htmlFor="active" className="text-foreground/70">
                         Active
                       </Label>
                     </div>
@@ -276,9 +278,9 @@ export const AddData = () => {
                       <RadioGroupItem
                         value="false"
                         id="inactive"
-                        className="text-red-500 border-red-950/30"
+                        className="text-primary border-border"
                       />
-                      <Label htmlFor="inactive" className="text-red-200">
+                      <Label htmlFor="inactive" className="text-foreground/70">
                         Inactive
                       </Label>
                     </div>
@@ -296,8 +298,8 @@ export const AddData = () => {
                 setOpen(false);
                 form.reset();
               }}
-              className="border-red-800/30 text-red-200 
-              hover:bg-red-950/20 hover:text-red-100 
+              className="border-primary/15 text-foreground/70 
+              hover:bg-primary/10 hover:text-foreground/80 
               transition-all duration-300"
             >
               Cancel
@@ -308,9 +310,9 @@ export const AddData = () => {
                 <Button
                   type="submit"
                   disabled={!canSubmit}
-                  className="bg-gradient-to-r from-red-950 to-red-900 
-                  hover:from-red-900 hover:to-red-800 
-                  text-foreground border border-red-800/30 
+                  className="bg-primary 
+                  hover:bg-primary/80 
+                  text-foreground border border-primary/15 
                   disabled:opacity-50 disabled:cursor-not-allowed
                   transition-all duration-300 
                   hover:scale-[1.02] active:scale-[0.98]"

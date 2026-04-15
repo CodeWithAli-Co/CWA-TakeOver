@@ -1,6 +1,13 @@
 import supabase from "@/MyComponents/supabase";
 import { useSuspenseQuery } from "@tanstack/react-query";
 import { message } from "@tauri-apps/plugin-dialog";
+import { useCompanyFilter } from "./store";
+
+/* ─── Helper: get current company label for DB storage ─── */
+export function getActiveCompanyLabel(): "CodeWithAli" | "simplicity" {
+  const raw = useCompanyFilter.getState().activeCompany;
+  return raw === "simplicityFunds" ? "simplicity" : "CodeWithAli";
+}
 
 // Fetch Active User with Avatar
 const fetchActiveUser = async () => {
@@ -16,7 +23,6 @@ const fetchActiveUser = async () => {
     .select("*") // Fetch everything
     .eq("supa_id", supaID.user.id)
     .single(); // Fetch a single user
-    // console.log("Supabase User Data:", data);
 
   if (error) {
     await message('Error Fetching Current Active User', {
@@ -48,15 +54,21 @@ export const ActiveUser = () => {
 };
 
 
-// Fetch All CWA Credentials
-const fetchCreds = async (folder: string) => {
-  const { data } = await supabase.from("cwa_creds").select("*").eq('folder', folder);
+// Fetch All CWA Credentials — scoped by company
+const fetchCreds = async (folder: string, company: string) => {
+  let query = supabase.from("cwa_creds").select("*").eq('folder', folder);
+  if (company !== "all") {
+    const label = company === "simplicityFunds" ? "simplicity" : "CodeWithAli";
+    query = query.eq("company", label);
+  }
+  const { data } = await query;
   return data;
 };
 export const CWACreds = (folder: string) => {
+  const { activeCompany } = useCompanyFilter();
   return useSuspenseQuery({
-    queryKey: ["creds"],
-    queryFn: () => fetchCreds(folder),
+    queryKey: ["creds", folder, activeCompany],
+    queryFn: () => fetchCreds(folder, activeCompany),
   });
 };
 
@@ -87,18 +99,24 @@ export const Interns = () => {
 };
 
 
-// Fetch DM Groups
-const fetchDMGroups = async (user: string) => {
-  const { data, error: nameError } = await supabase.from("dm_groups").select("*").contains('subscribers', [user])
+// Fetch DM Groups — scoped by company
+const fetchDMGroups = async (user: string, company: string) => {
+  let query = supabase.from("dm_groups").select("*").contains('subscribers', [user]);
+  if (company !== "all") {
+    const label = company === "simplicityFunds" ? "simplicity" : "CodeWithAli";
+    query = query.eq("company", label);
+  }
+  const { data, error: nameError } = await query;
   if (nameError) {
     console.log("NameError:", nameError)
   }
   return data;
 };
 export const DMGroups = (user: string) => {
+  const { activeCompany } = useCompanyFilter();
   return useSuspenseQuery({
-    queryKey: ["dmgroups"],
-    queryFn: () => fetchDMGroups(user),
+    queryKey: ["dmgroups", user, activeCompany],
+    queryFn: () => fetchDMGroups(user, activeCompany),
   });
 };
 
@@ -129,7 +147,7 @@ const fetchMessages = async (groupName: string ) => {
       return general?.reverse();
     default:
       const { data: DM } = await supabase.from("cwa_dm_chat").select("*").eq('dm_group', groupName).order('msg_id', { ascending: false }).limit(10);
-      return DM?.reverse();    
+      return DM?.reverse();
   }
 };
 export const Messages = (groupName: string) => {
@@ -140,7 +158,7 @@ export const Messages = (groupName: string) => {
 };
 
 
-// Fetch Todos
+// Fetch Todos — scoped by company
 export interface TodosInterface {
   todo_id: number
   created_at: string
@@ -156,14 +174,25 @@ export interface TodosInterface {
   priorityOrder: number
   assignee: string[]
   deadline: string
+  company?: string
 }
-const fetchTodos = async (user: string) => {
+const fetchTodos = async (user: string, company: string) => {
+  const companyLabel = company === "simplicityFunds" ? "simplicity" : "CodeWithAli";
 
-  const { data, error: todosError } = await supabase.from('cwa_todos').select('*').contains('assignee', [user]).order('priorityOrder', { ascending: false })
-  const { count: allTodoCount, error: allCountError } = await supabase.from('cwa_todos').select('todo_id', { count: 'exact', head: true }).contains('assignee', [user])
-  const { count: todoCount, error: todoCountError } = await supabase.from('cwa_todos').select('todo_id', { count: 'exact', head: true }).contains('assignee', [user]).eq('status', 'to-do')
-  const { count: inProgressTodoCount, error: inProgressCountError } = await supabase.from('cwa_todos').select('todo_id', { count: 'exact', head: true }).contains('assignee', [user]).eq('status', 'in-progress')
-  const { count: doneTodoCount, error: doneCountError } = await supabase.from('cwa_todos').select('todo_id', { count: 'exact', head: true }).contains('assignee', [user]).eq('status', 'done')
+  let baseQuery = supabase.from('cwa_todos').select('*').contains('assignee', [user]).order('priorityOrder', { ascending: false });
+  let countBase = supabase.from('cwa_todos').select('todo_id', { count: 'exact', head: true }).contains('assignee', [user]);
+
+  // Apply company filter if not "all"
+  if (company !== "all") {
+    baseQuery = baseQuery.eq("company", companyLabel);
+    countBase = countBase.eq("company", companyLabel);
+  }
+
+  const { data, error: todosError } = await baseQuery;
+  const { count: allTodoCount, error: allCountError } = await countBase;
+  const { count: todoCount, error: todoCountError } = await supabase.from('cwa_todos').select('todo_id', { count: 'exact', head: true }).contains('assignee', [user]).eq('status', 'to-do').eq("company", companyLabel);
+  const { count: inProgressTodoCount, error: inProgressCountError } = await supabase.from('cwa_todos').select('todo_id', { count: 'exact', head: true }).contains('assignee', [user]).eq('status', 'in-progress').eq("company", companyLabel);
+  const { count: doneTodoCount, error: doneCountError } = await supabase.from('cwa_todos').select('todo_id', { count: 'exact', head: true }).contains('assignee', [user]).eq('status', 'done').eq("company", companyLabel);
   if (todosError || allCountError || todoCountError || inProgressCountError || doneCountError) {
     console.log('Error with Todos Query: ', todosError?.message || allCountError?.message || todoCountError?.message || inProgressCountError?.message || doneCountError?.message)
   }
@@ -182,19 +211,20 @@ const fetchTodos = async (user: string) => {
     priority: task.priority,
     priorityOrder: task.priorityOrder,
     assignee: task.assignee,
-    deadline: task.deadline || ''
+    deadline: task.deadline || '',
+    company: task.company || 'CodeWithAli',
   }))
-  // return returnData
 }
 export const Todos = (user: string) => {
+  const { activeCompany } = useCompanyFilter();
   return useSuspenseQuery({
-    queryKey: ['todos'],
-    queryFn: () => fetchTodos(user)
+    queryKey: ['todos', user, activeCompany],
+    queryFn: () => fetchTodos(user, activeCompany)
   })
 }
 
 
-// Meetings Query
+// Meetings Query — scoped by company
 interface MeetingInterface {
   id: number;
   meeting_title: string;
@@ -204,9 +234,15 @@ interface MeetingInterface {
   meeting_type?: "online" | "in-person" | "hybrid";
   location?: string;
   hybrid_location?: { address: string, url: string };
+  company?: string;
 }
-const fetchMeetings = async () => {
-  const { data, error } = await supabase.from('cwa_meetings').select('*')
+const fetchMeetings = async (company: string) => {
+  let query = supabase.from('cwa_meetings').select('*');
+  if (company !== "all") {
+    const label = company === "simplicityFunds" ? "simplicity" : "CodeWithAli";
+    query = query.eq("company", label);
+  }
+  const { data, error } = await query;
   if (error) {
     console.log('Error fetching Meetings from DB', error.message)
   };
@@ -214,8 +250,9 @@ const fetchMeetings = async () => {
   return data as MeetingInterface[]
 };
 export const MeetingsQuery = () => {
+  const { activeCompany } = useCompanyFilter();
   return useSuspenseQuery({
-    queryKey: ["meetings"],
-    queryFn: fetchMeetings
+    queryKey: ["meetings", activeCompany],
+    queryFn: () => fetchMeetings(activeCompany)
   });
 };

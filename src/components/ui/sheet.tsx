@@ -2,7 +2,7 @@
  * Sheet — Void theme slide-out panel.
  *
  * Used for side panels (left/right) and drawers (top/bottom). Matches Dialog
- * styling: bg-card panel with white/[0.08] borders and red-400 close btn.
+ * styling: bg-card panel with border borders and red-400 close btn.
  */
 
 "use client";
@@ -35,7 +35,7 @@ const SheetOverlay = React.forwardRef<
 SheetOverlay.displayName = SheetPrimitive.Overlay.displayName;
 
 const sheetVariants = cva(
-  "fixed z-50 gap-4 bg-card border-white/[0.08] p-6 shadow-2xl shadow-black/50 transition ease-in-out data-[state=closed]:duration-300 data-[state=open]:duration-500 data-[state=open]:animate-in data-[state=closed]:animate-out",
+  "fixed z-50 gap-4 bg-card border-border p-6 shadow-2xl shadow-black/50 transition ease-in-out data-[state=closed]:duration-300 data-[state=open]:duration-500 data-[state=open]:animate-in data-[state=closed]:animate-out",
   {
     variants: {
       side: {
@@ -68,7 +68,7 @@ const SheetContent = React.forwardRef<
       className={cn(sheetVariants({ side }), className)}
       {...props}
     >
-      <SheetPrimitive.Close className="absolute right-3 top-3 p-1.5 rounded-sm text-white/30 hover:text-red-400 hover:bg-red-500/[0.08] transition-colors focus:outline-none focus:ring-1 focus:ring-red-500/30 disabled:pointer-events-none">
+      <SheetPrimitive.Close className="absolute right-3 top-3 p-1.5 rounded-sm text-muted-foreground hover:text-primary hover:bg-primary/[0.08] transition-colors focus:outline-none focus:ring-1 focus:ring-primary/30 disabled:pointer-events-none">
         <X className="h-3.5 w-3.5" />
         <span className="sr-only">Close</span>
       </SheetPrimitive.Close>
@@ -109,7 +109,7 @@ const SheetTitle = React.forwardRef<
 >(({ className, ...props }, ref) => (
   <SheetPrimitive.Title
     ref={ref}
-    className={cn("text-[15px] font-semibold text-white/90 tracking-tight", className)}
+    className={cn("text-[15px] font-semibold text-foreground tracking-tight", className)}
     {...props}
   />
 ));
@@ -121,7 +121,7 @@ const SheetDescription = React.forwardRef<
 >(({ className, ...props }, ref) => (
   <SheetPrimitive.Description
     ref={ref}
-    className={cn("text-[12px] text-white/30 leading-relaxed", className)}
+    className={cn("text-[12px] text-muted-foreground leading-relaxed", className)}
     {...props}
   />
 ));

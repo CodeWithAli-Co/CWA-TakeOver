@@ -1,5 +1,6 @@
 import supabase from "@/MyComponents/supabase";
 import { useQuery } from "@tanstack/react-query";
+import { useCompanyFilter } from "./store";
 
 interface ClientType {
   id: number;
@@ -8,10 +9,16 @@ interface ClientType {
    * *Emails are `unique` in DB
    */
   email: string;
+  company?: string;
 }
-// Fetch All Clients
-const fetchClients = async () => {
-  const { data, error } = await supabase.from("clients").select("*");
+// Fetch All Clients — scoped by company
+const fetchClients = async (company: string) => {
+  let query = supabase.from("clients").select("*");
+  if (company !== "all") {
+    const label = company === "simplicityFunds" ? "simplicity" : "CodeWithAli";
+    query = query.eq("company", label);
+  }
+  const { data, error } = await query;
   if (error) {
     console.error("Error fetching Clients:", error.message);
   }
@@ -19,9 +26,10 @@ const fetchClients = async () => {
   return res;
 };
 export const Clients = () => {
+  const { activeCompany } = useCompanyFilter();
   return useQuery({
-    queryKey: ["clients"],
-    queryFn: fetchClients,
+    queryKey: ["clients", activeCompany],
+    queryFn: () => fetchClients(activeCompany),
     refetchInterval: 10000,
   });
 };
@@ -89,12 +97,17 @@ export function getLineItems(inv: InvoiceType): LineItem[] {
   }
   return items;
 }
-// Fetch all of Client's Invoices
-const fetchInvoices = async (name: string) => {
-  const { data, error } = await supabase
+// Fetch all of Client's Invoices — scoped by company
+const fetchInvoices = async (name: string, company: string) => {
+  let query = supabase
     .from("invoices")
     .select("*")
     .eq("client_name", name);
+  if (company !== "all") {
+    const label = company === "simplicityFunds" ? "simplicity" : "CodeWithAli";
+    query = query.eq("company", label);
+  }
+  const { data, error } = await query;
   if (error) {
     console.error("Error fetching Invoices:", error.message);
   }
@@ -103,39 +116,50 @@ const fetchInvoices = async (name: string) => {
   return res;
 };
 export const Invoices = (name: string) => {
+  const { activeCompany } = useCompanyFilter();
   return useQuery({
-    queryKey: ["invoices"],
-    queryFn: () => fetchInvoices(name),
+    queryKey: ["invoices", name, activeCompany],
+    queryFn: () => fetchInvoices(name, activeCompany),
     refetchOnWindowFocus: true,
-    // enabled: queryState.active
   });
 };
 
-// Fetch ALL invoices (no client filter) — used by financial dashboard
-const fetchAllInvoices = async () => {
-  const { data, error } = await supabase
+// Fetch ALL invoices (no client filter) — used by financial dashboard — scoped by company
+const fetchAllInvoices = async (company: string) => {
+  let query = supabase
     .from("invoices")
     .select("*")
     .order("creation_date", { ascending: false });
+  if (company !== "all") {
+    const label = company === "simplicityFunds" ? "simplicity" : "CodeWithAli";
+    query = query.eq("company", label);
+  }
+  const { data, error } = await query;
   if (error) {
     console.error("Error fetching all Invoices:", error.message);
   }
   return (data as InvoiceType[]) || [];
 };
 export const AllInvoices = () => {
+  const { activeCompany } = useCompanyFilter();
   return useQuery({
-    queryKey: ["all-invoices"],
-    queryFn: fetchAllInvoices,
+    queryKey: ["all-invoices", activeCompany],
+    queryFn: () => fetchAllInvoices(activeCompany),
     refetchOnWindowFocus: true,
   });
 };
 
-// Fetch Client's Invoice
-const fetchInvoice = async (id: number) => {
-  const { data, error } = await supabase
+// Fetch Client's Invoice — scoped by company
+const fetchInvoice = async (id: number, company: string) => {
+  let query = supabase
     .from("invoices")
     .select("*")
     .eq("invoice_id", id);
+  if (company !== "all") {
+    const label = company === "simplicityFunds" ? "simplicity" : "CodeWithAli";
+    query = query.eq("company", label);
+  }
+  const { data, error } = await query;
   if (error) {
     console.error("Error fetching client's Invoice:", error.message);
   }
@@ -143,9 +167,10 @@ const fetchInvoice = async (id: number) => {
   return res;
 };
 export const ClientInvoice = (id: number) => {
+  const { activeCompany } = useCompanyFilter();
   return useQuery({
-    queryKey: ["client-invoice"],
-    queryFn: () => fetchInvoice(id),
+    queryKey: ["client-invoice", id, activeCompany],
+    queryFn: () => fetchInvoice(id, activeCompany),
     refetchOnWindowFocus: true,
   });
 };

@@ -11,6 +11,7 @@ import { useState, useRef, useEffect } from "react";
 import { Send, X, Paperclip, Smile } from "lucide-react";
 import supabase from "@/MyComponents/supabase";
 import { useChatStore } from "@/stores/chatStore";
+import { getActiveCompanyLabel } from "@/stores/query";
 
 interface Props {
   group: string;
@@ -76,12 +77,13 @@ export const MessageComposer: React.FC<Props> = ({
     };
     if (table === "cwa_dm_chat") basePayload.dm_group = group;
 
-    // Extended payload — includes new columns (reactions, read_by, reply_to)
+    // Extended payload — includes new columns (reactions, read_by, reply_to, company)
     const extendedPayload = {
       ...basePayload,
       reply_to: replyingTo?.msgId || null,
       reactions: {},
       read_by: [currentUsername],
+      company: getActiveCompanyLabel(),
     };
 
     // Try extended first; fall back to minimal if columns don't exist yet

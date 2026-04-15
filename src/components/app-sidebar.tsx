@@ -20,6 +20,8 @@ import {
   memberData,
   projectManagerData,
   securityEngineerData,
+  filterNavByCompany,
+  filterProjectsByCompany,
 } from "./ui/Dashboard/role-datas";
 import UserView, { Role } from "@/MyComponents/Reusables/userView";
 import { RolePreviewSelector } from "./ui/Dashboard/role-preview";
@@ -57,6 +59,8 @@ function SidebarBrand() {
 }
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
+  const { activeCompany } = useCompanyFilter();
+
   return (
     <UserView excludeRoles={Role.Client}>
       <Sidebar collapsible="icon" {...props}>
@@ -107,16 +111,16 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
             <NavMain items={securityEngineerData.navMain} />
           </UserView>
 
-          {/* COO View */}
+          {/* COO View — company-filtered */}
           <UserView userRole={Role.COO}>
-            <NavMain items={cooData.navMain} />
-            <NavProjects projects={cooData.projects} />
+            <NavMain items={filterNavByCompany(cooData.navMain as any, activeCompany)} />
+            <NavProjects projects={filterProjectsByCompany(cooData.projects as any, activeCompany)} />
           </UserView>
 
-          {/* CEO View */}
+          {/* CEO View — company-filtered */}
           <UserView userRole={Role.CEO}>
-            <NavMain items={ceoData.navMain} />
-            <NavProjects projects={ceoData.projects} />
+            <NavMain items={filterNavByCompany(ceoData.navMain as any, activeCompany)} />
+            <NavProjects projects={filterProjectsByCompany(ceoData.projects as any, activeCompany)} />
           </UserView>
         </SidebarContent>
 

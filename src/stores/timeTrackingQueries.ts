@@ -3,6 +3,7 @@
 
 import { useSuspenseQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import supabase from "@/MyComponents/supabase";
+import { getActiveCompanyLabel } from "./query";
 import type {
   TimeEntry,
   TimeEntryWithRelations,
@@ -371,6 +372,7 @@ export function useCreateTimeEntry() {
         .insert({
           ...entry,
           user_id: user.user.id,
+          company: getActiveCompanyLabel(),
         })
         .select()
         .single();
@@ -469,6 +471,7 @@ export function useCreateTemplate() {
         .insert({
           ...template,
           user_id: user.user.id,
+          company: getActiveCompanyLabel(),
         })
         .select()
         .single();

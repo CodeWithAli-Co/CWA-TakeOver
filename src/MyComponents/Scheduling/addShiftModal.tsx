@@ -285,18 +285,18 @@ export const AddShiftModal: React.FC = () => {
                 onClick={() => toggleEmployeeSelection(employee.id)}
                 className={`flex items-center p-2 rounded-md cursor-pointer transition-colors duration-150 ${
                   selectedEmployees.includes(employee.id)
-                    ? "bg-red-900/40 border border-red-500"
-                    : "hover:bg-gray-800 border border-gray-700"
+                    ? "bg-primary/[0.15] border border-primary"
+                    : "hover:bg-muted/50 border border-border"
                 } ${isEditMode && editingEvent?.employeeId !== employee.id && selectedEmployees.includes(employee.id) ? "bg-yellow-900/20 border border-yellow-500" : ""}`}
               >
                 <div className="mr-2">
                   <Checkbox 
                     checked={selectedEmployees.includes(employee.id)}
-                    className="data-[state=checked]:bg-primary data-[state=checked]:border-red-600"
+                    className="data-[state=checked]:bg-primary data-[state=checked]:border-primary"
                   />
                 </div>
                 <div className="flex items-center">
-                  <div className="w-6 h-6 rounded-full bg-red-800 flex items-center justify-center mr-2">
+                  <div className="w-6 h-6 rounded-full bg-primary flex items-center justify-center mr-2">
                     <span className="text-foreground text-xs">
                       {employee.avatar}
                     </span>
@@ -311,7 +311,7 @@ export const AddShiftModal: React.FC = () => {
               <Button
                 onClick={clearSelectedEmployees}
                 variant="ghost"
-                className="text-xs text-primary hover:text-red-300 hover:bg-transparent"
+                className="text-xs text-primary hover:text-primary/80 hover:bg-transparent"
               >
                 Clear Selection
               </Button>
@@ -332,14 +332,14 @@ export const AddShiftModal: React.FC = () => {
                   onClick={() => toggleDaySelection(index)}
                   className={`flex items-center p-2 rounded-md cursor-pointer transition-colors duration-150 ${
                     selectedDays.includes(index)
-                      ? "bg-red-900/40 border border-red-500"
-                      : "hover:bg-gray-800 border border-gray-700"
+                      ? "bg-primary/[0.15] border border-primary"
+                      : "hover:bg-muted/50 border border-border"
                   } ${isEditMode && editingEvent?.dayIndex !== index && selectedDays.includes(index) ? "bg-yellow-900/20 border border-yellow-500" : ""}`}
                 >
                   <div className="mr-2">
                     <Checkbox 
                       checked={selectedDays.includes(index)}
-                      className="data-[state=checked]:bg-primary data-[state=checked]:border-red-600"
+                      className="data-[state=checked]:bg-primary data-[state=checked]:border-primary"
                     />
                   </div>
                   <span className="text-foreground text-sm">{day}</span>
@@ -362,7 +362,7 @@ export const AddShiftModal: React.FC = () => {
                     <Button
                       id="shift-type" 
                       variant="outline"
-                      className="w-full justify-between mt-1 bg-background border border-red-900 text-foreground hover:bg-red-950"
+                      className="w-full justify-between mt-1 bg-background border border-border text-foreground hover:bg-primary/10"
                     >
                       <div className="flex items-center gap-2">
                         <span className={shiftTypeInfo.color}>{shiftTypeInfo.icon}</span>
@@ -372,14 +372,14 @@ export const AddShiftModal: React.FC = () => {
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent 
-                    className="w-[200px] bg-background border border-red-900 text-white"
+                    className="w-[200px] bg-background border border-border text-foreground"
                     align="start"
                   >
-                    <DropdownMenuLabel className="text-red-300">Shift Types</DropdownMenuLabel>
-                    <DropdownMenuSeparator className="bg-red-900/30" />
+                    <DropdownMenuLabel className="text-primary/80">Shift Types</DropdownMenuLabel>
+                    <DropdownMenuSeparator className="bg-border" />
                     <DropdownMenuGroup>
                       <DropdownMenuItem
-                        className="flex items-center gap-2 cursor-pointer hover:bg-red-900 focus:bg-red-900"
+                        className="flex items-center gap-2 cursor-pointer hover:bg-primary/[0.15] focus:bg-primary/[0.15]"
                         onClick={() => setShiftType("shift")}
                       >
                         <Briefcase size={16} className="text-primary" />
@@ -390,7 +390,7 @@ export const AddShiftModal: React.FC = () => {
                       </DropdownMenuItem>
                       
                       <DropdownMenuItem
-                        className="flex items-center gap-2 cursor-pointer hover:bg-red-900 focus:bg-red-900"
+                        className="flex items-center gap-2 cursor-pointer hover:bg-primary/[0.15] focus:bg-primary/[0.15]"
                         onClick={() => setShiftType("training")}
                       >
                         <Calendar size={16} className="text-emerald-400" />
@@ -401,7 +401,7 @@ export const AddShiftModal: React.FC = () => {
                       </DropdownMenuItem>
                       
                       <DropdownMenuItem
-                        className="flex items-center gap-2 cursor-pointer hover:bg-red-900 focus:bg-red-900"
+                        className="flex items-center gap-2 cursor-pointer hover:bg-primary/[0.15] focus:bg-primary/[0.15]"
                         onClick={() => setShiftType("break")}
                       >
                         <Coffee size={16} className="text-blue-400" />
@@ -412,7 +412,7 @@ export const AddShiftModal: React.FC = () => {
                       </DropdownMenuItem>
                       
                       <DropdownMenuItem
-                        className="flex items-center gap-2 cursor-pointer hover:bg-red-900 focus:bg-red-900"
+                        className="flex items-center gap-2 cursor-pointer hover:bg-primary/[0.15] focus:bg-primary/[0.15]"
                         onClick={() => setShiftType("off")}
                       >
                         <Home size={16} className="text-gray-400" />
@@ -423,7 +423,7 @@ export const AddShiftModal: React.FC = () => {
                       </DropdownMenuItem>
                       
                       <DropdownMenuItem
-                        className="flex items-center gap-2 cursor-pointer hover:bg-red-900 focus:bg-red-900"
+                        className="flex items-center gap-2 cursor-pointer hover:bg-primary/[0.15] focus:bg-primary/[0.15]"
                         onClick={() => setShiftType("meeting")}
                       >
                         <Users size={16} className="text-purple-400" />
@@ -448,7 +448,7 @@ export const AddShiftModal: React.FC = () => {
                       type="time"
                       value={startTime}
                       onChange={(e) => setStartTime(e.target.value)}
-                      className="bg-background border border-red-900 text-foreground mt-1"
+                      className="bg-background border border-border text-foreground mt-1"
                     />
                   </div>
                   <div>
@@ -460,7 +460,7 @@ export const AddShiftModal: React.FC = () => {
                       type="time"
                       value={endTime}
                       onChange={(e) => setEndTime(e.target.value)}
-                      className="bg-background border border-red-900 text-foreground mt-1"
+                      className="bg-background border border-border text-foreground mt-1"
                     />
                   </div>
                 </>
@@ -531,7 +531,7 @@ export const AddShiftModal: React.FC = () => {
             <Button
               onClick={handleDeleteShift}
               variant="destructive"
-              className="bg-red-900/60 hover:bg-red-800 text-foreground flex items-center"
+              className="bg-red-600/60 hover:bg-primary text-foreground flex items-center"
             >
               <Trash2 size={16} className="mr-1" />
               Delete
@@ -542,13 +542,13 @@ export const AddShiftModal: React.FC = () => {
             <Button
               onClick={handleClose}
               variant="outline"
-              className="bg-gray-800 hover:bg-gray-700 text-foreground border-gray-700"
+              className="bg-muted/50 hover:bg-muted/70 text-foreground border-border"
             >
               Cancel
             </Button>
             <Button 
               onClick={handleAddOrUpdateShift}
-              className={`bg-red-800 hover:bg-red-700 text-white`}
+              className={`bg-primary hover:bg-primary/80 text-foreground`}
               disabled={!isFormValid}
             >
               {isEditMode ? "Update" : "Add"} {shiftType.charAt(0).toUpperCase() + shiftType.slice(1)}

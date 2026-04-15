@@ -16,8 +16,34 @@ import {
   GraduationCap,
   User,
   Languages,
+  Users,
+  BarChart3,
+  Radio,
+  DollarSign,
+  Wrench,
+  Terminal,
+  CreditCard,
+  Activity,
+  type LucideIcon,
 } from "lucide-react";
-import { title } from "process";
+
+/* ─── Types ─── */
+export interface NavItem {
+  title: string;
+  url: string;
+  icon?: LucideIcon;
+  isActive?: boolean;
+  /** Which company this item belongs to. undefined = shared (both). */
+  company?: "codeWithAli" | "simplicityFunds";
+  items?: { title: string; url?: string; company?: "codeWithAli" | "simplicityFunds" }[];
+}
+
+export interface ProjectItem {
+  name: string;
+  url: string;
+  icon: LucideIcon;
+  company?: "codeWithAli" | "simplicityFunds";
+}
 
 // Intern Data set (What Interns can see)
 export const internData = {
@@ -612,132 +638,176 @@ export const cooData = {
       isActive: false,
       icon: Home,
     },
+    // ── CWA-only items ──
     {
       title: "Personal Life",
       url: "/personal",
       isActive: false,
-      icon: User
+      icon: User,
+      company: "codeWithAli" as const,
     },
     {
       title: "Admin Permissions",
       url: "/details",
       icon: SquareTerminal,
       isActive: true,
+      company: "codeWithAli" as const,
       items: [
-        // {
-        //   title: "Email Broadcast",
-        //   url: "/broadcast",
-        // },
         {
           title: "Account Management",
           url: "/details",
         },
         {
           title: "Contract",
-           url: "/contractGenerator",
-        },
-        {
-          title: "Users",
-          url: "/employee",
-        },
-        {
-          title: "Finance Dashboard",
-          url: "/financialDashboard",
+          url: "/contractGenerator",
         },
         {
           title: "Mod logs",
           url: "/mod_logs",
         },
-           {
+        {
           title: "Bio",
           url: "/bio"
         },
-          {
-              title: "Cold Email Generator",
-              url: "/coldEmail"
-          },
+        {
+          title: "Cold Email Generator",
+          url: "/coldEmail"
+        },
       ],
     },
-    
-    // {
-    //   title: "Bot Management",
-    //   url: "/bot",
-    //   icon: Bot,
-    // },
     {
       title: "Invoicer",
       url: "/invoicer",
       icon: File,
       isActive: false,
+      company: "codeWithAli" as const,
     },
     {
       title: "Chat",
       url: "/chat",
       isActive: false,
       icon: MessageCircle,
+      company: "codeWithAli" as const,
     },
     {
       title: "Task",
       url: "/task",
       isActive: false,
       icon: ClipboardList,
+      company: "codeWithAli" as const,
     },
     {
       title: "Weekly Quotas",
       url: "/quota",
       isActive: false,
       icon: Target,
+      company: "codeWithAli" as const,
     },
     {
       title: "Schedule",
       url: "/schedule",
       isActive: false,
       icon: CalendarDays,
+      company: "codeWithAli" as const,
     },
     {
       title: "Time Tracking",
       url: "/timetracking",
       isActive: false,
       icon: Clock,
+      company: "codeWithAli" as const,
     },
     {
       title: "Arabic Learning",
       url: "/arabic",
       isActive: false,
       icon: Languages,
+      company: "codeWithAli" as const,
     },
-    // {
-    //   title: "BioTech",
-    //   url: "/bio",
-    //   isActive: false,
-    //   icon: Cat,
-    // },
 
+    // ── Shared items ──
+    {
+      title: "Users",
+      url: "/employee",
+      icon: Users,
+      isActive: false,
+    },
+    {
+      title: "Finance Dashboard",
+      url: "/financialDashboard",
+      icon: DollarSign,
+      isActive: false,
+    },
+
+    // ── Simplicity-only items ──
+    {
+      title: "Simplicity Admin",
+      url: "/s-users",
+      icon: SquareTerminal,
+      isActive: true,
+      company: "simplicityFunds" as const,
+      items: [
+        {
+          title: "User Management",
+          url: "/s-users",
+        },
+        {
+          title: "Analytics & Surveys",
+          url: "/s-analytics",
+        },
+        {
+          title: "Broadcast Center",
+          url: "/s-broadcast",
+        },
+        {
+          title: "Manual Overrides",
+          url: "/s-overrides",
+        },
+      ],
+    },
+    {
+      title: "Financial Ops",
+      url: "/s-finance-ops",
+      icon: Activity,
+      isActive: false,
+      company: "simplicityFunds" as const,
+    },
+    {
+      title: "Subscriptions",
+      url: "/invoicer",
+      icon: CreditCard,
+      isActive: false,
+      company: "simplicityFunds" as const,
+    },
+    {
+      title: "Dev Console",
+      url: "/s-dev-console",
+      icon: Terminal,
+      isActive: false,
+      company: "simplicityFunds" as const,
+    },
+
+    // ── Settings (shared) ──
     {
       title: "Settings",
       url: "/settings",
       icon: Settings2,
       items: [
         {
-          // // In your sidebar navigation <Link to="/settings">Settings</Link>
           title: "General",
           url: "/settings",
         },
         {
           title: "Team",
-          // url: "/settings?tab=teams",
         },
         {
           title: "Tasks",
-          // url: "/settings?tab=tasks",
         },
         {
           title: "Company",
-          // url: "/settings?tab=company",
         },
         {
           title: "Notification",
-          // url: "/settings?tab=notification",
         },
       ],
     },
@@ -747,6 +817,7 @@ export const cooData = {
       name: "Budgetary",
       url: "/budgetary",
       icon: Frame,
+      company: "codeWithAli" as const,
     },
   ],
 };
@@ -769,7 +840,7 @@ export const ceoData = {
       logo: AudioWaveform,
       plan: "Startup",
     },
-    
+
     {
       name: "Members",
       logo: Command,
@@ -783,35 +854,30 @@ export const ceoData = {
       isActive: false,
       icon: Home,
     },
+    // ── CWA-only items ──
     {
       title: "Personal Life",
       url: "/personal",
       isActive: false,
       icon: User,
+      company: "codeWithAli" as const,
     },
-        {
+    {
       title: "Contract",
       url: "/contractGenerator",
-
-      icon: File
+      icon: File,
+      company: "codeWithAli" as const,
     },
     {
       title: "Admin Permissions",
       url: "/details",
       icon: SquareTerminal,
       isActive: true,
+      company: "codeWithAli" as const,
       items: [
         {
           title: "Account Management",
           url: "/details",
-        },
-        {
-          title: "Users",
-          url: "/employee",
-        },
-        {
-          title: "Finance Dashboard",
-          url: "/financialDashboard",
         },
         {
           title: "Mod logs",
@@ -827,84 +893,146 @@ export const ceoData = {
         },
       ],
     },
-    // {
-    //   title: "Bot Management",
-    //   url: "/bot",
-    //   icon: Bot,
-    // },
     {
       title: "Invoicer",
       url: "/invoicer",
       icon: File,
       isActive: false,
+      company: "codeWithAli" as const,
     },
     {
       title: "Chat",
       url: "/chat",
       isActive: false,
       icon: MessageCircle,
+      company: "codeWithAli" as const,
     },
     {
       title: "Task",
       url: "/task",
       isActive: false,
       icon: ClipboardList,
+      company: "codeWithAli" as const,
     },
     {
       title: "Weekly Quotas",
       url: "/quota",
       isActive: false,
       icon: Target,
+      company: "codeWithAli" as const,
     },
     {
       title: "Schedule",
       url: "/schedule",
       isActive: false,
       icon: CalendarDays,
+      company: "codeWithAli" as const,
     },
     {
       title: "Time Tracking",
       url: "/timetracking",
       isActive: false,
       icon: Clock,
+      company: "codeWithAli" as const,
     },
     {
       title: "Training Plan",
       url: "/trainingplan",
       isActive: false,
       icon: GraduationCap,
+      company: "codeWithAli" as const,
     },
     {
       title: "Arabic Learning",
       url: "/arabic",
       isActive: false,
       icon: Languages,
+      company: "codeWithAli" as const,
     },
+
+    // ── Shared items (visible in both modes) ──
+    {
+      title: "Users",
+      url: "/employee",
+      icon: Users,
+      isActive: false,
+    },
+    {
+      title: "Finance Dashboard",
+      url: "/financialDashboard",
+      icon: DollarSign,
+      isActive: false,
+    },
+
+    // ── Simplicity-only items ──
+    {
+      title: "Simplicity Admin",
+      url: "/s-users",
+      icon: SquareTerminal,
+      isActive: true,
+      company: "simplicityFunds" as const,
+      items: [
+        {
+          title: "User Management",
+          url: "/s-users",
+        },
+        {
+          title: "Analytics & Surveys",
+          url: "/s-analytics",
+        },
+        {
+          title: "Broadcast Center",
+          url: "/s-broadcast",
+        },
+        {
+          title: "Manual Overrides",
+          url: "/s-overrides",
+        },
+      ],
+    },
+    {
+      title: "Financial Ops",
+      url: "/s-finance-ops",
+      icon: Activity,
+      isActive: false,
+      company: "simplicityFunds" as const,
+    },
+    {
+      title: "Subscriptions",
+      url: "/invoicer",
+      icon: CreditCard,
+      isActive: false,
+      company: "simplicityFunds" as const,
+    },
+    {
+      title: "Dev Console",
+      url: "/s-dev-console",
+      icon: Terminal,
+      isActive: false,
+      company: "simplicityFunds" as const,
+    },
+
+    // ── Settings (shared) ──
     {
       title: "Settings",
       url: "/settings",
       icon: Settings2,
       items: [
         {
-          // // In your sidebar navigation <Link to="/settings">Settings</Link>
           title: "General",
           url: "/settings",
         },
         {
           title: "Team",
-          // url: "/settings?tab=teams",
         },
         {
           title: "Tasks",
-          // url: "/settings?tab=tasks",
         },
         {
           title: "Company",
-          // url: "/settings?tab=company",
         },
         {
           title: "Notification",
-          // url: "/settings?tab=notification",
         },
       ],
     },
@@ -914,6 +1042,30 @@ export const ceoData = {
       name: "Budgetary",
       url: "/budgetary",
       icon: Frame,
+      company: "codeWithAli" as const,
     },
   ],
 };
+
+/* ─── Helper: filter nav items by active company ─── */
+export function filterNavByCompany(
+  items: NavItem[],
+  activeCompany: "all" | "codeWithAli" | "simplicityFunds"
+): NavItem[] {
+  if (activeCompany === "all") return items;
+  return items.filter((item) => {
+    if (!item.company) return true; // shared — always show
+    return item.company === activeCompany;
+  });
+}
+
+export function filterProjectsByCompany(
+  projects: ProjectItem[],
+  activeCompany: "all" | "codeWithAli" | "simplicityFunds"
+): ProjectItem[] {
+  if (activeCompany === "all") return projects;
+  return projects.filter((p) => {
+    if (!p.company) return true;
+    return p.company === activeCompany;
+  });
+}

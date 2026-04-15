@@ -25,6 +25,7 @@ import {
 } from "@/MyComponents/Reusables/multiselectField";
 import supabase from "@/MyComponents/supabase";
 import { useMultiSelectStore } from "@/stores/store";
+import { getActiveCompanyLabel } from "@/stores/query";
 import { useForm } from "@tanstack/react-form";
 import { message } from "@tauri-apps/plugin-dialog";
 import { sendNotification } from "@tauri-apps/plugin-notification";
@@ -85,6 +86,7 @@ export const AddTodo = (props: Users) => {
             priorityOrderMap[value.priority as keyof typeof priorityOrderMap],
           assignee: newOption,
           deadline: value.deadline,
+          company: getActiveCompanyLabel(),
         });
 
         if (error) {
@@ -113,8 +115,8 @@ export const AddTodo = (props: Users) => {
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
         <Button
-          className="group relative overflow-hidden bg-gradient-to-r from-red-950 to-red-900 mb-2 
-          hover:from-red-900 hover:to-red-800 text-foreground border border-red-800/30 
+          className="group relative overflow-hidden bg-primary mb-2 
+          hover:bg-primary/80 text-foreground border border-primary/15 
           shadow-md shadow-red-950/20 transition-all duration-300 
           hover:scale-[1.02] active:scale-[0.98]"
         >
@@ -151,7 +153,7 @@ export const AddTodo = (props: Users) => {
                 <div className="grid gap-2">
                   <Label
                     htmlFor={field.name}
-                    className="text-red-200 flex items-center gap-2"
+                    className="text-foreground/70 flex items-center gap-2"
                   >
                     <Tags className="w-4 h-4 text-primary" />
                     Title
@@ -162,8 +164,8 @@ export const AddTodo = (props: Users) => {
                     autoComplete="off"
                     required
                     placeholder="Task title"
-                    className="bg-background/40 border-red-950/30 text-red-200 
-                    focus:border-red-700 focus:ring-2 focus:ring-red-900/50 
+                    className="bg-background/40 border-border text-foreground/70 
+                    focus:border-primary/30 focus:ring-2 focus:ring-primary/20 
                     transition-all duration-300"
                     value={field.state.value}
                     onChange={(e) =>
@@ -178,15 +180,15 @@ export const AddTodo = (props: Users) => {
               name="description"
               children={(field) => (
                 <div className="grid gap-2">
-                  <Label htmlFor={field.name} className="text-red-200">
+                  <Label htmlFor={field.name} className="text-foreground/70">
                     Description
                   </Label>
                   <Textarea
                     id={field.name}
                     placeholder="Task description"
-                    className="bg-background/40 border-red-950/30 text-red-200 
-                    min-h-[100px] focus:border-red-700 focus:ring-2 
-                    focus:ring-red-900/50 transition-all duration-300"
+                    className="bg-background/40 border-border text-foreground/70 
+                    min-h-[100px] focus:border-primary/30 focus:ring-2 
+                    focus:ring-primary/20 transition-all duration-300"
                     value={field.state.value}
                     onChange={(e) => field.handleChange(e.target.value)}
                   />
@@ -199,7 +201,7 @@ export const AddTodo = (props: Users) => {
                 name="label"
                 children={(field) => (
                   <div className="grid gap-2">
-                    <Label htmlFor={field.name} className="text-red-200">
+                    <Label htmlFor={field.name} className="text-foreground/70">
                       Label
                     </Label>
                     <Select
@@ -207,15 +209,15 @@ export const AddTodo = (props: Users) => {
                       onValueChange={(value) => field.handleChange(value)}
                     >
                       <SelectTrigger
-                        className="bg-background/40 border-red-950/30 
-                        text-red-200 focus:border-red-700 
-                        focus:ring-2 focus:ring-red-900/50"
+                        className="bg-background/40 border-border 
+                        text-foreground/70 focus:border-primary/30 
+                        focus:ring-2 focus:ring-primary/20"
                       >
                         <SelectValue placeholder="Select label" />
                       </SelectTrigger>
                       <SelectContent
-                        className="bg-background/95 border-red-950/30 
-                        text-red-200"
+                        className="bg-background/95 border-border 
+                        text-foreground/70"
                       >
                         {[
                           "Personal",
@@ -230,8 +232,8 @@ export const AddTodo = (props: Users) => {
                           <SelectItem
                             key={label}
                             value={label}
-                            className="text-red-200 
-                            hover:bg-red-950/30 focus:bg-red-950/40"
+                            className="text-foreground/70 
+                            hover:bg-primary/[0.12] focus:bg-primary/[0.15]"
                           >
                             {label}
                           </SelectItem>
@@ -247,7 +249,7 @@ export const AddTodo = (props: Users) => {
                 name="status"
                 children={(field) => (
                   <div className="grid gap-2">
-                    <Label htmlFor={field.name} className="text-red-200">
+                    <Label htmlFor={field.name} className="text-foreground/70">
                       Status
                     </Label>
                     <Select
@@ -255,22 +257,22 @@ export const AddTodo = (props: Users) => {
                       onValueChange={(value) => field.handleChange(value)}
                     >
                       <SelectTrigger
-                        className="bg-background/40 border-red-950/30 
-                            text-red-200 focus:border-red-700 
-                            focus:ring-2 focus:ring-red-900/50"
+                        className="bg-background/40 border-border 
+                            text-foreground/70 focus:border-primary/30 
+                            focus:ring-2 focus:ring-primary/20"
                       >
                         <SelectValue placeholder="Select status" />
                       </SelectTrigger>
                       <SelectContent
-                        className="bg-background/95 border-red-950/30 
-                            text-red-200"
+                        className="bg-background/95 border-border 
+                            text-foreground/70"
                       >
                         {["to-do", "in-progress", "done"].map((status) => (
                           <SelectItem
                             key={status}
                             value={status}
-                            className="text-red-200 
-                                hover:bg-red-950/30 focus:bg-red-950/40"
+                            className="text-foreground/70 
+                                hover:bg-primary/[0.12] focus:bg-primary/[0.15]"
                           >
                             {status === "to-do"
                               ? "To Do"
@@ -288,7 +290,7 @@ export const AddTodo = (props: Users) => {
                 name="priority"
                 children={(field) => (
                   <div className="grid gap-2">
-                    <Label htmlFor={field.name} className="text-red-200">
+                    <Label htmlFor={field.name} className="text-foreground/70">
                       Priority
                     </Label>
                     <Select
@@ -296,22 +298,22 @@ export const AddTodo = (props: Users) => {
                       onValueChange={(value) => field.handleChange(value)}
                     >
                       <SelectTrigger
-                        className="bg-background/40 border-red-950/30 
-                        text-red-200 focus:border-red-700 
-                        focus:ring-2 focus:ring-red-900/50"
+                        className="bg-background/40 border-border 
+                        text-foreground/70 focus:border-primary/30 
+                        focus:ring-2 focus:ring-primary/20"
                       >
                         <SelectValue placeholder="Select priority" />
                       </SelectTrigger>
                       <SelectContent
-                        className="bg-background/95 border-red-950/30 
-                        text-red-200"
+                        className="bg-background/95 border-border 
+                        text-foreground/70"
                       >
                         {["low", "medium", "high"].map((priority) => (
                           <SelectItem
                             key={priority}
                             value={priority}
-                            className="text-red-200 
-                            hover:bg-red-950/30 focus:bg-red-950/40"
+                            className="text-foreground/70 
+                            hover:bg-primary/[0.12] focus:bg-primary/[0.15]"
                           >
                             {priority.charAt(0).toUpperCase() +
                               priority.slice(1)}
@@ -330,7 +332,7 @@ export const AddTodo = (props: Users) => {
               name="deadline"
               children={(field) => (
                 <div className="grid gap-2">
-                  <Label htmlFor={field.name} className="text-red-200">
+                  <Label htmlFor={field.name} className="text-foreground/70">
                     Deadline
                   </Label>
                   <Input
@@ -338,8 +340,8 @@ export const AddTodo = (props: Users) => {
                     type="text"
                     autoComplete="off"
                     placeholder="Deadline (e.g. 3 days)"
-                    className="bg-background/40 border-red-950/30 text-red-200 
-                    focus:border-red-700 focus:ring-2 focus:ring-red-900/50 
+                    className="bg-background/40 border-border text-foreground/70 
+                    focus:border-primary/30 focus:ring-2 focus:ring-primary/20 
                     transition-all duration-300"
                     value={field.state.value}
                     onChange={(e) =>
@@ -359,8 +361,8 @@ export const AddTodo = (props: Users) => {
                 setOpen(false);
                 form.reset();
               }}
-              className="border-red-800/30 text-red-200 
-              hover:bg-red-950/20 hover:text-red-100 
+              className="border-primary/15 text-foreground/70 
+              hover:bg-primary/10 hover:text-foreground/80 
               transition-all duration-300"
             >
               Cancel
@@ -371,9 +373,9 @@ export const AddTodo = (props: Users) => {
                 <Button
                   type="submit"
                   disabled={!canSubmit}
-                  className="bg-gradient-to-r from-red-950 to-red-900 
-                  hover:from-red-900 hover:to-red-800 
-                  text-foreground border border-red-800/30 
+                  className="bg-primary 
+                  hover:bg-primary/80 
+                  text-foreground border border-primary/15 
                   disabled:opacity-50 disabled:cursor-not-allowed
                   transition-all duration-300 
                   hover:scale-[1.02] active:scale-[0.98]"
