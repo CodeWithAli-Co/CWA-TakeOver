@@ -50,7 +50,7 @@ function SidebarBrand() {
             {isSimplicity ? "Simplicity" : "CWA Manager"}
           </span>
           <span className="text-[10px] text-muted-foreground leading-none">
-            {isSimplicity ? "Funds Admin" : "v1.2.1"}
+            {isSimplicity ? "Funds Admin" : "v1.3.0"}
           </span>
         </div>
       )}
