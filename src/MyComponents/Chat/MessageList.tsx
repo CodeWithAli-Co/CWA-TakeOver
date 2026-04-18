@@ -1,28 +1,42 @@
 /**
  * MessageList.tsx — Scrollable message feed with day separators.
  *
- * Groups messages by day (Today / Yesterday / Mon Mar 3 / etc) and renders
- * subtle divider between day groups. Handles reactions, reply refs, read
- * receipts. Auto-scrolls to bottom on new messages.
+ * Groups messages by day (Today / Yesterday / Mon Mar 3 / etc), handles
+ * reactions/reply refs/read receipts, auto-scrolls on new messages, and
+ * (when threadStyle === "inline") renders ThreadInline under each
+ * thread-root message.
+ *
+ * Thread replies (messages with thread_root_id set) are HIDDEN from the
+ * main feed — they only appear inside their thread.
  */
 
 import { useEffect, useRef } from "react";
 import { ScrollArea } from "@/components/ui/shadcnComponents/scroll-area";
 import { MessageBubble } from "./MessageBubble";
+import { ThreadInline } from "./ThreadInline";
 import { TypingIndicator } from "./TypingIndicator";
-import { MessageInterface, MessageReactions } from "@/stores/query";
+import { MessageInterface } from "@/stores/query";
 import supabase from "@/MyComponents/supabase";
-import { useChatStore } from "@/stores/chatStore";
+import { useChatStore, type ThreadStyle } from "@/stores/chatStore";
 import { format, isToday, isYesterday } from "date-fns";
 
 interface Props {
   messages: MessageInterface[];
   group: string;
   currentUsername: string;
+  userAvatar: string;
   table: "cwa_chat" | "cwa_dm_chat";
+
+  // New props wired by ChatLayout
+  onOpenThread: (m: MessageInterface) => void;
+  onTogglePin: (m: MessageInterface) => void;
+  canPin: boolean;
+  threadReplyCounts: Map<number, number>;
+  threadStyle: ThreadStyle;
+  /** Parent-supplied reaction handler. Falls back to local impl if absent. */
+  onReactOverride?: (msgId: number, emoji: string) => Promise<void> | void;
 }
 
-// Format a date as a day separator label
 const formatDayLabel = (dateString: string): string => {
   const date = new Date(dateString);
   if (isNaN(date.getTime())) return "";
@@ -31,7 +45,6 @@ const formatDayLabel = (dateString: string): string => {
   return format(date, "EEEE, MMM d");
 };
 
-// Strip time from a date string for day-grouping comparison
 const dayKey = (dateString: string): string => {
   const date = new Date(dateString);
   if (isNaN(date.getTime())) return "unknown";
@@ -39,12 +52,14 @@ const dayKey = (dateString: string): string => {
 };
 
 export const MessageList: React.FC<Props> = ({
-  messages, group, currentUsername, table,
+  messages, group, currentUsername, userAvatar, table,
+  onOpenThread, onTogglePin, canPin,
+  threadReplyCounts, threadStyle,
+  onReactOverride,
 }) => {
   const scrollRef = useRef<HTMLDivElement>(null);
   const { setReplyingTo, markRead } = useChatStore();
 
-  // Auto-scroll + mark read on change
   useEffect(() => {
     if (scrollRef.current) {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
@@ -52,26 +67,35 @@ export const MessageList: React.FC<Props> = ({
     markRead(group);
   }, [messages, group, markRead]);
 
-  // Mark messages as read in Supabase (graceful fallback if column missing)
+  // Mark messages as read in Supabase
   useEffect(() => {
     if (!messages || messages.length === 0) return;
     const unread = messages.filter(
-      (m) => m.sent_by !== currentUsername && !(m.read_by || []).includes(currentUsername)
+      (m) =>
+        m.sent_by !== currentUsername &&
+        !(m.read_by || []).includes(currentUsername),
     );
     unread.forEach(async (msg) => {
       const newReadBy = [...(msg.read_by || []), currentUsername];
-      const { error } = await supabase.from(table).update({ read_by: newReadBy }).eq("msg_id", msg.msg_id);
+      const { error } = await supabase
+        .from(table)
+        .update({ read_by: newReadBy })
+        .eq("msg_id", msg.msg_id);
       if (error && !error.message.includes("column")) {
         console.warn("Read receipt update failed:", error.message);
       }
     });
   }, [messages, currentUsername, table]);
 
-  // Toggle a reaction — graceful fallback when column missing
   const handleReact = async (msgId: number, emoji: string) => {
+    if (onReactOverride) {
+      await onReactOverride(msgId, emoji);
+      return;
+    }
+    // Fallback implementation (for completeness; ChatLayout always provides one)
     const msg = messages.find((m) => m.msg_id === msgId);
     if (!msg) return;
-    const reactions: MessageReactions = { ...(msg.reactions || {}) };
+    const reactions: Record<string, string[]> = { ...(msg.reactions || {}) };
     const users = reactions[emoji] || [];
     if (users.includes(currentUsername)) {
       reactions[emoji] = users.filter((u) => u !== currentUsername);
@@ -79,13 +103,7 @@ export const MessageList: React.FC<Props> = ({
     } else {
       reactions[emoji] = [...users, currentUsername];
     }
-    const { error } = await supabase.from(table).update({ reactions }).eq("msg_id", msgId);
-    if (error) {
-      console.warn(
-        "Reactions not saved — add the `reactions jsonb` column on " + table +
-        " (see docs/INVOICER_CHAT_NOTIFICATIONS_QUOTAS.md)"
-      );
-    }
+    await supabase.from(table).update({ reactions }).eq("msg_id", msgId);
   };
 
   const handleReply = (msg: MessageInterface) => {
@@ -106,49 +124,74 @@ export const MessageList: React.FC<Props> = ({
       <div className="flex-1 flex items-center justify-center">
         <div className="text-center max-w-xs">
           <div className="text-4xl mb-3">👋</div>
-          <p className="text-[14px] text-muted-foreground/70 font-medium mb-1">Say hello!</p>
+          <p className="text-[14px] text-muted-foreground/70 font-medium mb-1">
+            Say hello!
+          </p>
           <p className="text-[12px] text-muted-foreground/60">
-            Be the first to start the conversation in <span className="text-primary">#{group}</span>
+            Be the first to start the conversation in{" "}
+            <span className="text-primary">#{group}</span>
           </p>
         </div>
       </div>
     );
   }
 
-  // Build rendered list with day separators injected
+  // Top-level feed hides thread replies; they render inside their thread.
+  const feedMessages = messages.filter((m) => m.thread_root_id == null);
+
   const rendered: React.ReactNode[] = [];
   let lastDay: string | null = null;
 
-  messages.forEach((msg, i) => {
+  feedMessages.forEach((msg, i) => {
     const thisDay = dayKey(msg.created_at);
-    const prevMsg = messages[i - 1];
+    const prevMsg = feedMessages[i - 1];
 
-    // Insert day separator when the day changes
     if (thisDay !== lastDay) {
       rendered.push(
-        <div key={`day-${thisDay}-${i}`} className="flex items-center gap-3 px-5 my-4 select-none">
+        <div
+          key={`day-${thisDay}-${i}`}
+          className="flex items-center gap-3 px-5 my-4 select-none"
+        >
           <div className="flex-1 h-px bg-muted/50" />
           <span className="text-[10px] text-muted-foreground uppercase tracking-[0.15em] font-medium px-2 py-0.5 rounded-sm bg-muted/30 border border-border">
             {formatDayLabel(msg.created_at)}
           </span>
           <div className="flex-1 h-px bg-muted/50" />
-        </div>
+        </div>,
       );
       lastDay = thisDay;
     }
+
+    const replyCount = threadReplyCounts.get(msg.msg_id) ?? 0;
 
     rendered.push(
       <div key={msg.msg_id} id={`msg-${msg.msg_id}`}>
         <MessageBubble
           msg={msg}
-          prevMsg={thisDay === dayKey(prevMsg?.created_at || "") ? prevMsg : undefined}
+          prevMsg={
+            thisDay === dayKey(prevMsg?.created_at || "") ? prevMsg : undefined
+          }
           currentUsername={currentUsername}
           onReact={handleReact}
           onReply={handleReply}
           onJumpTo={handleJumpTo}
+          onOpenThread={onOpenThread}
+          onTogglePin={onTogglePin}
+          canPin={canPin}
+          threadReplyCount={replyCount}
           allMessages={messages}
         />
-      </div>
+        {threadStyle === "inline" && replyCount > 0 && (
+          <ThreadInline
+            rootMsg={msg}
+            group={group}
+            currentUsername={currentUsername}
+            userAvatar={userAvatar}
+            table={table}
+            onReact={handleReact}
+          />
+        )}
+      </div>,
     );
   });
 

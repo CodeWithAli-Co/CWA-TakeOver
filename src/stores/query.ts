@@ -137,7 +137,55 @@ export interface MessageInterface {
   reply_to?: number | null;     // msg_id of message being replied to
   reactions?: MessageReactions; // emoji → usernames who reacted
   read_by?: string[];           // list of usernames who have read this message
+  // 2026 chat_enhancements migration (all optional for backward compat):
+  thread_root_id?: number | null; // msg_id of the thread root (if this is a thread reply)
+  image_urls?: string[];          // public URLs of attached images
+  pinned_at?: string | null;      // ISO timestamp when pinned (null = unpinned)
+  pinned_by?: string | null;      // username of the pinner
 }
+
+/** Fetch all messages pinned in a group (General or DM). */
+export const fetchPinnedMessages = async (
+  groupName: string,
+): Promise<MessageInterface[]> => {
+  if (groupName === "General") {
+    const { data } = await supabase
+      .from("cwa_chat")
+      .select("*")
+      .not("pinned_at", "is", null)
+      .order("pinned_at", { ascending: false });
+    return (data ?? []) as MessageInterface[];
+  }
+  const { data } = await supabase
+    .from("cwa_dm_chat")
+    .select("*")
+    .eq("dm_group", groupName)
+    .not("pinned_at", "is", null)
+    .order("pinned_at", { ascending: false });
+  return (data ?? []) as MessageInterface[];
+};
+
+export const PinnedMessages = (groupName: string) =>
+  useSuspenseQuery({
+    queryKey: ["pinned-messages", groupName],
+    queryFn: () => fetchPinnedMessages(groupName),
+  });
+
+/** Fetch all replies in a thread (messages whose thread_root_id matches). */
+export const fetchThreadReplies = async (
+  groupName: string,
+  threadRootId: number,
+): Promise<MessageInterface[]> => {
+  const table = groupName === "General" ? "cwa_chat" : "cwa_dm_chat";
+  let q = supabase
+    .from(table)
+    .select("*")
+    .eq("thread_root_id", threadRootId)
+    .order("msg_id", { ascending: true });
+  if (groupName !== "General") q = q.eq("dm_group", groupName);
+  const { data } = await q;
+  return (data ?? []) as MessageInterface[];
+};
 const fetchMessages = async (groupName: string ) => {
   switch(groupName) {
     case '':

@@ -18,8 +18,15 @@
  */
 
 import { useEffect, useState } from "react";
-import { Bell, Power, Volume2, VolumeX, Info } from "lucide-react";
+import {
+  Bell, Power, Volume2, VolumeX, Info, CheckCircle2,
+  MessageSquare, MessagesSquare, Beaker, AlertCircle,
+} from "lucide-react";
 import { invoke } from "@tauri-apps/api/core";
+import {
+  isPermissionGranted, requestPermission, sendNotification,
+} from "@tauri-apps/plugin-notification";
+import { useChatStore } from "@/stores/chatStore";
 
 interface Props {
   className?: string;
@@ -42,6 +49,37 @@ const defaultPrefs: NotificationPrefs = {
 export const NotificationSettings: React.FC<Props> = ({ className = "" }) => {
   const [prefs, setPrefs] = useState<NotificationPrefs>(defaultPrefs);
   const [autostartLoading, setAutostartLoading] = useState(false);
+  const [testStatus, setTestStatus] = useState<null | "ok" | "denied" | "error">(null);
+  const [testMessage, setTestMessage] = useState<string>("");
+  const { threadStyle, setThreadStyle } = useChatStore();
+
+  const sendTestNotification = async () => {
+    setTestStatus(null);
+    setTestMessage("");
+    try {
+      let granted = await isPermissionGranted();
+      if (!granted) {
+        const perm = await requestPermission();
+        granted = perm === "granted";
+      }
+      if (!granted) {
+        setTestStatus("denied");
+        setTestMessage(
+          "OS permission for notifications is denied. Open Windows Settings → System → Notifications and enable them for CWA Takeover.",
+        );
+        return;
+      }
+      await sendNotification({
+        title: "Takeover notification test",
+        body: "You'll receive real message pings the same way — from any page, even when the window is hidden to tray.",
+      });
+      setTestStatus("ok");
+      setTestMessage("Test notification sent. If you didn't see it, check Focus Assist or notification history.");
+    } catch (err) {
+      setTestStatus("error");
+      setTestMessage(err instanceof Error ? err.message : String(err));
+    }
+  };
 
   // Load on mount
   useEffect(() => {
@@ -172,6 +210,73 @@ export const NotificationSettings: React.FC<Props> = ({ className = "" }) => {
               instead of quitting. Notifications continue to work. Right-click the tray
               icon to fully quit.
             </p>
+          </div>
+        </div>
+
+        {/* Test notification */}
+        <div className="pt-3 border-t border-border">
+          <button
+            onClick={sendTestNotification}
+            className="flex w-full items-center justify-center gap-2 py-2 bg-muted/40 hover:bg-primary/[0.08] border border-border hover:border-primary/25 text-foreground/75 hover:text-primary text-[11.5px] font-medium rounded-sm transition-colors"
+          >
+            <Beaker className="h-3.5 w-3.5" />
+            Send Test Notification
+          </button>
+          {testStatus && (
+            <div
+              className={`mt-2 flex items-start gap-2 rounded-sm border p-2.5 text-[11px] leading-snug ${
+                testStatus === "ok"
+                  ? "border-emerald-500/25 bg-emerald-500/[0.08] text-emerald-300"
+                  : "border-destructive/25 bg-destructive/[0.08] text-destructive"
+              }`}
+            >
+              {testStatus === "ok" ? (
+                <CheckCircle2 className="h-3.5 w-3.5 mt-0.5 shrink-0" />
+              ) : (
+                <AlertCircle className="h-3.5 w-3.5 mt-0.5 shrink-0" />
+              )}
+              <span>{testMessage}</span>
+            </div>
+          )}
+        </div>
+
+        {/* Chat thread style */}
+        <div className="pt-3 border-t border-border">
+          <p className="text-[12px] text-foreground/70 font-medium mb-1">Chat Thread Style</p>
+          <p className="text-[11px] text-muted-foreground mb-2">
+            How replies-in-thread render in the chat page.
+          </p>
+          <div className="grid grid-cols-2 gap-1.5">
+            <button
+              type="button"
+              onClick={() => setThreadStyle("sidepanel")}
+              className={`flex items-start gap-2 rounded-sm border px-2 py-2 text-left transition-colors ${
+                threadStyle === "sidepanel"
+                  ? "border-primary/40 bg-primary/[0.06] text-foreground"
+                  : "border-border bg-muted/20 text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              <MessageSquare className="h-3.5 w-3.5 mt-0.5 shrink-0" />
+              <span>
+                <span className="block text-[11px] font-semibold">Side panel</span>
+                <span className="block text-[10px] opacity-70">Slack-style</span>
+              </span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setThreadStyle("inline")}
+              className={`flex items-start gap-2 rounded-sm border px-2 py-2 text-left transition-colors ${
+                threadStyle === "inline"
+                  ? "border-primary/40 bg-primary/[0.06] text-foreground"
+                  : "border-border bg-muted/20 text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              <MessagesSquare className="h-3.5 w-3.5 mt-0.5 shrink-0" />
+              <span>
+                <span className="block text-[11px] font-semibold">Inline</span>
+                <span className="block text-[10px] opacity-70">Discord-style</span>
+              </span>
+            </button>
           </div>
         </div>
 

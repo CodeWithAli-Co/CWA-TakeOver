@@ -4,36 +4,56 @@
  * Features:
  *   - Reply quote pill (when replyingTo is set in chatStore)
  *   - Typing indicator broadcast via Supabase Realtime presence
+ *   - Emoji picker (full picker — inline popover)
+ *   - Image attachments: paperclip picker, drag-and-drop, paste from clipboard
+ *   - /axon <prompt> slash command → Axon drafts a reply, fills textarea
  *   - Send on Enter, Shift+Enter for newline
  */
 
 import { useState, useRef, useEffect } from "react";
-import { Send, X, Paperclip, Smile } from "lucide-react";
+import { AnimatePresence, motion } from "framer-motion";
+import { Send, X, Paperclip, Smile, Sparkles, Loader2, Image as ImgIcon } from "lucide-react";
 import supabase from "@/MyComponents/supabase";
 import { useChatStore } from "@/stores/chatStore";
 import { getActiveCompanyLabel } from "@/stores/query";
+import { EmojiPicker } from "./EmojiPicker";
+import { useImageUpload, type PendingUpload } from "./useImageUpload";
+import { draftChatReply } from "@/Axon/engine/chatDraft";
 
 interface Props {
   group: string;
   currentUsername: string;
   userAvatar: string;
   table: "cwa_chat" | "cwa_dm_chat";
+  /** Last few messages in the channel — passed to /axon for context. */
+  recentMessages?: { sender: string; text: string }[];
 }
 
+const AXON_COMMAND = /^\/axon\s+/i;
+
 export const MessageComposer: React.FC<Props> = ({
-  group, currentUsername, userAvatar, table,
+  group, currentUsername, userAvatar, table, recentMessages,
 }) => {
   const [text, setText] = useState("");
+  const [showEmoji, setShowEmoji] = useState(false);
+  const [axonBusy, setAxonBusy] = useState(false);
+  const [axonError, setAxonError] = useState<string | null>(null);
+  const [draggingOver, setDraggingOver] = useState(false);
+
   const inputRef = useRef<HTMLTextAreaElement>(null);
-  const { replyingTo, setReplyingTo, setTyping } = useChatStore();
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const typingChannelRef = useRef<any>(null);
 
-  // Set up presence channel for typing indicators
+  const { replyingTo, setReplyingTo, setTyping } = useChatStore();
+  const {
+    pending, removePending, clearPending, uploadMany, filesFromClipboard,
+  } = useImageUpload(group, currentUsername);
+
+  // ── typing presence ───────────────────────────────────────────────────
   useEffect(() => {
     const channel = supabase.channel(`typing-${group}`, {
       config: { presence: { key: currentUsername } },
     });
-
     channel
       .on("presence", { event: "sync" }, () => {
         const state = channel.presenceState();
@@ -47,16 +67,13 @@ export const MessageComposer: React.FC<Props> = ({
         setTyping(group, typers);
       })
       .subscribe();
-
     typingChannelRef.current = channel;
-    return () => {
-      channel.unsubscribe();
-    };
+    return () => { channel.unsubscribe(); };
   }, [group, currentUsername, setTyping]);
 
-  // Broadcast typing on input
   const handleChange = (val: string) => {
     setText(val);
+    setAxonError(null);
     if (typingChannelRef.current) {
       typingChannelRef.current.track({
         typing: val.length > 0,
@@ -65,43 +82,103 @@ export const MessageComposer: React.FC<Props> = ({
     }
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!text.trim()) return;
+  // ── /axon detection ─────────────────────────────────────────────────
+  const runAxon = async (prompt: string) => {
+    setAxonBusy(true);
+    setAxonError(null);
+    const res = await draftChatReply(prompt, {
+      groupName: group,
+      operator: currentUsername,
+      recentMessages,
+    });
+    setAxonBusy(false);
+    if (res.error) {
+      setAxonError(res.error);
+      return;
+    }
+    setText(res.text);
+    inputRef.current?.focus();
+  };
 
-    // Minimal payload — works even without schema migrations
-    const basePayload: any = {
+  // ── image handling ────────────────────────────────────────────────────
+  const onPaste = (e: React.ClipboardEvent<HTMLTextAreaElement>) => {
+    const files = filesFromClipboard(e.nativeEvent as unknown as ClipboardEvent);
+    if (files.length > 0) {
+      e.preventDefault();
+      uploadMany(files);
+    }
+  };
+
+  const onPickFiles = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files ?? []);
+    if (files.length > 0) uploadMany(files);
+    if (fileInputRef.current) fileInputRef.current.value = "";
+  };
+
+  const onDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    setDraggingOver(false);
+    const files: File[] = [];
+    for (let i = 0; i < e.dataTransfer.files.length; i++) {
+      files.push(e.dataTransfer.files[i]!);
+    }
+    if (files.length > 0) uploadMany(files);
+  };
+
+  // ── send ──────────────────────────────────────────────────────────────
+  const handleSubmit = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+
+    // /axon: if the command is in the text, strip it and ask Axon to draft.
+    if (AXON_COMMAND.test(text)) {
+      const prompt = text.replace(AXON_COMMAND, "").trim();
+      if (!prompt) {
+        setAxonError("Usage: /axon <what you want to say>");
+        return;
+      }
+      await runAxon(prompt);
+      return; // user reviews the draft and sends manually
+    }
+
+    const hasText = !!text.trim();
+    const hasPending = pending.some((p) => !p.publicUrl);
+    if (hasPending) return; // wait for uploads
+    const imageUrls = pending
+      .map((p) => p.publicUrl)
+      .filter((u): u is string => !!u);
+
+    if (!hasText && imageUrls.length === 0) return;
+
+    const basePayload: Record<string, unknown> = {
       sent_by: currentUsername,
       message: text.trim(),
       userAvatar,
     };
     if (table === "cwa_dm_chat") basePayload.dm_group = group;
 
-    // Extended payload — includes new columns (reactions, read_by, reply_to, company)
     const extendedPayload = {
       ...basePayload,
       reply_to: replyingTo?.msgId || null,
       reactions: {},
       read_by: [currentUsername],
+      image_urls: imageUrls.length > 0 ? imageUrls : null,
       company: getActiveCompanyLabel(),
     };
 
-    // Try extended first; fall back to minimal if columns don't exist yet
     let { error } = await supabase.from(table).insert(extendedPayload);
     if (error) {
-      console.warn("Extended insert failed, retrying without new columns:", error.message);
+      console.warn("Extended insert failed, retrying minimal:", error.message);
       const result = await supabase.from(table).insert(basePayload);
       error = result.error;
     }
-
     if (error) {
       console.error("Send message error:", error);
       return;
     }
 
-    // Clear state immediately after successful send
     setText("");
     setReplyingTo(null);
+    clearPending();
     if (typingChannelRef.current) {
       typingChannelRef.current.track({ typing: false, expiresAt: 0 });
     }
@@ -111,12 +188,19 @@ export const MessageComposer: React.FC<Props> = ({
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
-      handleSubmit(e as any);
+      handleSubmit();
     }
   };
 
+  const isAxonMode = AXON_COMMAND.test(text);
+
   return (
-    <div className="border-t border-border bg-card">
+    <div
+      className="border-t border-border bg-card"
+      onDragOver={(e) => { e.preventDefault(); setDraggingOver(true); }}
+      onDragLeave={() => setDraggingOver(false)}
+      onDrop={onDrop}
+    >
       {/* Reply quote pill */}
       {replyingTo && (
         <div className="px-5 pt-3 pb-2 flex items-start justify-between gap-3 border-b border-border bg-card">
@@ -138,44 +222,153 @@ export const MessageComposer: React.FC<Props> = ({
         </div>
       )}
 
-      <form onSubmit={handleSubmit} className="px-5 py-3">
-        <div className="flex items-end gap-2 bg-muted/40 border border-border rounded-md focus-within:border-red-500/25 focus-within:bg-muted/50 transition-all">
+      {/* Pending image thumbnails */}
+      {pending.length > 0 && (
+        <div className="flex flex-wrap gap-2 border-b border-border px-5 py-2">
+          {pending.map((p) => (
+            <PendingThumb key={p.id} item={p} onRemove={() => removePending(p.id)} />
+          ))}
+        </div>
+      )}
+
+      {/* Axon error banner */}
+      {axonError && (
+        <div className="border-b border-destructive/30 bg-destructive/10 px-5 py-1.5 text-[11px] text-destructive">
+          {axonError}
+        </div>
+      )}
+
+      <form onSubmit={handleSubmit} className="relative px-5 py-3">
+        {draggingOver && (
+          <div className="pointer-events-none absolute inset-3 flex items-center justify-center rounded-md border-2 border-dashed border-primary/40 bg-primary/5 text-[11.5px] font-medium text-primary">
+            <ImgIcon className="mr-2 h-4 w-4" />
+            Drop images to attach
+          </div>
+        )}
+
+        <div className={`flex items-end gap-2 bg-muted/40 border rounded-md focus-within:bg-muted/50 transition-all ${
+          isAxonMode
+            ? "border-primary/50 focus-within:border-primary/70"
+            : "border-border focus-within:border-red-500/25"
+        }`}>
           <button
             type="button"
+            onClick={() => fileInputRef.current?.click()}
             className="p-2.5 text-muted-foreground/50 hover:text-foreground/60 transition-colors"
-            title="Attach"
+            title="Attach image"
           >
             <Paperclip className="h-4 w-4" />
           </button>
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/png,image/jpeg,image/gif,image/webp"
+            multiple
+            onChange={onPickFiles}
+            className="hidden"
+          />
+
           <textarea
             ref={inputRef}
             value={text}
             onChange={(e) => handleChange(e.target.value)}
             onKeyDown={handleKeyDown}
-            placeholder={`Message #${group}`}
+            onPaste={onPaste}
+            placeholder={
+              isAxonMode
+                ? "Axon is listening… press Enter to draft"
+                : `Message #${group} — try /axon to draft with AI`
+            }
             rows={1}
             className="flex-1 bg-transparent py-2.5 text-[13.5px] text-foreground/85 placeholder:text-muted-foreground/60 focus:outline-none resize-none max-h-32"
           />
-          <button
-            type="button"
-            className="p-2.5 text-muted-foreground/50 hover:text-foreground/60 transition-colors"
-            title="Emoji"
-          >
-            <Smile className="h-4 w-4" />
-          </button>
+
+          {/* Emoji picker anchor */}
+          <div className="relative">
+            <button
+              type="button"
+              onClick={() => setShowEmoji((v) => !v)}
+              className="p-2.5 text-muted-foreground/50 hover:text-foreground/60 transition-colors"
+              title="Emoji"
+              aria-expanded={showEmoji}
+            >
+              <Smile className="h-4 w-4" />
+            </button>
+            <AnimatePresence>
+              {showEmoji && (
+                <div className="absolute bottom-full right-0 z-30 mb-2">
+                  <EmojiPicker
+                    onPick={(e) => {
+                      setText((t) => t + e);
+                      setShowEmoji(false);
+                      inputRef.current?.focus();
+                    }}
+                    onClose={() => setShowEmoji(false)}
+                  />
+                </div>
+              )}
+            </AnimatePresence>
+          </div>
+
           <button
             type="submit"
-            disabled={!text.trim()}
+            disabled={axonBusy || pending.some((p) => !p.publicUrl) || (!text.trim() && pending.length === 0)}
             className="p-2 mr-1 my-1 rounded-sm bg-primary hover:bg-primary/80 active:scale-95 text-foreground disabled:bg-muted/50 disabled:text-muted-foreground/60 disabled:cursor-not-allowed transition-all"
-            title="Send message (Enter)"
+            title={isAxonMode ? "Draft with Axon" : "Send (Enter)"}
           >
-            <Send className="h-3.5 w-3.5" />
+            {axonBusy ? (
+              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+            ) : isAxonMode ? (
+              <Sparkles className="h-3.5 w-3.5" />
+            ) : (
+              <Send className="h-3.5 w-3.5" />
+            )}
           </button>
         </div>
+
         <p className="text-[10px] text-muted-foreground/40 mt-1.5 px-1">
-          Press <kbd className="px-1 py-0.5 bg-muted/50 rounded text-muted-foreground/70 text-[9px] border border-border">Enter</kbd> to send · <kbd className="px-1 py-0.5 bg-muted/50 rounded text-muted-foreground/70 text-[9px] border border-border">Shift+Enter</kbd> for newline
+          Press <kbd className="px-1 py-0.5 bg-muted/50 rounded text-muted-foreground/70 text-[9px] border border-border">Enter</kbd> to send ·
+          <kbd className="mx-1 px-1 py-0.5 bg-muted/50 rounded text-muted-foreground/70 text-[9px] border border-border">Shift+Enter</kbd> newline ·
+          <kbd className="mx-1 px-1 py-0.5 bg-muted/50 rounded text-muted-foreground/70 text-[9px] border border-border">/axon</kbd> draft with AI ·
+          paste or drop images
         </p>
       </form>
     </div>
   );
 };
+
+// ── pending image thumbnail ---------------------------------------------
+
+function PendingThumb({
+  item, onRemove,
+}: {
+  item: PendingUpload;
+  onRemove: () => void;
+}) {
+  const uploading = !item.publicUrl;
+  return (
+    <motion.div
+      initial={{ opacity: 0, scale: 0.9 }}
+      animate={{ opacity: 1, scale: 1 }}
+      exit={{ opacity: 0, scale: 0.9 }}
+      className="relative"
+    >
+      <div className="h-16 w-16 overflow-hidden rounded-md border border-border">
+        <img src={item.previewUrl} alt="" className="h-full w-full object-cover" />
+      </div>
+      {uploading && (
+        <div className="absolute inset-0 flex items-center justify-center rounded-md bg-black/50">
+          <Loader2 className="h-3.5 w-3.5 animate-spin text-white" />
+        </div>
+      )}
+      <button
+        type="button"
+        onClick={onRemove}
+        className="absolute -right-1.5 -top-1.5 flex h-4 w-4 items-center justify-center rounded-full border border-border bg-background text-muted-foreground hover:text-foreground"
+        aria-label="Remove"
+      >
+        <X className="h-2.5 w-2.5" />
+      </button>
+    </motion.div>
+  );
+}

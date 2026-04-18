@@ -19,6 +19,7 @@ import { SidebarProvider } from "@/components/ui/shadcnComponents/sidebar";
 import { AppSidebar } from "@/components/app-sidebar";
 import supabase from "@/MyComponents/supabase";
 import { useEffect, lazy, Suspense } from "react";
+import { getCurrentWindow } from "@tauri-apps/api/window";
 import LoginPage from "@/MyComponents/Beginning/login";
 import PinPage from "@/MyComponents/Beginning/pinPage";
 import { SignUpPage } from "@/MyComponents/Beginning/signup";
@@ -68,7 +69,36 @@ export const Route = createRootRoute({
       const currentUsername = user?.[0]?.username || "";
       const { incrementUnread } = useChatStore.getState();
 
-      // Listen to ALL message tables; increment unread + notify when not viewing that group
+      // Helper: read user's notification prefs from localStorage
+      const isNotifEnabled = (): boolean => {
+        try {
+          const raw = localStorage.getItem("cwa-notification-prefs");
+          if (!raw) return true; // default on
+          const parsed = JSON.parse(raw);
+          return parsed?.enableNotifications !== false;
+        } catch { return true; }
+      };
+
+      // Helper: are we on the chat page right now? If so, we only skip
+      // notifications for the CURRENTLY-VIEWED group (so user still gets
+      // pings from other channels while in-chat).
+      const isOnChatPage = (): boolean =>
+        typeof window !== "undefined" &&
+        window.location.pathname.startsWith("/chat");
+
+      const fireNotify = (title: string, body: string) => {
+        if (!isNotifEnabled()) {
+          console.log("[notify] skipped (user disabled notifications)");
+          return;
+        }
+        console.log("[notify] firing:", title, "·", body);
+        try {
+          sendNotification({ title, body });
+        } catch (err) {
+          console.error("[notify] sendNotification failed:", err);
+        }
+      };
+
       const unreadChannel = supabase
         .channel("unread-tracker")
         .on(
@@ -77,17 +107,17 @@ export const Route = createRootRoute({
           (payload) => {
             const groupName = payload.new.dm_group;
             const sentBy = payload.new.sent_by;
-            // Skip own messages
             if (sentBy === currentUsername) return;
-            // If not currently viewing this DM, increment unread + notify
-            if (GroupName !== groupName) {
+            // Suppress only when the user is actively viewing that group ON the chat page.
+            const viewing = isOnChatPage() && GroupName === groupName;
+            if (!viewing) {
               incrementUnread(groupName);
-              sendNotification({
-                title: `New message in ${groupName}`,
-                body: `${sentBy}: ${payload.new.message}`,
-              });
+              fireNotify(
+                `New message in ${groupName}`,
+                `${sentBy}: ${payload.new.message || "[attachment]"}`,
+              );
             }
-          }
+          },
         )
         .on(
           "postgres_changes",
@@ -95,16 +125,19 @@ export const Route = createRootRoute({
           (payload) => {
             const sentBy = payload.new.sent_by;
             if (sentBy === currentUsername) return;
-            if (GroupName !== "General") {
+            const viewing = isOnChatPage() && GroupName === "General";
+            if (!viewing) {
               incrementUnread("General");
-              sendNotification({
-                title: "New message in General",
-                body: `${sentBy}: ${payload.new.message}`,
-              });
+              fireNotify(
+                "New message in General",
+                `${sentBy}: ${payload.new.message || "[attachment]"}`,
+              );
             }
-          }
+          },
         )
-        .subscribe();
+        .subscribe((status) => {
+          console.log("[notify] realtime channel status:", status);
+        });
 
       return () => { unreadChannel.unsubscribe(); };
     }, [GroupName, user]);
@@ -190,6 +223,32 @@ export const Route = createRootRoute({
       if (import.meta.env.PROD) {
         RunUpdater();
       }
+    }, []);
+
+    // ─── Tray / taskbar unread badge ────────────────────────────────
+    // Mirror totalUnread into the window title so taskbar + tray tooltip
+    // show "(3) CWA TakeOver" and the user can see unread count even when
+    // the window is hidden. Works on top of the existing tray icon.
+    useEffect(() => {
+      let cancelled = false;
+      const updateTitle = async () => {
+        try {
+          const win = getCurrentWindow();
+          const total = useChatStore.getState().totalUnread();
+          const base = "CWA TakeOver";
+          if (!cancelled) {
+            await win.setTitle(total > 0 ? `(${total}) ${base}` : base);
+          }
+        } catch (err) {
+          console.warn("[tray] setTitle failed:", err);
+        }
+      };
+      updateTitle();
+      const unsub = useChatStore.subscribe(() => updateTitle());
+      return () => {
+        cancelled = true;
+        unsub();
+      };
     }, []);
 
     return (
