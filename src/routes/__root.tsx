@@ -96,6 +96,16 @@ export const Route = createRootRoute({
         typeof window !== "undefined" &&
         window.location.pathname.startsWith("/chat");
 
+      // Read the sound preference the same way (defaults to on).
+      const isSoundEnabled = (): boolean => {
+        try {
+          const raw = localStorage.getItem("cwa-notification-prefs");
+          if (!raw) return true;
+          const parsed = JSON.parse(raw);
+          return parsed?.enableSound !== false;
+        } catch { return true; }
+      };
+
       const fireNotify = (title: string, body: string) => {
         if (!isNotifEnabled()) {
           console.log("[notify] skipped (user disabled notifications)");
@@ -103,7 +113,13 @@ export const Route = createRootRoute({
         }
         console.log("[notify] firing:", title, "·", body);
         try {
-          sendNotification({ title, body });
+          sendNotification({
+            title,
+            body,
+            // "default" plays the OS default notification chime on platforms
+            // that support it (Windows / macOS). Harmless where unsupported.
+            ...(isSoundEnabled() ? { sound: "default" } : {}),
+          });
         } catch (err) {
           console.error("[notify] sendNotification failed:", err);
         }

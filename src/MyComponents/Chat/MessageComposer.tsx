@@ -400,7 +400,6 @@ export const MessageComposer: React.FC<Props> = ({
           <input
             ref={fileInputRef}
             type="file"
-            accept="image/png,image/jpeg,image/gif,image/webp"
             multiple
             onChange={onPickFiles}
             className="hidden"
@@ -501,7 +500,7 @@ export const MessageComposer: React.FC<Props> = ({
   );
 };
 
-// ── pending image thumbnail ---------------------------------------------
+// ── pending thumbnail / file card ---------------------------------------
 
 function PendingThumb({
   item, onRemove,
@@ -510,6 +509,10 @@ function PendingThumb({
   onRemove: () => void;
 }) {
   const uploading = !item.publicUrl;
+  const kb = item.file.size >= 1024 * 1024
+    ? `${(item.file.size / 1024 / 1024).toFixed(1)} MB`
+    : `${Math.max(1, Math.round(item.file.size / 1024))} KB`;
+
   return (
     <motion.div
       initial={{ opacity: 0, scale: 0.9 }}
@@ -517,9 +520,26 @@ function PendingThumb({
       exit={{ opacity: 0, scale: 0.9 }}
       className="relative"
     >
-      <div className="h-16 w-16 overflow-hidden rounded-md border border-border">
-        <img src={item.previewUrl} alt="" className="h-full w-full object-cover" />
-      </div>
+      {item.isImage ? (
+        <div className="h-16 w-16 overflow-hidden rounded-md border border-border">
+          <img src={item.previewUrl} alt="" className="h-full w-full object-cover" />
+        </div>
+      ) : (
+        <div className="flex h-16 w-48 items-center gap-2 rounded-md border border-border bg-muted/30 px-3">
+          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-muted text-[9px] font-mono uppercase tracking-widest text-muted-foreground">
+            {(item.file.name.split(".").pop() || "FILE").slice(0, 4).toUpperCase()}
+          </div>
+          <div className="min-w-0 flex-1 leading-tight">
+            <div className="truncate text-[11.5px] font-medium text-foreground" title={item.file.name}>
+              {item.file.name}
+            </div>
+            <div className="font-mono text-[9.5px] uppercase tracking-widest text-muted-foreground">
+              {kb}
+            </div>
+          </div>
+        </div>
+      )}
+
       {uploading && (
         <div className="absolute inset-0 flex items-center justify-center rounded-md bg-black/50">
           <Loader2 className="h-3.5 w-3.5 animate-spin text-white" />

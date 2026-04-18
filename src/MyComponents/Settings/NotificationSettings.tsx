@@ -150,7 +150,7 @@ export const NotificationSettings: React.FC<Props> = ({ className = "" }) => {
   );
 
   return (
-    <div className={`bg-card border border-border rounded-sm overflow-hidden ${className}`}>
+    <div className={`bg-card border border-border rounded-sm overflow-hidden ${className}`} data-notif-settings>
       <div className="px-5 py-4 border-b border-border">
         <div className="flex items-center gap-2.5">
           <div className="p-1.5 rounded-sm bg-primary/[0.08]">
@@ -212,6 +212,9 @@ export const NotificationSettings: React.FC<Props> = ({ className = "" }) => {
             </p>
           </div>
         </div>
+
+        {/* Diagnostic status */}
+        <NotificationDiagnostic />
 
         {/* Test notification */}
         <div className="pt-3 border-t border-border">
@@ -291,3 +294,79 @@ export const NotificationSettings: React.FC<Props> = ({ className = "" }) => {
     </div>
   );
 };
+
+// ── Diagnostic panel ────────────────────────────────────────────────────
+
+function NotificationDiagnostic() {
+  const [perm, setPerm] = useState<string>("checking…");
+  const [autostart, setAutostart] = useState<string>("checking…");
+  const totalUnread = useChatStore((s) => s.totalUnread());
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const granted = await isPermissionGranted();
+        setPerm(granted ? "granted" : "denied");
+      } catch {
+        setPerm("unavailable");
+      }
+      try {
+        const { isEnabled } = await import("@tauri-apps/plugin-autostart");
+        const enabled = await isEnabled();
+        setAutostart(enabled ? "enabled" : "disabled");
+      } catch {
+        setAutostart("unavailable");
+      }
+    })();
+  }, []);
+
+  const Row = ({
+    label, value, tone,
+  }: {
+    label: string;
+    value: string;
+    tone: "ok" | "warn" | "neutral";
+  }) => (
+    <div className="flex items-center justify-between">
+      <span className="text-[10.5px] uppercase tracking-[0.14em] text-muted-foreground">
+        {label}
+      </span>
+      <span
+        className={`font-mono text-[11px] font-semibold ${
+          tone === "ok"
+            ? "text-emerald-400"
+            : tone === "warn"
+              ? "text-destructive"
+              : "text-foreground/80"
+        }`}
+      >
+        {value}
+      </span>
+    </div>
+  );
+
+  return (
+    <div className="pt-3 border-t border-border">
+      <p className="mb-2 flex items-center gap-1.5 text-[11px] font-medium text-foreground/70">
+        <Info className="h-3 w-3" />
+        Status
+      </p>
+      <div className="space-y-1 rounded-sm border border-border bg-muted/20 p-2.5">
+        <Row label="OS permission" value={perm} tone={
+          perm === "granted" ? "ok"
+            : perm === "denied" ? "warn"
+              : "neutral"
+        } />
+        <Row label="Launch on boot" value={autostart} tone={
+          autostart === "enabled" ? "ok" : "neutral"
+        } />
+        <Row label="Unread (all channels)" value={String(totalUnread)} tone="neutral" />
+      </div>
+      <p className="mt-2 text-[10.5px] leading-snug text-muted-foreground">
+        If OS permission shows "denied", open Windows Settings → System →
+        Notifications → CWA TakeOver and turn it on. Notifications only
+        fire for channels you're not actively viewing (mentions always fire).
+      </p>
+    </div>
+  );
+}

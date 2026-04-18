@@ -35,6 +35,9 @@ interface Props {
   threadStyle: ThreadStyle;
   /** Parent-supplied reaction handler. Falls back to local impl if absent. */
   onReactOverride?: (msgId: number, emoji: string) => Promise<void> | void;
+  /** Edit / delete own message. */
+  onEdit?: (msg: MessageInterface, nextText: string) => Promise<void> | void;
+  onDelete?: (msg: MessageInterface) => Promise<void> | void;
   /** Text filter applied before day-grouping. Empty string = no filter. */
   searchQuery?: string;
 }
@@ -58,10 +61,21 @@ export const MessageList: React.FC<Props> = ({
   onOpenThread, onTogglePin, canPin,
   threadReplyCounts, threadStyle,
   onReactOverride,
+  onEdit, onDelete,
   searchQuery = "",
 }) => {
   const scrollRef = useRef<HTMLDivElement>(null);
-  const { setReplyingTo, markRead } = useChatStore();
+  const { setReplyingTo, markRead, lastReadAt } = useChatStore();
+
+  // Capture the lastReadAt for this group at mount / group-switch, so the
+  // unread divider stays in place even after `markRead` zeros the store.
+  const lastReadSnapshotRef = useRef<string | null>(null);
+  useEffect(() => {
+    lastReadSnapshotRef.current = lastReadAt[group] ?? null;
+    // intentionally only depends on `group` — we want the snapshot frozen
+    // for the lifetime of the current channel view.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [group]);
 
   useEffect(() => {
     if (scrollRef.current) {
@@ -151,6 +165,8 @@ export const MessageList: React.FC<Props> = ({
 
   const rendered: React.ReactNode[] = [];
   let lastDay: string | null = null;
+  const unreadAnchor = lastReadSnapshotRef.current;
+  let unreadDividerInserted = false;
 
   feedMessages.forEach((msg, i) => {
     const thisDay = dayKey(msg.created_at);
@@ -172,6 +188,29 @@ export const MessageList: React.FC<Props> = ({
       lastDay = thisDay;
     }
 
+    // Unread divider — insert once, before the first message newer than
+    // the snapshotted lastReadAt (and only if the message isn't your own).
+    if (
+      !unreadDividerInserted &&
+      unreadAnchor &&
+      new Date(msg.created_at) > new Date(unreadAnchor) &&
+      msg.sent_by !== currentUsername
+    ) {
+      rendered.push(
+        <div
+          key={`unread-${msg.msg_id}`}
+          className="flex items-center gap-3 px-5 my-3 select-none"
+        >
+          <div className="flex-1 h-px bg-primary/30" />
+          <span className="rounded-full border border-primary/40 bg-primary/10 px-2 py-0.5 text-[9.5px] font-semibold uppercase tracking-[0.18em] text-primary">
+            New messages
+          </span>
+          <div className="flex-1 h-px bg-primary/30" />
+        </div>,
+      );
+      unreadDividerInserted = true;
+    }
+
     const replyCount = threadReplyCounts.get(msg.msg_id) ?? 0;
 
     rendered.push(
@@ -189,6 +228,8 @@ export const MessageList: React.FC<Props> = ({
           onTogglePin={onTogglePin}
           canPin={canPin}
           threadReplyCount={replyCount}
+          onEdit={onEdit}
+          onDelete={onDelete}
           allMessages={messages}
         />
         {threadStyle === "inline" && replyCount > 0 && (

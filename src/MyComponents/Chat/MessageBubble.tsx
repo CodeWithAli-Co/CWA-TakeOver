@@ -19,10 +19,18 @@ import { useState } from "react";
 import { motion } from "framer-motion";
 import {
   Smile, Reply, MoreVertical, CheckCheck, Pin, PinOff, MessagesSquare,
+  Pencil, Trash2, Copy, Check,
 } from "lucide-react";
 import {
   Avatar, AvatarFallback, AvatarImage,
 } from "@/components/ui/shadcnComponents/avatar";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/shadcnComponents/dropdown-menu";
 import { ReactionPicker } from "./ReactionPicker";
 import { MessageText } from "./MessageText";
 import { MessageInterface } from "@/stores/query";
@@ -43,6 +51,10 @@ interface Props {
   canPin?: boolean;
   /** Count of replies to display as a chip. Computed by parent. */
   threadReplyCount?: number;
+  /** Edit the message body (called with the new plain text). */
+  onEdit?: (msg: MessageInterface, nextText: string) => Promise<void> | void;
+  /** Delete / tombstone the message. */
+  onDelete?: (msg: MessageInterface) => Promise<void> | void;
   allMessages: MessageInterface[];
 }
 
@@ -72,6 +84,44 @@ function extractImageUrls(text: string): { cleanText: string; urls: string[] } {
     return "";
   }).replace(/\n{3,}/g, "\n\n").trim();
   return { cleanText, urls };
+}
+
+/** Extract non-image attachment URLs uploaded to the `chat-images` bucket.
+ *  Identified by the storage path pattern, not by extension. */
+const FILE_URL_RE =
+  /https?:\/\/[^\s]*storage\/v1\/object\/public\/chat-images\/[^\s]+/gi;
+function extractFileAttachments(
+  text: string,
+): {
+  cleanText: string;
+  files: { url: string; name: string }[];
+} {
+  const files: { url: string; name: string }[] = [];
+  const cleanText = text.replace(FILE_URL_RE, (match) => {
+    // Images have already been removed by extractImageUrls; any remaining
+    // chat-images URL is a non-image file attachment.
+    if (/\.(png|jpe?g|gif|webp|avif)(\?|$)/i.test(match)) {
+      return match; // leave image URLs alone (shouldn't happen but defensive)
+    }
+    // Reconstruct an approximate filename from the last path segment.
+    const slug = decodeURIComponent(match.split("/").pop() || "attachment");
+    // Our upload naming is `{group}/{user}-{ts}-{rnd}-{origName}`.
+    const parts = slug.split("-");
+    const recovered = parts.length > 3 ? parts.slice(3).join("-") : slug;
+    files.push({ url: match, name: recovered });
+    return "";
+  }).replace(/\n{3,}/g, "\n\n").trim();
+  return { cleanText, files };
+}
+
+function attachmentIcon(name: string): string {
+  const ext = (name.split(".").pop() || "FILE").toUpperCase();
+  return ext.slice(0, 4);
+}
+
+function humanSizeFromUrl(_url: string): string {
+  // We don't have size info post-upload without a HEAD request. Keep blank.
+  return "";
 }
 
 /** Parse a reply marker embedded in the message body. The composer
@@ -134,11 +184,18 @@ export const MessageBubble: React.FC<Props> = ({
   onReact, onReply, onJumpTo,
   onOpenThread, onTogglePin, canPin = false,
   threadReplyCount,
+  onEdit, onDelete,
   allMessages,
 }) => {
   const [showPicker, setShowPicker] = useState(false);
   const [expandedImage, setExpandedImage] = useState<string | null>(null);
+  const [isEditing, setIsEditing] = useState(false);
+  const [editText, setEditText] = useState("");
+  const [editing, setEditing] = useState(false);
+  const [copied, setCopied] = useState(false);
   const isOwn = msg.sent_by === currentUsername;
+
+  const isDeleted = (msg.message || "").trim() === "[message deleted]";
 
   const isGrouped = !!prevMsg
     && prevMsg.sent_by === msg.sent_by
@@ -150,6 +207,50 @@ export const MessageBubble: React.FC<Props> = ({
     setShowPicker(false);
   };
 
+  const startEdit = () => {
+    // Use the cleaned body (no markers) as the edit seed so users don't see
+    // the {reply:...} prefix.
+    const stripped = stripReactionsMarker(msg.message || "");
+    const withoutReply = stripped.replace(/^\{reply:\d+\|[^}]+\}\s*\n?/, "");
+    setEditText(withoutReply);
+    setIsEditing(true);
+  };
+
+  const saveEdit = async () => {
+    if (!onEdit) { setIsEditing(false); return; }
+    const next = editText.trim();
+    if (!next) { setIsEditing(false); return; }
+    setEditing(true);
+    try {
+      await onEdit(msg, next);
+      setIsEditing(false);
+    } finally {
+      setEditing(false);
+    }
+  };
+
+  const cancelEdit = () => {
+    setIsEditing(false);
+    setEditText("");
+  };
+
+  const doDelete = async () => {
+    if (!onDelete) return;
+    if (!window.confirm("Delete this message?")) return;
+    await onDelete(msg);
+  };
+
+  const copyText = async () => {
+    try {
+      const stripped = stripReactionsMarker(msg.message || "")
+        .replace(/^\{reply:\d+\|[^}]+\}\s*\n?/, "")
+        .trim();
+      await navigator.clipboard.writeText(stripped);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1200);
+    } catch { /* noop */ }
+  };
+
   const readBy = (msg.read_by || []).filter((u) => u !== msg.sent_by);
   const isPinned = !!msg.pinned_at;
 
@@ -158,6 +259,7 @@ export const MessageBubble: React.FC<Props> = ({
   // the corresponding DB column doesn't exist.
   let displayText: string = msg.message ?? "";
   let images: string[] = msg.image_urls ?? [];
+  let files: { url: string; name: string }[] = [];
   let parsedReplyId: number | null = null;
   let parsedReplySender: string | null = null;
   let parsedReactions: Record<string, string[]> = {};
@@ -177,6 +279,14 @@ export const MessageBubble: React.FC<Props> = ({
     if (extracted.urls.length > 0) {
       images = extracted.urls;
       displayText = extracted.cleanText;
+    }
+  }
+  // Non-image file attachments that were stored to chat-images too.
+  if (displayText) {
+    const fExtracted = extractFileAttachments(displayText);
+    if (fExtracted.files.length > 0) {
+      files = fExtracted.files;
+      displayText = fExtracted.cleanText;
     }
   }
 
@@ -270,10 +380,54 @@ export const MessageBubble: React.FC<Props> = ({
           </motion.button>
         )}
 
-        {/* Body — rendered with markdown + URL embeds + @mention highlight */}
-        {displayText && (
+        {/* Body — rendered with markdown + URL embeds + @mention highlight.
+            In edit mode we swap for a textarea + save/cancel buttons. */}
+        {isEditing ? (
+          <div className="flex flex-col gap-1.5">
+            <textarea
+              value={editText}
+              onChange={(e) => setEditText(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && !e.shiftKey) {
+                  e.preventDefault();
+                  saveEdit();
+                } else if (e.key === "Escape") {
+                  e.preventDefault();
+                  cancelEdit();
+                }
+              }}
+              autoFocus
+              rows={2}
+              className="w-full resize-none rounded-md border border-primary/30 bg-background px-2.5 py-1.5 text-[13px] text-foreground/90 focus:border-primary/60 focus:outline-none"
+            />
+            <div className="flex items-center gap-2 text-[10.5px]">
+              <button
+                type="button"
+                onClick={saveEdit}
+                disabled={editing}
+                className="rounded-md bg-primary px-2 py-0.5 font-semibold text-primary-foreground disabled:opacity-60"
+              >
+                {editing ? "Saving…" : "Save"}
+              </button>
+              <button
+                type="button"
+                onClick={cancelEdit}
+                className="rounded-md border border-border px-2 py-0.5 text-muted-foreground hover:text-foreground"
+              >
+                Cancel
+              </button>
+              <span className="text-muted-foreground">
+                Enter to save · Esc to cancel
+              </span>
+            </div>
+          </div>
+        ) : isDeleted ? (
+          <div className="text-[12.5px] italic text-muted-foreground/60">
+            [message deleted]
+          </div>
+        ) : displayText ? (
           <MessageText text={displayText} currentUsername={currentUsername} />
-        )}
+        ) : null}
 
         {/* Image gallery */}
         {images.length > 0 && (
@@ -294,6 +448,34 @@ export const MessageBubble: React.FC<Props> = ({
                   draggable={false}
                 />
               </button>
+            ))}
+          </div>
+        )}
+
+        {/* Non-image file attachments */}
+        {files.length > 0 && (
+          <div className="mt-2 flex flex-wrap gap-2">
+            {files.map((f) => (
+              <a
+                key={f.url}
+                href={f.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                download={f.name}
+                className="flex max-w-[260px] items-center gap-2 rounded-md border border-border bg-muted/25 px-2.5 py-2 text-left transition-colors hover:border-primary/40 hover:bg-muted/40"
+              >
+                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-muted text-[9px] font-mono uppercase tracking-widest text-muted-foreground">
+                  {attachmentIcon(f.name)}
+                </div>
+                <div className="min-w-0 flex-1 leading-tight">
+                  <div className="truncate text-[11.5px] font-medium text-foreground" title={f.name}>
+                    {f.name}
+                  </div>
+                  <div className="font-mono text-[9.5px] uppercase tracking-widest text-muted-foreground">
+                    {humanSizeFromUrl(f.url) || "download"}
+                  </div>
+                </div>
+              </a>
             ))}
           </div>
         )}
@@ -404,12 +586,40 @@ export const MessageBubble: React.FC<Props> = ({
                 )}
               </button>
             )}
-            <button
-              className="p-1.5 rounded-sm hover:bg-white/[0.06] text-muted-foreground/70 hover:text-foreground/80 transition-colors"
-              title="More"
-            >
-              <MoreVertical className="h-3.5 w-3.5" />
-            </button>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <button
+                  className="p-1.5 rounded-sm hover:bg-white/[0.06] text-muted-foreground/70 hover:text-foreground/80 transition-colors"
+                  title="More"
+                >
+                  <MoreVertical className="h-3.5 w-3.5" />
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-44">
+                <DropdownMenuItem onSelect={copyText} className="gap-2 text-[12px]">
+                  {copied ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
+                  {copied ? "Copied!" : "Copy text"}
+                </DropdownMenuItem>
+                {isOwn && !isDeleted && onEdit && (
+                  <DropdownMenuItem onSelect={startEdit} className="gap-2 text-[12px]">
+                    <Pencil className="h-3.5 w-3.5" />
+                    Edit message
+                  </DropdownMenuItem>
+                )}
+                {isOwn && !isDeleted && onDelete && (
+                  <>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem
+                      onSelect={doDelete}
+                      className="gap-2 text-[12px] text-destructive focus:text-destructive"
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                      Delete message
+                    </DropdownMenuItem>
+                  </>
+                )}
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
         )}
       </div>

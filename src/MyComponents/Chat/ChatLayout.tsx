@@ -139,6 +139,48 @@ export const ChatLayout = () => {
   }));
 
   // ── Action handlers --------------------------------------------------
+  const editMessage = async (m: MessageInterface, nextText: string) => {
+    // Preserve any embedded markers (reply / reactions) that sit at the top
+    // of the current body; rewrite only the user-visible portion underneath.
+    const current = m.message || "";
+    let prefix = "";
+    const rxMatch = current.match(/^\{rx:[^}]*\}\s*\n?/);
+    if (rxMatch) prefix += rxMatch[0];
+    const replyMatch = current.slice(prefix.length).match(/^\{reply:\d+\|[^}]+\}\s*\n?/);
+    if (replyMatch) prefix += replyMatch[0];
+    const nextBody = prefix + nextText;
+    const { error } = await supabase
+      .from(table)
+      .update({ message: nextBody })
+      .eq("msg_id", m.msg_id);
+    if (error) {
+      console.error("[edit] update failed:", error.message);
+      return;
+    }
+    refetchMessages();
+  };
+
+  const deleteMessage = async (m: MessageInterface) => {
+    // Soft-delete: tombstone the body so reply references + timeline
+    // continuity aren't broken.
+    const { error } = await supabase
+      .from(table)
+      .update({ message: "[message deleted]", image_urls: null })
+      .eq("msg_id", m.msg_id);
+    if (error) {
+      // Fallback without image_urls if column missing
+      const r2 = await supabase
+        .from(table)
+        .update({ message: "[message deleted]" })
+        .eq("msg_id", m.msg_id);
+      if (r2.error) {
+        console.error("[delete] update failed:", r2.error.message);
+        return;
+      }
+    }
+    refetchMessages();
+  };
+
   const togglePin = async (m: MessageInterface) => {
     const nextPin = m.pinned_at ? null : new Date().toISOString();
     const payload = nextPin
@@ -255,6 +297,8 @@ export const ChatLayout = () => {
                 threadStyle={threadStyle}
                 userAvatar={userAvatar}
                 onReactOverride={reactToMessage}
+                onEdit={editMessage}
+                onDelete={deleteMessage}
                 searchQuery={searchQuery}
               />
 
