@@ -73,6 +73,22 @@ function extractImageUrls(text: string): { cleanText: string; urls: string[] } {
   return { cleanText, urls };
 }
 
+/** Parse a reply marker embedded in the message body. The composer
+ *  prepends `{reply:<id>|<sender>}` so the quote renders even when the
+ *  `reply_to` DB column doesn't exist. */
+const REPLY_MARKER_RE = /^\{reply:(\d+)\|([^}]+)\}\s*\n?/;
+function extractReplyMarker(
+  text: string,
+): { cleanText: string; replyId: number | null; replySender: string | null } {
+  const match = text.match(REPLY_MARKER_RE);
+  if (!match) return { cleanText: text, replyId: null, replySender: null };
+  return {
+    cleanText: text.replace(REPLY_MARKER_RE, "").trimStart(),
+    replyId: Number(match[1]),
+    replySender: match[2]!,
+  };
+}
+
 export const MessageBubble: React.FC<Props> = ({
   msg, prevMsg, currentUsername,
   onReact, onReply, onJumpTo,
@@ -89,10 +105,6 @@ export const MessageBubble: React.FC<Props> = ({
     && msg.created_at && prevMsg.created_at
     && (new Date(msg.created_at).getTime() - new Date(prevMsg.created_at).getTime()) < 5 * 60 * 1000;
 
-  const replyTarget = msg.reply_to
-    ? allMessages.find((m) => m.msg_id === msg.reply_to)
-    : null;
-
   const reactions = msg.reactions || {};
   const reactionEntries = Object.entries(reactions).filter(([, users]) => users.length > 0);
 
@@ -104,11 +116,20 @@ export const MessageBubble: React.FC<Props> = ({
   const readBy = (msg.read_by || []).filter((u) => u !== msg.sent_by);
   const isPinned = !!msg.pinned_at;
 
-  // Images + display text: prefer the image_urls column when it's populated;
-  // otherwise extract image URLs embedded in the message body (our fallback
-  // path when the image_urls column doesn't exist yet in the DB).
-  let images: string[] = msg.image_urls ?? [];
+  // Strip embedded markers before rendering. The composer prepends a reply
+  // marker + appends image URLs so replies/images survive even when the
+  // `reply_to` / `image_urls` DB columns don't exist.
   let displayText: string = msg.message ?? "";
+  let images: string[] = msg.image_urls ?? [];
+  let parsedReplyId: number | null = null;
+  let parsedReplySender: string | null = null;
+
+  if (displayText) {
+    const r = extractReplyMarker(displayText);
+    displayText = r.cleanText;
+    parsedReplyId = r.replyId;
+    parsedReplySender = r.replySender;
+  }
   if (images.length === 0 && displayText) {
     const extracted = extractImageUrls(displayText);
     if (extracted.urls.length > 0) {
@@ -116,6 +137,15 @@ export const MessageBubble: React.FC<Props> = ({
       displayText = extracted.cleanText;
     }
   }
+
+  // Resolve the replied-to target. Prefer DB column; fall back to the
+  // parsed marker. When the target message isn't in the currently-loaded
+  // window, use the marker's sender label so the quote still renders.
+  const effectiveReplyId = msg.reply_to ?? parsedReplyId;
+  const replyTarget = effectiveReplyId
+    ? allMessages.find((m) => m.msg_id === effectiveReplyId) ?? null
+    : null;
+  const replyFallbackSender = replyTarget ? null : parsedReplySender;
 
   return (
     <div
@@ -163,20 +193,28 @@ export const MessageBubble: React.FC<Props> = ({
           </div>
         )}
 
-        {/* Reply quote */}
-        {replyTarget && (
+        {/* Reply quote — renders from DB column OR from the embedded marker
+            so it's visible to everyone, regardless of whether the `reply_to`
+            column exists in the schema. */}
+        {(replyTarget || replyFallbackSender) && (
           <motion.button
             initial={{ opacity: 0, y: -4 }}
             animate={{ opacity: 1, y: 0 }}
-            onClick={() => onJumpTo?.(replyTarget.msg_id)}
-            className="mb-1.5 flex items-stretch gap-2 hover:bg-muted/40 rounded-sm transition-colors text-left max-w-md overflow-hidden group/reply"
+            onClick={() => replyTarget ? onJumpTo?.(replyTarget.msg_id) : undefined}
+            disabled={!replyTarget}
+            className="mb-2 flex items-stretch gap-2 max-w-md overflow-hidden rounded-md bg-primary/[0.06] hover:bg-primary/[0.12] border border-primary/20 transition-colors text-left group/reply disabled:cursor-default disabled:hover:bg-primary/[0.06]"
           >
-            <div className="w-0.5 bg-primary/40 group-hover/reply:bg-red-500/60 rounded-full shrink-0" />
-            <div className="py-1 pr-2 min-w-0">
-              <p className="text-[10px] text-primary/70 font-medium mb-0.5">
-                ↳ {replyTarget.sent_by}
+            <div className="w-[3px] bg-primary/80 shrink-0" />
+            <div className="py-1.5 pr-2.5 min-w-0">
+              <p className="text-[10.5px] font-semibold text-primary mb-0.5 flex items-center gap-1">
+                <Reply className="h-2.5 w-2.5" />
+                Replying to {replyTarget ? replyTarget.sent_by : replyFallbackSender}
               </p>
-              <p className="text-[11px] text-muted-foreground/70 truncate">{replyTarget.message}</p>
+              <p className="text-[11px] text-foreground/80 truncate italic">
+                {replyTarget
+                  ? (replyTarget.message || "[attachment]")
+                  : "(original message not in view)"}
+              </p>
             </div>
           </motion.button>
         )}
@@ -273,10 +311,10 @@ export const MessageBubble: React.FC<Props> = ({
         )}
       </div>
 
-      {/* Action bar — always visible at subtle opacity, 100% on hover so
-          reply / react / thread / pin are discoverable without having to
-          hover-hunt for them. */}
-      <div className="absolute right-4 -top-3 opacity-70 group-hover:opacity-100 transition-opacity z-10">
+      {/* Action bar — hidden at rest, appears on hover only. Native
+          browser tooltips (`title=`) name each icon, so the thread button
+          is discoverable without cluttering every message at rest. */}
+      <div className="absolute right-4 -top-3 opacity-0 group-hover:opacity-100 transition-opacity z-10 pointer-events-none group-hover:pointer-events-auto">
         {showPicker ? (
           <ReactionPicker onPick={handleReactClick} />
         ) : (

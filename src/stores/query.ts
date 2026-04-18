@@ -191,10 +191,10 @@ const fetchMessages = async (groupName: string ) => {
     case '':
       return [{message: 'Please Select a Group DM'}]
     case 'General':
-      const { data: general } = await supabase.from("cwa_chat").select("*").order('msg_id', { ascending: false }).limit(10);
+      const { data: general } = await supabase.from("cwa_chat").select("*").order('msg_id', { ascending: false }).limit(50);
       return general?.reverse();
     default:
-      const { data: DM } = await supabase.from("cwa_dm_chat").select("*").eq('dm_group', groupName).order('msg_id', { ascending: false }).limit(10);
+      const { data: DM } = await supabase.from("cwa_dm_chat").select("*").eq('dm_group', groupName).order('msg_id', { ascending: false }).limit(50);
       return DM?.reverse();
   }
 };

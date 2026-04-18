@@ -12,7 +12,7 @@
 
 import { useState, useRef, useEffect } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { Send, X, Paperclip, Smile, Sparkles, Loader2, Image as ImgIcon } from "lucide-react";
+import { Send, X, Paperclip, Smile, Sparkles, Loader2, Image as ImgIcon, Reply } from "lucide-react";
 import supabase from "@/MyComponents/supabase";
 import { useChatStore } from "@/stores/chatStore";
 import { getActiveCompanyLabel } from "@/stores/query";
@@ -153,13 +153,19 @@ export const MessageComposer: React.FC<Props> = ({
 
     if (!hasText && imageUrls.length === 0) return;
 
-    // Always embed image URLs into the message body. MessageBubble renders
-    // image_urls when the column exists, and falls back to extracting URLs
-    // from the text. This guarantees images survive any insert fallback
-    // even if migrations/chat_enhancements.sql hasn't been applied yet.
-    const finalMessage = imageUrls.length > 0
-      ? [textContent, ...imageUrls].filter(Boolean).join("\n\n")
-      : textContent;
+    // Always embed attachments inside the message body so they survive any
+    // DB column the user's schema happens to be missing:
+    //   · Image URLs append as plain text (MessageBubble extracts them back).
+    //   · If this is a reply, prepend an invisible marker that MessageBubble
+    //     parses back into a reply quote — works even when the DB has no
+    //     `reply_to` column.
+    const parts: string[] = [];
+    if (replyingTo) {
+      parts.push(`{reply:${replyingTo.msgId}|${replyingTo.sentBy}}`);
+    }
+    if (textContent) parts.push(textContent);
+    parts.push(...imageUrls);
+    const finalMessage = parts.join("\n");
 
     const basePayload: Record<string, unknown> = {
       sent_by: currentUsername,
@@ -168,42 +174,66 @@ export const MessageComposer: React.FC<Props> = ({
     };
     if (table === "cwa_dm_chat") basePayload.dm_group = group;
 
-    // Preserve as many of the pre-existing columns as possible. image_urls is
-    // new (migration required) — keep it on the "aggressive" payload only and
-    // gracefully drop it if the column isn't there yet.
-    const preExistingPayload = {
+    // Start with every column we'd like to populate. The fallback loop below
+    // drops fields whose columns don't exist in the DB, so inserts survive
+    // schemas missing optional columns (image_urls, reactions, read_by, etc.).
+    const aggressivePayload: Record<string, unknown> = {
       ...basePayload,
       reply_to: replyingTo?.msgId || null,
       reactions: {},
       read_by: [currentUsername],
       company: getActiveCompanyLabel(),
-    };
-
-    const aggressivePayload = {
-      ...preExistingPayload,
       image_urls: imageUrls.length > 0 ? imageUrls : null,
     };
 
-    // Try 1: everything including image_urls.
-    let { error } = await supabase.from(table).insert(aggressivePayload);
-    if (error) {
-      console.warn(
-        "[send] insert with image_urls failed, retrying without it:",
-        error.message,
-      );
-      // Try 2: pre-existing columns only (preserves reply_to, reactions).
-      const r2 = await supabase.from(table).insert(preExistingPayload);
-      error = r2.error;
-      if (error) {
-        console.warn(
-          "[send] insert with pre-existing columns failed, retrying minimal:",
-          error.message,
-        );
-        // Try 3: bare minimum — at least the message shows up.
-        const r3 = await supabase.from(table).insert(basePayload);
-        error = r3.error;
+    // Progressive fallback: on "column X does not exist" errors, drop X
+    // and retry. Order here is by importance: image_urls first (least
+    // critical), reply_to last (most critical for reply-quote rendering).
+    const dropOrder = [
+      "image_urls",
+      "company",
+      "reactions",
+      "read_by",
+      "reply_to",
+    ];
+    let payload: Record<string, unknown> = { ...aggressivePayload };
+    let error: { message: string } | null = null;
+    for (let attempt = 0; attempt <= dropOrder.length; attempt++) {
+      const res = await supabase.from(table).insert(payload);
+      error = res.error ? { message: res.error.message } : null;
+      if (!error) break;
+
+      // Try to identify the offending column from the error message
+      const msg = error.message || "";
+      const match =
+        msg.match(/column\s+["']?(\w+)["']?\s+.*(?:does not exist|not found)/i) ||
+        msg.match(/Could not find the ['"]?(\w+)['"]? column/i);
+      const offending = match?.[1];
+
+      let dropped = false;
+      if (offending && offending in payload) {
+        console.warn(`[send] column "${offending}" missing, retrying without it`);
+        const next = { ...payload };
+        delete next[offending];
+        payload = next;
+        dropped = true;
+      } else {
+        // Didn't recognise the column from error text — drop from our preset
+        // list in order.
+        for (const col of dropOrder) {
+          if (col in payload) {
+            console.warn(`[send] retrying without "${col}" (error was: ${msg})`);
+            const next = { ...payload };
+            delete next[col];
+            payload = next;
+            dropped = true;
+            break;
+          }
+        }
       }
+      if (!dropped) break;
     }
+
     if (error) {
       console.error("[send] all insert variants failed:", error);
       return;
@@ -238,21 +268,26 @@ export const MessageComposer: React.FC<Props> = ({
       onDragLeave={() => setDraggingOver(false)}
       onDrop={onDrop}
     >
-      {/* Reply quote pill */}
+      {/* Reply quote pill — bold so user can't miss that they're in reply mode */}
       {replyingTo && (
-        <div className="px-5 pt-3 pb-2 flex items-start justify-between gap-3 border-b border-border bg-card">
+        <div className="flex items-start justify-between gap-3 border-b border-primary/25 bg-primary/[0.08] px-5 py-2.5">
           <div className="flex gap-2.5 min-w-0 flex-1">
-            <div className="w-0.5 bg-red-500/50 rounded-full shrink-0 my-0.5" />
+            <div className="w-1 rounded-full bg-primary shrink-0" />
             <div className="min-w-0">
-              <p className="text-[10px] text-primary/80 font-medium mb-0.5">
-                Replying to <span className="text-red-300">{replyingTo.sentBy}</span>
+              <p className="text-[11px] font-semibold text-primary mb-0.5 flex items-center gap-1">
+                <Reply className="h-3 w-3" />
+                Replying to {replyingTo.sentBy}
               </p>
-              <p className="text-[11px] text-muted-foreground/80 truncate">{replyingTo.preview}</p>
+              <p className="text-[11.5px] text-foreground/85 truncate italic">
+                {replyingTo.preview}
+              </p>
             </div>
           </div>
           <button
+            type="button"
             onClick={() => setReplyingTo(null)}
-            className="p-1 rounded-sm text-muted-foreground hover:text-foreground/70 hover:bg-muted/50"
+            aria-label="Cancel reply"
+            className="p-1 rounded-sm text-muted-foreground hover:text-foreground hover:bg-muted/50"
           >
             <X className="h-3.5 w-3.5" />
           </button>
