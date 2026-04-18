@@ -21,7 +21,8 @@ export const enum Role {
   SecurityEngineer = "Security Engineer",
   Partner = "Partnership Lead",
   COO = "COO",
-  CEO = "CEO"
+  CEO = "CEO",
+  CFO = "CFO"
 }
 
 type Roles = keyof typeof Role | Role;

@@ -14,6 +14,7 @@ import { NavUser } from "./ui/Dashboard/nav-user";
 import {
   adminData,
   ceoData,
+  cfoData,
   cooData,
   internData,
   marketingData,
@@ -121,6 +122,12 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
           <UserView userRole={Role.CEO}>
             <NavMain items={filterNavByCompany(ceoData.navMain as any, activeCompany)} />
             <NavProjects projects={filterProjectsByCompany(ceoData.projects as any, activeCompany)} />
+          </UserView>
+
+          {/* CFO View — company-filtered */}
+          <UserView userRole={Role.CFO}>
+            <NavMain items={filterNavByCompany(cfoData.navMain as any, activeCompany)} />
+            <NavProjects projects={filterProjectsByCompany(cfoData.projects as any, activeCompany)} />
           </UserView>
         </SidebarContent>
 

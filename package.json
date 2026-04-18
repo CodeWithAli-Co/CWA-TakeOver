@@ -61,6 +61,7 @@
     "framer-motion": "^12.4.11",
     "gsap": "^3.12.7",
     "hono": "^4.7.4",
+    "html2canvas": "^1.4.1",
     "lucide-react": "^0.475.0",
     "react": "^19.0.0",
     "react-day-picker": "8.10.1",

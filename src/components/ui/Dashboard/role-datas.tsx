@@ -24,6 +24,7 @@ import {
   Terminal,
   CreditCard,
   Activity,
+  Map,
   type LucideIcon,
 } from "lucide-react";
 
@@ -638,6 +639,12 @@ export const cooData = {
       isActive: false,
       icon: Home,
     },
+    {
+      title: "Roadmap",
+      url: "/roadmap",
+      isActive: false,
+      icon: Map,
+    },
     // ── CWA-only items ──
     {
       title: "Personal Life",
@@ -854,6 +861,12 @@ export const ceoData = {
       isActive: false,
       icon: Home,
     },
+    {
+      title: "Roadmap",
+      url: "/roadmap",
+      isActive: false,
+      icon: Map,
+    },
     // ── CWA-only items ──
     {
       title: "Personal Life",
@@ -1045,6 +1058,79 @@ export const ceoData = {
       company: "codeWithAli" as const,
     },
   ],
+};
+
+// CFO Data set (What the CFO can see) — finance-first, cross-company.
+export const cfoData = {
+  user: {
+    name: "CodeWithAli",
+    email: "unfold@codewithali.com",
+    avatar: "/public/codewithali_logo.png",
+  },
+  teams: [
+    {
+      name: "CodeWithAli Co.",
+      logo: GalleryVerticalEnd,
+      plan: "Enterprise",
+    },
+  ],
+  navMain: [
+    {
+      title: "Home",
+      url: "/",
+      isActive: false,
+      icon: Home,
+    },
+    {
+      title: "Roadmap",
+      url: "/roadmap",
+      isActive: false,
+      icon: Map,
+    },
+    {
+      title: "Finance Dashboard",
+      url: "/financialDashboard",
+      icon: DollarSign,
+      isActive: false,
+    },
+    {
+      title: "Invoicer",
+      url: "/invoicer",
+      icon: File,
+      isActive: false,
+      company: "codeWithAli" as const,
+    },
+    {
+      title: "Financial Ops",
+      url: "/s-finance-ops",
+      icon: Activity,
+      isActive: false,
+      company: "simplicityFunds" as const,
+    },
+    {
+      title: "Subscriptions",
+      url: "/invoicer",
+      icon: CreditCard,
+      isActive: false,
+      company: "simplicityFunds" as const,
+    },
+    {
+      title: "Users",
+      url: "/employee",
+      icon: Users,
+      isActive: false,
+    },
+    {
+      title: "Settings",
+      url: "/settings",
+      icon: Settings2,
+      items: [
+        { title: "General", url: "/settings" },
+        { title: "Notification" },
+      ],
+    },
+  ],
+  projects: [] as ProjectItem[],
 };
 
 /* ─── Helper: filter nav items by active company ─── */

@@ -23,6 +23,7 @@ const SFinanceOpsLazyRouteImport = createFileRoute('/s-finance-ops')()
 const SDevConsoleLazyRouteImport = createFileRoute('/s-dev-console')()
 const SBroadcastLazyRouteImport = createFileRoute('/s-broadcast')()
 const SAnalyticsLazyRouteImport = createFileRoute('/s-analytics')()
+const RoadmapLazyRouteImport = createFileRoute('/roadmap')()
 const QuotaLazyRouteImport = createFileRoute('/quota')()
 const PersonalLazyRouteImport = createFileRoute('/personal')()
 const Mod_logsLazyRouteImport = createFileRoute('/mod_logs')()
@@ -99,6 +100,11 @@ const SAnalyticsLazyRoute = SAnalyticsLazyRouteImport.update({
   path: '/s-analytics',
   getParentRoute: () => rootRouteImport,
 } as any).lazy(() => import('./routes/s-analytics.lazy').then((d) => d.Route))
+const RoadmapLazyRoute = RoadmapLazyRouteImport.update({
+  id: '/roadmap',
+  path: '/roadmap',
+  getParentRoute: () => rootRouteImport,
+} as any).lazy(() => import('./routes/roadmap.lazy').then((d) => d.Route))
 const QuotaLazyRoute = QuotaLazyRouteImport.update({
   id: '/quota',
   path: '/quota',
@@ -212,6 +218,7 @@ export interface FileRoutesByFullPath {
   '/mod_logs': typeof Mod_logsLazyRoute
   '/personal': typeof PersonalLazyRoute
   '/quota': typeof QuotaLazyRoute
+  '/roadmap': typeof RoadmapLazyRoute
   '/s-analytics': typeof SAnalyticsLazyRoute
   '/s-broadcast': typeof SBroadcastLazyRoute
   '/s-dev-console': typeof SDevConsoleLazyRoute
@@ -243,6 +250,7 @@ export interface FileRoutesByTo {
   '/mod_logs': typeof Mod_logsLazyRoute
   '/personal': typeof PersonalLazyRoute
   '/quota': typeof QuotaLazyRoute
+  '/roadmap': typeof RoadmapLazyRoute
   '/s-analytics': typeof SAnalyticsLazyRoute
   '/s-broadcast': typeof SBroadcastLazyRoute
   '/s-dev-console': typeof SDevConsoleLazyRoute
@@ -275,6 +283,7 @@ export interface FileRoutesById {
   '/mod_logs': typeof Mod_logsLazyRoute
   '/personal': typeof PersonalLazyRoute
   '/quota': typeof QuotaLazyRoute
+  '/roadmap': typeof RoadmapLazyRoute
   '/s-analytics': typeof SAnalyticsLazyRoute
   '/s-broadcast': typeof SBroadcastLazyRoute
   '/s-dev-console': typeof SDevConsoleLazyRoute
@@ -308,6 +317,7 @@ export interface FileRouteTypes {
     | '/mod_logs'
     | '/personal'
     | '/quota'
+    | '/roadmap'
     | '/s-analytics'
     | '/s-broadcast'
     | '/s-dev-console'
@@ -339,6 +349,7 @@ export interface FileRouteTypes {
     | '/mod_logs'
     | '/personal'
     | '/quota'
+    | '/roadmap'
     | '/s-analytics'
     | '/s-broadcast'
     | '/s-dev-console'
@@ -370,6 +381,7 @@ export interface FileRouteTypes {
     | '/mod_logs'
     | '/personal'
     | '/quota'
+    | '/roadmap'
     | '/s-analytics'
     | '/s-broadcast'
     | '/s-dev-console'
@@ -402,6 +414,7 @@ export interface RootRouteChildren {
   Mod_logsLazyRoute: typeof Mod_logsLazyRoute
   PersonalLazyRoute: typeof PersonalLazyRoute
   QuotaLazyRoute: typeof QuotaLazyRoute
+  RoadmapLazyRoute: typeof RoadmapLazyRoute
   SAnalyticsLazyRoute: typeof SAnalyticsLazyRoute
   SBroadcastLazyRoute: typeof SBroadcastLazyRoute
   SDevConsoleLazyRoute: typeof SDevConsoleLazyRoute
@@ -493,6 +506,13 @@ declare module '@tanstack/react-router' {
       path: '/s-analytics'
       fullPath: '/s-analytics'
       preLoaderRoute: typeof SAnalyticsLazyRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/roadmap': {
+      id: '/roadmap'
+      path: '/roadmap'
+      fullPath: '/roadmap'
+      preLoaderRoute: typeof RoadmapLazyRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/quota': {
@@ -642,6 +662,7 @@ const rootRouteChildren: RootRouteChildren = {
   Mod_logsLazyRoute: Mod_logsLazyRoute,
   PersonalLazyRoute: PersonalLazyRoute,
   QuotaLazyRoute: QuotaLazyRoute,
+  RoadmapLazyRoute: RoadmapLazyRoute,
   SAnalyticsLazyRoute: SAnalyticsLazyRoute,
   SBroadcastLazyRoute: SBroadcastLazyRoute,
   SDevConsoleLazyRoute: SDevConsoleLazyRoute,
