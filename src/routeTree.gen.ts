@@ -10,433 +10,189 @@
 
 import { createFileRoute } from '@tanstack/react-router'
 
-// Import Routes
+import { Route as rootRouteImport } from './routes/__root'
 
-import { Route as rootRoute } from './routes/__root'
+const TrainingplanLazyRouteImport = createFileRoute('/trainingplan')()
+const TimetrackingLazyRouteImport = createFileRoute('/timetracking')()
+const TaskLazyRouteImport = createFileRoute('/task')()
+const SettingsLazyRouteImport = createFileRoute('/settings')()
+const ScheduleLazyRouteImport = createFileRoute('/schedule')()
+const SUsersLazyRouteImport = createFileRoute('/s-users')()
+const SOverridesLazyRouteImport = createFileRoute('/s-overrides')()
+const SFinanceOpsLazyRouteImport = createFileRoute('/s-finance-ops')()
+const SDevConsoleLazyRouteImport = createFileRoute('/s-dev-console')()
+const SBroadcastLazyRouteImport = createFileRoute('/s-broadcast')()
+const SAnalyticsLazyRouteImport = createFileRoute('/s-analytics')()
+const QuotaLazyRouteImport = createFileRoute('/quota')()
+const PersonalLazyRouteImport = createFileRoute('/personal')()
+const Mod_logsLazyRouteImport = createFileRoute('/mod_logs')()
+const InvoicerLazyRouteImport = createFileRoute('/invoicer')()
+const FinancialDashboardLazyRouteImport = createFileRoute(
+  '/financialDashboard',
+)()
+const EmployeeLazyRouteImport = createFileRoute('/employee')()
+const DetailsLazyRouteImport = createFileRoute('/details')()
+const DetailFoldersLazyRouteImport = createFileRoute('/detailFolders')()
+const ContractGeneratorLazyRouteImport = createFileRoute('/contractGenerator')()
+const ColdEmailLazyRouteImport = createFileRoute('/coldEmail')()
+const ChatLazyRouteImport = createFileRoute('/chat')()
+const BudgetaryLazyRouteImport = createFileRoute('/budgetary')()
+const BroadcastLazyRouteImport = createFileRoute('/broadcast')()
+const BotLazyRouteImport = createFileRoute('/bot')()
+const BioLazyRouteImport = createFileRoute('/bio')()
+const ArabicLazyRouteImport = createFileRoute('/arabic')()
+const IndexLazyRouteImport = createFileRoute('/')()
+const ClientIndexLazyRouteImport = createFileRoute('/client/')()
 
-// Create Virtual Routes
-
-const TrainingplanLazyImport = createFileRoute('/trainingplan')()
-const TimetrackingLazyImport = createFileRoute('/timetracking')()
-const TaskLazyImport = createFileRoute('/task')()
-const SettingsLazyImport = createFileRoute('/settings')()
-const ScheduleLazyImport = createFileRoute('/schedule')()
-const SUsersLazyImport = createFileRoute('/s-users')()
-const SOverridesLazyImport = createFileRoute('/s-overrides')()
-const SFinanceOpsLazyImport = createFileRoute('/s-finance-ops')()
-const SDevConsoleLazyImport = createFileRoute('/s-dev-console')()
-const SBroadcastLazyImport = createFileRoute('/s-broadcast')()
-const SAnalyticsLazyImport = createFileRoute('/s-analytics')()
-const QuotaLazyImport = createFileRoute('/quota')()
-const PersonalLazyImport = createFileRoute('/personal')()
-const ModlogsLazyImport = createFileRoute('/mod_logs')()
-const InvoicerLazyImport = createFileRoute('/invoicer')()
-const FinancialDashboardLazyImport = createFileRoute('/financialDashboard')()
-const EmployeeLazyImport = createFileRoute('/employee')()
-const DetailsLazyImport = createFileRoute('/details')()
-const DetailFoldersLazyImport = createFileRoute('/detailFolders')()
-const ContractGeneratorLazyImport = createFileRoute('/contractGenerator')()
-const ColdEmailLazyImport = createFileRoute('/coldEmail')()
-const ChatLazyImport = createFileRoute('/chat')()
-const BudgetaryLazyImport = createFileRoute('/budgetary')()
-const BroadcastLazyImport = createFileRoute('/broadcast')()
-const BotLazyImport = createFileRoute('/bot')()
-const BioLazyImport = createFileRoute('/bio')()
-const ArabicLazyImport = createFileRoute('/arabic')()
-const IndexLazyImport = createFileRoute('/')()
-const ClientIndexLazyImport = createFileRoute('/client/')()
-
-// Create/Update Routes
-
-const TrainingplanLazyRoute = TrainingplanLazyImport.update({
+const TrainingplanLazyRoute = TrainingplanLazyRouteImport.update({
   id: '/trainingplan',
   path: '/trainingplan',
-  getParentRoute: () => rootRoute,
+  getParentRoute: () => rootRouteImport,
 } as any).lazy(() => import('./routes/trainingplan.lazy').then((d) => d.Route))
-
-const TimetrackingLazyRoute = TimetrackingLazyImport.update({
+const TimetrackingLazyRoute = TimetrackingLazyRouteImport.update({
   id: '/timetracking',
   path: '/timetracking',
-  getParentRoute: () => rootRoute,
+  getParentRoute: () => rootRouteImport,
 } as any).lazy(() => import('./routes/timetracking.lazy').then((d) => d.Route))
-
-const TaskLazyRoute = TaskLazyImport.update({
+const TaskLazyRoute = TaskLazyRouteImport.update({
   id: '/task',
   path: '/task',
-  getParentRoute: () => rootRoute,
+  getParentRoute: () => rootRouteImport,
 } as any).lazy(() => import('./routes/task.lazy').then((d) => d.Route))
-
-const SettingsLazyRoute = SettingsLazyImport.update({
+const SettingsLazyRoute = SettingsLazyRouteImport.update({
   id: '/settings',
   path: '/settings',
-  getParentRoute: () => rootRoute,
+  getParentRoute: () => rootRouteImport,
 } as any).lazy(() => import('./routes/settings.lazy').then((d) => d.Route))
-
-const ScheduleLazyRoute = ScheduleLazyImport.update({
+const ScheduleLazyRoute = ScheduleLazyRouteImport.update({
   id: '/schedule',
   path: '/schedule',
-  getParentRoute: () => rootRoute,
+  getParentRoute: () => rootRouteImport,
 } as any).lazy(() => import('./routes/schedule.lazy').then((d) => d.Route))
-
-const SUsersLazyRoute = SUsersLazyImport.update({
+const SUsersLazyRoute = SUsersLazyRouteImport.update({
   id: '/s-users',
   path: '/s-users',
-  getParentRoute: () => rootRoute,
+  getParentRoute: () => rootRouteImport,
 } as any).lazy(() => import('./routes/s-users.lazy').then((d) => d.Route))
-
-const SOverridesLazyRoute = SOverridesLazyImport.update({
+const SOverridesLazyRoute = SOverridesLazyRouteImport.update({
   id: '/s-overrides',
   path: '/s-overrides',
-  getParentRoute: () => rootRoute,
+  getParentRoute: () => rootRouteImport,
 } as any).lazy(() => import('./routes/s-overrides.lazy').then((d) => d.Route))
-
-const SFinanceOpsLazyRoute = SFinanceOpsLazyImport.update({
+const SFinanceOpsLazyRoute = SFinanceOpsLazyRouteImport.update({
   id: '/s-finance-ops',
   path: '/s-finance-ops',
-  getParentRoute: () => rootRoute,
+  getParentRoute: () => rootRouteImport,
 } as any).lazy(() => import('./routes/s-finance-ops.lazy').then((d) => d.Route))
-
-const SDevConsoleLazyRoute = SDevConsoleLazyImport.update({
+const SDevConsoleLazyRoute = SDevConsoleLazyRouteImport.update({
   id: '/s-dev-console',
   path: '/s-dev-console',
-  getParentRoute: () => rootRoute,
+  getParentRoute: () => rootRouteImport,
 } as any).lazy(() => import('./routes/s-dev-console.lazy').then((d) => d.Route))
-
-const SBroadcastLazyRoute = SBroadcastLazyImport.update({
+const SBroadcastLazyRoute = SBroadcastLazyRouteImport.update({
   id: '/s-broadcast',
   path: '/s-broadcast',
-  getParentRoute: () => rootRoute,
+  getParentRoute: () => rootRouteImport,
 } as any).lazy(() => import('./routes/s-broadcast.lazy').then((d) => d.Route))
-
-const SAnalyticsLazyRoute = SAnalyticsLazyImport.update({
+const SAnalyticsLazyRoute = SAnalyticsLazyRouteImport.update({
   id: '/s-analytics',
   path: '/s-analytics',
-  getParentRoute: () => rootRoute,
+  getParentRoute: () => rootRouteImport,
 } as any).lazy(() => import('./routes/s-analytics.lazy').then((d) => d.Route))
-
-const QuotaLazyRoute = QuotaLazyImport.update({
+const QuotaLazyRoute = QuotaLazyRouteImport.update({
   id: '/quota',
   path: '/quota',
-  getParentRoute: () => rootRoute,
+  getParentRoute: () => rootRouteImport,
 } as any).lazy(() => import('./routes/quota.lazy').then((d) => d.Route))
-
-const PersonalLazyRoute = PersonalLazyImport.update({
+const PersonalLazyRoute = PersonalLazyRouteImport.update({
   id: '/personal',
   path: '/personal',
-  getParentRoute: () => rootRoute,
+  getParentRoute: () => rootRouteImport,
 } as any).lazy(() => import('./routes/personal.lazy').then((d) => d.Route))
-
-const ModlogsLazyRoute = ModlogsLazyImport.update({
+const Mod_logsLazyRoute = Mod_logsLazyRouteImport.update({
   id: '/mod_logs',
   path: '/mod_logs',
-  getParentRoute: () => rootRoute,
+  getParentRoute: () => rootRouteImport,
 } as any).lazy(() => import('./routes/mod_logs.lazy').then((d) => d.Route))
-
-const InvoicerLazyRoute = InvoicerLazyImport.update({
+const InvoicerLazyRoute = InvoicerLazyRouteImport.update({
   id: '/invoicer',
   path: '/invoicer',
-  getParentRoute: () => rootRoute,
+  getParentRoute: () => rootRouteImport,
 } as any).lazy(() => import('./routes/invoicer.lazy').then((d) => d.Route))
-
-const FinancialDashboardLazyRoute = FinancialDashboardLazyImport.update({
+const FinancialDashboardLazyRoute = FinancialDashboardLazyRouteImport.update({
   id: '/financialDashboard',
   path: '/financialDashboard',
-  getParentRoute: () => rootRoute,
+  getParentRoute: () => rootRouteImport,
 } as any).lazy(() =>
   import('./routes/financialDashboard.lazy').then((d) => d.Route),
 )
-
-const EmployeeLazyRoute = EmployeeLazyImport.update({
+const EmployeeLazyRoute = EmployeeLazyRouteImport.update({
   id: '/employee',
   path: '/employee',
-  getParentRoute: () => rootRoute,
+  getParentRoute: () => rootRouteImport,
 } as any).lazy(() => import('./routes/employee.lazy').then((d) => d.Route))
-
-const DetailsLazyRoute = DetailsLazyImport.update({
+const DetailsLazyRoute = DetailsLazyRouteImport.update({
   id: '/details',
   path: '/details',
-  getParentRoute: () => rootRoute,
+  getParentRoute: () => rootRouteImport,
 } as any).lazy(() => import('./routes/details.lazy').then((d) => d.Route))
-
-const DetailFoldersLazyRoute = DetailFoldersLazyImport.update({
+const DetailFoldersLazyRoute = DetailFoldersLazyRouteImport.update({
   id: '/detailFolders',
   path: '/detailFolders',
-  getParentRoute: () => rootRoute,
+  getParentRoute: () => rootRouteImport,
 } as any).lazy(() => import('./routes/detailFolders.lazy').then((d) => d.Route))
-
-const ContractGeneratorLazyRoute = ContractGeneratorLazyImport.update({
+const ContractGeneratorLazyRoute = ContractGeneratorLazyRouteImport.update({
   id: '/contractGenerator',
   path: '/contractGenerator',
-  getParentRoute: () => rootRoute,
+  getParentRoute: () => rootRouteImport,
 } as any).lazy(() =>
   import('./routes/contractGenerator.lazy').then((d) => d.Route),
 )
-
-const ColdEmailLazyRoute = ColdEmailLazyImport.update({
+const ColdEmailLazyRoute = ColdEmailLazyRouteImport.update({
   id: '/coldEmail',
   path: '/coldEmail',
-  getParentRoute: () => rootRoute,
+  getParentRoute: () => rootRouteImport,
 } as any).lazy(() => import('./routes/coldEmail.lazy').then((d) => d.Route))
-
-const ChatLazyRoute = ChatLazyImport.update({
+const ChatLazyRoute = ChatLazyRouteImport.update({
   id: '/chat',
   path: '/chat',
-  getParentRoute: () => rootRoute,
+  getParentRoute: () => rootRouteImport,
 } as any).lazy(() => import('./routes/chat.lazy').then((d) => d.Route))
-
-const BudgetaryLazyRoute = BudgetaryLazyImport.update({
+const BudgetaryLazyRoute = BudgetaryLazyRouteImport.update({
   id: '/budgetary',
   path: '/budgetary',
-  getParentRoute: () => rootRoute,
+  getParentRoute: () => rootRouteImport,
 } as any).lazy(() => import('./routes/budgetary.lazy').then((d) => d.Route))
-
-const BroadcastLazyRoute = BroadcastLazyImport.update({
+const BroadcastLazyRoute = BroadcastLazyRouteImport.update({
   id: '/broadcast',
   path: '/broadcast',
-  getParentRoute: () => rootRoute,
+  getParentRoute: () => rootRouteImport,
 } as any).lazy(() => import('./routes/broadcast.lazy').then((d) => d.Route))
-
-const BotLazyRoute = BotLazyImport.update({
+const BotLazyRoute = BotLazyRouteImport.update({
   id: '/bot',
   path: '/bot',
-  getParentRoute: () => rootRoute,
+  getParentRoute: () => rootRouteImport,
 } as any).lazy(() => import('./routes/bot.lazy').then((d) => d.Route))
-
-const BioLazyRoute = BioLazyImport.update({
+const BioLazyRoute = BioLazyRouteImport.update({
   id: '/bio',
   path: '/bio',
-  getParentRoute: () => rootRoute,
+  getParentRoute: () => rootRouteImport,
 } as any).lazy(() => import('./routes/bio.lazy').then((d) => d.Route))
-
-const ArabicLazyRoute = ArabicLazyImport.update({
+const ArabicLazyRoute = ArabicLazyRouteImport.update({
   id: '/arabic',
   path: '/arabic',
-  getParentRoute: () => rootRoute,
+  getParentRoute: () => rootRouteImport,
 } as any).lazy(() => import('./routes/arabic.lazy').then((d) => d.Route))
-
-const IndexLazyRoute = IndexLazyImport.update({
+const IndexLazyRoute = IndexLazyRouteImport.update({
   id: '/',
   path: '/',
-  getParentRoute: () => rootRoute,
+  getParentRoute: () => rootRouteImport,
 } as any).lazy(() => import('./routes/index.lazy').then((d) => d.Route))
-
-const ClientIndexLazyRoute = ClientIndexLazyImport.update({
+const ClientIndexLazyRoute = ClientIndexLazyRouteImport.update({
   id: '/client/',
   path: '/client/',
-  getParentRoute: () => rootRoute,
+  getParentRoute: () => rootRouteImport,
 } as any).lazy(() => import('./routes/client/index.lazy').then((d) => d.Route))
-
-// Populate the FileRoutesByPath interface
-
-declare module '@tanstack/react-router' {
-  interface FileRoutesByPath {
-    '/': {
-      id: '/'
-      path: '/'
-      fullPath: '/'
-      preLoaderRoute: typeof IndexLazyImport
-      parentRoute: typeof rootRoute
-    }
-    '/arabic': {
-      id: '/arabic'
-      path: '/arabic'
-      fullPath: '/arabic'
-      preLoaderRoute: typeof ArabicLazyImport
-      parentRoute: typeof rootRoute
-    }
-    '/bio': {
-      id: '/bio'
-      path: '/bio'
-      fullPath: '/bio'
-      preLoaderRoute: typeof BioLazyImport
-      parentRoute: typeof rootRoute
-    }
-    '/bot': {
-      id: '/bot'
-      path: '/bot'
-      fullPath: '/bot'
-      preLoaderRoute: typeof BotLazyImport
-      parentRoute: typeof rootRoute
-    }
-    '/broadcast': {
-      id: '/broadcast'
-      path: '/broadcast'
-      fullPath: '/broadcast'
-      preLoaderRoute: typeof BroadcastLazyImport
-      parentRoute: typeof rootRoute
-    }
-    '/budgetary': {
-      id: '/budgetary'
-      path: '/budgetary'
-      fullPath: '/budgetary'
-      preLoaderRoute: typeof BudgetaryLazyImport
-      parentRoute: typeof rootRoute
-    }
-    '/chat': {
-      id: '/chat'
-      path: '/chat'
-      fullPath: '/chat'
-      preLoaderRoute: typeof ChatLazyImport
-      parentRoute: typeof rootRoute
-    }
-    '/coldEmail': {
-      id: '/coldEmail'
-      path: '/coldEmail'
-      fullPath: '/coldEmail'
-      preLoaderRoute: typeof ColdEmailLazyImport
-      parentRoute: typeof rootRoute
-    }
-    '/contractGenerator': {
-      id: '/contractGenerator'
-      path: '/contractGenerator'
-      fullPath: '/contractGenerator'
-      preLoaderRoute: typeof ContractGeneratorLazyImport
-      parentRoute: typeof rootRoute
-    }
-    '/detailFolders': {
-      id: '/detailFolders'
-      path: '/detailFolders'
-      fullPath: '/detailFolders'
-      preLoaderRoute: typeof DetailFoldersLazyImport
-      parentRoute: typeof rootRoute
-    }
-    '/details': {
-      id: '/details'
-      path: '/details'
-      fullPath: '/details'
-      preLoaderRoute: typeof DetailsLazyImport
-      parentRoute: typeof rootRoute
-    }
-    '/employee': {
-      id: '/employee'
-      path: '/employee'
-      fullPath: '/employee'
-      preLoaderRoute: typeof EmployeeLazyImport
-      parentRoute: typeof rootRoute
-    }
-    '/financialDashboard': {
-      id: '/financialDashboard'
-      path: '/financialDashboard'
-      fullPath: '/financialDashboard'
-      preLoaderRoute: typeof FinancialDashboardLazyImport
-      parentRoute: typeof rootRoute
-    }
-    '/invoicer': {
-      id: '/invoicer'
-      path: '/invoicer'
-      fullPath: '/invoicer'
-      preLoaderRoute: typeof InvoicerLazyImport
-      parentRoute: typeof rootRoute
-    }
-    '/mod_logs': {
-      id: '/mod_logs'
-      path: '/mod_logs'
-      fullPath: '/mod_logs'
-      preLoaderRoute: typeof ModlogsLazyImport
-      parentRoute: typeof rootRoute
-    }
-    '/personal': {
-      id: '/personal'
-      path: '/personal'
-      fullPath: '/personal'
-      preLoaderRoute: typeof PersonalLazyImport
-      parentRoute: typeof rootRoute
-    }
-    '/quota': {
-      id: '/quota'
-      path: '/quota'
-      fullPath: '/quota'
-      preLoaderRoute: typeof QuotaLazyImport
-      parentRoute: typeof rootRoute
-    }
-    '/s-analytics': {
-      id: '/s-analytics'
-      path: '/s-analytics'
-      fullPath: '/s-analytics'
-      preLoaderRoute: typeof SAnalyticsLazyImport
-      parentRoute: typeof rootRoute
-    }
-    '/s-broadcast': {
-      id: '/s-broadcast'
-      path: '/s-broadcast'
-      fullPath: '/s-broadcast'
-      preLoaderRoute: typeof SBroadcastLazyImport
-      parentRoute: typeof rootRoute
-    }
-    '/s-dev-console': {
-      id: '/s-dev-console'
-      path: '/s-dev-console'
-      fullPath: '/s-dev-console'
-      preLoaderRoute: typeof SDevConsoleLazyImport
-      parentRoute: typeof rootRoute
-    }
-    '/s-finance-ops': {
-      id: '/s-finance-ops'
-      path: '/s-finance-ops'
-      fullPath: '/s-finance-ops'
-      preLoaderRoute: typeof SFinanceOpsLazyImport
-      parentRoute: typeof rootRoute
-    }
-    '/s-overrides': {
-      id: '/s-overrides'
-      path: '/s-overrides'
-      fullPath: '/s-overrides'
-      preLoaderRoute: typeof SOverridesLazyImport
-      parentRoute: typeof rootRoute
-    }
-    '/s-users': {
-      id: '/s-users'
-      path: '/s-users'
-      fullPath: '/s-users'
-      preLoaderRoute: typeof SUsersLazyImport
-      parentRoute: typeof rootRoute
-    }
-    '/schedule': {
-      id: '/schedule'
-      path: '/schedule'
-      fullPath: '/schedule'
-      preLoaderRoute: typeof ScheduleLazyImport
-      parentRoute: typeof rootRoute
-    }
-    '/settings': {
-      id: '/settings'
-      path: '/settings'
-      fullPath: '/settings'
-      preLoaderRoute: typeof SettingsLazyImport
-      parentRoute: typeof rootRoute
-    }
-    '/task': {
-      id: '/task'
-      path: '/task'
-      fullPath: '/task'
-      preLoaderRoute: typeof TaskLazyImport
-      parentRoute: typeof rootRoute
-    }
-    '/timetracking': {
-      id: '/timetracking'
-      path: '/timetracking'
-      fullPath: '/timetracking'
-      preLoaderRoute: typeof TimetrackingLazyImport
-      parentRoute: typeof rootRoute
-    }
-    '/trainingplan': {
-      id: '/trainingplan'
-      path: '/trainingplan'
-      fullPath: '/trainingplan'
-      preLoaderRoute: typeof TrainingplanLazyImport
-      parentRoute: typeof rootRoute
-    }
-    '/client/': {
-      id: '/client/'
-      path: '/client'
-      fullPath: '/client'
-      preLoaderRoute: typeof ClientIndexLazyImport
-      parentRoute: typeof rootRoute
-    }
-  }
-}
-
-// Create and export the route tree
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexLazyRoute
@@ -453,72 +209,7 @@ export interface FileRoutesByFullPath {
   '/employee': typeof EmployeeLazyRoute
   '/financialDashboard': typeof FinancialDashboardLazyRoute
   '/invoicer': typeof InvoicerLazyRoute
-  '/mod_logs': typeof ModlogsLazyRoute
-  '/personal': typeof PersonalLazyRoute
-  '/quota': typeof QuotaLazyRoute
-  '/s-analytics': typeof SAnalyticsLazyRoute
-  '/s-broadcast': typeof SBroadcastLazyRoute
-  '/s-dev-console': typeof SDevConsoleLazyRoute
-  '/s-finance-ops': typeof SFinanceOpsLazyRoute
-  '/s-overrides': typeof SOverridesLazyRoute
-  '/s-users': typeof SUsersLazyRoute
-  '/schedule': typeof ScheduleLazyRoute
-  '/settings': typeof SettingsLazyRoute
-  '/task': typeof TaskLazyRoute
-  '/timetracking': typeof TimetrackingLazyRoute
-  '/trainingplan': typeof TrainingplanLazyRoute
-  '/client': typeof ClientIndexLazyRoute
-}
-
-export interface FileRoutesByTo {
-  '/': typeof IndexLazyRoute
-  '/arabic': typeof ArabicLazyRoute
-  '/bio': typeof BioLazyRoute
-  '/bot': typeof BotLazyRoute
-  '/broadcast': typeof BroadcastLazyRoute
-  '/budgetary': typeof BudgetaryLazyRoute
-  '/chat': typeof ChatLazyRoute
-  '/coldEmail': typeof ColdEmailLazyRoute
-  '/contractGenerator': typeof ContractGeneratorLazyRoute
-  '/detailFolders': typeof DetailFoldersLazyRoute
-  '/details': typeof DetailsLazyRoute
-  '/employee': typeof EmployeeLazyRoute
-  '/financialDashboard': typeof FinancialDashboardLazyRoute
-  '/invoicer': typeof InvoicerLazyRoute
-  '/mod_logs': typeof ModlogsLazyRoute
-  '/personal': typeof PersonalLazyRoute
-  '/quota': typeof QuotaLazyRoute
-  '/s-analytics': typeof SAnalyticsLazyRoute
-  '/s-broadcast': typeof SBroadcastLazyRoute
-  '/s-dev-console': typeof SDevConsoleLazyRoute
-  '/s-finance-ops': typeof SFinanceOpsLazyRoute
-  '/s-overrides': typeof SOverridesLazyRoute
-  '/s-users': typeof SUsersLazyRoute
-  '/schedule': typeof ScheduleLazyRoute
-  '/settings': typeof SettingsLazyRoute
-  '/task': typeof TaskLazyRoute
-  '/timetracking': typeof TimetrackingLazyRoute
-  '/trainingplan': typeof TrainingplanLazyRoute
-  '/client': typeof ClientIndexLazyRoute
-}
-
-export interface FileRoutesById {
-  __root__: typeof rootRoute
-  '/': typeof IndexLazyRoute
-  '/arabic': typeof ArabicLazyRoute
-  '/bio': typeof BioLazyRoute
-  '/bot': typeof BotLazyRoute
-  '/broadcast': typeof BroadcastLazyRoute
-  '/budgetary': typeof BudgetaryLazyRoute
-  '/chat': typeof ChatLazyRoute
-  '/coldEmail': typeof ColdEmailLazyRoute
-  '/contractGenerator': typeof ContractGeneratorLazyRoute
-  '/detailFolders': typeof DetailFoldersLazyRoute
-  '/details': typeof DetailsLazyRoute
-  '/employee': typeof EmployeeLazyRoute
-  '/financialDashboard': typeof FinancialDashboardLazyRoute
-  '/invoicer': typeof InvoicerLazyRoute
-  '/mod_logs': typeof ModlogsLazyRoute
+  '/mod_logs': typeof Mod_logsLazyRoute
   '/personal': typeof PersonalLazyRoute
   '/quota': typeof QuotaLazyRoute
   '/s-analytics': typeof SAnalyticsLazyRoute
@@ -534,7 +225,69 @@ export interface FileRoutesById {
   '/trainingplan': typeof TrainingplanLazyRoute
   '/client/': typeof ClientIndexLazyRoute
 }
-
+export interface FileRoutesByTo {
+  '/': typeof IndexLazyRoute
+  '/arabic': typeof ArabicLazyRoute
+  '/bio': typeof BioLazyRoute
+  '/bot': typeof BotLazyRoute
+  '/broadcast': typeof BroadcastLazyRoute
+  '/budgetary': typeof BudgetaryLazyRoute
+  '/chat': typeof ChatLazyRoute
+  '/coldEmail': typeof ColdEmailLazyRoute
+  '/contractGenerator': typeof ContractGeneratorLazyRoute
+  '/detailFolders': typeof DetailFoldersLazyRoute
+  '/details': typeof DetailsLazyRoute
+  '/employee': typeof EmployeeLazyRoute
+  '/financialDashboard': typeof FinancialDashboardLazyRoute
+  '/invoicer': typeof InvoicerLazyRoute
+  '/mod_logs': typeof Mod_logsLazyRoute
+  '/personal': typeof PersonalLazyRoute
+  '/quota': typeof QuotaLazyRoute
+  '/s-analytics': typeof SAnalyticsLazyRoute
+  '/s-broadcast': typeof SBroadcastLazyRoute
+  '/s-dev-console': typeof SDevConsoleLazyRoute
+  '/s-finance-ops': typeof SFinanceOpsLazyRoute
+  '/s-overrides': typeof SOverridesLazyRoute
+  '/s-users': typeof SUsersLazyRoute
+  '/schedule': typeof ScheduleLazyRoute
+  '/settings': typeof SettingsLazyRoute
+  '/task': typeof TaskLazyRoute
+  '/timetracking': typeof TimetrackingLazyRoute
+  '/trainingplan': typeof TrainingplanLazyRoute
+  '/client': typeof ClientIndexLazyRoute
+}
+export interface FileRoutesById {
+  __root__: typeof rootRouteImport
+  '/': typeof IndexLazyRoute
+  '/arabic': typeof ArabicLazyRoute
+  '/bio': typeof BioLazyRoute
+  '/bot': typeof BotLazyRoute
+  '/broadcast': typeof BroadcastLazyRoute
+  '/budgetary': typeof BudgetaryLazyRoute
+  '/chat': typeof ChatLazyRoute
+  '/coldEmail': typeof ColdEmailLazyRoute
+  '/contractGenerator': typeof ContractGeneratorLazyRoute
+  '/detailFolders': typeof DetailFoldersLazyRoute
+  '/details': typeof DetailsLazyRoute
+  '/employee': typeof EmployeeLazyRoute
+  '/financialDashboard': typeof FinancialDashboardLazyRoute
+  '/invoicer': typeof InvoicerLazyRoute
+  '/mod_logs': typeof Mod_logsLazyRoute
+  '/personal': typeof PersonalLazyRoute
+  '/quota': typeof QuotaLazyRoute
+  '/s-analytics': typeof SAnalyticsLazyRoute
+  '/s-broadcast': typeof SBroadcastLazyRoute
+  '/s-dev-console': typeof SDevConsoleLazyRoute
+  '/s-finance-ops': typeof SFinanceOpsLazyRoute
+  '/s-overrides': typeof SOverridesLazyRoute
+  '/s-users': typeof SUsersLazyRoute
+  '/schedule': typeof ScheduleLazyRoute
+  '/settings': typeof SettingsLazyRoute
+  '/task': typeof TaskLazyRoute
+  '/timetracking': typeof TimetrackingLazyRoute
+  '/trainingplan': typeof TrainingplanLazyRoute
+  '/client/': typeof ClientIndexLazyRoute
+}
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
@@ -566,7 +319,7 @@ export interface FileRouteTypes {
     | '/task'
     | '/timetracking'
     | '/trainingplan'
-    | '/client'
+    | '/client/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -631,7 +384,6 @@ export interface FileRouteTypes {
     | '/client/'
   fileRoutesById: FileRoutesById
 }
-
 export interface RootRouteChildren {
   IndexLazyRoute: typeof IndexLazyRoute
   ArabicLazyRoute: typeof ArabicLazyRoute
@@ -647,7 +399,7 @@ export interface RootRouteChildren {
   EmployeeLazyRoute: typeof EmployeeLazyRoute
   FinancialDashboardLazyRoute: typeof FinancialDashboardLazyRoute
   InvoicerLazyRoute: typeof InvoicerLazyRoute
-  ModlogsLazyRoute: typeof ModlogsLazyRoute
+  Mod_logsLazyRoute: typeof Mod_logsLazyRoute
   PersonalLazyRoute: typeof PersonalLazyRoute
   QuotaLazyRoute: typeof QuotaLazyRoute
   SAnalyticsLazyRoute: typeof SAnalyticsLazyRoute
@@ -662,6 +414,214 @@ export interface RootRouteChildren {
   TimetrackingLazyRoute: typeof TimetrackingLazyRoute
   TrainingplanLazyRoute: typeof TrainingplanLazyRoute
   ClientIndexLazyRoute: typeof ClientIndexLazyRoute
+}
+
+declare module '@tanstack/react-router' {
+  interface FileRoutesByPath {
+    '/trainingplan': {
+      id: '/trainingplan'
+      path: '/trainingplan'
+      fullPath: '/trainingplan'
+      preLoaderRoute: typeof TrainingplanLazyRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/timetracking': {
+      id: '/timetracking'
+      path: '/timetracking'
+      fullPath: '/timetracking'
+      preLoaderRoute: typeof TimetrackingLazyRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/task': {
+      id: '/task'
+      path: '/task'
+      fullPath: '/task'
+      preLoaderRoute: typeof TaskLazyRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/settings': {
+      id: '/settings'
+      path: '/settings'
+      fullPath: '/settings'
+      preLoaderRoute: typeof SettingsLazyRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/schedule': {
+      id: '/schedule'
+      path: '/schedule'
+      fullPath: '/schedule'
+      preLoaderRoute: typeof ScheduleLazyRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/s-users': {
+      id: '/s-users'
+      path: '/s-users'
+      fullPath: '/s-users'
+      preLoaderRoute: typeof SUsersLazyRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/s-overrides': {
+      id: '/s-overrides'
+      path: '/s-overrides'
+      fullPath: '/s-overrides'
+      preLoaderRoute: typeof SOverridesLazyRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/s-finance-ops': {
+      id: '/s-finance-ops'
+      path: '/s-finance-ops'
+      fullPath: '/s-finance-ops'
+      preLoaderRoute: typeof SFinanceOpsLazyRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/s-dev-console': {
+      id: '/s-dev-console'
+      path: '/s-dev-console'
+      fullPath: '/s-dev-console'
+      preLoaderRoute: typeof SDevConsoleLazyRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/s-broadcast': {
+      id: '/s-broadcast'
+      path: '/s-broadcast'
+      fullPath: '/s-broadcast'
+      preLoaderRoute: typeof SBroadcastLazyRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/s-analytics': {
+      id: '/s-analytics'
+      path: '/s-analytics'
+      fullPath: '/s-analytics'
+      preLoaderRoute: typeof SAnalyticsLazyRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/quota': {
+      id: '/quota'
+      path: '/quota'
+      fullPath: '/quota'
+      preLoaderRoute: typeof QuotaLazyRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/personal': {
+      id: '/personal'
+      path: '/personal'
+      fullPath: '/personal'
+      preLoaderRoute: typeof PersonalLazyRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/mod_logs': {
+      id: '/mod_logs'
+      path: '/mod_logs'
+      fullPath: '/mod_logs'
+      preLoaderRoute: typeof Mod_logsLazyRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/invoicer': {
+      id: '/invoicer'
+      path: '/invoicer'
+      fullPath: '/invoicer'
+      preLoaderRoute: typeof InvoicerLazyRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/financialDashboard': {
+      id: '/financialDashboard'
+      path: '/financialDashboard'
+      fullPath: '/financialDashboard'
+      preLoaderRoute: typeof FinancialDashboardLazyRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/employee': {
+      id: '/employee'
+      path: '/employee'
+      fullPath: '/employee'
+      preLoaderRoute: typeof EmployeeLazyRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/details': {
+      id: '/details'
+      path: '/details'
+      fullPath: '/details'
+      preLoaderRoute: typeof DetailsLazyRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/detailFolders': {
+      id: '/detailFolders'
+      path: '/detailFolders'
+      fullPath: '/detailFolders'
+      preLoaderRoute: typeof DetailFoldersLazyRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/contractGenerator': {
+      id: '/contractGenerator'
+      path: '/contractGenerator'
+      fullPath: '/contractGenerator'
+      preLoaderRoute: typeof ContractGeneratorLazyRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/coldEmail': {
+      id: '/coldEmail'
+      path: '/coldEmail'
+      fullPath: '/coldEmail'
+      preLoaderRoute: typeof ColdEmailLazyRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/chat': {
+      id: '/chat'
+      path: '/chat'
+      fullPath: '/chat'
+      preLoaderRoute: typeof ChatLazyRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/budgetary': {
+      id: '/budgetary'
+      path: '/budgetary'
+      fullPath: '/budgetary'
+      preLoaderRoute: typeof BudgetaryLazyRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/broadcast': {
+      id: '/broadcast'
+      path: '/broadcast'
+      fullPath: '/broadcast'
+      preLoaderRoute: typeof BroadcastLazyRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/bot': {
+      id: '/bot'
+      path: '/bot'
+      fullPath: '/bot'
+      preLoaderRoute: typeof BotLazyRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/bio': {
+      id: '/bio'
+      path: '/bio'
+      fullPath: '/bio'
+      preLoaderRoute: typeof BioLazyRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/arabic': {
+      id: '/arabic'
+      path: '/arabic'
+      fullPath: '/arabic'
+      preLoaderRoute: typeof ArabicLazyRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/': {
+      id: '/'
+      path: '/'
+      fullPath: '/'
+      preLoaderRoute: typeof IndexLazyRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/client/': {
+      id: '/client/'
+      path: '/client'
+      fullPath: '/client/'
+      preLoaderRoute: typeof ClientIndexLazyRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+  }
 }
 
 const rootRouteChildren: RootRouteChildren = {
@@ -679,7 +639,7 @@ const rootRouteChildren: RootRouteChildren = {
   EmployeeLazyRoute: EmployeeLazyRoute,
   FinancialDashboardLazyRoute: FinancialDashboardLazyRoute,
   InvoicerLazyRoute: InvoicerLazyRoute,
-  ModlogsLazyRoute: ModlogsLazyRoute,
+  Mod_logsLazyRoute: Mod_logsLazyRoute,
   PersonalLazyRoute: PersonalLazyRoute,
   QuotaLazyRoute: QuotaLazyRoute,
   SAnalyticsLazyRoute: SAnalyticsLazyRoute,
@@ -695,135 +655,6 @@ const rootRouteChildren: RootRouteChildren = {
   TrainingplanLazyRoute: TrainingplanLazyRoute,
   ClientIndexLazyRoute: ClientIndexLazyRoute,
 }
-
-export const routeTree = rootRoute
+export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-/* ROUTE_MANIFEST_START
-{
-  "routes": {
-    "__root__": {
-      "filePath": "__root.tsx",
-      "children": [
-        "/",
-        "/arabic",
-        "/bio",
-        "/bot",
-        "/broadcast",
-        "/budgetary",
-        "/chat",
-        "/coldEmail",
-        "/contractGenerator",
-        "/detailFolders",
-        "/details",
-        "/employee",
-        "/financialDashboard",
-        "/invoicer",
-        "/mod_logs",
-        "/personal",
-        "/quota",
-        "/s-analytics",
-        "/s-broadcast",
-        "/s-dev-console",
-        "/s-finance-ops",
-        "/s-overrides",
-        "/s-users",
-        "/schedule",
-        "/settings",
-        "/task",
-        "/timetracking",
-        "/trainingplan",
-        "/client/"
-      ]
-    },
-    "/": {
-      "filePath": "index.lazy.tsx"
-    },
-    "/arabic": {
-      "filePath": "arabic.lazy.tsx"
-    },
-    "/bio": {
-      "filePath": "bio.lazy.tsx"
-    },
-    "/bot": {
-      "filePath": "bot.lazy.tsx"
-    },
-    "/broadcast": {
-      "filePath": "broadcast.lazy.tsx"
-    },
-    "/budgetary": {
-      "filePath": "budgetary.lazy.tsx"
-    },
-    "/chat": {
-      "filePath": "chat.lazy.tsx"
-    },
-    "/coldEmail": {
-      "filePath": "coldEmail.lazy.tsx"
-    },
-    "/contractGenerator": {
-      "filePath": "contractGenerator.lazy.tsx"
-    },
-    "/detailFolders": {
-      "filePath": "detailFolders.lazy.tsx"
-    },
-    "/details": {
-      "filePath": "details.lazy.tsx"
-    },
-    "/employee": {
-      "filePath": "employee.lazy.tsx"
-    },
-    "/financialDashboard": {
-      "filePath": "financialDashboard.lazy.tsx"
-    },
-    "/invoicer": {
-      "filePath": "invoicer.lazy.tsx"
-    },
-    "/mod_logs": {
-      "filePath": "mod_logs.lazy.tsx"
-    },
-    "/personal": {
-      "filePath": "personal.lazy.tsx"
-    },
-    "/quota": {
-      "filePath": "quota.lazy.tsx"
-    },
-    "/s-analytics": {
-      "filePath": "s-analytics.lazy.tsx"
-    },
-    "/s-broadcast": {
-      "filePath": "s-broadcast.lazy.tsx"
-    },
-    "/s-dev-console": {
-      "filePath": "s-dev-console.lazy.tsx"
-    },
-    "/s-finance-ops": {
-      "filePath": "s-finance-ops.lazy.tsx"
-    },
-    "/s-overrides": {
-      "filePath": "s-overrides.lazy.tsx"
-    },
-    "/s-users": {
-      "filePath": "s-users.lazy.tsx"
-    },
-    "/schedule": {
-      "filePath": "schedule.lazy.tsx"
-    },
-    "/settings": {
-      "filePath": "settings.lazy.tsx"
-    },
-    "/task": {
-      "filePath": "task.lazy.tsx"
-    },
-    "/timetracking": {
-      "filePath": "timetracking.lazy.tsx"
-    },
-    "/trainingplan": {
-      "filePath": "trainingplan.lazy.tsx"
-    },
-    "/client/": {
-      "filePath": "client/index.lazy.tsx"
-    }
-  }
-}
-ROUTE_MANIFEST_END */

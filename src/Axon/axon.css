@@ -1,0 +1,451 @@
+/* ═══════════════════════════════════════════════════════════════════
+   AXON styles — scoped to the [data-axon] attribute on the root.
+   Uses the app's brand-accent tokens so AXON matches the active
+   company theme (red for CWA, teal for Simplicity).
+   ═════════════════════════════════════════════════════════════════ */
+
+[data-axon] {
+  --axon-accent: hsl(var(--brand-accent));
+  --axon-accent-rgb: var(--brand-accent-rgb);
+  --axon-surface: hsl(var(--card));
+  --axon-border: hsl(var(--border));
+  --axon-fg: hsl(var(--foreground));
+  --axon-muted: hsl(var(--muted-foreground));
+}
+
+/* ── Orb ─────────────────────────────────────────────────────────── */
+
+.axon-orb {
+  position: fixed;
+  z-index: 9999;
+  width: 72px;
+  height: 72px;
+  border-radius: 50%;
+  cursor: grab;
+  user-select: none;
+  display: grid;
+  place-items: center;
+  background: radial-gradient(
+    circle at 30% 30%,
+    rgba(var(--axon-accent-rgb), 0.55) 0%,
+    rgba(var(--axon-accent-rgb), 0.15) 50%,
+    rgba(0, 0, 0, 0.9) 100%
+  );
+  box-shadow:
+    0 0 0 1px rgba(var(--axon-accent-rgb), 0.35),
+    0 0 24px rgba(var(--axon-accent-rgb), 0.25),
+    inset 0 0 20px rgba(0, 0, 0, 0.6);
+  transition: transform 160ms ease, box-shadow 200ms ease, filter 200ms ease;
+}
+
+.axon-orb:active {
+  cursor: grabbing;
+}
+
+.axon-orb:hover {
+  transform: scale(1.05);
+  box-shadow:
+    0 0 0 1px rgba(var(--axon-accent-rgb), 0.55),
+    0 0 36px rgba(var(--axon-accent-rgb), 0.4),
+    inset 0 0 20px rgba(0, 0, 0, 0.6);
+}
+
+/* Idle — slow subtle pulse */
+.axon-orb[data-state="idle"] .axon-orb-core {
+  animation: axon-pulse-idle 3.2s ease-in-out infinite;
+}
+
+/* Listening — brighter, faster pulse */
+.axon-orb[data-state="listening"] {
+  box-shadow:
+    0 0 0 1px rgba(var(--axon-accent-rgb), 0.85),
+    0 0 48px rgba(var(--axon-accent-rgb), 0.65),
+    inset 0 0 28px rgba(var(--axon-accent-rgb), 0.2);
+}
+.axon-orb[data-state="listening"] .axon-orb-core {
+  animation: axon-pulse-listening 1.1s ease-in-out infinite;
+}
+
+/* Processing — rotating rings */
+.axon-orb[data-state="processing"] .axon-orb-ring {
+  animation: axon-ring-spin 1.8s linear infinite;
+  opacity: 1;
+}
+
+/* Speaking — mouth pulse */
+.axon-orb[data-state="speaking"] .axon-orb-core {
+  animation: axon-pulse-speaking 0.45s ease-in-out infinite;
+}
+
+/* Error — desaturated red-amber halo */
+.axon-orb[data-state="error"] {
+  box-shadow:
+    0 0 0 1px rgba(255, 100, 60, 0.8),
+    0 0 32px rgba(255, 80, 50, 0.45);
+  filter: saturate(0.7);
+}
+
+.axon-orb-core {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: radial-gradient(
+    circle,
+    rgba(255, 255, 255, 0.95) 0%,
+    rgba(var(--axon-accent-rgb), 0.95) 60%,
+    rgba(var(--axon-accent-rgb), 0.2) 100%
+  );
+  box-shadow: 0 0 16px rgba(var(--axon-accent-rgb), 0.8);
+}
+
+.axon-orb-ring {
+  position: absolute;
+  inset: 4px;
+  border-radius: 50%;
+  border: 1px dashed rgba(var(--axon-accent-rgb), 0.55);
+  opacity: 0;
+  transition: opacity 200ms ease;
+  pointer-events: none;
+}
+
+.axon-orb-visualizer {
+  position: absolute;
+  inset: -18px;
+  border-radius: 50%;
+  pointer-events: none;
+}
+
+@keyframes axon-pulse-idle {
+  0%, 100% { transform: scale(1); opacity: 0.9; }
+  50% { transform: scale(1.08); opacity: 1; }
+}
+@keyframes axon-pulse-listening {
+  0%, 100% { transform: scale(0.96); box-shadow: 0 0 10px rgba(var(--axon-accent-rgb), 0.6); }
+  50%      { transform: scale(1.18); box-shadow: 0 0 20px rgba(var(--axon-accent-rgb), 0.9); }
+}
+@keyframes axon-pulse-speaking {
+  0%, 100% { transform: scale(1.0); }
+  50%      { transform: scale(1.22); }
+}
+@keyframes axon-ring-spin {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
+
+/* ── Panel ───────────────────────────────────────────────────────── */
+
+.axon-panel {
+  position: fixed;
+  top: 0;
+  right: 0;
+  height: 100vh;
+  width: min(460px, 96vw);
+  z-index: 9998;
+  background:
+    linear-gradient(180deg, rgba(0, 0, 0, 0.72) 0%, rgba(0, 0, 0, 0.92) 100%),
+    var(--axon-surface);
+  border-left: 1px solid rgba(var(--axon-accent-rgb), 0.35);
+  box-shadow: -20px 0 60px rgba(0, 0, 0, 0.6);
+  color: var(--axon-fg);
+  display: flex;
+  flex-direction: column;
+  transform: translateX(100%);
+  transition: transform 280ms cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+.axon-panel[data-open="true"] {
+  transform: translateX(0);
+}
+
+.axon-panel-header {
+  padding: 14px 16px 10px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  border-bottom: 1px solid rgba(var(--axon-accent-rgb), 0.2);
+}
+
+.axon-panel-title {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  font-size: 14px;
+}
+
+.axon-status-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: hsl(var(--brand-accent));
+  box-shadow: 0 0 8px hsl(var(--brand-accent));
+  transition: background 180ms, box-shadow 180ms;
+}
+.axon-status-dot[data-state="listening"] { animation: axon-pulse-listening 1s infinite; }
+.axon-status-dot[data-state="processing"] { background: hsl(45 100% 60%); box-shadow: 0 0 8px hsl(45 100% 60%); }
+.axon-status-dot[data-state="speaking"] { background: hsl(150 80% 55%); box-shadow: 0 0 8px hsl(150 80% 55%); }
+.axon-status-dot[data-state="error"] { background: hsl(0 80% 55%); }
+
+.axon-panel-body {
+  flex: 1;
+  min-height: 0;
+  display: grid;
+  grid-template-rows: auto 1fr auto;
+}
+
+.axon-tabs {
+  display: flex;
+  gap: 2px;
+  padding: 6px 10px;
+  border-bottom: 1px solid var(--axon-border);
+  background: rgba(0, 0, 0, 0.4);
+}
+
+.axon-tab {
+  padding: 6px 12px;
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  background: transparent;
+  color: var(--axon-muted);
+  border: 1px solid transparent;
+  border-radius: 4px;
+  cursor: pointer;
+}
+.axon-tab[data-active="true"] {
+  color: var(--axon-fg);
+  border-color: rgba(var(--axon-accent-rgb), 0.35);
+  background: rgba(var(--axon-accent-rgb), 0.08);
+}
+
+.axon-pane {
+  overflow-y: auto;
+  padding: 12px 14px;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(var(--axon-accent-rgb), 0.35) transparent;
+}
+
+.axon-turn {
+  margin-bottom: 10px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  font-size: 13px;
+  line-height: 1.45;
+}
+.axon-turn[data-role="user"] {
+  background: rgba(255, 255, 255, 0.04);
+  border-left: 2px solid rgba(var(--axon-accent-rgb), 0.7);
+}
+.axon-turn[data-role="axon"] {
+  background: rgba(var(--axon-accent-rgb), 0.08);
+  border-left: 2px solid rgba(var(--axon-accent-rgb), 1);
+}
+.axon-turn[data-role="system"] {
+  background: transparent;
+  color: var(--axon-muted);
+  font-style: italic;
+  font-size: 11.5px;
+}
+
+.axon-turn-meta {
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  color: var(--axon-muted);
+  text-transform: uppercase;
+  margin-bottom: 2px;
+  display: flex;
+  justify-content: space-between;
+}
+
+.axon-turn-actions {
+  margin-top: 6px;
+  padding-top: 6px;
+  border-top: 1px dashed rgba(255, 255, 255, 0.08);
+  font-size: 11px;
+  color: var(--axon-muted);
+}
+.axon-turn-action {
+  padding: 2px 0;
+}
+.axon-turn-action strong { color: var(--axon-fg); }
+
+.axon-activity-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 6px 8px;
+  border-radius: 6px;
+  font-size: 12px;
+  margin-bottom: 4px;
+  background: rgba(255, 255, 255, 0.02);
+}
+.axon-activity-row[data-error="true"] { background: rgba(255, 60, 60, 0.08); }
+.axon-activity-name { color: rgba(var(--axon-accent-rgb), 1); font-weight: 600; }
+.axon-activity-time { color: var(--axon-muted); font-variant-numeric: tabular-nums; }
+
+.axon-quickrow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 8px 12px 2px;
+  border-top: 1px solid var(--axon-border);
+  background: rgba(0, 0, 0, 0.5);
+}
+.axon-quickchip {
+  padding: 5px 10px;
+  font-size: 11px;
+  color: var(--axon-fg);
+  background: rgba(var(--axon-accent-rgb), 0.07);
+  border: 1px solid rgba(var(--axon-accent-rgb), 0.25);
+  border-radius: 999px;
+  cursor: pointer;
+  transition: all 140ms ease;
+}
+.axon-quickchip:hover {
+  background: rgba(var(--axon-accent-rgb), 0.18);
+  border-color: rgba(var(--axon-accent-rgb), 0.6);
+}
+
+.axon-composer {
+  padding: 10px 12px 14px;
+  border-top: 1px solid var(--axon-border);
+  background: rgba(0, 0, 0, 0.55);
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.axon-composer input {
+  flex: 1;
+  padding: 10px 12px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(var(--axon-accent-rgb), 0.3);
+  border-radius: 6px;
+  color: var(--axon-fg);
+  font-size: 13px;
+  outline: none;
+  transition: border-color 160ms ease, box-shadow 160ms ease;
+}
+.axon-composer input:focus {
+  border-color: rgba(var(--axon-accent-rgb), 0.8);
+  box-shadow: 0 0 0 3px rgba(var(--axon-accent-rgb), 0.12);
+}
+
+.axon-btn {
+  padding: 8px 12px;
+  background: rgba(var(--axon-accent-rgb), 0.18);
+  border: 1px solid rgba(var(--axon-accent-rgb), 0.45);
+  color: var(--axon-fg);
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 160ms ease;
+}
+.axon-btn:hover {
+  background: rgba(var(--axon-accent-rgb), 0.3);
+  border-color: rgba(var(--axon-accent-rgb), 0.75);
+}
+.axon-btn[disabled] { opacity: 0.4; cursor: not-allowed; }
+
+.axon-btn-icon {
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  display: grid;
+  place-items: center;
+}
+
+/* Live transcript bubble — appears above the orb while hearing */
+.axon-live-transcript {
+  position: fixed;
+  z-index: 9999;
+  padding: 8px 12px;
+  max-width: 320px;
+  background: rgba(0, 0, 0, 0.85);
+  border: 1px solid rgba(var(--axon-accent-rgb), 0.5);
+  border-radius: 8px;
+  color: var(--axon-fg);
+  font-size: 12px;
+  line-height: 1.4;
+  pointer-events: none;
+  backdrop-filter: blur(8px);
+}
+
+/* Settings sections */
+.axon-settings-group {
+  margin-bottom: 16px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--axon-border);
+}
+.axon-settings-group:last-child { border-bottom: none; }
+.axon-settings-label {
+  display: block;
+  margin-bottom: 4px;
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--axon-muted);
+}
+.axon-settings-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 8px;
+  font-size: 13px;
+}
+.axon-settings-input,
+.axon-settings-select {
+  width: 100%;
+  padding: 8px 10px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--axon-border);
+  border-radius: 4px;
+  color: var(--axon-fg);
+  font-size: 12px;
+}
+.axon-settings-range {
+  width: 100%;
+  accent-color: hsl(var(--brand-accent));
+}
+
+/* Confirmation modal overlay */
+.axon-confirm-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 10000;
+  background: rgba(0, 0, 0, 0.55);
+  backdrop-filter: blur(3px);
+  display: grid;
+  place-items: center;
+}
+.axon-confirm {
+  width: min(420px, 92vw);
+  padding: 20px;
+  background: var(--axon-surface);
+  border: 1px solid rgba(var(--axon-accent-rgb), 0.6);
+  border-radius: 10px;
+  color: var(--axon-fg);
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.7);
+}
+.axon-confirm-title {
+  font-size: 11px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: rgba(var(--axon-accent-rgb), 1);
+  margin-bottom: 8px;
+}
+.axon-confirm-body {
+  font-size: 14px;
+  line-height: 1.5;
+  margin-bottom: 16px;
+}
+.axon-confirm-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}

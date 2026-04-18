@@ -18,7 +18,7 @@ import { useAppStore } from "../stores/store";
 import { SidebarProvider } from "@/components/ui/shadcnComponents/sidebar";
 import { AppSidebar } from "@/components/app-sidebar";
 import supabase from "@/MyComponents/supabase";
-import { useEffect } from "react";
+import { useEffect, lazy, Suspense } from "react";
 import LoginPage from "@/MyComponents/Beginning/login";
 import PinPage from "@/MyComponents/Beginning/pinPage";
 import { SignUpPage } from "@/MyComponents/Beginning/signup";
@@ -27,6 +27,10 @@ import { useChatStore } from "@/stores/chatStore";
 import UserView from "@/MyComponents/Reusables/userView";
 import CyberpunkPinPage from "@/MyComponents/Beginning/bluePinPage";
 import SecurityBreach from "@/MyComponents/Beginning/conceptIdea";
+
+// AXON — lazy-loaded so the command-intelligence bundle never
+// touches the login / pin-pad paths, and stays admin-gated internally.
+const AxonRoot = lazy(() => import("@/Axon"));
 
 export const Route = createRootRoute({
   component: () => {
@@ -181,7 +185,11 @@ export const Route = createRootRoute({
         }
       }
 
-      RunUpdater();
+      // Only run the updater in production builds — in `bun run tauri dev`
+      // the dev host gets killed by relaunch() and the loop retriggers on every start.
+      if (import.meta.env.PROD) {
+        RunUpdater();
+      }
     }, []);
 
     return (
@@ -228,6 +236,10 @@ export const Route = createRootRoute({
             <section id="main-section">
               <Outlet />
             </section>
+            {/* AXON command intelligence — admin-gated inside the module */}
+            <Suspense fallback={null}>
+              <AxonRoot />
+            </Suspense>
           </SidebarProvider>
         ) : (
           <h3>Error Loading App Components</h3>

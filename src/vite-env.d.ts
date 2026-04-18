@@ -9,6 +9,9 @@ interface ImportMetaEnv {
   readonly VITE_ENCRYPTION_KEY: string
   readonly VITE_UPLOADTHING_TOKEN: string
   readonly VITE_RESEND_KEY: string
+  // AXON — reasoning + voice keys (both optional; AXON falls back gracefully)
+  readonly VITE_ANTHROPIC_API_KEY?: string
+  readonly VITE_ELEVENLABS_API_KEY?: string
   // more env variables...
 }
 
