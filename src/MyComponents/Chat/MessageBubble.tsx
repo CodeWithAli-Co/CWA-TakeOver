@@ -61,6 +61,18 @@ const formatExactTime = (dateString: string) => {
   } catch { return ""; }
 };
 
+/** Extract image URLs embedded in the message body. Used when image_urls
+ *  column isn't populated (migration not run yet or old message). */
+const IMG_URL_RE = /https?:\/\/[^\s]+?\.(?:png|jpe?g|gif|webp|avif)(?:\?[^\s]*)?/gi;
+function extractImageUrls(text: string): { cleanText: string; urls: string[] } {
+  const urls: string[] = [];
+  const cleanText = text.replace(IMG_URL_RE, (match) => {
+    urls.push(match);
+    return "";
+  }).replace(/\n{3,}/g, "\n\n").trim();
+  return { cleanText, urls };
+}
+
 export const MessageBubble: React.FC<Props> = ({
   msg, prevMsg, currentUsername,
   onReact, onReply, onJumpTo,
@@ -91,7 +103,19 @@ export const MessageBubble: React.FC<Props> = ({
 
   const readBy = (msg.read_by || []).filter((u) => u !== msg.sent_by);
   const isPinned = !!msg.pinned_at;
-  const images = msg.image_urls ?? [];
+
+  // Images + display text: prefer the image_urls column when it's populated;
+  // otherwise extract image URLs embedded in the message body (our fallback
+  // path when the image_urls column doesn't exist yet in the DB).
+  let images: string[] = msg.image_urls ?? [];
+  let displayText: string = msg.message ?? "";
+  if (images.length === 0 && displayText) {
+    const extracted = extractImageUrls(displayText);
+    if (extracted.urls.length > 0) {
+      images = extracted.urls;
+      displayText = extracted.cleanText;
+    }
+  }
 
   return (
     <div
@@ -158,9 +182,9 @@ export const MessageBubble: React.FC<Props> = ({
         )}
 
         {/* Body */}
-        {msg.message && (
+        {displayText && (
           <div className="text-[13.5px] text-foreground/85 break-words leading-relaxed whitespace-pre-wrap">
-            {msg.message}
+            {displayText}
           </div>
         )}
 
@@ -249,8 +273,10 @@ export const MessageBubble: React.FC<Props> = ({
         )}
       </div>
 
-      {/* Hover action bar */}
-      <div className="absolute right-4 -top-3 opacity-0 group-hover:opacity-100 transition-opacity z-10 pointer-events-none group-hover:pointer-events-auto">
+      {/* Action bar — always visible at subtle opacity, 100% on hover so
+          reply / react / thread / pin are discoverable without having to
+          hover-hunt for them. */}
+      <div className="absolute right-4 -top-3 opacity-70 group-hover:opacity-100 transition-opacity z-10">
         {showPicker ? (
           <ReactionPicker onPick={handleReactClick} />
         ) : (

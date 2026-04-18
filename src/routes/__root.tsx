@@ -79,6 +79,16 @@ export const Route = createRootRoute({
         } catch { return true; }
       };
 
+      // Helper: channel-level mute toggle from ChatHeader's More menu
+      const isGroupMuted = (name: string): boolean => {
+        try {
+          const raw = localStorage.getItem("cwa-chat-muted-groups");
+          if (!raw) return false;
+          const arr = JSON.parse(raw);
+          return Array.isArray(arr) && arr.includes(name);
+        } catch { return false; }
+      };
+
       // Helper: are we on the chat page right now? If so, we only skip
       // notifications for the CURRENTLY-VIEWED group (so user still gets
       // pings from other channels while in-chat).
@@ -108,14 +118,15 @@ export const Route = createRootRoute({
             const groupName = payload.new.dm_group;
             const sentBy = payload.new.sent_by;
             if (sentBy === currentUsername) return;
-            // Suppress only when the user is actively viewing that group ON the chat page.
             const viewing = isOnChatPage() && GroupName === groupName;
             if (!viewing) {
               incrementUnread(groupName);
-              fireNotify(
-                `New message in ${groupName}`,
-                `${sentBy}: ${payload.new.message || "[attachment]"}`,
-              );
+              if (!isGroupMuted(groupName)) {
+                fireNotify(
+                  `New message in ${groupName}`,
+                  `${sentBy}: ${payload.new.message || "[attachment]"}`,
+                );
+              }
             }
           },
         )
@@ -128,10 +139,12 @@ export const Route = createRootRoute({
             const viewing = isOnChatPage() && GroupName === "General";
             if (!viewing) {
               incrementUnread("General");
-              fireNotify(
-                "New message in General",
-                `${sentBy}: ${payload.new.message || "[attachment]"}`,
-              );
+              if (!isGroupMuted("General")) {
+                fireNotify(
+                  "New message in General",
+                  `${sentBy}: ${payload.new.message || "[attachment]"}`,
+                );
+              }
             }
           },
         )

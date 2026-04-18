@@ -42,7 +42,10 @@ export function PinnedBar({
   };
 
   return (
-    <div className="shrink-0 border-b border-border bg-muted/30">
+    <div
+      className="shrink-0 border-b border-border bg-muted/30"
+      data-pinned-bar={group}
+    >
       <button
         type="button"
         onClick={() => togglePinCollapsed(group)}

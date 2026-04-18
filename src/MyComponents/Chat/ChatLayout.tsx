@@ -11,7 +11,7 @@
  *   · passes onOpenThread/onTogglePin/canPin down to MessageBubble via MessageList
  */
 
-import { useEffect, useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { MessageSquare } from "lucide-react";
 import { ChatSidebar } from "./ChatSidebar";
@@ -41,8 +41,9 @@ export const ChatLayout = () => {
   const { data: messages, refetch: refetchMessages } = Messages(GroupName);
 
   const {
-    activeThreadRootId, setActiveThreadRootId, threadStyle,
+    activeThreadRootId, setActiveThreadRootId, threadStyle, markRead,
   } = useChatStore();
+  const [searchQuery, setSearchQuery] = useState("");
 
   // ── Realtime: refetch messages on any change for the CURRENT group ──
   useEffect(() => {
@@ -133,7 +134,9 @@ export const ChatLayout = () => {
     const { error } = await supabase.from(table).update(payload).eq("msg_id", m.msg_id);
     if (error) {
       console.error("[pin] toggle failed:", error.message);
+      return;
     }
+    refetchMessages();
   };
 
   const jumpTo = (msgId: number) => {
@@ -152,8 +155,16 @@ export const ChatLayout = () => {
     } else {
       reactions[emoji] = [...users, username];
     }
-    const { error } = await supabase.from(table).update({ reactions }).eq("msg_id", msgId);
-    if (error) console.warn("[reaction] update failed:", error.message);
+    const { error } = await supabase
+      .from(table)
+      .update({ reactions })
+      .eq("msg_id", msgId);
+    if (error) {
+      console.warn("[reaction] update failed:", error.message);
+      return;
+    }
+    // Belt-and-suspenders refetch in case realtime UPDATE doesn't arrive.
+    refetchMessages();
   };
 
   return (
@@ -177,6 +188,10 @@ export const ChatLayout = () => {
                 groupName={GroupName}
                 isGeneral={isGeneral}
                 memberCount={memberCount}
+                pinnedCount={pinnedMessages.length}
+                searchQuery={searchQuery}
+                setSearchQuery={setSearchQuery}
+                onMarkAllRead={() => markRead(GroupName)}
               />
 
               <PinnedBar
@@ -200,6 +215,7 @@ export const ChatLayout = () => {
                 threadStyle={threadStyle}
                 userAvatar={userAvatar}
                 onReactOverride={reactToMessage}
+                searchQuery={searchQuery}
               />
 
               <MessageComposer
@@ -208,6 +224,7 @@ export const ChatLayout = () => {
                 userAvatar={userAvatar}
                 table={table}
                 recentMessages={recentForAxon}
+                onAfterSend={refetchMessages}
               />
             </motion.div>
           ) : (

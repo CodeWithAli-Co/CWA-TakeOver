@@ -35,6 +35,8 @@ interface Props {
   threadStyle: ThreadStyle;
   /** Parent-supplied reaction handler. Falls back to local impl if absent. */
   onReactOverride?: (msgId: number, emoji: string) => Promise<void> | void;
+  /** Text filter applied before day-grouping. Empty string = no filter. */
+  searchQuery?: string;
 }
 
 const formatDayLabel = (dateString: string): string => {
@@ -56,6 +58,7 @@ export const MessageList: React.FC<Props> = ({
   onOpenThread, onTogglePin, canPin,
   threadReplyCounts, threadStyle,
   onReactOverride,
+  searchQuery = "",
 }) => {
   const scrollRef = useRef<HTMLDivElement>(null);
   const { setReplyingTo, markRead } = useChatStore();
@@ -137,7 +140,14 @@ export const MessageList: React.FC<Props> = ({
   }
 
   // Top-level feed hides thread replies; they render inside their thread.
-  const feedMessages = messages.filter((m) => m.thread_root_id == null);
+  // Also apply the search filter when one is set.
+  const needle = searchQuery.trim().toLowerCase();
+  const feedMessages = messages.filter((m) => {
+    if (m.thread_root_id != null) return false;
+    if (!needle) return true;
+    const hay = `${m.message ?? ""} ${m.sent_by ?? ""}`.toLowerCase();
+    return hay.includes(needle);
+  });
 
   const rendered: React.ReactNode[] = [];
   let lastDay: string | null = null;

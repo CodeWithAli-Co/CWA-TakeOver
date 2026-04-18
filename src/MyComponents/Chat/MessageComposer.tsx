@@ -27,12 +27,15 @@ interface Props {
   table: "cwa_chat" | "cwa_dm_chat";
   /** Last few messages in the channel — passed to /axon for context. */
   recentMessages?: { sender: string; text: string }[];
+  /** Called after a successful insert so the parent can refetch
+   *  immediately — belt-and-suspenders against slow realtime. */
+  onAfterSend?: () => void;
 }
 
 const AXON_COMMAND = /^\/axon\s+/i;
 
 export const MessageComposer: React.FC<Props> = ({
-  group, currentUsername, userAvatar, table, recentMessages,
+  group, currentUsername, userAvatar, table, recentMessages, onAfterSend,
 }) => {
   const [text, setText] = useState("");
   const [showEmoji, setShowEmoji] = useState(false);
@@ -140,7 +143,8 @@ export const MessageComposer: React.FC<Props> = ({
       return; // user reviews the draft and sends manually
     }
 
-    const hasText = !!text.trim();
+    const textContent = text.trim();
+    const hasText = !!textContent;
     const hasPending = pending.some((p) => !p.publicUrl);
     if (hasPending) return; // wait for uploads
     const imageUrls = pending
@@ -149,30 +153,59 @@ export const MessageComposer: React.FC<Props> = ({
 
     if (!hasText && imageUrls.length === 0) return;
 
+    // Always embed image URLs into the message body. MessageBubble renders
+    // image_urls when the column exists, and falls back to extracting URLs
+    // from the text. This guarantees images survive any insert fallback
+    // even if migrations/chat_enhancements.sql hasn't been applied yet.
+    const finalMessage = imageUrls.length > 0
+      ? [textContent, ...imageUrls].filter(Boolean).join("\n\n")
+      : textContent;
+
     const basePayload: Record<string, unknown> = {
       sent_by: currentUsername,
-      message: text.trim(),
+      message: finalMessage,
       userAvatar,
     };
     if (table === "cwa_dm_chat") basePayload.dm_group = group;
 
-    const extendedPayload = {
+    // Preserve as many of the pre-existing columns as possible. image_urls is
+    // new (migration required) — keep it on the "aggressive" payload only and
+    // gracefully drop it if the column isn't there yet.
+    const preExistingPayload = {
       ...basePayload,
       reply_to: replyingTo?.msgId || null,
       reactions: {},
       read_by: [currentUsername],
-      image_urls: imageUrls.length > 0 ? imageUrls : null,
       company: getActiveCompanyLabel(),
     };
 
-    let { error } = await supabase.from(table).insert(extendedPayload);
+    const aggressivePayload = {
+      ...preExistingPayload,
+      image_urls: imageUrls.length > 0 ? imageUrls : null,
+    };
+
+    // Try 1: everything including image_urls.
+    let { error } = await supabase.from(table).insert(aggressivePayload);
     if (error) {
-      console.warn("Extended insert failed, retrying minimal:", error.message);
-      const result = await supabase.from(table).insert(basePayload);
-      error = result.error;
+      console.warn(
+        "[send] insert with image_urls failed, retrying without it:",
+        error.message,
+      );
+      // Try 2: pre-existing columns only (preserves reply_to, reactions).
+      const r2 = await supabase.from(table).insert(preExistingPayload);
+      error = r2.error;
+      if (error) {
+        console.warn(
+          "[send] insert with pre-existing columns failed, retrying minimal:",
+          error.message,
+        );
+        // Try 3: bare minimum — at least the message shows up.
+        const r3 = await supabase.from(table).insert(basePayload);
+        error = r3.error;
+      }
     }
     if (error) {
-      console.error("Send message error:", error);
+      console.error("[send] all insert variants failed:", error);
       return;
     }
 
@@ -183,6 +216,10 @@ export const MessageComposer: React.FC<Props> = ({
       typingChannelRef.current.track({ typing: false, expiresAt: 0 });
     }
     inputRef.current?.focus();
+
+    // Belt-and-suspenders: trigger an immediate refetch so the UI shows the
+    // new message even if Supabase realtime is slow / dropped.
+    onAfterSend?.();
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
