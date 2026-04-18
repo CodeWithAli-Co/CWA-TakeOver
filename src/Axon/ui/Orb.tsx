@@ -1,10 +1,10 @@
 // ───────────────────────────────────────────────────────────────────
 // Orb v3 — plasma sphere.
 // Entirely canvas-driven. Renders:
-//   - A soft outer glow halo
 //   - A translucent sphere rim
 //   - Flowing inner energy waves (lissajous / noise-field hybrid)
 //   - Reactive core light
+//   - Orbiting dust particles around the sphere (no rectangular bg)
 // No DOM children inside the orb — everything is on the canvas so the
 // visual reads as a single coherent object, not a div sandwich.
 // ───────────────────────────────────────────────────────────────────
@@ -13,7 +13,8 @@ import { useEffect, useRef } from "react";
 import { useAxon } from "../AxonProvider";
 
 const ORB_SIZE = 96;
-const PADDING = 4; // tiny margin for antialiasing only — no exterior glow
+// Room for orbiting particles to live outside the sphere. No rectangular halo.
+const PADDING = 28;
 
 function parseRgb(raw: string): [number, number, number] {
   const parts = raw.split(",").map((n) => parseInt(n.trim(), 10));
@@ -108,6 +109,18 @@ export function Orb() {
     const cy = H / 2;
     const radius = (ORB_SIZE / 2) * dpr;
 
+    // Orbiting particles — live around the sphere, not on a rectangle bg.
+    const dustCount = 18;
+    const dust: Array<{ a: number; r: number; s: number; p: number }> = [];
+    for (let i = 0; i < dustCount; i++) {
+      dust.push({
+        a: (i / dustCount) * Math.PI * 2 + Math.random() * 0.4,
+        r: radius * 1.05 + Math.random() * (PADDING * dpr - 4),
+        s: 0.8 + Math.random() * 1.4,
+        p: Math.random() * Math.PI * 2,
+      });
+    }
+
     let raf = 0;
     const start = performance.now();
 
@@ -132,20 +145,11 @@ export function Orb() {
       const accentG = isError ? 90 : G;
       const accentB = isError ? 60 : B;
 
-      // ═══════════════════════════════════════════════════════════
-      // 1. OUTER HALO — several overlaid radial gradients, large & soft
-      // ═══════════════════════════════════════════════════════════
-      const haloPulse = 1 + Math.sin(t * 1.4) * 0.04;
-      const haloRadius = radius * 2.2 * haloPulse;
-      const halo = ctx.createRadialGradient(cx, cy, radius * 0.3, cx, cy, haloRadius);
-      halo.addColorStop(0, `rgba(${accentR}, ${accentG}, ${accentB}, ${0.28 * intensity})`);
-      halo.addColorStop(0.4, `rgba(${accentR}, ${accentG}, ${accentB}, ${0.12 * intensity})`);
-      halo.addColorStop(1, `rgba(${accentR}, ${accentG}, ${accentB}, 0)`);
-      ctx.fillStyle = halo;
-      ctx.fillRect(0, 0, W, H);
+      // Rectangular halo fill removed — nothing outside the sphere
+      // except the orbiting particles (drawn at the end).
 
       // ═══════════════════════════════════════════════════════════
-      // 2. BODY — sphere interior. Dark with color at center, deep edge.
+      // BODY — sphere interior. Dark with color at center, deep edge.
       // ═══════════════════════════════════════════════════════════
       ctx.save();
       ctx.beginPath();
@@ -164,7 +168,6 @@ export function Orb() {
       ctx.fillRect(cx - radius, cy - radius, radius * 2, radius * 2);
 
       // ─ Flowing plasma waves inside the sphere ─
-      // Draw several smooth bezier-ish paths whose control points move on lissajous curves.
       const waveSpeed = isDormant ? 0.1 : s === "listening" ? 0.8 + lvl * 1.4 : s === "speaking" ? 1.0 : s === "processing" ? 0.6 : 0.35;
       const waves = 4;
       for (let w = 0; w < waves; w++) {
@@ -175,14 +178,13 @@ export function Orb() {
         const segments = 48;
         for (let i = 0; i <= segments; i++) {
           const a = (i / segments) * Math.PI * 2;
-          // Core wavy radius — distorted circle
           const wobble =
             Math.sin(a * 3 + t * waveSpeed + phase) * 0.22 +
             Math.sin(a * 2 - t * waveSpeed * 0.7 + phase * 0.6) * 0.12 +
             Math.cos(a * 5 + t * waveSpeed * 0.3) * 0.08;
           const r = amp * (1 + wobble + lvl * 0.25);
           const x = cx + Math.cos(a) * r;
-          const y = cy + Math.sin(a) * r * 0.85; // slight oblate for "sphere" feel
+          const y = cy + Math.sin(a) * r * 0.85;
           if (i === 0) ctx.moveTo(x, y);
           else ctx.lineTo(x, y);
         }
@@ -223,7 +225,7 @@ export function Orb() {
       ctx.restore(); // release sphere clip
 
       // ═══════════════════════════════════════════════════════════
-      // 3. RIM — thin glassy highlight on the sphere edge
+      // RIM — thin glassy highlight on the sphere edge
       // ═══════════════════════════════════════════════════════════
       ctx.beginPath();
       ctx.arc(cx, cy, radius, 0, Math.PI * 2);
@@ -239,7 +241,7 @@ export function Orb() {
       ctx.stroke();
 
       // ═══════════════════════════════════════════════════════════
-      // 4. DUST — orbiting sparks around the outside
+      // DUST — orbiting sparks around the sphere
       // ═══════════════════════════════════════════════════════════
       if (!isDormant) {
         for (const d of dust) {

@@ -439,23 +439,39 @@ export function AxonProvider({ children }: { children: React.ReactNode }) {
   ]);
 
   // ── auto-greet on first mount ───────────────────────────────────
+  // Direct local greeting — no brain round-trip. Guaranteed to fire and
+  // speak even if the API is down. Fires ONCE per session, regardless of
+  // any dependency churn.
   useEffect(() => {
     if (greetedRef.current) return;
-    if (!isAdmin || !settings.enabled) return;
-    if (!settings.autoGreet) return;
-    const ctx = buildActionContext();
-    if (!ctx) return;
+    if (!isAdmin || !settings.enabled || !settings.autoGreet) return;
+    const op = operatorRef.current;
+    if (!op) return;
 
     greetedRef.current = true;
-    const timer = window.setTimeout(() => {
-      // Dispatch a brief-me style greeting — let the brain pull live numbers.
-      submitCommand(
-        "The operator just opened the app. Greet them briefly and by name, then tell them one genuinely interesting thing from today — either the overdue task count, a recent signup, or something otherwise notable. Keep it to one or two sentences. Don't list everything.",
-        "text"
-      );
+
+    const firstName = (op.username || "").split(/[\s.]/)[0] || op.username || "";
+    const greetings = [
+      `Welcome back${firstName ? ", " + firstName : ""}. Standing by.`,
+      `Hey${firstName ? ", " + firstName : ""}. Ready when you are.`,
+      `Good to see you${firstName ? ", " + firstName : ""}. Say the word.`,
+      `I'm here${firstName ? ", " + firstName : ""}. What's the move?`,
+    ];
+    const line = greetings[Math.floor(Math.random() * greetings.length)];
+
+    // NOTE: deliberately NOT returning a cleanup that clears this timer.
+    // If a dependency changes during the 1.6s window, the greet still fires.
+    window.setTimeout(() => {
+      appendTurn({
+        id: newId("t"),
+        role: "axon",
+        text: line,
+        modality: "voice",
+        timestamp: Date.now(),
+      });
+      voiceOutRef.current?.speak(line);
     }, AUTO_GREET_DELAY_MS);
-    return () => clearTimeout(timer);
-  }, [isAdmin, settings.enabled, settings.autoGreet, buildActionContext, submitCommand]);
+  }, [isAdmin, settings.enabled, settings.autoGreet, appendTurn]);
 
   // ── monitors ────────────────────────────────────────────────────
   useEffect(() => {

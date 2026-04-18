@@ -88,6 +88,71 @@ function containsPhrase(hay: string, needle: string): boolean {
   return h.includes(n);
 }
 
+// ── Fuzzy wake-word matching ──────────────────────────────────────
+// Browser STT mangles "axon" constantly. These are real transcripts
+// observed in testing plus common phonetic relatives.
+const AXON_VARIANTS = new Set([
+  "axon", "axons",
+  "exxon", "exxons",
+  "action",
+  "axel", "axle",
+  "ax on", "acts on", "axe on",
+  "hacks on", "hexon", "hex on",
+  "atsun", "aksam",
+  "akshan", "akshun",
+  "hey xon", "hey zon",
+  "aksen", "exon",
+  "access", "access on",
+  "acton",
+]);
+
+function levenshtein(a: string, b: string): number {
+  if (a === b) return 0;
+  const m = a.length, n = b.length;
+  if (m === 0) return n;
+  if (n === 0) return m;
+  const row = new Array(n + 1);
+  for (let j = 0; j <= n; j++) row[j] = j;
+  for (let i = 1; i <= m; i++) {
+    let prev = row[0];
+    row[0] = i;
+    for (let j = 1; j <= n; j++) {
+      const temp = row[j];
+      row[j] =
+        a.charCodeAt(i - 1) === b.charCodeAt(j - 1)
+          ? prev
+          : Math.min(prev, row[j - 1], row[j]) + 1;
+      prev = temp;
+    }
+  }
+  return row[n];
+}
+
+/** The key word in the wake phrase — last non-empty token. "hey axon" → "axon". */
+function wakeKeyword(wakeWord: string): string {
+  const toks = norm(wakeWord).split(" ").filter(Boolean);
+  return toks[toks.length - 1] ?? "axon";
+}
+
+/** Check if text contains the wake phrase OR a fuzzy phonetic match. */
+function hasWakeIntent(text: string, wakeWord: string): boolean {
+  const n = norm(text);
+  // 1. Literal substring (fastest path, most common when STT is accurate).
+  if (containsPhrase(text, wakeWord)) return true;
+  // 2. Variant whole-phrase match (covers "ax on", "hey exxon", etc.).
+  for (const v of AXON_VARIANTS) {
+    if (n.includes(v)) return true;
+  }
+  // 3. Per-token Levenshtein fallback for words close to the key word.
+  const key = wakeKeyword(wakeWord); // "axon"
+  const threshold = key.length <= 4 ? 1 : 2;
+  for (const tok of n.split(" ")) {
+    if (tok.length < 3) continue;
+    if (levenshtein(tok, key) <= threshold) return true;
+  }
+  return false;
+}
+
 export class VoiceInput {
   private recognition: SpeechRecognitionLike | null = null;
   private config: VoiceInputConfig;
@@ -258,7 +323,8 @@ export class VoiceInput {
     if (n === this.lastDispatched && now - this.lastDispatchedAt < 2500) return;
 
     const has = (arr: string[]) => arr.some((p) => containsPhrase(text, p));
-    const hasWake = containsPhrase(text, this.config.wakeWord);
+    // Fuzzy match on the wake phrase — tolerates "hey exxon", "hey action", etc.
+    const hasWake = hasWakeIntent(text, this.config.wakeWord);
     const hasSleep = has(this.config.sleepPhrases);
     const hasResume = has(this.config.resumePhrases);
 
@@ -333,9 +399,42 @@ export class VoiceInput {
   private stripWakePrefix(text: string): string {
     const lower = text.toLowerCase();
     const wake = this.config.wakeWord.toLowerCase();
-    const idx = lower.indexOf(wake);
+
+    // Try literal wake first.
+    let idx = lower.indexOf(wake);
+    let matched = wake.length;
+
+    // Then try each variant.
+    if (idx === -1) {
+      for (const v of AXON_VARIANTS) {
+        const vi = lower.indexOf(v);
+        if (vi !== -1) {
+          idx = vi;
+          matched = v.length;
+          break;
+        }
+      }
+    }
+
+    // Then try fuzzy: find any token with edit distance ≤ 2 of key.
+    if (idx === -1) {
+      const key = wakeKeyword(this.config.wakeWord);
+      const tokens = lower.split(/\s+/);
+      let runningIdx = 0;
+      for (const tok of tokens) {
+        const tokIdx = lower.indexOf(tok, runningIdx);
+        if (tokIdx === -1) break;
+        if (tok.length >= 3 && levenshtein(tok, key) <= (key.length <= 4 ? 1 : 2)) {
+          idx = tokIdx;
+          matched = tok.length;
+          break;
+        }
+        runningIdx = tokIdx + tok.length;
+      }
+    }
+
     if (idx === -1) return text;
-    return text.slice(idx + wake.length).replace(/^[\s,!?.-]+/, "");
+    return text.slice(idx + matched).replace(/^[\s,!?.-]+/, "");
   }
 
   // ── Audio metering ──────────────────────────────────────────────
