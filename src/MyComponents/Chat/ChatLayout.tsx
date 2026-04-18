@@ -22,6 +22,8 @@ import { ThreadPanel } from "./ThreadPanel";
 import { PinnedBar } from "./PinnedBar";
 import { ForwardDialog } from "./ForwardDialog";
 import { CreateChannelDialog } from "./CreateChannelDialog";
+import { StarredView } from "./StarredView";
+import { WebhookManager } from "./WebhookManager";
 import {
   parseReactionsMarker, stripReactionsMarker, encodeReactionsMarker,
 } from "./MessageBubble";
@@ -51,6 +53,7 @@ export const ChatLayout = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [forwardSource, setForwardSource] = useState<MessageInterface | null>(null);
   const [createChannelOpen, setCreateChannelOpen] = useState(false);
+  const [webhooksOpen, setWebhooksOpen] = useState(false);
 
   // ── Realtime: refetch messages on any change for the CURRENT group ──
   useEffect(() => {
@@ -260,12 +263,27 @@ export const ChatLayout = () => {
         groups={allGroups}
         employees={AllEmployees || []}
         onCreateChannel={canPin ? () => setCreateChannelOpen(true) : undefined}
+        onManageWebhooks={canPin ? () => setWebhooksOpen(true) : undefined}
       />
 
       {/* Middle: active chat */}
       <div className="flex-1 flex flex-col min-w-0">
         <AnimatePresence mode="wait">
-          {GroupName ? (
+          {GroupName === "__starred__" ? (
+            <motion.div
+              key="starred"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.15 }}
+              className="flex-1 flex flex-col min-h-0"
+            >
+              <StarredView
+                currentUsername={username}
+                onReact={reactToMessage}
+              />
+            </motion.div>
+          ) : GroupName ? (
             <motion.div
               key={GroupName}
               initial={{ opacity: 0 }}
@@ -372,6 +390,14 @@ export const ChatLayout = () => {
         open={createChannelOpen}
         onOpenChange={setCreateChannelOpen}
         allEmployees={(AllEmployees || []).map((e: any) => e.username).filter(Boolean) as string[]}
+        currentUsername={username}
+      />
+
+      {/* Webhook manager (admin only) */}
+      <WebhookManager
+        open={webhooksOpen}
+        onOpenChange={setWebhooksOpen}
+        groups={allGroups}
         currentUsername={username}
       />
 

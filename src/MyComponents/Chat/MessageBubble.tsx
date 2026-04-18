@@ -19,8 +19,9 @@ import { useState } from "react";
 import { motion } from "framer-motion";
 import {
   Smile, Reply, MoreVertical, CheckCheck, Pin, PinOff, MessagesSquare,
-  Pencil, Trash2, Copy, Check, Forward,
+  Pencil, Trash2, Copy, Check, Forward, Star,
 } from "lucide-react";
+import { useChatStore } from "@/stores/chatStore";
 import {
   Avatar, AvatarFallback, AvatarImage,
 } from "@/components/ui/shadcnComponents/avatar";
@@ -129,6 +130,16 @@ function attachmentIcon(name: string): string {
   return ext.slice(0, 4);
 }
 
+/** Deterministic color (HSL) derived from a username, used for the
+ *  read-receipt avatar pips so each teammate has a stable tint. */
+function colorForName(name: string): string {
+  let h = 0;
+  for (let i = 0; i < name.length; i++) {
+    h = (h * 31 + name.charCodeAt(i)) >>> 0;
+  }
+  return `hsl(${h % 360} 52% 38%)`;
+}
+
 function humanSizeFromUrl(_url: string): string {
   // We don't have size info post-upload without a HEAD request. Keep blank.
   return "";
@@ -218,7 +229,9 @@ export const MessageBubble: React.FC<Props> = ({
   const [editText, setEditText] = useState("");
   const [editing, setEditing] = useState(false);
   const [copied, setCopied] = useState(false);
+  const { toggleStarred, isStarred } = useChatStore();
   const isOwn = msg.sent_by === currentUsername;
+  const starred = isStarred(msg.msg_id);
 
   const isDeleted = (msg.message || "").trim() === "[message deleted]";
 
@@ -390,6 +403,14 @@ export const MessageBubble: React.FC<Props> = ({
               >
                 <Pin className="h-2.5 w-2.5" />
                 pinned
+              </span>
+            )}
+            {starred && (
+              <span
+                className="flex items-center gap-0.5 text-[9px] text-amber-400 font-medium"
+                title="You starred this"
+              >
+                <Star className="h-2.5 w-2.5 fill-amber-400" />
               </span>
             )}
           </div>
@@ -604,13 +625,30 @@ export const MessageBubble: React.FC<Props> = ({
           </button>
         )}
 
-        {/* Read receipts */}
+        {/* Read receipts — horizontal avatar stack */}
         {isOwn && readBy.length > 0 && (
-          <div className="flex items-center gap-1 mt-1">
-            <CheckCheck className="h-3 w-3 text-emerald-400/60" />
-            <span className="text-[10px] text-muted-foreground/50">
-              Seen by {readBy.length === 1 ? readBy[0] : `${readBy.length} people`}
-            </span>
+          <div className="mt-1.5 flex items-center gap-1.5">
+            <CheckCheck className="h-3 w-3 text-emerald-400/70" />
+            <div className="flex -space-x-1.5">
+              {readBy.slice(0, 5).map((u) => (
+                <div
+                  key={u}
+                  title={u}
+                  className="flex h-4 w-4 items-center justify-center rounded-full border border-background bg-muted text-[8px] font-semibold text-muted-foreground"
+                  style={{ background: colorForName(u) }}
+                >
+                  {u.slice(0, 1).toUpperCase()}
+                </div>
+              ))}
+              {readBy.length > 5 && (
+                <div
+                  title={readBy.slice(5).join(", ")}
+                  className="flex h-4 items-center justify-center rounded-full border border-background bg-muted px-1.5 text-[8.5px] font-semibold text-muted-foreground"
+                >
+                  +{readBy.length - 5}
+                </div>
+              )}
+            </div>
           </div>
         )}
       </div>
@@ -679,6 +717,21 @@ export const MessageBubble: React.FC<Props> = ({
                     Forward
                   </DropdownMenuItem>
                 )}
+                <DropdownMenuItem
+                  onSelect={() => {
+                    // Heuristic: General → cwa_chat else cwa_dm_chat. Caller can
+                    // override later with a proper `table` prop if needed.
+                    const table = msg.dm_group ? "cwa_dm_chat" : "cwa_chat";
+                    const group = msg.dm_group || "General";
+                    toggleStarred({ msgId: msg.msg_id, group, table });
+                  }}
+                  className="gap-2 text-[12px]"
+                >
+                  <Star
+                    className={`h-3.5 w-3.5 ${starred ? "fill-amber-400 text-amber-400" : ""}`}
+                  />
+                  {starred ? "Unstar message" : "Star message"}
+                </DropdownMenuItem>
                 {isOwn && !isDeleted && onEdit && (
                   <DropdownMenuItem onSelect={startEdit} className="gap-2 text-[12px]">
                     <Pencil className="h-3.5 w-3.5" />

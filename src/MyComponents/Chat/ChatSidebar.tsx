@@ -7,7 +7,17 @@
 
 import { useState } from "react";
 import { motion } from "framer-motion";
-import { Plus, Search, Hash, MessageSquare, HashIcon } from "lucide-react";
+import {
+  Plus, Search, Hash, MessageSquare, HashIcon,
+  Folder, FolderPlus, ChevronDown, ChevronRight, Star, MoreVertical, Webhook,
+} from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/shadcnComponents/dropdown-menu";
 import {
   Avatar, AvatarFallback, AvatarImage,
 } from "@/components/ui/shadcnComponents/avatar";
@@ -30,20 +40,37 @@ interface Props {
   groups: Group[];
   employees: any[];
   onCreateChannel?: () => void;
+  onManageWebhooks?: () => void;
 }
 
-export const ChatSidebar: React.FC<Props> = ({ groups, employees, onCreateChannel }) => {
+export const ChatSidebar: React.FC<Props> = ({ groups, employees, onCreateChannel, onManageWebhooks }) => {
   const { GroupName, setGroupName } = useAppStore();
-  const { unreadCounts, markRead } = useChatStore();
+  const {
+    unreadCounts, markRead,
+    channelCategories, addChannelCategory, moveChannelToCategory,
+    toggleCategoryCollapsed, removeChannelCategory,
+    starredMessages,
+  } = useChatStore();
   const [searchQuery, setSearchQuery] = useState("");
 
   const filtered = groups.filter((g) =>
-    g.name.toLowerCase().includes(searchQuery.toLowerCase())
+    g.name.toLowerCase().includes(searchQuery.toLowerCase()),
   );
+
+  // Split into categorized vs uncategorized.
+  const inAnyCategory = new Set<string>(
+    channelCategories.flatMap((c) => c.items),
+  );
+  const uncategorized = filtered.filter((g) => !inAnyCategory.has(g.name));
 
   const handleSelect = (name: string) => {
     setGroupName(name);
     markRead(name);
+  };
+
+  const promptCategory = () => {
+    const name = window.prompt("Category name", "Projects");
+    if (name && name.trim()) addChannelCategory(name);
   };
 
   return (
@@ -60,6 +87,16 @@ export const ChatSidebar: React.FC<Props> = ({ groups, employees, onCreateChanne
             </span>
           </div>
           <div className="flex items-center gap-1">
+            {onManageWebhooks && (
+              <button
+                type="button"
+                onClick={onManageWebhooks}
+                className="p-1.5 rounded-sm bg-muted/30 text-muted-foreground hover:text-primary hover:bg-primary/10 transition-colors"
+                title="Manage webhooks"
+              >
+                <Webhook className="h-3.5 w-3.5" />
+              </button>
+            )}
             {onCreateChannel && (
               <button
                 type="button"
@@ -104,54 +141,102 @@ export const ChatSidebar: React.FC<Props> = ({ groups, employees, onCreateChanne
         {filtered.length === 0 ? (
           <p className="text-center text-[12px] text-muted-foreground/40 py-8">No conversations</p>
         ) : (
-          filtered.map((group, i) => {
-            const isActive = GroupName === group.name;
-            const isGeneral = group.type === "general";
-            const unread = unreadCounts[group.name] || 0;
-
-            return (
-              <motion.button
-                key={group.id}
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ delay: i * 0.03 }}
-                onClick={() => handleSelect(group.name)}
-                className={`w-full text-left px-3 py-2 rounded-sm mb-0.5 transition-all duration-200 group ${
-                  isActive
-                    ? "bg-primary/[0.08] border border-primary/15"
-                    : "border border-transparent hover:bg-muted/30 hover:border-border"
+          <>
+            {/* Starred virtual row — jumps to global starred view */}
+            {starredMessages.length > 0 && (
+              <button
+                type="button"
+                onClick={() => handleSelect("__starred__")}
+                className={`flex w-full items-center gap-2 rounded-sm px-3 py-1.5 mb-0.5 text-[12px] transition-all ${
+                  GroupName === "__starred__"
+                    ? "bg-primary/[0.08] border border-primary/15 text-foreground"
+                    : "border border-transparent text-white/55 hover:bg-muted/30 hover:text-foreground/80"
                 }`}
               >
-                <div className="flex items-center gap-2.5">
-                  {isGeneral ? (
-                    <div className="h-8 w-8 rounded-sm bg-primary/10 border border-primary/20 flex items-center justify-center shrink-0">
-                      <Hash className="h-3.5 w-3.5 text-primary" />
-                    </div>
-                  ) : (
-                    <Avatar className="h-8 w-8 rounded-sm border border-border shrink-0">
-                      <AvatarImage src={`https://api.dicebear.com/7.x/shapes/svg?seed=${group.name}`} />
-                      <AvatarFallback className="bg-muted/50 text-muted-foreground/70 text-[10px] rounded-sm">
-                        {group.name?.slice(0, 2)?.toUpperCase()}
-                      </AvatarFallback>
-                    </Avatar>
-                  )}
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center justify-between gap-2">
-                      <span className={`text-[12px] font-medium truncate ${
-                        isActive ? "text-foreground" : unread > 0 ? "text-foreground/80" : "text-white/55"
-                      }`}>
-                        {group.name}
+                <Star className="h-3.5 w-3.5 text-amber-400" />
+                <span className="font-medium">Starred</span>
+                <span className="ml-auto font-mono text-[10px] text-muted-foreground">
+                  {starredMessages.length}
+                </span>
+              </button>
+            )}
+
+            {/* Uncategorized first */}
+            {uncategorized.map((group) => (
+              <GroupButton
+                key={group.id}
+                group={group}
+                isActive={GroupName === group.name}
+                unread={unreadCounts[group.name] || 0}
+                onSelect={handleSelect}
+                categories={channelCategories}
+                onMoveTo={(catId) => moveChannelToCategory(group.name, catId)}
+              />
+            ))}
+
+            {/* Categories */}
+            {channelCategories.map((cat) => {
+              const catGroups = filtered.filter((g) =>
+                cat.items.includes(g.name),
+              );
+              return (
+                <div key={cat.id} className="mt-3">
+                  <div className="flex items-center gap-1.5 px-2 pb-1">
+                    <button
+                      type="button"
+                      onClick={() => toggleCategoryCollapsed(cat.id)}
+                      className="flex flex-1 items-center gap-1.5 text-left font-mono text-[9.5px] uppercase tracking-[0.18em] text-muted-foreground hover:text-foreground"
+                    >
+                      {cat.collapsed ? (
+                        <ChevronRight className="h-3 w-3" />
+                      ) : (
+                        <ChevronDown className="h-3 w-3" />
+                      )}
+                      <Folder className="h-3 w-3 opacity-70" />
+                      <span className="truncate">{cat.name}</span>
+                      <span className="opacity-60">
+                        · {catGroups.length}
                       </span>
-                      <UnreadBadge count={unread} />
-                    </div>
-                    <p className="text-[10px] text-muted-foreground/50 truncate mt-0.5">
-                      {isGeneral ? "Company-wide" : `${group.subscribers?.length || 0} members`}
-                    </p>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (window.confirm(`Remove category "${cat.name}"?`)) {
+                          removeChannelCategory(cat.id);
+                        }
+                      }}
+                      className="text-muted-foreground hover:text-destructive"
+                      title="Remove category"
+                    >
+                      <MoreVertical className="h-3 w-3" />
+                    </button>
                   </div>
+                  {!cat.collapsed && catGroups.map((group) => (
+                    <GroupButton
+                      key={group.id}
+                      group={group}
+                      isActive={GroupName === group.name}
+                      unread={unreadCounts[group.name] || 0}
+                      onSelect={handleSelect}
+                      categories={channelCategories}
+                      onMoveTo={(catId) => moveChannelToCategory(group.name, catId)}
+                      currentCategoryId={cat.id}
+                    />
+                  ))}
                 </div>
-              </motion.button>
-            );
-          })
+              );
+            })}
+
+            {/* Add category */}
+            <button
+              type="button"
+              onClick={promptCategory}
+              className="mt-3 flex w-full items-center justify-center gap-1.5 rounded-sm border border-dashed border-border py-1.5 text-[10.5px] text-muted-foreground hover:border-primary/30 hover:text-foreground"
+            >
+              <FolderPlus className="h-3 w-3" />
+              New category
+            </button>
+          </>
         )}
       </div>
 
@@ -164,3 +249,107 @@ export const ChatSidebar: React.FC<Props> = ({ groups, employees, onCreateChanne
     </div>
   );
 };
+
+// ── Single sidebar button (with category-move dropdown) ────────────────
+
+function GroupButton({
+  group, isActive, unread, onSelect, categories, onMoveTo, currentCategoryId,
+}: {
+  group: Group;
+  isActive: boolean;
+  unread: number;
+  onSelect: (name: string) => void;
+  categories: { id: string; name: string }[];
+  onMoveTo: (categoryId: string | null) => void;
+  currentCategoryId?: string;
+}) {
+  const isGeneral = group.type === "general";
+  return (
+    <div className="group/row relative">
+      <motion.button
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        onClick={() => onSelect(group.name)}
+        className={`w-full text-left px-3 py-2 rounded-sm mb-0.5 transition-all duration-200 ${
+          isActive
+            ? "bg-primary/[0.08] border border-primary/15"
+            : "border border-transparent hover:bg-muted/30 hover:border-border"
+        }`}
+      >
+        <div className="flex items-center gap-2.5">
+          {isGeneral ? (
+            <div className="h-8 w-8 rounded-sm bg-primary/10 border border-primary/20 flex items-center justify-center shrink-0">
+              <Hash className="h-3.5 w-3.5 text-primary" />
+            </div>
+          ) : (
+            <Avatar className="h-8 w-8 rounded-sm border border-border shrink-0">
+              <AvatarImage src={`https://api.dicebear.com/7.x/shapes/svg?seed=${group.name}`} />
+              <AvatarFallback className="bg-muted/50 text-muted-foreground/70 text-[10px] rounded-sm">
+                {group.name?.slice(0, 2)?.toUpperCase()}
+              </AvatarFallback>
+            </Avatar>
+          )}
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center justify-between gap-2">
+              <span className={`text-[12px] font-medium truncate ${
+                isActive ? "text-foreground" : unread > 0 ? "text-foreground/80" : "text-white/55"
+              }`}>
+                {group.name}
+              </span>
+              <UnreadBadge count={unread} />
+            </div>
+            <p className="text-[10px] text-muted-foreground/50 truncate mt-0.5">
+              {isGeneral ? "Company-wide" : `${group.subscribers?.length || 0} members`}
+            </p>
+          </div>
+        </div>
+      </motion.button>
+
+      {/* Category move dropdown — visible on row hover */}
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <button
+            type="button"
+            className="absolute right-1 top-2 rounded p-1 text-muted-foreground opacity-0 transition-opacity hover:bg-muted hover:text-foreground group-hover/row:opacity-100"
+            title="Move to category"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <Folder className="h-3 w-3" />
+          </button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end" className="w-44">
+          <div className="px-2 py-1 font-mono text-[9.5px] uppercase tracking-widest text-muted-foreground">
+            Move to
+          </div>
+          {categories.length === 0 && (
+            <div className="px-2 py-1 text-[11px] text-muted-foreground">
+              No categories yet.
+            </div>
+          )}
+          {categories.map((c) => (
+            <DropdownMenuItem
+              key={c.id}
+              onSelect={() => onMoveTo(c.id)}
+              disabled={c.id === currentCategoryId}
+              className="gap-2 text-[12px]"
+            >
+              <Folder className="h-3.5 w-3.5" />
+              {c.name}
+            </DropdownMenuItem>
+          ))}
+          {currentCategoryId && (
+            <>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem
+                onSelect={() => onMoveTo(null)}
+                className="gap-2 text-[12px]"
+              >
+                Remove from category
+              </DropdownMenuItem>
+            </>
+          )}
+        </DropdownMenuContent>
+      </DropdownMenu>
+    </div>
+  );
+}

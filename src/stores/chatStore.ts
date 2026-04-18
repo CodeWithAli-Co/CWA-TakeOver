@@ -71,6 +71,20 @@ interface ChatStoreState {
   customEmojis: Record<string, string>;
   setCustomEmoji: (shortcode: string, url: string) => void;
   removeCustomEmoji: (shortcode: string) => void;
+
+  /** Sidebar channel categories. Channels not mentioned in any category
+   *  render as "Ungrouped" above the category list. Per-user, persisted. */
+  channelCategories: { id: string; name: string; collapsed: boolean; items: string[] }[];
+  addChannelCategory: (name: string) => void;
+  renameChannelCategory: (id: string, name: string) => void;
+  removeChannelCategory: (id: string) => void;
+  moveChannelToCategory: (groupName: string, categoryId: string | null) => void;
+  toggleCategoryCollapsed: (id: string) => void;
+
+  /** Starred messages — per-user bookmarks. */
+  starredMessages: { msgId: number; group: string; table: "cwa_chat" | "cwa_dm_chat"; starredAt: string }[];
+  toggleStarred: (m: { msgId: number; group: string; table: "cwa_chat" | "cwa_dm_chat" }) => void;
+  isStarred: (msgId: number) => boolean;
 }
 
 export const useChatStore = create<ChatStoreState>()(
@@ -172,6 +186,66 @@ export const useChatStore = create<ChatStoreState>()(
           delete next[shortcode];
           return { customEmojis: next };
         }),
+
+      channelCategories: [],
+      addChannelCategory: (name) =>
+        set((state) => ({
+          channelCategories: [
+            ...state.channelCategories,
+            {
+              id: crypto.randomUUID(),
+              name: name.trim() || "New category",
+              collapsed: false,
+              items: [],
+            },
+          ],
+        })),
+      renameChannelCategory: (id, name) =>
+        set((state) => ({
+          channelCategories: state.channelCategories.map((c) =>
+            c.id === id ? { ...c, name: name.trim() || c.name } : c,
+          ),
+        })),
+      removeChannelCategory: (id) =>
+        set((state) => ({
+          channelCategories: state.channelCategories.filter((c) => c.id !== id),
+        })),
+      moveChannelToCategory: (groupName, categoryId) =>
+        set((state) => ({
+          channelCategories: state.channelCategories.map((c) => {
+            // remove from all categories first
+            const filteredItems = c.items.filter((g) => g !== groupName);
+            if (categoryId != null && c.id === categoryId) {
+              return { ...c, items: [...filteredItems, groupName] };
+            }
+            return { ...c, items: filteredItems };
+          }),
+        })),
+      toggleCategoryCollapsed: (id) =>
+        set((state) => ({
+          channelCategories: state.channelCategories.map((c) =>
+            c.id === id ? { ...c, collapsed: !c.collapsed } : c,
+          ),
+        })),
+
+      starredMessages: [],
+      toggleStarred: (m) =>
+        set((state) => {
+          const exists = state.starredMessages.some((s) => s.msgId === m.msgId);
+          if (exists) {
+            return {
+              starredMessages: state.starredMessages.filter((s) => s.msgId !== m.msgId),
+            };
+          }
+          return {
+            starredMessages: [
+              ...state.starredMessages,
+              { ...m, starredAt: new Date().toISOString() },
+            ],
+          };
+        }),
+      isStarred: (msgId) =>
+        get().starredMessages.some((s) => s.msgId === msgId),
     }),
     {
       name: "cwa-chat-store",
@@ -182,6 +256,8 @@ export const useChatStore = create<ChatStoreState>()(
         pinCollapsed: state.pinCollapsed,
         recentEmojis: state.recentEmojis,
         customEmojis: state.customEmojis,
+        channelCategories: state.channelCategories,
+        starredMessages: state.starredMessages,
       }),
     },
   ),
