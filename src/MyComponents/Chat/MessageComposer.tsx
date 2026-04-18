@@ -19,6 +19,7 @@ import { getActiveCompanyLabel } from "@/stores/query";
 import { EmojiPicker } from "./EmojiPicker";
 import { useImageUpload, type PendingUpload } from "./useImageUpload";
 import { draftChatReply } from "@/Axon/engine/chatDraft";
+import { MentionPicker, detectMentionQuery } from "./MentionPicker";
 
 interface Props {
   group: string;
@@ -30,18 +31,34 @@ interface Props {
   /** Called after a successful insert so the parent can refetch
    *  immediately — belt-and-suspenders against slow realtime. */
   onAfterSend?: () => void;
+  /** Members available for @mention autocomplete. */
+  members?: string[];
 }
 
 const AXON_COMMAND = /^\/axon\s+/i;
 
 export const MessageComposer: React.FC<Props> = ({
   group, currentUsername, userAvatar, table, recentMessages, onAfterSend,
+  members = [],
 }) => {
   const [text, setText] = useState("");
   const [showEmoji, setShowEmoji] = useState(false);
   const [axonBusy, setAxonBusy] = useState(false);
   const [axonError, setAxonError] = useState<string | null>(null);
   const [draggingOver, setDraggingOver] = useState(false);
+
+  // Mention autocomplete state
+  const [mentionInfo, setMentionInfo] = useState<{
+    query: string;
+    startIndex: number;
+  } | null>(null);
+  const [mentionIdx, setMentionIdx] = useState(0);
+  const filteredMembers = mentionInfo
+    ? members
+        .filter((m) => m.toLowerCase().includes(mentionInfo.query.toLowerCase()))
+        .filter((m) => m !== currentUsername)
+        .slice(0, 8)
+    : [];
 
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -83,6 +100,30 @@ export const MessageComposer: React.FC<Props> = ({
         expiresAt: Date.now() + 5000,
       });
     }
+    // Update mention-detect state based on the current caret position.
+    const caret = inputRef.current?.selectionStart ?? val.length;
+    const info = detectMentionQuery(val, caret);
+    setMentionInfo(info);
+    setMentionIdx(0);
+  };
+
+  const insertMention = (username: string) => {
+    if (!mentionInfo) return;
+    const before = text.slice(0, mentionInfo.startIndex);
+    const caret = inputRef.current?.selectionStart ?? text.length;
+    const after = text.slice(caret);
+    const inserted = `@${username} `;
+    const next = before + inserted + after;
+    setText(next);
+    setMentionInfo(null);
+    // Restore focus + set caret just after the inserted mention.
+    requestAnimationFrame(() => {
+      const el = inputRef.current;
+      if (!el) return;
+      el.focus();
+      const pos = before.length + inserted.length;
+      el.setSelectionRange(pos, pos);
+    });
   };
 
   // ── /axon detection ─────────────────────────────────────────────────
@@ -253,6 +294,31 @@ export const MessageComposer: React.FC<Props> = ({
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
+    // Mention autocomplete: Arrow / Enter / Escape take precedence while the
+    // popover is open.
+    if (mentionInfo && filteredMembers.length > 0) {
+      if (e.key === "ArrowDown") {
+        e.preventDefault();
+        setMentionIdx((i) => Math.min(filteredMembers.length - 1, i + 1));
+        return;
+      }
+      if (e.key === "ArrowUp") {
+        e.preventDefault();
+        setMentionIdx((i) => Math.max(0, i - 1));
+        return;
+      }
+      if (e.key === "Enter" || e.key === "Tab") {
+        e.preventDefault();
+        const pick = filteredMembers[mentionIdx];
+        if (pick) insertMention(pick);
+        return;
+      }
+      if (e.key === "Escape") {
+        e.preventDefault();
+        setMentionInfo(null);
+        return;
+      }
+    }
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
       handleSubmit();
@@ -340,20 +406,46 @@ export const MessageComposer: React.FC<Props> = ({
             className="hidden"
           />
 
-          <textarea
-            ref={inputRef}
-            value={text}
-            onChange={(e) => handleChange(e.target.value)}
-            onKeyDown={handleKeyDown}
-            onPaste={onPaste}
-            placeholder={
-              isAxonMode
-                ? "Axon is listening… press Enter to draft"
-                : `Message #${group} — try /axon to draft with AI`
-            }
-            rows={1}
-            className="flex-1 bg-transparent py-2.5 text-[13.5px] text-foreground/85 placeholder:text-muted-foreground/60 focus:outline-none resize-none max-h-32"
-          />
+          <div className="relative flex-1">
+            <textarea
+              ref={inputRef}
+              value={text}
+              onChange={(e) => handleChange(e.target.value)}
+              onSelect={() => {
+                const caret = inputRef.current?.selectionStart ?? text.length;
+                const info = detectMentionQuery(text, caret);
+                setMentionInfo(info);
+              }}
+              onKeyDown={handleKeyDown}
+              onPaste={onPaste}
+              placeholder={
+                isAxonMode
+                  ? "Axon is listening… press Enter to draft"
+                  : `Message #${group} — @ to mention · /axon for AI`
+              }
+              rows={1}
+              className="w-full bg-transparent py-2.5 text-[13.5px] text-foreground/85 placeholder:text-muted-foreground/60 focus:outline-none resize-none max-h-32"
+            />
+            <AnimatePresence>
+              {mentionInfo && filteredMembers.length > 0 && (
+                <motion.div
+                  initial={{ opacity: 0, y: 4 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: 4 }}
+                  transition={{ duration: 0.12 }}
+                  className="absolute bottom-full left-0 z-30 mb-2"
+                >
+                  <MentionPicker
+                    members={filteredMembers}
+                    query={mentionInfo.query}
+                    activeIndex={mentionIdx}
+                    onPick={insertMention}
+                    onSetIndex={setMentionIdx}
+                  />
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
 
           {/* Emoji picker anchor */}
           <div className="relative">

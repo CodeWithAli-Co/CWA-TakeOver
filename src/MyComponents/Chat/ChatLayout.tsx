@@ -21,6 +21,9 @@ import { MessageComposer } from "./MessageComposer";
 import { ThreadPanel } from "./ThreadPanel";
 import { PinnedBar } from "./PinnedBar";
 import {
+  parseReactionsMarker, stripReactionsMarker, encodeReactionsMarker,
+} from "./MessageBubble";
+import {
   ActiveUser, DMGroups, Employees, Messages, MessageInterface,
 } from "@/stores/query";
 import { useAppStore } from "@/stores/store";
@@ -96,6 +99,16 @@ export const ChatLayout = () => {
   const activeGroup = allGroups.find((g) => g.name === GroupName);
   const memberCount = (activeGroup as any)?.subscribers?.length || 0;
 
+  // Members available for @mention autocomplete. For DMs = subscribers;
+  // for General = all employee usernames.
+  const channelMembers: string[] = (() => {
+    const dmSubs = (activeGroup as any)?.subscribers as string[] | undefined;
+    if (dmSubs && dmSubs.length > 0) return dmSubs;
+    return (AllEmployees || [])
+      .map((e: any) => e.username)
+      .filter(Boolean) as string[];
+  })();
+
   // Derived: thread reply counts + pinned messages from current messages window.
   // (For full-history pins, PinnedBar could subscribe separately — v1 uses the
   // window, which is plenty for the most-recent 10-item fetch.)
@@ -147,23 +160,50 @@ export const ChatLayout = () => {
   const reactToMessage = async (msgId: number, emoji: string) => {
     const m = msgs.find((x) => x.msg_id === msgId);
     if (!m) return;
-    const reactions: Record<string, string[]> = { ...(m.reactions || {}) };
-    const users = reactions[emoji] || [];
+
+    // Compute next reactions state (toggle emoji for current user). Read the
+    // current state from DB column first, falling back to the embedded marker
+    // inside the message body.
+    const fromColumn = m.reactions || {};
+    const fromMarker = parseReactionsMarker(m.message || "");
+    const current: Record<string, string[]> =
+      Object.keys(fromColumn).length > 0 ? fromColumn : fromMarker;
+
+    const next: Record<string, string[]> = { ...current };
+    const users = next[emoji] || [];
     if (users.includes(username)) {
-      reactions[emoji] = users.filter((u) => u !== username);
-      if (reactions[emoji].length === 0) delete reactions[emoji];
+      next[emoji] = users.filter((u) => u !== username);
+      if (next[emoji].length === 0) delete next[emoji];
     } else {
-      reactions[emoji] = [...users, username];
+      next[emoji] = [...users, username];
     }
-    const { error } = await supabase
+
+    // Try the DB column first.
+    const col = await supabase
       .from(table)
-      .update({ reactions })
+      .update({ reactions: next })
       .eq("msg_id", msgId);
-    if (error) {
-      console.warn("[reaction] update failed:", error.message);
+    if (!col.error) {
+      refetchMessages();
       return;
     }
-    // Belt-and-suspenders refetch in case realtime UPDATE doesn't arrive.
+    console.warn(
+      "[reaction] column update failed, falling back to text marker:",
+      col.error.message,
+    );
+
+    // Text-marker fallback: prepend {rx:...} to the message body. Preserves
+    // the original body and every other embedded marker (reply, etc.).
+    const bodyWithoutReactions = stripReactionsMarker(m.message || "");
+    const nextBody = encodeReactionsMarker(next) + bodyWithoutReactions;
+    const { error: textErr } = await supabase
+      .from(table)
+      .update({ message: nextBody })
+      .eq("msg_id", msgId);
+    if (textErr) {
+      console.error("[reaction] text-marker fallback failed:", textErr.message);
+      return;
+    }
     refetchMessages();
   };
 
@@ -225,6 +265,7 @@ export const ChatLayout = () => {
                 table={table}
                 recentMessages={recentForAxon}
                 onAfterSend={refetchMessages}
+                members={channelMembers}
               />
             </motion.div>
           ) : (

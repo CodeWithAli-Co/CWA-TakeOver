@@ -24,6 +24,7 @@ import {
   Avatar, AvatarFallback, AvatarImage,
 } from "@/components/ui/shadcnComponents/avatar";
 import { ReactionPicker } from "./ReactionPicker";
+import { MessageText } from "./MessageText";
 import { MessageInterface } from "@/stores/query";
 import { formatDistanceToNow, isValid, format } from "date-fns";
 
@@ -89,6 +90,45 @@ function extractReplyMarker(
   };
 }
 
+/** Reactions marker — stored at the top of the message body when the
+ *  `reactions` DB column doesn't exist. Format:
+ *  `{rx:<emoji>=<user1>,<user2>;<emoji>=<user>}` on its own line.
+ *  Encoded values are comma-separated usernames per emoji. */
+export const REACTIONS_MARKER_RE = /^\{rx:([^}]*)\}\s*\n?/;
+
+export function parseReactionsMarker(text: string): Record<string, string[]> {
+  const match = text.match(REACTIONS_MARKER_RE);
+  if (!match) return {};
+  const body = match[1] ?? "";
+  const out: Record<string, string[]> = {};
+  for (const chunk of body.split(";")) {
+    const piece = chunk.trim();
+    if (!piece) continue;
+    const eq = piece.indexOf("=");
+    if (eq < 0) continue;
+    const emoji = piece.slice(0, eq).trim();
+    const users = piece.slice(eq + 1).split(",").map((u) => u.trim()).filter(Boolean);
+    if (emoji) out[emoji] = users;
+  }
+  return out;
+}
+
+export function stripReactionsMarker(text: string): string {
+  return text.replace(REACTIONS_MARKER_RE, "").trimStart();
+}
+
+export function encodeReactionsMarker(
+  reactions: Record<string, string[]>,
+): string {
+  const parts: string[] = [];
+  for (const [emoji, users] of Object.entries(reactions)) {
+    if (!users || users.length === 0) continue;
+    parts.push(`${emoji}=${users.join(",")}`);
+  }
+  if (parts.length === 0) return "";
+  return `{rx:${parts.join(";")}}\n`;
+}
+
 export const MessageBubble: React.FC<Props> = ({
   msg, prevMsg, currentUsername,
   onReact, onReply, onJumpTo,
@@ -105,9 +145,6 @@ export const MessageBubble: React.FC<Props> = ({
     && msg.created_at && prevMsg.created_at
     && (new Date(msg.created_at).getTime() - new Date(prevMsg.created_at).getTime()) < 5 * 60 * 1000;
 
-  const reactions = msg.reactions || {};
-  const reactionEntries = Object.entries(reactions).filter(([, users]) => users.length > 0);
-
   const handleReactClick = (emoji: string) => {
     onReact(msg.msg_id, emoji);
     setShowPicker(false);
@@ -116,15 +153,20 @@ export const MessageBubble: React.FC<Props> = ({
   const readBy = (msg.read_by || []).filter((u) => u !== msg.sent_by);
   const isPinned = !!msg.pinned_at;
 
-  // Strip embedded markers before rendering. The composer prepends a reply
-  // marker + appends image URLs so replies/images survive even when the
-  // `reply_to` / `image_urls` DB columns don't exist.
+  // Strip embedded markers before rendering. The composer prepends reply
+  // + reactions markers + appends image URLs so each survives even when
+  // the corresponding DB column doesn't exist.
   let displayText: string = msg.message ?? "";
   let images: string[] = msg.image_urls ?? [];
   let parsedReplyId: number | null = null;
   let parsedReplySender: string | null = null;
+  let parsedReactions: Record<string, string[]> = {};
 
   if (displayText) {
+    // reactions first (they're always at the top if present)
+    parsedReactions = parseReactionsMarker(displayText);
+    displayText = stripReactionsMarker(displayText);
+
     const r = extractReplyMarker(displayText);
     displayText = r.cleanText;
     parsedReplyId = r.replyId;
@@ -137,6 +179,15 @@ export const MessageBubble: React.FC<Props> = ({
       displayText = extracted.cleanText;
     }
   }
+
+  // Effective reactions: prefer DB column; fall back to parsed marker.
+  const reactions: Record<string, string[]> =
+    msg.reactions && Object.keys(msg.reactions).length > 0
+      ? msg.reactions
+      : parsedReactions;
+  const reactionEntries = Object.entries(reactions).filter(
+    ([, users]) => users.length > 0,
+  );
 
   // Resolve the replied-to target. Prefer DB column; fall back to the
   // parsed marker. When the target message isn't in the currently-loaded
@@ -219,11 +270,9 @@ export const MessageBubble: React.FC<Props> = ({
           </motion.button>
         )}
 
-        {/* Body */}
+        {/* Body — rendered with markdown + URL embeds + @mention highlight */}
         {displayText && (
-          <div className="text-[13.5px] text-foreground/85 break-words leading-relaxed whitespace-pre-wrap">
-            {displayText}
-          </div>
+          <MessageText text={displayText} currentUsername={currentUsername} />
         )}
 
         {/* Image gallery */}

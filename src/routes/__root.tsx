@@ -109,6 +109,13 @@ export const Route = createRootRoute({
         }
       };
 
+      // Detect @username mentions in the message text.
+      const isMentioned = (text: string): boolean => {
+        if (!currentUsername || !text) return false;
+        const re = new RegExp(`(^|\\s)@${currentUsername}(?![A-Za-z0-9_.-])`, "i");
+        return re.test(text);
+      };
+
       const unreadChannel = supabase
         .channel("unread-tracker")
         .on(
@@ -117,14 +124,23 @@ export const Route = createRootRoute({
           (payload) => {
             const groupName = payload.new.dm_group;
             const sentBy = payload.new.sent_by;
+            const body = payload.new.message || "";
             if (sentBy === currentUsername) return;
             const viewing = isOnChatPage() && GroupName === groupName;
-            if (!viewing) {
-              incrementUnread(groupName);
-              if (!isGroupMuted(groupName)) {
+            const mentioned = isMentioned(body);
+            if (!viewing || mentioned) {
+              if (!viewing) incrementUnread(groupName);
+              // Mentions bypass the mute check — if someone @s you we notify.
+              const muted = isGroupMuted(groupName);
+              if (mentioned) {
+                fireNotify(
+                  `${sentBy} mentioned you in ${groupName}`,
+                  body || "[attachment]",
+                );
+              } else if (!muted) {
                 fireNotify(
                   `New message in ${groupName}`,
-                  `${sentBy}: ${payload.new.message || "[attachment]"}`,
+                  `${sentBy}: ${body || "[attachment]"}`,
                 );
               }
             }
@@ -135,14 +151,22 @@ export const Route = createRootRoute({
           { event: "INSERT", schema: "public", table: "cwa_chat" },
           (payload) => {
             const sentBy = payload.new.sent_by;
+            const body = payload.new.message || "";
             if (sentBy === currentUsername) return;
             const viewing = isOnChatPage() && GroupName === "General";
-            if (!viewing) {
-              incrementUnread("General");
-              if (!isGroupMuted("General")) {
+            const mentioned = isMentioned(body);
+            if (!viewing || mentioned) {
+              if (!viewing) incrementUnread("General");
+              const muted = isGroupMuted("General");
+              if (mentioned) {
+                fireNotify(
+                  `${sentBy} mentioned you in General`,
+                  body || "[attachment]",
+                );
+              } else if (!muted) {
                 fireNotify(
                   "New message in General",
-                  `${sentBy}: ${payload.new.message || "[attachment]"}`,
+                  `${sentBy}: ${body || "[attachment]"}`,
                 );
               }
             }
