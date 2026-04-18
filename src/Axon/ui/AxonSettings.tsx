@@ -6,14 +6,36 @@ import { useEffect, useState } from "react";
 import { useAxon } from "../AxonProvider";
 import { getAvailableVoices } from "../engine/voiceOutput";
 import { MONITORS } from "../engine/monitors";
+import { enrollVoice } from "../engine/voicePrint";
 
 export function AxonSettingsPane() {
   const { settings, updateSettings, automations } = useAxon();
   const [voices, setVoices] = useState<SpeechSynthesisVoice[]>([]);
+  const [enrolling, setEnrolling] = useState(false);
+  const [enrollStatus, setEnrollStatus] = useState<string | null>(null);
 
   useEffect(() => {
     getAvailableVoices().then(setVoices);
   }, []);
+
+  const doEnroll = async () => {
+    setEnrolling(true);
+    setEnrollStatus("Recording — speak naturally for 5 seconds…");
+    try {
+      const vec = await enrollVoice();
+      if (!vec) {
+        setEnrollStatus("Couldn't enroll — check mic permission and try again.");
+      } else {
+        updateSettings({ voicePrint: vec });
+        setEnrollStatus("Enrolled. AXON will prefer your voice now.");
+      }
+    } catch (e) {
+      setEnrollStatus(`Error: ${e instanceof Error ? e.message : String(e)}`);
+    } finally {
+      setEnrolling(false);
+      setTimeout(() => setEnrollStatus(null), 6000);
+    }
+  };
 
   return (
     <div style={{ padding: 2 }}>
@@ -47,6 +69,92 @@ export function AxonSettingsPane() {
             onChange={(e) => updateSettings({ autoGreet: e.target.checked })}
           />
         </div>
+        <div className="axon-settings-row">
+          <span>Dry-run mode</span>
+          <input
+            className="axon-switch"
+            type="checkbox"
+            checked={settings.dryRun}
+            onChange={(e) => updateSettings({ dryRun: e.target.checked })}
+          />
+        </div>
+        <div style={{ fontSize: 11, color: "var(--axon-muted)", marginTop: -4, marginBottom: 8 }}>
+          When on, mutating actions report what they'd do without doing it.
+        </div>
+      </div>
+
+      {/* Vision */}
+      <div className="axon-settings-group">
+        <label className="axon-settings-label">Vision</label>
+        <label className="axon-settings-label" style={{ fontSize: 9.5, opacity: 0.7 }}>
+          When to capture a screenshot for Claude
+        </label>
+        <select
+          className="axon-settings-select"
+          value={settings.visionMode}
+          onChange={(e) =>
+            updateSettings({ visionMode: e.target.value as "off" | "auto" | "always" })
+          }
+        >
+          <option value="off">Off — never capture</option>
+          <option value="auto">Auto — when the question implies vision</option>
+          <option value="always">Always — every turn</option>
+        </select>
+        <div className="axon-hint">
+          Requires <code>html2canvas</code>. Install with{" "}
+          <code>bun add html2canvas</code>. Without it AXON falls back to text-only.
+        </div>
+      </div>
+
+      {/* Voice identity */}
+      <div className="axon-settings-group">
+        <label className="axon-settings-label">Voice identity</label>
+        <div style={{ fontSize: 12, color: "var(--axon-muted)", marginBottom: 10, lineHeight: 1.5 }}>
+          Enroll your voice so AXON prefers yours. Best-effort filter —
+          stops most other voices from activating, but not a security measure.
+        </div>
+        <div className="axon-settings-row">
+          <button
+            className="axon-btn"
+            onClick={doEnroll}
+            disabled={enrolling}
+            style={{ width: "100%" }}
+          >
+            {enrolling ? "Enrolling…" : settings.voicePrint ? "Re-enroll voice" : "Enroll your voice (5s)"}
+          </button>
+        </div>
+        {settings.voicePrint && (
+          <div className="axon-settings-row">
+            <button
+              className="axon-btn"
+              onClick={() => updateSettings({ voicePrint: null })}
+              style={{ width: "100%" }}
+            >
+              Clear enrollment
+            </button>
+          </div>
+        )}
+        {settings.voicePrint && (
+          <>
+            <label className="axon-settings-label" style={{ fontSize: 9.5, opacity: 0.7, marginTop: 8 }}>
+              Match threshold · {settings.voicePrintThreshold.toFixed(2)}
+            </label>
+            <input
+              className="axon-settings-range"
+              type="range"
+              min="0"
+              max="1"
+              step="0.05"
+              value={settings.voicePrintThreshold}
+              onChange={(e) =>
+                updateSettings({ voicePrintThreshold: Number(e.target.value) })
+              }
+            />
+          </>
+        )}
+        {enrollStatus && (
+          <div className="axon-hint">{enrollStatus}</div>
+        )}
       </div>
 
       {/* Wake / sleep */}

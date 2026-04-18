@@ -5,6 +5,7 @@
 
 import type { ActionContext, AxonActionResult } from "../types";
 import { getAction } from "../actions/registry";
+import { appendAudit } from "./auditLog";
 
 export interface ExecuteOutcome {
   ok: boolean;
@@ -61,10 +62,34 @@ export async function executeAction(
 
   try {
     const result = await action.handler(input as any, ctx);
+    // Audit mutating actions (both real runs and dry-runs).
+    if (action.mutating) {
+      appendAudit({
+        actionName,
+        params: input,
+        summary: result.summary,
+        success: true,
+        operator: ctx.operator.username,
+        activeCompany: ctx.activeCompany,
+        dryRun: ctx.dryRun,
+      });
+    }
     return { ok: true, result, actionName };
   } catch (e) {
     const message = e instanceof Error ? e.message : String(e);
     console.error(`[AXON] Action ${actionName} threw:`, e);
+    if (action.mutating) {
+      appendAudit({
+        actionName,
+        params: input,
+        summary: "failed",
+        success: false,
+        error: message,
+        operator: ctx.operator.username,
+        activeCompany: ctx.activeCompany,
+        dryRun: ctx.dryRun,
+      });
+    }
     return { ok: false, error: message, actionName };
   }
 }

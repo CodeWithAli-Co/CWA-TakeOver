@@ -92,6 +92,8 @@ export interface ActionContext {
   operator: OperatorContext;
   activeCompany: CompanyFilter;
   currentPath: string;
+  /** When true, mutating actions should describe the action without performing it. */
+  dryRun: boolean;
   /** Navigate wrapper — thin adapter over TanStack Router. */
   navigate: (to: string) => void;
   /** Switch the active company — wraps useCompanyFilter. */
@@ -104,6 +106,8 @@ export interface ActionContext {
   logActivity: (entry: Omit<ExecutedAction, "id" | "timestamp">) => void;
   /** Ask the operator for a yes/no confirmation. Resolves with the answer. */
   requestConfirmation: (message: string) => Promise<boolean>;
+  /** Register a reversible-action entry. AXON can then run undo_last. */
+  pushUndo: (entry: { actionName: string; label: string; undo: () => Promise<string> }) => void;
 }
 
 export interface OperatorContext {
@@ -131,6 +135,14 @@ export interface AxonSettings {
   autoGreet: boolean;
   /** Emit a short observation when the operator navigates. */
   proactiveRouteObservations: boolean;
+  /** Vision mode — off / auto (on visual-intent keywords) / always capture. */
+  visionMode: "off" | "auto" | "always";
+  /** Dry-run: mutating actions report what they would do without doing it. */
+  dryRun: boolean;
+  /** Voice identity enrollment vector (mean MFCC-ish features). null = disabled. */
+  voicePrint: number[] | null;
+  /** Cosine-similarity threshold for voice identity; below this → reject. */
+  voicePrintThreshold: number;
   /** Push-to-talk keyboard shortcut. */
   pushToTalkShortcut: string;
   /** Preferred synthesis voice name. */
@@ -159,6 +171,10 @@ export const DEFAULT_SETTINGS: AxonSettings = {
   interruptPhrases: ["stop", "shut up", "quiet", "cancel", "never mind", "hold on", "wait"],
   autoGreet: true,
   proactiveRouteObservations: true,
+  visionMode: "auto",
+  dryRun: false,
+  voicePrint: null,
+  voicePrintThreshold: 0.7,
   pushToTalkShortcut: "Control+Space",
   preferredVoice: null,
   rate: 1.02,

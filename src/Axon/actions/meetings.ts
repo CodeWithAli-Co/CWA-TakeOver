@@ -111,12 +111,38 @@ export const createMeetingAction: AxonAction<
       row.hybrid_location = { address: input.location ?? "", url: input.url };
     }
 
+    const when = timeIso ? `${dateIso} at ${timeIso}` : dateIso;
+
+    if (ctx.dryRun) {
+      return {
+        summary: `[dry-run] Would schedule "${input.title}" for ${when}.`,
+        data: { id: null },
+      };
+    }
+
     const { data, error } = await supabase.from("cwa_meetings").insert(row).select().single();
     if (error) {
       return { summary: `Couldn't save that meeting. ${error.message}` };
     }
 
-    const when = timeIso ? `${dateIso} at ${timeIso}` : dateIso;
+    // Register undo.
+    if (data?.id) {
+      const deleteId = data.id;
+      const title = input.title;
+      ctx.pushUndo({
+        actionName: "create_meeting",
+        label: `scheduling of "${title}"`,
+        undo: async () => {
+          const { error: e2 } = await supabase
+            .from("cwa_meetings")
+            .delete()
+            .eq("id", deleteId);
+          if (e2) throw new Error(e2.message);
+          return `Cancelled meeting "${title}".`;
+        },
+      });
+    }
+
     ctx.logActivity({
       actionName: "create_meeting",
       params: input as Record<string, unknown>,

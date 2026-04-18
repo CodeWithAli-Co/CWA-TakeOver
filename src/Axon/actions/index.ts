@@ -11,6 +11,7 @@ import { registerMeetingActions } from "./meetings";
 import { registerDomActions } from "./dom";
 import { registerRoutineActions } from "./routines";
 import { registerMemoryActions } from "./memory";
+import { registerTrustActions } from "./trust";
 
 let registered = false;
 
@@ -28,4 +29,5 @@ export function registerAllActions() {
   registerDomActions();
   registerRoutineActions();
   registerMemoryActions();
+  registerTrustActions();
 }

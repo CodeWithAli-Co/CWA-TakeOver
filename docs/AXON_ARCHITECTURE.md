@@ -63,22 +63,26 @@ src/Axon/
 ├── axon.css                      ← scoped styles (uses --brand-accent)
 │
 ├── engine/                       ← pure logic, no React
-│   ├── brain.ts                  ← Claude SSE streaming + tool loop
-│   ├── executor.ts               ← dispatch actions w/ role+confidence gate
+│   ├── brain.ts                  ← Claude SSE streaming + tool loop + vision
+│   ├── executor.ts               ← dispatch actions + role/confidence/audit
 │   ├── voiceInput.ts             ← Web Speech Recognition + wake/sleep FSM
 │   ├── voiceOutput.ts            ← Web Speech Synthesis + ElevenLabs stream
 │   ├── monitors.ts               ← background anomaly checks
 │   ├── memory.ts                 ← persistent local store (localStorage)
 │   ├── summarizer.ts             ← compress old turns via Claude
 │   ├── screenContext.ts          ← capture visible page text for "this/that"
-│   └── routeObservations.ts      ← proactive one-liners on navigation
+│   ├── visionCapture.ts          ← screenshot capture for Claude vision
+│   ├── routeObservations.ts      ← proactive one-liners on navigation
+│   ├── auditLog.ts               ← persistent mutation log
+│   ├── undoStack.ts              ← session-scoped reversible actions
+│   └── voicePrint.ts             ← voice identity fingerprint + verify
 │
 ├── actions/                      ← all tools AXON can invoke
 │   ├── registry.ts               ← register / list / build tool defs
 │   ├── index.ts                  ← registerAllActions() called on provider mount
 │   ├── navigation.ts             ← navigate, go_back
 │   ├── company.ts                ← switch_company, which_company
-│   ├── tasks.ts                  ← CRUD against cwa_todos
+│   ├── tasks.ts                  ← CRUD against cwa_todos (dry-run + undo)
 │   ├── meetings.ts               ← create_meeting against cwa_meetings
 │   ├── data.ts                   ← count_users, recent_signups, etc.
 │   ├── briefing.ts               ← brief_me (compound action)
@@ -86,11 +90,12 @@ src/Axon/
 │   ├── automations.ts            ← schedule/list/cancel (session-scoped)
 │   ├── dom.ts                    ← fill_input, click_button, read_screen
 │   ├── memory.ts                 ← remember_note, set_preference
-│   └── routines.ts               ← run_routine (morning, focus, eod)
+│   ├── routines.ts               ← run_routine (morning, focus, eod)
+│   └── trust.ts                  ← undo_last, list_undoable, what_would_undo
 │
 └── ui/
     ├── Orb.tsx                   ← plasma sphere canvas
-    ├── CommandPanel.tsx          ← slide-in glass panel
+    ├── CommandPanel.tsx          ← slide-in glass panel (4 tabs)
     ├── SubtitleOverlay.tsx       ← floating captions near orb
     ├── AxonSettings.tsx          ← settings pane inside the panel
     ├── ConfirmDialog.tsx         ← modal for destructive actions
@@ -211,12 +216,15 @@ registerAction({
 
 | State                        | Lives in                         | Persistence                |
 | ---------------------------- | -------------------------------- | -------------------------- |
-| Settings                     | `AxonProvider` → localStorage    | `axon:settings:v2`         |
+| Settings                     | `AxonProvider` → localStorage    | `axon:settings:v3`         |
 | Persistent memory            | `engine/memory.ts` → localStorage| `axon:memory:v1` (30d cap) |
+| Audit log                    | `engine/auditLog.ts` → localStorage | `axon:audit:v1` (200 rows) |
+| Undo stack                   | `engine/undoStack.ts` module     | **Session only** (20 cap)  |
 | Conversation turns           | `AxonProvider` state             | **Session only**           |
 | Activity log                 | `AxonProvider` state             | **Session only**           |
 | Session automations          | `actions/automations.ts` module  | **Session only**           |
 | Voice state (standby/armed)  | `VoiceInput` instance            | **Session only**           |
+| Voice print vector           | Settings → localStorage          | Persistent (via settings)  |
 | Orb position                 | `AxonProvider` state             | Session (reset on reload)  |
 | Conversation summary         | `AxonProvider` ref               | Session only               |
 

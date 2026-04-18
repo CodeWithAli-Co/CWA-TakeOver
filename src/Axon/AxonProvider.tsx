@@ -54,6 +54,7 @@ import { MONITORS } from "./engine/monitors";
 import { loadMemory, saveMemory } from "./engine/memory";
 import { summarizeTurns } from "./engine/summarizer";
 import { observeRoute } from "./engine/routeObservations";
+import { pushUndo as pushUndoStack } from "./engine/undoStack";
 
 registerAllActions();
 
@@ -202,6 +203,7 @@ export function AxonProvider({ children }: { children: React.ReactNode }) {
       operator: op,
       activeCompany: activeCompanyRef.current,
       currentPath: pathRef.current,
+      dryRun: settingsRef.current.dryRun,
       navigate: (to: string) => navigate({ to: to as any }),
       setActiveCompany: (c) => setActiveCompany(c),
       speak: (text: string) => voiceOutRef.current?.speak(text),
@@ -215,6 +217,7 @@ export function AxonProvider({ children }: { children: React.ReactNode }) {
         }),
       logActivity: appendActivity,
       requestConfirmation,
+      pushUndo: (entry) => pushUndoStack(entry),
     };
   }, [navigate, setActiveCompany, appendActivity, appendTurn, requestConfirmation]);
 
@@ -246,6 +249,7 @@ export function AxonProvider({ children }: { children: React.ReactNode }) {
       const res = await runTurn(clean, conversationRef.current, ctx, {
         confidence,
         summary: summaryRef.current,
+        visionMode: settingsRef.current.visionMode,
         onSentence: (s) => {
           // Skip empty-after-sanitize fragments (pure markdown/bullets).
           const meaningful = s.replace(/[*_`|#~\-•>]/g, "").trim();

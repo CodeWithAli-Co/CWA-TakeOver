@@ -125,16 +125,13 @@ export const createTaskAction: AxonAction<
       ? input.assignee
       : input.assignee
       ? [input.assignee]
-      : [ctx.operator.username]; // self-assign by default
+      : [ctx.operator.username];
 
-    // Infer priority from language if not explicit.
     const inferredPriority = inferPriority(
       `${input.title} ${input.description ?? ""}`
     );
     const priority = input.priority ?? inferredPriority ?? "medium";
     const priorityOrder = priority === "high" ? 3 : priority === "medium" ? 2 : 1;
-
-    // Deadline: explicit → parsed. Missing → end of current week.
     const parsedDeadline = parseDeadline(input.deadline) ?? defaultDeadline();
 
     const row = {
@@ -149,6 +146,16 @@ export const createTaskAction: AxonAction<
       company: input.company ?? companyLabel(ctx.activeCompany),
     };
 
+    const when = row.deadline ? ` due ${new Date(row.deadline).toLocaleDateString()}` : "";
+
+    // DRY-RUN — describe, don't execute.
+    if (ctx.dryRun) {
+      return {
+        summary: `[dry-run] Would create task "${input.title}"${when}, assigned to ${assigneeArr.join(", ")}, priority ${priority}.`,
+        data: { todo_id: -1 },
+      };
+    }
+
     const { data, error } = await supabase
       .from("cwa_todos")
       .insert(row)
@@ -159,6 +166,21 @@ export const createTaskAction: AxonAction<
       return { summary: `Failed to create task: ${error.message}` };
     }
 
+    // Register undo — delete the just-created row.
+    const createdId = data.todo_id;
+    ctx.pushUndo({
+      actionName: "create_task",
+      label: `create of "${input.title}"`,
+      undo: async () => {
+        const { error: e2 } = await supabase
+          .from("cwa_todos")
+          .delete()
+          .eq("todo_id", createdId);
+        if (e2) throw new Error(e2.message);
+        return `Reverted — deleted task "${input.title}".`;
+      },
+    });
+
     ctx.logActivity({
       actionName: "create_task",
       params: input as Record<string, unknown>,
@@ -166,10 +188,9 @@ export const createTaskAction: AxonAction<
       result: data,
     });
 
-    const when = row.deadline ? ` due ${new Date(row.deadline).toLocaleDateString()}` : "";
     return {
       summary: `Task created: "${input.title}"${when}.`,
-      data: { todo_id: data.todo_id },
+      data: { todo_id: createdId },
     };
   },
 };
@@ -272,19 +293,37 @@ export const updateTaskStatusAction: AxonAction<
   handler: async ({ titleOrId, status }, ctx) => {
     const asNum = Number(titleOrId);
     let targetId: number | null = null;
+    let previousStatus: string | null = null;
+    let taskTitle = "";
 
     if (!Number.isNaN(asNum) && Number.isInteger(asNum)) {
       targetId = asNum;
+      const { data: row } = await supabase
+        .from("cwa_todos")
+        .select("status,title")
+        .eq("todo_id", targetId)
+        .single();
+      previousStatus = row?.status ?? null;
+      taskTitle = row?.title ?? `task #${targetId}`;
     } else {
       const { data } = await supabase
         .from("cwa_todos")
-        .select("todo_id,title")
+        .select("todo_id,title,status")
         .ilike("title", `%${titleOrId}%`)
         .limit(1);
       if (!data || data.length === 0) {
         return { summary: `No task matched "${titleOrId}".`, data: { matched: null } };
       }
       targetId = data[0].todo_id;
+      previousStatus = data[0].status;
+      taskTitle = data[0].title;
+    }
+
+    if (ctx.dryRun) {
+      return {
+        summary: `[dry-run] Would change "${taskTitle}" from ${previousStatus ?? "?"} to ${status}.`,
+        data: { matched: targetId },
+      };
     }
 
     const { error } = await supabase
@@ -293,6 +332,24 @@ export const updateTaskStatusAction: AxonAction<
       .eq("todo_id", targetId);
 
     if (error) return { summary: `Update failed: ${error.message}`, data: { matched: null } };
+
+    // Register undo — restore previous status.
+    if (previousStatus && previousStatus !== status) {
+      const restoreId = targetId;
+      const restoreStatus = previousStatus;
+      ctx.pushUndo({
+        actionName: "update_task_status",
+        label: `status change on "${taskTitle}"`,
+        undo: async () => {
+          const { error: e2 } = await supabase
+            .from("cwa_todos")
+            .update({ status: restoreStatus })
+            .eq("todo_id", restoreId);
+          if (e2) throw new Error(e2.message);
+          return `Reverted "${taskTitle}" back to ${restoreStatus}.`;
+        },
+      });
+    }
 
     ctx.logActivity({
       actionName: "update_task_status",
@@ -326,13 +383,21 @@ export const deleteTaskAction: AxonAction<
     const asNum = Number(titleOrId);
     let targetId: number | null = null;
     let title = titleOrId;
+    let snapshot: Record<string, unknown> | null = null;
 
     if (!Number.isNaN(asNum) && Number.isInteger(asNum)) {
       targetId = asNum;
+      const { data: row } = await supabase
+        .from("cwa_todos")
+        .select("*")
+        .eq("todo_id", targetId)
+        .single();
+      snapshot = row ?? null;
+      title = (row?.title as string | undefined) ?? title;
     } else {
       const { data } = await supabase
         .from("cwa_todos")
-        .select("todo_id,title")
+        .select("*")
         .ilike("title", `%${titleOrId}%`)
         .limit(1);
       if (!data || data.length === 0) {
@@ -340,15 +405,38 @@ export const deleteTaskAction: AxonAction<
       }
       targetId = data[0].todo_id;
       title = data[0].title;
+      snapshot = data[0];
+    }
+
+    if (ctx.dryRun) {
+      return {
+        summary: `[dry-run] Would delete "${title}".`,
+        data: { deleted: targetId },
+      };
     }
 
     const confirmed = await ctx.requestConfirmation(
-      `Delete task "${title}"? This cannot be undone.`
+      `Delete task "${title}"?`
     );
     if (!confirmed) return { summary: "Deletion cancelled.", data: { deleted: null } };
 
     const { error } = await supabase.from("cwa_todos").delete().eq("todo_id", targetId);
     if (error) return { summary: `Delete failed: ${error.message}` };
+
+    // Register undo — reinsert the full snapshot.
+    if (snapshot) {
+      const restoreSnap = snapshot;
+      const restoredTitle = title;
+      ctx.pushUndo({
+        actionName: "delete_task",
+        label: `deletion of "${restoredTitle}"`,
+        undo: async () => {
+          const { error: e2 } = await supabase.from("cwa_todos").insert(restoreSnap);
+          if (e2) throw new Error(e2.message);
+          return `Restored "${restoredTitle}".`;
+        },
+      });
+    }
 
     ctx.logActivity({
       actionName: "delete_task",

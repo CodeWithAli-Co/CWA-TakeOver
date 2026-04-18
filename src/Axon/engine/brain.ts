@@ -21,9 +21,18 @@ import { buildToolDefinitions } from "../actions/registry";
 import { executeAction } from "./executor";
 import { captureScreenContext } from "./screenContext";
 import { loadMemory, memoryPreamble, sinceLastSeen } from "./memory";
+import {
+  captureScreenshot,
+  dataUrlToBase64,
+  suggestsVision,
+} from "./visionCapture";
 
 // ── types ─────────────────────────────────────────────────────
 type TextBlock = { type: "text"; text: string };
+type ImageBlock = {
+  type: "image";
+  source: { type: "base64"; media_type: string; data: string };
+};
 type ToolUseBlock = {
   type: "tool_use";
   id: string;
@@ -36,7 +45,7 @@ type ToolResultBlock = {
   content: string;
   is_error?: boolean;
 };
-type ContentBlock = TextBlock | ToolUseBlock | ToolResultBlock;
+type ContentBlock = TextBlock | ImageBlock | ToolUseBlock | ToolResultBlock;
 
 interface AnthropicMessage {
   role: "user" | "assistant";
@@ -52,6 +61,8 @@ export interface BrainRunOpts {
   confidence?: number;
   /** Optional prior-conversation summary injected into the preamble. */
   summary?: string | null;
+  /** Vision: never / auto (on keywords) / always. */
+  visionMode?: "off" | "auto" | "always";
   /** Fires with incremental text as the FINAL assistant text streams in. */
   onTextDelta?: (chunk: string) => void;
   /** Fires once per completed sentence — handy for sentence-by-sentence TTS. */
@@ -291,11 +302,38 @@ export async function runTurn(
       ? `\n[voice transcript confidence: ${Math.round(opts.confidence * 100)}% — confirm destructive actions]`
       : "";
 
+  // ── Vision — capture screenshot when the question implies visual perception.
+  const visionMode = opts.visionMode ?? "auto";
+  const wantVision =
+    visionMode === "always" || (visionMode === "auto" && suggestsVision(userText));
+
+  let screenshot: { dataUrl: string; mediaType: "image/png" } | null = null;
+  if (wantVision) {
+    screenshot = await captureScreenshot({ maxWidth: 1400 });
+  }
+
   const historyMsgs = serializeHistory(history);
+
+  // Build the priming content. Include an image block if we captured one.
+  const textPart = `${preamble}${confidenceNote}\n\nOperator command: ${userText}`;
+  const primingContent: ContentBlock[] = [];
+  if (screenshot) {
+    primingContent.push({
+      type: "image",
+      source: {
+        type: "base64",
+        media_type: screenshot.mediaType,
+        data: dataUrlToBase64(screenshot.dataUrl),
+      },
+    });
+  }
+  primingContent.push({ type: "text", text: textPart });
+
   const primingMsg: AnthropicMessage = {
     role: "user",
-    content: `${preamble}${confidenceNote}\n\nOperator command: ${userText}`,
+    content: screenshot ? primingContent : textPart,
   };
+
   if (historyMsgs.length > 0 && historyMsgs[historyMsgs.length - 1].role === "user") {
     historyMsgs[historyMsgs.length - 1] = primingMsg;
   } else {

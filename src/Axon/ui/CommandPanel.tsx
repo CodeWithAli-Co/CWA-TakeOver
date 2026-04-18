@@ -9,8 +9,9 @@ import { useCompanyFilter } from "@/stores/store";
 import { ANTHROPIC_API_KEY } from "../config";
 import { AxonSettingsPane } from "./AxonSettings";
 import { quicksFor } from "./quickCommandsMap";
+import { listAudit, type AuditEntry } from "../engine/auditLog";
 
-type Tab = "conversation" | "activity" | "settings";
+type Tab = "conversation" | "activity" | "audit" | "settings";
 
 function formatTime(ms: number): string {
   return new Date(ms).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
@@ -118,6 +119,13 @@ export function CommandPanel() {
           </button>
           <button
             className="axon-tab"
+            data-active={tab === "audit"}
+            onClick={() => setTab("audit")}
+          >
+            Audit
+          </button>
+          <button
+            className="axon-tab"
             data-active={tab === "settings"}
             onClick={() => setTab("settings")}
           >
@@ -128,6 +136,7 @@ export function CommandPanel() {
         <div ref={scrollRef} className="axon-pane">
           {tab === "conversation" && <ConversationPane />}
           {tab === "activity" && <ActivityPane />}
+          {tab === "audit" && <AuditPane />}
           {tab === "settings" && <AxonSettingsPane />}
 
           {!ANTHROPIC_API_KEY && tab === "conversation" && (
@@ -257,6 +266,59 @@ function ActivityPane() {
             <span className="axon-activity-time">{formatTime(a.timestamp)}</span>
           </div>
         ))}
+    </>
+  );
+}
+
+function AuditPane() {
+  const [rows, setRows] = useState<AuditEntry[]>(() => listAudit({ limit: 100 }));
+  useEffect(() => {
+    // Refresh on mount + every 5s while the tab is visible.
+    const id = window.setInterval(() => setRows(listAudit({ limit: 100 })), 5000);
+    return () => clearInterval(id);
+  }, []);
+  if (rows.length === 0) {
+    return (
+      <div style={{ color: "var(--axon-muted)", fontSize: 12.5, padding: 12, lineHeight: 1.55 }}>
+        No mutating actions yet. The audit log is persistent — it survives reloads. Every
+        create, update, or delete AXON makes lands here with the operator, company, and
+        timestamp.
+      </div>
+    );
+  }
+  return (
+    <>
+      {rows.map((r) => (
+        <div
+          key={r.id}
+          className="axon-activity-row"
+          data-error={!r.success}
+          style={{ opacity: r.undone ? 0.5 : 1 }}
+        >
+          <div style={{ minWidth: 0, flex: 1 }}>
+            <span className="axon-activity-name">
+              {r.actionName}
+              {r.dryRun && <span style={{ color: "var(--axon-muted)", marginLeft: 8, fontSize: 10 }}>dry-run</span>}
+              {r.undone && <span style={{ color: "var(--axon-muted)", marginLeft: 8, fontSize: 10 }}>undone</span>}
+            </span>
+            <div style={{ fontSize: 11.5, color: "var(--axon-muted)", marginTop: 2 }}>
+              {r.summary}
+              {r.error ? ` — ${r.error}` : ""}
+            </div>
+            <div style={{ fontSize: 10, color: "var(--axon-muted)", marginTop: 2, opacity: 0.7 }}>
+              {r.operator} · {r.activeCompany}
+            </div>
+          </div>
+          <span className="axon-activity-time">
+            {new Date(r.timestamp).toLocaleString([], {
+              month: "short",
+              day: "numeric",
+              hour: "2-digit",
+              minute: "2-digit",
+            })}
+          </span>
+        </div>
+      ))}
     </>
   );
 }

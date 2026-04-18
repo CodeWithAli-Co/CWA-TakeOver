@@ -158,6 +158,21 @@ the listed wording is one shape among many.
 - "Remember that we're planning the Q2 roadmap this month"
 - "Forget everything you know about me" *(confirms first)*
 
+### Vision (requires `html2canvas` + `VITE_ANTHROPIC_API_KEY`)
+- "Axon, what's on this screen?" — captures a screenshot and describes it
+- "What does this chart show?"
+- "Is this invoice formatted correctly?"
+- "Take a look at this" / "What do you see?"
+- Vision auto-triggers on keywords (see, look, chart, picture, screen).
+  Set mode in Settings → Vision: **off / auto / always**.
+
+### Undo & safety
+- "Undo that" / "Revert" / "Take it back" — reverses the last mutation
+- "What would undo do?" — previews the reversal
+- "List undoable" — shows the stack (most recent first)
+- "Dry run: [command]" — if you set dryRun in Settings, AXON describes the
+  action without actually performing it
+
 ### Pronoun resolution
 - "Mark **that** as done"
 - "Open **the first one**"
@@ -309,8 +324,12 @@ overdue" — fires in-session. Listed under Settings → Active automations.
 | ElevenLabs voice id       | Unset              | Enables premium voice if key is set         |
 | Anomaly monitors          | None on            | Pick which monitors run                     |
 | Confidence threshold      | 0.55               | Below this → forced confirm on mutations    |
+| Dry-run mode              | Off                | Mutating actions describe without doing     |
+| Vision mode               | Auto               | Off / Auto / Always capture screenshots     |
+| Voice identity            | Off                | Enroll your voice as a best-effort filter   |
+| Voice match threshold     | 0.70               | Cosine similarity minimum for voice match   |
 
-Settings persist in `localStorage` at key `axon:settings:v2`.
+Settings persist in `localStorage` at key `axon:settings:v3`.
 
 ---
 
@@ -377,12 +396,18 @@ BRIEF       : Brief me              RECAP  : What happened while I was away?
 
 Honest boundaries:
 
-- **No voice identity.** Anyone with mic access and the right role can
-  command him. Voiceprint auth is a future addition.
+- **Voice identity is best-effort, not security.** The pitch/timbre
+  filter rejects most background voices but is not authentication.
+  Use role gates for real security.
+- **Vision requires html2canvas.** Without it installed, AXON falls
+  back to text-only perception.
 - **No true offline mode.** He needs the Anthropic API for reasoning.
   Web Speech works offline but he won't understand you without Claude.
 - **No persistent automations.** Scheduled commands are session-scoped.
   A reload drops them.
+- **Undo stack is session-only.** The audit log persists, but the
+  reversal functions don't survive reload. Once you close the app,
+  you can't undo what happened yesterday.
 - **No cross-device sync.** Memory is per-machine.
 - **No learning over time within a session beyond the summary.** He
   won't infer new preferences unless you tell him explicitly with

@@ -24,10 +24,15 @@ export const ANTHROPIC_API_VERSION = "2023-06-01";
 export const AXON_ALLOWED_ROLES = ["Admin", "CEO", "COO"] as const;
 
 /** Storage key for persisted settings (not secrets).
- *  Bumped to v2 — added alwaysListening-on-by-default, autoGreet,
- *  sleep/resume phrases. Bumping drops any stale v1 settings so the
- *  new defaults actually take effect. */
-export const AXON_SETTINGS_KEY = "axon:settings:v2";
+ *  Bumped to v3 — added vision, dryRun, voicePrint. Bumping drops any
+ *  stale prior settings so new defaults take effect cleanly. */
+export const AXON_SETTINGS_KEY = "axon:settings:v3";
+
+/** Audit log persistent key. */
+export const AXON_AUDIT_KEY = "axon:audit:v1";
+
+/** Max audit entries retained. */
+export const AUDIT_MAX_ENTRIES = 200;
 
 /** Max conversation turns kept in memory before trimming oldest. */
 export const MAX_CONVERSATION_TURNS = 40;
