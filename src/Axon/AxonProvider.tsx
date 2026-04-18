@@ -34,7 +34,10 @@ import {
   MAX_CONVERSATION_TURNS,
   NARRATION_DELAY_MS,
   RESUME_ACKS,
+  ROUTE_OBSERVATION_MIN_INTERVAL_MS,
   SLEEP_ACKS,
+  SUMMARY_KEEP_RECENT,
+  SUMMARY_TRIGGER_TURNS,
   WAKE_ACKS,
 } from "./config";
 import { registerAllActions } from "./actions";
@@ -48,6 +51,9 @@ import {
 } from "./engine/voiceInput";
 import { VoiceOutput } from "./engine/voiceOutput";
 import { MONITORS } from "./engine/monitors";
+import { loadMemory, saveMemory } from "./engine/memory";
+import { summarizeTurns } from "./engine/summarizer";
+import { observeRoute } from "./engine/routeObservations";
 
 registerAllActions();
 
@@ -212,9 +218,12 @@ export function AxonProvider({ children }: { children: React.ReactNode }) {
     };
   }, [navigate, setActiveCompany, appendActivity, appendTurn, requestConfirmation]);
 
+  // Summary ref — latest conversation summary (if any).
+  const summaryRef = useRef<string | null>(null);
+
   // ── core: submit a command ──────────────────────────────────────
   const submitCommand = useCallback(
-    async (text: string, modality: "voice" | "text" = "text") => {
+    async (text: string, modality: "voice" | "text" = "text", confidence?: number) => {
       const clean = text.trim();
       if (!clean) return;
       const ctx = buildActionContext();
@@ -225,6 +234,7 @@ export function AxonProvider({ children }: { children: React.ReactNode }) {
         role: "user",
         text: clean,
         modality,
+        confidence,
         timestamp: Date.now(),
       });
 
@@ -234,6 +244,8 @@ export function AxonProvider({ children }: { children: React.ReactNode }) {
       // Stream sentences into TTS as they arrive — speech starts fast.
       let spokeAny = false;
       const res = await runTurn(clean, conversationRef.current, ctx, {
+        confidence,
+        summary: summaryRef.current,
         onSentence: (s) => {
           // Skip empty-after-sanitize fragments (pure markdown/bullets).
           const meaningful = s.replace(/[*_`|#~\-•>]/g, "").trim();
@@ -339,6 +351,7 @@ export function AxonProvider({ children }: { children: React.ReactNode }) {
         wakeWord: settings.wakeWord,
         sleepPhrases: settings.sleepPhrases,
         resumePhrases: settings.resumePhrases,
+        interruptPhrases: settings.interruptPhrases,
         dispatchCooldownMs: 1400,
       },
       {
@@ -359,13 +372,25 @@ export function AxonProvider({ children }: { children: React.ReactNode }) {
         onAudioLevel: (lvl) => setAudioLevel(lvl),
         onIntent: (intent) => {
           setLiveTranscript("");
+          if (intent.kind === "interrupt") {
+            // Cut speech immediately. No ack — the silence IS the ack.
+            voiceOutRef.current?.interrupt();
+            setStatus("idle");
+            appendTurn({
+              id: newId("t"),
+              role: "system",
+              text: "— interrupted —",
+              modality: "system",
+              timestamp: Date.now(),
+            });
+            return;
+          }
           if (intent.kind === "wake") {
             speakLocal(pick(WAKE_ACKS));
             return;
           }
           if (intent.kind === "sleep") {
             speakLocal(pick(SLEEP_ACKS));
-            // Move into dormant; continuous mic stays on but only resume words act.
             vi.setState("dormant");
             return;
           }
@@ -375,7 +400,7 @@ export function AxonProvider({ children }: { children: React.ReactNode }) {
             return;
           }
           if (intent.kind === "command") {
-            submitCommand(intent.text, "voice");
+            submitCommand(intent.text, "voice", intent.confidence);
           }
         },
         onError: (msg) => console.warn("[AXON] voice input:", msg),
@@ -486,11 +511,12 @@ export function AxonProvider({ children }: { children: React.ReactNode }) {
         try {
           const alert = await m.check(ctx);
           if (alert) {
+            // Use voice modality so the subtitle overlay picks it up.
             appendTurn({
               id: newId("t"),
               role: "axon",
               text: `Heads up — ${alert}`,
-              modality: "system",
+              modality: "voice",
               timestamp: Date.now(),
             });
             voiceOutRef.current?.speak(`Heads up. ${alert}`);
@@ -511,23 +537,132 @@ export function AxonProvider({ children }: { children: React.ReactNode }) {
     appendTurn,
   ]);
 
-  // ── PTT fallback (still supported) ──────────────────────────────
+  // ── Keyboard shortcuts ─────────────────────────────────────────
+  // Cmd/Ctrl+K     → toggle panel
+  // Escape         → close panel
+  // Forward slash  → focus composer (if panel open)
+  // Ctrl+Space     → push-to-talk (configurable)
   useEffect(() => {
     if (!isAdmin || !settings.enabled) return;
     const handler = (e: KeyboardEvent) => {
-      const needCtrl = settings.pushToTalkShortcut.toLowerCase().includes("control");
-      const needSpace = settings.pushToTalkShortcut.toLowerCase().includes("space");
+      const target = e.target as HTMLElement | null;
+      const isTyping =
+        target?.tagName === "INPUT" ||
+        target?.tagName === "TEXTAREA" ||
+        target?.isContentEditable;
+
+      // Cmd/Ctrl+K — toggle panel (works even while typing in inputs).
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") {
+        e.preventDefault();
+        setPanelOpen((v) => !v);
+        return;
+      }
+
+      // Escape — close panel (but only if no other modal is open).
+      if (e.key === "Escape" && !isTyping) {
+        if (document.querySelector(".axon-confirm-overlay")) return; // confirm modal wins
+        setPanelOpen(false);
+        return;
+      }
+
+      // "/" — focus composer in the panel.
+      if (e.key === "/" && !isTyping) {
+        const input = document.querySelector<HTMLInputElement>(".axon-composer input");
+        if (input) {
+          e.preventDefault();
+          setPanelOpen(true);
+          // Defer focus so the panel transition has a frame.
+          setTimeout(() => input.focus(), 50);
+        }
+        return;
+      }
+
+      // Push-to-talk shortcut.
+      const shortcut = settings.pushToTalkShortcut.toLowerCase();
+      const needCtrl = shortcut.includes("control");
+      const needShift = shortcut.includes("shift");
+      const needSpace = shortcut.includes("space");
+      if (isTyping) return;
       if (needCtrl && !e.ctrlKey) return;
+      if (needShift && !e.shiftKey) return;
       if (needSpace && e.code !== "Space") return;
-      // Don't steal typing.
-      if ((e.target as HTMLElement)?.tagName === "INPUT") return;
-      if ((e.target as HTMLElement)?.tagName === "TEXTAREA") return;
       e.preventDefault();
       voiceInRef.current?.pushToTalk();
     };
     window.addEventListener("keydown", handler);
     return () => window.removeEventListener("keydown", handler);
   }, [isAdmin, settings.enabled, settings.pushToTalkShortcut]);
+
+  // ── Conversation summarization ─────────────────────────────────
+  // When the turn count exceeds SUMMARY_TRIGGER_TURNS, background-summarize
+  // the older half and keep the last SUMMARY_KEEP_RECENT verbatim.
+  const summarizingRef = useRef(false);
+  useEffect(() => {
+    if (summarizingRef.current) return;
+    if (conversation.length < SUMMARY_TRIGGER_TURNS) return;
+    const toSummarize = conversation.slice(0, conversation.length - SUMMARY_KEEP_RECENT);
+    if (toSummarize.length === 0) return;
+
+    summarizingRef.current = true;
+    summarizeTurns(toSummarize).then((result) => {
+      if (result) {
+        summaryRef.current = summaryRef.current
+          ? `${summaryRef.current}\n\n(continued) ${result}`
+          : result;
+        // Drop the summarized turns from the live conversation.
+        setConversation((prev) => prev.slice(-SUMMARY_KEEP_RECENT));
+      }
+      summarizingRef.current = false;
+    }).catch(() => {
+      summarizingRef.current = false;
+    });
+  }, [conversation]);
+
+  // ── Persistent memory — lastSeen heartbeat ─────────────────────
+  useEffect(() => {
+    if (!isAdmin) return;
+    // Mark current session time.
+    const m = loadMemory();
+    saveMemory({ ...m, lastSeen: Date.now() });
+    // Update every 60s so a mid-session crash still captures recent activity.
+    const id = window.setInterval(() => {
+      const cur = loadMemory();
+      saveMemory({ ...cur, lastSeen: Date.now() });
+    }, 60_000);
+    return () => clearInterval(id);
+  }, [isAdmin]);
+
+  // ── Proactive route observations ───────────────────────────────
+  // On pathname change, emit ONE short line if we have something useful
+  // to say, subject to a rate limit so rapid navigation doesn't spam.
+  const lastObservationAtRef = useRef(0);
+  const lastObservedPathRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (!isAdmin || !settings.enabled || !settings.proactiveRouteObservations) return;
+    const path = location.pathname;
+    if (!path || path === lastObservedPathRef.current) return;
+
+    const now = Date.now();
+    if (now - lastObservationAtRef.current < ROUTE_OBSERVATION_MIN_INTERVAL_MS) return;
+
+    // Don't narrate while AXON is mid-speech or mid-processing.
+    if (voiceOutRef.current?.isSpeaking()) return;
+
+    lastObservedPathRef.current = path;
+    lastObservationAtRef.current = now;
+
+    observeRoute(path, activeCompanyRef.current).then((line) => {
+      if (!line) return;
+      appendTurn({
+        id: newId("t"),
+        role: "axon",
+        text: line,
+        modality: "voice",
+        timestamp: Date.now(),
+      });
+      voiceOutRef.current?.speak(line);
+    }).catch(() => {});
+  }, [isAdmin, settings.enabled, settings.proactiveRouteObservations, location.pathname, appendTurn]);
 
   // ── public ops ──────────────────────────────────────────────────
   const updateSettings = useCallback((patch: Partial<AxonSettings>) => {

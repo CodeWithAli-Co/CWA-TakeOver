@@ -20,6 +20,7 @@ import {
 import { buildToolDefinitions } from "../actions/registry";
 import { executeAction } from "./executor";
 import { captureScreenContext } from "./screenContext";
+import { loadMemory, memoryPreamble, sinceLastSeen } from "./memory";
 
 // ── types ─────────────────────────────────────────────────────
 type TextBlock = { type: "text"; text: string };
@@ -49,6 +50,8 @@ interface StreamTurnResult {
 
 export interface BrainRunOpts {
   confidence?: number;
+  /** Optional prior-conversation summary injected into the preamble. */
+  summary?: string | null;
   /** Fires with incremental text as the FINAL assistant text streams in. */
   onTextDelta?: (chunk: string) => void;
   /** Fires once per completed sentence — handy for sentence-by-sentence TTS. */
@@ -76,7 +79,7 @@ function humanizeApiError(raw: string): string {
   return "Something went wrong on my end.";
 }
 
-function buildContextPreamble(ctx: ActionContext): string {
+function buildContextPreamble(ctx: ActionContext, summary?: string | null): string {
   const now = new Date();
   const companyDisplay =
     ctx.activeCompany === "simplicityFunds"
@@ -85,12 +88,23 @@ function buildContextPreamble(ctx: ActionContext): string {
       ? "CodeWithAli"
       : "all companies";
   const screen = captureScreenContext();
+  const mem = loadMemory();
+  const memBlock = memoryPreamble(mem);
+  const since = sinceLastSeen(mem);
+
   const parts = [
     `Operator: ${ctx.operator.username} (role: ${ctx.operator.role})`,
     `Active company: ${companyDisplay}`,
     `Current path: ${ctx.currentPath}`,
     `Local time: ${now.toString()}`,
   ];
+  if (since) parts.push(`Time since last session: ${since}`);
+  if (memBlock) parts.push("\n" + memBlock);
+  if (summary) {
+    parts.push(
+      `\n<prior_conversation_summary>\n${summary}\n</prior_conversation_summary>\n(These are earlier turns in the same session, compressed. Use for continuity.)`
+    );
+  }
   if (screen) {
     parts.push(
       `\n<visible_screen>\n${screen}\n</visible_screen>\n(Use this to resolve pronouns like "that", "this", "the first one". Do NOT quote it verbatim.)`
@@ -271,7 +285,7 @@ export async function runTurn(
     };
   }
 
-  const preamble = buildContextPreamble(ctx);
+  const preamble = buildContextPreamble(ctx, opts.summary);
   const confidenceNote =
     opts.confidence !== undefined && opts.confidence < 0.65
       ? `\n[voice transcript confidence: ${Math.round(opts.confidence * 100)}% — confirm destructive actions]`
@@ -353,7 +367,9 @@ export async function runTurn(
 
     const toolResults: ToolResultBlock[] = [];
     for (const tu of toolUses) {
-      const outcome = await executeAction(tu.name, tu.input, ctx);
+      const outcome = await executeAction(tu.name, tu.input, ctx, {
+        confidence: opts.confidence,
+      });
       const logged: ExecutedAction = {
         id: tu.id,
         actionName: tu.name,

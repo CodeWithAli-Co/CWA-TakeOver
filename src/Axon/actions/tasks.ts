@@ -18,13 +18,27 @@ function parseDeadline(phrase: string | undefined): string | null {
   const p = phrase.toLowerCase().trim();
   const now = new Date();
 
-  if (p === "today") {
+  if (p === "today" || p === "eod" || p === "end of day") {
     now.setHours(23, 59, 0, 0);
     return now.toISOString();
   }
   if (p === "tomorrow") {
     now.setDate(now.getDate() + 1);
     now.setHours(23, 59, 0, 0);
+    return now.toISOString();
+  }
+  if (p === "end of week" || p === "eow" || p === "this week") {
+    const dow = now.getDay();
+    const daysToFri = (5 - dow + 7) % 7 || 7;
+    now.setDate(now.getDate() + daysToFri);
+    now.setHours(17, 0, 0, 0);
+    return now.toISOString();
+  }
+  if (p === "next week") {
+    const dow = now.getDay();
+    const daysToNextMon = ((1 - dow + 7) % 7) + 7;
+    now.setDate(now.getDate() + daysToNextMon);
+    now.setHours(9, 0, 0, 0);
     return now.toISOString();
   }
 
@@ -39,11 +53,40 @@ function parseDeadline(phrase: string | undefined): string | null {
     return now.toISOString();
   }
 
+  // "in 3 days" / "in a week"
+  const inM = p.match(/^in\s+(\d+|a|an)\s+(day|days|week|weeks)$/);
+  if (inM) {
+    const n = inM[1] === "a" || inM[1] === "an" ? 1 : Number(inM[1]);
+    const unit = inM[2];
+    const mult = unit.startsWith("week") ? 7 : 1;
+    now.setDate(now.getDate() + n * mult);
+    now.setHours(23, 59, 0, 0);
+    return now.toISOString();
+  }
+
   // ISO date attempt
   const isoDate = new Date(phrase);
   if (!isNaN(isoDate.getTime())) return isoDate.toISOString();
 
   return null;
+}
+
+/** Infer priority from free-text title or description. */
+function inferPriority(text: string): "high" | "medium" | "low" | null {
+  const t = text.toLowerCase();
+  if (/\b(urgent|asap|immediately|critical|emergency|now|today)\b/.test(t)) return "high";
+  if (/\b(when you can|eventually|sometime|low priority|someday|nice to have)\b/.test(t)) return "low";
+  return null;
+}
+
+/** Default deadline — end of current week (Friday 5pm) if none provided. */
+function defaultDeadline(): string {
+  const now = new Date();
+  const dow = now.getDay();
+  const daysToFri = (5 - dow + 7) % 7 || 7;
+  now.setDate(now.getDate() + daysToFri);
+  now.setHours(17, 0, 0, 0);
+  return now.toISOString();
 }
 
 // ── Create ─────────────────────────────────────────────────────────
@@ -82,20 +125,27 @@ export const createTaskAction: AxonAction<
       ? input.assignee
       : input.assignee
       ? [input.assignee]
-      : [ctx.operator.username];
+      : [ctx.operator.username]; // self-assign by default
 
-    const priorityOrder =
-      input.priority === "high" ? 3 : input.priority === "medium" ? 2 : 1;
+    // Infer priority from language if not explicit.
+    const inferredPriority = inferPriority(
+      `${input.title} ${input.description ?? ""}`
+    );
+    const priority = input.priority ?? inferredPriority ?? "medium";
+    const priorityOrder = priority === "high" ? 3 : priority === "medium" ? 2 : 1;
+
+    // Deadline: explicit → parsed. Missing → end of current week.
+    const parsedDeadline = parseDeadline(input.deadline) ?? defaultDeadline();
 
     const row = {
       title: input.title,
       description: input.description ?? "",
       label: input.label ?? "",
       status: "to-do",
-      priority: input.priority ?? "medium",
+      priority,
       priorityOrder,
       assignee: assigneeArr,
-      deadline: parseDeadline(input.deadline) ?? "",
+      deadline: parsedDeadline,
       company: input.company ?? companyLabel(ctx.activeCompany),
     };
 

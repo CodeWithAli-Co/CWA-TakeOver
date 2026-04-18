@@ -43,6 +43,33 @@ export const WAKE_ACKS = ["Yeah?", "Go ahead.", "Listening.", "What's up?", "Her
 export const SLEEP_ACKS = ["Going quiet.", "Standing down.", "Catch you later.", "I'll be here."];
 export const RESUME_ACKS = ["Back.", "I'm here.", "Up and listening.", "Alright, what's going on?"];
 
+/** Phrases that instantly stop AXON mid-speech. */
+export const INTERRUPT_PHRASES = [
+  "stop",
+  "shut up",
+  "be quiet",
+  "quiet",
+  "silence",
+  "cancel",
+  "never mind",
+  "nevermind",
+  "hold on",
+  "wait",
+  "axon stop",
+  "axon shut up",
+  "axon cancel",
+];
+
+/** Persistent memory key. */
+export const AXON_MEMORY_KEY = "axon:memory:v1";
+
+/** Conversation threshold that triggers summarization. */
+export const SUMMARY_TRIGGER_TURNS = 20;
+export const SUMMARY_KEEP_RECENT = 8;
+
+/** Min delay between proactive route observations (ms). */
+export const ROUTE_OBSERVATION_MIN_INTERVAL_MS = 25_000;
+
 /** The system prompt — sent as the `system` field on every Claude call. */
 export const SYSTEM_PROMPT = `You're AXON — the operator's right hand inside Takeover, the ops platform for CodeWithAli and Simplicity.
 

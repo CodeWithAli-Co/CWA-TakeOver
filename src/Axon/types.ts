@@ -125,8 +125,12 @@ export interface AxonSettings {
   sleepPhrases: string[];
   /** Phrases that move AXON from dormant back to standby. */
   resumePhrases: string[];
+  /** Phrases that cut AXON off mid-speech. */
+  interruptPhrases: string[];
   /** Speak a proactive greeting on first mount per session. */
   autoGreet: boolean;
+  /** Emit a short observation when the operator navigates. */
+  proactiveRouteObservations: boolean;
   /** Push-to-talk keyboard shortcut. */
   pushToTalkShortcut: string;
   /** Preferred synthesis voice name. */
@@ -152,7 +156,9 @@ export const DEFAULT_SETTINGS: AxonSettings = {
   wakeWord: "hey axon",
   sleepPhrases: ["axon go to sleep", "axon stop listening", "axon standby", "axon go quiet", "goodbye axon"],
   resumePhrases: ["axon wake up", "axon activate", "hey axon wake up", "axon come back"],
+  interruptPhrases: ["stop", "shut up", "quiet", "cancel", "never mind", "hold on", "wait"],
   autoGreet: true,
+  proactiveRouteObservations: true,
   pushToTalkShortcut: "Control+Space",
   preferredVoice: null,
   rate: 1.02,
@@ -215,7 +221,7 @@ export interface AxonContextValue {
   closePanel: () => void;
   togglePanel: () => void;
   setOrbPosition: (pos: { x: number; y: number }) => void;
-  submitCommand: (text: string, modality?: "voice" | "text") => Promise<void>;
+  submitCommand: (text: string, modality?: "voice" | "text", confidence?: number) => Promise<void>;
   startListening: () => void;
   stopListening: () => void;
   interrupt: () => void;

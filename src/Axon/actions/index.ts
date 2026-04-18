@@ -10,6 +10,7 @@ import { registerAutomationActions } from "./automations";
 import { registerMeetingActions } from "./meetings";
 import { registerDomActions } from "./dom";
 import { registerRoutineActions } from "./routines";
+import { registerMemoryActions } from "./memory";
 
 let registered = false;
 
@@ -26,4 +27,5 @@ export function registerAllActions() {
   registerMeetingActions();
   registerDomActions();
   registerRoutineActions();
+  registerMemoryActions();
 }

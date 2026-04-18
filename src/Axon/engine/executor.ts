@@ -13,10 +13,18 @@ export interface ExecuteOutcome {
   actionName: string;
 }
 
+export interface ExecuteOpts {
+  /** Voice confidence 0..1 for the utterance that triggered this action. */
+  confidence?: number;
+  /** Threshold below which mutating actions gate on explicit confirmation. */
+  confidenceThreshold?: number;
+}
+
 export async function executeAction(
   actionName: string,
   input: Record<string, unknown>,
-  ctx: ActionContext
+  ctx: ActionContext,
+  opts: ExecuteOpts = {}
 ): Promise<ExecuteOutcome> {
   const action = getAction(actionName);
   if (!action) {
@@ -30,6 +38,25 @@ export async function executeAction(
       error: `Operator role ${ctx.operator.role} not permitted for ${actionName}`,
       actionName,
     };
+  }
+
+  // Confidence-weighted confirmation: mutating action + low-confidence voice
+  // transcript → force the operator to confirm verbally, even if the action
+  // wouldn't normally require it.
+  const threshold = opts.confidenceThreshold ?? 0.55;
+  const lowConfidence =
+    opts.confidence !== undefined && opts.confidence < threshold;
+  if (action.mutating && lowConfidence && !action.requiresConfirmation) {
+    const ok = await ctx.requestConfirmation(
+      `Low-confidence voice input — confirm: ${actionName.replace(/_/g, " ")}?`
+    );
+    if (!ok) {
+      return {
+        ok: true,
+        result: { summary: "Cancelled — unclear transcript." },
+        actionName,
+      };
+    }
   }
 
   try {

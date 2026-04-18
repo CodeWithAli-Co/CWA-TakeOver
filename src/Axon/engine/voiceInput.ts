@@ -21,6 +21,7 @@ export type VoiceIntent =
   | { kind: "wake" }
   | { kind: "sleep" }
   | { kind: "resume" }
+  | { kind: "interrupt" }
   | { kind: "command"; text: string; confidence: number }
   | { kind: "ignore" };
 
@@ -42,6 +43,8 @@ export interface VoiceInputConfig {
   wakeWord: string;
   sleepPhrases: string[];
   resumePhrases: string[];
+  /** Phrases that cut AXON off mid-speech. Detected even while speaking. */
+  interruptPhrases: string[];
   /** Cooldown after a successful dispatch — ms. Prevents duplicates. */
   dispatchCooldownMs: number;
 }
@@ -313,13 +316,21 @@ export class VoiceInput {
 
   private handleFinal(text: string, confidence: number) {
     const now = Date.now();
+    const n = norm(text);
 
-    // Muted (AXON speaking) or in cooldown — drop entirely.
+    // Interrupt phrases fire EVEN when muted (while AXON is speaking).
+    // That's the whole point of an interrupt.
+    const hasInterrupt = this.config.interruptPhrases.some((p) => containsPhrase(text, p));
+    if (hasInterrupt) {
+      this.dispatch({ kind: "interrupt" }, n, now);
+      return;
+    }
+
+    // Muted (AXON speaking) or in cooldown — drop non-interrupt speech.
     if (this.muted) return;
     if (now < this.suppressUntil) return;
 
     // Secondary dedup: identical normalized string within 2.5s is a duplicate echo.
-    const n = norm(text);
     if (n === this.lastDispatched && now - this.lastDispatchedAt < 2500) return;
 
     const has = (arr: string[]) => arr.some((p) => containsPhrase(text, p));

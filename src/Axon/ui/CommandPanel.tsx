@@ -8,29 +8,9 @@ import { useAxon } from "../AxonProvider";
 import { useCompanyFilter } from "@/stores/store";
 import { ANTHROPIC_API_KEY } from "../config";
 import { AxonSettingsPane } from "./AxonSettings";
+import { quicksFor } from "./quickCommandsMap";
 
 type Tab = "conversation" | "activity" | "settings";
-
-const QUICK_COMMANDS_COMMON = [
-  "Brief me",
-  "What's overdue?",
-  "What's on screen?",
-  "Schedule a reminder in 5 minutes",
-];
-
-const QUICK_COMMANDS_CWA = [
-  "Open the finance dashboard",
-  "Create a task: review Q2 roadmap, due Friday",
-  "How many employees do we have?",
-  "Switch to Simplicity",
-];
-
-const QUICK_COMMANDS_SIMPLICITY = [
-  "Open Simplicity analytics",
-  "How many users signed up today?",
-  "Schedule a meeting tomorrow at 3pm",
-  "Switch to CodeWithAli",
-];
 
 function formatTime(ms: number): string {
   return new Date(ms).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
@@ -88,10 +68,7 @@ export function CommandPanel() {
     submitCommand(t, "text");
   };
 
-  const quicks = [
-    ...QUICK_COMMANDS_COMMON,
-    ...(activeCompany === "simplicityFunds" ? QUICK_COMMANDS_SIMPLICITY : QUICK_COMMANDS_CWA),
-  ];
+  const quicks = quicksFor(loc.pathname, activeCompany);
 
   return (
     <aside className="axon-panel" data-open={panelOpen} aria-hidden={!panelOpen}>
