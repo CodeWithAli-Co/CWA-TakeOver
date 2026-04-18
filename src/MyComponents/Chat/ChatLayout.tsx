@@ -20,6 +20,8 @@ import { MessageList } from "./MessageList";
 import { MessageComposer } from "./MessageComposer";
 import { ThreadPanel } from "./ThreadPanel";
 import { PinnedBar } from "./PinnedBar";
+import { ForwardDialog } from "./ForwardDialog";
+import { CreateChannelDialog } from "./CreateChannelDialog";
 import {
   parseReactionsMarker, stripReactionsMarker, encodeReactionsMarker,
 } from "./MessageBubble";
@@ -47,6 +49,8 @@ export const ChatLayout = () => {
     activeThreadRootId, setActiveThreadRootId, threadStyle, markRead,
   } = useChatStore();
   const [searchQuery, setSearchQuery] = useState("");
+  const [forwardSource, setForwardSource] = useState<MessageInterface | null>(null);
+  const [createChannelOpen, setCreateChannelOpen] = useState(false);
 
   // ── Realtime: refetch messages on any change for the CURRENT group ──
   useEffect(() => {
@@ -252,7 +256,11 @@ export const ChatLayout = () => {
   return (
     <div className="flex h-[100dvh] w-full bg-background overflow-hidden">
       {/* Left: channel sidebar */}
-      <ChatSidebar groups={allGroups} employees={AllEmployees || []} />
+      <ChatSidebar
+        groups={allGroups}
+        employees={AllEmployees || []}
+        onCreateChannel={canPin ? () => setCreateChannelOpen(true) : undefined}
+      />
 
       {/* Middle: active chat */}
       <div className="flex-1 flex flex-col min-w-0">
@@ -299,6 +307,7 @@ export const ChatLayout = () => {
                 onReactOverride={reactToMessage}
                 onEdit={editMessage}
                 onDelete={deleteMessage}
+                onForward={(m) => setForwardSource(m)}
                 searchQuery={searchQuery}
               />
 
@@ -357,6 +366,25 @@ export const ChatLayout = () => {
           onReact={reactToMessage}
         />
       )}
+
+      {/* Create channel dialog (admin only) */}
+      <CreateChannelDialog
+        open={createChannelOpen}
+        onOpenChange={setCreateChannelOpen}
+        allEmployees={(AllEmployees || []).map((e: any) => e.username).filter(Boolean) as string[]}
+        currentUsername={username}
+      />
+
+      {/* Forward dialog */}
+      <ForwardDialog
+        open={forwardSource != null}
+        onOpenChange={(v) => !v && setForwardSource(null)}
+        source={forwardSource}
+        sourceGroup={GroupName}
+        groups={allGroups}
+        currentUsername={username}
+        userAvatar={userAvatar}
+      />
     </div>
   );
 };

@@ -19,7 +19,7 @@ import { useState } from "react";
 import { motion } from "framer-motion";
 import {
   Smile, Reply, MoreVertical, CheckCheck, Pin, PinOff, MessagesSquare,
-  Pencil, Trash2, Copy, Check,
+  Pencil, Trash2, Copy, Check, Forward,
 } from "lucide-react";
 import {
   Avatar, AvatarFallback, AvatarImage,
@@ -33,6 +33,7 @@ import {
 } from "@/components/ui/shadcnComponents/dropdown-menu";
 import { ReactionPicker } from "./ReactionPicker";
 import { MessageText } from "./MessageText";
+import { PresenceDot } from "./PresenceDot";
 import { MessageInterface } from "@/stores/query";
 import { formatDistanceToNow, isValid, format } from "date-fns";
 
@@ -55,6 +56,8 @@ interface Props {
   onEdit?: (msg: MessageInterface, nextText: string) => Promise<void> | void;
   /** Delete / tombstone the message. */
   onDelete?: (msg: MessageInterface) => Promise<void> | void;
+  /** Open the forward dialog with this message as source. */
+  onForward?: (msg: MessageInterface) => void;
   allMessages: MessageInterface[];
 }
 
@@ -86,8 +89,13 @@ function extractImageUrls(text: string): { cleanText: string; urls: string[] } {
   return { cleanText, urls };
 }
 
+/** Audio attachment detection (voice messages + uploaded audio). */
+const AUDIO_RE = /\.(webm|mp3|m4a|ogg|wav|opus)(\?|$)/i;
+
 /** Extract non-image attachment URLs uploaded to the `chat-images` bucket.
- *  Identified by the storage path pattern, not by extension. */
+ *  Identified by the storage path pattern, not by extension. Audio URLs
+ *  are returned in their own array so the bubble can render an inline
+ *  player; everything else lands as a download card. */
 const FILE_URL_RE =
   /https?:\/\/[^\s]*storage\/v1\/object\/public\/chat-images\/[^\s]+/gi;
 function extractFileAttachments(
@@ -95,23 +103,25 @@ function extractFileAttachments(
 ): {
   cleanText: string;
   files: { url: string; name: string }[];
+  audios: string[];
 } {
   const files: { url: string; name: string }[] = [];
+  const audios: string[] = [];
   const cleanText = text.replace(FILE_URL_RE, (match) => {
-    // Images have already been removed by extractImageUrls; any remaining
-    // chat-images URL is a non-image file attachment.
     if (/\.(png|jpe?g|gif|webp|avif)(\?|$)/i.test(match)) {
-      return match; // leave image URLs alone (shouldn't happen but defensive)
+      return match; // leave image URLs alone — handled by image extractor
     }
-    // Reconstruct an approximate filename from the last path segment.
+    if (AUDIO_RE.test(match)) {
+      audios.push(match);
+      return "";
+    }
     const slug = decodeURIComponent(match.split("/").pop() || "attachment");
-    // Our upload naming is `{group}/{user}-{ts}-{rnd}-{origName}`.
     const parts = slug.split("-");
     const recovered = parts.length > 3 ? parts.slice(3).join("-") : slug;
     files.push({ url: match, name: recovered });
     return "";
   }).replace(/\n{3,}/g, "\n\n").trim();
-  return { cleanText, files };
+  return { cleanText, files, audios };
 }
 
 function attachmentIcon(name: string): string {
@@ -122,6 +132,21 @@ function attachmentIcon(name: string): string {
 function humanSizeFromUrl(_url: string): string {
   // We don't have size info post-upload without a HEAD request. Keep blank.
   return "";
+}
+
+/** Parse a forwarded-from marker. Prepended by the Forward dialog when
+ *  inserting a copy of someone else's message into a new channel. */
+const FWD_MARKER_RE = /^\{fwd:([^|]+)\|([^}]+)\}\s*\n?/;
+function extractForwardMarker(
+  text: string,
+): { cleanText: string; fromSender: string | null; fromGroup: string | null } {
+  const match = text.match(FWD_MARKER_RE);
+  if (!match) return { cleanText: text, fromSender: null, fromGroup: null };
+  return {
+    cleanText: text.replace(FWD_MARKER_RE, "").trimStart(),
+    fromSender: match[1]!.trim(),
+    fromGroup: match[2]!.trim(),
+  };
 }
 
 /** Parse a reply marker embedded in the message body. The composer
@@ -184,7 +209,7 @@ export const MessageBubble: React.FC<Props> = ({
   onReact, onReply, onJumpTo,
   onOpenThread, onTogglePin, canPin = false,
   threadReplyCount,
-  onEdit, onDelete,
+  onEdit, onDelete, onForward,
   allMessages,
 }) => {
   const [showPicker, setShowPicker] = useState(false);
@@ -260,12 +285,21 @@ export const MessageBubble: React.FC<Props> = ({
   let displayText: string = msg.message ?? "";
   let images: string[] = msg.image_urls ?? [];
   let files: { url: string; name: string }[] = [];
+  let audios: string[] = [];
   let parsedReplyId: number | null = null;
   let parsedReplySender: string | null = null;
   let parsedReactions: Record<string, string[]> = {};
+  let forwardedFromSender: string | null = null;
+  let forwardedFromGroup: string | null = null;
 
   if (displayText) {
-    // reactions first (they're always at the top if present)
+    // Forwarded-from marker lives at the top (before reactions / reply).
+    const f = extractForwardMarker(displayText);
+    displayText = f.cleanText;
+    forwardedFromSender = f.fromSender;
+    forwardedFromGroup = f.fromGroup;
+
+    // reactions marker next
     parsedReactions = parseReactionsMarker(displayText);
     displayText = stripReactionsMarker(displayText);
 
@@ -281,11 +315,13 @@ export const MessageBubble: React.FC<Props> = ({
       displayText = extracted.cleanText;
     }
   }
-  // Non-image file attachments that were stored to chat-images too.
+  // Non-image file attachments (voice + files) that were stored to
+  // chat-images too.
   if (displayText) {
     const fExtracted = extractFileAttachments(displayText);
-    if (fExtracted.files.length > 0) {
+    if (fExtracted.files.length > 0 || fExtracted.audios.length > 0) {
       files = fExtracted.files;
+      audios = fExtracted.audios;
       displayText = fExtracted.cleanText;
     }
   }
@@ -317,14 +353,19 @@ export const MessageBubble: React.FC<Props> = ({
       {/* Avatar column */}
       <div className="w-9 shrink-0 flex items-start justify-center pt-0.5">
         {!isGrouped ? (
-          <Avatar className="h-9 w-9 rounded-sm border border-border">
-            <AvatarImage
-              src={`https://tqaytmvihogvhhvwgbwm.supabase.co/storage/v1/object/public/avatars//${msg.userAvatar}`}
-            />
-            <AvatarFallback className="bg-muted/50 text-muted-foreground/70 text-[10px] rounded-sm font-medium">
-              {msg.sent_by?.slice(0, 2)?.toUpperCase()}
-            </AvatarFallback>
-          </Avatar>
+          <div className="relative">
+            <Avatar className="h-9 w-9 rounded-sm border border-border">
+              <AvatarImage
+                src={`https://tqaytmvihogvhhvwgbwm.supabase.co/storage/v1/object/public/avatars//${msg.userAvatar}`}
+              />
+              <AvatarFallback className="bg-muted/50 text-muted-foreground/70 text-[10px] rounded-sm font-medium">
+                {msg.sent_by?.slice(0, 2)?.toUpperCase()}
+              </AvatarFallback>
+            </Avatar>
+            <div className="absolute -right-0.5 -bottom-0.5">
+              <PresenceDot username={msg.sent_by} />
+            </div>
+          </div>
         ) : (
           <span className="text-[9px] text-muted-foreground/40 opacity-0 group-hover:opacity-100 transition-opacity pt-1 font-medium tabular-nums">
             {formatExactTime(msg.created_at)}
@@ -350,6 +391,23 @@ export const MessageBubble: React.FC<Props> = ({
                 <Pin className="h-2.5 w-2.5" />
                 pinned
               </span>
+            )}
+          </div>
+        )}
+
+        {/* Forwarded-from banner */}
+        {forwardedFromSender && (
+          <div className="mb-1.5 flex items-center gap-1.5 text-[10.5px] text-muted-foreground">
+            <Forward className="h-2.5 w-2.5" />
+            Forwarded from{" "}
+            <span className="font-medium text-foreground/80">
+              {forwardedFromSender}
+            </span>
+            {forwardedFromGroup && (
+              <>
+                <span>·</span>
+                <span>#{forwardedFromGroup}</span>
+              </>
             )}
           </div>
         )}
@@ -448,6 +506,21 @@ export const MessageBubble: React.FC<Props> = ({
                   draggable={false}
                 />
               </button>
+            ))}
+          </div>
+        )}
+
+        {/* Voice / audio attachments — rendered inline */}
+        {audios.length > 0 && (
+          <div className="mt-2 flex flex-col gap-1.5">
+            {audios.map((url) => (
+              <audio
+                key={url}
+                src={url}
+                controls
+                preload="metadata"
+                className="h-9 w-full max-w-[320px] rounded-md bg-muted/40"
+              />
             ))}
           </div>
         )}
@@ -600,6 +673,12 @@ export const MessageBubble: React.FC<Props> = ({
                   {copied ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
                   {copied ? "Copied!" : "Copy text"}
                 </DropdownMenuItem>
+                {onForward && !isDeleted && (
+                  <DropdownMenuItem onSelect={() => onForward(msg)} className="gap-2 text-[12px]">
+                    <Forward className="h-3.5 w-3.5" />
+                    Forward
+                  </DropdownMenuItem>
+                )}
                 {isOwn && !isDeleted && onEdit && (
                   <DropdownMenuItem onSelect={startEdit} className="gap-2 text-[12px]">
                     <Pencil className="h-3.5 w-3.5" />

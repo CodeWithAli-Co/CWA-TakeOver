@@ -7,7 +7,7 @@
 
 import { useState } from "react";
 import { motion } from "framer-motion";
-import { Plus, Search, Hash, MessageSquare } from "lucide-react";
+import { Plus, Search, Hash, MessageSquare, HashIcon } from "lucide-react";
 import {
   Avatar, AvatarFallback, AvatarImage,
 } from "@/components/ui/shadcnComponents/avatar";
@@ -29,9 +29,10 @@ interface Group {
 interface Props {
   groups: Group[];
   employees: any[];
+  onCreateChannel?: () => void;
 }
 
-export const ChatSidebar: React.FC<Props> = ({ groups, employees }) => {
+export const ChatSidebar: React.FC<Props> = ({ groups, employees, onCreateChannel }) => {
   const { GroupName, setGroupName } = useAppStore();
   const { unreadCounts, markRead } = useChatStore();
   const [searchQuery, setSearchQuery] = useState("");
@@ -58,20 +59,32 @@ export const ChatSidebar: React.FC<Props> = ({ groups, employees }) => {
               Messages
             </span>
           </div>
-          <Dialog>
-            <DialogTrigger asChild>
+          <div className="flex items-center gap-1">
+            {onCreateChannel && (
               <button
-                className="p-1.5 rounded-sm bg-muted/30 text-muted-foreground hover:text-primary hover:bg-primary/80/[0.06] transition-colors"
-                title="New conversation"
+                type="button"
+                onClick={onCreateChannel}
+                className="p-1.5 rounded-sm bg-muted/30 text-muted-foreground hover:text-primary hover:bg-primary/10 transition-colors"
+                title="New channel"
               >
-                <Plus className="h-3.5 w-3.5" />
+                <HashIcon className="h-3.5 w-3.5" />
               </button>
-            </DialogTrigger>
-            <DialogContent className="max-w-md">
-              <DialogTitle className="text-foreground/85">New Conversation</DialogTitle>
-              <AddDMGroup Users={employees || []} />
-            </DialogContent>
-          </Dialog>
+            )}
+            <Dialog>
+              <DialogTrigger asChild>
+                <button
+                  className="p-1.5 rounded-sm bg-muted/30 text-muted-foreground hover:text-primary hover:bg-primary/80/[0.06] transition-colors"
+                  title="New conversation"
+                >
+                  <Plus className="h-3.5 w-3.5" />
+                </button>
+              </DialogTrigger>
+              <DialogContent className="max-w-md">
+                <DialogTitle className="text-foreground/85">New Conversation</DialogTitle>
+                <AddDMGroup Users={employees || []} />
+              </DialogContent>
+            </Dialog>
+          </div>
         </div>
 
         <div className="relative">

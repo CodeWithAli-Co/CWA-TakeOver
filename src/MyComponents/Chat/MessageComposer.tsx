@@ -12,14 +12,26 @@
 
 import { useState, useRef, useEffect } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { Send, X, Paperclip, Smile, Sparkles, Loader2, Image as ImgIcon, Reply } from "lucide-react";
+import { Send, X, Paperclip, Smile, Sparkles, Loader2, Image as ImgIcon, Reply, Mic, Square, Trash2, Clock } from "lucide-react";
 import supabase from "@/MyComponents/supabase";
 import { useChatStore } from "@/stores/chatStore";
 import { getActiveCompanyLabel } from "@/stores/query";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/shadcnComponents/popover";
 import { EmojiPicker } from "./EmojiPicker";
 import { useImageUpload, type PendingUpload } from "./useImageUpload";
 import { draftChatReply } from "@/Axon/engine/chatDraft";
 import { MentionPicker, detectMentionQuery } from "./MentionPicker";
+import { useVoiceRecorder, formatElapsed } from "./useVoiceRecorder";
+import {
+  addScheduled,
+  listScheduledForGroup,
+  removeScheduled,
+  type ScheduledMessage,
+} from "./scheduledStore";
 
 interface Props {
   group: string;
@@ -68,6 +80,70 @@ export const MessageComposer: React.FC<Props> = ({
   const {
     pending, removePending, clearPending, uploadMany, filesFromClipboard,
   } = useImageUpload(group, currentUsername);
+  const voice = useVoiceRecorder();
+
+  const handleMicToggle = async () => {
+    if (voice.recording) {
+      const file = await voice.stop();
+      if (file) await uploadMany([file]);
+    } else {
+      await voice.start();
+    }
+  };
+
+  // Scheduled messages — list + tick in response to changes
+  const [scheduled, setScheduled] = useState<ScheduledMessage[]>([]);
+  useEffect(() => {
+    const refresh = () => setScheduled(listScheduledForGroup(group));
+    refresh();
+    window.addEventListener("cwa-scheduled-changed", refresh);
+    const id = setInterval(refresh, 30_000);
+    return () => {
+      window.removeEventListener("cwa-scheduled-changed", refresh);
+      clearInterval(id);
+    };
+  }, [group]);
+
+  const scheduleSend = async (dueAt: Date) => {
+    const expanded = expandSlashCommands(text, currentUsername);
+    const textContent = expanded.trim();
+    const imageUrls = pending
+      .map((p) => p.publicUrl)
+      .filter((u): u is string => !!u);
+    if (!textContent && imageUrls.length === 0) return;
+
+    const parts: string[] = [];
+    if (replyingTo) {
+      parts.push(`{reply:${replyingTo.msgId}|${replyingTo.sentBy}}`);
+    }
+    if (textContent) parts.push(textContent);
+    parts.push(...imageUrls);
+    const finalMessage = parts.join("\n");
+
+    const payload: Record<string, unknown> = {
+      sent_by: currentUsername,
+      message: finalMessage,
+      userAvatar,
+      reply_to: replyingTo?.msgId || null,
+      reactions: {},
+      read_by: [currentUsername],
+      company: getActiveCompanyLabel(),
+      image_urls: imageUrls.length > 0 ? imageUrls : null,
+    };
+    if (table === "cwa_dm_chat") payload.dm_group = group;
+
+    addScheduled({
+      dueAt: dueAt.toISOString(),
+      table,
+      group,
+      payload,
+      createdBy: currentUsername,
+      preview: textContent.slice(0, 60) || `[${imageUrls.length} attachment]`,
+    });
+    setText("");
+    setReplyingTo(null);
+    clearPending();
+  };
 
   // ── typing presence ───────────────────────────────────────────────────
   useEffect(() => {
@@ -184,7 +260,9 @@ export const MessageComposer: React.FC<Props> = ({
       return; // user reviews the draft and sends manually
     }
 
-    const textContent = text.trim();
+    // Expand slash commands before anything else reads `text`.
+    const expanded = expandSlashCommands(text, currentUsername);
+    const textContent = expanded.trim();
     const hasText = !!textContent;
     const hasPending = pending.some((p) => !p.publicUrl);
     if (hasPending) return; // wait for uploads
@@ -360,6 +438,23 @@ export const MessageComposer: React.FC<Props> = ({
         </div>
       )}
 
+      {/* Scheduled-messages chip */}
+      {scheduled.length > 0 && (
+        <div className="flex items-center gap-2 border-b border-border bg-primary/[0.05] px-5 py-1.5 text-[11px]">
+          <Clock className="h-3 w-3 text-primary" />
+          <span className="text-primary">
+            {scheduled.length} scheduled in this channel
+          </span>
+          <button
+            type="button"
+            onClick={() => scheduled.forEach((s) => removeScheduled(s.id))}
+            className="ml-auto text-[10.5px] text-muted-foreground hover:text-foreground"
+          >
+            Clear all
+          </button>
+        </div>
+      )}
+
       {/* Pending image thumbnails */}
       {pending.length > 0 && (
         <div className="flex flex-wrap gap-2 border-b border-border px-5 py-2">
@@ -393,10 +488,42 @@ export const MessageComposer: React.FC<Props> = ({
             type="button"
             onClick={() => fileInputRef.current?.click()}
             className="p-2.5 text-muted-foreground/50 hover:text-foreground/60 transition-colors"
-            title="Attach image"
+            title="Attach file"
           >
             <Paperclip className="h-4 w-4" />
           </button>
+          {/* Mic / voice message */}
+          {voice.recording ? (
+            <div className="flex items-center gap-1.5 pl-1">
+              <button
+                type="button"
+                onClick={voice.cancel}
+                className="rounded-md p-1 text-muted-foreground hover:text-destructive"
+                title="Cancel recording"
+              >
+                <Trash2 className="h-3.5 w-3.5" />
+              </button>
+              <button
+                type="button"
+                onClick={handleMicToggle}
+                className="flex items-center gap-1.5 rounded-full bg-destructive/15 border border-destructive/40 px-2 py-1 text-[11px] font-medium text-destructive"
+                title="Stop recording"
+              >
+                <span className="inline-block h-2 w-2 animate-pulse rounded-full bg-destructive" />
+                {formatElapsed(voice.elapsed)}
+                <Square className="h-3 w-3" />
+              </button>
+            </div>
+          ) : (
+            <button
+              type="button"
+              onClick={handleMicToggle}
+              className="p-2.5 text-muted-foreground/50 hover:text-primary transition-colors"
+              title="Record voice message"
+            >
+              <Mic className="h-4 w-4" />
+            </button>
+          )}
           <input
             ref={fileInputRef}
             type="file"
@@ -473,6 +600,51 @@ export const MessageComposer: React.FC<Props> = ({
             </AnimatePresence>
           </div>
 
+          {/* Send-later popover */}
+          <Popover>
+            <PopoverTrigger asChild>
+              <button
+                type="button"
+                className="p-2.5 text-muted-foreground/50 hover:text-foreground/60 transition-colors"
+                title="Schedule send"
+              >
+                <Clock className="h-4 w-4" />
+              </button>
+            </PopoverTrigger>
+            <PopoverContent
+              align="end"
+              className="w-56 p-1.5"
+            >
+              <div className="px-2 py-1 font-mono text-[9.5px] uppercase tracking-widest text-muted-foreground">
+                Send later
+              </div>
+              {[
+                { label: "In 10 minutes", ms: 10 * 60_000 },
+                { label: "In 1 hour", ms: 60 * 60_000 },
+                { label: "In 4 hours", ms: 4 * 60 * 60_000 },
+                { label: "Tomorrow at 9 AM", at: nextMorningAt9() },
+              ].map((opt) => (
+                <button
+                  key={opt.label}
+                  type="button"
+                  onClick={() => {
+                    const due = "at" in opt && opt.at != null
+                      ? opt.at
+                      : new Date(Date.now() + ((opt as { ms: number }).ms ?? 0));
+                    scheduleSend(due);
+                  }}
+                  className="flex w-full items-center justify-between rounded px-2 py-1.5 text-left text-[12px] text-foreground/85 hover:bg-muted"
+                >
+                  <span>{opt.label}</span>
+                  <span className="font-mono text-[9.5px] uppercase tracking-widest text-muted-foreground">
+                    {"at" in opt && opt.at != null
+                      ? opt.at.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
+                      : ""}
+                  </span>
+                </button>
+              ))}
+            </PopoverContent>
+          </Popover>
           <button
             type="submit"
             disabled={axonBusy || pending.some((p) => !p.publicUrl) || (!text.trim() && pending.length === 0)}
@@ -555,4 +727,38 @@ function PendingThumb({
       </button>
     </motion.div>
   );
+}
+
+/** Tomorrow at 09:00 in the user's local timezone. */
+function nextMorningAt9(): Date {
+  const d = new Date();
+  d.setDate(d.getDate() + 1);
+  d.setHours(9, 0, 0, 0);
+  return d;
+}
+
+// ── Slash command expansion ---------------------------------------------
+// /me <text>       → italic action: "_<username> <text>_"
+// /shrug [text]    → "<text> ¯\_(ツ)_/¯"
+// /code <text>     → fenced code block
+// /here [text]     → "@here <text>" (notifies all online members via
+//                    __root's realtime handler that detects @here)
+function expandSlashCommands(text: string, username: string): string {
+  if (/^\/me\s+/i.test(text)) {
+    return `_${username} ${text.replace(/^\/me\s+/i, "").trim()}_`;
+  }
+  if (/^\/shrug\b/i.test(text)) {
+    const m = text.match(/^\/shrug\s*(.*)$/i);
+    const rest = (m?.[1] ?? "").trim();
+    return rest ? `${rest} \u00af\\_(\u30c4)_/\u00af` : "\u00af\\_(\u30c4)_/\u00af";
+  }
+  if (/^\/code\s+/i.test(text)) {
+    const body = text.replace(/^\/code\s+/i, "");
+    return "```\n" + body + "\n```";
+  }
+  if (/^\/here\b/i.test(text)) {
+    const rest = text.replace(/^\/here\s*/i, "").trim();
+    return rest ? `@here ${rest}` : "@here";
+  }
+  return text;
 }

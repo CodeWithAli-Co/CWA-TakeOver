@@ -17,6 +17,7 @@
 
 import { memo, useState } from "react";
 import { Check, Copy, ExternalLink, Play } from "lucide-react";
+import { useChatStore } from "@/stores/chatStore";
 
 interface Props {
   text: string;
@@ -60,6 +61,8 @@ function tokenize(src: string): (CodeBlock | Para)[] {
 export const MessageText = memo(function MessageText({
   text, currentUsername,
 }: Props) {
+  // Subscribe at the top so shortcodes inside renderInline can read them.
+  const customEmojis = useChatStore((s) => s.customEmojis);
   if (!text) return null;
   const tokens = tokenize(text);
   return (
@@ -72,6 +75,7 @@ export const MessageText = memo(function MessageText({
             key={i}
             body={tok.body}
             currentUsername={currentUsername}
+            customEmojis={customEmojis}
           />
         ),
       )}
@@ -82,33 +86,24 @@ export const MessageText = memo(function MessageText({
 // ── Paragraph (inline formatting) ----------------------------------------
 
 function ParaView({
-  body, currentUsername,
+  body, currentUsername, customEmojis,
 }: {
   body: string;
   currentUsername?: string;
+  customEmojis: Record<string, string>;
 }) {
   // Each paragraph keeps whitespace but goes line-by-line for embed detection.
   const lines = body.split("\n");
   const out: React.ReactNode[] = [];
   lines.forEach((line, i) => {
     const embeds = detectEmbeds(line);
-    if (embeds.length > 0) {
-      // Render the line text + an embed card underneath.
-      out.push(
-        <span key={`l-${i}`} className="whitespace-pre-wrap">
-          {renderInline(line, currentUsername)}
-          {i < lines.length - 1 ? "\n" : ""}
-        </span>,
-      );
-      for (const e of embeds) out.push(<EmbedCard key={`e-${i}-${e.url}`} embed={e} />);
-    } else {
-      out.push(
-        <span key={`l-${i}`} className="whitespace-pre-wrap">
-          {renderInline(line, currentUsername)}
-          {i < lines.length - 1 ? "\n" : ""}
-        </span>,
-      );
-    }
+    out.push(
+      <span key={`l-${i}`} className="whitespace-pre-wrap">
+        {renderInline(line, currentUsername, customEmojis)}
+        {i < lines.length - 1 ? "\n" : ""}
+      </span>,
+    );
+    for (const e of embeds) out.push(<EmbedCard key={`e-${i}-${e.url}`} embed={e} />);
   });
   return <>{out}</>;
 }
@@ -117,7 +112,11 @@ function ParaView({
 
 const URL_RE = /(https?:\/\/[^\s<]+)/g;
 
-function renderInline(line: string, currentUsername?: string): React.ReactNode[] {
+function renderInline(
+  line: string,
+  currentUsername?: string,
+  customEmojis: Record<string, string> = {},
+): React.ReactNode[] {
   // Process in multiple passes: code → bold → italic → strike → mentions → links
   // We split then recombine. Order matters: code first so markdown inside
   // backticks is preserved as literal.
@@ -129,7 +128,7 @@ function renderInline(line: string, currentUsername?: string): React.ReactNode[]
   let m: RegExpExecArray | null;
   while ((m = codeRe.exec(line)) !== null) {
     if (m.index > last) {
-      nodes.push(...renderNonCode(line.slice(last, m.index), currentUsername));
+      nodes.push(...renderNonCode(line.slice(last, m.index), currentUsername, customEmojis));
     }
     nodes.push(
       <code
@@ -142,12 +141,16 @@ function renderInline(line: string, currentUsername?: string): React.ReactNode[]
     last = codeRe.lastIndex;
   }
   if (last < line.length) {
-    nodes.push(...renderNonCode(line.slice(last), currentUsername));
+    nodes.push(...renderNonCode(line.slice(last), currentUsername, customEmojis));
   }
   return nodes;
 }
 
-function renderNonCode(src: string, currentUsername?: string): React.ReactNode[] {
+function renderNonCode(
+  src: string,
+  currentUsername?: string,
+  customEmojis: Record<string, string> = {},
+): React.ReactNode[] {
   // Bold **x**
   const nodes: React.ReactNode[] = [];
   const boldRe = /\*\*([^*\n]+)\*\*/g;
@@ -155,7 +158,7 @@ function renderNonCode(src: string, currentUsername?: string): React.ReactNode[]
   let m: RegExpExecArray | null;
   while ((m = boldRe.exec(src)) !== null) {
     if (m.index > last) {
-      nodes.push(...renderAfterBold(src.slice(last, m.index), currentUsername));
+      nodes.push(...renderAfterBold(src.slice(last, m.index), currentUsername, customEmojis));
     }
     nodes.push(
       <strong key={`b-${m.index}`} className="font-semibold text-foreground">
@@ -170,7 +173,11 @@ function renderNonCode(src: string, currentUsername?: string): React.ReactNode[]
   return nodes;
 }
 
-function renderAfterBold(src: string, currentUsername?: string): React.ReactNode[] {
+function renderAfterBold(
+  src: string,
+  currentUsername?: string,
+  customEmojis: Record<string, string> = {},
+): React.ReactNode[] {
   // Italic *x* — avoid ** (already handled), be strict about surrounding
   const italicRe = /(?<![*\w])\*([^\s*][^*\n]*?)\*(?!\w)/g;
   const nodes: React.ReactNode[] = [];
@@ -178,7 +185,7 @@ function renderAfterBold(src: string, currentUsername?: string): React.ReactNode
   let m: RegExpExecArray | null;
   while ((m = italicRe.exec(src)) !== null) {
     if (m.index > last) {
-      nodes.push(...renderAfterItalic(src.slice(last, m.index), currentUsername));
+      nodes.push(...renderAfterItalic(src.slice(last, m.index), currentUsername, customEmojis));
     }
     nodes.push(
       <em key={`i-${m.index}`} className="italic text-foreground/90">
@@ -193,7 +200,11 @@ function renderAfterBold(src: string, currentUsername?: string): React.ReactNode
   return nodes;
 }
 
-function renderAfterItalic(src: string, currentUsername?: string): React.ReactNode[] {
+function renderAfterItalic(
+  src: string,
+  currentUsername?: string,
+  customEmojis: Record<string, string> = {},
+): React.ReactNode[] {
   // Strike ~~x~~
   const strikeRe = /~~([^~\n]+)~~/g;
   const nodes: React.ReactNode[] = [];
@@ -201,7 +212,7 @@ function renderAfterItalic(src: string, currentUsername?: string): React.ReactNo
   let m: RegExpExecArray | null;
   while ((m = strikeRe.exec(src)) !== null) {
     if (m.index > last) {
-      nodes.push(...renderAfterStrike(src.slice(last, m.index), currentUsername));
+      nodes.push(...renderAfterStrike(src.slice(last, m.index), currentUsername, customEmojis));
     }
     nodes.push(
       <s key={`s-${m.index}`} className="text-muted-foreground line-through">
@@ -216,7 +227,11 @@ function renderAfterItalic(src: string, currentUsername?: string): React.ReactNo
   return nodes;
 }
 
-function renderAfterStrike(src: string, currentUsername?: string): React.ReactNode[] {
+function renderAfterStrike(
+  src: string,
+  currentUsername?: string,
+  customEmojis: Record<string, string> = {},
+): React.ReactNode[] {
   // Labeled links [label](url)
   const linkRe = /\[([^\]]+)\]\((https?:\/\/[^)\s]+)\)/g;
   const nodes: React.ReactNode[] = [];
@@ -224,7 +239,7 @@ function renderAfterStrike(src: string, currentUsername?: string): React.ReactNo
   let m: RegExpExecArray | null;
   while ((m = linkRe.exec(src)) !== null) {
     if (m.index > last) {
-      nodes.push(...renderAfterLinks(src.slice(last, m.index), currentUsername));
+      nodes.push(...renderAfterLinks(src.slice(last, m.index), currentUsername, customEmojis));
     }
     nodes.push(
       <a
@@ -245,9 +260,13 @@ function renderAfterStrike(src: string, currentUsername?: string): React.ReactNo
   return nodes;
 }
 
-function renderAfterLinks(src: string, currentUsername?: string): React.ReactNode[] {
-  // Auto-link bare URLs + highlight @mentions
-  const combined = /(@[A-Za-z0-9_\-.]+)|(https?:\/\/[^\s<]+)/g;
+function renderAfterLinks(
+  src: string,
+  currentUsername?: string,
+  customEmojis: Record<string, string> = {},
+): React.ReactNode[] {
+  // Auto-link bare URLs, highlight @mentions, render :shortcode: emojis.
+  const combined = /(@[A-Za-z0-9_\-.]+)|(https?:\/\/[^\s<]+)|(:[A-Za-z0-9_+-]{2,32}:)/g;
   const nodes: React.ReactNode[] = [];
   let last = 0;
   let m: RegExpExecArray | null;
@@ -282,6 +301,25 @@ function renderAfterLinks(src: string, currentUsername?: string): React.ReactNod
           {m[2]}
         </a>,
       );
+    } else if (m[3]) {
+      // :shortcode: → custom emoji image, if registered. Otherwise leave
+      // the literal :shortcode: text in place.
+      const shortcode = m[3].slice(1, -1);
+      const url = customEmojis[shortcode];
+      if (url) {
+        nodes.push(
+          <img
+            key={`ce-${m.index}`}
+            src={url}
+            alt={`:${shortcode}:`}
+            title={`:${shortcode}:`}
+            className="inline-block h-[18px] w-[18px] align-text-bottom"
+            draggable={false}
+          />,
+        );
+      } else {
+        nodes.push(m[3]);
+      }
     }
     last = combined.lastIndex;
   }

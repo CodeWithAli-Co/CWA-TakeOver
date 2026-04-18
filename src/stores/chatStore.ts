@@ -27,6 +27,13 @@ interface ReplyTarget {
   preview: string;
 }
 
+export type PresenceStatus = "online" | "away" | "offline";
+
+interface PresenceEntry {
+  /** ms timestamp of last heartbeat */
+  lastSeen: number;
+}
+
 interface ChatStoreState {
   unreadCounts: Record<string, number>;
   lastReadAt: Record<string, string>;
@@ -35,6 +42,12 @@ interface ChatStoreState {
   markRead: (group: string) => void;
   resetAllUnread: () => void;
   setUnreadCount: (group: string, count: number) => void;
+
+  // Presence (transient)
+  presenceByUser: Record<string, PresenceEntry>;
+  setPresence: (username: string, lastSeen: number) => void;
+  setPresenceMany: (entries: Record<string, PresenceEntry>) => void;
+  presenceStatus: (username: string) => PresenceStatus;
 
   replyingTo: ReplyTarget | null;
   setReplyingTo: (target: ReplyTarget | null) => void;
@@ -53,6 +66,11 @@ interface ChatStoreState {
 
   recentEmojis: string[];
   pushRecentEmoji: (emoji: string) => void;
+
+  /** Custom emoji registry — `:shortcode:` → image URL. */
+  customEmojis: Record<string, string>;
+  setCustomEmoji: (shortcode: string, url: string) => void;
+  removeCustomEmoji: (shortcode: string) => void;
 }
 
 export const useChatStore = create<ChatStoreState>()(
@@ -97,6 +115,27 @@ export const useChatStore = create<ChatStoreState>()(
           typingByGroup: { ...state.typingByGroup, [group]: users },
         })),
 
+      presenceByUser: {},
+      setPresence: (username, lastSeen) =>
+        set((state) => ({
+          presenceByUser: {
+            ...state.presenceByUser,
+            [username]: { lastSeen },
+          },
+        })),
+      setPresenceMany: (entries) =>
+        set((state) => ({
+          presenceByUser: { ...state.presenceByUser, ...entries },
+        })),
+      presenceStatus: (username) => {
+        const entry = get().presenceByUser[username];
+        if (!entry) return "offline";
+        const age = Date.now() - entry.lastSeen;
+        if (age < 60_000) return "online";       // < 1 min
+        if (age < 5 * 60_000) return "away";    // < 5 min
+        return "offline";
+      },
+
       activeThreadRootId: null,
       setActiveThreadRootId: (id) => set({ activeThreadRootId: id }),
 
@@ -121,6 +160,18 @@ export const useChatStore = create<ChatStoreState>()(
           ].slice(0, 16);
           return { recentEmojis: next };
         }),
+
+      customEmojis: {},
+      setCustomEmoji: (shortcode, url) =>
+        set((state) => ({
+          customEmojis: { ...state.customEmojis, [shortcode]: url },
+        })),
+      removeCustomEmoji: (shortcode) =>
+        set((state) => {
+          const next = { ...state.customEmojis };
+          delete next[shortcode];
+          return { customEmojis: next };
+        }),
     }),
     {
       name: "cwa-chat-store",
@@ -130,6 +181,7 @@ export const useChatStore = create<ChatStoreState>()(
         threadStyle: state.threadStyle,
         pinCollapsed: state.pinCollapsed,
         recentEmojis: state.recentEmojis,
+        customEmojis: state.customEmojis,
       }),
     },
   ),

@@ -38,6 +38,8 @@ interface Props {
   /** Edit / delete own message. */
   onEdit?: (msg: MessageInterface, nextText: string) => Promise<void> | void;
   onDelete?: (msg: MessageInterface) => Promise<void> | void;
+  /** Forward — opens parent's forward dialog with this message. */
+  onForward?: (msg: MessageInterface) => void;
   /** Text filter applied before day-grouping. Empty string = no filter. */
   searchQuery?: string;
 }
@@ -61,7 +63,7 @@ export const MessageList: React.FC<Props> = ({
   onOpenThread, onTogglePin, canPin,
   threadReplyCounts, threadStyle,
   onReactOverride,
-  onEdit, onDelete,
+  onEdit, onDelete, onForward,
   searchQuery = "",
 }) => {
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -230,6 +232,7 @@ export const MessageList: React.FC<Props> = ({
           threadReplyCount={replyCount}
           onEdit={onEdit}
           onDelete={onDelete}
+          onForward={onForward}
           allMessages={messages}
         />
         {threadStyle === "inline" && replyCount > 0 && (

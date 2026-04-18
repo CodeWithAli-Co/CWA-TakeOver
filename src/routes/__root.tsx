@@ -14,17 +14,17 @@ import {
 import "../assets/sidebar.css";
 import { sendNotification } from "@tauri-apps/plugin-notification";
 import { useAppStore } from "../stores/store";
+import { useChatStore } from "@/stores/chatStore";
 
 import { SidebarProvider } from "@/components/ui/shadcnComponents/sidebar";
 import { AppSidebar } from "@/components/app-sidebar";
 import supabase from "@/MyComponents/supabase";
-import { useEffect, lazy, Suspense } from "react";
+import { useEffect, useState, lazy, Suspense } from "react";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import LoginPage from "@/MyComponents/Beginning/login";
 import PinPage from "@/MyComponents/Beginning/pinPage";
 import { SignUpPage } from "@/MyComponents/Beginning/signup";
 import { ActiveUser, DMGroups, Messages } from "@/stores/query";
-import { useChatStore } from "@/stores/chatStore";
 import UserView from "@/MyComponents/Reusables/userView";
 import CyberpunkPinPage from "@/MyComponents/Beginning/bluePinPage";
 import SecurityBreach from "@/MyComponents/Beginning/conceptIdea";
@@ -32,6 +32,14 @@ import SecurityBreach from "@/MyComponents/Beginning/conceptIdea";
 // AXON — lazy-loaded so the command-intelligence bundle never
 // touches the login / pin-pad paths, and stays admin-gated internally.
 const AxonRoot = lazy(() => import("@/Axon"));
+
+// Global Cmd+K message search — also lazy so the chat search bundle
+// only loads after the user actually invokes it.
+const GlobalSearch = lazy(() =>
+  import("@/MyComponents/Chat/GlobalSearch").then((m) => ({
+    default: m.GlobalSearch,
+  })),
+);
 
 export const Route = createRootRoute({
   component: () => {
@@ -132,6 +140,15 @@ export const Route = createRootRoute({
         return re.test(text);
       };
 
+      // Detect /here — fire to anyone currently online per presence state.
+      const isHereCall = (text: string): boolean =>
+        /(^|\s)@here(?![A-Za-z0-9_.-])/i.test(text || "");
+      const isUserOnline = (): boolean => {
+        if (!currentUsername) return false;
+        const status = useChatStore.getState().presenceStatus(currentUsername);
+        return status === "online";
+      };
+
       const unreadChannel = supabase
         .channel("unread-tracker")
         .on(
@@ -144,13 +161,18 @@ export const Route = createRootRoute({
             if (sentBy === currentUsername) return;
             const viewing = isOnChatPage() && GroupName === groupName;
             const mentioned = isMentioned(body);
-            if (!viewing || mentioned) {
+            const hereCall = isHereCall(body) && isUserOnline();
+            if (!viewing || mentioned || hereCall) {
               if (!viewing) incrementUnread(groupName);
-              // Mentions bypass the mute check — if someone @s you we notify.
               const muted = isGroupMuted(groupName);
               if (mentioned) {
                 fireNotify(
                   `${sentBy} mentioned you in ${groupName}`,
+                  body || "[attachment]",
+                );
+              } else if (hereCall) {
+                fireNotify(
+                  `${sentBy} called @here in ${groupName}`,
                   body || "[attachment]",
                 );
               } else if (!muted) {
@@ -171,12 +193,18 @@ export const Route = createRootRoute({
             if (sentBy === currentUsername) return;
             const viewing = isOnChatPage() && GroupName === "General";
             const mentioned = isMentioned(body);
-            if (!viewing || mentioned) {
+            const hereCall = isHereCall(body) && isUserOnline();
+            if (!viewing || mentioned || hereCall) {
               if (!viewing) incrementUnread("General");
               const muted = isGroupMuted("General");
               if (mentioned) {
                 fireNotify(
                   `${sentBy} mentioned you in General`,
+                  body || "[attachment]",
+                );
+              } else if (hereCall) {
+                fireNotify(
+                  `${sentBy} called @here in General`,
                   body || "[attachment]",
                 );
               } else if (!muted) {
@@ -278,6 +306,100 @@ export const Route = createRootRoute({
       }
     }, []);
 
+    // ─── Scheduled messages — fire any due every 20s ────────────────
+    useEffect(() => {
+      const uname = user?.[0]?.username;
+      if (!uname) return;
+      let running = false;
+      const tick = async () => {
+        if (running) return;
+        running = true;
+        try {
+          const { dueScheduled, removeScheduled } = await import(
+            "@/MyComponents/Chat/scheduledStore"
+          );
+          const due = dueScheduled();
+          for (const item of due) {
+            // Only the author's client fires. Prevents dupes across devices.
+            if (item.createdBy !== uname) continue;
+            const { error } = await supabase
+              .from(item.table)
+              .insert(item.payload);
+            if (!error) {
+              console.log("[scheduled] sent", item.preview);
+              removeScheduled(item.id);
+            } else {
+              console.warn(
+                "[scheduled] send failed (keeping for retry):",
+                error.message,
+              );
+            }
+          }
+        } catch (err) {
+          console.warn("[scheduled] tick error:", err);
+        } finally {
+          running = false;
+        }
+      };
+      tick();
+      const id = setInterval(tick, 20_000);
+      return () => clearInterval(id);
+    }, [user]);
+
+    // ─── Presence — track self + listen for others ──────────────────
+    useEffect(() => {
+      const uname = user?.[0]?.username;
+      if (!uname) return;
+      const channel = supabase.channel("chat-presence", {
+        config: { presence: { key: uname } },
+      });
+
+      const syncPresence = () => {
+        const state = channel.presenceState();
+        const entries: Record<string, { lastSeen: number }> = {};
+        for (const [key, presences] of Object.entries(state)) {
+          const latest = (presences as any[])
+            .map((p) => Number(p?.lastSeen ?? Date.now()))
+            .reduce((a, b) => (a > b ? a : b), 0);
+          entries[key] = { lastSeen: latest || Date.now() };
+        }
+        useChatStore.getState().setPresenceMany(entries);
+      };
+
+      channel
+        .on("presence", { event: "sync" }, syncPresence)
+        .on("presence", { event: "join" }, syncPresence)
+        .on("presence", { event: "leave" }, syncPresence)
+        .subscribe((status) => {
+          if (status === "SUBSCRIBED") {
+            channel.track({ lastSeen: Date.now() });
+          }
+        });
+
+      // Heartbeat — republish every 30s so we stay "online".
+      const beat = setInterval(() => {
+        channel.track({ lastSeen: Date.now() });
+      }, 30_000);
+
+      return () => {
+        clearInterval(beat);
+        channel.unsubscribe();
+      };
+    }, [user]);
+
+    // ─── Cmd / Ctrl + K — global message search ─────────────────────
+    const [searchOpen, setSearchOpen] = useState(false);
+    useEffect(() => {
+      const onKey = (e: KeyboardEvent) => {
+        if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "k") {
+          e.preventDefault();
+          setSearchOpen((v) => !v);
+        }
+      };
+      window.addEventListener("keydown", onKey);
+      return () => window.removeEventListener("keydown", onKey);
+    }, []);
+
     // ─── Tray / taskbar unread badge ────────────────────────────────
     // Mirror totalUnread into the window title so taskbar + tray tooltip
     // show "(3) CWA TakeOver" and the user can see unread count even when
@@ -351,6 +473,10 @@ export const Route = createRootRoute({
             {/* AXON command intelligence — admin-gated inside the module */}
             <Suspense fallback={null}>
               <AxonRoot />
+            </Suspense>
+            {/* Global Cmd+K message search */}
+            <Suspense fallback={null}>
+              <GlobalSearch open={searchOpen} onOpenChange={setSearchOpen} />
             </Suspense>
           </SidebarProvider>
         ) : (
