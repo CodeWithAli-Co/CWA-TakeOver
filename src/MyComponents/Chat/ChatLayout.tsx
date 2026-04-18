@@ -24,6 +24,8 @@ import { ForwardDialog } from "./ForwardDialog";
 import { CreateChannelDialog } from "./CreateChannelDialog";
 import { StarredView } from "./StarredView";
 import { WebhookManager } from "./WebhookManager";
+import { useHuddle } from "./Huddle/useHuddle";
+import { HuddleBar } from "./Huddle/HuddleBar";
 import {
   parseReactionsMarker, stripReactionsMarker, encodeReactionsMarker,
 } from "./MessageBubble";
@@ -54,6 +56,12 @@ export const ChatLayout = () => {
   const [forwardSource, setForwardSource] = useState<MessageInterface | null>(null);
   const [createChannelOpen, setCreateChannelOpen] = useState(false);
   const [webhooksOpen, setWebhooksOpen] = useState(false);
+  // Huddle (voice + video) state — the hook itself is instantiated
+  // further down, after `username` has been derived from the ActiveUser
+  // query. This state lives here so header + bar both see it.
+  const [huddleGroup, setHuddleGroup] = useState<string | null>(null);
+  const [huddleMuted, setHuddleMuted] = useState(false);
+  const [huddleCamera, setHuddleCamera] = useState(false);
 
   // ── Realtime: refetch messages on any change for the CURRENT group ──
   useEffect(() => {
@@ -93,6 +101,13 @@ export const ChatLayout = () => {
   }, [GroupName, setActiveThreadRootId]);
 
   const username = user?.[0]?.username || "";
+  const huddle = useHuddle({
+    group: huddleGroup ?? "",
+    username,
+    joined: huddleGroup != null,
+    muted: huddleMuted,
+    camera: huddleCamera,
+  });
   const userRole = (user?.[0] as any)?.role ?? "";
   const userAvatar = user?.[0]?.avatarName || "";
   const isGeneral = GroupName === "General";
@@ -300,6 +315,10 @@ export const ChatLayout = () => {
                 searchQuery={searchQuery}
                 setSearchQuery={setSearchQuery}
                 onMarkAllRead={() => markRead(GroupName)}
+                huddleActive={huddleGroup === GroupName}
+                onToggleHuddle={() =>
+                  setHuddleGroup((prev) => (prev === GroupName ? null : GroupName))
+                }
               />
 
               <PinnedBar
@@ -400,6 +419,26 @@ export const ChatLayout = () => {
         groups={allGroups}
         currentUsername={username}
       />
+
+      {/* Huddle floating bar — only when joined */}
+      {huddleGroup && (
+        <HuddleBar
+          group={huddleGroup}
+          username={username}
+          localStream={huddle.localStream}
+          peers={huddle.peers}
+          muted={huddleMuted}
+          camera={huddleCamera}
+          onToggleMute={() => setHuddleMuted((v) => !v)}
+          onToggleCamera={() => setHuddleCamera((v) => !v)}
+          onLeave={() => {
+            setHuddleGroup(null);
+            setHuddleMuted(false);
+            setHuddleCamera(false);
+          }}
+          error={huddle.error}
+        />
+      )}
 
       {/* Forward dialog */}
       <ForwardDialog

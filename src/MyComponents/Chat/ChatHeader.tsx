@@ -12,7 +12,7 @@
 import { useEffect, useRef, useState } from "react";
 import {
   Search, Pin, MoreVertical, Hash, Users, X,
-  Check, Copy, BellOff, Bell,
+  Check, Copy, BellOff, Bell, Phone, PhoneOff,
 } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/shadcnComponents/avatar";
 import {
@@ -37,11 +37,15 @@ interface Props {
 
   /** Marks this channel's unread counter to zero. */
   onMarkAllRead: () => void;
+  /** Toggle the huddle state for this channel. */
+  onToggleHuddle?: () => void;
+  huddleActive?: boolean;
 }
 
 export const ChatHeader: React.FC<Props> = ({
   groupName, isGeneral, memberCount, pinnedCount,
   searchQuery, setSearchQuery, onMarkAllRead,
+  onToggleHuddle, huddleActive,
 }) => {
   const [searching, setSearching] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -195,6 +199,25 @@ export const ChatHeader: React.FC<Props> = ({
         >
           <Pin className="h-3.5 w-3.5" />
         </button>
+
+        {onToggleHuddle && (
+          <button
+            type="button"
+            onClick={onToggleHuddle}
+            className={`flex items-center gap-1 p-1.5 rounded-sm transition-colors ${
+              huddleActive
+                ? "bg-destructive/15 text-destructive hover:bg-destructive/20"
+                : "text-muted-foreground hover:text-primary hover:bg-primary/10"
+            }`}
+            title={huddleActive ? "Leave huddle" : "Start / join voice huddle"}
+          >
+            {huddleActive ? (
+              <PhoneOff className="h-3.5 w-3.5" />
+            ) : (
+              <Phone className="h-3.5 w-3.5" />
+            )}
+          </button>
+        )}
 
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
