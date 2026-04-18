@@ -1,6 +1,5 @@
 // ───────────────────────────────────────────────────────────────────
-// Command Panel — conversation, activity feed, quick commands,
-// composer, and settings pane.
+// Command Panel v2 — glass UI, voice-state chip, smarter composer.
 // ───────────────────────────────────────────────────────────────────
 
 import { useEffect, useRef, useState } from "react";
@@ -14,33 +13,50 @@ type Tab = "conversation" | "activity" | "settings";
 
 const QUICK_COMMANDS_COMMON = [
   "Brief me",
-  "What tasks are overdue?",
-  "What's due this week?",
-  "How many active users?",
+  "What's overdue?",
+  "What's on screen?",
+  "Schedule a reminder in 5 minutes",
 ];
 
 const QUICK_COMMANDS_CWA = [
-  "Show me the finance dashboard",
+  "Open the finance dashboard",
+  "Create a task: review Q2 roadmap, due Friday",
   "How many employees do we have?",
   "Switch to Simplicity",
 ];
 
 const QUICK_COMMANDS_SIMPLICITY = [
   "Open Simplicity analytics",
-  "How many signups today?",
+  "How many users signed up today?",
+  "Schedule a meeting tomorrow at 3pm",
   "Switch to CodeWithAli",
 ];
 
 function formatTime(ms: number): string {
-  const d = new Date(ms);
-  return d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+  return new Date(ms).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
 }
+
+const STATUS_LABEL: Record<string, string> = {
+  idle: "Idle",
+  listening: "Listening",
+  processing: "Thinking",
+  speaking: "Speaking",
+  executing: "Working",
+  error: "Error",
+};
+
+const VOICE_LABEL: Record<string, string> = {
+  standby: "Standby",
+  armed: "Armed",
+  dormant: "Dormant",
+};
 
 export function CommandPanel() {
   const {
     panelOpen,
     closePanel,
     status,
+    voiceState,
     conversation,
     activity,
     submitCommand,
@@ -58,7 +74,10 @@ export function CommandPanel() {
 
   useEffect(() => {
     if (scrollRef.current) {
-      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+      scrollRef.current.scrollTo({
+        top: scrollRef.current.scrollHeight,
+        behavior: "smooth",
+      });
     }
   }, [conversation.length, tab]);
 
@@ -69,20 +88,9 @@ export function CommandPanel() {
     submitCommand(t, "text");
   };
 
-  const statusLabel: Record<string, string> = {
-    idle: "Idle",
-    listening: "Listening",
-    processing: "Processing",
-    speaking: "Speaking",
-    executing: "Executing",
-    error: "Error",
-  };
-
   const quicks = [
     ...QUICK_COMMANDS_COMMON,
-    ...(activeCompany === "simplicityFunds"
-      ? QUICK_COMMANDS_SIMPLICITY
-      : QUICK_COMMANDS_CWA),
+    ...(activeCompany === "simplicityFunds" ? QUICK_COMMANDS_SIMPLICITY : QUICK_COMMANDS_CWA),
   ];
 
   return (
@@ -90,23 +98,32 @@ export function CommandPanel() {
       <header className="axon-panel-header">
         <div className="axon-panel-title">
           <span className="axon-status-dot" data-state={status} />
-          AXON · {statusLabel[status] ?? status}
+          <strong>AXON</strong>
+          <span style={{ color: "var(--axon-muted)", fontWeight: 500 }}>
+            {STATUS_LABEL[status] ?? status}
+          </span>
         </div>
-        <div style={{ display: "flex", gap: 6 }}>
+        <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+          <span className="axon-voicepill" data-state={voiceState}>
+            <span
+              className="axon-status-dot"
+              data-state={voiceState === "armed" ? "listening" : "idle"}
+            />
+            {VOICE_LABEL[voiceState] ?? voiceState}
+          </span>
           <button className="axon-btn" onClick={interrupt} title="Stop speaking">
             Stop
           </button>
           <button className="axon-btn" onClick={clearConversation} title="Clear session">
             Clear
           </button>
-          <button className="axon-btn" onClick={closePanel} aria-label="Close panel">
+          <button className="axon-btn" onClick={closePanel} aria-label="Close">
             ×
           </button>
         </div>
       </header>
 
       <div className="axon-panel-body">
-        {/* Tabs */}
         <div className="axon-tabs">
           <button
             className="axon-tab"
@@ -131,44 +148,26 @@ export function CommandPanel() {
           </button>
         </div>
 
-        {/* Pane */}
         <div ref={scrollRef} className="axon-pane">
-          {tab === "conversation" && (
-            <ConversationPane />
-          )}
+          {tab === "conversation" && <ConversationPane />}
           {tab === "activity" && <ActivityPane />}
           {tab === "settings" && <AxonSettingsPane />}
 
           {!ANTHROPIC_API_KEY && tab === "conversation" && (
-            <div
-              style={{
-                marginTop: 16,
-                padding: 10,
-                border: "1px dashed rgba(var(--axon-accent-rgb), 0.45)",
-                borderRadius: 6,
-                fontSize: 12,
-                color: "var(--axon-muted)",
-              }}
-            >
-              Reasoning engine is offline — set <code>VITE_ANTHROPIC_API_KEY</code> in your <code>.env</code> to activate.
+            <div className="axon-hint">
+              <strong style={{ color: "var(--axon-fg)" }}>AXON is offline.</strong>
+              <br />
+              Set <code>VITE_ANTHROPIC_API_KEY</code> in your <code>.env</code>, then restart{" "}
+              <code>bun run tauri dev</code>.
             </div>
           )}
         </div>
 
-        {/* Quick commands (conversation tab only) */}
         {tab === "conversation" && (
           <>
             <div className="axon-quickrow">
-              <div
-                style={{
-                  width: "100%",
-                  fontSize: 10,
-                  letterSpacing: "0.1em",
-                  color: "var(--axon-muted)",
-                  marginBottom: 4,
-                }}
-              >
-                QUICK COMMANDS · {loc.pathname}
+              <div className="axon-quickrow-label">
+                Quick commands · {loc.pathname}
               </div>
               {quicks.map((q) => (
                 <button
@@ -184,8 +183,9 @@ export function CommandPanel() {
             <div className="axon-composer">
               <button
                 className="axon-btn axon-btn-icon"
+                data-active={status === "listening"}
                 onClick={startListening}
-                title="Push to talk"
+                title="Push to talk (Ctrl+Space)"
                 aria-label="Push to talk"
               >
                 ◉
@@ -195,7 +195,9 @@ export function CommandPanel() {
                 placeholder={
                   status === "listening"
                     ? liveTranscript || "listening…"
-                    : "Type a command or ask something…"
+                    : voiceState === "dormant"
+                    ? "Dormant — say 'Axon wake up' or type…"
+                    : "Type a command, or just say 'Hey Axon…'"
                 }
                 value={draft}
                 onChange={(e) => setDraft(e.target.value)}
@@ -204,11 +206,7 @@ export function CommandPanel() {
                   if (e.key === "Escape") closePanel();
                 }}
               />
-              <button
-                className="axon-btn"
-                onClick={send}
-                disabled={!draft.trim()}
-              >
+              <button className="axon-btn" onClick={send} disabled={!draft.trim()}>
                 Send
               </button>
             </div>
@@ -223,8 +221,8 @@ function ConversationPane() {
   const { conversation } = useAxon();
   if (conversation.length === 0) {
     return (
-      <div style={{ color: "var(--axon-muted)", fontSize: 12, padding: 8 }}>
-        Standing by. Try: <em>"Hey AXON, brief me."</em>
+      <div style={{ color: "var(--axon-muted)", fontSize: 12.5, padding: 12, lineHeight: 1.6 }}>
+        I'm listening. Try: <em>"Hey Axon, brief me."</em>
       </div>
     );
   }
@@ -236,9 +234,7 @@ function ConversationPane() {
             <span>
               {t.role === "axon" ? "AXON" : t.role === "user" ? "YOU" : "SYSTEM"}
               {t.modality === "voice" ? " · VOICE" : ""}
-              {typeof t.confidence === "number"
-                ? ` · ${Math.round(t.confidence * 100)}%`
-                : ""}
+              {typeof t.confidence === "number" ? ` · ${Math.round(t.confidence * 100)}%` : ""}
             </span>
             <span>{formatTime(t.timestamp)}</span>
           </div>
@@ -262,8 +258,8 @@ function ActivityPane() {
   const { activity } = useAxon();
   if (activity.length === 0) {
     return (
-      <div style={{ color: "var(--axon-muted)", fontSize: 12, padding: 8 }}>
-        No actions yet this session.
+      <div style={{ color: "var(--axon-muted)", fontSize: 12.5, padding: 12 }}>
+        Nothing yet this session.
       </div>
     );
   }
@@ -273,14 +269,10 @@ function ActivityPane() {
         .slice()
         .reverse()
         .map((a) => (
-          <div
-            key={a.id}
-            className="axon-activity-row"
-            data-error={!!a.error}
-          >
-            <div>
+          <div key={a.id} className="axon-activity-row" data-error={!!a.error}>
+            <div style={{ minWidth: 0, flex: 1 }}>
               <span className="axon-activity-name">{a.actionName}</span>
-              <div style={{ fontSize: 11, color: "var(--axon-muted)" }}>
+              <div style={{ fontSize: 11.5, color: "var(--axon-muted)", marginTop: 2 }}>
                 {a.summary}
                 {a.error ? ` — ${a.error}` : ""}
               </div>

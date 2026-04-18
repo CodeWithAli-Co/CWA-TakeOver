@@ -24,6 +24,8 @@ import {
 } from "lucide-react";
 import { ActiveUser, Employees, Todos } from "@/stores/query";
 import { Suspense } from "react";
+import { TasksComponent } from "@/MyComponents/HomeDashboard/tasks";
+import Meetings from "@/MyComponents/HomeDashboard/meetings";
 
 // ── Revenue chart data (static for now — can be wired to financial context later) ──
 const revenueData = [
@@ -241,6 +243,14 @@ function CWADashboardContent() {
           ))}
         </div>
       </BentoCard>
+
+      {/* ── Row 4: Full Tasks + Meetings widgets ── */}
+      <div className="col-span-7">
+        <TasksComponent />
+      </div>
+      <div className="col-span-5">
+        <Meetings />
+      </div>
     </div>
   );
 }

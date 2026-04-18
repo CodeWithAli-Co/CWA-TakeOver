@@ -10,6 +10,7 @@ import { AxonProvider } from "./AxonProvider";
 import { Orb } from "./ui/Orb";
 import { CommandPanel } from "./ui/CommandPanel";
 import { ConfirmDialog } from "./ui/ConfirmDialog";
+import { SubtitleOverlay } from "./ui/SubtitleOverlay";
 import "./axon.css";
 
 export function AxonRoot() {
@@ -27,6 +28,7 @@ export function AxonRoot() {
     <div data-axon>
       <AxonProvider>
         <Orb />
+        <SubtitleOverlay />
         <CommandPanel />
         <ConfirmDialog />
       </AxonProvider>

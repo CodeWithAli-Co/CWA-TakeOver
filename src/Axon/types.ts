@@ -121,6 +121,12 @@ export interface AxonSettings {
   alwaysListening: boolean;
   /** Wake phrase — matched case-insensitive. */
   wakeWord: string;
+  /** Phrases that move AXON from active to dormant. */
+  sleepPhrases: string[];
+  /** Phrases that move AXON from dormant back to standby. */
+  resumePhrases: string[];
+  /** Speak a proactive greeting on first mount per session. */
+  autoGreet: boolean;
   /** Push-to-talk keyboard shortcut. */
   pushToTalkShortcut: string;
   /** Preferred synthesis voice name. */
@@ -141,16 +147,20 @@ export interface AxonSettings {
 
 export const DEFAULT_SETTINGS: AxonSettings = {
   enabled: true,
-  alwaysListening: false,
+  // Default ON — pure-voice operation, no button-pressing required.
+  alwaysListening: true,
   wakeWord: "hey axon",
+  sleepPhrases: ["axon go to sleep", "axon stop listening", "axon standby", "axon go quiet", "goodbye axon"],
+  resumePhrases: ["axon wake up", "axon activate", "hey axon wake up", "axon come back"],
+  autoGreet: true,
   pushToTalkShortcut: "Control+Space",
   preferredVoice: null,
-  rate: 1.0,
-  pitch: 0.9,
+  rate: 1.02,
+  pitch: 0.95,
   volume: 1.0,
   elevenLabsVoiceId: null,
   enabledMonitors: [],
-  confidenceThreshold: 0.65,
+  confidenceThreshold: 0.55,
 };
 
 // ── Automations ────────────────────────────────────────────────────
@@ -198,6 +208,7 @@ export interface AxonContextValue {
   liveTranscript: string;
   audioLevel: number;
   isAdmin: boolean;
+  voiceState: "dormant" | "standby" | "armed";
 
   // Actions
   openPanel: () => void;

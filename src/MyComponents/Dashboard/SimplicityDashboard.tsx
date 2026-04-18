@@ -33,6 +33,8 @@ import {
   useSimplicityUsers,
 } from "../Simplicity/api/simplicityQueries";
 import { Suspense, useMemo } from "react";
+import { TasksComponent } from "@/MyComponents/HomeDashboard/tasks";
+import Meetings from "@/MyComponents/HomeDashboard/meetings";
 
 // ── helpers ──
 const fmt = (n: number) =>
@@ -423,6 +425,14 @@ function SimplicityDashboardContent() {
           ))}
         </div>
       </BentoCard>
+
+      {/* ── Full Tasks + Meetings widgets — shown on Simplicity view too ── */}
+      <div className="col-span-7">
+        <TasksComponent />
+      </div>
+      <div className="col-span-5">
+        <Meetings />
+      </div>
     </div>
   );
 }

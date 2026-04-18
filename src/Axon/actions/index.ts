@@ -7,6 +7,9 @@ import { registerDataActions } from "./data";
 import { registerBriefingActions } from "./briefing";
 import { registerAnnouncementActions } from "./announcements";
 import { registerAutomationActions } from "./automations";
+import { registerMeetingActions } from "./meetings";
+import { registerDomActions } from "./dom";
+import { registerRoutineActions } from "./routines";
 
 let registered = false;
 
@@ -20,4 +23,7 @@ export function registerAllActions() {
   registerBriefingActions();
   registerAnnouncementActions();
   registerAutomationActions();
+  registerMeetingActions();
+  registerDomActions();
+  registerRoutineActions();
 }

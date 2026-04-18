@@ -289,6 +289,14 @@ pub fn run() {
                 let _ = window.show();
             }
 
+            // Spawn updater check in background.
+            let handle = app.handle().clone();
+            tauri::async_runtime::spawn(async move {
+                if let Err(e) = update(handle).await {
+                    eprintln!("updater check failed: {e}");
+                }
+            });
+
             Ok(())
         })
         // ─── Window close → hide to tray instead of quit ──────────────
@@ -319,13 +327,6 @@ pub fn run() {
             github_webhooks::get_github_webhooks,
             github_webhooks::handle_github_webhook,
         ])
-        .setup(|app| {
-            let handle = app.handle().clone();
-            tauri::async_runtime::spawn(async move {
-                update(handle).await.unwrap();
-            });
-            Ok(())
-        })
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }

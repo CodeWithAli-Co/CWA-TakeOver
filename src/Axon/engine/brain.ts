@@ -1,11 +1,12 @@
 // ───────────────────────────────────────────────────────────────────
-// The Claude brain — tool-use loop against Anthropic's API.
+// The Claude brain — streaming tool-use loop against Anthropic's API.
+//
+// Streams responses via SSE so speech can start as the first sentence
+// arrives, not when the whole reply completes.
 //
 // Security note: this calls the Anthropic API directly from the
-// renderer with `anthropic-dangerous-direct-browser-access`. That's
-// acceptable for a Tauri desktop admin tool where the key lives in a
-// local .env and never ships to a public web surface. If you ever
-// publish this as a web app, proxy through a backend.
+// renderer with `anthropic-dangerous-direct-browser-access`. Acceptable
+// for a Tauri desktop admin tool. For a public web build, proxy.
 // ───────────────────────────────────────────────────────────────────
 
 import type { ActionContext, ConversationTurn, ExecutedAction } from "../types";
@@ -18,8 +19,9 @@ import {
 } from "../config";
 import { buildToolDefinitions } from "../actions/registry";
 import { executeAction } from "./executor";
+import { captureScreenContext } from "./screenContext";
 
-// Anthropic content block types (minimal shape we care about).
+// ── types ─────────────────────────────────────────────────────
 type TextBlock = { type: "text"; text: string };
 type ToolUseBlock = {
   type: "tool_use";
@@ -40,20 +42,38 @@ interface AnthropicMessage {
   content: string | ContentBlock[];
 }
 
-interface AnthropicResponse {
-  id: string;
-  role: "assistant";
-  model: string;
-  stop_reason: "end_turn" | "tool_use" | "max_tokens" | "stop_sequence";
+interface StreamTurnResult {
   content: ContentBlock[];
+  stop_reason: "end_turn" | "tool_use" | "max_tokens" | "stop_sequence" | string;
+}
+
+export interface BrainRunOpts {
+  confidence?: number;
+  /** Fires with incremental text as the FINAL assistant text streams in. */
+  onTextDelta?: (chunk: string) => void;
+  /** Fires once per completed sentence — handy for sentence-by-sentence TTS. */
+  onSentence?: (sentence: string) => void;
 }
 
 export interface BrainRunResult {
   assistantText: string;
+  detail?: string;
   actions: ExecutedAction[];
-  /** True if we stopped early due to a missing API key or server error. */
   fallback: boolean;
   fallbackReason?: string;
+}
+
+// ── helpers ───────────────────────────────────────────────────
+function humanizeApiError(raw: string): string {
+  const m = raw.match(/Anthropic\s+(\d{3})/i);
+  const code = m ? m[1] : "";
+  if (code === "401") return "I can't reach my brain — the API key is invalid.";
+  if (code === "403") return "I'm blocked from my reasoning service right now.";
+  if (code === "404") return "The model I'm configured to use isn't available.";
+  if (code === "429") return "I'm hitting rate limits — give me a moment.";
+  if (code.startsWith("5")) return "My brain is having trouble. Try again in a sec.";
+  if (/network|fetch|timeout/i.test(raw)) return "I lost the connection. Try again.";
+  return "Something went wrong on my end.";
 }
 
 function buildContextPreamble(ctx: ActionContext): string {
@@ -64,24 +84,27 @@ function buildContextPreamble(ctx: ActionContext): string {
       : ctx.activeCompany === "codeWithAli"
       ? "CodeWithAli"
       : "all companies";
-  return [
+  const screen = captureScreenContext();
+  const parts = [
     `Operator: ${ctx.operator.username} (role: ${ctx.operator.role})`,
     `Active company: ${companyDisplay}`,
     `Current path: ${ctx.currentPath}`,
     `Local time: ${now.toString()}`,
-  ].join("\n");
+  ];
+  if (screen) {
+    parts.push(
+      `\n<visible_screen>\n${screen}\n</visible_screen>\n(Use this to resolve pronouns like "that", "this", "the first one". Do NOT quote it verbatim.)`
+    );
+  }
+  return parts.join("\n");
 }
 
-/** Serialize conversation history into Anthropic messages. */
 function serializeHistory(history: ConversationTurn[]): AnthropicMessage[] {
-  // Exclude system-note turns from the API payload; keep user + axon alternation.
   const rel = history.filter((t) => t.role === "user" || t.role === "axon");
-  // Coalesce to alternating roles the API requires.
   const out: AnthropicMessage[] = [];
   for (const t of rel) {
     const role: "user" | "assistant" = t.role === "user" ? "user" : "assistant";
     if (out.length > 0 && out[out.length - 1].role === role) {
-      // Same role twice in a row — concatenate text to keep API happy.
       const prev = out[out.length - 1];
       const prevText =
         typeof prev.content === "string"
@@ -95,7 +118,29 @@ function serializeHistory(history: ConversationTurn[]): AnthropicMessage[] {
   return out;
 }
 
-async function anthropicCall(messages: AnthropicMessage[]): Promise<AnthropicResponse> {
+/** Split emitted text into sentences on the fly. Returns completed sentences
+ *  and the tail-buffer of incomplete text. */
+export function drainSentences(buf: string): { sentences: string[]; rest: string } {
+  const out: string[] = [];
+  let remaining = buf;
+  // Common sentence terminators. Keep the punctuation with the sentence.
+  const re = /([.!?])(\s+|$)/g;
+  let lastIndex = 0;
+  let match: RegExpExecArray | null;
+  while ((match = re.exec(remaining)) !== null) {
+    const end = match.index + match[1].length;
+    const sentence = remaining.slice(lastIndex, end).trim();
+    if (sentence.length >= 3) out.push(sentence);
+    lastIndex = end + (match[2]?.length ?? 0);
+  }
+  return { sentences: out, rest: remaining.slice(lastIndex) };
+}
+
+// ── streaming turn ────────────────────────────────────────────
+async function anthropicStreamCall(
+  messages: AnthropicMessage[],
+  opts: { isFinal: boolean; onTextDelta?: (chunk: string) => void }
+): Promise<StreamTurnResult> {
   const tools = buildToolDefinitions();
   const body = {
     model: CLAUDE_MODEL,
@@ -103,6 +148,7 @@ async function anthropicCall(messages: AnthropicMessage[]): Promise<AnthropicRes
     system: SYSTEM_PROMPT,
     tools,
     messages,
+    stream: true,
   };
 
   const res = await fetch(ANTHROPIC_API_URL, {
@@ -116,24 +162,109 @@ async function anthropicCall(messages: AnthropicMessage[]): Promise<AnthropicRes
     body: JSON.stringify(body),
   });
 
-  if (!res.ok) {
-    const text = await res.text();
+  if (!res.ok || !res.body) {
+    const text = await res.text().catch(() => "");
     throw new Error(`Anthropic ${res.status}: ${text.slice(0, 200)}`);
   }
 
-  return (await res.json()) as AnthropicResponse;
+  const reader = res.body.getReader();
+  const decoder = new TextDecoder();
+
+  // Per-block accumulators — keyed by content block index.
+  const blocks: Record<number, { type: "text" | "tool_use"; text?: string; id?: string; name?: string; json?: string }> = {};
+  let stopReason = "";
+  let buf = "";
+
+  /* eslint-disable no-constant-condition */
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    buf += decoder.decode(value, { stream: true });
+
+    // SSE frames separated by blank line; events use lines `event: X` and `data: JSON`.
+    const frames = buf.split(/\r?\n\r?\n/);
+    buf = frames.pop() ?? "";
+
+    for (const frame of frames) {
+      const lines = frame.split(/\r?\n/);
+      const dataLine = lines.find((l) => l.startsWith("data: "));
+      if (!dataLine) continue;
+      const payload = dataLine.slice("data: ".length);
+      if (payload === "[DONE]") continue;
+      let evt: any;
+      try { evt = JSON.parse(payload); } catch { continue; }
+
+      switch (evt.type) {
+        case "content_block_start": {
+          const idx = evt.index;
+          const cb = evt.content_block;
+          if (cb.type === "text") {
+            blocks[idx] = { type: "text", text: "" };
+          } else if (cb.type === "tool_use") {
+            blocks[idx] = { type: "tool_use", id: cb.id, name: cb.name, json: "" };
+          }
+          break;
+        }
+        case "content_block_delta": {
+          const idx = evt.index;
+          const d = evt.delta;
+          const blk = blocks[idx];
+          if (!blk) break;
+          if (d.type === "text_delta" && blk.type === "text") {
+            blk.text = (blk.text ?? "") + d.text;
+            if (opts.isFinal) opts.onTextDelta?.(d.text);
+          } else if (d.type === "input_json_delta" && blk.type === "tool_use") {
+            blk.json = (blk.json ?? "") + (d.partial_json ?? "");
+          }
+          break;
+        }
+        case "content_block_stop":
+          // nothing to do — keep accumulated
+          break;
+        case "message_delta":
+          if (evt.delta?.stop_reason) stopReason = evt.delta.stop_reason;
+          break;
+        case "message_stop":
+          // final event
+          break;
+        case "error":
+          throw new Error(`stream error: ${evt.error?.message ?? "unknown"}`);
+      }
+    }
+  }
+
+  // Reconstruct content blocks array.
+  const content: ContentBlock[] = Object.keys(blocks)
+    .map((k) => Number(k))
+    .sort((a, b) => a - b)
+    .map((i) => {
+      const b = blocks[i];
+      if (b.type === "text") return { type: "text", text: b.text ?? "" };
+      // tool_use — parse json
+      let input: Record<string, unknown> = {};
+      try {
+        input = b.json ? JSON.parse(b.json) : {};
+      } catch {
+        input = {};
+      }
+      return { type: "tool_use", id: b.id!, name: b.name!, input };
+    });
+
+  return { content, stop_reason: stopReason || "end_turn" };
 }
 
+// ── public entry ───────────────────────────────────────────────
 export async function runTurn(
   userText: string,
   history: ConversationTurn[],
   ctx: ActionContext,
-  opts: { confidence?: number } = {}
+  opts: BrainRunOpts = {}
 ): Promise<BrainRunResult> {
   if (!ANTHROPIC_API_KEY) {
     return {
-      assistantText:
-        "My reasoning engine is offline. The Anthropic API key is not configured — add VITE_ANTHROPIC_API_KEY to the environment.",
+      assistantText: "I'm not hooked up to my brain yet.",
+      detail:
+        "The Anthropic API key is missing. Add VITE_ANTHROPIC_API_KEY to your .env and restart the dev server.",
       actions: [],
       fallback: true,
       fallbackReason: "missing-api-key",
@@ -151,8 +282,6 @@ export async function runTurn(
     role: "user",
     content: `${preamble}${confidenceNote}\n\nOperator command: ${userText}`,
   };
-
-  // Replace the last user turn (which duplicates userText) with the primed one.
   if (historyMsgs.length > 0 && historyMsgs[historyMsgs.length - 1].role === "user") {
     historyMsgs[historyMsgs.length - 1] = primingMsg;
   } else {
@@ -160,42 +289,68 @@ export async function runTurn(
   }
 
   const actions: ExecutedAction[] = [];
-  let messages: AnthropicMessage[] = [...historyMsgs];
+  const messages: AnthropicMessage[] = [...historyMsgs];
   let finalText = "";
   const MAX_ITER = 4;
 
   for (let iter = 0; iter < MAX_ITER; iter++) {
-    let response: AnthropicResponse;
+    let response: StreamTurnResult;
+
+    // Sentence chunker — only when we're on what should be the final iteration
+    // AND onSentence is provided. We don't know yet if this iter is final, so
+    // we buffer text deltas and commit sentences only if the turn ends without
+    // further tool_use.
+    let liveBuf = "";
+    const pendingSentences: string[] = [];
+    const textDelta = (chunk: string) => {
+      liveBuf += chunk;
+      const { sentences, rest } = drainSentences(liveBuf);
+      liveBuf = rest;
+      for (const s of sentences) pendingSentences.push(s);
+      opts.onTextDelta?.(chunk);
+    };
+
     try {
-      response = await anthropicCall(messages);
+      response = await anthropicStreamCall(messages, {
+        isFinal: true, // always stream text deltas; we commit sentences conditionally
+        onTextDelta: textDelta,
+      });
     } catch (e) {
       const message = e instanceof Error ? e.message : String(e);
+      console.error("[AXON] Brain stream error:", message);
       return {
-        assistantText: `I encountered a brain-layer error: ${message}`,
+        assistantText: humanizeApiError(message),
+        detail: message,
         actions,
         fallback: true,
         fallbackReason: "api-error",
       };
     }
 
-    // Collect any text blocks into the running final text.
     const textParts = response.content
       .filter((c): c is TextBlock => c.type === "text")
       .map((c) => c.text);
     if (textParts.length > 0) finalText = textParts.join("\n").trim();
 
-    // If no tool uses, we're done.
     const toolUses = response.content.filter(
       (c): c is ToolUseBlock => c.type === "tool_use"
     );
+
+    // If no tool uses, this is the final turn — commit any remaining buffered
+    // text as the last sentence.
     if (toolUses.length === 0 || response.stop_reason === "end_turn") {
+      if (opts.onSentence) {
+        for (const s of pendingSentences) opts.onSentence(s);
+        const tail = liveBuf.trim();
+        if (tail.length > 0) opts.onSentence(tail);
+      }
       return { assistantText: finalText, actions, fallback: false };
     }
 
-    // Add the assistant turn to the conversation.
+    // Tool-use turn — don't emit buffered sentences; Claude is about to
+    // replace them after getting tool results.
     messages.push({ role: "assistant", content: response.content });
 
-    // Run each tool and build tool_result blocks.
     const toolResults: ToolResultBlock[] = [];
     for (const tu of toolUses) {
       const outcome = await executeAction(tu.name, tu.input, ctx);
@@ -226,13 +381,12 @@ export async function runTurn(
     }
 
     messages.push({ role: "user", content: toolResults });
-    // Loop — Claude gets tool results and composes the final response.
   }
 
   return {
     assistantText:
       finalText ||
-      "I completed the requested actions, but ran out of reasoning iterations. Check the activity feed.",
+      "I got everything done but ran out of reasoning steps. Check the activity feed.",
     actions,
     fallback: false,
   };
