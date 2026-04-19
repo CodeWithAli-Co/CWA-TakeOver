@@ -13,6 +13,8 @@ import { registerRoutineActions } from "./routines";
 import { registerMemoryActions } from "./memory";
 import { registerTrustActions } from "./trust";
 import { registerChatActions } from "./chat";
+import { registerUndoActions } from "./undo";
+import { registerCeoPowerActions } from "./ceo_powers";
 
 let registered = false;
 
@@ -32,4 +34,6 @@ export function registerAllActions() {
   registerMemoryActions();
   registerTrustActions();
   registerChatActions();
+  registerUndoActions();
+  registerCeoPowerActions();
 }

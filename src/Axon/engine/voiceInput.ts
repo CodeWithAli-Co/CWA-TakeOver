@@ -47,6 +47,19 @@ export interface VoiceInputConfig {
   interruptPhrases: string[];
   /** Cooldown after a successful dispatch — ms. Prevents duplicates. */
   dispatchCooldownMs: number;
+  /**
+   * Continuous listen mode: once armed by the wake word, stay armed
+   * until the operator says a stand-down phrase. Every utterance
+   * becomes a command without needing to re-say "hey axon". Default
+   * true — the single biggest UX unlock for hands-free use.
+   */
+  continuousAfterWake?: boolean;
+  /**
+   * Phrases that exit continuous mode back to standby (still listening
+   * for the wake word, but not acting on every utterance). The classic
+   * military-style "stand down" is the primary.
+   */
+  standDownPhrases?: string[];
 }
 
 type SpeechRecognitionLike = any;
@@ -353,11 +366,32 @@ export class VoiceInput {
       return;
     }
 
-    // ── sleep phrase (from any awake state) ──
+    // ── stand-down (continuous mode exit) ──
+    // In continuous-listen mode, "stand down" / "that's all" drops Axon
+    // back to standby (passive wake-word listening). Checked BEFORE the
+    // generic sleep phrase so "stand down" doesn't also dormant us.
+    const standDownPhrases =
+      this.config.standDownPhrases ?? [
+        "stand down",
+        "that's all",
+        "that will be all",
+        "thanks axon",
+        "at ease",
+      ];
+    const hasStandDown = standDownPhrases.some((p) => containsPhrase(text, p));
+    if (hasStandDown && this.state === "armed") {
+      this.setState("standby");
+      this.dispatch({ kind: "sleep" }, n, now);
+      return;
+    }
+
+    // ── sleep phrase (from any awake state) — full dormant ──
     if (hasSleep) {
       this.dispatch({ kind: "sleep" }, n, now);
       return;
     }
+
+    const continuous = this.config.continuousAfterWake !== false;
 
     // ── standby: must hear wake phrase, nothing else ──
     if (this.state === "standby") {
@@ -367,16 +401,20 @@ export class VoiceInput {
         if (after.length > 2) {
           // "Hey Axon, brief me" — wake + command in one utterance.
           this.dispatch({ kind: "wake" }, n, now);
-          // Dispatch as command immediately after, but back-to-back — bypass cooldown
-          // for this chained dispatch since it's intentional.
           this.suppressUntil = 0;
           this.dispatch(
             { kind: "command", text: after, confidence },
             norm(after),
             now
           );
-          // Wake chained to command — return to standby.
-          this.setState("standby");
+          // Continuous: stay armed to accept follow-up utterances as
+          // commands. Legacy: drop back to standby after one.
+          if (continuous) {
+            this.setState("armed");
+            this.armedAt = now;
+          } else {
+            this.setState("standby");
+          }
         } else {
           // Just "Hey Axon" — arm for the next utterance.
           this.setState("armed");
@@ -387,10 +425,12 @@ export class VoiceInput {
       return;
     }
 
-    // ── armed: next utterance is the command ──
+    // ── armed: next utterance is a command ──
     if (this.state === "armed") {
-      // Arm timeout — if the operator took longer than 10s, fall back to standby.
-      if (now - this.armedAt > 10_000) {
+      // In legacy mode the armed state times out after 10s of silence.
+      // In continuous mode we NEVER time out — only "stand down" or a
+      // sleep phrase exits.
+      if (!continuous && now - this.armedAt > 10_000) {
         this.setState("standby");
         return;
       }
@@ -402,7 +442,14 @@ export class VoiceInput {
         norm(cleaned),
         now
       );
-      this.setState("standby");
+      if (continuous) {
+        // Refresh the armed-at timestamp so any future legacy-style
+        // timeout doesn't fire mid-conversation.
+        this.armedAt = now;
+        // Stay armed — the next utterance is another command.
+      } else {
+        this.setState("standby");
+      }
     }
   }
 

@@ -209,12 +209,28 @@ export function AxonProvider({ children }: { children: React.ReactNode }) {
   );
 
   // ── confirmation ─────────────────────────────────────────────────
+  // When `autoApprove` is on (default), destructive actions bypass the
+  // confirm dialog and just run. Mistakes are reversible via the undo
+  // stack. This eliminates the "yes, yes, YES, yes" frustration where
+  // voice quality made every confirmation round-trip painful.
   const requestConfirmation = useCallback(
     (message: string) =>
       new Promise<boolean>((resolve) => {
+        if (settingsRef.current.autoApprove) {
+          // Log a system note so the operator can see what ran implicitly.
+          appendTurn({
+            id: newId("t"),
+            role: "system",
+            text: `auto-approved: ${message}`,
+            modality: "system",
+            timestamp: Date.now(),
+          });
+          resolve(true);
+          return;
+        }
         setPendingConfirm({ id: newId("c"), message, resolve });
       }),
-    []
+    [appendTurn]
   );
   const answerConfirmation = useCallback((id: string, ok: boolean) => {
     setPendingConfirm((cur) => {
@@ -397,6 +413,8 @@ export function AxonProvider({ children }: { children: React.ReactNode }) {
         resumePhrases: settings.resumePhrases,
         interruptPhrases: settings.interruptPhrases,
         dispatchCooldownMs: 1400,
+        continuousAfterWake: settings.continuousAfterWake,
+        standDownPhrases: settings.standDownPhrases,
       },
       {
         onStart: () => {

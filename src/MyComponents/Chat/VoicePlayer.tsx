@@ -15,7 +15,8 @@
  */
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Pause, Play, Volume2 } from "lucide-react";
+import { Pause, Play, Volume2, FileText, Loader2 } from "lucide-react";
+import { transcribeAudio } from "@/Axon/engine/transcription";
 
 interface Props {
   src: string;
@@ -57,6 +58,9 @@ export function VoicePlayer({ src, compact = false }: Props) {
   const [current, setCurrent] = useState(0);
   const [duration, setDuration] = useState(0);
   const [rateIdx, setRateIdx] = useState(0);
+  const [transcript, setTranscript] = useState<string | null>(null);
+  const [transcribing, setTranscribing] = useState(false);
+  const [transcribeError, setTranscribeError] = useState<string | null>(null);
 
   const barCount = compact ? 28 : 42;
   const bars = useMemo(() => hashBars(src, barCount), [src, barCount]);
@@ -119,7 +123,18 @@ export function VoicePlayer({ src, compact = false }: Props) {
 
   const progress = duration > 0 ? Math.min(1, current / duration) : 0;
 
+  const runTranscribe = async () => {
+    if (transcribing || transcript) return;
+    setTranscribing(true);
+    setTranscribeError(null);
+    const res = await transcribeAudio(src);
+    setTranscribing(false);
+    if (res.ok) setTranscript(res.text);
+    else setTranscribeError(res.reason);
+  };
+
   return (
+    <div className="flex flex-col gap-1.5">
     <div
       className={`flex items-center gap-2.5 rounded-2xl border border-primary/25 bg-primary/[0.06] px-2.5 py-1.5 shadow-sm transition-colors hover:border-primary/40 ${
         compact ? "max-w-[280px]" : "max-w-[360px]"
@@ -184,8 +199,35 @@ export function VoicePlayer({ src, compact = false }: Props) {
         >
           {PLAYBACK_RATES[rateIdx]}x
         </button>
+        <button
+          type="button"
+          onClick={runTranscribe}
+          disabled={transcribing}
+          title={transcript ? "Transcript" : "Transcribe (Whisper sidecar)"}
+          className="flex h-6 w-6 items-center justify-center rounded-full border border-border bg-background/60 text-muted-foreground transition-colors hover:border-primary/40 hover:text-foreground disabled:opacity-60"
+        >
+          {transcribing ? (
+            <Loader2 className="h-3 w-3 animate-spin" />
+          ) : (
+            <FileText className="h-3 w-3" />
+          )}
+        </button>
         <Volume2 className="h-3 w-3 text-muted-foreground/60" />
       </div>
+    </div>
+    {transcript && (
+      <div className="mt-1 max-w-[360px] rounded-md border border-primary/20 bg-primary/[0.04] px-2.5 py-1.5 text-[11.5px] leading-snug text-foreground/85">
+        <div className="mb-0.5 font-mono text-[9px] uppercase tracking-widest text-primary">
+          transcript
+        </div>
+        {transcript}
+      </div>
+    )}
+    {transcribeError && !transcript && (
+      <div className="mt-1 max-w-[360px] text-[10.5px] text-muted-foreground">
+        {transcribeError}
+      </div>
+    )}
     </div>
   );
 }

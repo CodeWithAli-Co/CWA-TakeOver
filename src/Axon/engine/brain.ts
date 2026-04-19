@@ -297,10 +297,11 @@ export async function runTurn(
   }
 
   const preamble = buildContextPreamble(ctx, opts.summary);
-  const confidenceNote =
-    opts.confidence !== undefined && opts.confidence < 0.65
-      ? `\n[voice transcript confidence: ${Math.round(opts.confidence * 100)}% — confirm destructive actions]`
-      : "";
+  // No confidence-based confirm injection. Low confidence → still act;
+  // the operator will say "undo that" or correct if wrong. This is
+  // faster than a back-and-forth confirmation loop — especially on
+  // mobile/noisy-room conditions where confidence is usually < 0.65.
+  const confidenceNote = "";
 
   // ── Vision — capture screenshot when the question implies visual perception.
   const visionMode = opts.visionMode ?? "auto";

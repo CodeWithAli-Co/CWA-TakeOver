@@ -159,6 +159,22 @@ export interface AxonSettings {
   enabledMonitors: string[];
   /** Low-confidence voice threshold for confirming before acting. */
   confidenceThreshold: number;
+  /**
+   * When true, destructive actions (marked requiresConfirmation) run
+   * without popping the confirm dialog. The operator trusts Axon and
+   * relies on the undo stack to reverse mistakes. Default: true.
+   */
+  autoApprove: boolean;
+  /**
+   * Continuous-listen mode: once woken, Axon keeps accepting commands
+   * without needing the wake word again — until the operator says a
+   * stand-down phrase. Default: true.
+   */
+  continuousAfterWake: boolean;
+  /**
+   * Phrases that exit continuous mode ("stand down", "at ease", etc.).
+   */
+  standDownPhrases: string[];
 }
 
 export const DEFAULT_SETTINGS: AxonSettings = {
@@ -183,6 +199,15 @@ export const DEFAULT_SETTINGS: AxonSettings = {
   elevenLabsVoiceId: null,
   enabledMonitors: [],
   confidenceThreshold: 0.55,
+  autoApprove: true,
+  continuousAfterWake: true,
+  standDownPhrases: [
+    "stand down",
+    "that's all",
+    "that will be all",
+    "thanks axon",
+    "at ease",
+  ],
 };
 
 // ── Automations ────────────────────────────────────────────────────

@@ -23,6 +23,9 @@ import {
 import { ScrollArea } from "@/components/ui/shadcnComponents/scroll-area";
 import supabase from "@/MyComponents/supabase";
 import { format, startOfDay, subDays } from "date-fns";
+import {
+  Area, AreaChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis,
+} from "recharts";
 
 interface Row {
   sent_by: string;
@@ -131,7 +134,6 @@ export function AnalyticsDashboard() {
       ? Math.round((delta / stats.totalLastWeek) * 100)
       : 0;
 
-  const maxPerDay = Math.max(1, ...stats.perDay);
   const now = new Date();
 
   if (loading) {
@@ -185,7 +187,7 @@ export function AnalyticsDashboard() {
           />
         </div>
 
-        {/* Per-day bars */}
+        {/* Per-day area graph */}
         <section className="mb-6 rounded-lg border border-border bg-card p-5">
           <div className="flex items-center gap-2 mb-4">
             <BarChart3 className="h-4 w-4 text-primary" />
@@ -194,32 +196,71 @@ export function AnalyticsDashboard() {
               14d
             </span>
           </div>
-          <div className="flex h-[140px] items-end gap-1.5">
-            {stats.perDay.map((n, i) => {
-              const date = subDays(now, 13 - i);
-              return (
-                <div
-                  key={i}
-                  className="group flex flex-1 flex-col items-center gap-1"
-                  title={`${format(date, "EEE MMM d")} — ${n} msgs`}
-                >
-                  <div className="relative flex w-full flex-1 items-end">
-                    <div
-                      className="w-full rounded-t-sm bg-primary/70 transition-all group-hover:bg-primary"
-                      style={{ height: `${(n / maxPerDay) * 100}%` }}
-                    />
-                    {n > 0 && (
-                      <div className="absolute inset-x-0 -top-4 text-center font-mono text-[9px] text-muted-foreground opacity-0 group-hover:opacity-100">
-                        {n}
-                      </div>
-                    )}
-                  </div>
-                  <span className="font-mono text-[8.5px] uppercase tracking-widest text-muted-foreground">
-                    {format(date, "EEEEE")}
-                  </span>
-                </div>
-              );
-            })}
+          <div className="h-[220px]">
+            <ResponsiveContainer width="100%" height="100%">
+              <AreaChart
+                data={stats.perDay.map((n, i) => ({
+                  day: format(subDays(now, 13 - i), "MMM d"),
+                  short: format(subDays(now, 13 - i), "EEEEE"),
+                  messages: n,
+                }))}
+                margin={{ top: 8, right: 12, left: -18, bottom: 0 }}
+              >
+                <defs>
+                  <linearGradient id="analyticsArea" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor="hsl(var(--primary))" stopOpacity={0.55} />
+                    <stop offset="100%" stopColor="hsl(var(--primary))" stopOpacity={0.02} />
+                  </linearGradient>
+                </defs>
+                <CartesianGrid
+                  strokeDasharray="3 3"
+                  stroke="hsl(var(--border))"
+                  vertical={false}
+                />
+                <XAxis
+                  dataKey="short"
+                  tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 10 }}
+                  tickLine={false}
+                  axisLine={false}
+                />
+                <YAxis
+                  allowDecimals={false}
+                  tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 10 }}
+                  tickLine={false}
+                  axisLine={false}
+                  width={28}
+                />
+                <Tooltip
+                  cursor={{
+                    stroke: "hsl(var(--primary))",
+                    strokeDasharray: "4 4",
+                    strokeOpacity: 0.5,
+                  }}
+                  contentStyle={{
+                    background: "hsl(var(--popover))",
+                    border: "1px solid hsl(var(--border))",
+                    borderRadius: 8,
+                    fontSize: 11,
+                  }}
+                  labelFormatter={(v, payload) =>
+                    payload?.[0]?.payload?.day ?? v
+                  }
+                />
+                <Area
+                  type="monotone"
+                  dataKey="messages"
+                  stroke="hsl(var(--primary))"
+                  strokeWidth={2}
+                  fill="url(#analyticsArea)"
+                  activeDot={{
+                    r: 4,
+                    stroke: "hsl(var(--background))",
+                    strokeWidth: 2,
+                    fill: "hsl(var(--primary))",
+                  }}
+                />
+              </AreaChart>
+            </ResponsiveContainer>
           </div>
         </section>
 

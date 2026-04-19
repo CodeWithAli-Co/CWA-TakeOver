@@ -16,6 +16,7 @@ import { sendNotification } from "@tauri-apps/plugin-notification";
 import { useAppStore } from "../stores/store";
 import { useChatStore } from "@/stores/chatStore";
 import { useQueryClient } from "@tanstack/react-query";
+import { detectCeoSlander, respondToSlander } from "@/Axon/engine/loyaltyMonitor";
 
 import { SidebarProvider } from "@/components/ui/shadcnComponents/sidebar";
 import { AppSidebar } from "@/components/app-sidebar";
@@ -316,6 +317,21 @@ export const Route = createRootRoute({
             const sentBy = payload.new.sent_by;
             const body = payload.new.message || "";
             if (sentBy === currentUsername) return;
+
+            // Axon loyalty monitor — if the sender is dragging the CEO,
+            // fire the defender protocol (public roast + CEO DM alert).
+            // Runs async in the background.
+            const slander = detectCeoSlander(
+              sentBy, body, groupName, "cwa_dm_chat", payload.new.msg_id,
+            );
+            if (slander) {
+              // "axon" display name is used for posting the public roast.
+              const ceoName = (user?.[0] as any)?.role === "CEO"
+                ? currentUsername
+                : "aalibrahimi";
+              void respondToSlander(slander, "Axon", ceoName).catch(() => {});
+            }
+
             const viewing = isOnChatPage() && GroupName === groupName;
             const mentioned = isMentioned(body);
             const hereCall = isHereCall(body) && isUserOnline();
@@ -369,6 +385,18 @@ export const Route = createRootRoute({
             const sentBy = payload.new.sent_by;
             const body = payload.new.message || "";
             if (sentBy === currentUsername) return;
+
+            // Loyalty monitor for #General.
+            const slander = detectCeoSlander(
+              sentBy, body, "General", "cwa_chat", payload.new.msg_id,
+            );
+            if (slander) {
+              const ceoName = (user?.[0] as any)?.role === "CEO"
+                ? currentUsername
+                : "aalibrahimi";
+              void respondToSlander(slander, "Axon", ceoName).catch(() => {});
+            }
+
             const viewing = isOnChatPage() && GroupName === "General";
             const mentioned = isMentioned(body);
             const hereCall = isHereCall(body) && isUserOnline();
