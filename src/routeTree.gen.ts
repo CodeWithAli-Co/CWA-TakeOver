@@ -680,4 +680,23 @@ const rootRouteChildren: RootRouteChildren = {
   EmployeeLazyRoute: EmployeeLazyRoute,
   FinancialDashboardLazyRoute: FinancialDashboardLazyRoute,
   InvoicerLazyRoute: InvoicerLazyRoute,
-  Mod_logsLazyRoute: Mod_
+  Mod_logsLazyRoute: Mod_logsLazyRoute,
+  PersonalLazyRoute: PersonalLazyRoute,
+  QuotaLazyRoute: QuotaLazyRoute,
+  RoadmapLazyRoute: RoadmapLazyRoute,
+  SAnalyticsLazyRoute: SAnalyticsLazyRoute,
+  SBroadcastLazyRoute: SBroadcastLazyRoute,
+  SDevConsoleLazyRoute: SDevConsoleLazyRoute,
+  SFinanceOpsLazyRoute: SFinanceOpsLazyRoute,
+  SOverridesLazyRoute: SOverridesLazyRoute,
+  SUsersLazyRoute: SUsersLazyRoute,
+  ScheduleLazyRoute: ScheduleLazyRoute,
+  SettingsLazyRoute: SettingsLazyRoute,
+  TaskLazyRoute: TaskLazyRoute,
+  TimetrackingLazyRoute: TimetrackingLazyRoute,
+  TrainingplanLazyRoute: TrainingplanLazyRoute,
+  ClientIndexLazyRoute: ClientIndexLazyRoute,
+}
+export const routeTree = rootRouteImport
+  ._addFileChildren(rootRouteChildren)
+  ._addFileTypes<FileRouteTypes>()
