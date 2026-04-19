@@ -12,7 +12,7 @@
 
 import { useState, useRef, useEffect } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { Send, X, Paperclip, Smile, Sparkles, Loader2, Image as ImgIcon, Reply, Mic, Square, Trash2, Clock } from "lucide-react";
+import { Send, X, Paperclip, Smile, Sparkles, Loader2, Image as ImgIcon, Reply, Mic, Square, Trash2, Clock, Gift } from "lucide-react";
 import supabase from "@/MyComponents/supabase";
 import { useChatStore } from "@/stores/chatStore";
 import { getActiveCompanyLabel } from "@/stores/query";
@@ -32,6 +32,7 @@ import {
   filterSlashCommands,
   type SlashCommandDef,
 } from "./SlashCommandPicker";
+import { GifPicker } from "./GifPicker";
 import {
   addScheduled,
   listScheduledForGroup,
@@ -68,6 +69,7 @@ export const MessageComposer: React.FC<Props> = ({
   const [draggingOver, setDraggingOver] = useState(false);
   const [pollOpen, setPollOpen] = useState(false);
   const [pollInitialQ, setPollInitialQ] = useState("");
+  const [showGifs, setShowGifs] = useState(false);
   // Slash-command picker state — shown whenever the composer starts with '/'
   const [slashIdx, setSlashIdx] = useState(0);
   const slashVisible = /^\/\S*$/.test(text.trimStart());
@@ -759,6 +761,35 @@ export const MessageComposer: React.FC<Props> = ({
                     activeIndex={slashIdx}
                     onSetIndex={setSlashIdx}
                     onPick={pickSlashCommand}
+                  />
+                </div>
+              )}
+            </AnimatePresence>
+          </div>
+
+          {/* GIF picker anchor */}
+          <div className="relative">
+            <button
+              type="button"
+              onClick={() => setShowGifs((v) => !v)}
+              className="flex h-9 w-9 items-center justify-center rounded-lg text-muted-foreground/60 hover:bg-muted/60 hover:text-foreground transition-colors"
+              title="GIFs"
+              aria-expanded={showGifs}
+            >
+              <Gift className="h-[17px] w-[17px]" />
+            </button>
+            <AnimatePresence>
+              {showGifs && (
+                <div className="absolute bottom-full right-0 z-30 mb-2">
+                  <GifPicker
+                    onPick={(url) => {
+                      // Append the GIF URL to the message — MessageBubble
+                      // extracts and inlines it, hiding the raw link.
+                      setText((t) => (t.trim() ? `${t}\n${url}` : url));
+                      setShowGifs(false);
+                      inputRef.current?.focus();
+                    }}
+                    onClose={() => setShowGifs(false)}
                   />
                 </div>
               )}

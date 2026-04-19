@@ -44,13 +44,18 @@ export function HuddleBar({
 }: Props) {
   const [expanded, setExpanded] = useState(false);
 
-  // Identify the primary screen share (first peer sharing, else local if sharing)
-  const sharingPeer = peers.find((p) => p.sharing && p.screenStream);
-  const primaryScreen: { name: string; stream: MediaStream } | null = sharingPeer
-    ? { name: sharingPeer.id, stream: sharingPeer.screenStream! }
-    : sharing && localScreenStream
-      ? { name: `${username} (you)`, stream: localScreenStream }
-      : null;
+  // Collect ALL active screen shares — each peer's AND the local one
+  // if you're sharing too. Multiple simultaneous streams tile the
+  // primary stage side-by-side instead of only showing the first.
+  const primaryScreens: { name: string; stream: MediaStream; isLocal?: boolean }[] = [
+    ...peers
+      .filter((p) => p.sharing && p.screenStream)
+      .map((p) => ({ name: p.id, stream: p.screenStream! })),
+    ...(sharing && localScreenStream
+      ? [{ name: `${username} (you)`, stream: localScreenStream, isLocal: true }]
+      : []),
+  ];
+  const hasScreenStage = primaryScreens.length > 0;
 
   const peopleCount = peers.length + 1;
 
@@ -84,9 +89,12 @@ export function HuddleBar({
           <span className="text-muted-foreground">
             {peopleCount} {peopleCount === 1 ? "person" : "people"}
           </span>
-          {sharing && (
+          {primaryScreens.length > 0 && (
             <span className="ml-1 flex items-center gap-1 rounded-full bg-blue-500/15 px-2 py-0.5 text-[10px] font-semibold text-blue-300">
-              <Monitor className="h-3 w-3" /> sharing screen
+              <Monitor className="h-3 w-3" />
+              {primaryScreens.length === 1
+                ? (sharing ? "you're sharing" : "1 sharing")
+                : `${primaryScreens.length} sharing`}
             </span>
           )}
           {error && (
@@ -109,11 +117,30 @@ export function HuddleBar({
 
         {/* Body */}
         <div className={`flex flex-1 flex-col gap-3 min-h-0 ${expanded ? "" : ""}`}>
-          {primaryScreen ? (
+          {hasScreenStage ? (
             <>
-              {/* Screen-share primary stage */}
-              <div className="flex-1 min-h-0">
-                <ScreenShareTile name={primaryScreen.name} stream={primaryScreen.stream} />
+              {/* Screen-share primary stage — tiles side-by-side when
+               *  multiple people are sharing at the same time. */}
+              <div
+                className="grid flex-1 min-h-0 gap-2"
+                style={{
+                  gridTemplateColumns: `repeat(${
+                    primaryScreens.length === 1
+                      ? 1
+                      : primaryScreens.length === 2
+                        ? 2
+                        : Math.min(3, primaryScreens.length)
+                  }, 1fr)`,
+                  gridAutoRows: "1fr",
+                }}
+              >
+                {primaryScreens.map((s, i) => (
+                  <ScreenShareTile
+                    key={s.isLocal ? "local-screen" : `${s.name}-${i}`}
+                    name={s.name}
+                    stream={s.stream}
+                  />
+                ))}
               </div>
               {/* Participants row below */}
               <div className="flex items-center gap-2 overflow-x-auto pb-1">

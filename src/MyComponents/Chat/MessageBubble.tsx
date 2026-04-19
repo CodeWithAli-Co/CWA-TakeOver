@@ -80,15 +80,37 @@ const formatExactTime = (dateString: string) => {
   } catch { return ""; }
 };
 
-/** Extract image URLs embedded in the message body. Used when image_urls
- *  column isn't populated (migration not run yet or old message). */
-const IMG_URL_RE = /https?:\/\/[^\s]+?\.(?:png|jpe?g|gif|webp|avif)(?:\?[^\s]*)?/gi;
+/** Extract image URLs embedded in the message body. Covers:
+ *   · URLs ending in .png/.jpg/.jpeg/.gif/.webp/.avif (plus optional query).
+ *   · Supabase public-bucket chat-image URLs where the filename carries
+ *     the extension after the last path segment.
+ *   · Bare .gif URLs from giphy.com / media.tenor.com (GIFs via picker).
+ *  Strips matched URLs from the body completely — including the newline
+ *  that the composer inserts around them — so the image renders inline
+ *  without a visible link beside it. */
+const IMG_URL_RE =
+  /https?:\/\/[^\s]+?\.(?:png|jpe?g|gif|webp|avif)(?:\?[^\s]*)?/gi;
+const GIPHY_TENOR_RE =
+  /https?:\/\/(?:[^\s]*(?:giphy\.com|media\.tenor\.com|tenor\.com)[^\s]+)/gi;
 function extractImageUrls(text: string): { cleanText: string; urls: string[] } {
   const urls: string[] = [];
-  const cleanText = text.replace(IMG_URL_RE, (match) => {
-    urls.push(match);
-    return "";
-  }).replace(/\n{3,}/g, "\n\n").trim();
+  const matchers = [IMG_URL_RE, GIPHY_TENOR_RE];
+  let body = text;
+  for (const re of matchers) {
+    body = body.replace(re, (match) => {
+      // Dedup — same URL showing up in multiple regexes shouldn't
+      // render twice.
+      if (!urls.includes(match)) urls.push(match);
+      return "";
+    });
+  }
+  // Collapse the newlines the composer inserted around attachments so
+  // we don't leave empty gaps.
+  const cleanText = body
+    .split("\n")
+    .filter((ln) => ln.trim().length > 0)
+    .join("\n")
+    .trim();
   return { cleanText, urls };
 }
 
@@ -323,10 +345,14 @@ export const MessageBubble: React.FC<Props> = ({
     parsedReplyId = r.replyId;
     parsedReplySender = r.replySender;
   }
-  if (images.length === 0 && displayText) {
+  // Always strip image URLs from displayText — even when image_urls
+  // column is populated — so the raw link never shows up next to the
+  // rendered image. If image_urls is empty we also promote the extracted
+  // URLs into the images array.
+  if (displayText) {
     const extracted = extractImageUrls(displayText);
     if (extracted.urls.length > 0) {
-      images = extracted.urls;
+      if (images.length === 0) images = extracted.urls;
       displayText = extracted.cleanText;
     }
   }

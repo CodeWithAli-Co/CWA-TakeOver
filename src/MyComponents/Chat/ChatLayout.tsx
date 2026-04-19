@@ -26,7 +26,7 @@ import { StarredView } from "./StarredView";
 import { WebhookManager } from "./WebhookManager";
 import { useHuddle } from "./Huddle/useHuddle";
 import { HuddleBar } from "./Huddle/HuddleBar";
-import { announceHuddleStart } from "./Huddle/HuddleRing";
+import { announceHuddleStart, consumePendingHuddleJoin } from "./Huddle/HuddleRing";
 import {
   parseReactionsMarker, stripReactionsMarker, encodeReactionsMarker,
 } from "./MessageBubble";
@@ -105,6 +105,17 @@ export const ChatLayout = () => {
   useEffect(() => {
     setActiveThreadRootId(null);
   }, [GroupName, setActiveThreadRootId]);
+
+  // Auto-join a huddle if the user clicked "Join" on a ring notification
+  // while on another route — HuddleRing stashes the target group in
+  // localStorage, we consume it here on mount / GroupName change.
+  useEffect(() => {
+    if (!GroupName) return;
+    const pending = consumePendingHuddleJoin();
+    if (pending && pending === GroupName) {
+      setHuddleGroup(pending);
+    }
+  }, [GroupName]);
 
   const username = user?.[0]?.username || "";
   const huddle = useHuddle({

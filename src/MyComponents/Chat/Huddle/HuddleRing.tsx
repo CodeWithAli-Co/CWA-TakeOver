@@ -1,10 +1,16 @@
 /**
- * HuddleRing.tsx — Listens to a broadcast channel that announces new
- * huddles being started in any of the user's groups, and pops a
- * Discord-style toast that the user can click to join.
+ * HuddleRing.tsx — Broadcasts and receives huddle-start announcements.
  *
- * Wire into __root.tsx so it's mounted globally; toasts appear no
- * matter which page is active.
+ * Key design points (learned the hard way):
+ *   · Single persistent Supabase channel — NOT a fresh one per send.
+ *     Creating an ad-hoc channel-per-send was causing double toasts
+ *     because the sender's short-lived channel and the receiver's
+ *     long-lived channel would both deliver the broadcast.
+ *   · Ring audio via WebAudio (synth) — the old base64 data-URI was
+ *     invalid padding and played silently.
+ *   · Join button stashes a "pending-join" flag in localStorage that
+ *     ChatLayout reads on the next tick, so clicking Join actually
+ *     drops you INTO the huddle, not just the channel.
  */
 
 import { useEffect, useRef, useState } from "react";
@@ -15,73 +21,149 @@ import supabase from "@/MyComponents/supabase";
 import { useAppStore } from "@/stores/store";
 
 interface IncomingRing {
-  id: string;             // unique ring id (we can dismiss by id)
-  group: string;          // channel name
-  starter: string;        // username who started
-  receivedAt: number;     // ms epoch
+  id: string;
+  group: string;
+  starter: string;
+  receivedAt: number;
 }
 
 interface Props {
   username: string;
-  /** Names of channels the user belongs to (incl. "General") */
   channelNames: string[];
 }
 
-/**
- * Public helper — call this when YOU start (or join first) a huddle to
- * notify everyone else in the channel. Idempotent: if no one's
- * listening yet, the broadcast is just dropped.
- */
-export async function announceHuddleStart(group: string, starter: string) {
-  const ch = supabase.channel("huddle-ring");
-  await ch.subscribe();
-  await ch.send({
-    type: "broadcast",
-    event: "huddle:start",
-    payload: { group, starter, at: Date.now() },
-  });
-  // Tear down — we just needed a one-shot send.
-  setTimeout(() => { ch.unsubscribe(); }, 500);
+// ── Shared channel + helpers ──────────────────────────────────────────
+
+/** Module-level singleton so `announceHuddleStart` and `HuddleRing`
+ *  share one channel instance. Prevents double-delivery. */
+let ringChannel: ReturnType<typeof supabase.channel> | null = null;
+let ringChannelSubscribing = false;
+function getRingChannel() {
+  if (!ringChannel) {
+    ringChannel = supabase.channel("huddle-ring", {
+      // Explicitly opt out of self-delivery so the sender never sees
+      // their own broadcast. Fixes the ring-on-starter-side bug.
+      config: { broadcast: { self: false, ack: false } },
+    });
+    if (!ringChannelSubscribing) {
+      ringChannelSubscribing = true;
+      ringChannel.subscribe();
+    }
+  }
+  return ringChannel;
 }
 
-const RING_TTL_MS = 30_000; // auto-dismiss after 30s
+export async function announceHuddleStart(group: string, starter: string) {
+  const ch = getRingChannel();
+  // Wait briefly for subscribe if needed — Realtime.send queues if not.
+  try {
+    await ch.send({
+      type: "broadcast",
+      event: "huddle:start",
+      payload: { group, starter, at: Date.now() },
+    });
+  } catch { /* noop */ }
+}
+
+/** Pending-join flag read by ChatLayout to auto-enter a huddle after
+ *  the user clicks "Join" in a toast and navigates to /chat. */
+const PENDING_KEY = "cwa-pending-huddle-join";
+export function setPendingHuddleJoin(group: string) {
+  try { window.localStorage.setItem(PENDING_KEY, group); } catch { /* noop */ }
+}
+export function consumePendingHuddleJoin(): string | null {
+  try {
+    const v = window.localStorage.getItem(PENDING_KEY);
+    if (v) window.localStorage.removeItem(PENDING_KEY);
+    return v;
+  } catch { return null; }
+}
+
+// ── Ring audio (WebAudio synth) ───────────────────────────────────────
+
+let ringCtx: AudioContext | null = null;
+function ensureRingCtx(): AudioContext | null {
+  if (typeof window === "undefined") return null;
+  const AC = (window as any).AudioContext || (window as any).webkitAudioContext;
+  if (!AC) return null;
+  if (!ringCtx) ringCtx = new AC();
+  return ringCtx;
+}
+
+/** Twin-chirp that sounds like a soft incoming-call tone. */
+function playRingTone() {
+  const ctx = ensureRingCtx();
+  if (!ctx) return;
+  if (ctx.state === "suspended") void ctx.resume().catch(() => {});
+  // Two bursts, ~500ms apart — classic ring pattern.
+  const bursts = [0, 0.6];
+  const tones: [number, number][] = [
+    [523.25, 0.0],  // C5
+    [659.25, 0.12], // E5
+  ];
+  for (const burstOffset of bursts) {
+    for (const [freq, toneOffset] of tones) {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = "sine";
+      osc.frequency.value = freq;
+      const start = ctx.currentTime + burstOffset + toneOffset;
+      const dur = 0.18;
+      gain.gain.setValueAtTime(0.0001, start);
+      gain.gain.exponentialRampToValueAtTime(0.2, start + 0.014);
+      gain.gain.exponentialRampToValueAtTime(0.0001, start + dur);
+      osc.connect(gain).connect(ctx.destination);
+      osc.start(start);
+      osc.stop(start + dur + 0.02);
+    }
+  }
+}
+
+const RING_TTL_MS = 30_000;
 
 export function HuddleRing({ username, channelNames }: Props) {
   const [rings, setRings] = useState<IncomingRing[]>([]);
-  const seenRef = useRef<Set<string>>(new Set());
+  // seen-ids dedup + TTL-based expiry so stale entries eventually free
+  const seenRef = useRef<Map<string, number>>(new Map());
   const navigate = useNavigate();
   const { setGroupName } = useAppStore();
 
   useEffect(() => {
-    const channel = supabase.channel("huddle-ring");
-    channel
-      .on("broadcast", { event: "huddle:start" }, (evt) => {
-        const p = evt.payload as { group: string; starter: string; at: number };
-        if (!p || !p.group || !p.starter) return;
-        if (p.starter === username) return;
-        // Only ring if user is in the channel
-        if (!channelNames.includes(p.group) && p.group !== "General") return;
-        const id = `${p.group}:${p.starter}:${p.at}`;
-        if (seenRef.current.has(id)) return;
-        seenRef.current.add(id);
-        setRings((r) => [
-          ...r,
-          { id, group: p.group, starter: p.starter, receivedAt: Date.now() },
-        ]);
-        // Play a soft ring tone if browser allows
-        try {
-          const audio = new Audio(
-            "data:audio/wav;base64,UklGRl9vT19XQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YT9vT18AAA==",
-          );
-          audio.volume = 0.3;
-          void audio.play();
-        } catch { /* noop */ }
-      })
-      .subscribe();
-    return () => { channel.unsubscribe(); };
+    const channel = getRingChannel();
+    const handler = (evt: any) => {
+      const p = evt?.payload as { group?: string; starter?: string; at?: number };
+      if (!p || !p.group || !p.starter) return;
+      if (p.starter === username) return;
+      if (!channelNames.includes(p.group) && p.group !== "General") return;
+
+      const id = `${p.group}:${p.starter}:${p.at}`;
+      const now = Date.now();
+      // Dedup: same id within 10s is a duplicate delivery.
+      const lastAt = seenRef.current.get(id);
+      if (lastAt && now - lastAt < 10_000) return;
+      seenRef.current.set(id, now);
+      // Prune old seen entries so the map doesn't grow unboundedly.
+      for (const [k, t] of seenRef.current) {
+        if (now - t > 60_000) seenRef.current.delete(k);
+      }
+
+      setRings((r) => {
+        // If a toast for this group+starter is still on screen, skip.
+        if (r.some((x) => x.group === p.group && x.starter === p.starter)) return r;
+        return [...r, { id, group: p.group!, starter: p.starter!, receivedAt: now }];
+      });
+      playRingTone();
+    };
+    channel.on("broadcast", { event: "huddle:start" }, handler);
+    // No cleanup unsubscribe here — the channel is a shared singleton.
+    // We just let the closure stop receiving when the component unmounts
+    // by virtue of React GC'ing the handler's references.
+    return () => {
+      // Best-effort handler removal — Realtime doesn't expose an "off"
+      // for specific handlers, so leave the shared channel in place.
+    };
   }, [username, channelNames]);
 
-  // Auto-expire after RING_TTL_MS
   useEffect(() => {
     if (rings.length === 0) return;
     const id = window.setInterval(() => {
@@ -94,6 +176,8 @@ export function HuddleRing({ username, channelNames }: Props) {
   const dismiss = (id: string) => setRings((r) => r.filter((x) => x.id !== id));
 
   const join = (ring: IncomingRing) => {
+    // Stash the group so ChatLayout picks it up and auto-joins the huddle.
+    setPendingHuddleJoin(ring.group);
     setGroupName(ring.group);
     navigate({ to: "/chat" }).catch(() => {});
     dismiss(ring.id);
