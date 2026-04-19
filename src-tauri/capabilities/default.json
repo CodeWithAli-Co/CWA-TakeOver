@@ -13,6 +13,7 @@
     "core:window:allow-set-focus",
     "core:window:allow-unminimize",
     "core:window:allow-is-visible",
+    "core:window:allow-set-title",
     "opener:default",
     "sql:default",
     "sql:allow-execute",

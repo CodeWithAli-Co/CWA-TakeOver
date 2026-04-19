@@ -23,6 +23,7 @@ import {
   securityEngineerData,
   filterNavByCompany,
   filterProjectsByCompany,
+  accountManagerData,
 } from "./ui/Dashboard/role-datas";
 import UserView, { Role } from "@/MyComponents/Reusables/userView";
 import { RolePreviewSelector } from "./ui/Dashboard/role-preview";
@@ -48,10 +49,12 @@ function SidebarBrand() {
       {!isCollapsed && (
         <div className="flex flex-col min-w-0">
           <span className="text-[13px] font-semibold text-foreground/85 tracking-tight truncate transition-colors duration-300">
-            {isSimplicity ? "Simplicity" : "CWA Manager"}
+            {isSimplicity ? "Simplicity" : "CWA TakeOver"}
           </span>
           <span className="text-[10px] text-muted-foreground leading-none">
-            {isSimplicity ? "Funds Admin" : "v1.3.0"}
+            {/* {isSimplicity ? "Funds Admin" : "v1.3.2"} */}
+            {/* *This is the version of TakeOver app */}
+            v1.3.2
           </span>
         </div>
       )}
@@ -72,7 +75,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
           </div>
 
           {/* Company Toggle — switches entire dashboard theme */}
-          <UserView userRole={[Role.CEO, Role.COO]}>
+          <UserView userRole={[Role.CEO, Role.COO, Role.AccManager]}>
             <CompanyToggle />
           </UserView>
 
@@ -95,6 +98,11 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
           <UserView userRole={Role.ProjectManager}>
             <NavMain items={projectManagerData.navMain} />
             <NavProjects projects={projectManagerData.projects} />
+          </UserView>
+
+          {/* Account Manager View */}
+          <UserView userRole={Role.AccManager}>
+            <NavMain items={filterNavByCompany(accountManagerData.navMain as any, activeCompany)} />
           </UserView>
 
           {/* Marketing Specialist View */}
