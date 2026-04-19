@@ -24,9 +24,8 @@ import { ForwardDialog } from "./ForwardDialog";
 import { CreateChannelDialog } from "./CreateChannelDialog";
 import { StarredView } from "./StarredView";
 import { WebhookManager } from "./WebhookManager";
-import { useHuddle } from "./Huddle/useHuddle";
-import { HuddleBar } from "./Huddle/HuddleBar";
 import { announceHuddleStart, consumePendingHuddleJoin } from "./Huddle/HuddleRing";
+import { useHuddleStore } from "@/stores/huddleStore";
 import {
   parseReactionsMarker, stripReactionsMarker, encodeReactionsMarker,
 } from "./MessageBubble";
@@ -62,12 +61,12 @@ export const ChatLayout = () => {
   const [forwardSource, setForwardSource] = useState<MessageInterface | null>(null);
   const [createChannelOpen, setCreateChannelOpen] = useState(false);
   const [webhooksOpen, setWebhooksOpen] = useState(false);
-  // Huddle (voice + video) state — the hook itself is instantiated
-  // further down, after `username` has been derived from the ActiveUser
-  // query. This state lives here so header + bar both see it.
-  const [huddleGroup, setHuddleGroup] = useState<string | null>(null);
-  const [huddleMuted, setHuddleMuted] = useState(false);
-  const [huddleCamera, setHuddleCamera] = useState(false);
+  // Huddle state lives in a global store (huddleStore) so calls stay
+  // active when the user navigates to other routes. ChatLayout only
+  // reads `group` here to render the header toggle correctly.
+  const huddleGroup = useHuddleStore((s) => s.group);
+  const startHuddle = useHuddleStore((s) => s.startHuddle);
+  const leaveHuddle = useHuddleStore((s) => s.leaveHuddle);
 
   // ── Realtime: refetch messages on any change for the CURRENT group ──
   useEffect(() => {
@@ -106,6 +105,11 @@ export const ChatLayout = () => {
     setActiveThreadRootId(null);
   }, [GroupName, setActiveThreadRootId]);
 
+  // User identity — derived once so the effects below can reference it.
+  const username = user?.[0]?.username || "";
+  const userRole = (user?.[0] as any)?.role ?? "";
+  const userAvatar = user?.[0]?.avatarName || "";
+
   // Auto-join a huddle if the user clicked "Join" on a ring notification
   // while on another route — HuddleRing stashes the target group in
   // localStorage, we consume it here on mount / GroupName change.
@@ -113,20 +117,10 @@ export const ChatLayout = () => {
     if (!GroupName) return;
     const pending = consumePendingHuddleJoin();
     if (pending && pending === GroupName) {
-      setHuddleGroup(pending);
+      startHuddle(pending);
+      announceHuddleStart(pending, username).catch(() => {});
     }
-  }, [GroupName]);
-
-  const username = user?.[0]?.username || "";
-  const huddle = useHuddle({
-    group: huddleGroup ?? "",
-    username,
-    joined: huddleGroup != null,
-    muted: huddleMuted,
-    camera: huddleCamera,
-  });
-  const userRole = (user?.[0] as any)?.role ?? "";
-  const userAvatar = user?.[0]?.avatarName || "";
+  }, [GroupName, startHuddle, username]);
   const isGeneral = GroupName === "General";
   const table: "cwa_chat" | "cwa_dm_chat" = isGeneral ? "cwa_chat" : "cwa_dm_chat";
   const canPin = ADMIN_ROLES.includes(userRole);
@@ -369,14 +363,12 @@ export const ChatLayout = () => {
                 onMarkAllRead={() => markRead(GroupName)}
                 huddleActive={huddleGroup === GroupName}
                 onToggleHuddle={() => {
-                  setHuddleGroup((prev) => {
-                    const next = prev === GroupName ? null : GroupName;
-                    if (next && next !== prev) {
-                      // Announce so other channel members get the ring.
-                      announceHuddleStart(next, username).catch(() => {});
-                    }
-                    return next;
-                  });
+                  if (huddleGroup === GroupName) {
+                    leaveHuddle();
+                  } else {
+                    startHuddle(GroupName);
+                    announceHuddleStart(GroupName, username).catch(() => {});
+                  }
                 }}
               />
 
@@ -481,30 +473,8 @@ export const ChatLayout = () => {
         currentUsername={username}
       />
 
-      {/* Huddle floating bar — only when joined */}
-      {huddleGroup && (
-        <HuddleBar
-          group={huddleGroup}
-          username={username}
-          localStream={huddle.localStream}
-          localScreenStream={huddle.localScreenStream}
-          peers={huddle.peers}
-          muted={huddleMuted}
-          camera={huddleCamera}
-          sharing={huddle.sharing}
-          onToggleMute={() => setHuddleMuted((v) => !v)}
-          onToggleCamera={() => setHuddleCamera((v) => !v)}
-          onStartScreenShare={huddle.startScreenShare}
-          onStopScreenShare={huddle.stopScreenShare}
-          onLeave={() => {
-            if (huddle.sharing) huddle.stopScreenShare();
-            setHuddleGroup(null);
-            setHuddleMuted(false);
-            setHuddleCamera(false);
-          }}
-          error={huddle.error}
-        />
-      )}
+      {/* HuddleBar is now mounted globally by HuddleHost in __root.tsx
+       *  so the call survives route changes — nothing to render here. */}
 
       {/* Forward dialog */}
       <ForwardDialog

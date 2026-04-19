@@ -33,6 +33,8 @@ export interface HuddlePeer {
   muted: boolean;
   camera: boolean;
   sharing: boolean;
+  /** Current audio RMS 0..1 for active-speaker detection. */
+  level?: number;
 }
 
 interface SignalPayload {
@@ -159,7 +161,29 @@ export function useHuddle({ group, username, joined, muted, camera }: UseHuddleO
     // on media readiness).
     const local = localStreamRef.current;
     if (local) {
-      for (const track of local.getTracks()) pc.addTrack(track, local);
+      for (const track of local.getTracks()) {
+        const sender = pc.addTrack(track, local);
+        // Bump the max bitrate so we're not stuck at the browser's
+        // conservative default of ~500kbps. 2.5Mbps for video, 64kbps
+        // for audio — matches Meet/Zoom defaults.
+        try {
+          const params = sender.getParameters();
+          if (!params.encodings || params.encodings.length === 0) {
+            params.encodings = [{}];
+          }
+          for (const enc of params.encodings) {
+            if (track.kind === "video") {
+              enc.maxBitrate = 2_500_000;
+              enc.maxFramerate = 30;
+            } else if (track.kind === "audio") {
+              enc.maxBitrate = 64_000;
+              // Stereo music-style audio for clearer voices.
+              (enc as any).networkPriority = "high";
+            }
+          }
+          void sender.setParameters(params);
+        } catch { /* noop */ }
+      }
     }
     // Attach existing screen share if active.
     const screen = localScreenStreamRef.current;
@@ -258,6 +282,18 @@ export function useHuddle({ group, username, joined, muted, camera }: UseHuddleO
           kind: "offer",
           sdp: pc.localDescription!.toJSON(),
         });
+        // After every renegotiation, re-send our screen track IDs so
+        // the peer always has the latest bucketing info — fixes the
+        // "first sharer can't see second sharer" race.
+        const screen = localScreenStreamRef.current;
+        if (screen) {
+          broadcast({
+            from: username,
+            to: peerId,
+            kind: "screen-tracks",
+            screenTrackIds: screen.getTracks().map((t) => t.id),
+          });
+        }
       } catch (err) {
         console.warn("[huddle] negotiation failed:", err);
       } finally {
@@ -324,15 +360,29 @@ export function useHuddle({ group, username, joined, muted, camera }: UseHuddleO
   const startScreenShare = useCallback(async () => {
     try {
       const screenStream = await navigator.mediaDevices.getDisplayMedia({
-        video: { frameRate: 30 },
-        audio: false,
-      });
-      // Wrap so we can control the id (used by receivers to bucket).
+        video: {
+          // Sharp text + smooth UI — 1080p at 60fps if the source allows.
+          width: { ideal: 1920 },
+          height: { ideal: 1080 },
+          frameRate: { ideal: 30, max: 60 },
+        } as MediaTrackConstraints,
+        // Include system audio when the browser supports it (Chromium
+        // on Windows/ChromeOS). Falls through silently elsewhere.
+        audio: true,
+      } as MediaStreamConstraints);
+      // Wrap for local bookkeeping. Bucketing is done via the
+      // screen-tracks signal, not the stream id. Hint the encoder to
+      // favor detail (text sharpness) over motion smoothing.
       const routedStream = new MediaStream();
       Object.defineProperty(routedStream, "id", {
         value: `screen-${crypto.randomUUID()}`,
       });
-      for (const t of screenStream.getTracks()) routedStream.addTrack(t);
+      for (const t of screenStream.getTracks()) {
+        if (t.kind === "video") {
+          try { (t as any).contentHint = "detail"; } catch { /* noop */ }
+        }
+        routedStream.addTrack(t);
+      }
 
       localScreenStreamRef.current = routedStream;
       setLocalScreenStream(routedStream);
@@ -395,7 +445,13 @@ export function useHuddle({ group, username, joined, muted, camera }: UseHuddleO
             autoGainControl: true,
             channelCount: 1,
             sampleRate: 48000,
-          } as MediaTrackConstraints,
+            // Chromium-specific but harmless when unsupported.
+            googEchoCancellation: true,
+            googAutoGainControl: true,
+            googNoiseSuppression: true,
+            googHighpassFilter: true,
+            googTypingNoiseDetection: true,
+          } as any,
           video: false,
         });
       } catch (err) {
@@ -414,9 +470,13 @@ export function useHuddle({ group, username, joined, muted, camera }: UseHuddleO
       try {
         videoStream = await navigator.mediaDevices.getUserMedia({
           video: {
-            width: { ideal: 1280 },
-            height: { ideal: 720 },
-            frameRate: { ideal: 30, max: 30 },
+            // 1080p on capable cameras, graceful downshift via `ideal`.
+            width: { ideal: 1920 },
+            height: { ideal: 1080 },
+            frameRate: { ideal: 30, max: 60 },
+            aspectRatio: { ideal: 16 / 9 },
+            // facingMode biased toward front camera on mobile.
+            facingMode: "user",
           } as MediaTrackConstraints,
           audio: false,
         });
@@ -438,6 +498,8 @@ export function useHuddle({ group, username, joined, muted, camera }: UseHuddleO
       if (videoStream) {
         for (const t of videoStream.getTracks()) {
           t.enabled = stateRef.current.camera;
+          // Hint the encoder: camera = motion priority (smooth faces).
+          try { (t as any).contentHint = "motion"; } catch { /* noop */ }
           combined.addTrack(t);
         }
       }
@@ -466,6 +528,21 @@ export function useHuddle({ group, username, joined, muted, camera }: UseHuddleO
             }
             remoteStatesRef.current.set(msg.from, msg.state);
             updatePeersState();
+
+            // If THEY are sharing and we're also sharing, proactively
+            // re-announce OUR screen track IDs to them so both sides
+            // have bucketing info even if earlier signals were lost.
+            if (msg.state.sharing) {
+              const screen = localScreenStreamRef.current;
+              if (screen) {
+                broadcast({
+                  from: username,
+                  to: msg.from,
+                  kind: "screen-tracks",
+                  screenTrackIds: screen.getTracks().map((t) => t.id),
+                });
+              }
+            }
             return;
           }
 

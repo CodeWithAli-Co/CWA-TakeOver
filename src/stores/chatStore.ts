@@ -85,6 +85,21 @@ interface ChatStoreState {
   starredMessages: { msgId: number; group: string; table: "cwa_chat" | "cwa_dm_chat"; starredAt: string }[];
   toggleStarred: (m: { msgId: number; group: string; table: "cwa_chat" | "cwa_dm_chat" }) => void;
   isStarred: (msgId: number) => boolean;
+
+  /** Custom presence label — "In a meeting until 3pm", etc. Empty = clear. */
+  customStatus: string;
+  customStatusExpiresAt: number | null; // ms epoch; null = no expiry
+  setCustomStatus: (label: string, expiresAt?: number | null) => void;
+  clearCustomStatus: () => void;
+
+  /** Per-channel notification level:
+   *    all       → toast on every message (default)
+   *    mentions  → toast only when @mentioned or @here fires
+   *    none      → fully muted, only unread badge updates
+   */
+  notifLevels: Record<string, "all" | "mentions" | "none">;
+  setNotifLevel: (group: string, level: "all" | "mentions" | "none") => void;
+  getNotifLevel: (group: string) => "all" | "mentions" | "none";
 }
 
 export const useChatStore = create<ChatStoreState>()(
@@ -246,6 +261,20 @@ export const useChatStore = create<ChatStoreState>()(
         }),
       isStarred: (msgId) =>
         get().starredMessages.some((s) => s.msgId === msgId),
+
+      customStatus: "",
+      customStatusExpiresAt: null,
+      setCustomStatus: (label, expiresAt = null) =>
+        set({ customStatus: label.trim(), customStatusExpiresAt: expiresAt }),
+      clearCustomStatus: () =>
+        set({ customStatus: "", customStatusExpiresAt: null }),
+
+      notifLevels: {},
+      setNotifLevel: (group, level) =>
+        set((state) => ({
+          notifLevels: { ...state.notifLevels, [group]: level },
+        })),
+      getNotifLevel: (group) => get().notifLevels[group] ?? "all",
     }),
     {
       name: "cwa-chat-store",
@@ -258,6 +287,9 @@ export const useChatStore = create<ChatStoreState>()(
         customEmojis: state.customEmojis,
         channelCategories: state.channelCategories,
         starredMessages: state.starredMessages,
+        customStatus: state.customStatus,
+        customStatusExpiresAt: state.customStatusExpiresAt,
+        notifLevels: state.notifLevels,
       }),
     },
   ),

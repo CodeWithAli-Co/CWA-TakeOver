@@ -57,6 +57,15 @@ const ShortcutsOverlay = lazy(() =>
   })),
 );
 
+// Huddle host — keeps the voice/video call active across ALL routes.
+// The ChatLayout just toggles the store; this host lives at the root
+// and mounts the HuddleBar + WebRTC connection.
+const HuddleHost = lazy(() =>
+  import("@/MyComponents/Chat/Huddle/HuddleHost").then((m) => ({
+    default: m.HuddleHost,
+  })),
+);
+
 // Route-aware skeleton fallback picks a loader shape that roughly
 // matches the destination page, so the transition feels seamless.
 import { PageSkeleton, ChatSkeleton, RoadmapSkeleton, SplitSkeleton, TableSkeleton, FormSkeleton } from "@/MyComponents/Reusables/PageSkeletons";
@@ -152,15 +161,24 @@ export const Route = createRootRoute({
         } catch { return true; }
       };
 
-      // Helper: channel-level mute toggle from ChatHeader's More menu
-      const isGroupMuted = (name: string): boolean => {
+      // Helper: channel-level mute toggle from ChatHeader's More menu.
+      // "mute" here = fully muted (no toasts). Prefer the new notif-level
+      // store (all/mentions/none); fall back to the legacy binary list.
+      const getGroupNotifLevel = (name: string): "all" | "mentions" | "none" => {
+        try {
+          const lvl = useChatStore.getState().getNotifLevel(name);
+          if (lvl) return lvl;
+        } catch { /* store may not be ready */ }
         try {
           const raw = localStorage.getItem("cwa-chat-muted-groups");
-          if (!raw) return false;
+          if (!raw) return "all";
           const arr = JSON.parse(raw);
-          return Array.isArray(arr) && arr.includes(name);
-        } catch { return false; }
+          if (Array.isArray(arr) && arr.includes(name)) return "none";
+        } catch { /* noop */ }
+        return "all";
       };
+      const isGroupMuted = (name: string): boolean =>
+        getGroupNotifLevel(name) === "none";
 
       // Helper: are we on the chat page right now? If so, we only skip
       // notifications for the CURRENTLY-VIEWED group (so user still gets
@@ -302,19 +320,23 @@ export const Route = createRootRoute({
             const mentioned = isMentioned(body);
             const hereCall = isHereCall(body) && isUserOnline();
             const focused = isAppFocused();
-            const muted = isGroupMuted(groupName);
+            const level = getGroupNotifLevel(groupName);
+            const muted = level === "none";
+            const mentionsOnly = level === "mentions";
 
             // Unread badge — any message not in view, regardless of focus.
             if (!viewing) incrementUnread(groupName);
 
-            // Audible ping: every new message from someone else that isn't
-            // muted. Plays whether or not an OS toast fires.
-            if (!muted || mentioned || hereCall) playDing();
+            // Ding: any "important" message (mention/here) always. Otherwise
+            // respect the channel's notif level.
+            if (mentioned || hereCall) playDing();
+            else if (level === "all") playDing();
 
-            // OS toast: fire when we're off this channel, mentioned, here-
-            // called, or when the app simply isn't focused (background).
+            // OS toast follows the same level rules, with the override that
+            // mentions + here always fire.
             const shouldToast =
-              mentioned || hereCall || !viewing || !focused;
+              mentioned || hereCall ||
+              (!muted && !mentionsOnly && (!viewing || !focused));
             if (shouldToast) {
               if (mentioned) {
                 fireNotify(
@@ -326,7 +348,7 @@ export const Route = createRootRoute({
                   `${sentBy} called @here in ${groupName}`,
                   body || "[attachment]",
                 );
-              } else if (!muted) {
+              } else if (!muted && !mentionsOnly) {
                 fireNotify(
                   `New message in ${groupName}`,
                   `${sentBy}: ${body || "[attachment]"}`,
@@ -346,12 +368,17 @@ export const Route = createRootRoute({
             const mentioned = isMentioned(body);
             const hereCall = isHereCall(body) && isUserOnline();
             const focused = isAppFocused();
-            const muted = isGroupMuted("General");
+            const level = getGroupNotifLevel("General");
+            const muted = level === "none";
+            const mentionsOnly = level === "mentions";
 
             if (!viewing) incrementUnread("General");
-            if (!muted || mentioned || hereCall) playDing();
+            if (mentioned || hereCall) playDing();
+            else if (level === "all") playDing();
 
-            const shouldToast = mentioned || hereCall || !viewing || !focused;
+            const shouldToast =
+              mentioned || hereCall ||
+              (!muted && !mentionsOnly && (!viewing || !focused));
             if (shouldToast) {
               if (mentioned) {
                 fireNotify(
@@ -363,7 +390,7 @@ export const Route = createRootRoute({
                   `${sentBy} called @here in General`,
                   body || "[attachment]",
                 );
-              } else if (!muted) {
+              } else if (!muted && !mentionsOnly) {
                 fireNotify(
                   "New message in General",
                   `${sentBy}: ${body || "[attachment]"}`,
@@ -650,6 +677,11 @@ export const Route = createRootRoute({
             {/* Keyboard shortcuts ?-overlay */}
             <Suspense fallback={null}>
               <ShortcutsOverlay />
+            </Suspense>
+            {/* Persistent huddle bar — survives route changes so calls
+             *  aren't dropped when user clicks Home or another page. */}
+            <Suspense fallback={null}>
+              <HuddleHost />
             </Suspense>
           </SidebarProvider>
         ) : (

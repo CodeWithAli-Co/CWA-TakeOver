@@ -242,9 +242,11 @@ export const MessageComposer: React.FC<Props> = ({
       case "status": {
         const rest = raw.replace(/^\/status\s*/i, "").trim();
         try {
-          (useChatStore.getState() as any).setStatusLabel?.(rest || null);
-        } catch { /* store may not have it yet — ignore */ }
-        setAxonError(rest ? `Status set: ${rest}` : "Status cleared");
+          const store = useChatStore.getState();
+          if (rest) store.setCustomStatus(rest, null);
+          else store.clearCustomStatus();
+        } catch { /* noop */ }
+        setAxonError(rest ? `Status: ${rest}` : "Status cleared");
         return;
       }
       case "dnd": {

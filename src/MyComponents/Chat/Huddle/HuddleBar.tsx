@@ -10,13 +10,78 @@
  *     primary stage; camera tiles shrink and row along the bottom.
  */
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import {
   Mic, MicOff, Video, VideoOff, PhoneOff, Volume2, AlertCircle,
   Monitor, MonitorOff, Maximize2, Minimize2,
 } from "lucide-react";
 import type { HuddlePeer } from "./useHuddle";
+
+// ── Active-speaker hook ─────────────────────────────────────────────
+// Maintains one analyser per peer and returns the currently-loudest
+// peer id (above threshold). Sticky for 1.2s to avoid tile flicker
+// between spoken words.
+function useActiveSpeaker(peers: HuddlePeer[]): string | null {
+  const [active, setActive] = useState<string | null>(null);
+  const lastSpokeAtRef = useRef<Record<string, number>>({});
+
+  useEffect(() => {
+    if (peers.length === 0) return;
+    const AC = (window as any).AudioContext || (window as any).webkitAudioContext;
+    if (!AC) return;
+    const ctx: AudioContext = new AC();
+    const nodes: { id: string; analyser: AnalyserNode; buf: Uint8Array }[] = [];
+    for (const p of peers) {
+      if (!p.stream) continue;
+      if (p.stream.getAudioTracks().length === 0) continue;
+      try {
+        const src = ctx.createMediaStreamSource(p.stream);
+        const analyser = ctx.createAnalyser();
+        analyser.fftSize = 256;
+        src.connect(analyser);
+        nodes.push({ id: p.id, analyser, buf: new Uint8Array(analyser.fftSize) });
+      } catch { /* noop */ }
+    }
+    if (nodes.length === 0) {
+      ctx.close().catch(() => {});
+      return;
+    }
+    let raf = 0;
+    const tick = () => {
+      let loudest: { id: string; rms: number } | null = null;
+      for (const n of nodes) {
+        n.analyser.getByteTimeDomainData(n.buf);
+        let sum = 0;
+        for (let i = 0; i < n.buf.length; i++) {
+          const v = (n.buf[i] - 128) / 128;
+          sum += v * v;
+        }
+        const rms = Math.sqrt(sum / n.buf.length);
+        if (rms > 0.06) lastSpokeAtRef.current[n.id] = Date.now();
+        if (!loudest || rms > loudest.rms) loudest = { id: n.id, rms };
+      }
+      const now = Date.now();
+      // Sticky: prefer current active if they spoke in last 1.2s.
+      const currentStillSpeaking =
+        active && (now - (lastSpokeAtRef.current[active] ?? 0)) < 1200;
+      if (loudest && loudest.rms > 0.06) {
+        setActive(loudest.id);
+      } else if (!currentStillSpeaking) {
+        setActive(null);
+      }
+      raf = requestAnimationFrame(tick);
+    };
+    raf = requestAnimationFrame(tick);
+    return () => {
+      cancelAnimationFrame(raf);
+      ctx.close().catch(() => {});
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [peers.map((p) => p.id + ":" + (p.stream ? "s" : "n")).join("|")]);
+
+  return active;
+}
 
 interface Props {
   group: string;
@@ -43,6 +108,12 @@ export function HuddleBar({
   onLeave, error,
 }: Props) {
   const [expanded, setExpanded] = useState(false);
+
+  // Active-speaker detection: listen to every peer's audio via a single
+  // shared AudioContext. The loudest peer (> threshold) bubbles up so
+  // their tile can be promoted. Sticky for 1.2s to avoid flicker when
+  // people pause between words.
+  const activeSpeaker = useActiveSpeaker(peers);
 
   // Collect ALL active screen shares — each peer's AND the local one
   // if you're sharing too. Multiple simultaneous streams tile the
@@ -196,6 +267,7 @@ export function HuddleBar({
                   cameraOn={p.camera}
                   sharing={p.sharing}
                   size="lg"
+                  isActiveSpeaker={activeSpeaker === p.id}
                 />
               ))}
             </div>
@@ -280,7 +352,7 @@ function ControlButton({
 // ── Tiles --------------------------------------------------------------
 
 function PeerTile({
-  name, stream, isLocal, muted, cameraOn, sharing, size = "lg",
+  name, stream, isLocal, muted, cameraOn, sharing, size = "lg", isActiveSpeaker,
 }: {
   name: string;
   stream: MediaStream | null;
@@ -289,6 +361,7 @@ function PeerTile({
   cameraOn?: boolean;
   sharing?: boolean;
   size?: "sm" | "lg";
+  isActiveSpeaker?: boolean;
 }) {
   const audioRef = useRef<HTMLAudioElement>(null);
   const [speaking, setSpeaking] = useState(false);
@@ -356,9 +429,11 @@ function PeerTile({
         className={`
           relative flex items-center justify-center overflow-hidden border transition-all
           ${tileCls}
-          ${speaking
-            ? "border-emerald-400/80 shadow-[0_0_0_2px_rgba(16,185,129,0.35)]"
-            : "border-border/60"}
+          ${isActiveSpeaker
+            ? "border-primary/90 shadow-[0_0_0_3px_hsl(var(--primary)/0.35)]"
+            : speaking
+              ? "border-emerald-400/80 shadow-[0_0_0_2px_rgba(16,185,129,0.35)]"
+              : "border-border/60"}
           bg-gradient-to-br from-muted/40 to-muted/20
         `}
       >
