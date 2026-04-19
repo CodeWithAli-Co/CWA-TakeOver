@@ -25,6 +25,7 @@ import {
   CreditCard,
   Activity,
   Map,
+  FileText,
   type LucideIcon,
 } from "lucide-react";
 
@@ -299,6 +300,12 @@ export const adminData = {
       url: "/analytics",
       isActive: false,
       icon: BarChart3,
+    },
+    {
+      title: "Offer Letters",
+      url: "/offers",
+      isActive: false,
+      icon: FileText,
     },
     {
       title: "Admin Permissions",
@@ -720,6 +727,12 @@ export const cooData = {
       isActive: false,
       icon: BarChart3,
     },
+    {
+      title: "Offer Letters",
+      url: "/offers",
+      isActive: false,
+      icon: FileText,
+    },
     // ── CWA-only items ──
     {
       title: "Personal Life",
@@ -948,6 +961,12 @@ export const ceoData = {
       isActive: false,
       icon: BarChart3,
     },
+    {
+      title: "Offer Letters",
+      url: "/offers",
+      isActive: false,
+      icon: FileText,
+    },
     // ── CWA-only items ──
     {
       title: "Personal Life",
@@ -1173,6 +1192,12 @@ export const cfoData = {
       url: "/analytics",
       isActive: false,
       icon: BarChart3,
+    },
+    {
+      title: "Offer Letters",
+      url: "/offers",
+      isActive: false,
+      icon: FileText,
     },
     {
       title: "Finance Dashboard",
