@@ -264,15 +264,24 @@ function PeerTile({
   size?: "sm" | "lg";
 }) {
   const audioRef = useRef<HTMLAudioElement>(null);
-  const videoRef = useRef<HTMLVideoElement>(null);
   const [speaking, setSpeaking] = useState(false);
 
-  useEffect(() => {
-    if (videoRef.current && stream) {
-      videoRef.current.srcObject = stream;
+  // Use a ref callback so srcObject is re-assigned whenever the <video>
+  // element mounts/unmounts. Works across cameraOn toggles (which
+  // swap the video element for an avatar and back), unlike a plain ref
+  // + useEffect pattern which can miss the remount.
+  const attachVideo = (el: HTMLVideoElement | null) => {
+    if (el && stream) {
+      // Only re-assign if different — avoids needless pauses.
+      if (el.srcObject !== stream) el.srcObject = stream;
     }
+  };
+
+  useEffect(() => {
     if (audioRef.current && stream && !isLocal) {
-      audioRef.current.srcObject = stream;
+      if (audioRef.current.srcObject !== stream) {
+        audioRef.current.srcObject = stream;
+      }
     }
     if (!stream || !window.AudioContext) return;
     let raf = 0;
@@ -328,7 +337,7 @@ function PeerTile({
       >
         {showVideo ? (
           <video
-            ref={videoRef}
+            ref={attachVideo}
             autoPlay
             playsInline
             muted={isLocal}
@@ -375,14 +384,14 @@ function PeerTile({
 }
 
 function ScreenShareTile({ name, stream }: { name: string; stream: MediaStream }) {
-  const videoRef = useRef<HTMLVideoElement>(null);
-  useEffect(() => {
-    if (videoRef.current) videoRef.current.srcObject = stream;
-  }, [stream]);
+  // Ref callback for robust srcObject assignment across remounts.
+  const attach = (el: HTMLVideoElement | null) => {
+    if (el && stream && el.srcObject !== stream) el.srcObject = stream;
+  };
   return (
     <div className="relative h-full w-full overflow-hidden rounded-xl border border-blue-400/30 bg-black">
       <video
-        ref={videoRef}
+        ref={attach}
         autoPlay
         playsInline
         muted

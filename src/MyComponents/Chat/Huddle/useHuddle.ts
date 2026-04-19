@@ -38,10 +38,15 @@ export interface HuddlePeer {
 interface SignalPayload {
   from: string;
   to?: string;
-  kind: "offer" | "answer" | "ice" | "state";
+  kind: "offer" | "answer" | "ice" | "state" | "screen-tracks";
   sdp?: RTCSessionDescriptionInit;
   candidate?: RTCIceCandidateInit;
   state?: { muted: boolean; camera: boolean; sharing: boolean };
+  /** List of MediaStreamTrack IDs the sender is currently pushing as
+   *  screen-share tracks. Receivers use this to bucket incoming tracks
+   *  into the screen stream vs the camera stream — SDP msid spoofing
+   *  via Object.defineProperty is unreliable. */
+  screenTrackIds?: string[];
 }
 
 // Public Google STUN — fine for LAN + most consumer NAT traversal.
@@ -97,6 +102,10 @@ export function useHuddle({ group, username, joined, muted, camera }: UseHuddleO
   const localStreamRef = useRef<MediaStream | null>(null);
   const localScreenStreamRef = useRef<MediaStream | null>(null);
   const screenSenderMapRef = useRef<Map<string, RTCRtpSender[]>>(new Map());
+  // Remote screen track IDs keyed by peer — populated via the
+  // "screen-tracks" signal. Used in ontrack to bucket a new track
+  // into the screen stream vs camera stream.
+  const remoteScreenTrackIdsRef = useRef<Map<string, Set<string>>>(new Map());
 
   // Latest local input state — broadcasts read these instead of stale closures.
   const stateRef = useRef({ muted, camera, sharing });
@@ -160,6 +169,14 @@ export function useHuddle({ group, username, joined, muted, camera }: UseHuddleO
         senders.push(pc.addTrack(track, screen));
       }
       screenSenderMapRef.current.set(peerId, senders);
+      // Let the new peer know which tracks are the screen share so
+      // their ontrack can bucket them correctly.
+      broadcast({
+        from: username,
+        to: peerId,
+        kind: "screen-tracks",
+        screenTrackIds: screen.getTracks().map((t) => t.id),
+      });
     }
 
     pc.onicecandidate = (e) => {
@@ -174,8 +191,10 @@ export function useHuddle({ group, username, joined, muted, camera }: UseHuddleO
     };
 
     pc.ontrack = (e) => {
-      const streamId = e.streams[0]?.id ?? "";
-      const isScreen = streamId.startsWith("screen-");
+      // Bucket by explicit signal (screen-tracks) first; only video
+      // tracks ever end up in the screen bucket. Audio is always camera.
+      const screenSet = remoteScreenTrackIdsRef.current.get(peerId);
+      const isScreen = e.track.kind === "video" && !!screenSet?.has(e.track.id);
       const bucket = isScreen ? remoteScreenStreamsRef : remoteStreamsRef;
       let stream = bucket.current.get(peerId);
       if (!stream) {
@@ -294,6 +313,7 @@ export function useHuddle({ group, username, joined, muted, camera }: UseHuddleO
     localScreenStreamRef.current = null;
     setLocalScreenStream(null);
     setSharing(false);
+    broadcast({ from: username, kind: "screen-tracks", screenTrackIds: [] });
     broadcast({
       from: username,
       kind: "state",
@@ -325,6 +345,15 @@ export function useHuddle({ group, username, joined, muted, camera }: UseHuddleO
         }
         screenSenderMapRef.current.set(peerId, senders);
       }
+
+      // Announce which track IDs are the screen share so receivers can
+      // bucket them correctly (SDP msid spoofing isn't reliable).
+      const screenIds = routedStream.getTracks().map((t) => t.id);
+      broadcast({
+        from: username,
+        kind: "screen-tracks",
+        screenTrackIds: screenIds,
+      });
 
       routedStream.getVideoTracks()[0]?.addEventListener("ended", () => {
         stopScreenShare();
@@ -433,8 +462,39 @@ export function useHuddle({ group, username, joined, muted, camera }: UseHuddleO
             // we don't keep showing a frozen frame.
             if (!msg.state.sharing) {
               remoteScreenStreamsRef.current.delete(msg.from);
+              remoteScreenTrackIdsRef.current.delete(msg.from);
             }
             remoteStatesRef.current.set(msg.from, msg.state);
+            updatePeersState();
+            return;
+          }
+
+          if (msg.kind === "screen-tracks") {
+            const ids = new Set<string>(msg.screenTrackIds ?? []);
+            if (ids.size === 0) {
+              remoteScreenTrackIdsRef.current.delete(msg.from);
+              remoteScreenStreamsRef.current.delete(msg.from);
+            } else {
+              remoteScreenTrackIdsRef.current.set(msg.from, ids);
+              // If tracks already landed before the signal, rebucket them
+              // retroactively: walk the camera stream for this peer and
+              // move any track whose id is in the screen set.
+              const cam = remoteStreamsRef.current.get(msg.from);
+              if (cam) {
+                const movers = cam.getTracks().filter((t) => ids.has(t.id));
+                if (movers.length > 0) {
+                  let scr = remoteScreenStreamsRef.current.get(msg.from);
+                  if (!scr) {
+                    scr = new MediaStream();
+                    remoteScreenStreamsRef.current.set(msg.from, scr);
+                  }
+                  for (const t of movers) {
+                    try { cam.removeTrack(t); } catch { /* noop */ }
+                    try { scr.addTrack(t); } catch { /* noop */ }
+                  }
+                }
+              }
+            }
             updatePeersState();
             return;
           }

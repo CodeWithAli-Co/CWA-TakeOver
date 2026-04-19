@@ -190,22 +190,49 @@ export const Route = createRootRoute({
       // Synthesize a short two-note ding via WebAudio on every incoming
       // message. No bundled asset required. Rate-limited to once every
       // 400ms so a burst of messages doesn't turn into a machine gun.
-      let dingCtx: AudioContext | null = null;
+      //
+      // Chrome's autoplay policy suspends new AudioContexts until the
+      // user interacts with the page. We eagerly create + try to unlock
+      // on first keydown/click, and fall back to resume() right before
+      // each ding.
+      const AC = (window as any).AudioContext || (window as any).webkitAudioContext;
+      let dingCtx: AudioContext | null = AC ? new AC() : null;
       let lastDingAt = 0;
+      const unlockOnce = () => {
+        if (!dingCtx) return;
+        if (dingCtx.state === "suspended") {
+          void dingCtx.resume().catch(() => {});
+        }
+        // Play a 0-gain tone to truly unlock on iOS-style browsers.
+        try {
+          const s = dingCtx.createBufferSource();
+          s.buffer = dingCtx.createBuffer(1, 1, 22050);
+          s.connect(dingCtx.destination);
+          s.start(0);
+        } catch { /* noop */ }
+        window.removeEventListener("pointerdown", unlockOnce);
+        window.removeEventListener("keydown", unlockOnce);
+      };
+      window.addEventListener("pointerdown", unlockOnce, { once: false });
+      window.addEventListener("keydown", unlockOnce, { once: false });
+
       const playDing = () => {
         if (!isSoundEnabled()) return;
         const now = Date.now();
         if (now - lastDingAt < 400) return;
         lastDingAt = now;
         try {
-          const AC = (window as any).AudioContext || (window as any).webkitAudioContext;
-          if (!AC) return;
-          if (!dingCtx) dingCtx = new AC();
-          const ctx = dingCtx!;
+          if (!dingCtx) return;
+          // If Chrome suspended the context (user hasn't clicked yet),
+          // resume on-demand — it's a no-op after the first gesture.
+          if (dingCtx.state === "suspended") {
+            void dingCtx.resume().catch(() => {});
+          }
+          const ctx = dingCtx;
           // Two quick notes — a "meep" that sounds like Discord/Slack.
           const tones: [number, number][] = [
-            [880, 0.0],   // A5 at t=0
-            [1320, 0.085], // E6 at t=85ms
+            [880, 0.0],
+            [1320, 0.085],
           ];
           for (const [freq, offset] of tones) {
             const osc = ctx.createOscillator();
@@ -215,13 +242,15 @@ export const Route = createRootRoute({
             const start = ctx.currentTime + offset;
             const dur = 0.12;
             gain.gain.setValueAtTime(0.0001, start);
-            gain.gain.exponentialRampToValueAtTime(0.16, start + 0.012);
+            gain.gain.exponentialRampToValueAtTime(0.20, start + 0.012);
             gain.gain.exponentialRampToValueAtTime(0.0001, start + dur);
             osc.connect(gain).connect(ctx.destination);
             osc.start(start);
             osc.stop(start + dur + 0.02);
           }
-        } catch { /* noop */ }
+        } catch (err) {
+          console.warn("[ding] play failed:", err);
+        }
       };
 
       const fireNotify = (title: string, body: string) => {
@@ -347,7 +376,12 @@ export const Route = createRootRoute({
           console.log("[notify] realtime channel status:", status);
         });
 
-      return () => { unreadChannel.unsubscribe(); };
+      return () => {
+        unreadChannel.unsubscribe();
+        window.removeEventListener("pointerdown", unlockOnce);
+        window.removeEventListener("keydown", unlockOnce);
+        try { dingCtx?.close(); } catch { /* noop */ }
+      };
     }, [GroupName, user]);
 
     // Check if can send notifications

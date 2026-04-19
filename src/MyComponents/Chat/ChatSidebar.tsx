@@ -301,21 +301,29 @@ export const ChatSidebar: React.FC<Props> = ({ groups, employees, onCreateChanne
 };
 
 // ── Visual helpers: deterministic tile avatar from the channel name ────
-// Replaces the old dicebear shape noise with a clean, brand-aligned
-// initials tile. Hue is derived from a quick djb2 of the name so each
-// channel has its own consistent color without any external service.
+// Clean, brand-aligned initials tile. Muted zinc gradient with a tiny
+// warm/cool accent derived from a djb2 hash of the name — just enough
+// variation to tell channels apart at a glance without looking like a
+// rave flyer.
 
-function hashHue(s: string): number {
+function hashSeed(s: string): number {
   let h = 5381;
   for (let i = 0; i < s.length; i++) h = ((h << 5) + h + s.charCodeAt(i)) | 0;
-  return ((h >>> 0) % 360);
+  return (h >>> 0);
 }
 
 export function groupAvatarStyle(name: string): React.CSSProperties {
-  const hue = hashHue(name || "channel");
+  const seed = hashSeed(name || "channel");
+  // Pick one of 6 muted hue families — neutrals and deep accents only.
+  const HUES = [215, 230, 250, 200, 180, 30];
+  const hue = HUES[seed % HUES.length];
+  const bias = ((seed >> 4) % 6) - 3; // -3..+2 tiny lightness jitter
+  const topL = 16 + bias;
+  const bottomL = 9 + bias;
   return {
-    backgroundImage: `linear-gradient(135deg, hsl(${hue} 55% 32%) 0%, hsl(${(hue + 24) % 360} 60% 22%) 100%)`,
-    color: `hsl(${hue} 80% 90%)`,
+    backgroundImage: `linear-gradient(135deg, hsl(${hue} 14% ${topL}%) 0%, hsl(${hue} 18% ${bottomL}%) 100%)`,
+    color: `hsl(${hue} 20% 88%)`,
+    boxShadow: "inset 0 0 0 1px hsl(0 0% 100% / 0.04)",
   };
 }
 
