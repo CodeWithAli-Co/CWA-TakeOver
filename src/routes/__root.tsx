@@ -15,6 +15,7 @@ import "../assets/sidebar.css";
 import { sendNotification } from "@tauri-apps/plugin-notification";
 import { useAppStore } from "../stores/store";
 import { useChatStore } from "@/stores/chatStore";
+import { useQueryClient } from "@tanstack/react-query";
 
 import { SidebarProvider } from "@/components/ui/shadcnComponents/sidebar";
 import { AppSidebar } from "@/components/app-sidebar";
@@ -99,6 +100,37 @@ export const Route = createRootRoute({
       return () => { channel.unsubscribe(); };
     }, [refetchDMGroups]);
 
+    // Invalidate meetings + tasks queries whenever the underlying tables
+    // change — so new meetings/tasks appear without a page refresh, and
+    // other teammates' changes also flow through automatically.
+    const queryClient = useQueryClient();
+    useEffect(() => {
+      const meetingsCh = supabase
+        .channel("meetings-sync")
+        .on(
+          "postgres_changes",
+          { event: "*", schema: "public", table: "cwa_meetings" },
+          () => {
+            queryClient.invalidateQueries({ queryKey: ["meetings"] });
+          },
+        )
+        .subscribe();
+      const todosCh = supabase
+        .channel("todos-sync")
+        .on(
+          "postgres_changes",
+          { event: "*", schema: "public", table: "cwa_todos" },
+          () => {
+            queryClient.invalidateQueries({ queryKey: ["todos"] });
+          },
+        )
+        .subscribe();
+      return () => {
+        meetingsCh.unsubscribe();
+        todosCh.unsubscribe();
+      };
+    }, [queryClient]);
+
     // Checks if user is on DMChat or not. Using useEffect to prevent multiple rerenders
     useEffect(() => {
       // If user's on DMChat, remove realtime channel so they wont receive notification while in chat
@@ -145,6 +177,51 @@ export const Route = createRootRoute({
           const parsed = JSON.parse(raw);
           return parsed?.enableSound !== false;
         } catch { return true; }
+      };
+
+      // Is the app currently focused? When it's NOT, we always fire an OS
+      // toast even if the user is "on" the right channel — otherwise they
+      // miss messages when the app is in the background.
+      const isAppFocused = (): boolean =>
+        typeof document !== "undefined" &&
+        document.visibilityState === "visible" &&
+        document.hasFocus();
+
+      // Synthesize a short two-note ding via WebAudio on every incoming
+      // message. No bundled asset required. Rate-limited to once every
+      // 400ms so a burst of messages doesn't turn into a machine gun.
+      let dingCtx: AudioContext | null = null;
+      let lastDingAt = 0;
+      const playDing = () => {
+        if (!isSoundEnabled()) return;
+        const now = Date.now();
+        if (now - lastDingAt < 400) return;
+        lastDingAt = now;
+        try {
+          const AC = (window as any).AudioContext || (window as any).webkitAudioContext;
+          if (!AC) return;
+          if (!dingCtx) dingCtx = new AC();
+          const ctx = dingCtx!;
+          // Two quick notes — a "meep" that sounds like Discord/Slack.
+          const tones: [number, number][] = [
+            [880, 0.0],   // A5 at t=0
+            [1320, 0.085], // E6 at t=85ms
+          ];
+          for (const [freq, offset] of tones) {
+            const osc = ctx.createOscillator();
+            const gain = ctx.createGain();
+            osc.type = "sine";
+            osc.frequency.value = freq;
+            const start = ctx.currentTime + offset;
+            const dur = 0.12;
+            gain.gain.setValueAtTime(0.0001, start);
+            gain.gain.exponentialRampToValueAtTime(0.16, start + 0.012);
+            gain.gain.exponentialRampToValueAtTime(0.0001, start + dur);
+            osc.connect(gain).connect(ctx.destination);
+            osc.start(start);
+            osc.stop(start + dur + 0.02);
+          }
+        } catch { /* noop */ }
       };
 
       const fireNotify = (title: string, body: string) => {
@@ -195,9 +272,21 @@ export const Route = createRootRoute({
             const viewing = isOnChatPage() && GroupName === groupName;
             const mentioned = isMentioned(body);
             const hereCall = isHereCall(body) && isUserOnline();
-            if (!viewing || mentioned || hereCall) {
-              if (!viewing) incrementUnread(groupName);
-              const muted = isGroupMuted(groupName);
+            const focused = isAppFocused();
+            const muted = isGroupMuted(groupName);
+
+            // Unread badge — any message not in view, regardless of focus.
+            if (!viewing) incrementUnread(groupName);
+
+            // Audible ping: every new message from someone else that isn't
+            // muted. Plays whether or not an OS toast fires.
+            if (!muted || mentioned || hereCall) playDing();
+
+            // OS toast: fire when we're off this channel, mentioned, here-
+            // called, or when the app simply isn't focused (background).
+            const shouldToast =
+              mentioned || hereCall || !viewing || !focused;
+            if (shouldToast) {
               if (mentioned) {
                 fireNotify(
                   `${sentBy} mentioned you in ${groupName}`,
@@ -227,9 +316,14 @@ export const Route = createRootRoute({
             const viewing = isOnChatPage() && GroupName === "General";
             const mentioned = isMentioned(body);
             const hereCall = isHereCall(body) && isUserOnline();
-            if (!viewing || mentioned || hereCall) {
-              if (!viewing) incrementUnread("General");
-              const muted = isGroupMuted("General");
+            const focused = isAppFocused();
+            const muted = isGroupMuted("General");
+
+            if (!viewing) incrementUnread("General");
+            if (!muted || mentioned || hereCall) playDing();
+
+            const shouldToast = mentioned || hereCall || !viewing || !focused;
+            if (shouldToast) {
               if (mentioned) {
                 fireNotify(
                   `${sentBy} mentioned you in General`,

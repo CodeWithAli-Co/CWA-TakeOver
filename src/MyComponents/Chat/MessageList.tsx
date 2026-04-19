@@ -123,11 +123,12 @@ export const MessageList: React.FC<Props> = ({
   // Capture the lastReadAt for this group at mount / group-switch, so the
   // unread divider stays in place even after `markRead` zeros the store.
   const lastReadSnapshotRef = useRef<string | null>(null);
-  useEffect(() => {
+  useLayoutEffect(() => {
     lastReadSnapshotRef.current = lastReadAt[group] ?? null;
     lastMsgIdRef.current = null;
     // Capture the max msg_id seen on this group's first paint so subsequent
-    // animations only fire for genuinely-new messages.
+    // animations only fire for genuinely-new messages. Runs BEFORE paint so
+    // the first render already reads the right threshold.
     initialMaxIdRef.current = (messages || []).reduce(
       (max, m) => (m.msg_id > max ? m.msg_id : max),
       -1,
@@ -138,6 +139,18 @@ export const MessageList: React.FC<Props> = ({
     // for the lifetime of the current channel view.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [group]);
+
+  // Update the initial-max-id when messages first arrive for the current
+  // group (placeholder / loading → real data transition).
+  useLayoutEffect(() => {
+    if (initialMaxIdRef.current >= 0) return;
+    if (!messages || messages.length === 0) return;
+    initialMaxIdRef.current = messages.reduce(
+      (max, m) => (m.msg_id > max ? m.msg_id : max),
+      -1,
+    );
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [messages]);
 
   // Initial paint: jump straight to the bottom on group switch / mount,
   // before the user sees the top of the list flash by.
@@ -346,14 +359,23 @@ export const MessageList: React.FC<Props> = ({
 
     const replyCount = threadReplyCounts.get(msg.msg_id) ?? 0;
 
-    const isNew = msg.msg_id > initialMaxIdRef.current;
+    // Only wrap genuinely-new messages in an entry animation. Existing
+    // messages render as plain divs so nothing can get stuck at opacity 0
+    // if framer-motion hiccups during concurrent renders.
+    const isNew = initialMaxIdRef.current >= 0 && msg.msg_id > initialMaxIdRef.current;
+    const Wrapper = isNew ? motion.div : "div";
+    const wrapperProps = isNew
+      ? {
+          initial: { opacity: 0, y: 8, scale: 0.98 },
+          animate: { opacity: 1, y: 0, scale: 1 },
+          transition: { duration: 0.22, ease: [0.16, 1, 0.3, 1] as [number, number, number, number] },
+        }
+      : {};
     rendered.push(
-      <motion.div
+      <Wrapper
         key={msg.msg_id}
         id={`msg-${msg.msg_id}`}
-        initial={isNew ? { opacity: 0, y: 8, scale: 0.98 } : false}
-        animate={isNew ? { opacity: 1, y: 0, scale: 1 } : undefined}
-        transition={{ duration: 0.22, ease: [0.16, 1, 0.3, 1] }}
+        {...wrapperProps}
       >
         <MessageBubble
           msg={msg}
@@ -383,7 +405,7 @@ export const MessageList: React.FC<Props> = ({
             onReact={handleReact}
           />
         )}
-      </motion.div>,
+      </Wrapper>,
     );
   });
 
@@ -427,38 +449,51 @@ export const MessageList: React.FC<Props> = ({
 };
 
 // ── In-feed skeleton shown while the initial messages query is loading.
+//  Rendered at full flex height with high-contrast bars so it's visibly
+//  "the chat is loading" even on the new dark-zinc surface.
 function MessageListSkeleton() {
   const rows = [
-    { w: 180, self: false },
-    { w: 90, self: false },
-    { w: 240, self: true },
-    { w: 140, self: false },
-    { w: 320, self: true },
-    { w: 110, self: false },
-    { w: 200, self: false },
-    { w: 160, self: true },
+    { wBody: [260], wMeta: 100 },
+    { wBody: [180], wMeta: 70,  grouped: true },
+    { wBody: [90],  wMeta: 90 },
+    { wBody: [320, 200], wMeta: 120 },
+    { wBody: [140], wMeta: 80,  grouped: true },
+    { wBody: [240], wMeta: 110 },
+    { wBody: [110], wMeta: 70 },
+    { wBody: [200, 140], wMeta: 90 },
+    { wBody: [160], wMeta: 100, grouped: true },
+    { wBody: [280], wMeta: 80 },
   ];
   return (
-    <div className="flex-1 flex flex-col gap-3 px-5 py-6 overflow-hidden">
+    <div className="flex-1 flex flex-col gap-2 py-4 overflow-hidden">
       {rows.map((r, i) => (
         <div
           key={i}
-          className={`flex items-start gap-2 ${r.self ? "flex-row-reverse" : ""}`}
+          className={`flex items-start gap-3 px-5 ${r.grouped ? "pl-[60px]" : ""}`}
         >
-          {!r.self && (
-            <div className="mt-1 h-7 w-7 shrink-0 rounded-full bg-muted/60 animate-pulse" />
+          {!r.grouped && (
+            <div className="h-9 w-9 shrink-0 rounded-sm bg-muted/80 animate-pulse" />
           )}
-          <div className={`flex flex-col gap-1.5 ${r.self ? "items-end" : ""}`}>
-            {!r.self && (
-              <div className="h-2.5 w-20 rounded bg-muted/50 animate-pulse" />
+          <div className="flex flex-col gap-1.5 min-w-0 flex-1">
+            {!r.grouped && (
+              <div className="flex items-center gap-2">
+                <div
+                  className="h-3 rounded bg-muted/80 animate-pulse"
+                  style={{ width: r.wMeta }}
+                />
+                <div className="h-2.5 w-12 rounded bg-muted/40 animate-pulse" />
+              </div>
             )}
-            <div
-              className="h-6 rounded-xl bg-muted/40 animate-pulse"
-              style={{
-                width: r.w,
-                animationDelay: `${i * 80}ms`,
-              }}
-            />
+            {r.wBody.map((w, j) => (
+              <div
+                key={j}
+                className="h-4 rounded-md bg-muted/60 animate-pulse"
+                style={{
+                  width: w,
+                  animationDelay: `${(i * 2 + j) * 70}ms`,
+                }}
+              />
+            ))}
           </div>
         </div>
       ))}
