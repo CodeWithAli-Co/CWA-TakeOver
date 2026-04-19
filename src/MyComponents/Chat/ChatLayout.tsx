@@ -48,7 +48,12 @@ export const ChatLayout = () => {
   const { data: user } = ActiveUser();
   const { data: AllEmployees } = Employees();
   const { data: DmGroups } = DMGroups(user![0]?.username);
-  const { data: messages, refetch: refetchMessages } = Messages(GroupName);
+  const {
+    data: messages,
+    refetch: refetchMessages,
+    isLoading: messagesLoading,
+    isPlaceholderData: messagesStale,
+  } = Messages(GroupName);
 
   const {
     activeThreadRootId, setActiveThreadRootId, threadStyle, markRead,
@@ -339,7 +344,7 @@ export const ChatLayout = () => {
               />
 
               <MessageList
-                messages={msgs}
+                messages={messagesLoading || messagesStale ? undefined : msgs}
                 group={GroupName}
                 currentUsername={username}
                 table={table}

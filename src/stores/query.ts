@@ -1,5 +1,5 @@
 import supabase from "@/MyComponents/supabase";
-import { useSuspenseQuery } from "@tanstack/react-query";
+import { keepPreviousData, useQuery, useSuspenseQuery } from "@tanstack/react-query";
 import { message } from "@tauri-apps/plugin-dialog";
 import { useCompanyFilter } from "./store";
 
@@ -199,9 +199,16 @@ const fetchMessages = async (groupName: string ) => {
   }
 };
 export const Messages = (groupName: string) => {
-  return useSuspenseQuery({
-    queryKey: ["messages", groupName], // include group in key so each cache is isolated
-    queryFn: () => fetchMessages(groupName)
+  // `useQuery` (not suspense) + `keepPreviousData` gives Slack-like UX:
+  //   · First visit to a channel → data is undefined → MessageList shows
+  //     its inline skeleton.
+  //   · Subsequent group switches → previous channel's messages stay
+  //     visible for the 100-200ms TanStack Query takes to settle, then
+  //     swap in. No layout flicker.
+  return useQuery({
+    queryKey: ["messages", groupName],
+    queryFn: () => fetchMessages(groupName),
+    placeholderData: keepPreviousData,
   });
 };
 

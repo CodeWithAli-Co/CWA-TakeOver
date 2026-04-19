@@ -30,31 +30,31 @@ html, body {
 @layer base {
   :root,
   [data-company="codeWithAli"] {
-    /* Surfaces */
-    --background: 0 0% 0%;
+    /* Surfaces — deep zinc. Dark enough to feel cinematic, not pure black. */
+    --background: 240 5% 4%;
     --foreground: 0 0% 96%;
-    --card: 0 0% 4%;
+    --card: 240 5% 7%;
     --card-foreground: 0 0% 96%;
-    --popover: 0 0% 4%;
+    --popover: 240 5% 7%;
     --popover-foreground: 0 0% 96%;
 
     /* Brand */
     --primary: 0 72% 51%;          /* Red-600 */
     --primary-foreground: 0 0% 100%;
-    --secondary: 0 0% 8%;
+    --secondary: 240 5% 9%;
     --secondary-foreground: 0 0% 96%;
 
     /* Utility */
-    --muted: 0 0% 10%;
-    --muted-foreground: 0 0% 45%;
-    --accent: 0 0% 10%;
+    --muted: 240 5% 10%;
+    --muted-foreground: 240 4% 52%;
+    --accent: 240 5% 10%;
     --accent-foreground: 0 0% 96%;
     --destructive: 0 84% 60%;
     --destructive-foreground: 0 0% 100%;
 
     /* Borders & Inputs */
-    --border: 0 0% 12%;
-    --input: 0 0% 12%;
+    --border: 240 5% 13%;
+    --input: 240 5% 11%;
     --ring: 0 72% 51%;
 
     /* Charts */
@@ -64,35 +64,36 @@ html, body {
     --chart-4: 25 80% 55%;         /* Orange */
     --chart-5: 0 50% 40%;
 
-    /* Sidebar */
-    --sidebar-background: 0 0% 3%;
-    --sidebar-foreground: 0 0% 96%;
+    /* Sidebar — noticeably darker than --background for depth, with
+     *  brighter text so icons / channel names pop. */
+    --sidebar-background: 240 6% 1.5%;
+    --sidebar-foreground: 0 0% 100%;
     --sidebar-primary: 0 72% 51%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 0 0% 8%;
-    --sidebar-accent-foreground: 0 0% 96%;
-    --sidebar-border: 0 0% 10%;
+    --sidebar-accent: 240 5% 7%;
+    --sidebar-accent-foreground: 0 0% 100%;
+    --sidebar-border: 240 5% 9%;
     --sidebar-ring: 0 72% 51%;
 
     /* Company-specific tokens */
     --brand-accent: 0 72% 51%;     /* Red */
     --brand-accent-rgb: 220, 38, 38;
     --brand-glow: 0 72% 51%;
-    --surface-hover: 0 0% 6%;
-    --surface-active: 0 0% 8%;
-    --text-dim: 0 0% 25%;
-    --text-muted: 0 0% 40%;
-    --border-subtle: 0 0% 8%;
+    --surface-hover: 240 5% 9%;
+    --surface-active: 240 5% 11%;
+    --text-dim: 240 4% 28%;
+    --text-muted: 240 4% 42%;
+    --border-subtle: 240 5% 9%;
   }
 
   /* ── Simplicity Theme ── */
   [data-company="simplicityFunds"] {
-    /* Surfaces — much darker zinc */
-    --background: 0 0% 2%;          /* Near-black */
+    /* Surfaces — deep zinc with a slight cool cast */
+    --background: 220 6% 5%;
     --foreground: 210 20% 95%;
-    --card: 240 4% 5%;              /* Very dark card */
+    --card: 220 6% 8%;
     --card-foreground: 210 20% 95%;
-    --popover: 240 4% 5%;
+    --popover: 220 6% 8%;
     --popover-foreground: 210 20% 95%;
 
     /* Brand */
@@ -121,14 +122,14 @@ html, body {
     --chart-4: 25 95% 53%;         /* Orange */
     --chart-5: 270 60% 60%;        /* Purple */
 
-    /* Sidebar */
-    --sidebar-background: 0 0% 2%;
-    --sidebar-foreground: 210 20% 95%;
+    /* Sidebar — darker than background for depth, bright foreground. */
+    --sidebar-background: 220 7% 2%;
+    --sidebar-foreground: 210 20% 99%;
     --sidebar-primary: 168 76% 42%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 168 30% 6%;
-    --sidebar-accent-foreground: 168 60% 70%;
-    --sidebar-border: 240 4% 8%;
+    --sidebar-accent: 168 30% 8%;
+    --sidebar-accent-foreground: 168 70% 85%;
+    --sidebar-border: 220 6% 7%;
     --sidebar-ring: 168 76% 42%;
 
     /* Company-specific tokens */

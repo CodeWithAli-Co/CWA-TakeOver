@@ -170,18 +170,22 @@ export function WebhookManager({ open, onOpenChange, groups, currentUsername }: 
                     <SelectValue placeholder="Select a channel…" />
                   </SelectTrigger>
                   <SelectContent>
-                    {groups.map((g) => (
-                      <SelectItem
-                        key={String(g.id)}
-                        value={g.name}
-                        className="text-[12px]"
-                      >
-                        <span className="flex items-center gap-1.5">
-                          <Hash className="h-3 w-3 text-muted-foreground" />
-                          {g.name === "General" ? "General" : g.name.replace(/^#/, "")}
-                        </span>
-                      </SelectItem>
-                    ))}
+                    {groups
+                      // Radix Select refuses empty-string values — filter any
+                      // pathological rows that would crash the menu.
+                      .filter((g) => g && typeof g.name === "string" && g.name.trim() !== "")
+                      .map((g) => (
+                        <SelectItem
+                          key={String(g.id)}
+                          value={g.name}
+                          className="text-[12px]"
+                        >
+                          <span className="flex items-center gap-1.5">
+                            <Hash className="h-3 w-3 text-muted-foreground" />
+                            {g.name === "General" ? "General" : g.name.replace(/^#/, "")}
+                          </span>
+                        </SelectItem>
+                      ))}
                   </SelectContent>
                 </Select>
                 <div className="grid grid-cols-2 gap-2">

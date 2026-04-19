@@ -22,8 +22,23 @@ import { useChatStore, type ThreadStyle } from "@/stores/chatStore";
 import { format, isToday, isYesterday } from "date-fns";
 import { ArrowDown } from "lucide-react";
 
+// Module-level cache: once an UPDATE fails because a column doesn't
+// exist in the DB (schemas drift between dev / staging / prod), stop
+// hammering the endpoint with requests that will always 400.
+// Keys: `${table}:${column}` → true means "skip this field everywhere".
+const missingColumns = new Set<string>();
+const isMissingColumn = (table: string, column: string) =>
+  missingColumns.has(`${table}:${column}`);
+const markColumnMissing = (table: string, column: string) => {
+  missingColumns.add(`${table}:${column}`);
+  console.info(
+    `[chat] Detected missing DB column ${table}.${column}. Skipping future writes.`,
+  );
+};
+
 interface Props {
-  messages: MessageInterface[];
+  /** undefined = initial load / group-switch in progress → skeleton. */
+  messages: MessageInterface[] | undefined;
   group: string;
   currentUsername: string;
   userAvatar: string;
@@ -178,23 +193,42 @@ export const MessageList: React.FC<Props> = ({
     return () => v.removeEventListener("scroll", onScroll);
   }, [group]);
 
-  // Mark messages as read in Supabase
+  // Mark messages as read in Supabase.
+  // Skip entirely if we've already discovered that the target column
+  // doesn't exist in this schema — prevents an N-per-message flood of
+  // 400s in the browser console for schemas that lack read_by.
   useEffect(() => {
     if (!messages || messages.length === 0) return;
+    if (isMissingColumn(table, "read_by")) return;
+
     const unread = messages.filter(
       (m) =>
         m.sent_by !== currentUsername &&
         !(m.read_by || []).includes(currentUsername),
     );
-    unread.forEach(async (msg) => {
+    // Cap per-tick work to avoid a burst of 25 parallel requests.
+    const batch = unread.slice(0, 10);
+    batch.forEach(async (msg) => {
+      if (isMissingColumn(table, "read_by")) return;
       const newReadBy = [...(msg.read_by || []), currentUsername];
       const { error } = await supabase
         .from(table)
         .update({ read_by: newReadBy })
         .eq("msg_id", msg.msg_id);
-      if (error && !error.message.includes("column")) {
-        console.warn("Read receipt update failed:", error.message);
+      if (!error) return;
+      const em = error.message || "";
+      // Postgres error codes 42703 (undefined column) / PGRST204 (schema mismatch)
+      // bubble up as "column ... does not exist" or similar. Detect and cache.
+      if (
+        /column .* does not exist/i.test(em) ||
+        /could not find the .* column/i.test(em) ||
+        /PGRST204/i.test(em) ||
+        em.toLowerCase().includes("read_by")
+      ) {
+        markColumnMissing(table, "read_by");
+        return;
       }
+      console.warn("Read receipt update failed:", em);
     });
   }, [messages, currentUsername, table]);
 
@@ -204,7 +238,7 @@ export const MessageList: React.FC<Props> = ({
       return;
     }
     // Fallback implementation (for completeness; ChatLayout always provides one)
-    const msg = messages.find((m) => m.msg_id === msgId);
+    const msg = messages?.find((m) => m.msg_id === msgId);
     if (!msg) return;
     const reactions: Record<string, string[]> = { ...(msg.reactions || {}) };
     const users = reactions[emoji] || [];

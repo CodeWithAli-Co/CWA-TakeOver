@@ -28,6 +28,11 @@ import { MentionPicker, detectMentionQuery } from "./MentionPicker";
 import { useVoiceRecorder, formatElapsed } from "./useVoiceRecorder";
 import { PollDialog } from "./PollDialog";
 import {
+  SlashCommandPicker,
+  filterSlashCommands,
+  type SlashCommandDef,
+} from "./SlashCommandPicker";
+import {
   addScheduled,
   listScheduledForGroup,
   removeScheduled,
@@ -63,6 +68,10 @@ export const MessageComposer: React.FC<Props> = ({
   const [draggingOver, setDraggingOver] = useState(false);
   const [pollOpen, setPollOpen] = useState(false);
   const [pollInitialQ, setPollInitialQ] = useState("");
+  // Slash-command picker state — shown whenever the composer starts with '/'
+  const [slashIdx, setSlashIdx] = useState(0);
+  const slashVisible = /^\/\S*$/.test(text.trimStart());
+  const slashMatches = slashVisible ? filterSlashCommands(text.trimStart()) : [];
 
   // Mention autocomplete state
   const [mentionInfo, setMentionInfo] = useState<{
@@ -291,6 +300,46 @@ export const MessageComposer: React.FC<Props> = ({
     }
   };
 
+  // ── slash command picker ────────────────────────────────────────────
+  const pickSlashCommand = (def: SlashCommandDef) => {
+    // Zero-arg commands execute immediately.
+    const zeroArg = new Set(["/away", "/dnd", "/clear", "/shortcuts"]);
+    if (zeroArg.has(def.command)) {
+      if (def.command === "/shortcuts") {
+        // Fire the same `?` shortcut the ShortcutsOverlay listens for.
+        const ev = new KeyboardEvent("keydown", { key: "?", bubbles: true });
+        window.dispatchEvent(ev);
+        setText("");
+        return;
+      }
+      const kind =
+        def.command === "/away"
+          ? "away"
+          : def.command === "/dnd"
+          ? "dnd"
+          : "clear";
+      handleSideEffectCommand(kind as "away" | "dnd" | "clear", def.command);
+      setText("");
+      return;
+    }
+    // Commands that take arguments — expand the trigger and position the
+    // caret after the trailing space so the user can immediately type.
+    setText(def.command + " ");
+    setSlashIdx(0);
+    requestAnimationFrame(() => {
+      const el = inputRef.current;
+      if (!el) return;
+      el.focus();
+      const pos = def.command.length + 1;
+      el.setSelectionRange(pos, pos);
+    });
+  };
+
+  // Reset the slash picker highlight whenever the command query changes.
+  useEffect(() => {
+    if (slashVisible) setSlashIdx(0);
+  }, [slashVisible, text]);
+
   // ── /axon detection ─────────────────────────────────────────────────
   const runAxon = async (prompt: string) => {
     setAxonBusy(true);
@@ -470,6 +519,37 @@ export const MessageComposer: React.FC<Props> = ({
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
+    // Slash-command picker takes priority over other pickers when visible.
+    if (slashVisible && slashMatches.length > 0) {
+      if (e.key === "ArrowDown") {
+        e.preventDefault();
+        setSlashIdx((i) => Math.min(slashMatches.length - 1, i + 1));
+        return;
+      }
+      if (e.key === "ArrowUp") {
+        e.preventDefault();
+        setSlashIdx((i) => Math.max(0, i - 1));
+        return;
+      }
+      if (e.key === "Tab" || (e.key === "Enter" && !e.shiftKey)) {
+        // Only hijack Enter if the user is still typing the bare command
+        // (no arguments yet). Otherwise let Enter submit the message.
+        const onlyCommand = /^\/\S*$/.test(text.trimStart());
+        if (onlyCommand) {
+          e.preventDefault();
+          const pick = slashMatches[slashIdx];
+          if (pick) pickSlashCommand(pick);
+          return;
+        }
+      }
+      if (e.key === "Escape") {
+        e.preventDefault();
+        // Clear the leading slash so picker closes.
+        setText("");
+        return;
+      }
+    }
+
     // Mention autocomplete: Arrow / Enter / Escape take precedence while the
     // popover is open.
     if (mentionInfo && filteredMembers.length > 0) {
@@ -577,34 +657,34 @@ export const MessageComposer: React.FC<Props> = ({
           </div>
         )}
 
-        <div className={`flex items-end gap-2 bg-muted/40 border rounded-md focus-within:bg-muted/50 transition-all ${
+        <div className={`flex items-center gap-1 bg-muted/40 border rounded-xl pl-1 pr-1 focus-within:bg-muted/50 transition-all ${
           isAxonMode
             ? "border-primary/50 focus-within:border-primary/70"
-            : "border-border focus-within:border-red-500/25"
+            : "border-border/70 focus-within:border-primary/35"
         }`}>
           <button
             type="button"
             onClick={() => fileInputRef.current?.click()}
-            className="p-2.5 text-muted-foreground/50 hover:text-foreground/60 transition-colors"
+            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-muted-foreground/60 hover:bg-muted/60 hover:text-foreground transition-colors"
             title="Attach file"
           >
-            <Paperclip className="h-4 w-4" />
+            <Paperclip className="h-[17px] w-[17px]" />
           </button>
           {/* Mic / voice message */}
           {voice.recording ? (
-            <div className="flex items-center gap-1.5 pl-1">
+            <div className="flex items-center gap-1">
               <button
                 type="button"
                 onClick={voice.cancel}
-                className="rounded-md p-1 text-muted-foreground hover:text-destructive"
+                className="flex h-9 w-9 items-center justify-center rounded-lg text-muted-foreground hover:bg-destructive/15 hover:text-destructive transition-colors"
                 title="Cancel recording"
               >
-                <Trash2 className="h-3.5 w-3.5" />
+                <Trash2 className="h-[15px] w-[15px]" />
               </button>
               <button
                 type="button"
                 onClick={handleMicToggle}
-                className="flex items-center gap-1.5 rounded-full bg-destructive/15 border border-destructive/40 px-2 py-1 text-[11px] font-medium text-destructive"
+                className="flex h-7 items-center gap-1.5 rounded-full bg-destructive/15 border border-destructive/40 px-2.5 text-[11px] font-medium text-destructive"
                 title="Stop recording"
               >
                 <span className="inline-block h-2 w-2 animate-pulse rounded-full bg-destructive" />
@@ -616,10 +696,10 @@ export const MessageComposer: React.FC<Props> = ({
             <button
               type="button"
               onClick={handleMicToggle}
-              className="p-2.5 text-muted-foreground/50 hover:text-primary transition-colors"
+              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-muted-foreground/60 hover:bg-muted/60 hover:text-primary transition-colors"
               title="Record voice message"
             >
-              <Mic className="h-4 w-4" />
+              <Mic className="h-[17px] w-[17px]" />
             </button>
           )}
           <input
@@ -669,6 +749,20 @@ export const MessageComposer: React.FC<Props> = ({
                 </motion.div>
               )}
             </AnimatePresence>
+
+            {/* Slash command picker — slides up when the composer starts with '/' */}
+            <AnimatePresence>
+              {slashVisible && slashMatches.length > 0 && (
+                <div className="absolute bottom-full left-0 z-30 mb-2">
+                  <SlashCommandPicker
+                    query={text.trimStart()}
+                    activeIndex={slashIdx}
+                    onSetIndex={setSlashIdx}
+                    onPick={pickSlashCommand}
+                  />
+                </div>
+              )}
+            </AnimatePresence>
           </div>
 
           {/* Emoji picker anchor */}
@@ -676,11 +770,11 @@ export const MessageComposer: React.FC<Props> = ({
             <button
               type="button"
               onClick={() => setShowEmoji((v) => !v)}
-              className="p-2.5 text-muted-foreground/50 hover:text-foreground/60 transition-colors"
+              className="flex h-9 w-9 items-center justify-center rounded-lg text-muted-foreground/60 hover:bg-muted/60 hover:text-foreground transition-colors"
               title="Emoji"
               aria-expanded={showEmoji}
             >
-              <Smile className="h-4 w-4" />
+              <Smile className="h-[17px] w-[17px]" />
             </button>
             <AnimatePresence>
               {showEmoji && (
@@ -703,10 +797,10 @@ export const MessageComposer: React.FC<Props> = ({
             <PopoverTrigger asChild>
               <button
                 type="button"
-                className="p-2.5 text-muted-foreground/50 hover:text-foreground/60 transition-colors"
+                className="flex h-9 w-9 items-center justify-center rounded-lg text-muted-foreground/60 hover:bg-muted/60 hover:text-foreground transition-colors"
                 title="Schedule send"
               >
-                <Clock className="h-4 w-4" />
+                <Clock className="h-[17px] w-[17px]" />
               </button>
             </PopoverTrigger>
             <PopoverContent
@@ -746,7 +840,7 @@ export const MessageComposer: React.FC<Props> = ({
           <button
             type="submit"
             disabled={axonBusy || pending.some((p) => !p.publicUrl) || (!text.trim() && pending.length === 0)}
-            className="p-2 mr-1 my-1 rounded-sm bg-primary hover:bg-primary/80 active:scale-95 text-foreground disabled:bg-muted/50 disabled:text-muted-foreground/60 disabled:cursor-not-allowed transition-all"
+            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary text-primary-foreground shadow-sm hover:bg-primary/90 active:scale-95 disabled:bg-muted/50 disabled:text-muted-foreground/60 disabled:cursor-not-allowed transition-all"
             title={isAxonMode ? "Draft with Axon" : "Send (Enter)"}
           >
             {axonBusy ? (
@@ -754,7 +848,7 @@ export const MessageComposer: React.FC<Props> = ({
             ) : isAxonMode ? (
               <Sparkles className="h-3.5 w-3.5" />
             ) : (
-              <Send className="h-3.5 w-3.5" />
+              <Send className="h-3.5 w-3.5 translate-x-[1px]" />
             )}
           </button>
         </div>

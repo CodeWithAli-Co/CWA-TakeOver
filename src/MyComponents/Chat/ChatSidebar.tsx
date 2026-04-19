@@ -28,6 +28,7 @@ import { useAppStore } from "@/stores/store";
 import { useChatStore } from "@/stores/chatStore";
 import { UnreadBadge } from "./UnreadBadge";
 import { AddDMGroup } from "@/MyComponents/subForms/addDMGroup";
+import { CategoryDialog } from "./CategoryDialog";
 
 interface Group {
   id: string | number;
@@ -52,6 +53,7 @@ export const ChatSidebar: React.FC<Props> = ({ groups, employees, onCreateChanne
     starredMessages,
   } = useChatStore();
   const [searchQuery, setSearchQuery] = useState("");
+  const [categoryDialogOpen, setCategoryDialogOpen] = useState(false);
 
   const filtered = groups.filter((g) =>
     g.name.toLowerCase().includes(searchQuery.toLowerCase()),
@@ -69,8 +71,7 @@ export const ChatSidebar: React.FC<Props> = ({ groups, employees, onCreateChanne
   };
 
   const promptCategory = () => {
-    const name = window.prompt("Category name", "Projects");
-    if (name && name.trim()) addChannelCategory(name);
+    setCategoryDialogOpen(true);
   };
 
   return (
@@ -246,6 +247,13 @@ export const ChatSidebar: React.FC<Props> = ({ groups, employees, onCreateChanne
           {filtered.length} of {groups.length} conversations
         </p>
       </div>
+
+      {/* Themed modal for creating a new channel category */}
+      <CategoryDialog
+        open={categoryDialogOpen}
+        onOpenChange={setCategoryDialogOpen}
+        onCreate={(name) => addChannelCategory(name)}
+      />
     </div>
   );
 };
