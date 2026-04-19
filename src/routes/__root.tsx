@@ -271,11 +271,10 @@ export const Route = createRootRoute({
         }
       }
 
-      // Only run the updater in production builds — in `bun run tauri dev`
-      // the dev host gets killed by relaunch() and the loop retriggers on every start.
-      if (import.meta.env.PROD) {
-        RunUpdater();
-      }
+      // *If the updater is downloading and trying to install during `dev` mode, that means you didnt `git pull`.
+      // Because as long as the app's version matches the "new version" in the cloud, the updater wont run.
+      // Which should always be the case in dev mode bc dev is newer or same version as cloud.
+      RunUpdater();
     }, []);
 
     // ─── Tray / taskbar unread badge ────────────────────────────────
