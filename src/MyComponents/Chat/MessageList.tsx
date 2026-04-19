@@ -1,18 +1,23 @@
 /**
- * MessageList.tsx — Scrollable message feed with day separators.
+ * MessageList.tsx — Virtualized chat feed (react-virtuoso).
  *
- * Groups messages by day (Today / Yesterday / Mon Mar 3 / etc), handles
- * reactions/reply refs/read receipts, auto-scrolls on new messages, and
- * (when threadStyle === "inline") renders ThreadInline under each
- * thread-root message.
+ * Messages, day separators, and the unread divider are flattened into a
+ * single typed `FeedRow[]` and handed to Virtuoso. Virtuoso only mounts
+ * the rows currently in the viewport (plus a small buffer), so channels
+ * with thousands of messages scroll smoothly and open instantly.
  *
- * Thread replies (messages with thread_root_id set) are HIDDEN from the
- * main feed — they only appear inside their thread.
+ * Behavior preserved from the pre-virtualization version:
+ *   · Auto-scroll to bottom on group switch / first load.
+ *   · Follow newest messages only when user is near the bottom; otherwise
+ *     show a "N new messages" pill.
+ *   · Reply jumps (handleJumpTo) scroll the target message into view.
+ *   · New-message enter animation (only for genuinely-new rows).
+ *   · Inline skeleton while the query is loading (messages === undefined).
  */
 
-import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { ScrollArea } from "@/components/ui/shadcnComponents/scroll-area";
+import { Virtuoso, type VirtuosoHandle } from "react-virtuoso";
 import { MessageBubble } from "./MessageBubble";
 import { ThreadInline } from "./ThreadInline";
 import { TypingIndicator } from "./TypingIndicator";
@@ -75,6 +80,19 @@ const dayKey = (dateString: string): string => {
   return format(date, "yyyy-MM-dd");
 };
 
+// ── Flat row model ──────────────────────────────────────────────────
+type DayRow = { kind: "day"; key: string; day: string; dateISO: string };
+type UnreadRow = { kind: "unread"; key: string };
+type MessageRow = {
+  kind: "message";
+  key: string;
+  msg: MessageInterface;
+  prevMsg?: MessageInterface;
+  replyCount: number;
+  isNew: boolean;
+};
+type FeedRow = DayRow | UnreadRow | MessageRow;
+
 export const MessageList: React.FC<Props> = ({
   messages, group, currentUsername, userAvatar, table,
   onOpenThread, onTogglePin, canPin,
@@ -83,8 +101,8 @@ export const MessageList: React.FC<Props> = ({
   onEdit, onDelete, onForward,
   searchQuery = "",
 }) => {
-  const rootRef = useRef<HTMLDivElement>(null);
-  const bottomSentinelRef = useRef<HTMLDivElement>(null);
+  const virtuosoRef = useRef<VirtuosoHandle | null>(null);
+  const [atBottom, setAtBottom] = useState(true);
   const [showJumpButton, setShowJumpButton] = useState(false);
   const [unreadWhileScrolledUp, setUnreadWhileScrolledUp] = useState(0);
   const lastMsgIdRef = useRef<number | null>(null);
@@ -94,32 +112,6 @@ export const MessageList: React.FC<Props> = ({
   const initialMaxIdRef = useRef<number>(-1);
   const { setReplyingTo, markRead, lastReadAt } = useChatStore();
 
-  // Resolve the actual scrollable element (Radix viewport).
-  const getViewport = (): HTMLElement | null => {
-    return (
-      rootRef.current?.querySelector(
-        "[data-radix-scroll-area-viewport]",
-      ) as HTMLElement | null
-    ) ?? null;
-  };
-
-  const scrollToBottom = (behavior: ScrollBehavior = "auto") => {
-    const v = getViewport();
-    if (!v) return;
-    // Use scrollTop assignment for instant; scrollIntoView on sentinel for smooth.
-    if (behavior === "smooth" && bottomSentinelRef.current) {
-      bottomSentinelRef.current.scrollIntoView({ behavior: "smooth", block: "end" });
-    } else {
-      v.scrollTop = v.scrollHeight;
-    }
-  };
-
-  const isNearBottom = (): boolean => {
-    const v = getViewport();
-    if (!v) return true;
-    return v.scrollHeight - v.scrollTop - v.clientHeight < 120;
-  };
-
   // Capture the lastReadAt for this group at mount / group-switch, so the
   // unread divider stays in place even after `markRead` zeros the store.
   const lastReadSnapshotRef = useRef<string | null>(null);
@@ -127,16 +119,13 @@ export const MessageList: React.FC<Props> = ({
     lastReadSnapshotRef.current = lastReadAt[group] ?? null;
     lastMsgIdRef.current = null;
     // Capture the max msg_id seen on this group's first paint so subsequent
-    // animations only fire for genuinely-new messages. Runs BEFORE paint so
-    // the first render already reads the right threshold.
+    // animations only fire for genuinely-new messages.
     initialMaxIdRef.current = (messages || []).reduce(
       (max, m) => (m.msg_id > max ? m.msg_id : max),
       -1,
     );
     setShowJumpButton(false);
     setUnreadWhileScrolledUp(0);
-    // intentionally only depends on `group` — we want the snapshot frozen
-    // for the lifetime of the current channel view.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [group]);
 
@@ -152,64 +141,35 @@ export const MessageList: React.FC<Props> = ({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [messages]);
 
-  // Initial paint: jump straight to the bottom on group switch / mount,
-  // before the user sees the top of the list flash by.
-  useLayoutEffect(() => {
-    scrollToBottom("auto");
-    // ensure after layout the viewport is at bottom (images/skeletons may push)
-    const id = requestAnimationFrame(() => scrollToBottom("auto"));
-    return () => cancelAnimationFrame(id);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [group]);
-
-  // On new messages: if user is near bottom, follow. Otherwise show a
-  // "jump to bottom" pill that counts unread messages.
+  // Track new-message arrivals for the jump-pill + auto-scroll-when-near-bottom.
   useEffect(() => {
     if (!messages || messages.length === 0) return;
     const lastId = messages[messages.length - 1]?.msg_id ?? null;
     const previousLastId = lastMsgIdRef.current;
     lastMsgIdRef.current = lastId;
 
-    // First settling pass for this group → jump to bottom + clear pill.
     if (previousLastId == null) {
-      // run after render so layout is final
-      requestAnimationFrame(() => scrollToBottom("auto"));
+      // First settle for this group — mark read.
       markRead(group);
       return;
     }
     if (lastId === previousLastId) return;
 
-    if (isNearBottom()) {
-      requestAnimationFrame(() => scrollToBottom("smooth"));
+    if (atBottom) {
+      // Virtuoso's `followOutput` prop handles the actual scroll.
       setShowJumpButton(false);
       setUnreadWhileScrolledUp(0);
       markRead(group);
     } else {
-      // Count messages added since last tick
       const added = messages.filter((m) => m.msg_id > (previousLastId ?? 0)).length;
       setUnreadWhileScrolledUp((c) => c + added);
       setShowJumpButton(true);
     }
-  }, [messages, group, markRead]);
+  }, [messages, group, markRead, atBottom]);
 
-  // Track whether user has scrolled away from the bottom.
-  useEffect(() => {
-    const v = getViewport();
-    if (!v) return;
-    const onScroll = () => {
-      if (isNearBottom()) {
-        setShowJumpButton(false);
-        setUnreadWhileScrolledUp(0);
-      }
-    };
-    v.addEventListener("scroll", onScroll, { passive: true });
-    return () => v.removeEventListener("scroll", onScroll);
-  }, [group]);
-
-  // Mark messages as read in Supabase.
-  // Skip entirely if we've already discovered that the target column
-  // doesn't exist in this schema — prevents an N-per-message flood of
-  // 400s in the browser console for schemas that lack read_by.
+  // Mark messages as read in Supabase. Skip entirely if we've already
+  // discovered the column is missing — prevents an N-per-message flood
+  // of 400s in the browser console.
   useEffect(() => {
     if (!messages || messages.length === 0) return;
     if (isMissingColumn(table, "read_by")) return;
@@ -219,7 +179,6 @@ export const MessageList: React.FC<Props> = ({
         m.sent_by !== currentUsername &&
         !(m.read_by || []).includes(currentUsername),
     );
-    // Cap per-tick work to avoid a burst of 25 parallel requests.
     const batch = unread.slice(0, 10);
     batch.forEach(async (msg) => {
       if (isMissingColumn(table, "read_by")) return;
@@ -230,8 +189,6 @@ export const MessageList: React.FC<Props> = ({
         .eq("msg_id", msg.msg_id);
       if (!error) return;
       const em = error.message || "";
-      // Postgres error codes 42703 (undefined column) / PGRST204 (schema mismatch)
-      // bubble up as "column ... does not exist" or similar. Detect and cache.
       if (
         /column .* does not exist/i.test(em) ||
         /could not find the .* column/i.test(em) ||
@@ -250,7 +207,6 @@ export const MessageList: React.FC<Props> = ({
       await onReactOverride(msgId, emoji);
       return;
     }
-    // Fallback implementation (for completeness; ChatLayout always provides one)
     const msg = messages?.find((m) => m.msg_id === msgId);
     if (!msg) return;
     const reactions: Record<string, string[]> = { ...(msg.reactions || {}) };
@@ -272,10 +228,85 @@ export const MessageList: React.FC<Props> = ({
     });
   };
 
+  // Jump to a message by id. Virtuoso owns the scroll, but the bubble
+  // still has id="msg-<id>" so scrollIntoView works after a small
+  // delay that gives Virtuoso time to mount the row. We also pre-scroll
+  // the virtualizer to the row index for long-distance jumps.
   const handleJumpTo = (msgId: number) => {
-    const el = document.getElementById(`msg-${msgId}`);
-    if (el) el.scrollIntoView({ behavior: "smooth", block: "center" });
+    const idx = feedRows.findIndex(
+      (r) => r.kind === "message" && r.msg.msg_id === msgId,
+    );
+    if (idx >= 0) {
+      virtuosoRef.current?.scrollToIndex({
+        index: idx,
+        align: "center",
+        behavior: "smooth",
+      });
+    }
+    // Briefly highlight the bubble by scrollIntoView on the DOM node once
+    // it mounts.
+    requestAnimationFrame(() => {
+      const el = document.getElementById(`msg-${msgId}`);
+      if (el) el.scrollIntoView({ behavior: "smooth", block: "center" });
+    });
   };
+
+  // ── Build the flat row array ──────────────────────────────────────
+  // NB: useMemo keeps Virtuoso's `data` reference stable across renders
+  // where nothing relevant changed.
+  const feedRows: FeedRow[] = useMemo(() => {
+    if (!messages || messages.length === 0) return [];
+    const needle = searchQuery.trim().toLowerCase();
+    const feedMessages = messages.filter((m) => {
+      if (m.thread_root_id != null) return false;
+      if (!needle) return true;
+      const hay = `${m.message ?? ""} ${m.sent_by ?? ""}`.toLowerCase();
+      return hay.includes(needle);
+    });
+
+    const out: FeedRow[] = [];
+    let lastDay: string | null = null;
+    const unreadAnchor = lastReadSnapshotRef.current;
+    let unreadDividerInserted = false;
+
+    for (let i = 0; i < feedMessages.length; i++) {
+      const msg = feedMessages[i]!;
+      const prevMsg = feedMessages[i - 1];
+      const thisDay = dayKey(msg.created_at);
+
+      if (thisDay !== lastDay) {
+        out.push({
+          kind: "day",
+          key: `day-${thisDay}-${i}`,
+          day: thisDay,
+          dateISO: msg.created_at,
+        });
+        lastDay = thisDay;
+      }
+
+      if (
+        !unreadDividerInserted &&
+        unreadAnchor &&
+        new Date(msg.created_at) > new Date(unreadAnchor) &&
+        msg.sent_by !== currentUsername
+      ) {
+        out.push({ kind: "unread", key: `unread-${msg.msg_id}` });
+        unreadDividerInserted = true;
+      }
+
+      out.push({
+        kind: "message",
+        key: `msg-${msg.msg_id}`,
+        msg,
+        prevMsg:
+          thisDay === dayKey(prevMsg?.created_at || "") ? prevMsg : undefined,
+        replyCount: threadReplyCounts.get(msg.msg_id) ?? 0,
+        isNew:
+          initialMaxIdRef.current >= 0 && msg.msg_id > initialMaxIdRef.current,
+      });
+    }
+    return out;
+  }, [messages, searchQuery, threadReplyCounts, currentUsername]);
 
   // Loading state: messages is undefined (query still in flight).
   if (!messages) {
@@ -299,89 +330,35 @@ export const MessageList: React.FC<Props> = ({
     );
   }
 
-  // Top-level feed hides thread replies; they render inside their thread.
-  // Also apply the search filter when one is set.
-  const needle = searchQuery.trim().toLowerCase();
-  const feedMessages = messages.filter((m) => {
-    if (m.thread_root_id != null) return false;
-    if (!needle) return true;
-    const hay = `${m.message ?? ""} ${m.sent_by ?? ""}`.toLowerCase();
-    return hay.includes(needle);
-  });
-
-  const rendered: React.ReactNode[] = [];
-  let lastDay: string | null = null;
-  const unreadAnchor = lastReadSnapshotRef.current;
-  let unreadDividerInserted = false;
-
-  feedMessages.forEach((msg, i) => {
-    const thisDay = dayKey(msg.created_at);
-    const prevMsg = feedMessages[i - 1];
-
-    if (thisDay !== lastDay) {
-      rendered.push(
-        <div
-          key={`day-${thisDay}-${i}`}
-          className="flex items-center gap-3 px-5 my-4 select-none"
-        >
+  const renderItem = (row: FeedRow) => {
+    if (row.kind === "day") {
+      return (
+        <div className="flex items-center gap-3 px-5 my-4 select-none">
           <div className="flex-1 h-px bg-muted/50" />
           <span className="text-[10px] text-muted-foreground uppercase tracking-[0.15em] font-medium px-2 py-0.5 rounded-sm bg-muted/30 border border-border">
-            {formatDayLabel(msg.created_at)}
+            {formatDayLabel(row.dateISO)}
           </span>
           <div className="flex-1 h-px bg-muted/50" />
-        </div>,
+        </div>
       );
-      lastDay = thisDay;
     }
-
-    // Unread divider — insert once, before the first message newer than
-    // the snapshotted lastReadAt (and only if the message isn't your own).
-    if (
-      !unreadDividerInserted &&
-      unreadAnchor &&
-      new Date(msg.created_at) > new Date(unreadAnchor) &&
-      msg.sent_by !== currentUsername
-    ) {
-      rendered.push(
-        <div
-          key={`unread-${msg.msg_id}`}
-          className="flex items-center gap-3 px-5 my-3 select-none"
-        >
+    if (row.kind === "unread") {
+      return (
+        <div className="flex items-center gap-3 px-5 my-3 select-none">
           <div className="flex-1 h-px bg-primary/30" />
           <span className="rounded-full border border-primary/40 bg-primary/10 px-2 py-0.5 text-[9.5px] font-semibold uppercase tracking-[0.18em] text-primary">
             New messages
           </span>
           <div className="flex-1 h-px bg-primary/30" />
-        </div>,
+        </div>
       );
-      unreadDividerInserted = true;
     }
-
-    const replyCount = threadReplyCounts.get(msg.msg_id) ?? 0;
-
-    // Only wrap genuinely-new messages in an entry animation. Existing
-    // messages render as plain divs so nothing can get stuck at opacity 0
-    // if framer-motion hiccups during concurrent renders.
-    const isNew = initialMaxIdRef.current >= 0 && msg.msg_id > initialMaxIdRef.current;
-    const Wrapper = isNew ? motion.div : "div";
-    const wrapperProps = isNew
-      ? {
-          initial: { opacity: 0, y: 8, scale: 0.98 },
-          animate: { opacity: 1, y: 0, scale: 1 },
-          transition: { duration: 0.22, ease: [0.16, 1, 0.3, 1] as [number, number, number, number] },
-        }
-      : {};
-    rendered.push(
-      <Wrapper
-        key={msg.msg_id}
-        id={`msg-${msg.msg_id}`}
-        {...wrapperProps}
-      >
+    const { msg, prevMsg, replyCount, isNew } = row;
+    const inner = (
+      <div id={`msg-${msg.msg_id}`}>
         <MessageBubble
           msg={msg}
-          prevMsg={
-            thisDay === dayKey(prevMsg?.created_at || "") ? prevMsg : undefined
-          }
+          prevMsg={prevMsg}
           currentUsername={currentUsername}
           onReact={handleReact}
           onReply={handleReply}
@@ -405,18 +382,51 @@ export const MessageList: React.FC<Props> = ({
             onReact={handleReact}
           />
         )}
-      </Wrapper>,
+      </div>
     );
-  });
+    if (!isNew) return inner;
+    return (
+      <motion.div
+        initial={{ opacity: 0, y: 8, scale: 0.98 }}
+        animate={{ opacity: 1, y: 0, scale: 1 }}
+        transition={{ duration: 0.22, ease: [0.16, 1, 0.3, 1] }}
+      >
+        {inner}
+      </motion.div>
+    );
+  };
 
   return (
     <div className="flex-1 flex flex-col min-h-0 relative">
-      <ScrollArea ref={rootRef} className="flex-1">
-        <div className="py-4">
-          {rendered}
-          <div ref={bottomSentinelRef} aria-hidden="true" />
-        </div>
-      </ScrollArea>
+      <Virtuoso
+        ref={virtuosoRef}
+        data={feedRows}
+        // Auto-scroll to the latest row whenever `data` grows AND the
+        // user is already near the bottom. Returns "smooth" to scroll,
+        // false to stay put.
+        followOutput={(isAtBottom) => (isAtBottom ? "smooth" : false)}
+        // Start at the bottom on mount / group switch.
+        initialTopMostItemIndex={Math.max(0, feedRows.length - 1)}
+        // Feed dedup key so scroll position is preserved across renders.
+        computeItemKey={(_, row) => row.key}
+        atBottomStateChange={(v) => {
+          setAtBottom(v);
+          if (v) {
+            setShowJumpButton(false);
+            setUnreadWhileScrolledUp(0);
+          }
+        }}
+        // Buffer a few screens so quick scroll-up feels instant.
+        increaseViewportBy={{ top: 600, bottom: 600 }}
+        // Give the list some bottom padding so the composer doesn't
+        // overlap the most recent message.
+        className="flex-1"
+        itemContent={(_, row) => renderItem(row)}
+        components={{
+          Header: () => <div className="h-3" />,
+          Footer: () => <div className="h-2" />,
+        }}
+      />
 
       {/* Jump-to-bottom pill */}
       <AnimatePresence>
@@ -424,7 +434,11 @@ export const MessageList: React.FC<Props> = ({
           <motion.button
             type="button"
             onClick={() => {
-              scrollToBottom("smooth");
+              virtuosoRef.current?.scrollToIndex({
+                index: feedRows.length - 1,
+                align: "end",
+                behavior: "smooth",
+              });
               setShowJumpButton(false);
               setUnreadWhileScrolledUp(0);
               markRead(group);
@@ -449,8 +463,6 @@ export const MessageList: React.FC<Props> = ({
 };
 
 // ── In-feed skeleton shown while the initial messages query is loading.
-//  Rendered at full flex height with high-contrast bars so it's visibly
-//  "the chat is loading" even on the new dark-zinc surface.
 function MessageListSkeleton() {
   const rows = [
     { wBody: [260], wMeta: 100 },
