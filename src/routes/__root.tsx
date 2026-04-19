@@ -317,6 +317,8 @@ export const Route = createRootRoute({
             const sentBy = payload.new.sent_by;
             const body = payload.new.message || "";
             if (sentBy === currentUsername) return;
+            // Ignore Axon's own alerts / roasts — they'd loop if rescanned.
+            if (sentBy === "Axon" || sentBy === "AXON") return;
 
             // Axon loyalty monitor — if the sender is dragging the CEO,
             // fire the defender protocol (public roast + CEO DM alert).
@@ -385,6 +387,7 @@ export const Route = createRootRoute({
             const sentBy = payload.new.sent_by;
             const body = payload.new.message || "";
             if (sentBy === currentUsername) return;
+            if (sentBy === "Axon" || sentBy === "AXON") return;
 
             // Loyalty monitor for #General.
             const slander = detectCeoSlander(

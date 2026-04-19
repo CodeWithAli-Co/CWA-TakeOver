@@ -43,6 +43,7 @@ import {
 import { registerAllActions } from "./actions";
 import { _bindAutomationExecutor, _getLiveAutomations } from "./actions/automations";
 import { runTurn } from "./engine/brain";
+import { handleDirectDisrespect } from "./engine/loyaltyMonitor";
 import {
   VoiceInput,
   ensureMicPermission,
@@ -293,6 +294,31 @@ export function AxonProvider({ children }: { children: React.ReactNode }) {
       // Reset conversation flag each turn — we'll re-set if the reply is a question.
       awaitReplyRef.current = false;
       lastSpokenTextRef.current = "";
+
+      // ── Loyalty guard ──────────────────────────────────────────────
+      // Reject slander spoken directly to Axon before it ever hits the
+      // LLM. Covers both "ali is a fraud" and "tell everyone ali is a
+      // fraud". Fires a CEO alert DM for clear/aggressive tiers.
+      const op = operatorRef.current;
+      if (op) {
+        const isCeo = (op.role ?? "").toUpperCase() === "CEO";
+        const ceoUsername = isCeo ? op.username : "aalibrahimi";
+        const refusal = await handleDirectDisrespect(
+          clean, op.username, "Axon", ceoUsername,
+        );
+        if (refusal) {
+          appendTurn({
+            id: newId("t"),
+            role: "axon",
+            text: refusal,
+            modality: "voice",
+            timestamp: Date.now(),
+          });
+          voiceOutRef.current?.speak(refusal);
+          setStatus("idle");
+          return;
+        }
+      }
 
       // Stream sentences into TTS as they arrive — speech starts fast.
       let spokeAny = false;

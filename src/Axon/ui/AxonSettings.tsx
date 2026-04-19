@@ -83,6 +83,73 @@ export function AxonSettingsPane() {
         </div>
       </div>
 
+      {/* Autonomy — how much Axon does on its own vs. asking permission */}
+      <div className="axon-settings-group">
+        <label className="axon-settings-label">Autonomy</label>
+
+        <div className="axon-settings-row">
+          <div style={{ display: "flex", flexDirection: "column", flex: 1 }}>
+            <span>Auto-approve destructive actions</span>
+            <span style={{ fontSize: 11, color: "var(--axon-muted)" }}>
+              Skip the "are you sure?" dialog. Mistakes reversed via undo.
+            </span>
+          </div>
+          <input
+            className="axon-switch"
+            type="checkbox"
+            checked={settings.autoApprove !== false}
+            onChange={(e) => updateSettings({ autoApprove: e.target.checked })}
+          />
+        </div>
+
+        <div
+          className="axon-settings-row"
+          style={{
+            borderRadius: 8,
+            padding: "8px 10px",
+            background: settings.autoApprove !== false
+              ? "hsl(0 72% 51% / 0.08)"
+              : "var(--axon-muted-bg, transparent)",
+            border: `1px solid ${settings.autoApprove !== false ? "hsl(0 72% 51% / 0.25)" : "transparent"}`,
+          }}
+        >
+          <div style={{ display: "flex", flexDirection: "column", flex: 1, gap: 2 }}>
+            <span style={{ fontSize: 11, fontWeight: 600, letterSpacing: "0.08em", color: settings.autoApprove !== false ? "hsl(0 72% 68%)" : "var(--axon-muted)" }}>
+              {settings.autoApprove !== false ? "🔴 LIVE FIRE" : "ASK FIRST"}
+            </span>
+            <span style={{ fontSize: 11, color: "var(--axon-muted)", lineHeight: 1.4 }}>
+              {settings.autoApprove !== false
+                ? "Axon acts on first interpretation. Say 'undo that' to reverse."
+                : "Axon pauses for confirmation before every destructive action."}
+            </span>
+          </div>
+        </div>
+
+        <div className="axon-settings-row" style={{ marginTop: 10 }}>
+          <div style={{ display: "flex", flexDirection: "column", flex: 1 }}>
+            <span>Continuous listen mode</span>
+            <span style={{ fontSize: 11, color: "var(--axon-muted)" }}>
+              After the wake word, stay armed until you say "stand down".
+            </span>
+          </div>
+          <input
+            className="axon-switch"
+            type="checkbox"
+            checked={settings.continuousAfterWake !== false}
+            onChange={(e) =>
+              updateSettings({ continuousAfterWake: e.target.checked })
+            }
+          />
+        </div>
+
+        <div style={{ fontSize: 10.5, color: "var(--axon-muted)", marginTop: 2, marginBottom: 4 }}>
+          Stand-down phrases:{" "}
+          <span style={{ fontFamily: "monospace" }}>
+            {(settings.standDownPhrases ?? []).join(" · ")}
+          </span>
+        </div>
+      </div>
+
       {/* Vision */}
       <div className="axon-settings-group">
         <label className="axon-settings-label">Vision</label>
