@@ -129,6 +129,69 @@ export const memberData = {
   ],
 };
 
+// Account Manager data set ( What account managers can see )
+export const accountManagerData = {
+  user: {
+    name: "CodeWithAli",
+    email: "unfold@codewithali.com",
+    avatar: "/public/codewithali_logo.png",
+  },
+  navMain: [
+    {
+      title: "Home",
+      url: "/",
+      isActive: false,
+      icon: Home,
+    },
+    {
+      title: "Admin Permissions",
+      url: "/details",
+      icon: SquareTerminal,
+      isActive: true,
+      company: "codeWithAli" as const,
+      items: [
+        {
+          title: "Contract",
+          url: "/contractGenerator",
+        },
+        {
+          title: "Cold Email Generator",
+          url: "/coldEmail"
+        },
+      ],
+    },
+    {
+      title: "Chat",
+      url: "/chat",
+      isActive: false,
+      icon: MessageCircle,
+    },
+    {
+      title: "Task",
+      url: "/task",
+      isActive: false,
+      icon: ClipboardList,
+    },
+    {
+      title: "Weekly Quotas",
+      url: "/quota",
+      isActive: false,
+      icon: Target,
+    },
+    {
+      title: "Schedule",
+      url: "/schedule",
+      isActive: false,
+      icon: CalendarDays,
+    },
+    {
+      title: "Settings",
+      url: "/settings",
+      icon: Settings2,
+    },
+  ],
+};
+
 // Markerting Specialist Data set (What Markerting Specialists can see)
 export const marketingData = {
   user: {

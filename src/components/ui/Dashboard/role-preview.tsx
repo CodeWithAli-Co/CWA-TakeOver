@@ -15,6 +15,7 @@ import { useSidebar } from "@/components/ui/shadcnComponents/sidebar";
 const previewableRoles = [
   { key: Role.Intern, label: "Intern" },
   { key: Role.Member, label: "Member" },
+  { key: Role.AccManager, label: "Account Manager" },
   { key: Role.Marketing, label: "Marketing" },
   { key: Role.Admin, label: "Admin" },
   { key: Role.ProjectManager, label: "Project Manager" },
