@@ -41,6 +41,29 @@ const GlobalSearch = lazy(() =>
   })),
 );
 
+// Global huddle ring — surfaces toasts when someone starts a huddle
+// in any channel the user belongs to.
+const HuddleRing = lazy(() =>
+  import("@/MyComponents/Chat/Huddle/HuddleRing").then((m) => ({
+    default: m.HuddleRing,
+  })),
+);
+
+// Route-aware skeleton fallback picks a loader shape that roughly
+// matches the destination page, so the transition feels seamless.
+import { PageSkeleton, ChatSkeleton, RoadmapSkeleton, SplitSkeleton, TableSkeleton, FormSkeleton } from "@/MyComponents/Reusables/PageSkeletons";
+
+function RouteFallback() {
+  const loc = useLocation();
+  const p = loc.pathname || "";
+  if (p.startsWith("/chat")) return <ChatSkeleton />;
+  if (p.startsWith("/roadmap")) return <RoadmapSkeleton />;
+  if (p.startsWith("/invoicer")) return <SplitSkeleton />;
+  if (p.startsWith("/employee") || p.startsWith("/details") || p.startsWith("/mod_logs")) return <TableSkeleton />;
+  if (p.startsWith("/settings")) return <FormSkeleton />;
+  return <PageSkeleton />;
+}
+
 export const Route = createRootRoute({
   component: () => {
     const { pinCheck, isLoggedIn, GroupName } = useAppStore();
@@ -51,7 +74,10 @@ export const Route = createRootRoute({
         body: "Error Fetching Active User on Start up!",
       });
     }
-    const { refetch: refetchDMGroups } = DMGroups(user[0]?.username);
+    const { data: dmGroupsData, refetch: refetchDMGroups } = DMGroups(user[0]?.username);
+    const userChannelNames: string[] = (dmGroupsData || [])
+      .map((g: any) => g?.name)
+      .filter(Boolean);
 
     // Keep DMGroups in sync across the app (channel is idempotent for same name)
     useEffect(() => {
@@ -467,7 +493,9 @@ export const Route = createRootRoute({
             {/* // root.tsx layout section */}
             <AppSidebar />
             <section id="main-section">
-              <Outlet />
+              <Suspense fallback={<RouteFallback />}>
+                <Outlet />
+              </Suspense>
             </section>
             {/* AXON command intelligence — admin-gated inside the module */}
             <Suspense fallback={null}>
@@ -476,6 +504,13 @@ export const Route = createRootRoute({
             {/* Global Cmd+K message search */}
             <Suspense fallback={null}>
               <GlobalSearch open={searchOpen} onOpenChange={setSearchOpen} />
+            </Suspense>
+            {/* Global huddle ring */}
+            <Suspense fallback={null}>
+              <HuddleRing
+                username={user[0]?.username || ""}
+                channelNames={["General", ...userChannelNames]}
+              />
             </Suspense>
           </SidebarProvider>
         ) : (

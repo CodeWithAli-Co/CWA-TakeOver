@@ -10,6 +10,13 @@ import { useCallback, useEffect, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { Check, Copy, Hash, Loader2, MessageSquare, Plus, Trash2, Webhook, X } from "lucide-react";
 import supabase from "@/MyComponents/supabase";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/shadcnComponents/select";
 
 interface Group {
   id: string | number;
@@ -158,37 +165,44 @@ export function WebhookManager({ open, onOpenChange, groups, currentUsername }: 
                 New webhook
               </p>
               <div className="flex flex-col gap-2">
-                <select
-                  value={group}
-                  onChange={(e) => setGroup(e.target.value)}
-                  className="rounded-md border border-border bg-background px-2 py-1.5 text-[12px]"
-                >
-                  <option value="">Select a channel…</option>
-                  {groups.map((g) => (
-                    <option key={String(g.id)} value={g.name}>
-                      {g.name === "General" ? "#General" : g.name}
-                    </option>
-                  ))}
-                </select>
+                <Select value={group} onValueChange={setGroup}>
+                  <SelectTrigger className="h-9 text-[12px]">
+                    <SelectValue placeholder="Select a channel…" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {groups.map((g) => (
+                      <SelectItem
+                        key={String(g.id)}
+                        value={g.name}
+                        className="text-[12px]"
+                      >
+                        <span className="flex items-center gap-1.5">
+                          <Hash className="h-3 w-3 text-muted-foreground" />
+                          {g.name === "General" ? "General" : g.name.replace(/^#/, "")}
+                        </span>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
                 <div className="grid grid-cols-2 gap-2">
                   <input
                     value={label}
                     onChange={(e) => setLabel(e.target.value)}
                     placeholder="Label (e.g. GitHub CI)"
-                    className="rounded-md border border-border bg-background px-2 py-1.5 text-[12px]"
+                    className="rounded-md border border-border bg-background px-2 py-1.5 text-[12px] focus:outline-none focus:ring-2 focus:ring-primary/40"
                   />
                   <input
                     value={botName}
                     onChange={(e) => setBotName(e.target.value)}
                     placeholder="Sender name (default: Bot)"
-                    className="rounded-md border border-border bg-background px-2 py-1.5 text-[12px]"
+                    className="rounded-md border border-border bg-background px-2 py-1.5 text-[12px] focus:outline-none focus:ring-2 focus:ring-primary/40"
                   />
                 </div>
                 <button
                   type="button"
                   onClick={createHook}
                   disabled={!group || creating}
-                  className="flex items-center justify-center gap-1.5 rounded-md bg-primary px-3 py-1.5 text-[12px] font-semibold text-primary-foreground disabled:opacity-60"
+                  className="flex items-center justify-center gap-1.5 rounded-md bg-primary px-3 py-1.5 text-[12px] font-semibold text-primary-foreground transition-colors hover:bg-primary/90 disabled:opacity-60"
                 >
                   {creating ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Plus className="h-3.5 w-3.5" />}
                   Generate token

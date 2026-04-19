@@ -10,7 +10,8 @@
  * main feed — they only appear inside their thread.
  */
 
-import { useEffect, useRef } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { AnimatePresence, motion } from "framer-motion";
 import { ScrollArea } from "@/components/ui/shadcnComponents/scroll-area";
 import { MessageBubble } from "./MessageBubble";
 import { ThreadInline } from "./ThreadInline";
@@ -19,6 +20,7 @@ import { MessageInterface } from "@/stores/query";
 import supabase from "@/MyComponents/supabase";
 import { useChatStore, type ThreadStyle } from "@/stores/chatStore";
 import { format, isToday, isYesterday } from "date-fns";
+import { ArrowDown } from "lucide-react";
 
 interface Props {
   messages: MessageInterface[];
@@ -66,25 +68,115 @@ export const MessageList: React.FC<Props> = ({
   onEdit, onDelete, onForward,
   searchQuery = "",
 }) => {
-  const scrollRef = useRef<HTMLDivElement>(null);
+  const rootRef = useRef<HTMLDivElement>(null);
+  const bottomSentinelRef = useRef<HTMLDivElement>(null);
+  const [showJumpButton, setShowJumpButton] = useState(false);
+  const [unreadWhileScrolledUp, setUnreadWhileScrolledUp] = useState(0);
+  const lastMsgIdRef = useRef<number | null>(null);
+  // Captures the highest msg_id present at mount/group-switch. Messages
+  // with id <= this are NOT animated (they were already in the feed).
+  // Messages above this threshold are new arrivals → animate them in.
+  const initialMaxIdRef = useRef<number>(-1);
   const { setReplyingTo, markRead, lastReadAt } = useChatStore();
+
+  // Resolve the actual scrollable element (Radix viewport).
+  const getViewport = (): HTMLElement | null => {
+    return (
+      rootRef.current?.querySelector(
+        "[data-radix-scroll-area-viewport]",
+      ) as HTMLElement | null
+    ) ?? null;
+  };
+
+  const scrollToBottom = (behavior: ScrollBehavior = "auto") => {
+    const v = getViewport();
+    if (!v) return;
+    // Use scrollTop assignment for instant; scrollIntoView on sentinel for smooth.
+    if (behavior === "smooth" && bottomSentinelRef.current) {
+      bottomSentinelRef.current.scrollIntoView({ behavior: "smooth", block: "end" });
+    } else {
+      v.scrollTop = v.scrollHeight;
+    }
+  };
+
+  const isNearBottom = (): boolean => {
+    const v = getViewport();
+    if (!v) return true;
+    return v.scrollHeight - v.scrollTop - v.clientHeight < 120;
+  };
 
   // Capture the lastReadAt for this group at mount / group-switch, so the
   // unread divider stays in place even after `markRead` zeros the store.
   const lastReadSnapshotRef = useRef<string | null>(null);
   useEffect(() => {
     lastReadSnapshotRef.current = lastReadAt[group] ?? null;
+    lastMsgIdRef.current = null;
+    // Capture the max msg_id seen on this group's first paint so subsequent
+    // animations only fire for genuinely-new messages.
+    initialMaxIdRef.current = (messages || []).reduce(
+      (max, m) => (m.msg_id > max ? m.msg_id : max),
+      -1,
+    );
+    setShowJumpButton(false);
+    setUnreadWhileScrolledUp(0);
     // intentionally only depends on `group` — we want the snapshot frozen
     // for the lifetime of the current channel view.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [group]);
 
+  // Initial paint: jump straight to the bottom on group switch / mount,
+  // before the user sees the top of the list flash by.
+  useLayoutEffect(() => {
+    scrollToBottom("auto");
+    // ensure after layout the viewport is at bottom (images/skeletons may push)
+    const id = requestAnimationFrame(() => scrollToBottom("auto"));
+    return () => cancelAnimationFrame(id);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [group]);
+
+  // On new messages: if user is near bottom, follow. Otherwise show a
+  // "jump to bottom" pill that counts unread messages.
   useEffect(() => {
-    if (scrollRef.current) {
-      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+    if (!messages || messages.length === 0) return;
+    const lastId = messages[messages.length - 1]?.msg_id ?? null;
+    const previousLastId = lastMsgIdRef.current;
+    lastMsgIdRef.current = lastId;
+
+    // First settling pass for this group → jump to bottom + clear pill.
+    if (previousLastId == null) {
+      // run after render so layout is final
+      requestAnimationFrame(() => scrollToBottom("auto"));
+      markRead(group);
+      return;
     }
-    markRead(group);
+    if (lastId === previousLastId) return;
+
+    if (isNearBottom()) {
+      requestAnimationFrame(() => scrollToBottom("smooth"));
+      setShowJumpButton(false);
+      setUnreadWhileScrolledUp(0);
+      markRead(group);
+    } else {
+      // Count messages added since last tick
+      const added = messages.filter((m) => m.msg_id > (previousLastId ?? 0)).length;
+      setUnreadWhileScrolledUp((c) => c + added);
+      setShowJumpButton(true);
+    }
   }, [messages, group, markRead]);
+
+  // Track whether user has scrolled away from the bottom.
+  useEffect(() => {
+    const v = getViewport();
+    if (!v) return;
+    const onScroll = () => {
+      if (isNearBottom()) {
+        setShowJumpButton(false);
+        setUnreadWhileScrolledUp(0);
+      }
+    };
+    v.addEventListener("scroll", onScroll, { passive: true });
+    return () => v.removeEventListener("scroll", onScroll);
+  }, [group]);
 
   // Mark messages as read in Supabase
   useEffect(() => {
@@ -215,8 +307,15 @@ export const MessageList: React.FC<Props> = ({
 
     const replyCount = threadReplyCounts.get(msg.msg_id) ?? 0;
 
+    const isNew = msg.msg_id > initialMaxIdRef.current;
     rendered.push(
-      <div key={msg.msg_id} id={`msg-${msg.msg_id}`}>
+      <motion.div
+        key={msg.msg_id}
+        id={`msg-${msg.msg_id}`}
+        initial={isNew ? { opacity: 0, y: 8, scale: 0.98 } : false}
+        animate={isNew ? { opacity: 1, y: 0, scale: 1 } : undefined}
+        transition={{ duration: 0.22, ease: [0.16, 1, 0.3, 1] }}
+      >
         <MessageBubble
           msg={msg}
           prevMsg={
@@ -245,17 +344,44 @@ export const MessageList: React.FC<Props> = ({
             onReact={handleReact}
           />
         )}
-      </div>,
+      </motion.div>,
     );
   });
 
   return (
-    <div className="flex-1 flex flex-col min-h-0">
-      <ScrollArea className="flex-1">
-        <div ref={scrollRef} className="py-4">
+    <div className="flex-1 flex flex-col min-h-0 relative">
+      <ScrollArea ref={rootRef} className="flex-1">
+        <div className="py-4">
           {rendered}
+          <div ref={bottomSentinelRef} aria-hidden="true" />
         </div>
       </ScrollArea>
+
+      {/* Jump-to-bottom pill */}
+      <AnimatePresence>
+        {showJumpButton && (
+          <motion.button
+            type="button"
+            onClick={() => {
+              scrollToBottom("smooth");
+              setShowJumpButton(false);
+              setUnreadWhileScrolledUp(0);
+              markRead(group);
+            }}
+            initial={{ y: 12, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            exit={{ y: 12, opacity: 0 }}
+            transition={{ duration: 0.15, ease: [0.16, 1, 0.3, 1] }}
+            className="absolute bottom-3 left-1/2 -translate-x-1/2 z-20 flex items-center gap-2 rounded-full border border-primary/40 bg-primary px-3 py-1.5 text-[11.5px] font-semibold text-primary-foreground shadow-lg hover:bg-primary/90"
+          >
+            <ArrowDown className="h-3.5 w-3.5" />
+            {unreadWhileScrolledUp > 0
+              ? `${unreadWhileScrolledUp} new ${unreadWhileScrolledUp === 1 ? "message" : "messages"}`
+              : "Jump to bottom"}
+          </motion.button>
+        )}
+      </AnimatePresence>
+
       <TypingIndicator group={group} currentUsername={currentUsername} />
     </div>
   );

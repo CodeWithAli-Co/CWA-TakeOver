@@ -26,6 +26,7 @@ import { StarredView } from "./StarredView";
 import { WebhookManager } from "./WebhookManager";
 import { useHuddle } from "./Huddle/useHuddle";
 import { HuddleBar } from "./Huddle/HuddleBar";
+import { announceHuddleStart } from "./Huddle/HuddleRing";
 import {
   parseReactionsMarker, stripReactionsMarker, encodeReactionsMarker,
 } from "./MessageBubble";
@@ -282,15 +283,15 @@ export const ChatLayout = () => {
       />
 
       {/* Middle: active chat */}
-      <div className="flex-1 flex flex-col min-w-0">
-        <AnimatePresence mode="wait">
+      <div className="flex-1 flex flex-col min-w-0 relative overflow-hidden">
+        <AnimatePresence mode="wait" initial={false}>
           {GroupName === "__starred__" ? (
             <motion.div
               key="starred"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: 0.15 }}
+              initial={{ opacity: 0, x: 14, filter: "blur(4px)" }}
+              animate={{ opacity: 1, x: 0, filter: "blur(0px)" }}
+              exit={{ opacity: 0, x: -14, filter: "blur(4px)" }}
+              transition={{ duration: 0.22, ease: [0.16, 1, 0.3, 1] }}
               className="flex-1 flex flex-col min-h-0"
             >
               <StarredView
@@ -301,10 +302,10 @@ export const ChatLayout = () => {
           ) : GroupName ? (
             <motion.div
               key={GroupName}
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: 0.15 }}
+              initial={{ opacity: 0, x: 14, filter: "blur(4px)" }}
+              animate={{ opacity: 1, x: 0, filter: "blur(0px)" }}
+              exit={{ opacity: 0, x: -14, filter: "blur(4px)" }}
+              transition={{ duration: 0.22, ease: [0.16, 1, 0.3, 1] }}
               className="flex-1 flex flex-col min-h-0"
             >
               <ChatHeader
@@ -316,9 +317,16 @@ export const ChatLayout = () => {
                 setSearchQuery={setSearchQuery}
                 onMarkAllRead={() => markRead(GroupName)}
                 huddleActive={huddleGroup === GroupName}
-                onToggleHuddle={() =>
-                  setHuddleGroup((prev) => (prev === GroupName ? null : GroupName))
-                }
+                onToggleHuddle={() => {
+                  setHuddleGroup((prev) => {
+                    const next = prev === GroupName ? null : GroupName;
+                    if (next && next !== prev) {
+                      // Announce so other channel members get the ring.
+                      announceHuddleStart(next, username).catch(() => {});
+                    }
+                    return next;
+                  });
+                }}
               />
 
               <PinnedBar
@@ -361,8 +369,10 @@ export const ChatLayout = () => {
           ) : (
             <motion.div
               key="empty"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
+              initial={{ opacity: 0, scale: 0.98 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.98 }}
+              transition={{ duration: 0.22, ease: [0.16, 1, 0.3, 1] }}
               className="flex-1 flex items-center justify-center"
             >
               <div className="text-center max-w-sm">
@@ -426,12 +436,17 @@ export const ChatLayout = () => {
           group={huddleGroup}
           username={username}
           localStream={huddle.localStream}
+          localScreenStream={huddle.localScreenStream}
           peers={huddle.peers}
           muted={huddleMuted}
           camera={huddleCamera}
+          sharing={huddle.sharing}
           onToggleMute={() => setHuddleMuted((v) => !v)}
           onToggleCamera={() => setHuddleCamera((v) => !v)}
+          onStartScreenShare={huddle.startScreenShare}
+          onStopScreenShare={huddle.stopScreenShare}
           onLeave={() => {
+            if (huddle.sharing) huddle.stopScreenShare();
             setHuddleGroup(null);
             setHuddleMuted(false);
             setHuddleCamera(false);
