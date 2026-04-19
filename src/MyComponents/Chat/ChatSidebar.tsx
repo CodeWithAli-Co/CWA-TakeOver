@@ -9,7 +9,7 @@ import { useState } from "react";
 import { motion } from "framer-motion";
 import {
   Plus, Search, Hash, MessageSquare, HashIcon,
-  Folder, FolderPlus, ChevronDown, ChevronRight, Star, MoreVertical, Webhook,
+  Folder, FolderPlus, ChevronDown, ChevronRight, Star, MoreVertical, Webhook, Trash2,
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -19,16 +19,15 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/shadcnComponents/dropdown-menu";
 import {
-  Avatar, AvatarFallback, AvatarImage,
-} from "@/components/ui/shadcnComponents/avatar";
-import {
   Dialog, DialogContent, DialogTitle, DialogTrigger,
 } from "@/components/ui/shadcnComponents/dialog";
 import { useAppStore } from "@/stores/store";
 import { useChatStore } from "@/stores/chatStore";
+import { ActiveUser } from "@/stores/query";
 import { UnreadBadge } from "./UnreadBadge";
 import { AddDMGroup } from "@/MyComponents/subForms/addDMGroup";
 import { CategoryDialog } from "./CategoryDialog";
+import { DMPickerDialog, prettyDMLabel } from "./DMPickerDialog";
 
 interface Group {
   id: string | number;
@@ -42,9 +41,13 @@ interface Props {
   employees: any[];
   onCreateChannel?: () => void;
   onManageWebhooks?: () => void;
+  /** Admin-gated callback to delete a DM channel. Handles the DB side. */
+  onDeleteChannel?: (group: Group) => Promise<void> | void;
+  /** True if the current user is allowed to delete channels. */
+  canDelete?: boolean;
 }
 
-export const ChatSidebar: React.FC<Props> = ({ groups, employees, onCreateChannel, onManageWebhooks }) => {
+export const ChatSidebar: React.FC<Props> = ({ groups, employees, onCreateChannel, onManageWebhooks, onDeleteChannel, canDelete }) => {
   const { GroupName, setGroupName } = useAppStore();
   const {
     unreadCounts, markRead,
@@ -54,6 +57,13 @@ export const ChatSidebar: React.FC<Props> = ({ groups, employees, onCreateChanne
   } = useChatStore();
   const [searchQuery, setSearchQuery] = useState("");
   const [categoryDialogOpen, setCategoryDialogOpen] = useState(false);
+  const [dmPickerOpen, setDmPickerOpen] = useState(false);
+
+  // Current user's own username — needed to render 1-on-1 DM labels as
+  // the OTHER person's name (not the canonical dm::alice::bob form) and
+  // to exclude yourself from the DM picker list.
+  const { data: me } = ActiveUser();
+  const currentUsername = me?.[0]?.username || "";
 
   const filtered = groups.filter((g) =>
     g.name.toLowerCase().includes(searchQuery.toLowerCase()),
@@ -108,17 +118,27 @@ export const ChatSidebar: React.FC<Props> = ({ groups, employees, onCreateChanne
                 <HashIcon className="h-3.5 w-3.5" />
               </button>
             )}
+            {/* New DM — 1-on-1, no group-naming step */}
+            <button
+              type="button"
+              onClick={() => setDmPickerOpen(true)}
+              className="p-1.5 rounded-sm bg-muted/30 text-muted-foreground hover:text-primary hover:bg-primary/10 transition-colors"
+              title="New direct message"
+            >
+              <MessageSquare className="h-3.5 w-3.5" />
+            </button>
+            {/* New group conversation — keeps AddDMGroup for multi-person rooms */}
             <Dialog>
               <DialogTrigger asChild>
                 <button
                   className="p-1.5 rounded-sm bg-muted/30 text-muted-foreground hover:text-primary hover:bg-primary/80/[0.06] transition-colors"
-                  title="New conversation"
+                  title="New group conversation"
                 >
                   <Plus className="h-3.5 w-3.5" />
                 </button>
               </DialogTrigger>
               <DialogContent className="max-w-md">
-                <DialogTitle className="text-foreground/85">New Conversation</DialogTitle>
+                <DialogTitle className="text-foreground/85">New Group</DialogTitle>
                 <AddDMGroup Users={employees || []} />
               </DialogContent>
             </Dialog>
@@ -172,6 +192,13 @@ export const ChatSidebar: React.FC<Props> = ({ groups, employees, onCreateChanne
                 onSelect={handleSelect}
                 categories={channelCategories}
                 onMoveTo={(catId) => moveChannelToCategory(group.name, catId)}
+                currentUsername={currentUsername}
+                canDelete={canDelete && group.type !== "general"}
+                onDelete={
+                  onDeleteChannel
+                    ? () => onDeleteChannel(group)
+                    : undefined
+                }
               />
             ))}
 
@@ -221,7 +248,14 @@ export const ChatSidebar: React.FC<Props> = ({ groups, employees, onCreateChanne
                       onSelect={handleSelect}
                       categories={channelCategories}
                       onMoveTo={(catId) => moveChannelToCategory(group.name, catId)}
+                currentUsername={currentUsername}
                       currentCategoryId={cat.id}
+                      canDelete={canDelete && group.type !== "general"}
+                      onDelete={
+                        onDeleteChannel
+                          ? () => onDeleteChannel(group)
+                          : undefined
+                      }
                     />
                   ))}
                 </div>
@@ -254,14 +288,53 @@ export const ChatSidebar: React.FC<Props> = ({ groups, employees, onCreateChanne
         onOpenChange={setCategoryDialogOpen}
         onCreate={(name) => addChannelCategory(name)}
       />
+
+      {/* 1-on-1 DM picker — skips the group-naming step */}
+      <DMPickerDialog
+        open={dmPickerOpen}
+        onOpenChange={setDmPickerOpen}
+        employees={employees || []}
+        currentUsername={currentUsername}
+      />
     </div>
   );
 };
+
+// ── Visual helpers: deterministic tile avatar from the channel name ────
+// Replaces the old dicebear shape noise with a clean, brand-aligned
+// initials tile. Hue is derived from a quick djb2 of the name so each
+// channel has its own consistent color without any external service.
+
+function hashHue(s: string): number {
+  let h = 5381;
+  for (let i = 0; i < s.length; i++) h = ((h << 5) + h + s.charCodeAt(i)) | 0;
+  return ((h >>> 0) % 360);
+}
+
+export function groupAvatarStyle(name: string): React.CSSProperties {
+  const hue = hashHue(name || "channel");
+  return {
+    backgroundImage: `linear-gradient(135deg, hsl(${hue} 55% 32%) 0%, hsl(${(hue + 24) % 360} 60% 22%) 100%)`,
+    color: `hsl(${hue} 80% 90%)`,
+  };
+}
+
+export function groupAvatarInitials(name: string): string {
+  const bare = (name || "").replace(/^#/, "").trim();
+  if (!bare) return "?";
+  // "3 Blind Mice" → "3B", "Ali&Blaze" → "AB", "Marketing" → "MA"
+  const parts = bare.split(/[\s&_/.-]+/).filter(Boolean);
+  if (parts.length >= 2) {
+    return ((parts[0]?.[0] ?? "") + (parts[1]?.[0] ?? "")).toUpperCase();
+  }
+  return bare.slice(0, 2).toUpperCase();
+}
 
 // ── Single sidebar button (with category-move dropdown) ────────────────
 
 function GroupButton({
   group, isActive, unread, onSelect, categories, onMoveTo, currentCategoryId,
+  canDelete, onDelete, currentUsername,
 }: {
   group: Group;
   isActive: boolean;
@@ -270,8 +343,15 @@ function GroupButton({
   categories: { id: string; name: string }[];
   onMoveTo: (categoryId: string | null) => void;
   currentCategoryId?: string;
+  canDelete?: boolean;
+  onDelete?: () => void;
+  currentUsername: string;
 }) {
   const isGeneral = group.type === "general";
+  // For canonical 1-on-1 DMs (dm::alice::bob) show the OTHER person's name.
+  const pretty = prettyDMLabel(group.name, currentUsername);
+  const displayName = pretty ?? group.name;
+  const isOneOnOne = pretty != null;
   return (
     <div className="group/row relative">
       <motion.button
@@ -286,28 +366,32 @@ function GroupButton({
       >
         <div className="flex items-center gap-2.5">
           {isGeneral ? (
-            <div className="h-8 w-8 rounded-sm bg-primary/10 border border-primary/20 flex items-center justify-center shrink-0">
+            <div className="h-8 w-8 rounded-md bg-primary/10 border border-primary/20 flex items-center justify-center shrink-0">
               <Hash className="h-3.5 w-3.5 text-primary" />
             </div>
           ) : (
-            <Avatar className="h-8 w-8 rounded-sm border border-border shrink-0">
-              <AvatarImage src={`https://api.dicebear.com/7.x/shapes/svg?seed=${group.name}`} />
-              <AvatarFallback className="bg-muted/50 text-muted-foreground/70 text-[10px] rounded-sm">
-                {group.name?.slice(0, 2)?.toUpperCase()}
-              </AvatarFallback>
-            </Avatar>
+            <div
+              className="h-8 w-8 rounded-md border border-border flex items-center justify-center shrink-0 font-semibold text-[11px] shadow-sm"
+              style={groupAvatarStyle(displayName)}
+            >
+              {groupAvatarInitials(displayName)}
+            </div>
           )}
           <div className="flex-1 min-w-0">
             <div className="flex items-center justify-between gap-2">
               <span className={`text-[12px] font-medium truncate ${
                 isActive ? "text-foreground" : unread > 0 ? "text-foreground/80" : "text-white/55"
               }`}>
-                {group.name}
+                {displayName}
               </span>
               <UnreadBadge count={unread} />
             </div>
             <p className="text-[10px] text-muted-foreground/50 truncate mt-0.5">
-              {isGeneral ? "Company-wide" : `${group.subscribers?.length || 0} members`}
+              {isGeneral
+                ? "Company-wide"
+                : isOneOnOne
+                  ? "Direct message"
+                  : `${group.subscribers?.length || 0} members`}
             </p>
           </div>
         </div>
@@ -353,6 +437,18 @@ function GroupButton({
                 className="gap-2 text-[12px]"
               >
                 Remove from category
+              </DropdownMenuItem>
+            </>
+          )}
+          {canDelete && onDelete && !isGeneral && (
+            <>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem
+                onSelect={onDelete}
+                className="gap-2 text-[12px] text-destructive focus:bg-destructive/15 focus:text-destructive"
+              >
+                <Trash2 className="h-3.5 w-3.5" />
+                Delete conversation
               </DropdownMenuItem>
             </>
           )}

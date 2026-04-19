@@ -14,7 +14,6 @@ import {
   Search, Pin, MoreVertical, Hash, Users, X,
   Check, Copy, BellOff, Bell, Phone, PhoneOff,
 } from "lucide-react";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/shadcnComponents/avatar";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -24,6 +23,9 @@ import {
 } from "@/components/ui/shadcnComponents/dropdown-menu";
 import { Input } from "@/components/ui/shadcnComponents/input";
 import { useChatStore } from "@/stores/chatStore";
+import { ActiveUser } from "@/stores/query";
+import { groupAvatarInitials, groupAvatarStyle } from "./ChatSidebar";
+import { prettyDMLabel } from "./DMPickerDialog";
 
 interface Props {
   groupName: string;
@@ -48,6 +50,11 @@ export const ChatHeader: React.FC<Props> = ({
   onToggleHuddle, huddleActive,
 }) => {
   const [searching, setSearching] = useState(false);
+  const { data: me } = ActiveUser();
+  const currentUsername = me?.[0]?.username || "";
+  const prettyLabel = prettyDMLabel(groupName, currentUsername);
+  const displayName = prettyLabel ?? groupName;
+  const isOneOnOne = prettyLabel != null;
   const inputRef = useRef<HTMLInputElement>(null);
   const { pinCollapsed, togglePinCollapsed } = useChatStore();
   const [muted, setMuted] = useState(false);
@@ -132,25 +139,27 @@ export const ChatHeader: React.FC<Props> = ({
       ) : (
         <div className="flex items-center gap-3 min-w-0">
           {isGeneral ? (
-            <div className="h-9 w-9 rounded-sm bg-primary/[0.08] border border-primary/15 flex items-center justify-center">
+            <div className="h-9 w-9 rounded-md bg-primary/[0.08] border border-primary/15 flex items-center justify-center">
               <Hash className="h-4 w-4 text-primary" />
             </div>
           ) : (
-            <Avatar className="h-9 w-9 rounded-sm border border-border">
-              <AvatarImage src={`https://api.dicebear.com/7.x/shapes/svg?seed=${groupName}`} />
-              <AvatarFallback className="bg-muted/50 text-muted-foreground/70 text-[11px] rounded-sm">
-                {groupName?.slice(0, 2)?.toUpperCase()}
-              </AvatarFallback>
-            </Avatar>
+            <div
+              className="h-9 w-9 rounded-md border border-border flex items-center justify-center font-semibold text-[12px] shadow-sm"
+              style={groupAvatarStyle(displayName)}
+            >
+              {groupAvatarInitials(displayName)}
+            </div>
           )}
           <div className="min-w-0">
             <h2 className="text-[14px] font-semibold text-foreground truncate flex items-center gap-1.5">
-              {groupName}
+              {displayName}
               {muted && <BellOff className="h-3 w-3 text-muted-foreground" />}
             </h2>
             <div className="flex items-center gap-1.5 mt-0.5">
               {isGeneral ? (
                 <span className="text-[11px] text-muted-foreground">Company-wide channel</span>
+              ) : isOneOnOne ? (
+                <span className="text-[11px] text-muted-foreground">Direct message</span>
               ) : (
                 <>
                   <Users className="h-2.5 w-2.5 text-muted-foreground/60" />

@@ -227,6 +227,39 @@ export const ChatLayout = () => {
     if (el) el.scrollIntoView({ behavior: "smooth", block: "center" });
   };
 
+  /**
+   * Delete a DM channel from the sidebar + its message history. Two-step
+   * confirm because this is destructive and there's no undo. The General
+   * channel can never be deleted (guarded by the sidebar's canDelete).
+   */
+  const deleteChannel = async (group: { name: string; id?: string | number; type?: string }) => {
+    if (group.type === "general") return;
+    if (!window.confirm(
+      `Delete "${group.name}" for everyone? All messages in this channel will be permanently removed.`,
+    )) return;
+    // Delete messages first so orphaned rows aren't left behind if the
+    // group delete succeeds but the purge below fails.
+    const purge = await supabase
+      .from("cwa_dm_chat")
+      .delete()
+      .eq("dm_group", group.name);
+    if (purge.error) {
+      console.warn("[chat] purge messages failed:", purge.error.message);
+    }
+    const { error } = await supabase
+      .from("dm_groups")
+      .delete()
+      .eq("name", group.name);
+    if (error) {
+      alert(`Could not delete: ${error.message}`);
+      return;
+    }
+    // Switch off the deleted channel if we're currently viewing it.
+    if (GroupName === group.name) {
+      (useAppStore.getState() as any).setGroupName?.("General");
+    }
+  };
+
   const reactToMessage = async (msgId: number, emoji: string) => {
     const m = msgs.find((x) => x.msg_id === msgId);
     if (!m) return;
@@ -285,6 +318,8 @@ export const ChatLayout = () => {
         employees={AllEmployees || []}
         onCreateChannel={canPin ? () => setCreateChannelOpen(true) : undefined}
         onManageWebhooks={canPin ? () => setWebhooksOpen(true) : undefined}
+        canDelete={canPin}
+        onDeleteChannel={canPin ? deleteChannel : undefined}
       />
 
       {/* Middle: active chat */}
