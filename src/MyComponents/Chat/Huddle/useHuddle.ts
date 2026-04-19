@@ -4,12 +4,23 @@
  *
  * Topology: every peer holds an RTCPeerConnection to every other peer
  * (mesh). Works well up to 5–6 participants; beyond that you'd want an
- * SFU. Signalling uses three broadcast event kinds: "offer", "answer",
- * and "ice", all keyed by a huddle id derived from the channel name.
+ * SFU. Signalling uses four broadcast event kinds: "offer", "answer",
+ * "ice", and "state", all keyed by a huddle id derived from the channel
+ * name.
  *
- * Keeps things flat: no connecting / reconnecting logic beyond what
- * the browser gives us. If a peer drops, their RTCPeerConnection fires
- * `iceconnectionstatechange` and we clean up on "disconnected".
+ * Design notes (lessons learned from the v1):
+ *   1. Always grab audio + video together at join time and use
+ *      `track.enabled` for mute / camera toggles. Re-running
+ *      getUserMedia on every toggle was breaking SDP state and
+ *      "kicking out" peers when one of them turned on their camera.
+ *   2. Don't subscribe to the channel until local media is ready —
+ *      otherwise the first offer/answer round trip happens with no
+ *      tracks attached and audio never flows.
+ *   3. Perfect negotiation: both sides handle simultaneous offers
+ *      without crashing. The polite peer rolls back; the impolite
+ *      peer ignores stale offers.
+ *   4. Only close a peer connection on `failed` (not `disconnected`),
+ *      because the latter can be a transient blip during renegotiation.
  */
 
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -27,7 +38,7 @@ export interface HuddlePeer {
 interface SignalPayload {
   from: string;
   to?: string;
-  kind: "offer" | "answer" | "ice" | "state" | "renegotiate";
+  kind: "offer" | "answer" | "ice" | "state";
   sdp?: RTCSessionDescriptionInit;
   candidate?: RTCIceCandidateInit;
   state?: { muted: boolean; camera: boolean; sharing: boolean };
@@ -50,7 +61,7 @@ export interface UseHuddleOpts {
 }
 
 export interface UseHuddleResult {
-  peers: HuddlePeer[];        // remote peers only
+  peers: HuddlePeer[];
   localStream: MediaStream | null;
   localScreenStream: MediaStream | null;
   startScreenShare: () => Promise<void>;
@@ -58,6 +69,18 @@ export interface UseHuddleResult {
   sharing: boolean;
   error: string | null;
 }
+
+/**
+ * Per-peer negotiation state, kept on the PC instance via WeakMap
+ * (so we don't have to subclass).
+ */
+interface PeerMeta {
+  polite: boolean;
+  makingOffer: boolean;
+  ignoreOffer: boolean;
+  isSettingRemoteAnswerPending: boolean;
+}
+const peerMetaMap = new WeakMap<RTCPeerConnection, PeerMeta>();
 
 export function useHuddle({ group, username, joined, muted, camera }: UseHuddleOpts): UseHuddleResult {
   const [peers, setPeers] = useState<HuddlePeer[]>([]);
@@ -75,12 +98,14 @@ export function useHuddle({ group, username, joined, muted, camera }: UseHuddleO
   const localScreenStreamRef = useRef<MediaStream | null>(null);
   const screenSenderMapRef = useRef<Map<string, RTCRtpSender[]>>(new Map());
 
+  // Latest local input state — broadcasts read these instead of stale closures.
+  const stateRef = useRef({ muted, camera, sharing });
+  stateRef.current = { muted, camera, sharing };
+
   // ── helpers -----------------------------------------------------------
 
   const updatePeersState = useCallback(() => {
     const out: HuddlePeer[] = [];
-    // Aggregate ids from both regular streams + screen streams so we still
-    // track peers that only have one of the two.
     const ids = new Set<string>([
       ...remoteStreamsRef.current.keys(),
       ...remoteScreenStreamsRef.current.keys(),
@@ -106,18 +131,35 @@ export function useHuddle({ group, username, joined, muted, camera }: UseHuddleO
     ch.send({ type: "broadcast", event: "huddle-signal", payload });
   }, []);
 
-  // Create (or return) a peer connection keyed by the other user.
+  // ── Create (or return) a peer connection keyed by the other user. ────
   const ensurePeer = useCallback((peerId: string, polite: boolean): RTCPeerConnection => {
     const existing = connectionsRef.current.get(peerId);
     if (existing) return existing;
 
     const pc = new RTCPeerConnection(RTC_CONFIG);
     connectionsRef.current.set(peerId, pc);
+    peerMetaMap.set(pc, {
+      polite,
+      makingOffer: false,
+      ignoreOffer: false,
+      isSettingRemoteAnswerPending: false,
+    });
 
-    // Attach local tracks
+    // Attach local audio + video tracks. localStream is guaranteed set
+    // by the time ensurePeer is ever called (channel subscribe is gated
+    // on media readiness).
     const local = localStreamRef.current;
     if (local) {
       for (const track of local.getTracks()) pc.addTrack(track, local);
+    }
+    // Attach existing screen share if active.
+    const screen = localScreenStreamRef.current;
+    if (screen) {
+      const senders: RTCRtpSender[] = [];
+      for (const track of screen.getTracks()) {
+        senders.push(pc.addTrack(track, screen));
+      }
+      screenSenderMapRef.current.set(peerId, senders);
     }
 
     pc.onicecandidate = (e) => {
@@ -132,20 +174,9 @@ export function useHuddle({ group, username, joined, muted, camera }: UseHuddleO
     };
 
     pc.ontrack = (e) => {
-      // Discriminate screen-share tracks by transceiver mid or track label
-      // — the remote advertises `sharing` via the state payload; we bucket
-      // video tracks into screen vs camera based on remoteState.
-      const remoteState = remoteStatesRef.current.get(peerId);
-      const isScreenVideo =
-        e.track.kind === "video" && !!remoteState?.sharing && (e.streams[0]?.id?.startsWith("screen-") || false);
-
-      // Prefer the remote-supplied stream id heuristic. If the remote's
-      // stream id matches the screen namespace we created (`screen-...`),
-      // treat as screen; else treat as camera/audio.
       const streamId = e.streams[0]?.id ?? "";
-      const goesToScreen = streamId.startsWith("screen-") || isScreenVideo;
-
-      const bucket = goesToScreen ? remoteScreenStreamsRef : remoteStreamsRef;
+      const isScreen = streamId.startsWith("screen-");
+      const bucket = isScreen ? remoteScreenStreamsRef : remoteStreamsRef;
       let stream = bucket.current.get(peerId);
       if (!stream) {
         stream = new MediaStream();
@@ -153,7 +184,6 @@ export function useHuddle({ group, username, joined, muted, camera }: UseHuddleO
       }
       stream.addTrack(e.track);
 
-      // When the remote stops a track, drop it from our aggregated stream.
       e.track.onended = () => {
         const s = bucket.current.get(peerId);
         if (s) {
@@ -163,33 +193,46 @@ export function useHuddle({ group, username, joined, muted, camera }: UseHuddleO
         updatePeersState();
       };
 
+      // Remote requested stream-removal via mute event (Chrome fires this
+      // when sender removeTrack happens). Treat as track ended.
+      e.track.onmute = () => {
+        // Don't tear down — the user might be switching cam off but
+        // staying in the huddle. Just trigger a re-render so PeerTile
+        // can fall back to the avatar.
+        updatePeersState();
+      };
+      e.track.onunmute = () => {
+        updatePeersState();
+      };
+
       updatePeersState();
     };
 
+    // Only tear down on `failed`. `disconnected` is a transient blip
+    // during renegotiation (camera toggle, screen share, etc.).
     pc.oniceconnectionstatechange = () => {
-      if (pc.iceConnectionState === "failed" || pc.iceConnectionState === "disconnected") {
-        console.warn(`[huddle] peer ${peerId} disconnected`);
-        pc.close();
-        connectionsRef.current.delete(peerId);
-        remoteStreamsRef.current.delete(peerId);
-        remoteScreenStreamsRef.current.delete(peerId);
-        remoteStatesRef.current.delete(peerId);
-        screenSenderMapRef.current.delete(peerId);
-        updatePeersState();
+      if (pc.iceConnectionState === "failed") {
+        console.warn(`[huddle] peer ${peerId} ICE failed, closing`);
+        try { pc.restartIce(); } catch { /* noop */ }
+      }
+    };
+    pc.onconnectionstatechange = () => {
+      if (pc.connectionState === "failed" || pc.connectionState === "closed") {
+        console.warn(`[huddle] peer ${peerId} connection ${pc.connectionState}`);
+        // Only fully tear down if the peer actually left presence.
+        // Presence-leave handler does the cleanup.
       }
     };
 
-    // When the negotiation needs to refresh (e.g. screen share added /
-    // removed), kick off a new offer if we are the impolite peer.
+    // Perfect negotiation: this side spontaneously needs a new offer
+    // (because tracks were added/removed). Both sides may fire this
+    // simultaneously; perfect-negotiation guards the resulting state.
     pc.onnegotiationneeded = async () => {
-      if (polite) {
-        // Polite peer: notify impolite peer to start renegotiation.
-        broadcast({ from: username, to: peerId, kind: "renegotiate" });
-        return;
-      }
+      const meta = peerMetaMap.get(pc);
+      if (!meta) return;
       try {
-        const offer = await pc.createOffer();
-        await pc.setLocalDescription(offer);
+        meta.makingOffer = true;
+        await pc.setLocalDescription(); // auto-creates the right description
         broadcast({
           from: username,
           to: peerId,
@@ -197,73 +240,39 @@ export function useHuddle({ group, username, joined, muted, camera }: UseHuddleO
           sdp: pc.localDescription!.toJSON(),
         });
       } catch (err) {
-        console.warn("[huddle] renegotiation failed:", err);
+        console.warn("[huddle] negotiation failed:", err);
+      } finally {
+        meta.makingOffer = false;
       }
     };
-
-    // Negotiation — polite peer waits for the other to initiate.
-    if (!polite) {
-      (async () => {
-        try {
-          const offer = await pc.createOffer();
-          await pc.setLocalDescription(offer);
-          broadcast({
-            from: username,
-            to: peerId,
-            kind: "offer",
-            sdp: pc.localDescription!.toJSON(),
-          });
-        } catch (err) {
-          console.error("[huddle] createOffer failed:", err);
-        }
-      })();
-    }
 
     return pc;
   }, [broadcast, username, updatePeersState]);
 
-  // ── Manage mic capture (start when joined, stop when not) ------------
+  // ── Mute / camera toggles — flip enabled flags in place. ─────────────
+  // No getUserMedia re-call, no addTrack, no renegotiation.
 
-  useEffect(() => {
-    if (!joined) {
-      if (localStreamRef.current) {
-        for (const t of localStreamRef.current.getTracks()) t.stop();
-      }
-      localStreamRef.current = null;
-      setLocalStream(null);
-      return;
-    }
-    let cancelled = false;
-    (async () => {
-      try {
-        const stream = await navigator.mediaDevices.getUserMedia({
-          audio: true,
-          video: camera,
-        });
-        if (cancelled) {
-          for (const t of stream.getTracks()) t.stop();
-          return;
-        }
-        localStreamRef.current = stream;
-        setLocalStream(stream);
-        // Attach to any already-open peers
-        for (const pc of connectionsRef.current.values()) {
-          for (const track of stream.getTracks()) pc.addTrack(track, stream);
-        }
-      } catch (err) {
-        setError(err instanceof Error ? err.message : String(err));
-      }
-    })();
-    return () => { cancelled = true; };
-  }, [joined, camera]);
-
-  // Track mute state: enable/disable local audio track on toggle.
   useEffect(() => {
     const s = localStreamRef.current;
     if (!s) return;
     for (const t of s.getAudioTracks()) t.enabled = !muted;
-    broadcast({ from: username, kind: "state", state: { muted, camera, sharing } });
-  }, [muted, camera, sharing, broadcast, username]);
+    broadcast({
+      from: username,
+      kind: "state",
+      state: { muted, camera, sharing: stateRef.current.sharing },
+    });
+  }, [muted, broadcast, username, camera]);
+
+  useEffect(() => {
+    const s = localStreamRef.current;
+    if (!s) return;
+    for (const t of s.getVideoTracks()) t.enabled = camera;
+    broadcast({
+      from: username,
+      kind: "state",
+      state: { muted, camera, sharing: stateRef.current.sharing },
+    });
+  }, [camera, broadcast, username, muted]);
 
   // ── Screen share --------------------------------------------------------
 
@@ -274,7 +283,6 @@ export function useHuddle({ group, username, joined, muted, camera }: UseHuddleO
         try { t.stop(); } catch { /* noop */ }
       }
     }
-    // Remove senders from every peer connection.
     for (const [peerId, senders] of screenSenderMapRef.current.entries()) {
       const pc = connectionsRef.current.get(peerId);
       if (!pc) continue;
@@ -286,20 +294,20 @@ export function useHuddle({ group, username, joined, muted, camera }: UseHuddleO
     localScreenStreamRef.current = null;
     setLocalScreenStream(null);
     setSharing(false);
-    broadcast({ from: username, kind: "state", state: { muted, camera, sharing: false } });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [broadcast, camera, muted, username]);
+    broadcast({
+      from: username,
+      kind: "state",
+      state: { muted: stateRef.current.muted, camera: stateRef.current.camera, sharing: false },
+    });
+  }, [broadcast, username]);
 
   const startScreenShare = useCallback(async () => {
     try {
-      // Ask for display media. `browser support`: returns a MediaStream
-      // whose video tracks represent the chosen surface (screen/window/tab).
       const screenStream = await navigator.mediaDevices.getDisplayMedia({
         video: { frameRate: 30 },
         audio: false,
       });
-      // Wrap in a fresh MediaStream we control so receivers can bucket
-      // it as screen by inspecting the id prefix.
+      // Wrap so we can control the id (used by receivers to bucket).
       const routedStream = new MediaStream();
       Object.defineProperty(routedStream, "id", {
         value: `screen-${crypto.randomUUID()}`,
@@ -310,52 +318,143 @@ export function useHuddle({ group, username, joined, muted, camera }: UseHuddleO
       setLocalScreenStream(routedStream);
       setSharing(true);
 
-      // Push tracks into every peer connection.
       for (const [peerId, pc] of connectionsRef.current.entries()) {
         const senders: RTCRtpSender[] = [];
         for (const track of routedStream.getTracks()) {
-          const sender = pc.addTrack(track, routedStream);
-          senders.push(sender);
+          senders.push(pc.addTrack(track, routedStream));
         }
         screenSenderMapRef.current.set(peerId, senders);
       }
 
-      // When the user stops sharing via the browser UI, clean up.
       routedStream.getVideoTracks()[0]?.addEventListener("ended", () => {
         stopScreenShare();
       });
 
-      broadcast({ from: username, kind: "state", state: { muted, camera, sharing: true } });
+      broadcast({
+        from: username,
+        kind: "state",
+        state: { muted: stateRef.current.muted, camera: stateRef.current.camera, sharing: true },
+      });
     } catch (err) {
       if (err instanceof Error && err.name === "NotAllowedError") return;
       console.error("[huddle] startScreenShare failed:", err);
       setError(err instanceof Error ? err.message : String(err));
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [broadcast, camera, muted, username, stopScreenShare]);
+  }, [broadcast, username, stopScreenShare]);
 
-  // ── Subscribe to the signalling channel ------------------------------
+  // ── Combined media + signalling lifecycle ────────────────────────────
+  // One effect, fires only on join/leave/group change. NO camera dep —
+  // toggles are handled by enable-flag effects above.
 
   useEffect(() => {
     if (!joined || !username) return;
-    const channel = supabase.channel(`huddle:${group}`, {
-      config: { presence: { key: username } },
-    });
-    channelRef.current = channel;
 
-    channel
-      .on("broadcast", { event: "huddle-signal" }, (evt) => {
-        const msg = evt.payload as SignalPayload;
-        if (!msg || !msg.from || msg.from === username) return;
-        if (msg.to && msg.to !== username) return;
+    let cancelled = false;
+    let channel: ReturnType<typeof supabase.channel> | null = null;
 
-        if (msg.kind === "offer" && msg.sdp) {
-          const pc = ensurePeer(msg.from, /* polite */ true);
-          (async () => {
+    const setup = async () => {
+      // 1. Get audio. Required.
+      let audioStream: MediaStream;
+      try {
+        audioStream = await navigator.mediaDevices.getUserMedia({
+          audio: true, video: false,
+        });
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "Microphone access denied");
+        return;
+      }
+      if (cancelled) {
+        for (const t of audioStream.getTracks()) t.stop();
+        return;
+      }
+
+      // 2. Try video. Optional — some users have no camera.
+      let videoStream: MediaStream | null = null;
+      try {
+        videoStream = await navigator.mediaDevices.getUserMedia({
+          video: true, audio: false,
+        });
+      } catch (err) {
+        console.warn("[huddle] no camera available:", err);
+      }
+      if (cancelled) {
+        for (const t of audioStream.getTracks()) t.stop();
+        if (videoStream) for (const t of videoStream.getTracks()) t.stop();
+        return;
+      }
+
+      // 3. Combine. Apply initial enabled state from current props.
+      const combined = new MediaStream();
+      for (const t of audioStream.getTracks()) {
+        t.enabled = !stateRef.current.muted;
+        combined.addTrack(t);
+      }
+      if (videoStream) {
+        for (const t of videoStream.getTracks()) {
+          t.enabled = stateRef.current.camera;
+          combined.addTrack(t);
+        }
+      }
+
+      localStreamRef.current = combined;
+      setLocalStream(combined);
+
+      // 4. NOW it's safe to subscribe. Initial offers will include tracks.
+      channel = supabase.channel(`huddle:${group}`, {
+        config: { presence: { key: username } },
+      });
+      channelRef.current = channel;
+
+      channel
+        .on("broadcast", { event: "huddle-signal" }, async (evt) => {
+          const msg = evt.payload as SignalPayload;
+          if (!msg || !msg.from || msg.from === username) return;
+          if (msg.to && msg.to !== username) return;
+
+          if (msg.kind === "state" && msg.state) {
+            // If they stopped screen sharing, drop the cached stream so
+            // we don't keep showing a frozen frame.
+            if (!msg.state.sharing) {
+              remoteScreenStreamsRef.current.delete(msg.from);
+            }
+            remoteStatesRef.current.set(msg.from, msg.state);
+            updatePeersState();
+            return;
+          }
+
+          if (msg.kind === "ice" && msg.candidate) {
+            const pc = connectionsRef.current.get(msg.from);
+            if (!pc) return;
             try {
-              await pc.setRemoteDescription(msg.sdp!);
-              const answer = await pc.createAnswer();
-              await pc.setLocalDescription(answer);
+              await pc.addIceCandidate(msg.candidate);
+            } catch (err) {
+              const meta = peerMetaMap.get(pc);
+              if (!meta?.ignoreOffer) {
+                console.warn("[huddle] addIceCandidate failed:", err);
+              }
+            }
+            return;
+          }
+
+          // Perfect negotiation for offer/answer.
+          // We always ensurePeer here so a peer that says hi via offer
+          // (e.g. they joined and we missed presence sync) gets a PC.
+          const polite = username < msg.from;
+          const pc = ensurePeer(msg.from, polite);
+          const meta = peerMetaMap.get(pc);
+          if (!meta) return;
+
+          if (msg.kind === "offer" && msg.sdp) {
+            const readyForOffer =
+              !meta.makingOffer &&
+              (pc.signalingState === "stable" || meta.isSettingRemoteAnswerPending);
+            const offerCollision = !readyForOffer;
+            meta.ignoreOffer = !meta.polite && offerCollision;
+            if (meta.ignoreOffer) return;
+
+            try {
+              await pc.setRemoteDescription(msg.sdp);
+              await pc.setLocalDescription(); // auto-creates an answer
               broadcast({
                 from: username,
                 to: msg.from,
@@ -363,73 +462,68 @@ export function useHuddle({ group, username, joined, muted, camera }: UseHuddleO
                 sdp: pc.localDescription!.toJSON(),
               });
             } catch (err) {
-              console.error("[huddle] answer failed:", err);
+              console.error("[huddle] handle offer failed:", err);
             }
-          })();
-        } else if (msg.kind === "answer" && msg.sdp) {
-          const pc = connectionsRef.current.get(msg.from);
-          if (pc) {
-            pc.setRemoteDescription(msg.sdp).catch((err) =>
-              console.error("[huddle] setRemote(answer) failed:", err),
-            );
-          }
-        } else if (msg.kind === "ice" && msg.candidate) {
-          const pc = connectionsRef.current.get(msg.from);
-          if (pc) {
-            pc.addIceCandidate(msg.candidate).catch((err) =>
-              console.warn("[huddle] addIceCandidate failed:", err),
-            );
-          }
-        } else if (msg.kind === "state" && msg.state) {
-          remoteStatesRef.current.set(msg.from, msg.state);
-          updatePeersState();
-        } else if (msg.kind === "renegotiate") {
-          // The polite peer asked us to start a new offer cycle.
-          const pc = connectionsRef.current.get(msg.from);
-          if (!pc) return;
-          (async () => {
+          } else if (msg.kind === "answer" && msg.sdp) {
             try {
-              const offer = await pc.createOffer();
-              await pc.setLocalDescription(offer);
-              broadcast({
-                from: username,
-                to: msg.from,
-                kind: "offer",
-                sdp: pc.localDescription!.toJSON(),
-              });
+              meta.isSettingRemoteAnswerPending = true;
+              await pc.setRemoteDescription(msg.sdp);
             } catch (err) {
-              console.warn("[huddle] renegotiate→offer failed:", err);
+              console.error("[huddle] setRemote(answer) failed:", err);
+            } finally {
+              meta.isSettingRemoteAnswerPending = false;
             }
-          })();
-        }
-      })
-      .on("presence", { event: "sync" }, () => {
-        const state = channel.presenceState();
-        // For every other participant, ensure a peer connection exists.
-        // We use username comparison to decide who initiates (lex < = impolite).
-        for (const key of Object.keys(state)) {
-          if (key === username) continue;
-          const polite = username < key;
-          ensurePeer(key, polite);
-        }
-      })
-      .on("presence", { event: "leave" }, ({ key }) => {
-        if (typeof key !== "string") return;
-        const pc = connectionsRef.current.get(key);
-        if (pc) pc.close();
-        connectionsRef.current.delete(key);
-        remoteStreamsRef.current.delete(key);
-        remoteStatesRef.current.delete(key);
-        updatePeersState();
-      })
-      .subscribe((status) => {
-        if (status === "SUBSCRIBED") {
-          channel.track({ muted, camera, sharing });
-        }
-      });
+          }
+        })
+        .on("presence", { event: "sync" }, () => {
+          if (!channel) return;
+          const state = channel.presenceState();
+          // Ensure a PC for every other participant. The PC's
+          // onnegotiationneeded will fire (because we attach tracks
+          // inside ensurePeer) and produce the initial offer.
+          for (const key of Object.keys(state)) {
+            if (key === username) continue;
+            const polite = username < key;
+            ensurePeer(key, polite);
+          }
+        })
+        .on("presence", { event: "leave" }, ({ key }) => {
+          if (typeof key !== "string") return;
+          const pc = connectionsRef.current.get(key);
+          if (pc) pc.close();
+          connectionsRef.current.delete(key);
+          remoteStreamsRef.current.delete(key);
+          remoteScreenStreamsRef.current.delete(key);
+          remoteStatesRef.current.delete(key);
+          screenSenderMapRef.current.delete(key);
+          updatePeersState();
+        })
+        .subscribe((status) => {
+          if (status === "SUBSCRIBED" && channel) {
+            channel.track({
+              muted: stateRef.current.muted,
+              camera: stateRef.current.camera,
+              sharing: stateRef.current.sharing,
+            });
+            // Broadcast initial state so peers see our flags.
+            broadcast({
+              from: username,
+              kind: "state",
+              state: {
+                muted: stateRef.current.muted,
+                camera: stateRef.current.camera,
+                sharing: stateRef.current.sharing,
+              },
+            });
+          }
+        });
+    };
+
+    void setup();
 
     return () => {
-      channel.unsubscribe();
+      cancelled = true;
+      if (channel) channel.unsubscribe();
       channelRef.current = null;
       for (const pc of connectionsRef.current.values()) pc.close();
       connectionsRef.current.clear();
@@ -437,12 +531,17 @@ export function useHuddle({ group, username, joined, muted, camera }: UseHuddleO
       remoteScreenStreamsRef.current.clear();
       remoteStatesRef.current.clear();
       screenSenderMapRef.current.clear();
-      // Also stop any local screen share on unmount.
-      const s = localScreenStreamRef.current;
-      if (s) {
-        for (const t of s.getTracks()) {
-          try { t.stop(); } catch { /* noop */ }
-        }
+      // Stop local audio+video stream.
+      const s = localStreamRef.current;
+      if (s) for (const t of s.getTracks()) {
+        try { t.stop(); } catch { /* noop */ }
+      }
+      localStreamRef.current = null;
+      setLocalStream(null);
+      // Stop screen share if any.
+      const ss = localScreenStreamRef.current;
+      if (ss) for (const t of ss.getTracks()) {
+        try { t.stop(); } catch { /* noop */ }
       }
       localScreenStreamRef.current = null;
       setLocalScreenStream(null);
