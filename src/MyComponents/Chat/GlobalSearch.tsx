@@ -56,40 +56,57 @@ export function GlobalSearch({ open, onOpenChange }: Props) {
     const timer = setTimeout(async () => {
       setLoading(true);
       try {
-        const [{ data: generalData }, { data: dmData }] = await Promise.all([
-          supabase
-            .from("cwa_chat")
-            .select("msg_id, sent_by, message, created_at")
-            .ilike("message", `%${needle}%`)
-            .order("msg_id", { ascending: false })
-            .limit(20),
-          supabase
-            .from("cwa_dm_chat")
-            .select("msg_id, sent_by, message, dm_group, created_at")
-            .ilike("message", `%${needle}%`)
-            .order("msg_id", { ascending: false })
-            .limit(20),
-        ]);
-        const merged: Hit[] = [
-          ...(generalData ?? []).map((r: any) => ({
+        // Prefer the ranked full-text RPC when the migration has been
+        // applied. Falls back to the legacy parallel ilike queries
+        // gracefully if the RPC returns an error.
+        let merged: Hit[] = [];
+        const rpc = await supabase.rpc("chat_search", { needle, lim: 40 });
+        if (!rpc.error && Array.isArray(rpc.data)) {
+          merged = (rpc.data as any[]).map((r) => ({
             msg_id: r.msg_id,
-            group: "General",
-            kind: "general" as const,
+            group: r.table_name === "cwa_chat" ? "General" : r.dm_group,
+            kind: (r.table_name === "cwa_chat" ? "general" : "dm") as const,
             sent_by: r.sent_by,
             message: r.message ?? "",
             created_at: r.created_at,
-          })),
-          ...(dmData ?? []).map((r: any) => ({
-            msg_id: r.msg_id,
-            group: r.dm_group,
-            kind: "dm" as const,
-            sent_by: r.sent_by,
-            message: r.message ?? "",
-            created_at: r.created_at,
-          })),
-        ]
-          .sort((a, b) => b.created_at.localeCompare(a.created_at))
-          .slice(0, 30);
+          }));
+        } else {
+          // Legacy path — keeps search working before the migration runs.
+          const [{ data: generalData }, { data: dmData }] = await Promise.all([
+            supabase
+              .from("cwa_chat")
+              .select("msg_id, sent_by, message, created_at")
+              .ilike("message", `%${needle}%`)
+              .order("msg_id", { ascending: false })
+              .limit(20),
+            supabase
+              .from("cwa_dm_chat")
+              .select("msg_id, sent_by, message, dm_group, created_at")
+              .ilike("message", `%${needle}%`)
+              .order("msg_id", { ascending: false })
+              .limit(20),
+          ]);
+          merged = [
+            ...(generalData ?? []).map((r: any) => ({
+              msg_id: r.msg_id,
+              group: "General",
+              kind: "general" as const,
+              sent_by: r.sent_by,
+              message: r.message ?? "",
+              created_at: r.created_at,
+            })),
+            ...(dmData ?? []).map((r: any) => ({
+              msg_id: r.msg_id,
+              group: r.dm_group,
+              kind: "dm" as const,
+              sent_by: r.sent_by,
+              message: r.message ?? "",
+              created_at: r.created_at,
+            })),
+          ]
+            .sort((a, b) => b.created_at.localeCompare(a.created_at))
+            .slice(0, 30);
+        }
         setHits(merged);
         setActive(0);
       } catch (err) {

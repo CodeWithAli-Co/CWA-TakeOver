@@ -19,7 +19,7 @@ import { useState } from "react";
 import { motion } from "framer-motion";
 import {
   Smile, Reply, MoreVertical, CheckCheck, Pin, PinOff, MessagesSquare,
-  Pencil, Trash2, Copy, Check, Forward, Star,
+  Pencil, Trash2, Copy, Check, Forward, Star, X,
 } from "lucide-react";
 import { useChatStore } from "@/stores/chatStore";
 import {
@@ -250,6 +250,7 @@ export const MessageBubble: React.FC<Props> = ({
   const [showPicker, setShowPicker] = useState(false);
   const [expandedImage, setExpandedImage] = useState<string | null>(null);
   const [isEditing, setIsEditing] = useState(false);
+  const [pdfPreview, setPdfPreview] = useState<{ url: string; name: string } | null>(null);
   const [editText, setEditText] = useState("");
   const [editing, setEditing] = useState(false);
   const [copied, setCopied] = useState(false);
@@ -597,31 +598,94 @@ export const MessageBubble: React.FC<Props> = ({
           </div>
         )}
 
-        {/* Non-image file attachments */}
+        {/* Non-image file attachments — PDFs open an in-app preview; all
+            other file types fall through as a normal download link. */}
         {files.length > 0 && (
           <div className="mt-2 flex flex-wrap gap-2">
-            {files.map((f) => (
-              <a
-                key={f.url}
-                href={f.url}
-                target="_blank"
-                rel="noopener noreferrer"
-                download={f.name}
-                className="flex max-w-[260px] items-center gap-2 rounded-md border border-border bg-muted/25 px-2.5 py-2 text-left transition-colors hover:border-primary/40 hover:bg-muted/40"
-              >
-                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-muted text-[9px] font-mono uppercase tracking-widest text-muted-foreground">
-                  {attachmentIcon(f.name)}
-                </div>
-                <div className="min-w-0 flex-1 leading-tight">
-                  <div className="truncate text-[11.5px] font-medium text-foreground" title={f.name}>
-                    {f.name}
+            {files.map((f) => {
+              const isPdf = /\.pdf(\?|$)/i.test(f.url) || /\.pdf$/i.test(f.name);
+              const body = (
+                <>
+                  <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-muted text-[9px] font-mono uppercase tracking-widest text-muted-foreground">
+                    {attachmentIcon(f.name)}
                   </div>
-                  <div className="font-mono text-[9.5px] uppercase tracking-widest text-muted-foreground">
-                    {humanSizeFromUrl(f.url) || "download"}
+                  <div className="min-w-0 flex-1 leading-tight">
+                    <div className="truncate text-[11.5px] font-medium text-foreground" title={f.name}>
+                      {f.name}
+                    </div>
+                    <div className="font-mono text-[9.5px] uppercase tracking-widest text-muted-foreground">
+                      {isPdf ? "preview" : humanSizeFromUrl(f.url) || "download"}
+                    </div>
                   </div>
+                </>
+              );
+              const cls = "flex max-w-[260px] items-center gap-2 rounded-md border border-border bg-muted/25 px-2.5 py-2 text-left transition-colors hover:border-primary/40 hover:bg-muted/40";
+              if (isPdf) {
+                return (
+                  <button
+                    key={f.url}
+                    type="button"
+                    onClick={() => setPdfPreview({ url: f.url, name: f.name })}
+                    className={cls}
+                  >
+                    {body}
+                  </button>
+                );
+              }
+              return (
+                <a
+                  key={f.url}
+                  href={f.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  download={f.name}
+                  className={cls}
+                >
+                  {body}
+                </a>
+              );
+            })}
+          </div>
+        )}
+        {/* PDF preview overlay */}
+        {pdfPreview && (
+          <div
+            className="fixed inset-0 z-[90] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4"
+            onClick={() => setPdfPreview(null)}
+          >
+            <div
+              className="flex h-[90vh] w-[min(1100px,100%)] flex-col overflow-hidden rounded-xl border border-border bg-card"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="flex items-center justify-between border-b border-border px-4 py-2.5">
+                <div className="font-mono text-[10.5px] uppercase tracking-widest text-muted-foreground">
+                  PDF · {pdfPreview.name}
                 </div>
-              </a>
-            ))}
+                <div className="flex items-center gap-2">
+                  <a
+                    href={pdfPreview.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    download={pdfPreview.name}
+                    className="rounded-md border border-border bg-muted/40 px-2 py-1 text-[10.5px] text-foreground/80 hover:border-primary/40 hover:text-foreground"
+                  >
+                    Download
+                  </a>
+                  <button
+                    type="button"
+                    onClick={() => setPdfPreview(null)}
+                    className="rounded-md p-1 text-muted-foreground hover:bg-muted hover:text-foreground"
+                  >
+                    <X className="h-3.5 w-3.5" />
+                  </button>
+                </div>
+              </div>
+              <iframe
+                title={pdfPreview.name}
+                src={pdfPreview.url}
+                className="flex-1 border-0 bg-black"
+              />
+            </div>
           </div>
         )}
 

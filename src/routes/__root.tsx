@@ -323,19 +323,19 @@ export const Route = createRootRoute({
             const level = getGroupNotifLevel(groupName);
             const muted = level === "none";
             const mentionsOnly = level === "mentions";
+            const keywordHit = useChatStore.getState().matchesKeyword(body);
 
             // Unread badge — any message not in view, regardless of focus.
             if (!viewing) incrementUnread(groupName);
 
-            // Ding: any "important" message (mention/here) always. Otherwise
-            // respect the channel's notif level.
-            if (mentioned || hereCall) playDing();
+            // Ding: any "important" message (mention/here/keyword) always.
+            if (mentioned || hereCall || keywordHit) playDing();
             else if (level === "all") playDing();
 
             // OS toast follows the same level rules, with the override that
-            // mentions + here always fire.
+            // mentions + here + keyword matches always fire.
             const shouldToast =
-              mentioned || hereCall ||
+              mentioned || hereCall || !!keywordHit ||
               (!muted && !mentionsOnly && (!viewing || !focused));
             if (shouldToast) {
               if (mentioned) {
@@ -347,6 +347,11 @@ export const Route = createRootRoute({
                 fireNotify(
                   `${sentBy} called @here in ${groupName}`,
                   body || "[attachment]",
+                );
+              } else if (keywordHit) {
+                fireNotify(
+                  `"${keywordHit}" mentioned in ${groupName}`,
+                  `${sentBy}: ${body || "[attachment]"}`,
                 );
               } else if (!muted && !mentionsOnly) {
                 fireNotify(
@@ -371,13 +376,14 @@ export const Route = createRootRoute({
             const level = getGroupNotifLevel("General");
             const muted = level === "none";
             const mentionsOnly = level === "mentions";
+            const keywordHit = useChatStore.getState().matchesKeyword(body);
 
             if (!viewing) incrementUnread("General");
-            if (mentioned || hereCall) playDing();
+            if (mentioned || hereCall || keywordHit) playDing();
             else if (level === "all") playDing();
 
             const shouldToast =
-              mentioned || hereCall ||
+              mentioned || hereCall || !!keywordHit ||
               (!muted && !mentionsOnly && (!viewing || !focused));
             if (shouldToast) {
               if (mentioned) {
@@ -389,6 +395,11 @@ export const Route = createRootRoute({
                 fireNotify(
                   `${sentBy} called @here in General`,
                   body || "[attachment]",
+                );
+              } else if (keywordHit) {
+                fireNotify(
+                  `"${keywordHit}" mentioned in General`,
+                  `${sentBy}: ${body || "[attachment]"}`,
                 );
               } else if (!muted && !mentionsOnly) {
                 fireNotify(

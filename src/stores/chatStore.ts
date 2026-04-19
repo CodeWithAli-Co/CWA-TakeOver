@@ -100,6 +100,13 @@ interface ChatStoreState {
   notifLevels: Record<string, "all" | "mentions" | "none">;
   setNotifLevel: (group: string, level: "all" | "mentions" | "none") => void;
   getNotifLevel: (group: string) => "all" | "mentions" | "none";
+
+  /** Custom keyword alerts — any message containing one of these words
+   *  (case-insensitive) always fires a toast, even in muted channels. */
+  keywordAlerts: string[];
+  addKeywordAlert: (word: string) => void;
+  removeKeywordAlert: (word: string) => void;
+  matchesKeyword: (text: string) => string | null;
 }
 
 export const useChatStore = create<ChatStoreState>()(
@@ -275,6 +282,28 @@ export const useChatStore = create<ChatStoreState>()(
           notifLevels: { ...state.notifLevels, [group]: level },
         })),
       getNotifLevel: (group) => get().notifLevels[group] ?? "all",
+
+      keywordAlerts: [],
+      addKeywordAlert: (word) =>
+        set((state) => {
+          const w = word.trim().toLowerCase();
+          if (!w || state.keywordAlerts.includes(w)) return state;
+          return { keywordAlerts: [...state.keywordAlerts, w] };
+        }),
+      removeKeywordAlert: (word) =>
+        set((state) => ({
+          keywordAlerts: state.keywordAlerts.filter((w) => w !== word.toLowerCase()),
+        })),
+      matchesKeyword: (text) => {
+        const hay = (text || "").toLowerCase();
+        if (!hay) return null;
+        for (const w of get().keywordAlerts) {
+          // Word-boundary-ish match — avoid matching "foo" inside "bufoon".
+          const re = new RegExp(`(^|[^a-z0-9])${w.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}($|[^a-z0-9])`, "i");
+          if (re.test(hay)) return w;
+        }
+        return null;
+      },
     }),
     {
       name: "cwa-chat-store",
@@ -290,6 +319,7 @@ export const useChatStore = create<ChatStoreState>()(
         customStatus: state.customStatus,
         customStatusExpiresAt: state.customStatusExpiresAt,
         notifLevels: state.notifLevels,
+        keywordAlerts: state.keywordAlerts,
       }),
     },
   ),

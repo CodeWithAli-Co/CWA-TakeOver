@@ -42,6 +42,7 @@ const BroadcastLazyRouteImport = createFileRoute('/broadcast')()
 const BotLazyRouteImport = createFileRoute('/bot')()
 const BioLazyRouteImport = createFileRoute('/bio')()
 const ArabicLazyRouteImport = createFileRoute('/arabic')()
+const AnalyticsLazyRouteImport = createFileRoute('/analytics')()
 const IndexLazyRouteImport = createFileRoute('/')()
 const ClientIndexLazyRouteImport = createFileRoute('/client/')()
 
@@ -189,6 +190,11 @@ const ArabicLazyRoute = ArabicLazyRouteImport.update({
   path: '/arabic',
   getParentRoute: () => rootRouteImport,
 } as any).lazy(() => import('./routes/arabic.lazy').then((d) => d.Route))
+const AnalyticsLazyRoute = AnalyticsLazyRouteImport.update({
+  id: '/analytics',
+  path: '/analytics',
+  getParentRoute: () => rootRouteImport,
+} as any).lazy(() => import('./routes/analytics.lazy').then((d) => d.Route))
 const IndexLazyRoute = IndexLazyRouteImport.update({
   id: '/',
   path: '/',
@@ -202,6 +208,7 @@ const ClientIndexLazyRoute = ClientIndexLazyRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexLazyRoute
+  '/analytics': typeof AnalyticsLazyRoute
   '/arabic': typeof ArabicLazyRoute
   '/bio': typeof BioLazyRoute
   '/bot': typeof BotLazyRoute
@@ -234,6 +241,7 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof IndexLazyRoute
+  '/analytics': typeof AnalyticsLazyRoute
   '/arabic': typeof ArabicLazyRoute
   '/bio': typeof BioLazyRoute
   '/bot': typeof BotLazyRoute
@@ -267,6 +275,7 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexLazyRoute
+  '/analytics': typeof AnalyticsLazyRoute
   '/arabic': typeof ArabicLazyRoute
   '/bio': typeof BioLazyRoute
   '/bot': typeof BotLazyRoute
@@ -301,6 +310,7 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/analytics'
     | '/arabic'
     | '/bio'
     | '/bot'
@@ -333,6 +343,7 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/analytics'
     | '/arabic'
     | '/bio'
     | '/bot'
@@ -365,6 +376,7 @@ export interface FileRouteTypes {
   id:
     | '__root__'
     | '/'
+    | '/analytics'
     | '/arabic'
     | '/bio'
     | '/bot'
@@ -398,6 +410,7 @@ export interface FileRouteTypes {
 }
 export interface RootRouteChildren {
   IndexLazyRoute: typeof IndexLazyRoute
+  AnalyticsLazyRoute: typeof AnalyticsLazyRoute
   ArabicLazyRoute: typeof ArabicLazyRoute
   BioLazyRoute: typeof BioLazyRoute
   BotLazyRoute: typeof BotLazyRoute
@@ -627,6 +640,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ArabicLazyRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/analytics': {
+      id: '/analytics'
+      path: '/analytics'
+      fullPath: '/analytics'
+      preLoaderRoute: typeof AnalyticsLazyRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/': {
       id: '/'
       path: '/'
@@ -646,6 +666,7 @@ declare module '@tanstack/react-router' {
 
 const rootRouteChildren: RootRouteChildren = {
   IndexLazyRoute: IndexLazyRoute,
+  AnalyticsLazyRoute: AnalyticsLazyRoute,
   ArabicLazyRoute: ArabicLazyRoute,
   BioLazyRoute: BioLazyRoute,
   BotLazyRoute: BotLazyRoute,

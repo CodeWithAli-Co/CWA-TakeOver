@@ -163,6 +163,20 @@ export const ChatSidebar: React.FC<Props> = ({ groups, employees, onCreateChanne
           <p className="text-center text-[12px] text-muted-foreground/40 py-8">No conversations</p>
         ) : (
           <>
+            {/* Threads virtual row — Slack-style global threads inbox */}
+            <button
+              type="button"
+              onClick={() => handleSelect("__threads__")}
+              className={`flex w-full items-center gap-2 rounded-sm px-3 py-1.5 mb-0.5 text-[12px] transition-all ${
+                GroupName === "__threads__"
+                  ? "bg-primary/[0.08] border border-primary/15 text-foreground"
+                  : "border border-transparent text-white/55 hover:bg-muted/30 hover:text-foreground/80"
+              }`}
+            >
+              <MessageSquare className="h-3.5 w-3.5 text-sky-400" />
+              <span className="font-medium">Threads</span>
+            </button>
+
             {/* Starred virtual row — jumps to global starred view */}
             {starredMessages.length > 0 && (
               <button

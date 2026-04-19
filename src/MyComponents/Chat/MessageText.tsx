@@ -363,9 +363,14 @@ function CodeBlockView({ lang, body }: { lang: string; body: string }) {
 // ── Embed detection + cards ---------------------------------------------
 
 interface Embed {
-  kind: "youtube" | "loom" | "github" | "image" | "generic";
+  kind: "youtube" | "loom" | "github-pr" | "github-issue" | "github"
+      | "linear" | "figma" | "notion" | "image" | "generic";
   url: string;
   videoId?: string;
+  /** Human-readable ID/slug for cards that show one (PR #123, ISSUE #45). */
+  label?: string;
+  /** repo / project / page slug shown as subtitle. */
+  subtitle?: string;
 }
 
 function detectEmbeds(line: string): Embed[] {
@@ -387,9 +392,41 @@ function detectEmbeds(line: string): Embed[] {
       out.push({ kind: "loom", url });
       continue;
     }
-    // GitHub
+    // GitHub — detect PR / issue specifically so we can show richer info.
+    const ghPr = url.match(/github\.com\/([^/]+)\/([^/]+)\/pull\/(\d+)/i);
+    if (ghPr) {
+      out.push({ kind: "github-pr", url, label: `#${ghPr[3]}`, subtitle: `${ghPr[1]}/${ghPr[2]}` });
+      continue;
+    }
+    const ghIssue = url.match(/github\.com\/([^/]+)\/([^/]+)\/issues\/(\d+)/i);
+    if (ghIssue) {
+      out.push({ kind: "github-issue", url, label: `#${ghIssue[3]}`, subtitle: `${ghIssue[1]}/${ghIssue[2]}` });
+      continue;
+    }
     if (/^https?:\/\/(www\.)?github\.com\/[^/]+\/[^/]+/i.test(url)) {
-      out.push({ kind: "github", url });
+      const repo = url.match(/github\.com\/([^/]+)\/([^/]+)/i);
+      out.push({ kind: "github", url, subtitle: repo ? `${repo[1]}/${repo[2]}` : undefined });
+      continue;
+    }
+    // Linear
+    const linearIssue = url.match(/linear\.app\/[^/]+\/issue\/([A-Z]+-\d+)/i);
+    if (linearIssue) {
+      out.push({ kind: "linear", url, label: linearIssue[1] });
+      continue;
+    }
+    // Figma
+    if (/^https?:\/\/(www\.)?figma\.com\/(file|proto|design)\//i.test(url)) {
+      const name = url.match(/figma\.com\/(?:file|proto|design)\/[^/]+\/([^?]+)/i);
+      out.push({
+        kind: "figma",
+        url,
+        subtitle: name ? decodeURIComponent(name[1]).replace(/-/g, " ") : undefined,
+      });
+      continue;
+    }
+    // Notion
+    if (/^https?:\/\/(www\.)?notion\.so\//i.test(url)) {
+      out.push({ kind: "notion", url });
       continue;
     }
     // Image (already rendered by MessageBubble image gallery; skip here)
@@ -429,32 +466,93 @@ function EmbedCard({ embed }: { embed: Embed }) {
     );
   }
   if (embed.kind === "loom") {
+    return <EmbedLink label="LOOM" url={embed.url} tone="violet" />;
+  }
+  if (embed.kind === "github-pr") {
     return (
-      <EmbedLink label="LOOM" url={embed.url} />
+      <EmbedLink
+        label={`GITHUB PR ${embed.label ?? ""}`.trim()}
+        url={embed.url}
+        subtitle={embed.subtitle}
+        tone="emerald"
+      />
+    );
+  }
+  if (embed.kind === "github-issue") {
+    return (
+      <EmbedLink
+        label={`GITHUB ISSUE ${embed.label ?? ""}`.trim()}
+        url={embed.url}
+        subtitle={embed.subtitle}
+        tone="amber"
+      />
     );
   }
   if (embed.kind === "github") {
     return (
-      <EmbedLink label="GITHUB" url={embed.url} />
+      <EmbedLink label="GITHUB" url={embed.url} subtitle={embed.subtitle} tone="slate" />
     );
+  }
+  if (embed.kind === "linear") {
+    return (
+      <EmbedLink
+        label={`LINEAR ${embed.label ?? ""}`.trim()}
+        url={embed.url}
+        tone="indigo"
+      />
+    );
+  }
+  if (embed.kind === "figma") {
+    return (
+      <EmbedLink
+        label="FIGMA"
+        url={embed.url}
+        subtitle={embed.subtitle}
+        tone="pink"
+      />
+    );
+  }
+  if (embed.kind === "notion") {
+    return <EmbedLink label="NOTION" url={embed.url} tone="slate" />;
   }
   return null;
 }
 
-function EmbedLink({ label, url }: { label: string; url: string }) {
+const TONE_CLS: Record<string, { border: string; label: string; ring: string }> = {
+  slate:   { border: "border-slate-500/30",   label: "text-slate-300",   ring: "bg-slate-500/10" },
+  emerald: { border: "border-emerald-500/30", label: "text-emerald-300", ring: "bg-emerald-500/10" },
+  amber:   { border: "border-amber-500/30",   label: "text-amber-300",   ring: "bg-amber-500/10" },
+  violet:  { border: "border-violet-500/30",  label: "text-violet-300",  ring: "bg-violet-500/10" },
+  indigo:  { border: "border-indigo-500/30",  label: "text-indigo-300",  ring: "bg-indigo-500/10" },
+  pink:    { border: "border-pink-500/30",    label: "text-pink-300",    ring: "bg-pink-500/10" },
+};
+
+function EmbedLink({
+  label, url, subtitle, tone = "slate",
+}: {
+  label: string;
+  url: string;
+  subtitle?: string;
+  tone?: keyof typeof TONE_CLS;
+}) {
+  const t = TONE_CLS[tone] ?? TONE_CLS.slate;
   return (
     <a
       href={url}
       target="_blank"
       rel="noopener noreferrer"
-      className="mt-1.5 inline-flex items-center gap-2 rounded-md border border-border bg-card px-2.5 py-1.5 text-[11px] text-foreground/85 hover:border-primary/40"
+      className={`mt-1.5 inline-flex max-w-[360px] items-center gap-2 rounded-md border ${t.border} ${t.ring} px-2.5 py-1.5 text-[11px] text-foreground/85 hover:brightness-110`}
     >
-      <span className="font-mono text-[9.5px] uppercase tracking-widest text-primary">
+      <span className={`font-mono text-[9.5px] uppercase tracking-widest ${t.label}`}>
         {label}
       </span>
-      <span className="truncate max-w-[260px]">
-        {url.replace(/^https?:\/\/(www\.)?/, "")}
-      </span>
+      {subtitle ? (
+        <span className="truncate max-w-[200px] text-foreground/70">{subtitle}</span>
+      ) : (
+        <span className="truncate max-w-[220px]">
+          {url.replace(/^https?:\/\/(www\.)?/, "")}
+        </span>
+      )}
       <ExternalLink className="h-3 w-3 shrink-0 text-muted-foreground" />
     </a>
   );

@@ -109,6 +109,18 @@ export function HuddleBar({
 }: Props) {
   const [expanded, setExpanded] = useState(false);
 
+  // Persisted drag offset — remember where the user dragged the bar to.
+  const [dragOffset, setDragOffset] = useState<{ x: number; y: number }>(() => {
+    try {
+      const raw = window.localStorage.getItem("cwa-huddle-offset");
+      if (raw) return JSON.parse(raw);
+    } catch { /* noop */ }
+    return { x: 0, y: 0 };
+  });
+  const persistOffset = (o: { x: number; y: number }) => {
+    try { window.localStorage.setItem("cwa-huddle-offset", JSON.stringify(o)); } catch { /* noop */ }
+  };
+
   // Active-speaker detection: listen to every peer's audio via a single
   // shared AudioContext. The loudest peer (> threshold) bubbles up so
   // their tile can be promoted. Sticky for 1.2s to avoid flicker when
@@ -138,6 +150,31 @@ export function HuddleBar({
         animate={{ y: 0, opacity: 1, scale: 1 }}
         exit={{ y: 20, opacity: 0, scale: 0.98 }}
         transition={{ duration: 0.22, ease: [0.16, 1, 0.3, 1] }}
+        // Draggable when NOT in expanded (fullscreen) mode. The motion
+        // `drag` handle applies a translate, which adds on top of the
+        // fixed bottom-4 right-4 origin. We persist the offset so the
+        // panel "remembers" where you put it.
+        drag={!expanded}
+        dragMomentum={false}
+        dragElastic={0.1}
+        dragConstraints={{
+          left: -Math.max(0, window.innerWidth - 520),
+          right: 0,
+          top: -Math.max(0, window.innerHeight - 240),
+          bottom: 20,
+        }}
+        onDragEnd={(_, info) => {
+          const next = {
+            x: dragOffset.x + info.offset.x,
+            y: dragOffset.y + info.offset.y,
+          };
+          setDragOffset(next);
+          persistOffset(next);
+        }}
+        style={{
+          boxShadow: "0 28px 80px rgba(0,0,0,0.55)",
+          ...(expanded ? {} : { x: dragOffset.x, y: dragOffset.y }),
+        }}
         className={`
           fixed z-30 flex flex-col gap-3 rounded-2xl border border-primary/25
           bg-card/95 backdrop-blur-md shadow-2xl
@@ -145,10 +182,13 @@ export function HuddleBar({
             ? "inset-6 p-5"
             : "bottom-4 right-4 w-[480px] max-w-[calc(100vw-2rem)] p-3.5"}
         `}
-        style={{ boxShadow: "0 28px 80px rgba(0,0,0,0.55)" }}
       >
-        {/* Header */}
-        <header className="flex items-center gap-2 text-[11.5px]">
+        {/* Header — doubles as drag handle */}
+        <header
+          className={`flex items-center gap-2 text-[11.5px] select-none ${
+            expanded ? "" : "cursor-grab active:cursor-grabbing"
+          }`}
+        >
           <span className="flex items-center gap-1.5 rounded-full bg-primary/15 px-2.5 py-1 font-semibold text-primary">
             <span className="relative flex h-2 w-2">
               <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-70" />

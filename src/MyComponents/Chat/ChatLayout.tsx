@@ -23,6 +23,7 @@ import { PinnedBar } from "./PinnedBar";
 import { ForwardDialog } from "./ForwardDialog";
 import { CreateChannelDialog } from "./CreateChannelDialog";
 import { StarredView } from "./StarredView";
+import { ThreadsView } from "./ThreadsView";
 import { WebhookManager } from "./WebhookManager";
 import { announceHuddleStart, consumePendingHuddleJoin } from "./Huddle/HuddleRing";
 import { useHuddleStore } from "@/stores/huddleStore";
@@ -343,6 +344,17 @@ export const ChatLayout = () => {
                 currentUsername={username}
                 onReact={reactToMessage}
               />
+            </motion.div>
+          ) : GroupName === "__threads__" ? (
+            <motion.div
+              key="threads"
+              initial={{ opacity: 0, x: 14, filter: "blur(4px)" }}
+              animate={{ opacity: 1, x: 0, filter: "blur(0px)" }}
+              exit={{ opacity: 0, x: -14, filter: "blur(4px)" }}
+              transition={{ duration: 0.22, ease: [0.16, 1, 0.3, 1] }}
+              className="flex-1 flex flex-col min-h-0"
+            >
+              <ThreadsView currentUsername={username} />
             </motion.div>
           ) : GroupName ? (
             <motion.div

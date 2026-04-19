@@ -295,6 +295,12 @@ export const adminData = {
       icon: Home,
     },
     {
+      title: "Analytics",
+      url: "/analytics",
+      isActive: false,
+      icon: BarChart3,
+    },
+    {
       title: "Admin Permissions",
       url: "/mod_logs",
       icon: SquareTerminal,
@@ -708,6 +714,12 @@ export const cooData = {
       isActive: false,
       icon: Map,
     },
+    {
+      title: "Analytics",
+      url: "/analytics",
+      isActive: false,
+      icon: BarChart3,
+    },
     // ── CWA-only items ──
     {
       title: "Personal Life",
@@ -930,6 +942,12 @@ export const ceoData = {
       isActive: false,
       icon: Map,
     },
+    {
+      title: "Analytics",
+      url: "/analytics",
+      isActive: false,
+      icon: BarChart3,
+    },
     // ── CWA-only items ──
     {
       title: "Personal Life",
@@ -1149,6 +1167,12 @@ export const cfoData = {
       url: "/roadmap",
       isActive: false,
       icon: Map,
+    },
+    {
+      title: "Analytics",
+      url: "/analytics",
+      isActive: false,
+      icon: BarChart3,
     },
     {
       title: "Finance Dashboard",
