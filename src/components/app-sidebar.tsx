@@ -52,9 +52,9 @@ function SidebarBrand() {
             {isSimplicity ? "Simplicity" : "CWA TakeOver"}
           </span>
           <span className="text-[10px] text-muted-foreground leading-none">
-            {/* {isSimplicity ? "Funds Admin" : "v1.3.0"} */}
+            {/* {isSimplicity ? "Funds Admin" : "v1.3.1"} */}
             {/* *This is the version of TakeOver app */}
-            v1.3.0
+            v1.3.1
           </span>
         </div>
       )}
