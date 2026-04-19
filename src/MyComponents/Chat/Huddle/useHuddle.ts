@@ -353,11 +353,21 @@ export function useHuddle({ group, username, joined, muted, camera }: UseHuddleO
     let channel: ReturnType<typeof supabase.channel> | null = null;
 
     const setup = async () => {
-      // 1. Get audio. Required.
+      // 1. Get audio. Required. Use Discord/Meet-grade constraints:
+      // echo cancellation + noise suppression + AGC for clean voice,
+      // mono (channelCount: 1) for consistent volumes across peers,
+      // and 48 kHz where supported for lower-latency Opus encoding.
       let audioStream: MediaStream;
       try {
         audioStream = await navigator.mediaDevices.getUserMedia({
-          audio: true, video: false,
+          audio: {
+            echoCancellation: true,
+            noiseSuppression: true,
+            autoGainControl: true,
+            channelCount: 1,
+            sampleRate: 48000,
+          } as MediaTrackConstraints,
+          video: false,
         });
       } catch (err) {
         setError(err instanceof Error ? err.message : "Microphone access denied");
@@ -368,11 +378,18 @@ export function useHuddle({ group, username, joined, muted, camera }: UseHuddleO
         return;
       }
 
-      // 2. Try video. Optional — some users have no camera.
+      // 2. Try video. Optional — some users have no camera. Target 720p
+      // @ 30fps with mid-quality so small windows/crappy networks are
+      // handled gracefully.
       let videoStream: MediaStream | null = null;
       try {
         videoStream = await navigator.mediaDevices.getUserMedia({
-          video: true, audio: false,
+          video: {
+            width: { ideal: 1280 },
+            height: { ideal: 720 },
+            frameRate: { ideal: 30, max: 30 },
+          } as MediaTrackConstraints,
+          audio: false,
         });
       } catch (err) {
         console.warn("[huddle] no camera available:", err);

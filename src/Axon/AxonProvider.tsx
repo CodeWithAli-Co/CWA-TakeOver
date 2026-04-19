@@ -100,6 +100,30 @@ function newId(prefix: string): string {
   return `${prefix}-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`;
 }
 
+/**
+ * Heuristic: does this utterance expect a reply?
+ *   · Explicit "?" anywhere near the end (TTS may trim punctuation).
+ *   · Ends with a known interrogative pattern.
+ *   · Phrased as a confirmation ("should I…", "would you like…").
+ * Conservative — false negatives are fine (user says Axon as usual);
+ * false positives are bad (recognizer arms at the wrong time).
+ */
+function isQuestion(text: string): boolean {
+  if (!text) return false;
+  const trimmed = text.trim();
+  if (trimmed.endsWith("?")) return true;
+  const last = trimmed.slice(-120).toLowerCase();
+  // Strong question patterns near the end of the utterance.
+  const patterns = [
+    /\b(should|would|could|can|may|shall|will) (i|you|we)\b/,
+    /\b(do you want|would you like|is that|shall i|want me to)\b/,
+    /\b(which|what|where|when|who|how|why)(\s+\w+){0,6}\s*$/,
+    /\b(confirm|approve|proceed|continue|go ahead)\b[^.?!]*$/,
+  ];
+  for (const re of patterns) if (re.test(last)) return true;
+  return false;
+}
+
 // ─────────────────────────────────────────────────────────────────
 export function AxonProvider({ children }: { children: React.ReactNode }) {
   const { data: userRows } = ActiveUser();
@@ -145,6 +169,13 @@ export function AxonProvider({ children }: { children: React.ReactNode }) {
   const voiceInRef = useRef<VoiceInput | null>(null);
   const voiceOutRef = useRef<VoiceOutput | null>(null);
   const greetedRef = useRef(false);
+  // Conversation-mode flag: set true when Axon's current/last spoken line
+  // is a question. When TTS finishes, we auto-arm the recognizer so the
+  // user can reply immediately without saying "Axon" again.
+  const awaitReplyRef = useRef(false);
+  // Best-effort text of the last line TTS spoke (collected as sentences
+  // stream in).
+  const lastSpokenTextRef = useRef("");
 
   // orb default position
   useEffect(() => {
@@ -243,6 +274,9 @@ export function AxonProvider({ children }: { children: React.ReactNode }) {
 
       setStatus("processing");
       voiceOutRef.current?.interrupt();
+      // Reset conversation flag each turn — we'll re-set if the reply is a question.
+      awaitReplyRef.current = false;
+      lastSpokenTextRef.current = "";
 
       // Stream sentences into TTS as they arrive — speech starts fast.
       let spokeAny = false;
@@ -255,9 +289,15 @@ export function AxonProvider({ children }: { children: React.ReactNode }) {
           const meaningful = s.replace(/[*_`|#~\-•>]/g, "").trim();
           if (meaningful.length < 2) return;
           spokeAny = true;
+          lastSpokenTextRef.current = s;
           voiceOutRef.current?.queueSentence(s);
         },
       });
+
+      // Conversation mode: if Axon's assistant text ends with a question
+      // (by punctuation or by phrasing), flag auto-arm. The onEnd TTS
+      // callback will push-to-talk when playback finishes.
+      awaitReplyRef.current = isQuestion(res.assistantText);
 
       appendTurn({
         id: newId("t"),
@@ -448,6 +488,17 @@ export function AxonProvider({ children }: { children: React.ReactNode }) {
         onEnd: () => {
           voiceInRef.current?.setMuted(false);
           setStatus("idle");
+          // Conversation mode: if the line ended with a question, arm the
+          // recognizer so the operator can reply without saying "Axon"
+          // again. We give the browser 300ms to clear the TTS buffer
+          // before arming, otherwise STT can pick up Axon's own trailing
+          // syllables.
+          if (awaitReplyRef.current) {
+            awaitReplyRef.current = false;
+            window.setTimeout(() => {
+              voiceInRef.current?.pushToTalk();
+            }, 300);
+          }
         },
         onError: (msg) => {
           voiceInRef.current?.setMuted(false);

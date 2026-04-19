@@ -230,7 +230,12 @@ export const MessageList: React.FC<Props> = ({
     if (el) el.scrollIntoView({ behavior: "smooth", block: "center" });
   };
 
-  if (!messages || messages.length === 0) {
+  // Loading state: messages is undefined (query still in flight).
+  if (!messages) {
+    return <MessageListSkeleton />;
+  }
+
+  if (messages.length === 0) {
     return (
       <div className="flex-1 flex items-center justify-center">
         <div className="text-center max-w-xs">
@@ -386,3 +391,43 @@ export const MessageList: React.FC<Props> = ({
     </div>
   );
 };
+
+// ── In-feed skeleton shown while the initial messages query is loading.
+function MessageListSkeleton() {
+  const rows = [
+    { w: 180, self: false },
+    { w: 90, self: false },
+    { w: 240, self: true },
+    { w: 140, self: false },
+    { w: 320, self: true },
+    { w: 110, self: false },
+    { w: 200, self: false },
+    { w: 160, self: true },
+  ];
+  return (
+    <div className="flex-1 flex flex-col gap-3 px-5 py-6 overflow-hidden">
+      {rows.map((r, i) => (
+        <div
+          key={i}
+          className={`flex items-start gap-2 ${r.self ? "flex-row-reverse" : ""}`}
+        >
+          {!r.self && (
+            <div className="mt-1 h-7 w-7 shrink-0 rounded-full bg-muted/60 animate-pulse" />
+          )}
+          <div className={`flex flex-col gap-1.5 ${r.self ? "items-end" : ""}`}>
+            {!r.self && (
+              <div className="h-2.5 w-20 rounded bg-muted/50 animate-pulse" />
+            )}
+            <div
+              className="h-6 rounded-xl bg-muted/40 animate-pulse"
+              style={{
+                width: r.w,
+                animationDelay: `${i * 80}ms`,
+              }}
+            />
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}

@@ -12,6 +12,7 @@ import { registerDomActions } from "./dom";
 import { registerRoutineActions } from "./routines";
 import { registerMemoryActions } from "./memory";
 import { registerTrustActions } from "./trust";
+import { registerChatActions } from "./chat";
 
 let registered = false;
 
@@ -30,4 +31,5 @@ export function registerAllActions() {
   registerRoutineActions();
   registerMemoryActions();
   registerTrustActions();
+  registerChatActions();
 }

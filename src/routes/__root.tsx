@@ -49,6 +49,13 @@ const HuddleRing = lazy(() =>
   })),
 );
 
+// Keyboard shortcuts cheat-sheet — press `?` anywhere.
+const ShortcutsOverlay = lazy(() =>
+  import("@/MyComponents/Chat/ShortcutsOverlay").then((m) => ({
+    default: m.ShortcutsOverlay,
+  })),
+);
+
 // Route-aware skeleton fallback picks a loader shape that roughly
 // matches the destination page, so the transition feels seamless.
 import { PageSkeleton, ChatSkeleton, RoadmapSkeleton, SplitSkeleton, TableSkeleton, FormSkeleton } from "@/MyComponents/Reusables/PageSkeletons";
@@ -511,6 +518,10 @@ export const Route = createRootRoute({
                 username={user[0]?.username || ""}
                 channelNames={["General", ...userChannelNames]}
               />
+            </Suspense>
+            {/* Keyboard shortcuts ?-overlay */}
+            <Suspense fallback={null}>
+              <ShortcutsOverlay />
             </Suspense>
           </SidebarProvider>
         ) : (

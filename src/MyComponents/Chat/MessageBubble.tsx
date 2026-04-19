@@ -35,6 +35,8 @@ import {
 import { ReactionPicker } from "./ReactionPicker";
 import { MessageText } from "./MessageText";
 import { PresenceDot } from "./PresenceDot";
+import { VoicePlayer } from "./VoicePlayer";
+import { PollMessage, parsePollMarker, stripPollMarker } from "./PollMessage";
 import { MessageInterface } from "@/stores/query";
 import { formatDistanceToNow, isValid, format } from "date-fns";
 
@@ -339,13 +341,19 @@ export const MessageBubble: React.FC<Props> = ({
     }
   }
 
+  // Poll marker — if present, renders as an interactive PollMessage
+  // block instead of inline text. The poll's question is also kept as
+  // the message's text fallback for systems that can't render the poll.
+  const poll = displayText ? parsePollMarker(displayText) : null;
+  if (poll) displayText = stripPollMarker(displayText).trim();
+
   // Effective reactions: prefer DB column; fall back to parsed marker.
   const reactions: Record<string, string[]> =
     msg.reactions && Object.keys(msg.reactions).length > 0
       ? msg.reactions
       : parsedReactions;
   const reactionEntries = Object.entries(reactions).filter(
-    ([, users]) => users.length > 0,
+    ([emoji, users]) => users.length > 0 && !emoji.startsWith("__poll_"),
   );
 
   // Resolve the replied-to target. Prefer DB column; fall back to the
@@ -508,6 +516,29 @@ export const MessageBubble: React.FC<Props> = ({
           <MessageText text={displayText} currentUsername={currentUsername} />
         ) : null}
 
+        {/* Poll — votes stored inside `reactions` under __poll_<i> keys */}
+        {poll && (
+          <PollMessage
+            poll={poll}
+            reactions={reactions}
+            currentUsername={currentUsername}
+            onVote={(optionIdx) => {
+              const keyPrefix = poll.multi ? "__poll_multi_" : "__poll_";
+              if (!poll.multi) {
+                // Single-select: find and remove any other option I voted for.
+                for (let i = 0; i < poll.options.length; i++) {
+                  const k = `${keyPrefix}${i}`;
+                  const users = reactions[k] || [];
+                  if (i !== optionIdx && users.includes(currentUsername)) {
+                    onReact(msg.msg_id, k);
+                  }
+                }
+              }
+              onReact(msg.msg_id, `${keyPrefix}${optionIdx}`);
+            }}
+          />
+        )}
+
         {/* Image gallery */}
         {images.length > 0 && (
           <div className="mt-1.5 flex flex-wrap gap-1.5">
@@ -535,13 +566,7 @@ export const MessageBubble: React.FC<Props> = ({
         {audios.length > 0 && (
           <div className="mt-2 flex flex-col gap-1.5">
             {audios.map((url) => (
-              <audio
-                key={url}
-                src={url}
-                controls
-                preload="metadata"
-                className="h-9 w-full max-w-[320px] rounded-md bg-muted/40"
-              />
+              <VoicePlayer key={url} src={url} />
             ))}
           </div>
         )}

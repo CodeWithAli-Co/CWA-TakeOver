@@ -70,7 +70,13 @@ export async function ensureMicPermission(): Promise<"granted" | "denied" | "una
     return "unavailable";
   }
   try {
-    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    const stream = await navigator.mediaDevices.getUserMedia({
+      audio: {
+        echoCancellation: true,
+        noiseSuppression: true,
+        autoGainControl: true,
+      } as MediaTrackConstraints,
+    });
     // We don't need the stream here — just wanted to trigger the permission flow.
     stream.getTracks().forEach((t) => t.stop());
     return "granted";
@@ -453,7 +459,17 @@ export class VoiceInput {
     if (!this.callbacks.onAudioLevel) return;
     if (this.micStream) return;
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      // Rich constraints so the meter reads clean audio and STT gets
+      // echo-cancelled input. Makes wake-word detection far more
+      // reliable (esp. when there's music/TV in the room).
+      const stream = await navigator.mediaDevices.getUserMedia({
+        audio: {
+          echoCancellation: true,
+          noiseSuppression: true,
+          autoGainControl: true,
+          channelCount: 1,
+        } as MediaTrackConstraints,
+      });
       this.micStream = stream;
       const ctx = new AudioContext();
       this.audioCtx = ctx;

@@ -26,6 +26,7 @@ import { useImageUpload, type PendingUpload } from "./useImageUpload";
 import { draftChatReply } from "@/Axon/engine/chatDraft";
 import { MentionPicker, detectMentionQuery } from "./MentionPicker";
 import { useVoiceRecorder, formatElapsed } from "./useVoiceRecorder";
+import { PollDialog } from "./PollDialog";
 import {
   addScheduled,
   listScheduledForGroup,
@@ -53,11 +54,15 @@ export const MessageComposer: React.FC<Props> = ({
   group, currentUsername, userAvatar, table, recentMessages, onAfterSend,
   members = [],
 }) => {
-  const [text, setText] = useState("");
+  // Drafts are persisted per-channel so you can switch groups without
+  // losing a half-typed message. Wiped on send.
+  const [text, setText] = useState<string>(() => readDraft(group));
   const [showEmoji, setShowEmoji] = useState(false);
   const [axonBusy, setAxonBusy] = useState(false);
   const [axonError, setAxonError] = useState<string | null>(null);
   const [draggingOver, setDraggingOver] = useState(false);
+  const [pollOpen, setPollOpen] = useState(false);
+  const [pollInitialQ, setPollInitialQ] = useState("");
 
   // Mention autocomplete state
   const [mentionInfo, setMentionInfo] = useState<{
@@ -90,6 +95,15 @@ export const MessageComposer: React.FC<Props> = ({
       await voice.start();
     }
   };
+
+  // Draft persistence: save on text change (debounced), load on group switch.
+  useEffect(() => {
+    setText(readDraft(group));
+  }, [group]);
+  useEffect(() => {
+    const id = window.setTimeout(() => writeDraft(group, text), 250);
+    return () => window.clearTimeout(id);
+  }, [text, group]);
 
   // Scheduled messages — list + tick in response to changes
   const [scheduled, setScheduled] = useState<ScheduledMessage[]>([]);
@@ -202,6 +216,81 @@ export const MessageComposer: React.FC<Props> = ({
     });
   };
 
+  // ── side-effect slash commands ──────────────────────────────────────
+  const handleSideEffectCommand = (
+    kind: "status" | "dnd" | "away" | "clear" | "remind" | "poll",
+    raw: string,
+  ) => {
+    switch (kind) {
+      case "poll": {
+        const rest = raw.replace(/^\/poll\s*/i, "").trim();
+        setPollInitialQ(rest);
+        setPollOpen(true);
+        return;
+      }
+      case "status": {
+        const rest = raw.replace(/^\/status\s*/i, "").trim();
+        try {
+          (useChatStore.getState() as any).setStatusLabel?.(rest || null);
+        } catch { /* store may not have it yet — ignore */ }
+        setAxonError(rest ? `Status set: ${rest}` : "Status cleared");
+        return;
+      }
+      case "dnd": {
+        try {
+          const store = useChatStore.getState() as any;
+          const cur = !!store.dnd;
+          store.setDnd?.(!cur);
+          setAxonError(!cur ? "Do Not Disturb on" : "Do Not Disturb off");
+        } catch { /* noop */ }
+        return;
+      }
+      case "away": {
+        try { (useChatStore.getState() as any).setPresenceStatus?.(currentUsername, "away"); } catch { /* noop */ }
+        setAxonError("Marked as away");
+        return;
+      }
+      case "clear": {
+        try { useChatStore.getState().markRead(group); } catch { /* noop */ }
+        setAxonError("Channel marked as read");
+        return;
+      }
+      case "remind": {
+        // /remind me in 10m <message>
+        //         at 3pm      <message>
+        const m = raw.match(/^\/remind\s+(?:me\s+)?(in\s+([^\s]+)|at\s+([^\s]+))\s+(.+)$/i);
+        if (!m) {
+          setAxonError("Usage: /remind me in 10m <msg>  OR  /remind me at 3pm <msg>");
+          return;
+        }
+        const relSpec = m[2];
+        const absSpec = m[3];
+        const body = m[4];
+        const dueAt = parseRemindSpec(relSpec, absSpec);
+        if (!dueAt) {
+          setAxonError("Couldn't parse time. Try '15m', '2h', '3pm', '17:30'.");
+          return;
+        }
+        const payload = {
+          sent_by: currentUsername,
+          message: `⏰ Reminder: ${body}`,
+          userAvatar,
+        } as Record<string, unknown>;
+        if (table === "cwa_dm_chat") (payload as any).dm_group = group;
+        addScheduled({
+          dueAt: dueAt.toISOString(),
+          table,
+          group,
+          payload,
+          createdBy: currentUsername,
+          preview: `⏰ ${body.slice(0, 50)}`,
+        });
+        setAxonError(`Reminder set for ${dueAt.toLocaleString()}`);
+        return;
+      }
+    }
+  };
+
   // ── /axon detection ─────────────────────────────────────────────────
   const runAxon = async (prompt: string) => {
     setAxonBusy(true);
@@ -258,6 +347,14 @@ export const MessageComposer: React.FC<Props> = ({
       }
       await runAxon(prompt);
       return; // user reviews the draft and sends manually
+    }
+
+    // Side-effect-only slash commands (no message posted).
+    const sideEffect = isSideEffectCommand(text);
+    if (sideEffect) {
+      handleSideEffectCommand(sideEffect, text);
+      setText("");
+      return;
     }
 
     // Expand slash commands before anything else reads `text`.
@@ -359,6 +456,7 @@ export const MessageComposer: React.FC<Props> = ({
     }
 
     setText("");
+    writeDraft(group, "");
     setReplyingTo(null);
     clearPending();
     if (typingChannelRef.current) {
@@ -668,6 +766,36 @@ export const MessageComposer: React.FC<Props> = ({
           paste or drop images
         </p>
       </form>
+
+      {/* Poll composer (opened via /poll or the Plus button in the toolbar) */}
+      <PollDialog
+        open={pollOpen}
+        onOpenChange={setPollOpen}
+        initialQuestion={pollInitialQ}
+        onSubmit={async (pollBody) => {
+          // Post as a regular message. PollMessage will detect the
+          // {poll:...} marker and render the interactive poll.
+          const basePayload: Record<string, unknown> = {
+            sent_by: currentUsername,
+            message: pollBody,
+            userAvatar,
+          };
+          if (table === "cwa_dm_chat") basePayload.dm_group = group;
+          const aggressive: Record<string, unknown> = {
+            ...basePayload,
+            reactions: {},
+            read_by: [currentUsername],
+            company: getActiveCompanyLabel(),
+          };
+          let { error } = await supabase.from(table).insert(aggressive);
+          if (error) {
+            // Progressive fallback — drop columns that don't exist.
+            await supabase.from(table).insert(basePayload);
+          }
+          onAfterSend?.();
+          setPollInitialQ("");
+        }}
+      />
     </div>
   );
 };
@@ -738,11 +866,23 @@ function nextMorningAt9(): Date {
 }
 
 // ── Slash command expansion ---------------------------------------------
-// /me <text>       → italic action: "_<username> <text>_"
-// /shrug [text]    → "<text> ¯\_(ツ)_/¯"
-// /code <text>     → fenced code block
-// /here [text]     → "@here <text>" (notifies all online members via
-//                    __root's realtime handler that detects @here)
+//
+//   /me <text>         italic action: "_<username> <text>_"
+//   /shrug [text]      appends ¯\_(ツ)_/¯
+//   /tableflip [text]  appends (╯°□°）╯︵ ┻━┻
+//   /unflip [text]     appends ┬─┬ ノ( ゜-゜ノ)
+//   /code <text>       fenced code block
+//   /here [text]       "@here <text>" — notifies online members
+//   /channel [text]    "@channel <text>" — notifies ALL channel members
+//   /status <text>     sets presence label ("In a meeting" etc.)
+//   /dnd               toggles Do Not Disturb (handled at callsite)
+//   /away              sets presence to away
+//   /remind me <in|at> <...> <msg>   scheduled self-message (handled at callsite)
+//   /giphy <query>     inline giphy link (static for now — no API)
+//   /clear             local-only — hides the channel's current unread
+//   /poll [question]   opens the poll dialog (handled at callsite)
+//
+// Anything this function doesn't recognize is passed through unchanged.
 function expandSlashCommands(text: string, username: string): string {
   if (/^\/me\s+/i.test(text)) {
     return `_${username} ${text.replace(/^\/me\s+/i, "").trim()}_`;
@@ -752,6 +892,16 @@ function expandSlashCommands(text: string, username: string): string {
     const rest = (m?.[1] ?? "").trim();
     return rest ? `${rest} \u00af\\_(\u30c4)_/\u00af` : "\u00af\\_(\u30c4)_/\u00af";
   }
+  if (/^\/tableflip\b/i.test(text)) {
+    const rest = text.replace(/^\/tableflip\s*/i, "").trim();
+    const flip = "(\u256f\u00b0\u25a1\u00b0\uff09\u256f\ufe35 \u253b\u2501\u253b";
+    return rest ? `${rest} ${flip}` : flip;
+  }
+  if (/^\/unflip\b/i.test(text)) {
+    const rest = text.replace(/^\/unflip\s*/i, "").trim();
+    const unflip = "\u252c\u2500\u252c\u30ce( \u309c-\u309c\u30ce)";
+    return rest ? `${rest} ${unflip}` : unflip;
+  }
   if (/^\/code\s+/i.test(text)) {
     const body = text.replace(/^\/code\s+/i, "");
     return "```\n" + body + "\n```";
@@ -760,5 +910,83 @@ function expandSlashCommands(text: string, username: string): string {
     const rest = text.replace(/^\/here\s*/i, "").trim();
     return rest ? `@here ${rest}` : "@here";
   }
+  if (/^\/channel\b/i.test(text)) {
+    const rest = text.replace(/^\/channel\s*/i, "").trim();
+    return rest ? `@channel ${rest}` : "@channel";
+  }
+  if (/^\/giphy\s+/i.test(text)) {
+    const q = text.replace(/^\/giphy\s+/i, "").trim();
+    // Direct Giphy search link — avoids needing an API key for v1.
+    return `_(giphy: ${q}) — https://giphy.com/search/${encodeURIComponent(q)}_`;
+  }
   return text;
+}
+
+/** Read/write per-channel drafts from localStorage. Keyed by group name. */
+const DRAFT_PREFIX = "cwa-chat-draft:";
+function readDraft(group: string): string {
+  if (typeof window === "undefined" || !group) return "";
+  try { return window.localStorage.getItem(DRAFT_PREFIX + group) ?? ""; }
+  catch { return ""; }
+}
+function writeDraft(group: string, value: string) {
+  if (typeof window === "undefined" || !group) return;
+  try {
+    if (value) window.localStorage.setItem(DRAFT_PREFIX + group, value);
+    else window.localStorage.removeItem(DRAFT_PREFIX + group);
+  } catch { /* quota or private mode */ }
+}
+
+/** Parse /remind spec into a Date. Supports:
+ *   relSpec: 10m / 2h / 3d / 90s
+ *   absSpec: 3pm / 17:30 / 9am / 21:00
+ */
+function parseRemindSpec(rel: string | undefined, abs: string | undefined): Date | null {
+  const now = new Date();
+  if (rel) {
+    const m = rel.match(/^(\d+)(s|m|h|d)$/i);
+    if (!m) return null;
+    const n = parseInt(m[1], 10);
+    const unit = m[2].toLowerCase();
+    const d = new Date(now);
+    if (unit === "s") d.setSeconds(d.getSeconds() + n);
+    else if (unit === "m") d.setMinutes(d.getMinutes() + n);
+    else if (unit === "h") d.setHours(d.getHours() + n);
+    else if (unit === "d") d.setDate(d.getDate() + n);
+    return d;
+  }
+  if (abs) {
+    const m12 = abs.match(/^(\d{1,2})(?::(\d{2}))?(am|pm)$/i);
+    if (m12) {
+      let h = parseInt(m12[1], 10);
+      const min = m12[2] ? parseInt(m12[2], 10) : 0;
+      const pm = m12[3].toLowerCase() === "pm";
+      if (h === 12) h = pm ? 12 : 0;
+      else if (pm) h += 12;
+      const d = new Date(now);
+      d.setHours(h, min, 0, 0);
+      if (d.getTime() <= now.getTime()) d.setDate(d.getDate() + 1);
+      return d;
+    }
+    const m24 = abs.match(/^(\d{1,2}):(\d{2})$/);
+    if (m24) {
+      const d = new Date(now);
+      d.setHours(parseInt(m24[1], 10), parseInt(m24[2], 10), 0, 0);
+      if (d.getTime() <= now.getTime()) d.setDate(d.getDate() + 1);
+      return d;
+    }
+  }
+  return null;
+}
+
+/** True if the text is a side-effect-only slash command that shouldn't post
+ *  a message. Callsite handles the side effect and swallows the send. */
+function isSideEffectCommand(text: string): "status" | "dnd" | "away" | "clear" | "remind" | "poll" | null {
+  if (/^\/status\b/i.test(text)) return "status";
+  if (/^\/dnd\b/i.test(text)) return "dnd";
+  if (/^\/away\b/i.test(text)) return "away";
+  if (/^\/clear\b/i.test(text)) return "clear";
+  if (/^\/remind\b/i.test(text)) return "remind";
+  if (/^\/poll\b/i.test(text)) return "poll";
+  return null;
 }
