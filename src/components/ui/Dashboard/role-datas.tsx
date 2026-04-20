@@ -26,6 +26,7 @@ import {
   Activity,
   Map,
   FileText,
+  Package,
   type LucideIcon,
 } from "lucide-react";
 
@@ -306,6 +307,12 @@ export const adminData = {
       url: "/offers",
       isActive: false,
       icon: FileText,
+    },
+    {
+      title: "Components",
+      url: "/components",
+      isActive: false,
+      icon: Package,
     },
     {
       title: "Admin Permissions",
@@ -733,6 +740,12 @@ export const cooData = {
       isActive: false,
       icon: FileText,
     },
+    {
+      title: "Components",
+      url: "/components",
+      isActive: false,
+      icon: Package,
+    },
     // ── CWA-only items ──
     {
       title: "Personal Life",
@@ -967,6 +980,12 @@ export const ceoData = {
       isActive: false,
       icon: FileText,
     },
+    {
+      title: "Components",
+      url: "/components",
+      isActive: false,
+      icon: Package,
+    },
     // ── CWA-only items ──
     {
       title: "Personal Life",
@@ -1198,6 +1217,12 @@ export const cfoData = {
       url: "/offers",
       isActive: false,
       icon: FileText,
+    },
+    {
+      title: "Components",
+      url: "/components",
+      isActive: false,
+      icon: Package,
     },
     {
       title: "Finance Dashboard",
