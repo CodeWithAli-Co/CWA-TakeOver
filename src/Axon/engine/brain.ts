@@ -124,10 +124,19 @@ function buildContextPreamble(ctx: ActionContext, summary?: string | null): stri
   return parts.join("\n");
 }
 
+// Cap how many raw conversation turns we send per call. The summarizer
+// already compacts older turns into a single summary that rides in the
+// preamble — we don't need to re-send the full transcript every time.
+// Keeping 10 recent turns (~5 exchanges) is plenty of context without
+// blowing the input-token budget every turn.
+const MAX_HISTORY_TURNS = 10;
+
 function serializeHistory(history: ConversationTurn[]): AnthropicMessage[] {
   const rel = history.filter((t) => t.role === "user" || t.role === "axon");
+  // Trim to the tail — freshest turns matter most.
+  const windowed = rel.slice(-MAX_HISTORY_TURNS);
   const out: AnthropicMessage[] = [];
-  for (const t of rel) {
+  for (const t of windowed) {
     const role: "user" | "assistant" = t.role === "user" ? "user" : "assistant";
     if (out.length > 0 && out[out.length - 1].role === role) {
       const prev = out[out.length - 1];
@@ -141,6 +150,45 @@ function serializeHistory(history: ConversationTurn[]): AnthropicMessage[] {
     }
   }
   return out;
+}
+
+// ── Retry helper ───────────────────────────────────────────────────
+// Wraps fetch with automatic retry on 429 + 5xx. For 429, honors the
+// server's `retry-after` header (capped at 10s). For 5xx, uses
+// exponential backoff (400ms → 800ms → 1600ms). Total attempts: 3.
+async function fetchWithRetry(
+  url: string,
+  init: RequestInit,
+  onDelta?: (chunk: string) => void,
+): Promise<Response> {
+  const MAX_ATTEMPTS = 3;
+  for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
+    const res = await fetch(url, init);
+    if (res.ok) return res;
+
+    const shouldRetry =
+      (res.status === 429 || (res.status >= 500 && res.status < 600)) &&
+      attempt < MAX_ATTEMPTS;
+    if (!shouldRetry) return res;
+
+    let waitMs = 0;
+    if (res.status === 429) {
+      const ra = res.headers.get("retry-after");
+      const asSec = ra ? parseInt(ra, 10) : NaN;
+      waitMs = Number.isFinite(asSec) ? Math.min(asSec * 1000, 10_000) : 4_000;
+    } else {
+      waitMs = Math.min(400 * Math.pow(2, attempt - 1), 3_000);
+    }
+
+    // Let the caller stream a breathy filler so the orb doesn't look
+    // frozen during the wait.
+    if (attempt === 1 && res.status === 429) {
+      onDelta?.("I'm hitting rate limits — give me a moment. ");
+    }
+    await new Promise((r) => setTimeout(r, waitMs));
+  }
+  // Unreachable — loop always returns or throws.
+  throw new Error("fetchWithRetry exhausted");
 }
 
 /** Split emitted text into sentences on the fly. Returns completed sentences
@@ -167,28 +215,61 @@ async function anthropicStreamCall(
   opts: { isFinal: boolean; onTextDelta?: (chunk: string) => void }
 ): Promise<StreamTurnResult> {
   const tools = buildToolDefinitions();
+  // Prompt caching — discounts input tokens by 90% for cached blocks on
+  // repeat calls within ~5 min. The system prompt + tool schemas are
+  // identical turn-to-turn, so we mark them ephemeral. On first request
+  // of a session you pay 25% extra to WRITE the cache; every subsequent
+  // turn pays 10% to READ. Since Axon is a multi-turn conversation
+  // machine, this is a massive net win for ITPM.
+  const cachedTools = tools.length > 0
+    ? [
+        ...tools.slice(0, -1),
+        { ...tools[tools.length - 1], cache_control: { type: "ephemeral" } },
+      ]
+    : tools;
   const body = {
     model: CLAUDE_MODEL,
     max_tokens: 1024,
-    system: SYSTEM_PROMPT,
-    tools,
+    system: [
+      {
+        type: "text",
+        text: SYSTEM_PROMPT,
+        cache_control: { type: "ephemeral" },
+      },
+    ],
+    tools: cachedTools,
     messages,
     stream: true,
   };
 
-  const res = await fetch(ANTHROPIC_API_URL, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "x-api-key": ANTHROPIC_API_KEY ?? "",
-      "anthropic-version": ANTHROPIC_API_VERSION,
-      "anthropic-dangerous-direct-browser-access": "true",
+  // Fetch with automatic 429 / 5xx retry. Anthropic returns a
+  // `retry-after` header in seconds when it rate-limits; we honor it
+  // (capped at 10s so the UI doesn't feel frozen). Other transient
+  // server errors use exponential backoff.
+  const res = await fetchWithRetry(
+    ANTHROPIC_API_URL,
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "x-api-key": ANTHROPIC_API_KEY ?? "",
+        "anthropic-version": ANTHROPIC_API_VERSION,
+        "anthropic-dangerous-direct-browser-access": "true",
+      },
+      body: JSON.stringify(body),
     },
-    body: JSON.stringify(body),
-  });
+    opts.onTextDelta,
+  );
 
   if (!res.ok || !res.body) {
     const text = await res.text().catch(() => "");
+    // Surface a friendlier message for the common 429 case so the
+    // orb can speak it clearly instead of dumping JSON at the user.
+    if (res.status === 429) {
+      throw new Error(
+        "Rate limit hit — a lot of back-and-forth in a short window. Give me 30 seconds and try again, or upgrade Anthropic tier for more headroom.",
+      );
+    }
     throw new Error(`Anthropic ${res.status}: ${text.slice(0, 200)}`);
   }
 
