@@ -89,7 +89,8 @@ async function handleWhoami(caller: Caller): Promise<Response> {
     owner: caller.owner,
     scope: caller.scope,
     // Echo the server version so `cwa whoami --verbose` can cross-check.
-    server_version: "1.0.0",
+    // Keep in sync with CWA-CLI package.json version.
+    server_version: "2.0.0",
   });
 }
 
