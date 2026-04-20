@@ -11,7 +11,7 @@ import { useState } from "react";
 import { motion } from "framer-motion";
 import {
   X, Download, Upload, Terminal, Trash2, Copy, CheckCircle2,
-  Clock, User, Tag, Code2, Package, AlertTriangle,
+  Clock, User, Tag, Code2, Package, AlertTriangle, FileText, BookOpen, Play, Users,
 } from "lucide-react";
 import {
   useRegistryVersions,
@@ -20,6 +20,12 @@ import {
   useDeleteRegistryItem,
   registryTarballUrl,
 } from "./queries";
+import { RegistryCodePreview } from "./RegistryCodePreview";
+import { RegistryInstallsView } from "./RegistryInstallsView";
+import { RegistryLivePreview } from "./RegistryLivePreview";
+import { useTarball } from "./lib/useTarball";
+import { findReadme } from "./lib/extractTarball";
+import { MiniMarkdown } from "./lib/miniMarkdown";
 import type { RegistryItemWithLatest, Bump } from "./types";
 
 interface Props {
@@ -28,7 +34,16 @@ interface Props {
   username: string;
 }
 
-type Tab = "overview" | "versions" | "install";
+type Tab = "overview" | "code" | "preview" | "versions" | "installs" | "install";
+
+const TABS: Array<{ key: Tab; label: string }> = [
+  { key: "overview", label: "Overview" },
+  { key: "code",     label: "Code" },
+  { key: "preview",  label: "Preview" },
+  { key: "versions", label: "Versions" },
+  { key: "installs", label: "Installs" },
+  { key: "install",  label: "Install" },
+];
 
 export function RegistryDetailDrawer({ item, onClose, username }: Props) {
   const [tab, setTab] = useState<Tab>("overview");
@@ -96,20 +111,20 @@ export function RegistryDetailDrawer({ item, onClose, username }: Props) {
         </header>
 
         {/* Tabs */}
-        <div className="flex items-center gap-0.5 border-b border-border/60 px-3 pt-2">
-          {(["overview", "versions", "install"] as Tab[]).map((t) => (
+        <div className="flex items-center gap-0.5 border-b border-border/60 px-3 pt-2 overflow-x-auto">
+          {TABS.map(({ key: t, label }) => (
             <button
               key={t}
               type="button"
               onClick={() => setTab(t)}
               className={[
-                "relative rounded-t-md px-3 py-1.5 text-[12px] font-medium capitalize transition-colors",
+                "relative rounded-t-md px-3 py-1.5 text-[12px] font-medium transition-colors whitespace-nowrap",
                 tab === t
                   ? "text-foreground"
                   : "text-muted-foreground hover:text-foreground",
               ].join(" ")}
             >
-              {t}
+              {label}
               {tab === t && (
                 <motion.span
                   layoutId="registry-tab-indicator"
@@ -129,8 +144,29 @@ export function RegistryDetailDrawer({ item, onClose, username }: Props) {
               onAskDelete={() => setConfirmDelete(true)}
             />
           )}
+          {tab === "code" && (
+            <RegistryCodePreview
+              storagePath={item.latestStoragePath}
+              itemName={item.name}
+              version={item.latestVersionStr}
+            />
+          )}
+          {tab === "preview" && (
+            <RegistryLivePreview
+              storagePath={item.latestStoragePath}
+              itemName={item.name}
+            />
+          )}
           {tab === "versions" && (
             <VersionsTab itemId={item.id} versions={versions} />
+          )}
+          {tab === "installs" && (
+            <RegistryInstallsView
+              itemId={item.id}
+              itemName={item.name}
+              kind={item.kind}
+              installCount={item.installCount}
+            />
           )}
           {tab === "install" && <InstallTab item={item} />}
         </div>
@@ -145,6 +181,33 @@ export function RegistryDetailDrawer({ item, onClose, username }: Props) {
         )}
       </motion.aside>
     </>
+  );
+}
+
+// ── README sub-block (shown inside Overview) ────────────────
+function ReadmePanel({ storagePath }: { storagePath: string | null }) {
+  const url = storagePath ? registryTarballUrl(storagePath) : null;
+  const { data: entries, isLoading } = useTarball(url);
+  const readme = entries ? findReadme(entries) : null;
+
+  if (!storagePath) return null;
+  if (isLoading) {
+    return (
+      <section className="rounded-lg border border-border/60 bg-muted/10 p-4">
+        <SectionLabel icon={BookOpen}>README</SectionLabel>
+        <p className="mt-1 text-[11.5px] text-muted-foreground">Fetching…</p>
+      </section>
+    );
+  }
+  if (!readme || !readme.text) return null;
+
+  return (
+    <section className="rounded-lg border border-border/60 bg-muted/10 p-4">
+      <SectionLabel icon={BookOpen}>README</SectionLabel>
+      <div className="mt-1">
+        <MiniMarkdown source={readme.text} />
+      </div>
+    </section>
   );
 }
 
@@ -191,6 +254,8 @@ function OverviewTab({
           {item.description || <em className="italic text-muted-foreground">No description yet.</em>}
         </p>
       </section>
+
+      <ReadmePanel storagePath={item.latestStoragePath} />
 
       {item.tags.length > 0 && (
         <section>

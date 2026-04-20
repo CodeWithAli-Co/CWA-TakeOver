@@ -411,6 +411,43 @@ export async function logInstall(params: {
   });
 }
 
+// ── Installs for an item — powers the Installs tab ─────────────
+export interface InstallRow {
+  id: string;
+  version: string;
+  installedBy: string;
+  projectName: string | null;
+  machineId: string | null;
+  installedAt: string;
+}
+
+async function fetchInstalls(itemId: string): Promise<InstallRow[]> {
+  const { data, error } = await supabase
+    .from("registry_installs")
+    .select("id, version, installed_by, project_name, machine_id, installed_at")
+    .eq("item_id", itemId)
+    .order("installed_at", { ascending: false })
+    .limit(500);
+  if (error) return [];
+  return (data ?? []).map((r: any) => ({
+    id: r.id,
+    version: r.version,
+    installedBy: r.installed_by,
+    projectName: r.project_name ?? null,
+    machineId: r.machine_id ?? null,
+    installedAt: r.installed_at,
+  }));
+}
+
+export function useRegistryInstalls(itemId: string | null) {
+  return useQuery({
+    queryKey: ["registry", "installs", itemId],
+    queryFn: () => (itemId ? fetchInstalls(itemId) : Promise.resolve([] as InstallRow[])),
+    enabled: !!itemId,
+    staleTime: 30_000,
+  });
+}
+
 // ── CLI tokens (personal access tokens) ────────────────────────
 async function fetchTokens(owner: string): Promise<RegistryToken[]> {
   const { data, error } = await supabase
