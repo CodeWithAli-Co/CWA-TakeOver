@@ -655,6 +655,21 @@ export const Route = createRootRoute({
       };
     }, []);
 
+    // Public candidate-facing routes bypass the pin/login gate entirely.
+    // These URLs are shared with people outside the company (candidates
+    // clicking an email link) and must render without auth.
+    const publicPath = typeof window !== "undefined"
+      ? window.location.pathname
+      : "";
+    const isPublicRoute = publicPath.startsWith("/offer/accept/");
+    if (isPublicRoute) {
+      return (
+        <Suspense fallback={<RouteFallback />}>
+          <Outlet />
+        </Suspense>
+      );
+    }
+
     return (
       <>
         {pinCheck === "false" ? (

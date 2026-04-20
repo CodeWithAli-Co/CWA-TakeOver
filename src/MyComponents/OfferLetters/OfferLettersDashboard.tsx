@@ -27,6 +27,7 @@ import { ActiveUser } from "@/stores/query";
 import { draftOfferLetter, type OfferInput } from "./draftOffer";
 import { OfferLetterPDF } from "./OfferLetterPDF";
 import { pdf } from "@react-pdf/renderer";
+import { HiringActions } from "./HiringActions";
 
 // ── Defaults ───────────────────────────────────────────────────────
 
@@ -131,6 +132,11 @@ export function OfferLettersDashboard() {
   const [past, setPast] = useState<OfferRow[]>([]);
   const [loadingPast, setLoadingPast] = useState(true);
   const [tableMissing, setTableMissing] = useState(false);
+  const [refreshTick, setRefreshTick] = useState(0);
+  // The saved row matching `currentId` — powers the HiringActions panel.
+  const currentSaved = currentId
+    ? (past.find((p: any) => p.id === currentId) as any) || null
+    : null;
 
   useEffect(() => {
     let cancelled = false;
@@ -161,7 +167,7 @@ export function OfferLettersDashboard() {
       setLoadingPast(false);
     })();
     return () => { cancelled = true; };
-  }, [currentId]);
+  }, [currentId, refreshTick]);
 
   const update = <K extends keyof OfferInput>(key: K, value: OfferInput[K]) =>
     setForm((f) => ({ ...f, [key]: value }));
@@ -785,7 +791,16 @@ export function OfferLettersDashboard() {
             )}
           </div>
           <ScrollArea className="flex-1">
-            <div className="mx-auto max-w-[760px] p-8">
+            <div className="mx-auto max-w-[760px] p-8 space-y-5">
+              {/* Hiring actions panel — shown once the offer has an id */}
+              {currentId && (
+                <HiringActions
+                  current={currentSaved}
+                  form={form}
+                  generatedBody={generated}
+                  onMutated={() => setRefreshTick((x) => x + 1)}
+                />
+              )}
               {!generated ? (
                 <div className="flex flex-col items-center justify-center py-24 text-center text-muted-foreground">
                   <div className="h-14 w-14 rounded-full border border-primary/30 bg-primary/10 flex items-center justify-center mb-4">

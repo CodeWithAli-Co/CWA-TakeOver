@@ -46,6 +46,9 @@ const ArabicLazyRouteImport = createFileRoute('/arabic')()
 const AnalyticsLazyRouteImport = createFileRoute('/analytics')()
 const IndexLazyRouteImport = createFileRoute('/')()
 const ClientIndexLazyRouteImport = createFileRoute('/client/')()
+const OfferAcceptTokenLazyRouteImport = createFileRoute(
+  '/offer/accept/$token',
+)()
 
 const TrainingplanLazyRoute = TrainingplanLazyRouteImport.update({
   id: '/trainingplan',
@@ -211,6 +214,13 @@ const ClientIndexLazyRoute = ClientIndexLazyRouteImport.update({
   path: '/client/',
   getParentRoute: () => rootRouteImport,
 } as any).lazy(() => import('./routes/client/index.lazy').then((d) => d.Route))
+const OfferAcceptTokenLazyRoute = OfferAcceptTokenLazyRouteImport.update({
+  id: '/offer/accept/$token',
+  path: '/offer/accept/$token',
+  getParentRoute: () => rootRouteImport,
+} as any).lazy(() =>
+  import('./routes/offer.accept.$token.lazy').then((d) => d.Route),
+)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexLazyRoute
@@ -245,6 +255,7 @@ export interface FileRoutesByFullPath {
   '/timetracking': typeof TimetrackingLazyRoute
   '/trainingplan': typeof TrainingplanLazyRoute
   '/client/': typeof ClientIndexLazyRoute
+  '/offer/accept/$token': typeof OfferAcceptTokenLazyRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexLazyRoute
@@ -279,6 +290,7 @@ export interface FileRoutesByTo {
   '/timetracking': typeof TimetrackingLazyRoute
   '/trainingplan': typeof TrainingplanLazyRoute
   '/client': typeof ClientIndexLazyRoute
+  '/offer/accept/$token': typeof OfferAcceptTokenLazyRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -314,6 +326,7 @@ export interface FileRoutesById {
   '/timetracking': typeof TimetrackingLazyRoute
   '/trainingplan': typeof TrainingplanLazyRoute
   '/client/': typeof ClientIndexLazyRoute
+  '/offer/accept/$token': typeof OfferAcceptTokenLazyRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -350,6 +363,7 @@ export interface FileRouteTypes {
     | '/timetracking'
     | '/trainingplan'
     | '/client/'
+    | '/offer/accept/$token'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -384,6 +398,7 @@ export interface FileRouteTypes {
     | '/timetracking'
     | '/trainingplan'
     | '/client'
+    | '/offer/accept/$token'
   id:
     | '__root__'
     | '/'
@@ -418,6 +433,7 @@ export interface FileRouteTypes {
     | '/timetracking'
     | '/trainingplan'
     | '/client/'
+    | '/offer/accept/$token'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -453,6 +469,7 @@ export interface RootRouteChildren {
   TimetrackingLazyRoute: typeof TimetrackingLazyRoute
   TrainingplanLazyRoute: typeof TrainingplanLazyRoute
   ClientIndexLazyRoute: typeof ClientIndexLazyRoute
+  OfferAcceptTokenLazyRoute: typeof OfferAcceptTokenLazyRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -681,6 +698,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ClientIndexLazyRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/offer/accept/$token': {
+      id: '/offer/accept/$token'
+      path: '/offer/accept/$token'
+      fullPath: '/offer/accept/$token'
+      preLoaderRoute: typeof OfferAcceptTokenLazyRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -717,6 +741,7 @@ const rootRouteChildren: RootRouteChildren = {
   TimetrackingLazyRoute: TimetrackingLazyRoute,
   TrainingplanLazyRoute: TrainingplanLazyRoute,
   ClientIndexLazyRoute: ClientIndexLazyRoute,
+  OfferAcceptTokenLazyRoute: OfferAcceptTokenLazyRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
