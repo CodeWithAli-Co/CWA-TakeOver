@@ -56,6 +56,89 @@ const RTC_CONFIG: RTCConfiguration = {
   iceServers: [{ urls: "stun:stun.l.google.com:19302" }],
 };
 
+/**
+ * Aggressive quality tuning for video senders.
+ *
+ *   Screen share   → 4K60, maintain-resolution (text-heavy content).
+ *                    Cap ~20 Mbps so we don't saturate the uplink.
+ *   Camera video   → 4K60 if the hardware supports it, otherwise the
+ *                    browser downshifts. Cap ~12 Mbps; motion priority.
+ *
+ * Real-world sustained rates will be well below these caps — the
+ * browser's congestion controller (GCC) owns the throttle. These
+ * numbers are the ceiling, not the target.
+ *
+ * Codec preference: VP9 > H.264 > VP8 for screen (sharp text),
+ *                   H.264 > VP9 > VP8 for camera (HW accel everywhere).
+ * AV1 is skipped — encoder cost on Chromium is still too high for 60fps.
+ */
+function tuneVideoSender(
+  sender: RTCRtpSender,
+  kind: "camera" | "screen",
+): void {
+  try {
+    const params = sender.getParameters();
+    if (!params.encodings || params.encodings.length === 0) {
+      params.encodings = [{}];
+    }
+    const maxBitrate = kind === "screen" ? 20_000_000 : 12_000_000;
+    for (const enc of params.encodings) {
+      enc.maxBitrate = maxBitrate;
+      enc.maxFramerate = 60;
+      (enc as any).networkPriority = "high";
+      (enc as any).priority = "high";
+    }
+    // Trade off resolution vs framerate under pressure. Screen = keep
+    // pixels (text stays legible). Camera = keep motion (faces move).
+    (params as any).degradationPreference =
+      kind === "screen" ? "maintain-resolution" : "maintain-framerate";
+    void sender.setParameters(params);
+  } catch { /* noop — unsupported in some engines */ }
+
+  // Prefer a codec that handles the load well. setCodecPreferences lives
+  // on the transceiver; find it from the sender.
+  try {
+    const transceiver = (sender as any).transport
+      ? null
+      : (function findTransceiver() {
+          // RTCPeerConnection.getTransceivers() is the real source.
+          // We don't have the pc here, so we stash the transceiver on
+          // the sender when available — otherwise this is a no-op.
+          return (sender as any)._cwaTransceiver ?? null;
+        })();
+    if (transceiver && typeof transceiver.setCodecPreferences === "function") {
+      const caps = (RTCRtpSender as any).getCapabilities?.("video");
+      const codecs: RTCRtpCodecCapability[] = caps?.codecs ?? [];
+      if (codecs.length > 0) {
+        const want = kind === "screen"
+          ? ["video/VP9", "video/H264", "video/VP8"]
+          : ["video/H264", "video/VP9", "video/VP8"];
+        const ordered = [
+          ...want.flatMap((m) => codecs.filter((c) => c.mimeType === m)),
+          ...codecs.filter((c) => !want.includes(c.mimeType)),
+        ];
+        transceiver.setCodecPreferences(ordered);
+      }
+    }
+  } catch { /* noop */ }
+}
+
+function tuneAudioSender(sender: RTCRtpSender): void {
+  try {
+    const params = sender.getParameters();
+    if (!params.encodings || params.encodings.length === 0) {
+      params.encodings = [{}];
+    }
+    for (const enc of params.encodings) {
+      // 128 kbps stereo Opus is music-grade; plenty of headroom for voice.
+      enc.maxBitrate = 128_000;
+      (enc as any).networkPriority = "high";
+      (enc as any).priority = "high";
+    }
+    void sender.setParameters(params);
+  } catch { /* noop */ }
+}
+
 export interface UseHuddleOpts {
   group: string;             // which channel's huddle
   username: string;          // presence key
@@ -163,26 +246,11 @@ export function useHuddle({ group, username, joined, muted, camera }: UseHuddleO
     if (local) {
       for (const track of local.getTracks()) {
         const sender = pc.addTrack(track, local);
-        // Bump the max bitrate so we're not stuck at the browser's
-        // conservative default of ~500kbps. 2.5Mbps for video, 64kbps
-        // for audio — matches Meet/Zoom defaults.
-        try {
-          const params = sender.getParameters();
-          if (!params.encodings || params.encodings.length === 0) {
-            params.encodings = [{}];
-          }
-          for (const enc of params.encodings) {
-            if (track.kind === "video") {
-              enc.maxBitrate = 2_500_000;
-              enc.maxFramerate = 30;
-            } else if (track.kind === "audio") {
-              enc.maxBitrate = 64_000;
-              // Stereo music-style audio for clearer voices.
-              (enc as any).networkPriority = "high";
-            }
-          }
-          void sender.setParameters(params);
-        } catch { /* noop */ }
+        // Stash the transceiver so tuneVideoSender can set codec prefs.
+        const tx = pc.getTransceivers().find((t) => t.sender === sender);
+        if (tx) (sender as any)._cwaTransceiver = tx;
+        if (track.kind === "video") tuneVideoSender(sender, "camera");
+        else if (track.kind === "audio") tuneAudioSender(sender);
       }
     }
     // Attach existing screen share if active.
@@ -190,7 +258,12 @@ export function useHuddle({ group, username, joined, muted, camera }: UseHuddleO
     if (screen) {
       const senders: RTCRtpSender[] = [];
       for (const track of screen.getTracks()) {
-        senders.push(pc.addTrack(track, screen));
+        const sender = pc.addTrack(track, screen);
+        const tx = pc.getTransceivers().find((t) => t.sender === sender);
+        if (tx) (sender as any)._cwaTransceiver = tx;
+        if (track.kind === "video") tuneVideoSender(sender, "screen");
+        else if (track.kind === "audio") tuneAudioSender(sender);
+        senders.push(sender);
       }
       screenSenderMapRef.current.set(peerId, senders);
       // Let the new peer know which tracks are the screen share so
@@ -361,10 +434,14 @@ export function useHuddle({ group, username, joined, muted, camera }: UseHuddleO
     try {
       const screenStream = await navigator.mediaDevices.getDisplayMedia({
         video: {
-          // Sharp text + smooth UI — 1080p at 60fps if the source allows.
-          width: { ideal: 1920 },
-          height: { ideal: 1080 },
-          frameRate: { ideal: 30, max: 60 },
+          // 4K60 when the source + GPU can sustain it. `ideal` lets the
+          // browser downshift gracefully on weaker machines. The bitrate
+          // cap (20 Mbps, set in tuneVideoSender) is what actually
+          // governs on-the-wire quality — without it a 4K capture would
+          // be compressed down to ~2.5 Mbps and look worse than 1080p.
+          width: { ideal: 3840, max: 3840 },
+          height: { ideal: 2160, max: 2160 },
+          frameRate: { ideal: 60, max: 60 },
         } as MediaTrackConstraints,
         // Include system audio when the browser supports it (Chromium
         // on Windows/ChromeOS). Falls through silently elsewhere.
@@ -391,7 +468,12 @@ export function useHuddle({ group, username, joined, muted, camera }: UseHuddleO
       for (const [peerId, pc] of connectionsRef.current.entries()) {
         const senders: RTCRtpSender[] = [];
         for (const track of routedStream.getTracks()) {
-          senders.push(pc.addTrack(track, routedStream));
+          const sender = pc.addTrack(track, routedStream);
+          const tx = pc.getTransceivers().find((t) => t.sender === sender);
+          if (tx) (sender as any)._cwaTransceiver = tx;
+          if (track.kind === "video") tuneVideoSender(sender, "screen");
+          else if (track.kind === "audio") tuneAudioSender(sender);
+          senders.push(sender);
         }
         screenSenderMapRef.current.set(peerId, senders);
       }
@@ -463,17 +545,16 @@ export function useHuddle({ group, username, joined, muted, camera }: UseHuddleO
         return;
       }
 
-      // 2. Try video. Optional — some users have no camera. Target 720p
-      // @ 30fps with mid-quality so small windows/crappy networks are
-      // handled gracefully.
+      // 2. Try video. Optional — some users have no camera. Ask for 4K60
+      // ideally; the browser downshifts to the camera's real max (most
+      // consumer webcams cap at 1080p, some pro/phone cams hit 4K).
       let videoStream: MediaStream | null = null;
       try {
         videoStream = await navigator.mediaDevices.getUserMedia({
           video: {
-            // 1080p on capable cameras, graceful downshift via `ideal`.
-            width: { ideal: 1920 },
-            height: { ideal: 1080 },
-            frameRate: { ideal: 30, max: 60 },
+            width: { ideal: 3840, max: 3840 },
+            height: { ideal: 2160, max: 2160 },
+            frameRate: { ideal: 60, max: 60 },
             aspectRatio: { ideal: 16 / 9 },
             // facingMode biased toward front camera on mobile.
             facingMode: "user",
