@@ -1,186 +1,171 @@
-# Offer-letter email send — setup
+# Email send — setup guide
 
-The **Send** button on the offer-letters dashboard calls a Supabase
-Edge Function named `send-offer-email`. The function holds the Resend
-API key server-side (never shipped to the client) and emails the
-candidate a branded HTML message with the PDF attached + the signed
-accept-link URL.
-
-## Prerequisites
-
-1. **Resend account** — https://resend.com. Free tier is fine.
-2. **Verified sending domain** on Resend (e.g. `hire.codewithali.com`).
-   Takes ~10 minutes — DNS TXT records. Without this, emails will go
-   to spam or be rejected.
-3. **Supabase CLI** installed locally: `bun add -g supabase` or
-   `npm i -g supabase`.
-
-## Step 1 — project secrets
-
-In your Supabase dashboard → Project Settings → Edge Functions → Secrets:
+Transactional email from Takeover flows through the **cwa_takeover
+Next.js website** (deployed on Vercel). The website is the only
+process that holds the Resend API key. Takeover authenticates each
+request to the website via an HMAC-SHA256 signature — **no Redis,
+no token storage, no extra infrastructure**.
 
 ```
-RESEND_API_KEY=re_xxxxxxxxxxxx
-EMAIL_FROM=Hiring at CodeWithAli <hiring@hire.codewithali.com>
+┌─────────────┐                              ┌─────────────────────┐
+│ Takeover    │   POST /api/email/offer-letter ▶  cwa_takeover     │
+│ (Tauri)     │   Authorization: Bearer <sig>     (Next.js + Hono) │
+│             │   timestamp: 2026-...             on Vercel        │
+│             │   body: OfferLetterParams      │                    │
+│             │                                │  ┌─ HMAC verify
+│             │                                │  └─ Resend
+└─────────────┘                                └────────────────────┘
+
+Both sides share EMAIL_HMAC_SECRET. The signature is:
+  sig = HMAC-SHA256(secret, timestamp + ":" + sha256(body))
 ```
 
-`EMAIL_FROM` must be on a domain Resend has verified. The display name
-is optional but recommended.
+The signature covers the **timestamp + the exact body bytes**,
+so:
+- Replaying a captured request after the 5-minute window is rejected
+  on freshness.
+- Tampering with any byte of the body (even within the window)
+  invalidates the sig.
+- No storage means no cleanup, no TTLs, no rate-limit considerations
+  on a Redis tier.
 
-## Step 2 — create the Edge Function
+---
 
-From the repo root:
+## 1. Generate a shared HMAC secret
+
+The same value goes on both sides. Generate any way you like — must
+be at least 32 chars. Easiest:
 
 ```bash
-supabase functions new send-offer-email
+# macOS / Linux / Git Bash:
+openssl rand -hex 32
+
+# PowerShell:
+[BitConverter]::ToString([byte[]] (1..32 | ForEach { Get-Random -Max 256 })).Replace("-","").ToLower()
 ```
 
-Replace the generated `supabase/functions/send-offer-email/index.ts` with:
+Either gives you a 64-char hex string like:
+`8a1d5e3fa9b2c0...` — keep it somewhere safe; you'll paste it
+twice (once into Vercel, once into your local Takeover .env).
 
-```ts
-import { serve } from "https://deno.land/std@0.224.0/http/server.ts";
+## 2. Resend (~3 minutes)
 
-const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY");
-const EMAIL_FROM = Deno.env.get("EMAIL_FROM") ?? "Hiring <hiring@example.com>";
+1. Sign up at [resend.com](https://resend.com)
+2. Add a domain (`codewithali.com` etc.) and complete DNS verification
+3. Dashboard → API Keys → Create → copy the `re_...` key
 
-const CORS = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-  "Access-Control-Allow-Methods": "POST, OPTIONS",
-};
+## 3. cwa_takeover website env vars (Vercel)
 
-interface Body {
-  to: string;
-  candidateName: string;
-  positionTitle: string;
-  employerLegalName: string;
-  brand: "codeWithAli" | "simplicity";
-  acceptUrl: string;
-  pdfBase64: string;
-  pdfName: string;
-}
+Vercel dashboard → cwa_takeover → Settings → Environment Variables.
+Add these two, scoped to **Production + Preview + Development**:
 
-const BRAND_COLORS = {
-  codeWithAli: { bg: "#DC2626", label: "CodeWithAli" },
-  simplicity: { bg: "#0D9488", label: "Simplicity" },
-};
+- `EMAIL_HMAC_SECRET` → the 64-char hex from step 1
+- `RESEND_API_KEY`    → your Resend `re_...` key
 
-serve(async (req) => {
-  if (req.method === "OPTIONS") return new Response("ok", { headers: CORS });
-  if (!RESEND_API_KEY) {
-    return new Response(JSON.stringify({ error: "RESEND_API_KEY not set" }), {
-      status: 500,
-      headers: { ...CORS, "content-type": "application/json" },
-    });
-  }
-  try {
-    const body = (await req.json()) as Body;
-    const brand = BRAND_COLORS[body.brand] ?? BRAND_COLORS.codeWithAli;
+Then **redeploy** so the new env takes effect: Deployments tab →
+latest deployment → ⋮ → Redeploy.
 
-    const html = `
-<!doctype html>
-<html><body style="font-family:system-ui,-apple-system,sans-serif;background:#f5f5f7;margin:0;padding:24px;">
-  <table role="presentation" width="100%" style="max-width:560px;margin:0 auto;background:#fff;border-radius:12px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,0.06);">
-    <tr><td style="height:6px;background:${brand.bg};"></td></tr>
-    <tr><td style="padding:28px 28px 8px;">
-      <div style="font-family:Helvetica,Arial,sans-serif;font-weight:700;font-size:20px;color:${brand.bg};">
-        ${body.employerLegalName}
-      </div>
-      <div style="font-size:11px;text-transform:uppercase;letter-spacing:0.15em;color:#6b7280;margin-top:2px;">
-        ${brand.label} · Employment offer
-      </div>
-    </td></tr>
-    <tr><td style="padding:18px 28px 6px;font-size:15px;line-height:1.6;color:#111;">
-      <p>Hi ${escapeHtml(body.candidateName.split(" ")[0] || body.candidateName)},</p>
-      <p>We're excited to extend an offer for the <b>${escapeHtml(body.positionTitle)}</b> role at ${escapeHtml(body.employerLegalName)}. The full offer letter is attached as a PDF.</p>
-      <p>When you're ready, click the button below to review and sign:</p>
-    </td></tr>
-    <tr><td style="padding:8px 28px 28px;">
-      <a href="${body.acceptUrl}" style="display:inline-block;padding:12px 22px;background:${brand.bg};color:#fff;text-decoration:none;font-weight:600;border-radius:8px;font-size:14px;">Review & sign offer →</a>
-      <p style="font-size:12px;color:#6b7280;margin-top:16px;">Or paste this URL into your browser:<br/><a href="${body.acceptUrl}" style="color:${brand.bg};word-break:break-all;">${body.acceptUrl}</a></p>
-    </td></tr>
-    <tr><td style="padding:16px 28px;background:#f9fafb;font-size:11px;color:#6b7280;border-top:1px solid #e5e7eb;">
-      Sent by ${escapeHtml(body.employerLegalName)}. If you weren't expecting this, please ignore this email.
-    </td></tr>
-  </table>
-</body></html>`.trim();
-
-    const resendRes = await fetch("https://api.resend.com/emails", {
-      method: "POST",
-      headers: {
-        "Authorization": `Bearer ${RESEND_API_KEY}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        from: EMAIL_FROM,
-        to: [body.to],
-        subject: `Offer for ${body.positionTitle} — ${body.employerLegalName}`,
-        html,
-        attachments: [
-          {
-            filename: body.pdfName,
-            content: body.pdfBase64,
-          },
-        ],
-      }),
-    });
-
-    if (!resendRes.ok) {
-      const txt = await resendRes.text();
-      return new Response(JSON.stringify({ error: `Resend ${resendRes.status}: ${txt}` }), {
-        status: 502,
-        headers: { ...CORS, "content-type": "application/json" },
-      });
-    }
-    const data = await resendRes.json();
-    return new Response(JSON.stringify({ ok: true, id: data?.id }), {
-      headers: { ...CORS, "content-type": "application/json" },
-    });
-  } catch (err) {
-    return new Response(JSON.stringify({ error: String(err) }), {
-      status: 500,
-      headers: { ...CORS, "content-type": "application/json" },
-    });
-  }
-});
-
-function escapeHtml(s: string): string {
-  return s
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&#039;");
-}
-```
-
-## Step 3 — deploy
+Verify the route:
 
 ```bash
-supabase functions deploy send-offer-email --no-verify-jwt
+curl -i https://takeover.codewithali.com/api/email/offer-letter
+# 405 Method Not Allowed (GET not supported)  ← route is live
+
+curl -i -X POST https://takeover.codewithali.com/api/email/offer-letter \
+  -H "Authorization: Bearer 0000000000000000000000000000000000000000000000000000000000000000" \
+  -H "timestamp: 2026-04-20T21:00:00.000Z" \
+  -H "Content-Type: application/json" \
+  -d "{}"
+# 401  {"message":"Invalid signature ..."}  ← HMAC layer working
 ```
 
-`--no-verify-jwt` is important — the function is called from the
-authenticated app with the anon key, and we don't need JWT validation
-for this flow.
+## 4. Takeover (desktop) env vars
 
-## Step 4 — test
+Add to `CWA-Manager/.env`:
 
-In the offer-letters dashboard:
+```bash
+VITE_TAKEOVER_SITE_URL="https://takeover.codewithali.com"
+VITE_EMAIL_HMAC_SECRET="<paste the same 64-char hex from step 1>"
+```
 
-1. Save a draft.
-2. Paste a test email (your own) in the **Email to candidate** row.
-3. Click **Send**.
-4. You should receive the branded email with the PDF attached within
-   a few seconds.
-5. Clicking the **Review & sign offer** button opens `/offer/accept/{token}`.
+Restart `bun run tauri dev` so Vite picks up the new env.
+
+## 5. Send a test email
+
+Open Takeover → Offers → create or open an offer letter → enter your
+own email → Send. You should see:
+
+```
+✔ Sent to you@example.com.
+```
+
+The Resend dashboard's Activity tab should show the email within
+~2 seconds.
+
+---
 
 ## Troubleshooting
 
-- `Edge function 'send-offer-email' isn't deployed` → run the deploy command above.
-- Email arrives but is in spam → make sure your sending domain is
-  verified on Resend (SPF + DKIM + DMARC records).
-- Resend rejects with "from not allowed" → the `EMAIL_FROM` address
-  must be on a verified domain.
-- Status never flips to `sent` → the update is ignored if RLS policy
-  rejects anon UPDATE. Already handled in the phase-2 migration.
+### `401 Invalid signature`
+The body or timestamp got tampered between sign and send, OR the
+secrets don't match between the two repos. Recheck both .env values
+are identical.
+
+### `401 timestamp is outside the ±300s window`
+Your machine's clock is off by more than 5 minutes. Sync via Windows
+Settings → Date & Time → Sync now.
+
+### `EMAIL_HMAC_SECRET is missing or too short`
+The website env doesn't have it set, or the value is shorter than
+32 chars. Use `openssl rand -hex 32` to get a proper one and re-add
+it on Vercel.
+
+### `502 Resend rejected the request`
+Check:
+- `RESEND_API_KEY` is correct on Vercel.
+- The `from` domain is verified in Resend.
+- Recipient isn't blacklisted.
+
+---
+
+## Why HMAC instead of Redis bearer?
+
+We started with a per-request bearer token stored in Redis with a
+24-hour TTL. That worked but added an external dependency that
+turned out to be overkill for the use case:
+
+- **Browser-compatible**: Web Crypto's `crypto.subtle.sign` works
+  natively in the Tauri webview. No need for Redis to bridge a TCP
+  socket the browser can't open.
+- **Stateless**: server doesn't store anything; verification is pure
+  computation. No Redis tier to maintain, no TTL bookkeeping, no
+  cold-start TCP overhead from serverless.
+- **Same security guarantees**: timestamp window prevents replay,
+  body-hash inclusion prevents tampering, constant-time compare
+  prevents timing attacks. The Redis approach added single-use,
+  but for a HTTPS-protected API where you're the only client, that's
+  a small marginal benefit at significant infra cost.
+
+If you ever want stronger replay protection (e.g., a public API where
+you can't trust the network), add a per-request nonce stored
+server-side — but at that point you've grown out of "CEO's email
+helper" and into "real public API". This is the right architecture
+for now.
+
+---
+
+## Security notes
+
+- **Constant-time HMAC compare** prevents timing attacks on the
+  signature.
+- **5-minute timestamp window** (configurable via
+  `EMAIL_TIMESTAMP_WINDOW_SECONDS`) is generous for clock drift but
+  tight against replay.
+- **Body bytes are hashed**, so tampering with attachment, recipient,
+  or any other field invalidates the sig — even a single-byte change.
+- **Secret rotation**: change `EMAIL_HMAC_SECRET` on Vercel + in
+  Takeover's .env, redeploy + restart Takeover, and you're rotated.
+  All in-flight requests fail mid-flight (acceptable; just retry).
+- **Secret must be ≥ 32 chars**. The route refuses to start
+  validating shorter secrets — better to fail early than ship weak
+  auth.

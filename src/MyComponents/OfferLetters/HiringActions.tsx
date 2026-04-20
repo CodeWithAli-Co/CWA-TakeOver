@@ -2,7 +2,8 @@
  * HiringActions.tsx — Panel that appears alongside a saved offer
  * showing the full hiring flow beyond the letter itself:
  *   · Copy the candidate's accept link
- *   · Send the offer via email (Resend through a Supabase Edge Function)
+ *   · Send the offer via email (proxied through cwa_takeover website →
+ *     Resend; Redis bearer + timestamp for auth)
  *   · Generate + export companion agreements (ICA, Employment, NDA, IP)
  *   · Convert an accepted offer into an app_users employee record
  */
@@ -20,6 +21,7 @@ import {
   draftCompanion, DOC_META, type CompanionDocType,
 } from "./draftCompanion";
 import type { OfferInput } from "./draftOffer";
+import { sendOfferLetterEmail, blobToBase64 as pdfBlobToBase64 } from "./sendEmailViaTakeover";
 
 interface CurrentOffer {
   id: string;
@@ -144,8 +146,8 @@ function SendEmailRow({
     setResult(null);
 
     try {
-      // Render the PDF to base64 so the edge function can attach it.
-      const blob = await pdf(
+      // 1. Render the PDF once; base64-encode for the email attachment.
+      const pdfBlob = await pdf(
         <OfferLetterPDF
           brand={form.brand}
           employerLegalName={form.employerLegalName}
@@ -156,28 +158,50 @@ function SendEmailRow({
           body={generatedBody}
         />,
       ).toBlob();
-      const base64 = await blobToBase64(blob);
+      const pdfBase64 = await pdfBlobToBase64(pdfBlob);
 
+      // 2. Pick the from-address based on brand. Both must be verified
+      //    senders in Resend before they'll actually deliver.
+      const brand = form.brand ?? "codeWithAli";
+      const fromAddress =
+        brand === "simplicityFunds"
+          ? { name: "Simplicity Funds", email: "hire@simplicityfunds.com" }
+          : { name: "CodeWithAli",      email: "hire@codewithali.com"     };
+
+      // 3. Build the prose body — the React Email template on the
+      //    server splits this into paragraphs automatically. We pass
+      //    a short personal note here; the template adds the
+      //    greeting, position line, and accept-button around it.
+      const proseBody = [
+        `The offer letter is attached. Take your time reviewing —`,
+        `it covers compensation, start date, and the role expectations.`,
+      ].join(" ");
+
+      // 4. Send via the cwa_takeover website proxy. Server renders
+      //    the React Email template; we just ship structured data.
       const acceptUrl = buildAcceptUrl(current.acceptance_token);
-
-      // Supabase Edge Function is the right place for the Resend API
-      // key — never ship it to the client bundle.
-      const { data, error } = await supabase.functions.invoke("send-offer-email", {
-        body: {
-          to: email,
-          candidateName: form.candidateName,
-          positionTitle: form.positionTitle,
-          employerLegalName: form.employerLegalName,
-          brand: form.brand ?? "codeWithAli",
-          acceptUrl,
-          pdfBase64: base64,
-          pdfName: `Offer letter - ${form.candidateName}.pdf`,
+      const result = await sendOfferLetterEmail({
+        from: fromAddress,
+        to: email,
+        subject: `Your offer from ${form.employerLegalName}`,
+        body: proseBody,
+        candidateName: form.candidateName,
+        positionTitle: form.positionTitle,
+        employerLegalName: form.employerLegalName,
+        brand,
+        acceptUrl,
+        attachment: {
+          filename: `Offer letter - ${form.candidateName}.pdf`,
+          contentBase64: pdfBase64,
+          contentType: "application/pdf",
         },
       });
 
-      if (error) throw error;
+      if (!result.ok) {
+        throw new Error(result.error ?? "Unknown send failure");
+      }
 
-      // Update the row to record emailed_at + candidate_email
+      // 5. Update the offer row to record emailed_at + candidate_email.
       await supabase
         .from("offer_letters")
         .update({
@@ -193,8 +217,8 @@ function SendEmailRow({
       setIsError(true);
       const msg = err instanceof Error ? err.message : String(err);
       setResult(
-        msg.includes("Function not found") || msg.includes("404")
-          ? "Edge function 'send-offer-email' isn't deployed. See docs/EMAIL_SEND_SETUP.md."
+        msg.includes("VITE_TAKEOVER_SITE_URL") || msg.includes("VITE_UPSTASH")
+          ? `${msg} See docs/EMAIL_SEND_SETUP.md for the env-var setup.`
           : `Send failed: ${msg}`,
       );
     } finally {
@@ -243,18 +267,6 @@ function SendEmailRow({
       )}
     </Row>
   );
-}
-
-async function blobToBase64(blob: Blob): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const r = new FileReader();
-    r.onload = () => {
-      const s = r.result as string;
-      resolve(s.split(",")[1] ?? "");
-    };
-    r.onerror = reject;
-    r.readAsDataURL(blob);
-  });
 }
 
 // ── 3. Companion docs (ICA / Employment / NDA / IP) ────────────────
