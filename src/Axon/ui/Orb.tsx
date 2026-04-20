@@ -12,9 +12,10 @@
 import { useEffect, useRef } from "react";
 import { useAxon } from "../AxonProvider";
 
-const ORB_SIZE = 96;
-// Room for orbiting particles to live outside the sphere. No rectangular halo.
-const PADDING = 28;
+// Orb dimensions — smaller footprint so it doesn't dominate the
+// screen. The particle ring still has room to orbit via PADDING.
+const ORB_SIZE = 68;
+const PADDING = 20;
 
 function parseRgb(raw: string): [number, number, number] {
   const parts = raw.split(",").map((n) => parseInt(n.trim(), 10));

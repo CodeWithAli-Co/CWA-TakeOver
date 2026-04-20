@@ -60,6 +60,11 @@ export interface VoiceInputConfig {
    * military-style "stand down" is the primary.
    */
   standDownPhrases?: string[];
+  /**
+   * Forced sleep — overrides everything. No wake word, no resume
+   * phrase, no command dispatch. The user toggles this from Settings.
+   */
+  forceSleep?: boolean;
 }
 
 type SpeechRecognitionLike = any;
@@ -336,6 +341,13 @@ export class VoiceInput {
   private handleFinal(text: string, confidence: number) {
     const now = Date.now();
     const n = norm(text);
+
+    // Forced sleep — absolute silence. No wake, no resume, no interrupt,
+    // no command dispatch. User must toggle off in Settings to re-enable.
+    if (this.config.forceSleep) {
+      if (this.state !== "dormant") this.setState("dormant");
+      return;
+    }
 
     // Interrupt phrases fire EVEN when muted (while AXON is speaking).
     // That's the whole point of an interrupt.

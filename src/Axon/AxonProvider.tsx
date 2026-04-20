@@ -441,6 +441,7 @@ export function AxonProvider({ children }: { children: React.ReactNode }) {
         dispatchCooldownMs: 1400,
         continuousAfterWake: settings.continuousAfterWake,
         standDownPhrases: settings.standDownPhrases,
+        forceSleep: settings.forceSleep,
       },
       {
         onStart: () => {
@@ -511,6 +512,29 @@ export function AxonProvider({ children }: { children: React.ReactNode }) {
     speakLocal,
     submitCommand,
     appendTurn,
+  ]);
+
+  // ── live config patches (no recognizer restart) ──────────────────
+  // Some settings can be hot-swapped on the running VoiceInput instance.
+  // Anything in here MUST NOT be in the constructor effect's dep list,
+  // or we'd needlessly tear down + restart recognition on every toggle.
+  useEffect(() => {
+    voiceInRef.current?.updateConfig({
+      forceSleep: settings.forceSleep,
+      continuousAfterWake: settings.continuousAfterWake,
+      standDownPhrases: settings.standDownPhrases,
+      interruptPhrases: settings.interruptPhrases,
+    });
+    // If forced sleep just turned ON and we're not already dormant,
+    // drop to dormant immediately so the orb + state reflect it.
+    if (settings.forceSleep && voiceInRef.current?.getState() !== "dormant") {
+      voiceInRef.current?.setState("dormant");
+    }
+  }, [
+    settings.forceSleep,
+    settings.continuousAfterWake,
+    settings.standDownPhrases,
+    settings.interruptPhrases,
   ]);
 
   // ── voice output wiring ─────────────────────────────────────────

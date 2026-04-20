@@ -81,6 +81,54 @@ export function AxonSettingsPane() {
         <div style={{ fontSize: 11, color: "var(--axon-muted)", marginTop: -4, marginBottom: 8 }}>
           When on, mutating actions report what they'd do without doing it.
         </div>
+
+        {/* Forced-sleep kill switch — overrides wake word + resume phrases */}
+        <div
+          className="axon-settings-row"
+          style={{
+            borderRadius: 8,
+            padding: "10px 12px",
+            marginTop: 6,
+            background: settings.forceSleep
+              ? "hsl(210 40% 55% / 0.12)"
+              : "transparent",
+            border: `1px solid ${settings.forceSleep ? "hsl(210 40% 55% / 0.35)" : "hsl(0 0% 50% / 0.15)"}`,
+          }}
+        >
+          <div style={{ display: "flex", flexDirection: "column", flex: 1, gap: 3 }}>
+            <span style={{ display: "flex", alignItems: "center", gap: 6 }}>
+              <span style={{ fontSize: 13 }}>
+                {settings.forceSleep ? "😴 Forced sleep" : "Forced sleep"}
+              </span>
+              {settings.forceSleep && (
+                <span
+                  style={{
+                    fontSize: 9.5,
+                    fontWeight: 700,
+                    letterSpacing: "0.08em",
+                    color: "hsl(210 60% 72%)",
+                    padding: "1px 6px",
+                    borderRadius: 4,
+                    background: "hsl(210 40% 55% / 0.18)",
+                  }}
+                >
+                  ACTIVE
+                </span>
+              )}
+            </span>
+            <span style={{ fontSize: 11, color: "var(--axon-muted)", lineHeight: 1.45 }}>
+              Total silence. Wake words, resume phrases, and proactive speech
+              are all ignored until you toggle this off. Use when you need
+              guaranteed quiet.
+            </span>
+          </div>
+          <input
+            className="axon-switch"
+            type="checkbox"
+            checked={!!settings.forceSleep}
+            onChange={(e) => updateSettings({ forceSleep: e.target.checked })}
+          />
+        </div>
       </div>
 
       {/* Autonomy — how much Axon does on its own vs. asking permission */}

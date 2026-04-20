@@ -14,7 +14,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import {
   Mic, MicOff, Video, VideoOff, PhoneOff, Volume2, AlertCircle,
-  Monitor, MonitorOff, Maximize2, Minimize2,
+  Monitor, MonitorOff, Maximize2, Minimize2, ChevronDown, RefreshCw,
 } from "lucide-react";
 import type { HuddlePeer } from "./useHuddle";
 
@@ -108,17 +108,44 @@ export function HuddleBar({
   onLeave, error,
 }: Props) {
   const [expanded, setExpanded] = useState(false);
+  // Third display state — minimized to a small status pill at the
+  // bottom-right. Ignores drag offset + can't be dragged off-screen.
+  // Persisted so it survives route changes + reloads.
+  const [minimized, setMinimized] = useState<boolean>(() => {
+    try { return window.localStorage.getItem("cwa-huddle-minimized") === "1"; }
+    catch { return false; }
+  });
+  const persistMinimized = (v: boolean) => {
+    try { window.localStorage.setItem("cwa-huddle-minimized", v ? "1" : "0"); } catch { /* noop */ }
+  };
 
   // Persisted drag offset — remember where the user dragged the bar to.
+  // On mount we clamp it back into the visible viewport so a resize or
+  // stale value can't leave the panel floating out of reach.
   const [dragOffset, setDragOffset] = useState<{ x: number; y: number }>(() => {
     try {
       const raw = window.localStorage.getItem("cwa-huddle-offset");
-      if (raw) return JSON.parse(raw);
+      if (raw) {
+        const parsed = JSON.parse(raw) as { x: number; y: number };
+        // Clamp to current viewport. The panel is anchored at bottom:16
+        // right:16 with a 480px width, so x must be negative enough
+        // (leftward) to keep its left edge visible; same for y upward.
+        const maxLeft = -Math.max(0, window.innerWidth - 520);
+        const maxUp = -Math.max(0, window.innerHeight - 260);
+        return {
+          x: Math.min(0, Math.max(maxLeft, parsed.x || 0)),
+          y: Math.min(20, Math.max(maxUp, parsed.y || 0)),
+        };
+      }
     } catch { /* noop */ }
     return { x: 0, y: 0 };
   });
   const persistOffset = (o: { x: number; y: number }) => {
     try { window.localStorage.setItem("cwa-huddle-offset", JSON.stringify(o)); } catch { /* noop */ }
+  };
+  const resetOffset = () => {
+    setDragOffset({ x: 0, y: 0 });
+    persistOffset({ x: 0, y: 0 });
   };
 
   // Active-speaker detection: listen to every peer's audio via a single
@@ -141,6 +168,55 @@ export function HuddleBar({
   const hasScreenStage = primaryScreens.length > 0;
 
   const peopleCount = peers.length + 1;
+
+  // ── Minimized state — small pill, always in the corner ──
+  if (minimized) {
+    return (
+      <AnimatePresence>
+        <motion.button
+          key="huddle-pill"
+          type="button"
+          initial={{ y: 20, opacity: 0, scale: 0.9 }}
+          animate={{ y: 0, opacity: 1, scale: 1 }}
+          exit={{ y: 20, opacity: 0, scale: 0.9 }}
+          transition={{ duration: 0.18, ease: [0.16, 1, 0.3, 1] }}
+          onClick={() => {
+            setMinimized(false);
+            persistMinimized(false);
+          }}
+          className="fixed bottom-4 right-4 z-30 flex items-center gap-2 rounded-full border border-primary/40 bg-card/95 px-3.5 py-2 shadow-xl backdrop-blur-md hover:bg-card transition-colors cursor-pointer"
+          title="Restore huddle"
+          style={{ boxShadow: "0 12px 36px rgba(0,0,0,0.5)" }}
+        >
+          <span className="relative flex h-2 w-2">
+            <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-70" />
+            <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-400" />
+          </span>
+          <Volume2 className="h-3.5 w-3.5 text-primary" />
+          <span className="text-[11.5px] font-semibold text-foreground">
+            #{group}
+          </span>
+          <span className="text-[10.5px] text-muted-foreground">
+            {peopleCount} {peopleCount === 1 ? "person" : "ppl"}
+          </span>
+          {muted && <MicOff className="h-3 w-3 text-destructive" />}
+          {sharing && <Monitor className="h-3 w-3 text-blue-400" />}
+          {/* Close/leave button — stops propagation so it doesn't restore. */}
+          <span
+            role="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              onLeave();
+            }}
+            className="ml-1 flex h-5 w-5 items-center justify-center rounded-full text-muted-foreground hover:bg-destructive/20 hover:text-destructive transition-colors"
+            title="Leave huddle"
+          >
+            <PhoneOff className="h-2.5 w-2.5" />
+          </span>
+        </motion.button>
+      </AnimatePresence>
+    );
+  }
 
   return (
     <AnimatePresence>
@@ -215,11 +291,36 @@ export function HuddleBar({
             </span>
           )}
           <div className="ml-auto flex items-center gap-1">
+            {/* Reset-position — visible only when drag offset is non-zero. */}
+            {(dragOffset.x !== 0 || dragOffset.y !== 0) && !expanded && (
+              <button
+                type="button"
+                onClick={resetOffset}
+                className="rounded-md p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
+                title="Reset position"
+              >
+                <RefreshCw className="h-3.5 w-3.5" />
+              </button>
+            )}
+            {/* Minimize to pill. Disabled while expanded — collapse first. */}
+            <button
+              type="button"
+              onClick={() => {
+                if (expanded) setExpanded(false);
+                setMinimized(true);
+                persistMinimized(true);
+              }}
+              className="rounded-md p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
+              title="Minimize to pill"
+            >
+              <ChevronDown className="h-3.5 w-3.5" />
+            </button>
+            {/* Expand / collapse fullscreen */}
             <button
               type="button"
               onClick={() => setExpanded((v) => !v)}
               className="rounded-md p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
-              title={expanded ? "Collapse" : "Expand"}
+              title={expanded ? "Exit fullscreen" : "Fullscreen"}
             >
               {expanded ? <Minimize2 className="h-3.5 w-3.5" /> : <Maximize2 className="h-3.5 w-3.5" />}
             </button>

@@ -175,6 +175,13 @@ export interface AxonSettings {
    * Phrases that exit continuous mode ("stand down", "at ease", etc.).
    */
   standDownPhrases: string[];
+  /**
+   * Forced sleep — overrides everything. When true, Axon is fully dormant:
+   * no wake-word matching, no resume phrases, no proactive speech, no
+   * command dispatch. Must be toggled off via the Settings UI to use
+   * Axon again. Use when you need guaranteed silence.
+   */
+  forceSleep: boolean;
 }
 
 export const DEFAULT_SETTINGS: AxonSettings = {
@@ -208,6 +215,7 @@ export const DEFAULT_SETTINGS: AxonSettings = {
     "thanks axon",
     "at ease",
   ],
+  forceSleep: false,
 };
 
 // ── Automations ────────────────────────────────────────────────────
