@@ -108,7 +108,7 @@ function tuneVideoSender(
         })();
     if (transceiver && typeof transceiver.setCodecPreferences === "function") {
       const caps = (RTCRtpSender as any).getCapabilities?.("video");
-      const codecs: RTCRtpCodecCapability[] = caps?.codecs ?? [];
+      const codecs: Array<{ mimeType: string }> = caps?.codecs ?? [];
       if (codecs.length > 0) {
         const want = kind === "screen"
           ? ["video/VP9", "video/H264", "video/VP8"]
