@@ -25,6 +25,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import supabase from "@/MyComponents/supabase";
+import { QUALITY_PRESETS, type HuddleQuality, type QualitySpec } from "@/stores/huddleStore";
 
 export interface HuddlePeer {
   id: string;              // presence key (username)
@@ -57,41 +58,45 @@ const RTC_CONFIG: RTCConfiguration = {
 };
 
 /**
- * Aggressive quality tuning for video senders.
+ * Quality tuning for video senders, driven by the active preset.
  *
- *   Screen share   → 4K60, maintain-resolution (text-heavy content).
- *                    Cap ~20 Mbps so we don't saturate the uplink.
- *   Camera video   → 4K60 if the hardware supports it, otherwise the
- *                    browser downshifts. Cap ~12 Mbps; motion priority.
+ *   spec.bitrate      → encoder cap (the real lever; pixels alone
+ *                       don't make things sharp).
+ *   spec.framerate    → maxFramerate hint.
+ *   spec.degrade      → which axis collapses under CPU/network pressure.
+ *                       maintain-framerate = smooth scrolling, pixels
+ *                       drop. maintain-resolution = sharp text, frames
+ *                       drop (this is what made scrolling feel rough).
+ *   spec.hint         → contentHint: "motion" prefers smoothness,
+ *                       "detail" prefers clarity on static frames.
  *
- * Real-world sustained rates will be well below these caps — the
- * browser's congestion controller (GCC) owns the throttle. These
- * numbers are the ceiling, not the target.
- *
- * Codec preference: VP9 > H.264 > VP8 for screen (sharp text),
- *                   H.264 > VP9 > VP8 for camera (HW accel everywhere).
+ * Camera uses the same spec but a lower bitrate ceiling since faces
+ * compress well. Codec preference: VP9 > H.264 > VP8 for screen (sharp
+ * text), H.264 > VP9 > VP8 for camera (HW accel is near-universal).
  * AV1 is skipped — encoder cost on Chromium is still too high for 60fps.
  */
 function tuneVideoSender(
   sender: RTCRtpSender,
   kind: "camera" | "screen",
+  spec: QualitySpec,
 ): void {
   try {
     const params = sender.getParameters();
     if (!params.encodings || params.encodings.length === 0) {
       params.encodings = [{}];
     }
-    const maxBitrate = kind === "screen" ? 20_000_000 : 12_000_000;
+    // Camera gets 60% of the screen-share ceiling — same preset, less
+    // raw data (faces compress well, we don't need 20 Mbps).
+    const maxBitrate = kind === "screen"
+      ? spec.bitrate
+      : Math.round(spec.bitrate * 0.6);
     for (const enc of params.encodings) {
       enc.maxBitrate = maxBitrate;
-      enc.maxFramerate = 60;
+      enc.maxFramerate = spec.framerate;
       (enc as any).networkPriority = "high";
       (enc as any).priority = "high";
     }
-    // Trade off resolution vs framerate under pressure. Screen = keep
-    // pixels (text stays legible). Camera = keep motion (faces move).
-    (params as any).degradationPreference =
-      kind === "screen" ? "maintain-resolution" : "maintain-framerate";
+    (params as any).degradationPreference = spec.degrade;
     void sender.setParameters(params);
   } catch { /* noop — unsupported in some engines */ }
 
@@ -148,6 +153,8 @@ export interface UseHuddleOpts {
   muted: boolean;
   /** Local camera state */
   camera: boolean;
+  /** Video quality preset. Defaults to "smooth". */
+  quality?: HuddleQuality;
 }
 
 export interface UseHuddleResult {
@@ -172,7 +179,12 @@ interface PeerMeta {
 }
 const peerMetaMap = new WeakMap<RTCPeerConnection, PeerMeta>();
 
-export function useHuddle({ group, username, joined, muted, camera }: UseHuddleOpts): UseHuddleResult {
+export function useHuddle({ group, username, joined, muted, camera, quality = "smooth" }: UseHuddleOpts): UseHuddleResult {
+  // Live reference to the active spec. Refs (not state) so it's always
+  // read fresh from tuning callsites, and updates-while-sharing use the
+  // dedicated effect below to re-apply setParameters on running senders.
+  const qualityRef = useRef<QualitySpec>(QUALITY_PRESETS[quality]);
+  qualityRef.current = QUALITY_PRESETS[quality];
   const [peers, setPeers] = useState<HuddlePeer[]>([]);
   const [localStream, setLocalStream] = useState<MediaStream | null>(null);
   const [localScreenStream, setLocalScreenStream] = useState<MediaStream | null>(null);
@@ -249,7 +261,7 @@ export function useHuddle({ group, username, joined, muted, camera }: UseHuddleO
         // Stash the transceiver so tuneVideoSender can set codec prefs.
         const tx = pc.getTransceivers().find((t) => t.sender === sender);
         if (tx) (sender as any)._cwaTransceiver = tx;
-        if (track.kind === "video") tuneVideoSender(sender, "camera");
+        if (track.kind === "video") tuneVideoSender(sender, "camera", qualityRef.current);
         else if (track.kind === "audio") tuneAudioSender(sender);
       }
     }
@@ -261,7 +273,7 @@ export function useHuddle({ group, username, joined, muted, camera }: UseHuddleO
         const sender = pc.addTrack(track, screen);
         const tx = pc.getTransceivers().find((t) => t.sender === sender);
         if (tx) (sender as any)._cwaTransceiver = tx;
-        if (track.kind === "video") tuneVideoSender(sender, "screen");
+        if (track.kind === "video") tuneVideoSender(sender, "screen", qualityRef.current);
         else if (track.kind === "audio") tuneAudioSender(sender);
         senders.push(sender);
       }
@@ -432,31 +444,31 @@ export function useHuddle({ group, username, joined, muted, camera }: UseHuddleO
 
   const startScreenShare = useCallback(async () => {
     try {
+      const spec = qualityRef.current;
       const screenStream = await navigator.mediaDevices.getDisplayMedia({
         video: {
-          // 4K60 when the source + GPU can sustain it. `ideal` lets the
-          // browser downshift gracefully on weaker machines. The bitrate
-          // cap (20 Mbps, set in tuneVideoSender) is what actually
-          // governs on-the-wire quality — without it a 4K capture would
-          // be compressed down to ~2.5 Mbps and look worse than 1080p.
-          width: { ideal: 3840, max: 3840 },
-          height: { ideal: 2160, max: 2160 },
-          frameRate: { ideal: 60, max: 60 },
+          // Capture size + framerate come from the active preset. Browser
+          // downshifts via `ideal` if the source can't provide it. The
+          // bitrate cap in tuneVideoSender is what actually governs
+          // on-the-wire quality — raw pixel count alone doesn't help.
+          width: { ideal: spec.width, max: spec.width },
+          height: { ideal: spec.height, max: spec.height },
+          frameRate: { ideal: spec.framerate, max: spec.framerate },
         } as MediaTrackConstraints,
         // Include system audio when the browser supports it (Chromium
         // on Windows/ChromeOS). Falls through silently elsewhere.
         audio: true,
       } as MediaStreamConstraints);
       // Wrap for local bookkeeping. Bucketing is done via the
-      // screen-tracks signal, not the stream id. Hint the encoder to
-      // favor detail (text sharpness) over motion smoothing.
+      // screen-tracks signal, not the stream id. contentHint comes from
+      // the preset: "motion" = smooth scrolling, "detail" = sharp text.
       const routedStream = new MediaStream();
       Object.defineProperty(routedStream, "id", {
         value: `screen-${crypto.randomUUID()}`,
       });
       for (const t of screenStream.getTracks()) {
         if (t.kind === "video") {
-          try { (t as any).contentHint = "detail"; } catch { /* noop */ }
+          try { (t as any).contentHint = spec.hint; } catch { /* noop */ }
         }
         routedStream.addTrack(t);
       }
@@ -471,7 +483,7 @@ export function useHuddle({ group, username, joined, muted, camera }: UseHuddleO
           const sender = pc.addTrack(track, routedStream);
           const tx = pc.getTransceivers().find((t) => t.sender === sender);
           if (tx) (sender as any)._cwaTransceiver = tx;
-          if (track.kind === "video") tuneVideoSender(sender, "screen");
+          if (track.kind === "video") tuneVideoSender(sender, "screen", spec);
           else if (track.kind === "audio") tuneAudioSender(sender);
           senders.push(sender);
         }
@@ -502,6 +514,43 @@ export function useHuddle({ group, username, joined, muted, camera }: UseHuddleO
       setError(err instanceof Error ? err.message : String(err));
     }
   }, [broadcast, username, stopScreenShare]);
+
+  // ── Live quality re-tune ─────────────────────────────────────────
+  // When the user flips the quality preset mid-call, re-apply the new
+  // spec to every already-attached sender + update the outbound
+  // contentHint on the local screen track. Capture resolution can't
+  // change without re-calling getDisplayMedia — we document that limit
+  // and fire applyConstraints() as a best-effort reshape.
+  useEffect(() => {
+    const spec = QUALITY_PRESETS[quality];
+    // Re-parameterize every live video sender across every peer.
+    for (const pc of connectionsRef.current.values()) {
+      for (const sender of pc.getSenders()) {
+        const track = sender.track;
+        if (!track) continue;
+        if (track.kind === "video") {
+          const isScreen = track.id !== undefined
+            && Array.from(screenSenderMapRef.current.values())
+              .some((arr) => arr.includes(sender));
+          tuneVideoSender(sender, isScreen ? "screen" : "camera", spec);
+        }
+      }
+    }
+    // Best-effort reshape of the running screen-share source. Chrome
+    // and Edge honor applyConstraints on display tracks; Firefox
+    // usually doesn't — it'll just keep the original resolution.
+    const screen = localScreenStreamRef.current;
+    if (screen) {
+      for (const t of screen.getVideoTracks()) {
+        try { (t as any).contentHint = spec.hint; } catch { /* noop */ }
+        t.applyConstraints({
+          width: { ideal: spec.width, max: spec.width },
+          height: { ideal: spec.height, max: spec.height },
+          frameRate: { ideal: spec.framerate, max: spec.framerate },
+        } as MediaTrackConstraints).catch(() => { /* noop */ });
+      }
+    }
+  }, [quality]);
 
   // ── Combined media + signalling lifecycle ────────────────────────────
   // One effect, fires only on join/leave/group change. NO camera dep —
@@ -545,16 +594,17 @@ export function useHuddle({ group, username, joined, muted, camera }: UseHuddleO
         return;
       }
 
-      // 2. Try video. Optional — some users have no camera. Ask for 4K60
-      // ideally; the browser downshifts to the camera's real max (most
-      // consumer webcams cap at 1080p, some pro/phone cams hit 4K).
+      // 2. Try video. Optional — some users have no camera. Size +
+      // framerate track the active quality preset; browser downshifts
+      // to the camera's real max.
       let videoStream: MediaStream | null = null;
       try {
+        const spec = qualityRef.current;
         videoStream = await navigator.mediaDevices.getUserMedia({
           video: {
-            width: { ideal: 3840, max: 3840 },
-            height: { ideal: 2160, max: 2160 },
-            frameRate: { ideal: 60, max: 60 },
+            width: { ideal: spec.width, max: spec.width },
+            height: { ideal: spec.height, max: spec.height },
+            frameRate: { ideal: spec.framerate, max: spec.framerate },
             aspectRatio: { ideal: 16 / 9 },
             // facingMode biased toward front camera on mobile.
             facingMode: "user",
@@ -579,7 +629,8 @@ export function useHuddle({ group, username, joined, muted, camera }: UseHuddleO
       if (videoStream) {
         for (const t of videoStream.getTracks()) {
           t.enabled = stateRef.current.camera;
-          // Hint the encoder: camera = motion priority (smooth faces).
+          // Camera prefers motion regardless of preset — faces are always
+          // motion-oriented. (Screen share is the one that tracks detail.)
           try { (t as any).contentHint = "motion"; } catch { /* noop */ }
           combined.addTrack(t);
         }

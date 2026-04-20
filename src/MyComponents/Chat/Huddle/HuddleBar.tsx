@@ -15,8 +15,15 @@ import { AnimatePresence, motion } from "framer-motion";
 import {
   Mic, MicOff, Video, VideoOff, PhoneOff, Volume2, AlertCircle,
   Monitor, MonitorOff, Maximize2, Minimize2, ChevronDown, RefreshCw,
+  Sparkles, Check,
 } from "lucide-react";
 import type { HuddlePeer } from "./useHuddle";
+import { ShareSourceModal } from "./ShareSourceModal";
+import {
+  useHuddleStore,
+  QUALITY_PRESETS,
+  type HuddleQuality,
+} from "@/stores/huddleStore";
 
 // ── Active-speaker hook ─────────────────────────────────────────────
 // Maintains one analyser per peer and returns the currently-loudest
@@ -108,6 +115,10 @@ export function HuddleBar({
   onLeave, error,
 }: Props) {
   const [expanded, setExpanded] = useState(false);
+  const [shareModalOpen, setShareModalOpen] = useState(false);
+  const [qualityMenuOpen, setQualityMenuOpen] = useState(false);
+  const quality = useHuddleStore((s) => s.quality);
+  const setQuality = useHuddleStore((s) => s.setQuality);
   // Third display state — minimized to a small status pill at the
   // bottom-right. Ignores drag offset + can't be dragged off-screen.
   // Persisted so it survives route changes + reloads.
@@ -284,6 +295,75 @@ export function HuddleBar({
                 : `${primaryScreens.length} sharing`}
             </span>
           )}
+          {/* Live quality chip — mid-call hot-swap. Visible whenever
+              there's a screen share active (self or any peer). */}
+          {hasScreenStage && (
+            <div className="relative">
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setQualityMenuOpen((v) => !v);
+                }}
+                className="flex items-center gap-1 rounded-full border border-white/10 bg-white/5 px-2 py-0.5 text-[10px] font-semibold text-white/75 hover:border-white/20 hover:bg-white/10 hover:text-white transition-colors"
+                title="Change screen-share quality"
+              >
+                <Sparkles className="h-2.5 w-2.5" />
+                {QUALITY_PRESETS[quality].label.split("·")[1]?.trim() ?? quality}
+                <ChevronDown className="h-2.5 w-2.5 opacity-60" />
+              </button>
+              {qualityMenuOpen && (
+                <>
+                  <div
+                    className="fixed inset-0 z-40"
+                    onClick={() => setQualityMenuOpen(false)}
+                  />
+                  <div className="absolute right-0 top-full z-50 mt-1 w-52 overflow-hidden rounded-lg border border-white/10 bg-zinc-950/95 shadow-2xl backdrop-blur-xl">
+                    <div className="border-b border-white/5 px-3 py-1.5 text-[9.5px] font-semibold uppercase tracking-wider text-white/40">
+                      Share Quality
+                    </div>
+                    {(["smooth", "balanced", "crisp", "ultra"] as HuddleQuality[]).map((k) => {
+                      const p = QUALITY_PRESETS[k];
+                      const on = k === quality;
+                      return (
+                        <button
+                          key={k}
+                          type="button"
+                          onClick={() => {
+                            setQuality(k);
+                            setQualityMenuOpen(false);
+                          }}
+                          className={[
+                            "flex w-full items-center gap-2 px-3 py-2 text-left transition-colors",
+                            on
+                              ? "bg-blue-500/15 text-white"
+                              : "text-white/75 hover:bg-white/5 hover:text-white",
+                          ].join(" ")}
+                        >
+                          <div
+                            className={[
+                              "flex h-4 w-4 shrink-0 items-center justify-center rounded-full border",
+                              on ? "border-blue-400 bg-blue-500" : "border-white/20",
+                            ].join(" ")}
+                          >
+                            {on && <Check className="h-2.5 w-2.5 text-white" />}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <div className="text-[11.5px] font-medium truncate">
+                              {p.label}
+                            </div>
+                            <div className="text-[9.5px] leading-tight text-white/45 truncate">
+                              {p.blurb}
+                            </div>
+                          </div>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </>
+              )}
+            </div>
+          )}
           {error && (
             <span className="flex items-center gap-1 text-destructive">
               <AlertCircle className="h-3 w-3" />
@@ -434,7 +514,9 @@ export function HuddleBar({
           />
           <ControlButton
             active={sharing}
-            onClick={() => (sharing ? onStopScreenShare() : onStartScreenShare())}
+            onClick={() =>
+              sharing ? onStopScreenShare() : setShareModalOpen(true)
+            }
             Icon={sharing ? MonitorOff : Monitor}
             label={sharing ? "Stop sharing" : "Share screen"}
             title={sharing ? "Stop screen share" : "Share your screen"}
@@ -452,6 +534,16 @@ export function HuddleBar({
           </button>
         </div>
       </motion.div>
+
+      {/* Pre-share modal — replaces the abrupt hand-off to the OS
+          picker with a branded confirmation step + quality selector. */}
+      <ShareSourceModal
+        open={shareModalOpen}
+        onClose={() => setShareModalOpen(false)}
+        onConfirm={() => onStartScreenShare()}
+        huddleName={`#${group}`}
+        peerCount={peers.length}
+      />
     </AnimatePresence>
   );
 }

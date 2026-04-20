@@ -12,7 +12,7 @@ import { useHuddleStore } from "@/stores/huddleStore";
 import { ActiveUser } from "@/stores/query";
 
 export function HuddleHost() {
-  const { group, muted, camera, leaveHuddle, toggleMute, toggleCamera, pttActive } =
+  const { group, muted, camera, leaveHuddle, toggleMute, toggleCamera, pttActive, quality } =
     useHuddleStore();
   const { data: me } = ActiveUser();
   const username = me?.[0]?.username || "";
@@ -27,6 +27,7 @@ export function HuddleHost() {
     joined: group != null && !!username,
     muted: effectiveMuted,
     camera,
+    quality,
   });
 
   // Push-to-talk: hold Space (outside of input fields) to unmute.
