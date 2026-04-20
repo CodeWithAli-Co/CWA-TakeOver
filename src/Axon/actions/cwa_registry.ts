@@ -387,6 +387,274 @@ export const registryCopyInstallAction: AxonAction<
   },
 };
 
+// ── Recent activity ─────────────────────────────────────────────────
+
+/** Recently-published items across the whole registry, newest first.
+ *  Good for "what did the team ship this week?" questions. */
+export const registryRecentActivityAction: AxonAction<
+  { since?: string; limit?: number; company?: RegistryCompany },
+  { recent: Array<{ name: string; kind: string; version: string | null; publishedAt: string; publishedBy: string }> }
+> = {
+  name: "list_recent_registry_activity",
+  description:
+    "List recently-published registry items (components + templates), newest first. Supports an optional 'since' relative period (e.g., 'week', 'day', 'month') and a company filter. Use when the operator asks 'what's new', 'what was published recently', 'what did we ship this week'.",
+  input_schema: {
+    type: "object",
+    properties: {
+      since: {
+        type: "string",
+        description: "Optional time window — 'hour', 'day', 'week', 'month'. Defaults to 'week'.",
+      },
+      limit: {
+        type: "number",
+        description: "Optional max results (default 10, max 50).",
+      },
+      company: { type: "string", enum: ["cwa", "simplicity", "shared"] },
+    },
+  },
+  handler: async ({ since, limit, company }) => {
+    const windowMs = (() => {
+      switch ((since || "week").toLowerCase()) {
+        case "hour":  return 3600 * 1000;
+        case "day":   return 24 * 3600 * 1000;
+        case "week":  return 7 * 24 * 3600 * 1000;
+        case "month": return 30 * 24 * 3600 * 1000;
+        default:      return 7 * 24 * 3600 * 1000;
+      }
+    })();
+    const cutoff = new Date(Date.now() - windowMs).toISOString();
+    const cap = Math.max(1, Math.min(50, Number(limit) || 10));
+
+    // Query registry_versions joined back to items — gives us one row
+    // per publish event rather than one row per item.
+    let q = supabase
+      .from("registry_versions")
+      .select("version, published_at, published_by, registry_items!inner(name, kind, company)")
+      .gte("published_at", cutoff)
+      .order("published_at", { ascending: false })
+      .limit(cap);
+
+    const { data, error } = await q;
+    if (error || !data) return { summary: `Couldn't read recent activity: ${error?.message ?? "unknown"}` };
+
+    // Client-side company filter — applied after the join because
+    // nested filtering in PostgREST joins is finicky.
+    const rows = (data as any[])
+      .filter((r) => !company || r.registry_items?.company === company)
+      .map((r) => ({
+        name: r.registry_items?.name ?? "(unknown)",
+        kind: r.registry_items?.kind ?? "(unknown)",
+        version: r.version,
+        publishedAt: r.published_at,
+        publishedBy: r.published_by,
+      }));
+
+    if (rows.length === 0) {
+      return { summary: `Nothing new in the last ${since ?? "week"}${company ? ` (${company})` : ""}.` };
+    }
+
+    const top = rows.slice(0, 3).map((r) => `${r.name} v${r.version}`).join(", ");
+    return {
+      summary:
+        `${rows.length} publish${rows.length === 1 ? "" : "es"} in the last ${since ?? "week"}` +
+        (company ? ` for ${company}` : "") + `. Top 3: ${top}.`,
+      data: { recent: rows },
+    };
+  },
+};
+
+// ── Metadata update (with undo) ────────────────────────────────────
+
+/** Update the description (and optionally tags) of a registry item. */
+export const registryUpdateDescriptionAction: AxonAction<
+  { name: string; kind?: RegistryKind; description?: string; tags?: string[] },
+  { updated: boolean; name: string }
+> = {
+  name: "update_registry_description",
+  description:
+    "Update the human description and/or tags of a registry item. Reversible via 'undo that'. Use when the operator says 'change the description of X to Y' or 'tag X with navigation'.",
+  input_schema: {
+    type: "object",
+    properties: {
+      name: { type: "string" },
+      kind: { type: "string", enum: ["component", "template"] },
+      description: { type: "string", description: "New description. Omit to leave unchanged." },
+      tags: {
+        type: "array",
+        items: { type: "string" },
+        description: "New tags list (replaces existing). Omit to leave unchanged.",
+      },
+    },
+    required: ["name"],
+  },
+  mutating: true,
+  handler: async ({ name, kind, description, tags }) => {
+    const item = await findItem(name, kind);
+    if (!item) return { summary: `No registry item matching "${name}".` };
+
+    // Snapshot previous values for the undo.
+    const { data: prev } = await supabase
+      .from("registry_items")
+      .select("description, tags")
+      .eq("id", item.id)
+      .maybeSingle();
+
+    const patch: Record<string, unknown> = {};
+    if (description !== undefined) patch.description = description;
+    if (tags !== undefined)        patch.tags = tags;
+    if (Object.keys(patch).length === 0) {
+      return { summary: "Nothing to update — pass description or tags." };
+    }
+
+    const { error } = await supabase
+      .from("registry_items")
+      .update(patch)
+      .eq("id", item.id);
+    if (error) return { summary: `Update failed: ${error.message}` };
+
+    pushUndo({
+      actionName: "update_registry_description",
+      label: `revert description/tags on ${item.name}`,
+      undo: async () => {
+        if (!prev) return `Can't revert — no snapshot.`;
+        const revertPatch: Record<string, unknown> = {};
+        if (description !== undefined) revertPatch.description = prev.description;
+        if (tags !== undefined)        revertPatch.tags = prev.tags;
+        const { error } = await supabase
+          .from("registry_items")
+          .update(revertPatch)
+          .eq("id", item.id);
+        return error ? `Revert failed: ${error.message}` : `Reverted ${item.name}.`;
+      },
+    });
+
+    const changed = Object.keys(patch).join(" + ");
+    return {
+      summary: `Updated ${item.name} (${changed}). Say 'undo that' to revert.`,
+      data: { updated: true, name: item.name },
+    };
+  },
+};
+
+// ── Shell execution — actually run `cwa` in a terminal ─────────────
+/**
+ * Executes `cwa <subcommand>` via the Tauri shell plugin. Captures
+ * stdout/stderr and returns the first few lines in the summary so
+ * Axon can read them aloud.
+ *
+ * Requires tauri-plugin-shell to be installed + a capability allowing
+ * the `cwa` binary to run. See registerCwaRegistryActions below for
+ * setup steps.
+ *
+ * Working-directory policy:
+ *   · If `cwd` is provided, run there.
+ *   · Otherwise run in the user's HOME (cross-platform via Tauri path).
+ *   · Commands that require a project folder (like `cwa add`) will
+ *     fail if you don't pass `cwd` — that's fine; Axon will surface
+ *     the error and ask the operator for a path.
+ */
+export const registryRunCwaAction: AxonAction<
+  { subcommand: string; cwd?: string },
+  { exitCode: number; stdout: string; stderr: string }
+> = {
+  name: "run_cwa_command",
+  description:
+    "Execute a cwa CLI subcommand directly in a terminal process and read back the result. The operator can say things like 'install DataTable in my MyApp folder' (subcommand='add DataTable', cwd='C:/Dev/MyApp') or 'cwa ls' (just subcommand='ls', no cwd needed). DO NOT include the literal word 'cwa' in subcommand — just the args after it.",
+  input_schema: {
+    type: "object",
+    properties: {
+      subcommand: {
+        type: "string",
+        description: "The cwa subcommand + args, e.g. 'add cwa-sidebar' or 'publish my-template --bump=minor'. Exclude the leading 'cwa'.",
+      },
+      cwd: {
+        type: "string",
+        description: "Optional absolute folder path to run the command in. Required for `add` / `publish` / `store` / `update` since those operate on a project folder.",
+      },
+    },
+    required: ["subcommand"],
+  },
+  mutating: true,
+  // requiresConfirmation is false — reads like `cwa ls` shouldn't
+  // prompt. The action itself includes a safety guard that force-
+  // prompts for any command containing `delete` / `remove` / `publish`.
+  handler: async ({ subcommand, cwd }, ctx) => {
+    const cmd = (subcommand || "").trim();
+    if (!cmd) return { summary: "No subcommand given." };
+
+    // Extra safety: if the command could be destructive, prompt even
+    // when the subcommand-level requiresConfirmation is off.
+    const destructive = /^(delete|remove|publish|store)\b/i.test(cmd);
+    if (destructive) {
+      const ok = await ctx.requestConfirmation(`Run: cwa ${cmd}${cwd ? ` (in ${cwd})` : ""}?`);
+      if (!ok) return { summary: "Cancelled." };
+    }
+
+    // Dynamically import the shell plugin so the build doesn't fail
+    // if it isn't installed. If the import fails, fall back to
+    // clipboard copy.
+    let Command: any;
+    try {
+      const shell = await import("@tauri-apps/plugin-shell");
+      Command = (shell as any).Command;
+    } catch {
+      const fullCmd = `cwa ${cmd}`;
+      try { await navigator.clipboard.writeText(fullCmd); } catch { /* noop */ }
+      return {
+        summary:
+          `Tauri shell plugin isn't installed. Copied 'cwa ${cmd}' to clipboard — paste it into a terminal manually. ` +
+          `(Add tauri-plugin-shell to Cargo.toml + lib.rs + capabilities/default.json to enable direct execution.)`,
+      };
+    }
+
+    try {
+      // Parse args respecting double-quoted strings.
+      const args = splitArgs(cmd);
+      const command = Command.create("cwa", args, cwd ? { cwd } : {});
+      const out: string[] = [];
+      const errOut: string[] = [];
+      command.stdout.on("data", (line: string) => out.push(line));
+      command.stderr.on("data", (line: string) => errOut.push(line));
+
+      const child = await command.execute();
+      const exitCode = child.code ?? 0;
+      const stdout = (child.stdout ?? out.join("\n")).trim();
+      const stderr = (child.stderr ?? errOut.join("\n")).trim();
+
+      // Summarize the first ~3 lines of stdout for Axon to speak.
+      const brief = stdout.split("\n").slice(0, 3).join(" ").slice(0, 240);
+
+      return {
+        summary:
+          exitCode === 0
+            ? `Ran cwa ${cmd}${brief ? `. ${brief}` : "."}`
+            : `cwa ${cmd} exited ${exitCode}${stderr ? `: ${stderr.slice(0, 200)}` : ""}`,
+        data: { exitCode, stdout, stderr },
+      };
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e);
+      // Most common cause: capability not allowed.
+      if (/not allowed|not authorized|capability/i.test(msg)) {
+        return {
+          summary:
+            `Shell execution blocked by Tauri capabilities. Add 'shell:allow-execute' with 'cwa' to src-tauri/capabilities/default.json and rebuild.`,
+        };
+      }
+      return { summary: `cwa ${cmd} failed to launch: ${msg}` };
+    }
+  },
+};
+
+function splitArgs(s: string): string[] {
+  const out: string[] = [];
+  const re = /"([^"]*)"|(\S+)/g;
+  let m: RegExpExecArray | null;
+  while ((m = re.exec(s)) !== null) {
+    out.push(m[1] !== undefined ? m[1] : m[2]);
+  }
+  return out;
+}
+
 // ── Bundle registration ─────────────────────────────────────────────
 
 export function registerCwaRegistryActions(): void {
@@ -396,4 +664,7 @@ export function registerCwaRegistryActions(): void {
   registerAction(registryDeleteAction);
   registerAction(registryYankVersionAction);
   registerAction(registryCopyInstallAction);
+  registerAction(registryRecentActivityAction);
+  registerAction(registryUpdateDescriptionAction);
+  registerAction(registryRunCwaAction);
 }

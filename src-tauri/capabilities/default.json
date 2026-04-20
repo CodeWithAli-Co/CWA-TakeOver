@@ -23,6 +23,18 @@
     "dialog:default",
     "autostart:default",
     "fs:default",
+    "shell:default",
+    {
+      "identifier": "shell:allow-execute",
+      "allow": [
+        {
+          "name": "cwa",
+          "cmd": "cwa",
+          "args": true,
+          "sidecar": false
+        }
+      ]
+    },
     {
       "identifier": "fs:allow-applocaldata-write-recursive",
       "allow": [
