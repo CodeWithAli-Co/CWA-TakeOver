@@ -11,13 +11,14 @@
 
 import { useMemo, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { Package, Search, Plus, Layers, Component as CompIcon, Sparkles, Building2, Globe2 } from "lucide-react";
+import { Package, Search, Plus, Layers, Component as CompIcon, Sparkles, Building2, Globe2, Key } from "lucide-react";
 import { useCompanyFilter } from "@/stores/store";
 import { ActiveUser } from "@/stores/query";
 import { useRegistryItems } from "./queries";
 import { RegistryItemCard } from "./RegistryItemCard";
 import { RegistryDetailDrawer } from "./RegistryDetailDrawer";
 import { RegistryPublishModal } from "./RegistryPublishModal";
+import { CliTokensCard } from "./CliTokensCard";
 import type { RegistryKind, RegistryCompany, RegistryItemWithLatest } from "./types";
 
 const KIND_TABS: { key: "all" | RegistryKind; label: string; Icon: typeof Package }[] = [
@@ -43,6 +44,7 @@ export function RegistryDashboard() {
   const [search, setSearch] = useState("");
   const [selected, setSelected] = useState<RegistryItemWithLatest | null>(null);
   const [publishOpen, setPublishOpen] = useState(false);
+  const [view, setView] = useState<"registry" | "tokens">("registry");
 
   const companyScope = mapCompany(activeCompany);
 
@@ -90,19 +92,50 @@ export function RegistryDashboard() {
           </div>
 
           <div className="flex items-center gap-2">
+            <div className="flex items-center gap-0.5 rounded-md border border-border bg-muted/30 p-0.5">
+              <button
+                type="button"
+                onClick={() => setView("registry")}
+                className={[
+                  "inline-flex items-center gap-1.5 rounded px-2.5 py-1 text-[11.5px] font-medium transition-colors",
+                  view === "registry"
+                    ? "bg-background text-foreground shadow-sm"
+                    : "text-muted-foreground hover:text-foreground",
+                ].join(" ")}
+              >
+                <Package className="h-3 w-3" />
+                Registry
+              </button>
+              <button
+                type="button"
+                onClick={() => setView("tokens")}
+                className={[
+                  "inline-flex items-center gap-1.5 rounded px-2.5 py-1 text-[11.5px] font-medium transition-colors",
+                  view === "tokens"
+                    ? "bg-background text-foreground shadow-sm"
+                    : "text-muted-foreground hover:text-foreground",
+                ].join(" ")}
+              >
+                <Key className="h-3 w-3" />
+                CLI Tokens
+              </button>
+            </div>
             <CompanyChip company={companyScope} />
-            <button
-              type="button"
-              onClick={() => setPublishOpen(true)}
-              className="inline-flex items-center gap-1.5 rounded-md bg-gradient-to-b from-blue-500 to-blue-600 px-3.5 py-1.5 text-[12.5px] font-semibold text-white shadow-[0_4px_14px_-2px_hsl(210_90%_55%/0.4)] ring-1 ring-inset ring-white/15 hover:from-blue-400 hover:to-blue-500 transition-all"
-            >
-              <Plus className="h-3.5 w-3.5" />
-              Publish
-            </button>
+            {view === "registry" && (
+              <button
+                type="button"
+                onClick={() => setPublishOpen(true)}
+                className="inline-flex items-center gap-1.5 rounded-md bg-gradient-to-b from-blue-500 to-blue-600 px-3.5 py-1.5 text-[12.5px] font-semibold text-white shadow-[0_4px_14px_-2px_hsl(210_90%_55%/0.4)] ring-1 ring-inset ring-white/15 hover:from-blue-400 hover:to-blue-500 transition-all"
+              >
+                <Plus className="h-3.5 w-3.5" />
+                Publish
+              </button>
+            )}
           </div>
         </div>
 
-        {/* Filter row */}
+        {/* Filter row — hidden in tokens view */}
+        {view === "registry" && (
         <div className="flex flex-wrap items-center gap-2">
           {/* Search */}
           <div className="relative flex-1 min-w-[240px] max-w-[420px]">
@@ -139,11 +172,16 @@ export function RegistryDashboard() {
             })}
           </div>
         </div>
+        )}
       </header>
 
       {/* Body */}
       <main className="relative flex-1 overflow-y-auto px-6 py-6">
-        {isLoading ? (
+        {view === "tokens" ? (
+          <div className="mx-auto max-w-3xl">
+            <CliTokensCard />
+          </div>
+        ) : isLoading ? (
           <GallerySkeleton />
         ) : items.length === 0 ? (
           <EmptyState

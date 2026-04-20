@@ -5,9 +5,9 @@
  * new-version publish automatically.
  */
 
-import { useState } from "react";
-import { AnimatePresence, motion } from "framer-motion";
-import { X, Upload, Loader2, Package, Component as CompIcon, Tag as TagIcon, Image as ImageIcon, Check } from "lucide-react";
+import { useRef, useState } from "react";
+import { AnimatePresence, motion, useDragControls } from "framer-motion";
+import { X, Upload, Loader2, Package, Component as CompIcon, Tag as TagIcon, Image as ImageIcon, Check, GripHorizontal } from "lucide-react";
 import { useCreateRegistryItem } from "./queries";
 import type { RegistryCompany, RegistryKind } from "./types";
 
@@ -80,25 +80,42 @@ export function RegistryPublishModal({ open, onClose, defaultCompany, username }
 
   const canSubmit = !!name.trim() && !!tarball && !!username && !create.isPending;
 
+  const dragConstraintsRef = useRef<HTMLDivElement | null>(null);
+  const dragControls = useDragControls();
+
   return (
     <AnimatePresence>
       {open && (
-        <>
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.15 }}
-            className="fixed inset-0 z-[9990] bg-black/70 backdrop-blur-md"
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: 0.15 }}
+          className="fixed inset-0 z-[9990] flex items-center justify-center p-4"
+        >
+          {/* Backdrop — closes on click unless uploading. */}
+          <div
+            className="absolute inset-0 bg-black/70 backdrop-blur-md"
             onClick={handleClose}
           />
 
+          {/* Drag constraints container — keeps the card inside the viewport. */}
+          <div ref={dragConstraintsRef} className="pointer-events-none absolute inset-4" />
+
+          {/* Card — draggable ONLY by the header via dragControls. */}
           <motion.div
-            initial={{ opacity: 0, y: 24, scale: 0.97 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: 16, scale: 0.98 }}
+            drag
+            dragListener={false}
+            dragControls={dragControls}
+            dragMomentum={false}
+            dragElastic={0.08}
+            dragConstraints={dragConstraintsRef}
+            initial={{ opacity: 0, scale: 0.97 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.98 }}
             transition={{ type: "spring", stiffness: 320, damping: 30 }}
-            className="fixed left-1/2 top-1/2 z-[9991] w-[min(620px,calc(100vw-24px))] max-h-[calc(100vh-48px)] -translate-x-1/2 -translate-y-1/2 overflow-hidden rounded-2xl border border-white/10 bg-zinc-950/95 shadow-[0_24px_80px_-12px_rgba(0,0,0,0.8)] backdrop-blur-xl"
+            whileDrag={{ scale: 1.005, cursor: "grabbing" }}
+            className="relative z-10 w-[min(620px,calc(100vw-32px))] max-h-[calc(100vh-48px)] overflow-hidden rounded-2xl border border-white/10 bg-zinc-950/95 shadow-[0_24px_80px_-12px_rgba(0,0,0,0.8)] backdrop-blur-xl"
           >
             <div
               className="h-1 w-full"
@@ -108,30 +125,41 @@ export function RegistryPublishModal({ open, onClose, defaultCompany, username }
               }}
             />
 
-            <div className="flex items-start justify-between gap-3 px-6 pt-5 pb-4">
-              <div className="flex items-start gap-3">
-                <div className="mt-0.5 flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-blue-500/20 to-purple-500/20 text-blue-300 ring-1 ring-inset ring-white/10">
-                  <Upload className="h-5 w-5" />
+            {/* Header — acts as the drag handle. onPointerDown on
+                this area starts the card's drag via dragControls. */}
+            <div
+              onPointerDown={(e) => dragControls.start(e)}
+              className="cursor-grab active:cursor-grabbing select-none"
+            >
+              <div className="flex items-start justify-between gap-3 px-6 pt-5 pb-4">
+                <div className="flex items-start gap-3">
+                  <div className="mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-blue-500/20 to-purple-500/20 text-blue-300 ring-1 ring-inset ring-white/10">
+                    <Upload className="h-5 w-5" />
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-1.5">
+                      <h2 className="text-[15px] font-semibold text-white">
+                        Publish to registry
+                      </h2>
+                      <GripHorizontal className="h-3.5 w-3.5 text-white/30" />
+                    </div>
+                    <p className="mt-0.5 text-[12px] text-white/55 leading-snug">
+                      Pack a project or component as <code className="font-mono">.tgz</code> and upload.
+                      Re-publishing the same name creates a new version.
+                    </p>
+                  </div>
                 </div>
-                <div>
-                  <h2 className="text-[15px] font-semibold text-white">
-                    Publish to registry
-                  </h2>
-                  <p className="mt-0.5 text-[12px] text-white/55 leading-snug">
-                    Pack a project or component as <code className="font-mono">.tgz</code> and upload.
-                    Re-publishing the same name creates a new version.
-                  </p>
-                </div>
+                <button
+                  type="button"
+                  onClick={handleClose}
+                  disabled={create.isPending}
+                  onPointerDown={(e) => e.stopPropagation()}
+                  className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-white/50 hover:bg-white/5 hover:text-white/80 disabled:opacity-40 transition-colors"
+                  aria-label="Close"
+                >
+                  <X className="h-4 w-4" />
+                </button>
               </div>
-              <button
-                type="button"
-                onClick={handleClose}
-                disabled={create.isPending}
-                className="flex h-7 w-7 items-center justify-center rounded-md text-white/50 hover:bg-white/5 hover:text-white/80 disabled:opacity-40 transition-colors"
-                aria-label="Close"
-              >
-                <X className="h-4 w-4" />
-              </button>
             </div>
 
             <div className="max-h-[calc(100vh-220px)] overflow-y-auto px-6 pb-4">
@@ -304,7 +332,7 @@ export function RegistryPublishModal({ open, onClose, defaultCompany, username }
               </div>
             </div>
           </motion.div>
-        </>
+        </motion.div>
       )}
     </AnimatePresence>
   );
