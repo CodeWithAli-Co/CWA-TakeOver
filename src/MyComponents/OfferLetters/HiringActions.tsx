@@ -11,7 +11,7 @@
 import { useEffect, useState } from "react";
 import {
   Link2, Mail, FilePlus2, UserPlus, Loader2, Check, Copy,
-  AlertTriangle, Download, Sparkles, X,
+  AlertTriangle, Download, Sparkles, X, ShieldCheck, FileSignature,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import supabase from "@/MyComponents/supabase";
@@ -28,9 +28,15 @@ interface CurrentOffer {
   status: string;
   acceptance_token: string;
   candidate_email?: string | null;
+  candidate_name?: string | null;
+  position_title?: string | null;
+  employer_legal_name?: string | null;
   converted_to_user_id?: string | null;
   accepted_at?: string | null;
+  declined_at?: string | null;
   emailed_at?: string | null;
+  candidate_signature_name?: string | null;
+  candidate_signature_at?: string | null;
 }
 
 interface Props {
@@ -59,6 +65,7 @@ export function HiringActions({ current, form, generatedBody, onMutated }: Props
   }
   return (
     <div className="space-y-3">
+      <SignatureRecordRow current={current} />
       <AcceptLinkRow current={current} />
       <SendEmailRow
         current={current}
@@ -522,6 +529,7 @@ function ConvertRow({
   const [converting, setConverting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
+  const [successMsg, setSuccessMsg] = useState<string>("");
 
   const canConvert =
     current.status === "accepted" && !current.converted_to_user_id;
@@ -530,6 +538,7 @@ function ConvertRow({
     setConverting(true);
     setError(null);
     setSuccess(false);
+    setSuccessMsg("");
 
     // Role mapping — best-effort; operator can change it in app_users later.
     const role =
@@ -542,7 +551,71 @@ function ConvertRow({
     const company =
       form.brand === "simplicity" ? "simplicity" : "CodeWithAli";
 
-    const username = slugify(form.candidateName);
+    const baseUsername = slugify(form.candidateName);
+
+    // ── 1. Check if an app_users row already exists with this username.
+    //    The username column has a UNIQUE constraint, so re-converting
+    //    the same candidate (or one who already had an account) would
+    //    otherwise crash with `app_users_username_key`. If we find a
+    //    match, we just relink the offer to the existing user.
+    const existing = await supabase
+      .from("app_users")
+      .select("id, supa_id, username")
+      .eq("username", baseUsername)
+      .maybeSingle();
+
+    if (existing.data) {
+      // offer_letters.converted_to_user_id is a UUID column. app_users
+      // has TWO id-like fields: `id` (integer PK) and `supa_id` (UUID
+      // from Supabase auth). Always prefer supa_id — writing the int
+      // `id` into the UUID FK throws "invalid input syntax for type uuid".
+      const row = existing.data as any;
+      const existingId = row.supa_id ?? null;
+      if (!existingId) {
+        setError(
+          `Found existing employee "${baseUsername}" but they have no supa_id (UUID) to link the offer to. Open them in the Employees page and assign a Supabase auth id first.`,
+        );
+        setConverting(false);
+        return;
+      }
+      const upd = await supabase
+        .from("offer_letters")
+        .update({ converted_to_user_id: existingId })
+        .eq("id", current.id);
+      if (upd.error) {
+        setError(`Could not link offer to existing user: ${upd.error.message}`);
+        setConverting(false);
+        return;
+      }
+      setSuccess(true);
+      setSuccessMsg(
+        `Linked to existing employee "${baseUsername}". Check the Employees page.`,
+      );
+      setConverting(false);
+      onMutated();
+      return;
+    }
+
+    // ── 2. No existing row — create a fresh app_users record.
+    //    We still pick a unique username-on-collision just in case two
+    //    candidates share a name (Jane Smith #2 becomes jane-smith-2).
+    let username = baseUsername;
+    let suffix = 2;
+    // Small safety loop — bail after 20 attempts rather than hammer the
+    // DB. In practice we break on the first pass; the select above
+    // already cleared the most common case.
+    // eslint-disable-next-line no-constant-condition
+    while (true) {
+      const probe = await supabase
+        .from("app_users")
+        .select("id")
+        .eq("username", username)
+        .maybeSingle();
+      if (!probe.data) break;
+      if (suffix > 20) break;
+      username = `${baseUsername}-${suffix++}`;
+    }
+
     // Unique avatar URL per user — DiceBear generates deterministic
     // SVGs from a seed, so every username gets its own avatar. This
     // sidesteps the UNIQUE constraint on app_users.avatar that was
@@ -573,12 +646,31 @@ function ConvertRow({
       setConverting(false);
       return;
     }
-    const userId = (res.data as any)?.id ?? (res.data as any)?.supa_id ?? null;
-    await supabase
-      .from("offer_letters")
-      .update({ converted_to_user_id: userId })
-      .eq("id", current.id);
+    // Prefer supa_id (UUID) — same reason as the link-existing branch.
+    // If the freshly-inserted row doesn't yet have a supa_id (some
+    // app_users defaults set it via trigger, some don't), we skip the
+    // link update rather than blow up with "invalid input syntax for
+    // type uuid". The employee row is still created; operator can
+    // link the offer manually later.
+    const freshRow = res.data as any;
+    const userId = freshRow?.supa_id ?? null;
+    if (userId) {
+      const upd = await supabase
+        .from("offer_letters")
+        .update({ converted_to_user_id: userId })
+        .eq("id", current.id);
+      if (upd.error) {
+        setError(
+          `Employee row created but couldn't link offer: ${upd.error.message}`,
+        );
+        setConverting(false);
+        return;
+      }
+    }
     setSuccess(true);
+    setSuccessMsg(
+      `Created employee "${username}". Check the Employees page to assign avatar + tune role.`,
+    );
     setConverting(false);
     onMutated();
   };
@@ -610,11 +702,308 @@ function ConvertRow({
       </button>
       {success && (
         <p className="mt-2 text-[10.5px] text-emerald-300">
-          Created. Check the Employees page to assign avatar + tune role.
+          {successMsg || "Done."}
         </p>
       )}
       {error && (
         <p className="mt-2 text-[10.5px] text-red-300">{error}</p>
+      )}
+    </Row>
+  );
+}
+
+// ── Signature / proof-of-acceptance record ─────────────────────────
+// Pulls the full signing trail for an offer so the CEO can verify what
+// the candidate actually agreed to. Fetches hire_documents for the
+// offer on mount to include any ICA / NDA / IP signings.
+
+interface HireDocRecord {
+  id: string;
+  doc_type: string;
+  status: string;
+  signed_name: string | null;
+  signed_at: string | null;
+  sign_order: number | null;
+}
+
+function SignatureRecordRow({ current }: { current: CurrentOffer }) {
+  const [docs, setDocs] = useState<HireDocRecord[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [copyState, setCopyState] = useState<"idle" | "copied">("idle");
+  const [expanded, setExpanded] = useState(true);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      setLoading(true);
+      // Best-effort: if the signature columns don't exist yet, fall back.
+      const primary = await supabase
+        .from("hire_documents")
+        .select("id, doc_type, status, signed_name, signed_at, sign_order")
+        .eq("offer_letter_id", current.id)
+        .order("sign_order", { ascending: true });
+      if (cancelled) return;
+      if (primary.error) {
+        const basic = await supabase
+          .from("hire_documents")
+          .select("id, doc_type")
+          .eq("offer_letter_id", current.id);
+        setDocs(
+          (basic.data ?? []).map((d: any) => ({
+            id: d.id,
+            doc_type: d.doc_type,
+            status: "pending_signature",
+            signed_name: null,
+            signed_at: null,
+            sign_order: null,
+          })),
+        );
+      } else {
+        setDocs((primary.data ?? []) as HireDocRecord[]);
+      }
+      setLoading(false);
+    })();
+    return () => { cancelled = true; };
+  }, [current.id]);
+
+  const offerSigned = current.status === "accepted";
+  const offerDeclined = current.status === "declined";
+  const offerSentOnly = current.status === "sent";
+  const signedDocs = docs.filter((d) => d.status === "signed");
+  const pendingDocs = docs.filter((d) => d.status !== "signed" && d.status !== "waived");
+
+  // Nothing to show for a fresh draft.
+  if (!offerSigned && !offerDeclined && !offerSentOnly && docs.length === 0 && !loading) {
+    return null;
+  }
+
+  const stateColor = offerSigned
+    ? "text-emerald-400"
+    : offerDeclined
+      ? "text-red-400"
+      : "text-amber-400";
+
+  const stateLabel = offerSigned
+    ? "Signed & accepted"
+    : offerDeclined
+      ? "Declined"
+      : offerSentOnly
+        ? "Sent — awaiting response"
+        : "In progress";
+
+  // Build a plain-text audit record the CEO can paste into an email
+  // or save alongside the offer PDF.
+  const buildReceipt = (): string => {
+    const lines: string[] = [];
+    lines.push("SIGNING RECORD");
+    lines.push("──────────────");
+    lines.push(`Candidate:  ${current.candidate_name ?? "(unknown)"}`);
+    lines.push(`Position:   ${current.position_title ?? "(unknown)"}`);
+    lines.push(`Employer:   ${current.employer_legal_name ?? "(unknown)"}`);
+    lines.push(`Offer ID:   ${current.id}`);
+    lines.push(`Token:      ${current.acceptance_token}`);
+    lines.push("");
+    lines.push(`Status:     ${stateLabel}`);
+    if (current.emailed_at) {
+      lines.push(`Emailed:    ${new Date(current.emailed_at).toLocaleString()}`);
+    }
+    if (current.accepted_at) {
+      lines.push(`Accepted:   ${new Date(current.accepted_at).toLocaleString()}`);
+    }
+    if (current.declined_at) {
+      lines.push(`Declined:   ${new Date(current.declined_at).toLocaleString()}`);
+    }
+    if (current.candidate_signature_name) {
+      lines.push(
+        `Signature:  /s/ ${current.candidate_signature_name}${
+          current.candidate_signature_at
+            ? " on " + new Date(current.candidate_signature_at).toLocaleString()
+            : ""
+        }`,
+      );
+    }
+    if (docs.length > 0) {
+      lines.push("");
+      lines.push("Companion documents:");
+      for (const d of docs) {
+        const prettyType = d.doc_type.toUpperCase();
+        const signedStr =
+          d.status === "signed" && d.signed_name
+            ? ` — /s/ ${d.signed_name}${
+                d.signed_at
+                  ? " on " + new Date(d.signed_at).toLocaleString()
+                  : ""
+              }`
+            : ` — ${d.status}`;
+        lines.push(`  • ${prettyType}${signedStr}`);
+      }
+    }
+    return lines.join("\n");
+  };
+
+  const copyReceipt = async () => {
+    try {
+      await navigator.clipboard.writeText(buildReceipt());
+      setCopyState("copied");
+      setTimeout(() => setCopyState("idle"), 1400);
+    } catch { /* noop */ }
+  };
+
+  const downloadReceipt = () => {
+    const blob = new Blob([buildReceipt()], { type: "text/plain;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    const slug = (current.candidate_name ?? "candidate")
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/^-|-$/g, "");
+    a.download = `signing-record-${slug}.txt`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+  };
+
+  return (
+    <Row
+      icon={ShieldCheck}
+      title="Signing record"
+      subtitle="Proof of what the candidate has signed so far. Download or copy as a receipt."
+    >
+      {/* Status line */}
+      <div className="mb-3 flex items-center justify-between gap-2 rounded-md border border-border/60 bg-muted/20 px-3 py-2">
+        <div className="flex items-center gap-2 min-w-0">
+          <span className={`text-[11px] font-semibold ${stateColor} shrink-0`}>
+            ● {stateLabel}
+          </span>
+          {signedDocs.length > 0 && (
+            <span className="text-[10.5px] text-muted-foreground truncate">
+              · {signedDocs.length} doc{signedDocs.length === 1 ? "" : "s"} signed
+              {pendingDocs.length > 0 && ` · ${pendingDocs.length} pending`}
+            </span>
+          )}
+        </div>
+        <button
+          type="button"
+          onClick={() => setExpanded((v) => !v)}
+          className="text-[10.5px] text-muted-foreground hover:text-foreground shrink-0"
+        >
+          {expanded ? "Hide" : "Show"}
+        </button>
+      </div>
+
+      {expanded && (
+        <div className="space-y-2">
+          {/* Offer signature card */}
+          <div className="rounded-md border border-border/60 bg-background/40 p-3">
+            <div className="flex items-center gap-1.5 mb-1.5">
+              <FileSignature className="h-3 w-3 text-muted-foreground" />
+              <span className="text-[10.5px] font-mono uppercase tracking-widest text-muted-foreground">
+                Offer letter
+              </span>
+            </div>
+            {offerSigned ? (
+              <>
+                <p className="text-[13px] italic text-foreground" style={{ fontFamily: "ui-serif, Georgia, serif" }}>
+                  /s/ {current.candidate_signature_name ?? current.candidate_name ?? "(name not captured)"}
+                </p>
+                <p className="mt-0.5 text-[10.5px] text-muted-foreground">
+                  {current.candidate_signature_at
+                    ? new Date(current.candidate_signature_at).toLocaleString()
+                    : current.accepted_at
+                      ? new Date(current.accepted_at).toLocaleString()
+                      : "(timestamp not captured)"}
+                </p>
+              </>
+            ) : offerDeclined ? (
+              <p className="text-[11.5px] text-red-300">
+                Declined{current.declined_at && ` on ${new Date(current.declined_at).toLocaleString()}`}
+              </p>
+            ) : (
+              <p className="text-[11.5px] text-muted-foreground">
+                Not yet signed.
+                {current.emailed_at && ` Emailed ${new Date(current.emailed_at).toLocaleString()}.`}
+              </p>
+            )}
+          </div>
+
+          {/* Companion docs */}
+          {loading ? (
+            <div className="flex items-center gap-2 text-[11px] text-muted-foreground">
+              <Loader2 className="h-3 w-3 animate-spin" />
+              Loading companion documents…
+            </div>
+          ) : docs.length > 0 && (
+            <div className="space-y-1.5">
+              {docs.map((d) => (
+                <div
+                  key={d.id}
+                  className="rounded-md border border-border/60 bg-background/40 p-3"
+                >
+                  <div className="flex items-center justify-between gap-2 mb-1.5">
+                    <div className="flex items-center gap-1.5">
+                      <FileSignature className="h-3 w-3 text-muted-foreground" />
+                      <span className="text-[10.5px] font-mono uppercase tracking-widest text-muted-foreground">
+                        {d.doc_type}
+                      </span>
+                    </div>
+                    <span
+                      className={[
+                        "text-[10px] px-1.5 py-0.5 rounded-full border",
+                        d.status === "signed"
+                          ? "border-emerald-500/40 bg-emerald-500/10 text-emerald-300"
+                          : d.status === "waived"
+                            ? "border-zinc-500/40 bg-zinc-500/10 text-zinc-300"
+                            : "border-amber-500/40 bg-amber-500/10 text-amber-300",
+                      ].join(" ")}
+                    >
+                      {d.status.replace(/_/g, " ")}
+                    </span>
+                  </div>
+                  {d.status === "signed" && d.signed_name ? (
+                    <>
+                      <p className="text-[13px] italic text-foreground" style={{ fontFamily: "ui-serif, Georgia, serif" }}>
+                        /s/ {d.signed_name}
+                      </p>
+                      {d.signed_at && (
+                        <p className="mt-0.5 text-[10.5px] text-muted-foreground">
+                          {new Date(d.signed_at).toLocaleString()}
+                        </p>
+                      )}
+                    </>
+                  ) : (
+                    <p className="text-[11px] text-muted-foreground">Awaiting signature.</p>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* Actions */}
+          <div className="flex items-center gap-2 pt-1">
+            <button
+              type="button"
+              onClick={copyReceipt}
+              className="flex h-8 items-center gap-1 rounded-md border border-border bg-background px-2 text-[11px] font-medium hover:border-primary/40"
+            >
+              {copyState === "copied" ? (
+                <Check className="h-3 w-3 text-emerald-400" />
+              ) : (
+                <Copy className="h-3 w-3" />
+              )}
+              {copyState === "copied" ? "Copied" : "Copy receipt"}
+            </button>
+            <button
+              type="button"
+              onClick={downloadReceipt}
+              className="flex h-8 items-center gap-1 rounded-md border border-border bg-background px-2 text-[11px] font-medium hover:border-primary/40"
+            >
+              <Download className="h-3 w-3" />
+              Save .txt
+            </button>
+          </div>
+        </div>
       )}
     </Row>
   );
