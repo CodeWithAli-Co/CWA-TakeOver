@@ -643,4 +643,15 @@ function Row({
   return (
     <section className="rounded-xl border border-border/60 bg-card/50 p-3.5">
       <div className="mb-2 flex items-start gap-2">
-        <Icon className="h-3.5 w-3.5 
+        <Icon className="h-3.5 w-3.5 mt-0.5 text-muted-foreground shrink-0" />
+        <div className="min-w-0">
+          <h3 className="text-[13px] font-semibold text-foreground">{title}</h3>
+          <p className="text-[11.5px] text-muted-foreground leading-snug">
+            {subtitle}
+          </p>
+        </div>
+      </div>
+      {children}
+    </section>
+  );
+} 
