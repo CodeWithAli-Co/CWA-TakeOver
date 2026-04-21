@@ -542,20 +542,29 @@ function ConvertRow({
     const company =
       form.brand === "simplicity" ? "simplicity" : "CodeWithAli";
 
+    const username = slugify(form.candidateName);
+    // Unique avatar URL per user — DiceBear generates deterministic
+    // SVGs from a seed, so every username gets its own avatar. This
+    // sidesteps the UNIQUE constraint on app_users.avatar that was
+    // crashing the insert whenever the DB default fired twice.
+    const avatar = `https://api.dicebear.com/9.x/shapes/svg?seed=${encodeURIComponent(username)}`;
+
     const payload: Record<string, any> = {
-      username: slugify(form.candidateName),
+      username,
       role,
       company,
+      avatar,
       // Most installs of app_users have these columns but not all.
       // Supabase will reject unknowns — we attempt, then fall back.
     };
 
     let res = await supabase.from("app_users").insert(payload).select().single();
     if (res.error) {
-      // Fallback: minimal payload
+      // Fallback: minimal payload — still include the unique avatar
+      // so the constraint doesn't bite on the retry either.
       res = await supabase
         .from("app_users")
-        .insert({ username: payload.username, role })
+        .insert({ username: payload.username, role, avatar })
         .select()
         .single();
     }
@@ -634,13 +643,4 @@ function Row({
   return (
     <section className="rounded-xl border border-border/60 bg-card/50 p-3.5">
       <div className="mb-2 flex items-start gap-2">
-        <Icon className="h-3.5 w-3.5 text-primary mt-0.5" />
-        <div className="flex-1">
-          <div className="text-[12.5px] font-semibold text-foreground">{title}</div>
-          <div className="text-[10.5px] text-muted-foreground">{subtitle}</div>
-        </div>
-      </div>
-      {children}
-    </section>
-  );
-}
+        <Icon className="h-3.5 w-3.5 
