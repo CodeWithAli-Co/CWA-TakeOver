@@ -172,9 +172,13 @@ function SendEmailRow({
 
       // 2. Pick the from-address based on brand. Both must be verified
       //    senders in Resend before they'll actually deliver.
-      const brand = form.brand ?? "codeWithAli";
+      //    OfferInput.brand uses "simplicity"; the email layer's Brand
+      //    uses "simplicityFunds" — map between them here.
+      const localBrand = form.brand ?? "codeWithAli";
+      const emailBrand: "codeWithAli" | "simplicityFunds" =
+        localBrand === "simplicity" ? "simplicityFunds" : "codeWithAli";
       const fromAddress =
-        brand === "simplicityFunds"
+        emailBrand === "simplicityFunds"
           ? { name: "Simplicity Funds", email: "hire@simplicityfunds.com" }
           : { name: "CodeWithAli",      email: "hire@codewithali.com"     };
 
@@ -198,7 +202,7 @@ function SendEmailRow({
         candidateName: form.candidateName,
         positionTitle: form.positionTitle,
         employerLegalName: form.employerLegalName,
-        brand,
+        brand: emailBrand,
         acceptUrl,
         attachment: {
           filename: `Offer letter - ${form.candidateName}.pdf`,
