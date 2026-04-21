@@ -108,8 +108,18 @@ function AcceptLinkRow({ current }: { current: CurrentOffer }) {
 }
 
 function buildAcceptUrl(token: string): string {
-  const base =
-    typeof window !== "undefined" ? window.location.origin : "";
+  // The accept page is a PUBLIC web page on cwa_takeover, not a
+  // route inside Takeover desktop itself. Candidates don't have
+  // Takeover installed — they click the email link in their own
+  // browser, which needs to resolve to a real URL.
+  //
+  // Reads VITE_TAKEOVER_SITE_URL (e.g., https://takeover.codewithali.com)
+  // — same env var used by sendEmailViaTakeover. Falls back to
+  // window.location.origin in dev if the env isn't set, so the
+  // "copy accept link" button still gives a usable in-app URL.
+  const siteUrl = import.meta.env.VITE_TAKEOVER_SITE_URL as string | undefined;
+  const base = siteUrl?.replace(/\/+$/, "")
+    ?? (typeof window !== "undefined" ? window.location.origin : "");
   return `${base}/offer/accept/${token}`;
 }
 
@@ -198,7 +208,12 @@ function SendEmailRow({
       });
 
       if (!result.ok) {
-        throw new Error(result.error ?? "Unknown send failure");
+        // Surface provider-specific reason when available — usually
+        // "domain not verified", "recipient blocked", etc. from Resend.
+        const detail = result.providerCode
+          ? `${result.error} (${result.providerCode})`
+          : result.error ?? "Unknown send failure";
+        throw new Error(detail);
       }
 
       // 5. Update the offer row to record emailed_at + candidate_email.
