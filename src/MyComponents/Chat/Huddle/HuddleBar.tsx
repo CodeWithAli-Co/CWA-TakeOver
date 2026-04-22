@@ -15,7 +15,7 @@ import { AnimatePresence, motion } from "framer-motion";
 import {
   Mic, MicOff, Video, VideoOff, PhoneOff, Volume2, AlertCircle,
   Monitor, MonitorOff, Maximize2, Minimize2, ChevronDown, RefreshCw,
-  Sparkles, Check,
+  Sparkles, Check, Columns2, Rows2,
 } from "lucide-react";
 import type { HuddlePeer } from "./useHuddle";
 import { ShareSourceModal } from "./ShareSourceModal";
@@ -128,6 +128,25 @@ export function HuddleBar({
   });
   const persistMinimized = (v: boolean) => {
     try { window.localStorage.setItem("cwa-huddle-minimized", v ? "1" : "0"); } catch { /* noop */ }
+  };
+
+  // Screen-share layout: "stacked" (screens on top, camera row below —
+  // the original layout) or "side" (screens on the left, camera tiles
+  // in a column on the right). Persisted across sessions.
+  const [screenLayout, setScreenLayout] = useState<"stacked" | "side">(() => {
+    try {
+      return window.localStorage.getItem("cwa-huddle-screen-layout") === "side"
+        ? "side"
+        : "stacked";
+    } catch { return "stacked"; }
+  });
+  const toggleScreenLayout = () => {
+    setScreenLayout((cur) => {
+      const next = cur === "stacked" ? "side" : "stacked";
+      try { window.localStorage.setItem("cwa-huddle-screen-layout", next); }
+      catch { /* noop */ }
+      return next;
+    });
   };
 
   // Persisted drag offset — remember where the user dragged the bar to.
@@ -394,6 +413,27 @@ export function HuddleBar({
                 <RefreshCw className="h-3.5 w-3.5" />
               </button>
             )}
+            {/* Layout toggle — only visible when someone's sharing a
+                screen. Switches between the default stacked layout
+                (screens on top, camera row below) and a side-by-side
+                layout (screens on the left, camera tiles in a column
+                on the right). Choice is persisted in localStorage. */}
+            {hasScreenStage && (
+              <button
+                type="button"
+                onClick={toggleScreenLayout}
+                className="rounded-md p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
+                title={
+                  screenLayout === "side"
+                    ? "Switch to stacked layout (screens on top)"
+                    : "Switch to side-by-side layout (screens on left, cameras on right)"
+                }
+              >
+                {screenLayout === "side"
+                  ? <Rows2 className="h-3.5 w-3.5" />
+                  : <Columns2 className="h-3.5 w-3.5" />}
+              </button>
+            )}
             {/* Minimize to pill. Disabled while expanded — collapse first. */}
             <button
               type="button"
@@ -422,54 +462,111 @@ export function HuddleBar({
         {/* Body */}
         <div className={`flex flex-1 flex-col gap-3 min-h-0 ${expanded ? "" : ""}`}>
           {hasScreenStage ? (
-            <>
-              {/* Screen-share primary stage — tiles side-by-side when
-               *  multiple people are sharing at the same time. */}
-              <div
-                className="grid flex-1 min-h-0 gap-2"
-                style={{
-                  gridTemplateColumns: `repeat(${
-                    primaryScreens.length === 1
-                      ? 1
-                      : primaryScreens.length === 2
-                        ? 2
-                        : Math.min(3, primaryScreens.length)
-                  }, 1fr)`,
-                  gridAutoRows: "1fr",
-                }}
-              >
-                {primaryScreens.map((s, i) => (
-                  <ScreenShareTile
-                    key={s.isLocal ? "local-screen" : `${s.name}-${i}`}
-                    name={s.name}
-                    stream={s.stream}
-                  />
-                ))}
-              </div>
-              {/* Participants row below */}
-              <div className="flex items-center gap-2 overflow-x-auto pb-1">
-                <PeerTile
-                  name={`${username} (you)`}
-                  stream={localStream}
-                  isLocal
-                  muted={muted}
-                  cameraOn={camera}
-                  sharing={sharing}
-                  size="sm"
-                />
-                {peers.map((p) => (
+            screenLayout === "side" ? (
+              // ── Side-by-side layout ───────────────────────────
+              // Screens take roughly two-thirds on the left; camera
+              // tiles stack in a column on the right at full tile
+              // size (not the small row used in stacked mode). Works
+              // well for presentations where the presenter's face +
+              // reactions from participants both matter.
+              <div className="flex flex-1 min-h-0 gap-2">
+                <div
+                  className="grid flex-1 min-h-0 gap-2"
+                  style={{
+                    gridTemplateColumns: `repeat(${
+                      primaryScreens.length === 1
+                        ? 1
+                        : Math.min(2, primaryScreens.length)
+                    }, 1fr)`,
+                    gridAutoRows: "1fr",
+                  }}
+                >
+                  {primaryScreens.map((s, i) => (
+                    <ScreenShareTile
+                      key={s.isLocal ? "local-screen" : `${s.name}-${i}`}
+                      name={s.name}
+                      stream={s.stream}
+                    />
+                  ))}
+                </div>
+                <div
+                  className="flex flex-col gap-2 shrink-0 overflow-y-auto"
+                  style={{ width: expanded ? 280 : 200 }}
+                >
                   <PeerTile
-                    key={p.id}
-                    name={p.id}
-                    stream={p.stream}
-                    muted={p.muted}
-                    cameraOn={p.camera}
-                    sharing={p.sharing}
+                    name={`${username} (you)`}
+                    stream={localStream}
+                    isLocal
+                    muted={muted}
+                    cameraOn={camera}
+                    sharing={sharing}
+                    size="lg"
+                  />
+                  {peers.map((p) => (
+                    <PeerTile
+                      key={p.id}
+                      name={p.id}
+                      stream={p.stream}
+                      muted={p.muted}
+                      cameraOn={p.camera}
+                      sharing={p.sharing}
+                      size="lg"
+                      isActiveSpeaker={activeSpeaker === p.id}
+                    />
+                  ))}
+                </div>
+              </div>
+            ) : (
+              // ── Stacked layout (original / default) ───────────
+              <>
+                {/* Screen-share primary stage — tiles side-by-side
+                    when multiple people are sharing at once. */}
+                <div
+                  className="grid flex-1 min-h-0 gap-2"
+                  style={{
+                    gridTemplateColumns: `repeat(${
+                      primaryScreens.length === 1
+                        ? 1
+                        : primaryScreens.length === 2
+                          ? 2
+                          : Math.min(3, primaryScreens.length)
+                    }, 1fr)`,
+                    gridAutoRows: "1fr",
+                  }}
+                >
+                  {primaryScreens.map((s, i) => (
+                    <ScreenShareTile
+                      key={s.isLocal ? "local-screen" : `${s.name}-${i}`}
+                      name={s.name}
+                      stream={s.stream}
+                    />
+                  ))}
+                </div>
+                {/* Participants row below */}
+                <div className="flex items-center gap-2 overflow-x-auto pb-1">
+                  <PeerTile
+                    name={`${username} (you)`}
+                    stream={localStream}
+                    isLocal
+                    muted={muted}
+                    cameraOn={camera}
+                    sharing={sharing}
                     size="sm"
                   />
-                ))}
-              </div>
-            </>
+                  {peers.map((p) => (
+                    <PeerTile
+                      key={p.id}
+                      name={p.id}
+                      stream={p.stream}
+                      muted={p.muted}
+                      cameraOn={p.camera}
+                      sharing={p.sharing}
+                      size="sm"
+                    />
+                  ))}
+                </div>
+              </>
+            )
           ) : (
             /* Gallery grid — auto-fit columns for Discord-like density */
             <div
