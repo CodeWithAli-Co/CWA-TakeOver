@@ -711,23 +711,37 @@ function PeerTile({
 
   const showVideo = !!cameraOn && !!stream && stream.getVideoTracks().length > 0;
 
-  // Video <srcObject> sync — belt-and-suspenders pattern:
-  //   · Runs on mount (when showVideo flips from false→true and the
-  //     <video> element first renders)
-  //   · Runs on stream reference changes (remote peer renegotiation,
-  //     track replacement, etc.)
-  //   · Explicit play() kick — Chromium leaves the video paused when
-  //     srcObject is assigned after mount; autoPlay only reliably
-  //     fires for the INITIAL pre-paint srcObject. This fix resolves
-  //     the "video freezes black until I toggle camera again" bug
-  //     that hit every camera-on transition.
+  // Video <srcObject> sync — uses BOTH a ref callback AND a useEffect:
+  //
+  //   1. Ref callback `attachVideo` — fires on every render with the
+  //      current stream captured in closure. React re-invokes it when
+  //      the inline function identity changes (every render) which
+  //      means it reliably re-binds srcObject even when the parent
+  //      passes a same-reference MediaStream whose contents changed
+  //      (track add/remove, mute/unmute). This was the fix for the
+  //      first-sharer-blind-to-second-sharer bug: updatePeersState
+  //      was sometimes reusing the same MediaStream reference across
+  //      renders, so a useEffect keyed on [stream] would skip the
+  //      re-assignment and the video element kept showing stale
+  //      tracks (or went black).
+  //
+  //   2. useEffect — kicks el.play() after srcObject is assigned.
+  //      Chromium leaves the video paused when srcObject is set
+  //      after mount; autoPlay only reliably fires for the INITIAL
+  //      pre-paint srcObject. Swallow AbortError — happens when
+  //      React re-renders mid-play().
+  const attachVideo = (el: HTMLVideoElement | null) => {
+    videoRef.current = el;
+    if (el && stream && el.srcObject !== stream) {
+      el.srcObject = stream;
+    }
+  };
   useEffect(() => {
     const el = videoRef.current;
     if (!el || !showVideo || !stream) return;
     if (el.srcObject !== stream) {
       el.srcObject = stream;
     }
-    // Swallow AbortError — happens when React re-renders mid-play().
     el.play().catch(() => { /* noop */ });
   }, [stream, showVideo]);
 
@@ -735,6 +749,11 @@ function PeerTile({
     if (audioRef.current && stream && !isLocal) {
       if (audioRef.current.srcObject !== stream) {
         audioRef.current.srcObject = stream;
+        // After post-mount srcObject reassignment Chromium leaves the
+        // element paused. Kick play() so remote voice keeps flowing
+        // when the stream reference changes (e.g., after rebucketing
+        // or a new track arrives).
+        audioRef.current.play().catch(() => { /* noop */ });
       }
     }
     if (!stream || !window.AudioContext) return;
@@ -794,7 +813,7 @@ function PeerTile({
       >
         {showVideo ? (
           <video
-            ref={videoRef}
+            ref={attachVideo}
             autoPlay
             playsInline
             muted={isLocal}
@@ -871,10 +890,24 @@ function PeerAudioSink({ stream }: { stream: MediaStream }) {
 }
 
 function ScreenShareTile({ name, stream }: { name: string; stream: MediaStream }) {
-  // Ref callback for robust srcObject assignment across remounts.
+  // Ref callback + play() kick. The ref callback handles srcObject
+  // assignment across re-renders (including same-reference streams
+  // whose contents mutated). The useEffect fires play() in case
+  // Chromium left the element paused after a post-mount srcObject
+  // assignment — autoPlay alone doesn't always resume.
+  const ref = useRef<HTMLVideoElement | null>(null);
   const attach = (el: HTMLVideoElement | null) => {
-    if (el && stream && el.srcObject !== stream) el.srcObject = stream;
+    ref.current = el;
+    if (el && stream && el.srcObject !== stream) {
+      el.srcObject = stream;
+    }
   };
+  useEffect(() => {
+    const el = ref.current;
+    if (!el || !stream) return;
+    if (el.srcObject !== stream) el.srcObject = stream;
+    el.play().catch(() => { /* noop */ });
+  }, [stream]);
   return (
     <div className="relative h-full w-full overflow-hidden rounded-xl border border-blue-400/30 bg-black">
       <video

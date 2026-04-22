@@ -302,21 +302,31 @@ export function useHuddle({ group, username, joined, muted, camera, quality = "s
     pc.ontrack = (e) => {
       // Bucket by explicit signal (screen-tracks) first; only video
       // tracks ever end up in the screen bucket. Audio is always camera.
+      //
+      // Critical: we MINT a fresh MediaStream on every track add rather
+      // than mutating the existing one in place. React's `<video>`
+      // srcObject binding is keyed on the stream's JS reference; if we
+      // mutate-in-place, PeerTile/ScreenShareTile never see a prop
+      // change and the video element keeps pointing at a stale track
+      // layout. Copy-on-write makes every bucketing event generate a
+      // fresh reference so child tiles re-bind.
       const screenSet = remoteScreenTrackIdsRef.current.get(peerId);
       const isScreen = e.track.kind === "video" && !!screenSet?.has(e.track.id);
       const bucket = isScreen ? remoteScreenStreamsRef : remoteStreamsRef;
-      let stream = bucket.current.get(peerId);
-      if (!stream) {
-        stream = new MediaStream();
-        bucket.current.set(peerId, stream);
-      }
-      stream.addTrack(e.track);
+      const existing = bucket.current.get(peerId);
+      const tracks = existing ? [...existing.getTracks(), e.track] : [e.track];
+      const fresh = new MediaStream(tracks);
+      bucket.current.set(peerId, fresh);
 
       e.track.onended = () => {
         const s = bucket.current.get(peerId);
         if (s) {
-          try { s.removeTrack(e.track); } catch { /* noop */ }
-          if (s.getTracks().length === 0) bucket.current.delete(peerId);
+          const remaining = s.getTracks().filter((t) => t !== e.track);
+          if (remaining.length === 0) {
+            bucket.current.delete(peerId);
+          } else {
+            bucket.current.set(peerId, new MediaStream(remaining));
+          }
         }
         updatePeersState();
       };
@@ -419,15 +429,123 @@ export function useHuddle({ group, username, joined, muted, camera, quality = "s
     });
   }, [muted, broadcast, username, camera]);
 
+  // Camera toggle — flips enabled on the existing video track. If the
+  // local stream never got a video track in the first place (the
+  // initial getUserMedia failed with NotReadableError because the
+  // camera was in use by another app / OS-locked at huddle startup),
+  // this effect LAZILY ACQUIRES it when the user toggles camera on:
+  //   1. Calls getUserMedia with the current quality preset.
+  //   2. Adds the new track to the local stream (mint a fresh
+  //      MediaStream so React sees a new reference — PeerTile's ref
+  //      callback then rebinds srcObject for the self-view).
+  //   3. Attaches the new track as a sender on every live peer
+  //      connection, which fires onnegotiationneeded and renegotiates.
+  //   4. Broadcasts the new state.
+  // If getUserMedia still fails, surfaces the error and leaves camera
+  // state alone so the UI doesn't show a stuck "on" indicator.
   useEffect(() => {
     const s = localStreamRef.current;
     if (!s) return;
-    for (const t of s.getVideoTracks()) t.enabled = camera;
-    broadcast({
-      from: username,
-      kind: "state",
-      state: { muted, camera, sharing: stateRef.current.sharing },
-    });
+
+    const hasVideo = s.getVideoTracks().length > 0;
+
+    if (!camera) {
+      // Going off — flip enabled on whatever video tracks exist.
+      for (const t of s.getVideoTracks()) t.enabled = false;
+      broadcast({
+        from: username,
+        kind: "state",
+        state: { muted, camera, sharing: stateRef.current.sharing },
+      });
+      return;
+    }
+
+    if (hasVideo) {
+      // Camera already acquired — just enable existing tracks.
+      for (const t of s.getVideoTracks()) t.enabled = true;
+      broadcast({
+        from: username,
+        kind: "state",
+        state: { muted, camera, sharing: stateRef.current.sharing },
+      });
+      return;
+    }
+
+    // Camera ON but no video track exists — lazy-acquire.
+    let cancelled = false;
+    (async () => {
+      try {
+        const spec = qualityRef.current;
+        const videoStream = await navigator.mediaDevices.getUserMedia({
+          video: {
+            width: { ideal: spec.width, max: spec.width },
+            height: { ideal: spec.height, max: spec.height },
+            frameRate: { ideal: spec.framerate, max: spec.framerate },
+            aspectRatio: { ideal: 16 / 9 },
+            facingMode: "user",
+          } as MediaTrackConstraints,
+          audio: false,
+        });
+        if (cancelled) {
+          for (const t of videoStream.getTracks()) t.stop();
+          return;
+        }
+        const newVideoTrack = videoStream.getVideoTracks()[0];
+        if (!newVideoTrack) return;
+        try { (newVideoTrack as any).contentHint = "motion"; } catch { /* noop */ }
+        newVideoTrack.enabled = true;
+
+        // Rebuild localStream with a fresh reference (COW) so PeerTile
+        // notices the change. Preserve existing audio tracks.
+        const freshLocal = new MediaStream([
+          ...s.getAudioTracks(),
+          newVideoTrack,
+        ]);
+        localStreamRef.current = freshLocal;
+        setLocalStream(freshLocal);
+
+        // Attach to every existing peer connection. addTrack fires
+        // onnegotiationneeded; perfect negotiation handles collisions.
+        for (const pc of connectionsRef.current.values()) {
+          try {
+            const sender = pc.addTrack(newVideoTrack, freshLocal);
+            const tx = pc.getTransceivers().find((t) => t.sender === sender);
+            if (tx) (sender as any)._cwaTransceiver = tx;
+            tuneVideoSender(sender, "camera", qualityRef.current);
+          } catch (err) {
+            console.warn("[huddle] addTrack(camera) failed:", err);
+          }
+        }
+
+        // Clean up if the track ends from the OS side (unplugged, etc).
+        newVideoTrack.addEventListener("ended", () => {
+          const live = localStreamRef.current;
+          if (!live) return;
+          const remaining = live.getTracks().filter((t) => t !== newVideoTrack);
+          const rebuilt = new MediaStream(remaining);
+          localStreamRef.current = rebuilt;
+          setLocalStream(rebuilt);
+        });
+
+        broadcast({
+          from: username,
+          kind: "state",
+          state: { muted, camera: true, sharing: stateRef.current.sharing },
+        });
+      } catch (err) {
+        console.error("[huddle] lazy camera acquire failed:", err);
+        const msg = err instanceof Error ? err.message : String(err);
+        setError(
+          err instanceof Error && err.name === "NotReadableError"
+            ? "Camera is in use by another app. Close it and try again."
+            : err instanceof Error && err.name === "NotAllowedError"
+              ? "Camera permission denied."
+              : msg,
+        );
+      }
+    })();
+
+    return () => { cancelled = true; };
   }, [camera, broadcast, username, muted]);
 
   // ── Screen share --------------------------------------------------------
@@ -704,19 +822,29 @@ export function useHuddle({ group, username, joined, muted, camera, quality = "s
               // If tracks already landed before the signal, rebucket them
               // retroactively: walk the camera stream for this peer and
               // move any track whose id is in the screen set.
+              //
+              // Both buckets are REPLACED with fresh MediaStream objects
+              // — never mutated in place — so React sees new references
+              // on the next updatePeersState and PeerTile/ScreenShareTile
+              // re-bind their <video> srcObject to the correct layout.
+              // Without this the first sharer's tiles freeze pointing at
+              // the stale mutated stream and the second sharer's screen
+              // never renders for them.
               const cam = remoteStreamsRef.current.get(msg.from);
               if (cam) {
                 const movers = cam.getTracks().filter((t) => ids.has(t.id));
                 if (movers.length > 0) {
-                  let scr = remoteScreenStreamsRef.current.get(msg.from);
-                  if (!scr) {
-                    scr = new MediaStream();
-                    remoteScreenStreamsRef.current.set(msg.from, scr);
+                  const camRemaining = cam.getTracks().filter((t) => !ids.has(t.id));
+                  if (camRemaining.length === 0) {
+                    remoteStreamsRef.current.delete(msg.from);
+                  } else {
+                    remoteStreamsRef.current.set(msg.from, new MediaStream(camRemaining));
                   }
-                  for (const t of movers) {
-                    try { cam.removeTrack(t); } catch { /* noop */ }
-                    try { scr.addTrack(t); } catch { /* noop */ }
-                  }
+                  const scrExisting = remoteScreenStreamsRef.current.get(msg.from);
+                  const scrTracks = scrExisting
+                    ? [...scrExisting.getTracks(), ...movers]
+                    : movers;
+                  remoteScreenStreamsRef.current.set(msg.from, new MediaStream(scrTracks));
                 }
               }
             }

@@ -42,7 +42,11 @@ const fetchActiveUser = async () => {
       role: data.role,
       role_rank: data.role_rank,
       avatarURL: AvatarUrl.publicUrl || 'default_avatar.png',
-      avatarName: data.avatar || 'default_avatar.png'
+      avatarName: data.avatar || 'default_avatar.png',
+      // created_at drives the first-sign-in welcome modal (14-day
+      // recency window). Without it the modal's createdAt check
+      // always yielded 0 and it silently refused to render.
+      created_at: data.created_at,
     },
   ];
 };
