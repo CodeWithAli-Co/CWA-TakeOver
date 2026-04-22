@@ -609,18 +609,30 @@ function PeerTile({
   isActiveSpeaker?: boolean;
 }) {
   const audioRef = useRef<HTMLAudioElement>(null);
+  const videoRef = useRef<HTMLVideoElement>(null);
   const [speaking, setSpeaking] = useState(false);
 
-  // Use a ref callback so srcObject is re-assigned whenever the <video>
-  // element mounts/unmounts. Works across cameraOn toggles (which
-  // swap the video element for an avatar and back), unlike a plain ref
-  // + useEffect pattern which can miss the remount.
-  const attachVideo = (el: HTMLVideoElement | null) => {
-    if (el && stream) {
-      // Only re-assign if different — avoids needless pauses.
-      if (el.srcObject !== stream) el.srcObject = stream;
+  const showVideo = !!cameraOn && !!stream && stream.getVideoTracks().length > 0;
+
+  // Video <srcObject> sync — belt-and-suspenders pattern:
+  //   · Runs on mount (when showVideo flips from false→true and the
+  //     <video> element first renders)
+  //   · Runs on stream reference changes (remote peer renegotiation,
+  //     track replacement, etc.)
+  //   · Explicit play() kick — Chromium leaves the video paused when
+  //     srcObject is assigned after mount; autoPlay only reliably
+  //     fires for the INITIAL pre-paint srcObject. This fix resolves
+  //     the "video freezes black until I toggle camera again" bug
+  //     that hit every camera-on transition.
+  useEffect(() => {
+    const el = videoRef.current;
+    if (!el || !showVideo || !stream) return;
+    if (el.srcObject !== stream) {
+      el.srcObject = stream;
     }
-  };
+    // Swallow AbortError — happens when React re-renders mid-play().
+    el.play().catch(() => { /* noop */ });
+  }, [stream, showVideo]);
 
   useEffect(() => {
     if (audioRef.current && stream && !isLocal) {
@@ -659,7 +671,8 @@ function PeerTile({
     };
   }, [stream, isLocal, muted]);
 
-  const showVideo = !!cameraOn && !!stream && stream.getVideoTracks().length > 0;
+  // `showVideo` is declared once up top — this is just the tile
+  // content from here on.
   const initial = name.replace(/\s+\(you\)$/i, "").slice(0, 2).toUpperCase();
 
   const sm = size === "sm";
@@ -684,7 +697,7 @@ function PeerTile({
       >
         {showVideo ? (
           <video
-            ref={attachVideo}
+            ref={videoRef}
             autoPlay
             playsInline
             muted={isLocal}
