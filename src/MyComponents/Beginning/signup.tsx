@@ -1,234 +1,246 @@
-import { useForm } from "@tanstack/react-form";
+/**
+ * signup.tsx — Invite-only access explainer.
+ *
+ * Takeover is an internal tool. Public signup was removed because
+ * anyone on the internet could previously pick "Employee" or "Intern"
+ * and create an account. Now accounts are created exclusively
+ * through the hiring flow (Offer Letters → Convert to employee),
+ * which spawns an app_users row with the right role.
+ *
+ * This page reuses the split-screen layout from login.tsx so the
+ * two screens feel like siblings, and explains the new access
+ * model so anyone who lands here understands why they can't just
+ * make an account.
+ */
 
-import { useState } from "react";
 import { useAppStore } from "@/stores/store";
-import supabase from "../supabase";
-import { message } from "@tauri-apps/plugin-dialog";
-import { Button } from "@/components/ui/shadcnComponents/button";
-import { Input } from "@/components/ui/shadcnComponents/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/shadcnComponents/select";
-import { Label } from "@/components/ui/shadcnComponents/Label";
+import {
+  Mail, ShieldCheck, ArrowLeft, FileSignature, UserPlus, ClipboardCheck,
+  Sparkles, Users,
+} from "lucide-react";
 
 export const SignUpPage = () => {
   const { setIsLoggedIn } = useAppStore();
-  const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  // const { data: role, isLoading, error: roleError } = useQuery({
-  //   queryKey: ["getrole"],
-  //   queryFn: fetchData,
-  //   refetchInterval: 5000
-  // });
 
-  const handleLogIn = () => {
-    setIsLoggedIn("false"); // Indicate that user should go back to login
-  };
-
-  const form = useForm({
-    defaultValues: {
-      username: "-",
-      email: "",
-      password: "",
-      retypepassword: "",
-      position: "Employee",
-    },
-    onSubmit: async ({ value }) => {
-      console.log(value);
-      // Need to Insert data into app_users table
-
-      // Check if passwords match or not
-      if (value.password !== value.retypepassword) {
-        setErrorMessage("Passwords do not match");
-        console.log("Passwords do not match");
-        return;
-      }
-      let { data, error } = await supabase.auth.signUp({
-        email: value.email,
-        password: value.password,
-      });
-
-      if (error) return await message(error.message, { title: 'Error Signing Up', kind: "error" });
-
-
-      if (value.position === "Employee") {
-        const { error } = await supabase.from("app_users").insert({
-          username: value.username,
-          email: value.email,
-          supa_id: data.user?.id,
-        });
-        if (error)
-          return console.log("Signing Employee up Error:", error.message);
-      } else if (value.position === "Intern") {
-        const { error } = await supabase.from("interns").insert({
-          username: value.username,
-          email: value.email,
-          supa_id: data.user?.id,
-        });
-        if (error)
-          return console.log("Signing Intern up Error:", error.message);
-      }
-
-      // add delay for email to reach user
-      // ill shorten the time for the email to reach the user sooner by removing the line entirely
-      // await new Promise((r) => setTimeout(r, 10000));
-      setIsLoggedIn("false"); // Go to login page
-    },
-  });
+  const goToLogin = () => setIsLoggedIn("false");
 
   return (
-    
-      <div className="min-h-screen w-full flex justify-center items-center  bg-gradient-to-br from-red-950/20 via-red-950/70 to-red-950/20">
-      <div className="w-[400px]  p-8 rounded-lg flex flex-col items-center border bg-black border-white">
-        <h3 className="text-2xl text-amber-50 mb-12">Sign Up</h3>
+    <div className="min-h-screen w-full bg-zinc-950 text-zinc-100 flex">
+      {/* ── Left brand panel (mirror of login's) ──────────────── */}
+      <BrandPanel />
 
-        <form
-          onSubmit={(e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            form.handleSubmit();
-          }}
-        >
-        
-          <div className="w-[300px] ">
-            {/* Email Field */}
-            <form.Field
-              name="email"
-           
-              children={(field) => (
-                <div className="w-full group ">
-                  <Label
-                    className="text-amber-50 block mb-2"
-                    htmlFor={field.name}
-                  >
-                    Email:
-                  </Label>
-                  
-                  <Input
-                    name={field.name}
-                    type="email"
-                    placeholder="john@gmail.com"
-                    className="w-full p-0  text-amber-50  border-zinc-900 
-                             focus:border-red-900 pl-3 focus:bg-zinc-950/10 focus:rounded-lg 
-                             hover:bg-zinc-950/10 hover:border-red-950 hover:rounded-lg hover:border-none"
-                    value={field.state.value}
-                    onChange={(e) => field.handleChange(e.target.value)}
-                  />
-                </div>
-              )}
-            />
-            <br />
-            {/* Password Field */}
-            <form.Field
-              name="password"
-              children={(field) => (
-                <div className="w-full group  ">
-                  <Label
-                    className="text-amber-50 block mb-2"
-                    htmlFor={field.name}
-                  >
-                    Password:
-                  </Label>
-                  <Input
-                    name={field.name}
-                    type="password"
-                    placeholder="Enter Password..."
-                    className="w-full p-0 bg-transparent text-amber-50  border-zinc-900 mb-4
-                             focus:border-red-900 pl-3 focus:bg-zinc-950/10 focus:rounded-lg 
-                             hover:bg-zinc-950/10 hover:border-red-950 hover:rounded-lg hover:border-none"
-                    value={field.state.value}
-                    onChange={(e) => field.handleChange(e.target.value)}
-                  />
-                </div>
-              )}
-            />
+      {/* ── Right: the explainer ──────────────────────────────── */}
+      <main className="flex flex-1 items-center justify-center p-6 md:p-10">
+        <div className="w-full max-w-[440px]">
+          <button
+            type="button"
+            onClick={goToLogin}
+            className="mb-6 inline-flex items-center gap-1.5 text-[11.5px] text-zinc-500 hover:text-zinc-200 transition-colors"
+          >
+            <ArrowLeft className="h-3 w-3" />
+            Back to sign in
+          </button>
 
-            {/* Retype Password Field */}
-          <form.Field
-            name="retypepassword"
-            children={(field) => (
-              <div className="w-full group ">
-                <Label className="text-amber-50 block mb-2" htmlFor={field.name}>
-                  Retype Password:
-                </Label>
-                <Input
-                  name={field.name}
-                  type="password"
-                  placeholder="Re-enter Password..."
-                  className="w-full p-0  text-amber-50  border-zinc-900 
-                           focus:border-red-900 pl-3 focus:bg-zinc-950/10 focus:rounded-lg 
-                           hover:bg-zinc-950/10 hover:border-red-950 hover:rounded-lg hover:border-none"
-                  value={field.state.value}
-                  onChange={(e) => field.handleChange(e.target.value)}
-                />
-                {/* Show error message below Retype Password field */}
-                {form.getFieldValue("password") !== form.getFieldValue("retypepassword") &&
-                  form.getFieldValue("retypepassword").length > 0 && (
-                    <p className="text-red-900 mt-2">Passwords do not match!</p>
-                  )}
-              </div>
-            )}
-          />
-
-            <br />
-            <form.Field
-              name="position"
-              children={(field) => (
-                <div className="flex flex-col justify-center w-full">
-                  <Label className="mb-1 block font-bold ">Role</Label>
-                  <Select name={field.name}>
-                    <SelectTrigger className="border border-zinc-900">
-                      <SelectValue placeholder= "Select Role"/>
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="Employee">Employee</SelectItem>
-                      <SelectItem value="Intern">Intern</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  {/* <select
-                    name={field.name}
-                    className="w-full p-2  text-amber-50 bg-transparent  border-zinc-900
-                             focus:border-red-900 pl-3 focus:bg-zinc-950/10 focus:rounded-lg 
-                             hover:bg-zinc-950/10 hover:border-red-950 hover:rounded-lg hover:border-none
-                              cursor-pointer appearance-none"
-                    onChange={(e) => field.handleChange(e.target.value)}
-                  >
-                    <option value="Employee" className="bg-gray-800 text-amber-50">
-                      Employee
-                    </option>
-                    <option value="Intern" className="bg-gray-800 text-amber-50">
-                      Intern
-                    </option>
-                  </select> */}
-                </div>
-              )}
-            />
-            <br />
+          <div className="mb-6">
+            <div className="inline-flex h-10 w-10 items-center justify-center rounded-lg border border-zinc-800 bg-zinc-900/70 mb-4">
+              <ShieldCheck className="h-4 w-4 text-zinc-300" />
+            </div>
+            <h1 className="text-[24px] font-bold tracking-tight text-zinc-100">
+              Takeover is invite-only.
+            </h1>
+            <p className="mt-2 text-[13px] text-zinc-400 leading-relaxed">
+              We don't have a public signup form. Accounts are created
+              automatically when you're hired, through the Offer Letters
+              → Convert workflow.
+            </p>
           </div>
-          <div className="flex flex-col items-center w-full space-y-4">
-            <form.Subscribe
-              selector={(state) => [state.canSubmit]}
-              children={([canSubmit]) => (
-                <Button type="submit" className="w-full bg-red-950 hover:bg-red-950" disabled={!canSubmit}>
-                  Submit
-                </Button>
-              )}
-            />
-         
-             {/* Sign Up Button */}
-        <div className="mt-4 text-center">
-        <p>Already have an account?</p>
-        <Button
-          // goes to the above function, pretty simple right?
-          onClick={handleLogIn}
-         className="mt-2 w-full bg-blue-950 hover:bg-blue-950/20 px-0"
-        >
-          Log In
-        </Button>
-      </div>
-          
-      </div>
-        </form>
-      </div>
-    </div>
-  // throw new Error("Function not implemented.");
-  );
 
+          {/* ── Access path ── */}
+          <div className="rounded-lg border border-zinc-800 bg-zinc-900/40 p-5">
+            <p className="text-[10.5px] font-mono uppercase tracking-widest text-zinc-500 mb-4">
+              How access works
+            </p>
+            <ul className="space-y-4">
+              <Step
+                n={1}
+                icon={FileSignature}
+                title="Accept your offer"
+                body="You receive a signed offer letter via email with a secure link to accept, counter-sign, and complete any companion agreements."
+              />
+              <Step
+                n={2}
+                icon={UserPlus}
+                title="Account gets created"
+                body="Your hiring contact clicks 'Create employee record' after you've signed. Your Takeover account is provisioned automatically with your role + company."
+              />
+              <Step
+                n={3}
+                icon={ClipboardCheck}
+                title="Sign in + onboard"
+                body="You receive a welcome email with your first-login details. Sign in, work through your onboarding checklist, and you're in."
+              />
+            </ul>
+          </div>
+
+          {/* ── Contact fallback ── */}
+          <div className="mt-6 flex items-start gap-3 rounded-lg border border-zinc-800 bg-zinc-900/30 p-4">
+            <Mail className="h-4 w-4 mt-0.5 text-zinc-400 shrink-0" />
+            <div className="min-w-0">
+              <p className="text-[12.5px] font-semibold text-zinc-200">
+                Think you should have access?
+              </p>
+              <p className="mt-1 text-[11.5px] text-zinc-500 leading-relaxed">
+                If you've been hired and haven't received an invite, or
+                your hiring contact says your account was created but
+                you can't sign in, reach out to{" "}
+                <a
+                  href="mailto:hire@codewithali.com"
+                  className="text-zinc-300 hover:text-zinc-100 underline underline-offset-2"
+                >
+                  hire@codewithali.com
+                </a>
+                .
+              </p>
+            </div>
+          </div>
+
+          <button
+            type="button"
+            onClick={goToLogin}
+            className="mt-8 w-full inline-flex items-center justify-center gap-2 rounded-md bg-zinc-100 px-4 py-2.5 text-[13px] font-semibold text-zinc-950 hover:bg-white transition-colors shadow-lg"
+          >
+            Go to sign in
+          </button>
+        </div>
+      </main>
+    </div>
+  );
 };
+
+// ── Brand panel (kept in-file to avoid cross-file coupling on a
+// single-use component; login.tsx has a near-identical one) ────
+
+function BrandPanel() {
+  return (
+    <aside className="hidden lg:flex relative w-[46%] min-w-[440px] max-w-[620px] flex-col justify-between overflow-hidden border-r border-zinc-900/80 bg-gradient-to-br from-zinc-950 via-zinc-950 to-zinc-900 p-10">
+      <div
+        aria-hidden
+        className="pointer-events-none absolute inset-0"
+        style={{
+          background: `
+            radial-gradient(circle at 20% 20%, rgba(99, 102, 241, 0.15) 0%, transparent 45%),
+            radial-gradient(circle at 80% 80%, rgba(236, 72, 153, 0.12) 0%, transparent 40%),
+            radial-gradient(circle at 50% 0%, rgba(59, 130, 246, 0.08) 0%, transparent 50%)
+          `,
+        }}
+      />
+      <div
+        aria-hidden
+        className="pointer-events-none absolute inset-0 opacity-[0.04]"
+        style={{
+          backgroundImage:
+            "linear-gradient(to right, #fff 1px, transparent 1px), linear-gradient(to bottom, #fff 1px, transparent 1px)",
+          backgroundSize: "48px 48px",
+        }}
+      />
+
+      <div className="relative z-10">
+        <div className="flex items-center gap-2.5">
+          <div className="h-9 w-9 rounded-lg bg-gradient-to-br from-zinc-100 to-zinc-400 flex items-center justify-center font-bold text-zinc-950 text-[15px]">
+            T
+          </div>
+          <div>
+            <p className="text-[15px] font-bold tracking-tight text-zinc-100">Takeover</p>
+            <p className="text-[10px] font-mono uppercase tracking-widest text-zinc-500">
+              Ops Platform
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <div className="relative z-10 max-w-[420px]">
+        <h2 className="text-[28px] font-bold tracking-tight text-zinc-100 leading-[1.15]">
+          A tightly-scoped platform — earned access only.
+        </h2>
+        <p className="mt-3 text-[13px] text-zinc-400 leading-relaxed">
+          Every Takeover account is tied to a real hiring event. That's how
+          we keep the data clean, the audit trail intact, and the user
+          directory from filling with strangers.
+        </p>
+
+        <ul className="mt-8 space-y-4">
+          <Feature
+            icon={ShieldCheck}
+            title="Identity verified at source"
+            body="Every user was vetted during hiring — no drive-by signups."
+          />
+          <Feature
+            icon={Users}
+            title="Role assigned on creation"
+            body="Your permissions match your role. You see what you need and nothing else."
+          />
+          <Feature
+            icon={Sparkles}
+            title="Onboarding is built-in"
+            body="New-hire checklist appears the moment you log in."
+          />
+        </ul>
+      </div>
+
+      <div className="relative z-10 flex items-center justify-between text-[10.5px] text-zinc-600">
+        <span>© {new Date().getFullYear()} CodeWithAli LLC</span>
+        <span className="font-mono">v2</span>
+      </div>
+    </aside>
+  );
+}
+
+function Feature({
+  icon: Icon, title, body,
+}: {
+  icon: typeof Sparkles;
+  title: string;
+  body: string;
+}) {
+  return (
+    <li className="flex items-start gap-3">
+      <div className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-md border border-zinc-800 bg-zinc-900/80">
+        <Icon className="h-3.5 w-3.5 text-zinc-300" />
+      </div>
+      <div>
+        <p className="text-[12.5px] font-semibold text-zinc-200">{title}</p>
+        <p className="mt-0.5 text-[11.5px] text-zinc-500 leading-snug">{body}</p>
+      </div>
+    </li>
+  );
+}
+
+// ── Numbered step block ────────────────────────────────────────
+
+function Step({
+  n, icon: Icon, title, body,
+}: {
+  n: number;
+  icon: typeof FileSignature;
+  title: string;
+  body: string;
+}) {
+  return (
+    <li className="flex items-start gap-3">
+      <div className="relative shrink-0">
+        <div className="flex h-8 w-8 items-center justify-center rounded-full border border-zinc-800 bg-zinc-900 text-[11px] font-bold text-zinc-300">
+          {n}
+        </div>
+      </div>
+      <div className="min-w-0 pt-1">
+        <div className="flex items-center gap-1.5">
+          <Icon className="h-3.5 w-3.5 text-zinc-400" />
+          <p className="text-[12.5px] font-semibold text-zinc-200">{title}</p>
+        </div>
+        <p className="mt-1 text-[11.5px] text-zinc-500 leading-relaxed">{body}</p>
+      </div>
+    </li>
+  );
+}
+
+export default SignUpPage;
