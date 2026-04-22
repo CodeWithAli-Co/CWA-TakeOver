@@ -26,6 +26,7 @@ const SAnalyticsLazyRouteImport = createFileRoute('/s-analytics')()
 const RoadmapLazyRouteImport = createFileRoute('/roadmap')()
 const QuotaLazyRouteImport = createFileRoute('/quota')()
 const PersonalLazyRouteImport = createFileRoute('/personal')()
+const OnboardingLazyRouteImport = createFileRoute('/onboarding')()
 const OffersLazyRouteImport = createFileRoute('/offers')()
 const Mod_logsLazyRouteImport = createFileRoute('/mod_logs')()
 const InvoicerLazyRouteImport = createFileRoute('/invoicer')()
@@ -121,6 +122,11 @@ const PersonalLazyRoute = PersonalLazyRouteImport.update({
   path: '/personal',
   getParentRoute: () => rootRouteImport,
 } as any).lazy(() => import('./routes/personal.lazy').then((d) => d.Route))
+const OnboardingLazyRoute = OnboardingLazyRouteImport.update({
+  id: '/onboarding',
+  path: '/onboarding',
+  getParentRoute: () => rootRouteImport,
+} as any).lazy(() => import('./routes/onboarding.lazy').then((d) => d.Route))
 const OffersLazyRoute = OffersLazyRouteImport.update({
   id: '/offers',
   path: '/offers',
@@ -247,6 +253,7 @@ export interface FileRoutesByFullPath {
   '/invoicer': typeof InvoicerLazyRoute
   '/mod_logs': typeof Mod_logsLazyRoute
   '/offers': typeof OffersLazyRoute
+  '/onboarding': typeof OnboardingLazyRoute
   '/personal': typeof PersonalLazyRoute
   '/quota': typeof QuotaLazyRoute
   '/roadmap': typeof RoadmapLazyRoute
@@ -283,6 +290,7 @@ export interface FileRoutesByTo {
   '/invoicer': typeof InvoicerLazyRoute
   '/mod_logs': typeof Mod_logsLazyRoute
   '/offers': typeof OffersLazyRoute
+  '/onboarding': typeof OnboardingLazyRoute
   '/personal': typeof PersonalLazyRoute
   '/quota': typeof QuotaLazyRoute
   '/roadmap': typeof RoadmapLazyRoute
@@ -320,6 +328,7 @@ export interface FileRoutesById {
   '/invoicer': typeof InvoicerLazyRoute
   '/mod_logs': typeof Mod_logsLazyRoute
   '/offers': typeof OffersLazyRoute
+  '/onboarding': typeof OnboardingLazyRoute
   '/personal': typeof PersonalLazyRoute
   '/quota': typeof QuotaLazyRoute
   '/roadmap': typeof RoadmapLazyRoute
@@ -358,6 +367,7 @@ export interface FileRouteTypes {
     | '/invoicer'
     | '/mod_logs'
     | '/offers'
+    | '/onboarding'
     | '/personal'
     | '/quota'
     | '/roadmap'
@@ -394,6 +404,7 @@ export interface FileRouteTypes {
     | '/invoicer'
     | '/mod_logs'
     | '/offers'
+    | '/onboarding'
     | '/personal'
     | '/quota'
     | '/roadmap'
@@ -430,6 +441,7 @@ export interface FileRouteTypes {
     | '/invoicer'
     | '/mod_logs'
     | '/offers'
+    | '/onboarding'
     | '/personal'
     | '/quota'
     | '/roadmap'
@@ -467,6 +479,7 @@ export interface RootRouteChildren {
   InvoicerLazyRoute: typeof InvoicerLazyRoute
   Mod_logsLazyRoute: typeof Mod_logsLazyRoute
   OffersLazyRoute: typeof OffersLazyRoute
+  OnboardingLazyRoute: typeof OnboardingLazyRoute
   PersonalLazyRoute: typeof PersonalLazyRoute
   QuotaLazyRoute: typeof QuotaLazyRoute
   RoadmapLazyRoute: typeof RoadmapLazyRoute
@@ -583,6 +596,13 @@ declare module '@tanstack/react-router' {
       path: '/personal'
       fullPath: '/personal'
       preLoaderRoute: typeof PersonalLazyRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/onboarding': {
+      id: '/onboarding'
+      path: '/onboarding'
+      fullPath: '/onboarding'
+      preLoaderRoute: typeof OnboardingLazyRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/offers': {
@@ -747,6 +767,7 @@ const rootRouteChildren: RootRouteChildren = {
   InvoicerLazyRoute: InvoicerLazyRoute,
   Mod_logsLazyRoute: Mod_logsLazyRoute,
   OffersLazyRoute: OffersLazyRoute,
+  OnboardingLazyRoute: OnboardingLazyRoute,
   PersonalLazyRoute: PersonalLazyRoute,
   QuotaLazyRoute: QuotaLazyRoute,
   RoadmapLazyRoute: RoadmapLazyRoute,

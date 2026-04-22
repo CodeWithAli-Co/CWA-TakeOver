@@ -557,6 +557,95 @@ function DocPreviewModal({
 
 // ── 4. Convert accepted offer → employee ───────────────────────────
 
+/** Spawn an onboarding_instance + copy template items for a newly
+ *  converted hire. Best-effort: errors here do NOT fail the convert,
+ *  they just surface as a soft note. Returns a human-readable status
+ *  string the caller can append to the success message. */
+async function spawnOnboarding(
+  offerId: string,
+  employeeUserId: string | null,
+  form: OfferInput,
+): Promise<{ ok: boolean; note: string }> {
+  try {
+    // OfferInput.brand uses "simplicity"; DB schema uses "simplicityFunds".
+    const dbBrand = form.brand === "simplicity" ? "simplicityFunds" : "codeWithAli";
+
+    // Pick the template matching this hire's (brand, employment_type).
+    const tpl = await supabase
+      .from("onboarding_templates")
+      .select("id, item_list")
+      .eq("brand", dbBrand)
+      .eq("employment_type", form.employmentType)
+      .maybeSingle();
+
+    if (tpl.error) {
+      // Table likely missing — migration hasn't been run yet.
+      if ((tpl.error as any).code === "42P01" ||
+          (tpl.error.message || "").toLowerCase().includes("does not exist")) {
+        return {
+          ok: false,
+          note: "Onboarding not spawned — run migrations/onboarding_init.sql first.",
+        };
+      }
+      return { ok: false, note: `Onboarding template lookup failed: ${tpl.error.message}` };
+    }
+    if (!tpl.data) {
+      return {
+        ok: false,
+        note: `No onboarding template for ${dbBrand} / ${form.employmentType}. Create one in the Onboarding page.`,
+      };
+    }
+
+    // Create the instance.
+    const instanceRes = await supabase
+      .from("onboarding_instances")
+      .insert({
+        offer_letter_id: offerId,
+        employee_user_id: employeeUserId,
+        template_id: (tpl.data as any).id,
+        status: "active",
+      })
+      .select("id")
+      .single();
+    if (instanceRes.error) {
+      return { ok: false, note: `Could not start onboarding: ${instanceRes.error.message}` };
+    }
+
+    // Copy template items into concrete onboarding_items rows.
+    const itemList = (tpl.data as any).item_list as Array<{
+      title: string;
+      description?: string;
+      owner: "employer" | "employee";
+      position?: number;
+    }>;
+    if (Array.isArray(itemList) && itemList.length > 0) {
+      const itemsRes = await supabase.from("onboarding_items").insert(
+        itemList.map((it, i) => ({
+          instance_id: (instanceRes.data as any).id,
+          title: it.title,
+          description: it.description ?? null,
+          owner: it.owner,
+          position: it.position ?? i + 1,
+          status: "pending",
+        })),
+      );
+      if (itemsRes.error) {
+        return {
+          ok: false,
+          note: `Onboarding started but couldn't copy tasks: ${itemsRes.error.message}`,
+        };
+      }
+    }
+
+    return { ok: true, note: `Onboarding checklist started (${itemList.length} items).` };
+  } catch (e) {
+    return {
+      ok: false,
+      note: `Onboarding spawn failed: ${e instanceof Error ? e.message : String(e)}`,
+    };
+  }
+}
+
 function ConvertRow({
   current, form, onMutated,
 }: {
@@ -625,9 +714,14 @@ function ConvertRow({
         setConverting(false);
         return;
       }
+      // Spawn onboarding checklist for the existing employee too —
+      // even if they already have an app_users row, THIS specific
+      // hire event gets its own onboarding instance so the task
+      // list is scoped to this offer / role change.
+      const onb = await spawnOnboarding(current.id, existingId, form);
       setSuccess(true);
       setSuccessMsg(
-        `Linked to existing employee "${baseUsername}". Check the Employees page.`,
+        `Linked to existing employee "${baseUsername}". ${onb.note}`,
       );
       setConverting(false);
       onMutated();
@@ -705,9 +799,13 @@ function ConvertRow({
         return;
       }
     }
+    // Spawn onboarding checklist for the newly-created employee.
+    // Best-effort — failures here surface as a note but don't
+    // undo the employee record or the offer link.
+    const onb = await spawnOnboarding(current.id, userId, form);
     setSuccess(true);
     setSuccessMsg(
-      `Created employee "${username}". Check the Employees page to assign avatar + tune role.`,
+      `Created employee "${username}". ${onb.note}`,
     );
     setConverting(false);
     onMutated();

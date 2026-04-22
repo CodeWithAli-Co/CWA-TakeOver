@@ -27,6 +27,7 @@ import {
   Map,
   FileText,
   Package,
+  ClipboardCheck,
   type LucideIcon,
 } from "lucide-react";
 
@@ -307,6 +308,12 @@ export const adminData = {
       url: "/offers",
       isActive: false,
       icon: FileText,
+    },
+    {
+      title: "Onboarding",
+      url: "/onboarding",
+      isActive: false,
+      icon: ClipboardCheck,
     },
     {
       title: "Components",
@@ -741,6 +748,12 @@ export const cooData = {
       icon: FileText,
     },
     {
+      title: "Onboarding",
+      url: "/onboarding",
+      isActive: false,
+      icon: ClipboardCheck,
+    },
+    {
       title: "Components",
       url: "/components",
       isActive: false,
@@ -981,6 +994,12 @@ export const ceoData = {
       icon: FileText,
     },
     {
+      title: "Onboarding",
+      url: "/onboarding",
+      isActive: false,
+      icon: ClipboardCheck,
+    },
+    {
       title: "Components",
       url: "/components",
       isActive: false,
@@ -1217,6 +1236,12 @@ export const cfoData = {
       url: "/offers",
       isActive: false,
       icon: FileText,
+    },
+    {
+      title: "Onboarding",
+      url: "/onboarding",
+      isActive: false,
+      icon: ClipboardCheck,
     },
     {
       title: "Components",
