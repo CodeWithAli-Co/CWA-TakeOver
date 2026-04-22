@@ -23,6 +23,7 @@ import {
 } from "./draftCompanion";
 import type { OfferInput } from "./draftOffer";
 import { sendOfferLetterEmail, blobToBase64 as pdfBlobToBase64 } from "./sendEmailViaTakeover";
+import { inviteUserViaTakeover } from "./inviteUserViaTakeover";
 
 interface CurrentOffer {
   id: string;
@@ -763,13 +764,58 @@ function ConvertRow({
       // Supabase will reject unknowns — we attempt, then fall back.
     };
 
-    let res = await supabase.from("app_users").insert(payload).select().single();
+    // ── 2a. Provision Supabase auth user FIRST so we have a real
+    //    supa_id UUID before inserting into app_users. This closes
+    //    the "app_users row exists but auth.users doesn't, so they
+    //    can't log in" gap. Supabase sends the invite email with a
+    //    set-password link automatically.
+    let authUserId: string | null = null;
+    if (current.candidate_email) {
+      const invite = await inviteUserViaTakeover({
+        email: current.candidate_email,
+        candidateName: form.candidateName,
+      });
+      if (invite.ok) {
+        authUserId = invite.userId ?? null;
+      } else if (invite.alreadyRegistered) {
+        // Rare — the email already has an auth.users row from a
+        // previous attempt. Proceed without a fresh invite; the
+        // operator can trigger a password reset separately.
+      } else {
+        setError(
+          `Could not send invite to ${current.candidate_email}: ${invite.error ?? "unknown"}. Employee record not created — fix the invite pipeline and retry.`,
+        );
+        setConverting(false);
+        return;
+      }
+    } else {
+      setError(
+        "Offer has no candidate email — can't invite the user to set up auth. Add candidate_email to the offer row first.",
+      );
+      setConverting(false);
+      return;
+    }
+
+    // ── 2b. Insert app_users row, preferring the supa_id from the
+    //    invite so the row is linkable immediately. If some
+    //    installs auto-generate supa_id via trigger, the direct
+    //    payload still wins.
+    const fullPayload = authUserId
+      ? { ...payload, supa_id: authUserId }
+      : payload;
+
+    let res = await supabase.from("app_users").insert(fullPayload).select().single();
     if (res.error) {
-      // Fallback: minimal payload — still include the unique avatar
-      // so the constraint doesn't bite on the retry either.
+      // Fallback: minimal payload — still include supa_id + unique
+      // avatar so the constraint doesn't bite on the retry either.
       res = await supabase
         .from("app_users")
-        .insert({ username: payload.username, role, avatar })
+        .insert({
+          username: payload.username,
+          role,
+          avatar,
+          ...(authUserId ? { supa_id: authUserId } : {}),
+        })
         .select()
         .single();
     }
@@ -778,14 +824,10 @@ function ConvertRow({
       setConverting(false);
       return;
     }
-    // Prefer supa_id (UUID) — same reason as the link-existing branch.
-    // If the freshly-inserted row doesn't yet have a supa_id (some
-    // app_users defaults set it via trigger, some don't), we skip the
-    // link update rather than blow up with "invalid input syntax for
-    // type uuid". The employee row is still created; operator can
-    // link the offer manually later.
+
+    // ── 2c. Link offer_letters.converted_to_user_id → supa_id.
     const freshRow = res.data as any;
-    const userId = freshRow?.supa_id ?? null;
+    const userId = authUserId ?? freshRow?.supa_id ?? null;
     if (userId) {
       const upd = await supabase
         .from("offer_letters")
@@ -805,7 +847,7 @@ function ConvertRow({
     const onb = await spawnOnboarding(current.id, userId, form);
     setSuccess(true);
     setSuccessMsg(
-      `Created employee "${username}". ${onb.note}`,
+      `Created employee "${username}". Invite email sent to ${current.candidate_email}. ${onb.note}`,
     );
     setConverting(false);
     onMutated();

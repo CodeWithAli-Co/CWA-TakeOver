@@ -29,6 +29,10 @@ export const LoginPage = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [authError, setAuthError] = useState<string | null>(null);
+  // Forgot-password flow state — lets us show a success toast
+  // inline instead of a blocking dialog.
+  const [resetting, setResetting] = useState(false);
+  const [resetNote, setResetNote] = useState<string | null>(null);
 
   const form = useForm({
     defaultValues: { email: "", password: "" },
@@ -134,17 +138,44 @@ export const LoginPage = () => {
                     </label>
                     <button
                       type="button"
-                      onClick={() => {
-                        // Forgot-password flow lands in task #198.
-                        // For now this is a placeholder that tells the
-                        // user to reach out if they're locked out.
-                        setAuthError(
-                          "Password reset is coming soon. For now, ping your admin to reset your password manually.",
+                      disabled={resetting}
+                      onClick={async () => {
+                        // Send a Supabase password-reset email to the
+                        // address currently in the email field. If the
+                        // field is empty, prompt for one rather than
+                        // silently doing nothing.
+                        const email = form.getFieldValue("email")?.trim();
+                        if (!email || !email.includes("@")) {
+                          setAuthError(
+                            "Enter your email above first, then click 'Forgot password?' again.",
+                          );
+                          return;
+                        }
+                        setResetting(true);
+                        setAuthError(null);
+                        setResetNote(null);
+                        const siteUrl =
+                          (import.meta.env.VITE_TAKEOVER_SITE_URL as string | undefined)?.replace(/\/+$/, "")
+                          ?? "";
+                        const redirectTo = siteUrl
+                          ? `${siteUrl}/auth/set-password`
+                          : undefined;
+                        const { error } = await supabase.auth.resetPasswordForEmail(
+                          email,
+                          redirectTo ? { redirectTo } : undefined,
+                        );
+                        setResetting(false);
+                        if (error) {
+                          setAuthError(`Couldn't send reset email: ${error.message}`);
+                          return;
+                        }
+                        setResetNote(
+                          `Reset link sent to ${email}. Check your inbox (and spam) — open the link to set a new password.`,
                         );
                       }}
-                      className="text-[11px] text-zinc-500 hover:text-zinc-200 transition-colors"
+                      className="text-[11px] text-zinc-500 hover:text-zinc-200 transition-colors disabled:opacity-50"
                     >
-                      Forgot password?
+                      {resetting ? "Sending…" : "Forgot password?"}
                     </button>
                   </div>
                   <FieldShell
@@ -181,6 +212,14 @@ export const LoginPage = () => {
               <div className="flex items-start gap-2 rounded-md border border-red-500/30 bg-red-500/10 px-3 py-2">
                 <AlertCircle className="h-3.5 w-3.5 mt-0.5 text-red-400 shrink-0" />
                 <p className="text-[12px] text-red-200 leading-snug">{authError}</p>
+              </div>
+            )}
+
+            {/* ── Reset-email confirmation ── */}
+            {resetNote && (
+              <div className="flex items-start gap-2 rounded-md border border-emerald-500/30 bg-emerald-500/10 px-3 py-2">
+                <Mail className="h-3.5 w-3.5 mt-0.5 text-emerald-400 shrink-0" />
+                <p className="text-[12px] text-emerald-200 leading-snug">{resetNote}</p>
               </div>
             )}
 
