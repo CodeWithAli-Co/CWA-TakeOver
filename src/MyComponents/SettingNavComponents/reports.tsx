@@ -1,1164 +1,647 @@
-import { useState } from "react";
+/**
+ * reports.tsx (settings tab) — structured report submission.
+ *
+ * Layout philosophy: this is a form for working adults, not a
+ * tutorial. No step numbers, no hero marketing card, no monospace
+ * scratchpad. Just:
+ *
+ *   1. Report-type pill row
+ *   2. Starting-framework row (templates for that type)
+ *   3. Basics card (title, priority, project when relevant)
+ *   4. Structured fields generated from the chosen template —
+ *      each template field renders as a labeled input/textarea
+ *   5. Submit
+ *   6. Your recent reports
+ *
+ * When the user picks a template, the form expands to show real
+ * labeled fields for each section of that template. Empty fields
+ * are skipped on submit; values are serialized to a readable
+ * "Label:\n<value>" body string that the inbox renders as prose.
+ */
+
+import { useEffect, useMemo, useState } from "react";
 import {
-  BarChart,
-  FileText,
-  FileSpreadsheet,
-  FilePieChart,
-  Download,
-  Plus,
-  RefreshCw,
-  Trash2,
-  Settings,
-  Shield,
-  Activity,
-  Search,
-  Clipboard,
-  LineChart,
+  Send, Loader2, Check, AlertCircle, Sparkles, AlertTriangle,
+  MessageSquare, FileText, FolderKanban, ClipboardList,
+  Clock, Eye, Pencil,
 } from "lucide-react";
+import supabase from "@/MyComponents/supabase";
+import { ActiveUser } from "@/stores/query";
 import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/shadcnComponents/card";
-import { Button } from "@/components/ui/shadcnComponents/button";
-import { Input } from "@/components/ui/shadcnComponents/input";
-import { Badge } from "@/components/ui/shadcnComponents/badge";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/shadcnComponents/select";
-import {
-  Tabs,
-  TabsList,
-  TabsTrigger,
-  TabsContent,
-} from "@/components/ui/shadcnComponents/tabs";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/shadcnComponents/dialog";
-import { Checkbox } from "@/components/ui/shadcnComponents/checkbox";
-import { Label } from "@/components/ui/shadcnComponents/label";
-import { Separator } from "@/components/ui/shadcnComponents/separator";
-import { Switch } from "@/components/ui/shadcnComponents/switch";
-import { motion, AnimatePresence } from "framer-motion";
+  REPORT_TEMPLATES,
+  serializeTemplate,
+  type ReportTypeKey,
+  type ReportTemplate,
+} from "./reportTemplates";
 
-// Define types
-interface Report {
+type ReportPriority = "low" | "normal" | "high" | "urgent";
+type ReportStatus = "draft" | "submitted" | "reviewed" | "archived";
+
+interface ReportRow {
   id: string;
-  name: string;
-  type: "security" | "activity" | "performance" | "audit" | "custom";
-  format: "pdf" | "csv" | "excel" | "json";
-  schedule: "manual" | "daily" | "weekly" | "monthly";
-  lastGenerated?: string;
-  recipients?: string[];
-  filters?: Record<string, any>;
-  status?: "ready" | "generating" | "error";
+  title: string;
+  body: string | null;
+  type: ReportTypeKey;
+  priority: ReportPriority;
+  project_id: string | null;
+  status: ReportStatus;
+  review_notes: string | null;
+  submitted_at: string | null;
+  reviewed_at: string | null;
 }
 
-interface ReportTemplate {
+interface ProjectLite {
   id: string;
   name: string;
-  type: "security" | "activity" | "performance" | "audit" | "custom";
-  description: string;
-  availableFormats: ("pdf" | "csv" | "excel" | "json")[];
+  company: string;
 }
 
-// Sample data
-const sampleReports: Report[] = [
-  {
-    id: "rep-001",
-    name: "Monthly Security Summary",
-    type: "security",
-    format: "pdf",
-    schedule: "monthly",
-    lastGenerated: "2025-02-01T10:15:30Z",
-    recipients: ["security@example.com", "admin@example.com"],
-    status: "ready",
-  },
-  {
-    id: "rep-002",
-    name: "Weekly User Activity",
-    type: "activity",
-    format: "csv",
-    schedule: "weekly",
-    lastGenerated: "2025-02-18T14:22:10Z",
-    recipients: ["analytics@example.com"],
-    status: "ready",
-  },
-  {
-    id: "rep-003",
-    name: "System Performance Metrics",
-    type: "performance",
-    format: "excel",
-    schedule: "daily",
-    lastGenerated: "2025-02-24T23:50:00Z",
-    status: "ready",
-  },
-  {
-    id: "rep-004",
-    name: "Failed Login Attempts",
-    type: "security",
-    format: "pdf",
-    schedule: "daily",
-    lastGenerated: "2025-02-24T23:55:12Z",
-    recipients: ["security@example.com"],
-    status: "ready",
-  },
-  {
-    id: "rep-005",
-    name: "Quarterly Compliance Audit",
-    type: "audit",
-    format: "pdf",
-    schedule: "manual",
-    lastGenerated: "2025-01-15T09:30:00Z",
-    recipients: ["compliance@example.com", "legal@example.com"],
-    status: "ready",
-  },
-];
-
-const reportTemplates: ReportTemplate[] = [
-  {
-    id: "template-001",
-    name: "Security Incidents Summary",
-    type: "security",
-    description:
-      "Overview of security incidents, severity levels, and resolution status.",
-    availableFormats: ["pdf", "excel"],
-  },
-  {
-    id: "template-002",
-    name: "User Activity Log",
-    type: "activity",
-    description: "Detailed log of user actions, logins, and resource access.",
-    availableFormats: ["pdf", "csv", "excel"],
-  },
-  {
-    id: "template-003",
-    name: "System Performance Analysis",
-    type: "performance",
-    description:
-      "Analysis of system performance metrics, response times, and resource usage.",
-    availableFormats: ["pdf", "excel", "json"],
-  },
-  {
-    id: "template-004",
-    name: "Compliance Audit Report",
-    type: "audit",
-    description:
-      "Comprehensive audit report for compliance with security policies and regulations.",
-    availableFormats: ["pdf", "excel"],
-  },
-  {
-    id: "template-005",
-    name: "Custom Data Export",
-    type: "custom",
-    description:
-      "Customizable report for exporting specific data based on selected filters.",
-    availableFormats: ["csv", "excel", "json"],
-  },
-];
-
-// Helper components
-const ReportTypeIcon = ({ type }: { type: any }) => {
-  switch (type) {
-    case "security":
-      return (
-        <Badge
-          variant="outline"
-          className="bg-red-500/20 text-primary border-primary/30 flex items-center gap-1"
-        >
-          <Shield className="h-3 w-3" />
-          Security
-        </Badge>
-      );
-    case "activity":
-      return (
-        <Badge
-          variant="outline"
-          className="bg-blue-500/20 text-blue-400 border-blue-500/30 flex items-center gap-1"
-        >
-          <Activity className="h-3 w-3" />
-          Activity
-        </Badge>
-      );
-    case "performance":
-      return (
-        <Badge
-          variant="outline"
-          className="bg-green-500/20 text-green-400 border-green-500/30 flex items-center gap-1"
-        >
-          <BarChart className="h-3 w-3" />
-          Performance
-        </Badge>
-      );
-    case "audit":
-      return (
-        <Badge
-          variant="outline"
-          className="bg-amber-500/20 text-amber-400 border-amber-500/30 flex items-center gap-1"
-        >
-          <Clipboard className="h-3 w-3" />
-          Audit
-        </Badge>
-      );
-    case "custom":
-      return (
-        <Badge
-          variant="outline"
-          className="bg-purple-500/20 text-purple-400 border-purple-500/30 flex items-center gap-1"
-        >
-          <Settings className="h-3 w-3" />
-          Custom
-        </Badge>
-      );
-    default:
-      return (
-        <Badge
-          variant="outline"
-          className="bg-gray-500/20 text-gray-400 border-gray-500/30"
-        >
-          Unknown
-        </Badge>
-      );
-  }
+const TYPE_META: Record<
+  ReportTypeKey,
+  { label: string; icon: typeof FileText; accent: string }
+> = {
+  status:         { label: "Status update",   icon: ClipboardList,  accent: "#3b82f6" },
+  project_update: { label: "Project update",  icon: FolderKanban,   accent: "#8b5cf6" },
+  incident:       { label: "Incident",        icon: AlertTriangle,  accent: "#ef4444" },
+  feedback:       { label: "Feedback",        icon: MessageSquare,  accent: "#10b981" },
+  other:          { label: "Other",           icon: FileText,       accent: "#64748b" },
 };
 
-const ReportFormatIcon = ({ format }: { format: any }) => {
-  switch (format) {
-    case "pdf":
-      return (
-        <Badge
-          variant="outline"
-          className="bg-red-500/10 text-primary border-primary/20 flex items-center gap-1"
-        >
-          <FileText className="h-3 w-3" />
-          PDF
-        </Badge>
-      );
-    case "csv":
-      return (
-        <Badge
-          variant="outline"
-          className="bg-green-500/10 text-green-400 border-green-500/20 flex items-center gap-1"
-        >
-          <FileSpreadsheet className="h-3 w-3" />
-          CSV
-        </Badge>
-      );
-    case "excel":
-      return (
-        <Badge
-          variant="outline"
-          className="bg-blue-500/10 text-blue-400 border-blue-500/20 flex items-center gap-1"
-        >
-          <FileSpreadsheet className="h-3 w-3" />
-          Excel
-        </Badge>
-      );
-    case "json":
-      return (
-        <Badge
-          variant="outline"
-          className="bg-amber-500/10 text-amber-400 border-amber-500/20 flex items-center gap-1"
-        >
-          <FilePieChart className="h-3 w-3" />
-          JSON
-        </Badge>
-      );
-    default:
-      return (
-        <Badge
-          variant="outline"
-          className="bg-gray-500/10 text-gray-400 border-gray-500/20"
-        >
-          Unknown
-        </Badge>
-      );
-  }
+const PRIORITY_META: Record<ReportPriority, { label: string; cls: string }> = {
+  low:    { label: "Low",    cls: "border-zinc-500/40 bg-zinc-500/10 text-zinc-300" },
+  normal: { label: "Normal", cls: "border-blue-500/40 bg-blue-500/10 text-blue-300" },
+  high:   { label: "High",   cls: "border-amber-500/40 bg-amber-500/10 text-amber-300" },
+  urgent: { label: "Urgent", cls: "border-red-500/40 bg-red-500/10 text-red-300" },
 };
 
-const ScheduleBadge = ({ schedule }: { schedule: any }) => {
-  switch (schedule) {
-    case "manual":
-      return (
-        <Badge
-          variant="outline"
-          className="bg-gray-500/10 text-foreground border-red-900/20"
-        >
-          Manual
-        </Badge>
-      );
-    case "daily":
-      return (
-        <Badge
-          variant="outline"
-          className="bg-blue-500/10 text-foreground border-red-900/20"
-        >
-          Daily
-        </Badge>
-      );
-    case "weekly":
-      return (
-        <Badge
-          variant="outline"
-          className="bg-green-500/10 text-foreground border-red-900/20"
-        >
-          Weekly
-        </Badge>
-      );
-    case "monthly":
-      return (
-        <Badge
-          variant="outline"
-          className="bg-purple-500/10 text-foreground border-red-900/20"
-        >
-          Monthly
-        </Badge>
-      );
-    default:
-      return (
-        <Badge
-          variant="outline"
-          className="bg-gray-500/10 text-gray-400 border-gray-500/20"
-        >
-          Unknown
-        </Badge>
-      );
-  }
-};
+// ── Main component ──────────────────────────────────────────────
 
-// New Report Dialog
-const NewReportDialog = ({
-  templates,
-  onSave,
-}: {
-  templates: any;
-  onSave: any;
-}) => {
-  const [selectedTemplate, setSelectedTemplate] = useState("");
-  const [reportName, setReportName] = useState("");
-  const [reportFormat, setReportFormat] = useState("");
-  const [schedule, setSchedule] = useState("manual");
-  const [recipients, setRecipients] = useState("");
-  const [open, setOpen] = useState(false);
+export default function ReportSettings() {
+  const { data: currentUser } = ActiveUser();
+  const me = currentUser?.[0];
+  const mySupaId = me?.supa_id as string | undefined;
 
-  const selectedTemplateData = templates.find(
-    (t: any) => t.id === selectedTemplate
-  );
+  const [projects, setProjects] = useState<ProjectLite[]>([]);
+  const [myReports, setMyReports] = useState<ReportRow[]>([]);
+  const [loadingReports, setLoadingReports] = useState(true);
 
-  const handleSave = () => {
-    if (!reportName || !selectedTemplate || !reportFormat) return;
+  // Form state
+  const [type, setType] = useState<ReportTypeKey>("status");
+  const [priority, setPriority] = useState<ReportPriority>("normal");
+  const [projectId, setProjectId] = useState<string>("");
+  const [title, setTitle] = useState("");
+  const [templateId, setTemplateId] = useState<string>("weekly-checkin");
+  /** Values for each template field, keyed by field.key. Also
+   *  stores a `__freeform` key for when no template is picked. */
+  const [values, setValues] = useState<Record<string, string>>({});
 
-    const newReport: Report = {
-      id: `rep-${Math.floor(Math.random() * 1000)
-        .toString()
-        .padStart(3, "0")}`,
-      name: reportName,
-      type: selectedTemplateData?.type || "custom",
-      format: reportFormat as "pdf" | "csv" | "excel" | "json",
-      schedule: schedule as "manual" | "daily" | "weekly" | "monthly",
-      recipients: recipients ? recipients.split(",").map((r) => r.trim()) : [],
-      status: "ready",
-    };
+  const [submitState, setSubmitState] = useState<
+    "idle" | "submitting" | "sent" | "error"
+  >("idle");
+  const [submitError, setSubmitError] = useState<string | null>(null);
 
-    onSave(newReport);
-    setOpen(false);
-    resetForm();
+  const typeMeta = TYPE_META[type];
+  const templatesForType = REPORT_TEMPLATES[type] ?? [];
+  const template: ReportTemplate | undefined =
+    templatesForType.find((t) => t.id === templateId) ?? templatesForType[0];
+
+  // Re-pick default template when type changes.
+  useEffect(() => {
+    const first = REPORT_TEMPLATES[type]?.[0];
+    if (first) {
+      setTemplateId(first.id);
+      // Seed title if user hasn't typed one.
+      if (!title.trim()) {
+        setTitle(first.defaultTitle);
+      }
+    }
+    // Wipe field values since old ones won't match new fields.
+    setValues({});
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [type]);
+
+  // Re-seed title when template changes (unless user has edited it
+  // to something non-empty and non-matching the old default).
+  useEffect(() => {
+    if (!template) return;
+    // If title is empty OR equals any template's default for the
+    // current type, treat it as "safe to replace".
+    const allDefaults = new Set(
+      templatesForType.map((t) => t.defaultTitle).filter(Boolean),
+    );
+    if (!title.trim() || allDefaults.has(title.trim())) {
+      setTitle(template.defaultTitle);
+    }
+    // Wipe field values so stale keys don't bleed across templates.
+    setValues({});
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [templateId]);
+
+  const reload = async () => {
+    setLoadingReports(true);
+    const [p, r] = await Promise.all([
+      supabase.from("projects").select("id, name, company").order("name"),
+      mySupaId
+        ? supabase
+            .from("reports")
+            .select(
+              "id, title, body, type, priority, project_id, status, review_notes, submitted_at, reviewed_at",
+            )
+            .eq("sender_user_id", mySupaId)
+            .order("created_at", { ascending: false })
+            .limit(20)
+        : Promise.resolve({ data: [], error: null } as any),
+    ]);
+    setProjects((p.data ?? []) as ProjectLite[]);
+    setMyReports((r.data ?? []) as ReportRow[]);
+    setLoadingReports(false);
   };
+
+  useEffect(() => {
+    reload();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [mySupaId]);
 
   const resetForm = () => {
-    setSelectedTemplate("");
-    setReportName("");
-    setReportFormat("");
-    setSchedule("manual");
-    setRecipients("");
+    setType("status");
+    setPriority("normal");
+    setProjectId("");
+    setTitle("");
+    setTemplateId("weekly-checkin");
+    setValues({});
   };
 
-  return (
-    <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
-        <Button className="bg-gradient-to-r from-red-950 to-red-900 hover:from-red-900 hover:to-red-800 text-foreground border border-red-800/30 shadow-lg shadow-red-950/20">
-          <Plus className="h-4 w-4 mr-2" />
-          New Report
-        </Button>
-      </DialogTrigger>
-      <DialogContent className="max-w-lg">
-        <DialogHeader>
-          <DialogTitle>Create New Report</DialogTitle>
-          <DialogDescription className="text-foreground/60">
-            Configure a new report from a template or create a custom report.
-          </DialogDescription>
-        </DialogHeader>
+  // Body preview — used both for the Submit button's title and the
+  // actual payload. When there's no template (Blank / freeform),
+  // we fall back to the `__freeform` field.
+  const buildBody = (): string => {
+    if (!template || template.fields.length === 0) {
+      return (values["__freeform"] ?? "").trim();
+    }
+    return serializeTemplate(template, values);
+  };
 
-        <div className="py-4 space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="template" className="text-foreground">
-              Report Template
-            </Label>
-            <Select
-              value={selectedTemplate}
-              onValueChange={setSelectedTemplate}
-            >
-              <SelectTrigger
-                id="template"
-                className="bg-zinc-950 high-dpi:bg-zinc-950/20 rounded-xs border-red-950/30 text-white"
-              >
-                <SelectValue placeholder="Select a report template" />
-              </SelectTrigger>
-              <SelectContent className="bg-background/95 border-red-950/30 text-white">
-                {templates.map((template: any) => (
-                  <SelectItem
-                    key={template.id}
-                    value={template.id}
-                    className="text-foreground hover:bg-red-950/30"
-                  >
-                    <div className="flex items-center gap-2">
-                      <span>{template.name}</span>
-                      <ReportTypeIcon type={template.type} />
-                    </div>
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+  const submit = async () => {
+    if (!mySupaId) {
+      setSubmitError("Your account isn't fully provisioned. Contact an admin.");
+      setSubmitState("error");
+      return;
+    }
+    if (!title.trim()) {
+      setSubmitError("Give the report a title.");
+      setSubmitState("error");
+      return;
+    }
+    setSubmitState("submitting");
+    setSubmitError(null);
 
-          {selectedTemplateData && (
-            <div className="p-3 bg-zinc-950 high-dpi:bg-zinc-950/20 rounded-xs border border-red-950/30 rounded-md text-sm text-foreground/70">
-              {selectedTemplateData.description}
-            </div>
-          )}
+    const body = buildBody();
 
-          <div className="space-y-2">
-            <Label htmlFor="report-name" className="text-foreground">
-              Report Name
-            </Label>
-            <Input
-              id="report-name"
-              value={reportName}
-              onChange={(e) => setReportName(e.target.value)}
-              placeholder="Enter a descriptive name"
-              className="bg-zinc-950 high-dpi:bg-zinc-950/20 rounded-xs border-red-950/30 text-foreground placeholder:text-muted-foreground/70"
-            />
-          </div>
+    const { error } = await supabase.from("reports").insert({
+      title: title.trim(),
+      body: body || null,
+      type,
+      priority,
+      project_id: projectId || null,
+      sender_user_id: mySupaId,
+      company: me?.company === "simplicity" ? "simplicity" : "codewithali",
+      status: "submitted",
+    });
 
-          {selectedTemplateData && (
-            <div className="space-y-2">
-              <Label htmlFor="format" className="text-foreground">
-                Report Format
-              </Label>
-              <Select value={reportFormat} onValueChange={setReportFormat}>
-                <SelectTrigger
-                  id="format"
-                  className="bg-zinc-950 high-dpi:bg-zinc-950/20 rounded-xs border-red-950/30 text-white"
-                >
-                  <SelectValue placeholder="Select format" />
-                </SelectTrigger>
-                <SelectContent className="bg-background/95 border-red-950/30 text-white">
-                  {selectedTemplateData.availableFormats.map((format: any) => (
-                    <SelectItem
-                      key={format}
-                      value={format}
-                      className="text-foreground hover:bg-red-950/30"
-                    >
-                      <div className="flex items-center gap-2">
-                        {format === "pdf" && <FileText className="h-4 w-4" />}
-                        {format === "csv" && (
-                          <FileSpreadsheet className="h-4 w-4" />
-                        )}
-                        {format === "excel" && (
-                          <FileSpreadsheet className="h-4 w-4" />
-                        )}
-                        {format === "json" && (
-                          <FilePieChart className="h-4 w-4" />
-                        )}
-                        {format.toUpperCase()}
-                      </div>
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          )}
-
-          <div className="space-y-2">
-            <Label htmlFor="schedule" className="text-foreground">
-              Schedule
-            </Label>
-            <Select value={schedule} onValueChange={setSchedule}>
-              <SelectTrigger
-                id="schedule"
-                className="bg-zinc-950 high-dpi:bg-zinc-950/20 rounded-xs border-red-950/30 text-white"
-              >
-                <SelectValue placeholder="Select schedule" />
-              </SelectTrigger>
-              <SelectContent className="bg-background/95 border-red-950/30 text-white">
-                <SelectItem
-                  value="manual"
-                  className="text-foreground hover:bg-red-950/30"
-                >
-                  Manual Generation
-                </SelectItem>
-                <SelectItem
-                  value="daily"
-                  className="text-foreground hover:bg-red-950/30"
-                >
-                  Daily
-                </SelectItem>
-                <SelectItem
-                  value="weekly"
-                  className="text-foreground hover:bg-red-950/30"
-                >
-                  Weekly
-                </SelectItem>
-                <SelectItem
-                  value="monthly"
-                  className="text-foreground hover:bg-red-950/30"
-                >
-                  Monthly
-                </SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="recipients" className="text-foreground">
-              Email Recipients (comma-separated)
-            </Label>
-            <Input
-              id="recipients"
-              value={recipients}
-              onChange={(e) => setRecipients(e.target.value)}
-              placeholder="email1@example.com, email2@example.com"
-              className="bg-zinc-950 high-dpi:bg-zinc-950/20 rounded-xs border-red-950/30 text-foreground placeholder:text-muted-foreground/70"
-            />
-          </div>
-
-          <div className="flex items-center space-x-2">
-            <Checkbox
-              id="notify"
-              className="data-[state=checked]:bg-red-900 data-[state=checked]:border-red-900"
-            />
-            <Label htmlFor="notify" className="text-foreground">
-              Notify me when report is generated
-            </Label>
-          </div>
-        </div>
-
-        <DialogFooter>
-          <Button
-            variant="outline"
-            onClick={() => setOpen(false)}
-            className="border-red-800/30 text-foreground hover:bg-red-950/20"
-          >
-            Cancel
-          </Button>
-          <Button
-            onClick={handleSave}
-            disabled={!reportName || !selectedTemplate || !reportFormat}
-            className="bg-gradient-to-r from-red-950 to-red-900 hover:from-red-900 hover:to-red-800 text-foreground border border-red-800/30 shadow-lg shadow-red-950/20"
-          >
-            Create Report
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
-  );
-};
-
-// Report cards for different report types
-const ReportCard = ({
-  report,
-  onGenerate,
-  onDelete,
-}: {
-  report: any;
-  onGenerate: any;
-  onDelete: any;
-}) => {
-  return (
-    <Card className="bg-zinc-950 high-dpi:bg-zinc-950/20 rounded-xs border-red-900/30 overflow-hidden hover:border-red-900/50 transition-all duration-200">
-      <CardHeader className="pb-2">
-        <div className="flex justify-between items-start">
-          <div>
-            <CardTitle className="text-foreground text-base font-medium">
-              {report.name}
-            </CardTitle>
-            <CardDescription className="text-foreground/60 text-xs">
-              Last generated:{" "}
-              {report.lastGenerated
-                ? new Date(report.lastGenerated).toLocaleString()
-                : "Never"}
-            </CardDescription>
-          </div>
-          <ReportTypeIcon type={report.type} />
-        </div>
-      </CardHeader>
-      <CardContent className="pt-0 pb-2">
-        <div className="flex flex-wrap gap-2 mt-2">
-          <ReportFormatIcon format={report.format} />
-          <ScheduleBadge schedule={report.schedule} />
-        </div>
-
-        {report.recipients && report.recipients.length > 0 && (
-          <div className="mt-3 text-xs text-foreground/60">
-            <span className="font-medium">Recipients:</span>{" "}
-            {report.recipients.join(", ")}
-          </div>
-        )}
-      </CardContent>
-      <CardFooter className="pt-0 flex gap-2 justify-end">
-        <Button
-          size="sm"
-          variant="outline"
-          onClick={() => onGenerate(report.id)}
-          disabled={report.status === "generating"}
-          className="border-red-800/30 text-foreground hover:bg-red-950/20"
-        >
-          {report.status === "generating" ? (
-            <RefreshCw className="h-4 w-4 animate-spin" />
-          ) : (
-            <Download className="h-4 w-4 mr-2" />
-          )}
-          {report.status === "generating" ? "Generating..." : "Generate"}
-        </Button>
-        <Button
-          size="sm"
-          variant="outline"
-          onClick={() => onDelete(report.id)}
-          className="border-red-800/30 text-foreground hover:bg-red-700/20"
-        >
-          <Trash2 className="h-4 w-4" />
-        </Button>
-      </CardFooter>
-    </Card>
-  );
-};
-
-// Main Report Settings component
-const ReportSettings = () => {
-  const [reports, setReports] = useState<Report[]>(sampleReports);
-  const [searchQuery, setSearchQuery] = useState("");
-  const [activeTab, setActiveTab] = useState("all");
-
-  const filteredReports = reports.filter((report) => {
-    if (
-      searchQuery &&
-      !report.name.toLowerCase().includes(searchQuery.toLowerCase())
-    ) {
-      return false;
+    if (error) {
+      const msg = (error.message || "").toLowerCase();
+      if (msg.includes("does not exist") || (error as any).code === "42P01") {
+        setSubmitError(
+          "Reports table isn't set up yet. Ask an admin to run migrations/reports_init.sql.",
+        );
+      } else {
+        setSubmitError(error.message);
+      }
+      setSubmitState("error");
+      return;
     }
 
-    if (activeTab !== "all" && report.type !== activeTab) {
-      return false;
-    }
-
-    return true;
-  });
-
-  const handleAddReport = (newReport: Report) => {
-    setReports([newReport, ...reports]);
-  };
-
-  const handleDeleteReport = (id: string) => {
-    setReports(reports.filter((report) => report.id !== id));
-  };
-
-  const handleGenerateReport = (id: string) => {
-    setReports(
-      reports.map((report) =>
-        report.id === id ? { ...report, status: "generating" } : report
-      )
-    );
-
-    // Simulate report generation
-    setTimeout(() => {
-      setReports(
-        reports.map((report) =>
-          report.id === id
-            ? {
-                ...report,
-                status: "ready",
-                lastGenerated: new Date().toISOString(),
-              }
-            : report
-        )
-      );
-    }, 2000);
-  };
-
-  // Report counts by type
-  const reportCounts = {
-    security: reports.filter((r) => r.type === "security").length,
-    activity: reports.filter((r) => r.type === "activity").length,
-    performance: reports.filter((r) => r.type === "performance").length,
-    audit: reports.filter((r) => r.type === "audit").length,
-    custom: reports.filter((r) => r.type === "custom").length,
+    setSubmitState("sent");
+    resetForm();
+    await reload();
+    setTimeout(() => setSubmitState("idle"), 3500);
   };
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-        <h2 className="text-xl font-bold text-white">Report Management</h2>
-        <NewReportDialog templates={reportTemplates} onSave={handleAddReport} />
+    <div className="mx-auto max-w-[820px] space-y-6">
+      {/* ─── Heading ─── */}
+      <div>
+        <h1 className="text-[20px] font-bold tracking-tight text-foreground">
+          New report
+        </h1>
+        <p className="mt-1 text-[12.5px] text-muted-foreground">
+          Send to CEO / COO / CFO. Pick a type + framework, fill in the
+          relevant sections, submit.
+        </p>
       </div>
 
-      {/* Filter and Search */}
-      <div className="flex flex-col sm:flex-row gap-4">
-        <div className="relative flex-grow">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-foreground/60" />
-          <Input
-            placeholder="Search reports..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-10 w-full bg-zinc-950 high-dpi:bg-zinc-950/20 rounded-xs border-red-950/30 text-foreground placeholder:text-muted-foreground/70"
-          />
-        </div>
-      </div>
-
-      {/* Report Type Tabs */}
-      <Tabs
-        value={activeTab}
-        onValueChange={setActiveTab}
-        className="space-y-6"
+      {/* ─── Type row ─── */}
+      <Section
+        label="Report type"
+        hint="What kind of report is this?"
       >
-        <TabsList className="h-12 justify-start space-x-2 bg-zinc-950 high-dpi:bg-zinc-950/20 rounded-xs p-1 text-foreground/60 border border-red-950/20">
-          <TabsTrigger
-            value="all"
-            className="data-[state=active]:bg-red-950/20 data-[state=active]:text-foreground hover:text-foreground transition-colors duration-200"
-          >
-            <LineChart className="h-4 w-4 mr-2" />
-            All Reports ({reports.length})
-          </TabsTrigger>
-          <TabsTrigger
-            value="security"
-            className="data-[state=active]:bg-red-950/20 data-[state=active]:text-foreground hover:text-foreground transition-colors duration-200"
-          >
-            <Shield className="h-4 w-4 mr-2" />
-            Security ({reportCounts.security})
-          </TabsTrigger>
-          <TabsTrigger
-            value="activity"
-            className="data-[state=active]:bg-red-950/20 data-[state=active]:text-foreground hover:text-foreground transition-colors duration-200"
-          >
-            <Activity className="h-4 w-4 mr-2" />
-            Activity ({reportCounts.activity})
-          </TabsTrigger>
-          <TabsTrigger
-            value="performance"
-            className="data-[state=active]:bg-red-950/20 data-[state=active]:text-foreground hover:text-foreground transition-colors duration-200"
-          >
-            <BarChart className="h-4 w-4 mr-2" />
-            Performance ({reportCounts.performance})
-          </TabsTrigger>
-          <TabsTrigger
-            value="audit"
-            className="data-[state=active]:bg-red-950/20 data-[state=active]:text-foreground hover:text-foreground transition-colors duration-200"
-          >
-            <Clipboard className="h-4 w-4 mr-2" />
-            Audit ({reportCounts.audit})
-          </TabsTrigger>
-          <TabsTrigger
-            value="custom"
-            className="data-[state=active]:bg-red-950/20 data-[state=active]:text-foreground hover:text-foreground transition-colors duration-200"
-          >
-            <Settings className="h-4 w-4 mr-2" />
-            Custom ({reportCounts.custom})
-          </TabsTrigger>
-        </TabsList>
-
-        <AnimatePresence mode="wait">
-          <motion.div
-            key={activeTab}
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -20 }}
-            transition={{ duration: 0.2 }}
-          >
-            <TabsContent value="all" className="mt-4 space-y-4">
-              <Card className="bg-zinc-950 high-dpi:bg-zinc-950/20  rounded-xs  border-red-950/30 backdrop-blur-sm">
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-foreground text-lg">
-                    All Reports
-                  </CardTitle>
-                  <CardDescription className="text-foreground/60">
-                    View and manage all your configured reports
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  {filteredReports.length > 0 ? (
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                      {filteredReports.map((report) => (
-                        <ReportCard
-                          key={report.id}
-                          report={report}
-                          onGenerate={handleGenerateReport}
-                          onDelete={handleDeleteReport}
-                        />
-                      ))}
-                    </div>
-                  ) : (
-                    <div className="flex flex-col items-center justify-center text-center py-10">
-                      <FileText className="h-16 w-16 text-red-900/30 mb-4" />
-                      <h3 className="text-lg font-medium text-foreground mb-1">
-                        No reports found
-                      </h3>
-                      <p className="text-sm text-foreground/60 mb-6">
-                        {searchQuery
-                          ? "Try adjusting your search"
-                          : "Create your first report to get started"}
-                      </p>
-                      <NewReportDialog
-                        templates={reportTemplates}
-                        onSave={handleAddReport}
-                      />
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-            </TabsContent>
-
-            {/* Performance tab */}
-            <TabsContent value="performance" className="mt-4 space-y-4">
-              <Card className="bg-zinc-950 high-dpi:bg-zinc-950/20  rounded-xs  border-red-950/30 backdrop-blur-sm">
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-foreground text-lg">
-                    Performance Reports
-                  </CardTitle>
-                  <CardDescription className="text-foreground/60">
-                    Analyze system performance metrics
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  {filteredReports.length > 0 ? (
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                      {filteredReports.map((report) => (
-                        <ReportCard
-                          key={report.id}
-                          report={report}
-                          onGenerate={handleGenerateReport}
-                          onDelete={handleDeleteReport}
-                        />
-                      ))}
-                    </div>
-                  ) : (
-                    <div className="flex flex-col items-center justify-center text-center py-10">
-                      <BarChart className="h-16 w-16 text-red-900/30 mb-4" />
-                      <h3 className="text-lg font-medium text-foreground mb-1">
-                        No performance reports found
-                      </h3>
-                      <p className="text-sm text-foreground/60 mb-6">
-                        Create performance reports to monitor system metrics and
-                        resources
-                      </p>
-                      <NewReportDialog
-                        templates={reportTemplates}
-                        onSave={handleAddReport}
-                      />
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-            </TabsContent>
-
-            {/* Audit tab */}
-            <TabsContent value="audit" className="mt-4 space-y-4">
-              <Card className="bg-zinc-950 high-dpi:bg-zinc-950/20  rounded-xs  border-red-950/30 backdrop-blur-sm">
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-foreground text-lg">
-                    Audit Reports
-                  </CardTitle>
-                  <CardDescription className="text-foreground/60">
-                    Compliance and governance reporting
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  {filteredReports.length > 0 ? (
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                      {filteredReports.map((report) => (
-                        <ReportCard
-                          key={report.id}
-                          report={report}
-                          onGenerate={handleGenerateReport}
-                          onDelete={handleDeleteReport}
-                        />
-                      ))}
-                    </div>
-                  ) : (
-                    <div className="flex flex-col items-center justify-center text-center py-10">
-                      <Clipboard className="h-16 w-16 text-red-900/30 mb-4" />
-                      <h3 className="text-lg font-medium text-foreground mb-1">
-                        No audit reports found
-                      </h3>
-                      <p className="text-sm text-foreground/60 mb-6">
-                        Create audit reports for compliance and governance
-                        requirements
-                      </p>
-                      <NewReportDialog
-                        templates={reportTemplates}
-                        onSave={handleAddReport}
-                      />
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-            </TabsContent>
-
-            {/* Custom tab */}
-            <TabsContent value="custom" className="mt-4 space-y-4">
-              <Card className="bg-zinc-950 high-dpi:bg-zinc-950/20  rounded-xs  border-red-950/30 backdrop-blur-sm">
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-foreground text-lg">
-                    Custom Reports
-                  </CardTitle>
-                  <CardDescription className="text-foreground/60">
-                    Customized reports for specific needs
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  {filteredReports.length > 0 ? (
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                      {filteredReports.map((report) => (
-                        <ReportCard
-                          key={report.id}
-                          report={report}
-                          onGenerate={handleGenerateReport}
-                          onDelete={handleDeleteReport}
-                        />
-                      ))}
-                    </div>
-                  ) : (
-                    <div className="flex flex-col items-center justify-center text-center py-10">
-                      <Settings className="h-16 w-16 text-red-900/30 mb-4" />
-                      <h3 className="text-lg font-medium text-foreground mb-1">
-                        No custom reports found
-                      </h3>
-                      <p className="text-sm text-foreground/60 mb-6">
-                        Create custom reports tailored to your specific
-                        requirements
-                      </p>
-                      <NewReportDialog
-                        templates={reportTemplates}
-                        onSave={handleAddReport}
-                      />
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-            </TabsContent>
-          </motion.div>
-        </AnimatePresence>
-      </Tabs>
-
-      {/* Available Templates */}
-      <Card className="bg-zinc-950 high-dpi:bg-zinc-950/20  rounded-xs  border-red-950/30 backdrop-blur-sm">
-        <CardHeader>
-          <CardTitle className="text-foreground">Report Templates</CardTitle>
-          <CardDescription className="text-foreground/60">
-            Available templates for generating new reports
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {reportTemplates.map((template) => (
-              <Card
-                key={template.id}
-                className="bg-zinc-950 high-dpi:bg-zinc-950/20 rounded-xs border-red-900/30 hover:border-red-900/50 transition-all duration-200"
+        <div className="flex flex-wrap gap-1.5">
+          {(Object.keys(TYPE_META) as ReportTypeKey[]).map((t) => {
+            const meta = TYPE_META[t];
+            const Icon = meta.icon;
+            const active = t === type;
+            return (
+              <button
+                key={t}
+                type="button"
+                onClick={() => setType(t)}
+                className={[
+                  "inline-flex items-center gap-1.5 rounded-md border px-3 py-1.5 text-[12px] font-semibold transition-colors",
+                  active
+                    ? "border-transparent text-white shadow-sm"
+                    : "border-border bg-card/40 text-foreground/80 hover:text-foreground hover:bg-card/70",
+                ].join(" ")}
+                style={active ? { background: meta.accent } : undefined}
               >
-                <CardHeader className="pb-2">
-                  <div className="flex justify-between items-center">
-                    <CardTitle className="text-foreground text-base font-medium">
-                      {template.name}
-                    </CardTitle>
-                    <ReportTypeIcon type={template.type} />
-                  </div>
-                </CardHeader>
-                <CardContent className="py-2">
-                  <p className="text-xs text-foreground/70 mb-3">
-                    {template.description}
-                  </p>
-                  <div className="flex flex-wrap gap-2">
-                    {template.availableFormats.map((format) => (
-                      <ReportFormatIcon key={format} format={format} />
-                    ))}
-                  </div>
-                </CardContent>
-                <CardFooter className="pt-0">
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    className="w-full border-red-800/30 text-foreground hover:bg-red-950/20"
-                    onClick={() => {
-                      // Would typically open New Report dialog pre-filled with this template
-                    }}
+                <Icon className="h-3.5 w-3.5" />
+                {meta.label}
+              </button>
+            );
+          })}
+        </div>
+      </Section>
+
+      {/* ─── Template row ─── */}
+      {templatesForType.length > 0 && (
+        <Section
+          label="Starting framework"
+          hint="Each framework guides you through the right sections. You can leave fields blank."
+        >
+          <div className="flex flex-wrap gap-1.5">
+            {templatesForType.map((tpl) => {
+              const active = tpl.id === templateId;
+              return (
+                <button
+                  key={tpl.id}
+                  type="button"
+                  onClick={() => setTemplateId(tpl.id)}
+                  className={[
+                    "inline-flex items-center gap-1.5 rounded-md border px-3 py-1.5 text-[12px] transition-colors",
+                    active
+                      ? "border-primary/60 bg-primary/10 text-primary font-semibold"
+                      : "border-border bg-card/40 text-foreground/80 hover:text-foreground hover:bg-card/70 font-medium",
+                  ].join(" ")}
+                  title={tpl.blurb}
+                >
+                  {tpl.name}
+                </button>
+              );
+            })}
+          </div>
+          {template && (
+            <p className="mt-2 text-[11px] text-muted-foreground italic">
+              {template.blurb}
+            </p>
+          )}
+        </Section>
+      )}
+
+      {/* ─── Basics card ─── */}
+      <div className="rounded-lg border border-border bg-card/40 backdrop-blur-sm p-5 md:p-6 space-y-5">
+        <div className="flex items-center gap-2">
+          <Pencil className="h-3.5 w-3.5 text-muted-foreground" />
+          <h2 className="text-[12px] font-mono uppercase tracking-widest text-muted-foreground">
+            Basics
+          </h2>
+        </div>
+
+        <FieldLine
+          label="Title"
+          hint="One-line summary. Shows up as the subject in the inbox."
+        >
+          <input
+            type="text"
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
+            maxLength={140}
+            placeholder="Short, specific, action-oriented"
+            className="w-full rounded-md border border-border bg-background/50 px-3.5 py-2.5 text-[13.5px] text-foreground placeholder:text-muted-foreground/50 outline-none focus:border-primary/50 focus:ring-2 focus:ring-primary/20 transition-colors"
+          />
+        </FieldLine>
+
+        <div className="grid gap-5 md:grid-cols-2">
+          <FieldLine label="Priority">
+            <div className="flex flex-wrap gap-1.5">
+              {(Object.keys(PRIORITY_META) as ReportPriority[]).map((p) => {
+                const active = priority === p;
+                return (
+                  <button
+                    key={p}
+                    type="button"
+                    onClick={() => setPriority(p)}
+                    className={[
+                      "rounded-full border px-3 py-1 text-[11.5px] font-semibold transition-all",
+                      active
+                        ? `${PRIORITY_META[p].cls} ring-2 ring-offset-1 ring-offset-card ring-primary/30`
+                        : "border-border bg-background/30 text-muted-foreground hover:text-foreground",
+                    ].join(" ")}
                   >
-                    <Plus className="h-4 w-4 mr-2" />
-                    Use Template
-                  </Button>
-                </CardFooter>
-              </Card>
-            ))}
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Global Report Settings */}
-      <Card className="bg-zinc-950 high-dpi:bg-zinc-950/20  rounded-xs  border-red-950/30 backdrop-blur-sm">
-        <CardHeader>
-          <CardTitle className="text-foreground">Report Settings</CardTitle>
-          <CardDescription className="text-foreground/60">
-            Configure global reporting preferences
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="flex items-center justify-between">
-            <div className="space-y-0.5">
-              <Label className="text-base text-white">
-                Email Notifications
-              </Label>
-              <p className="text-sm text-foreground/60">
-                Receive email notifications when reports are generated
-              </p>
+                    {PRIORITY_META[p].label}
+                  </button>
+                );
+              })}
             </div>
-            <Switch className="data-[state=checked]:bg-red-900" />
-          </div>
+          </FieldLine>
 
-          <Separator className="border-red-950/20" />
+          {type === "project_update" && (
+            <FieldLine label="Project">
+              <select
+                value={projectId}
+                onChange={(e) => setProjectId(e.target.value)}
+                className="w-full rounded-md border border-border bg-background/50 px-3 py-2 text-[13px] text-foreground outline-none focus:border-primary/50 focus:ring-2 focus:ring-primary/20 transition-colors"
+              >
+                <option value="">Select a project…</option>
+                {projects.map((p) => (
+                  <option key={p.id} value={p.id}>
+                    {p.name}{" "}({p.company === "simplicity" ? "Simplicity" : "CodeWithAli"})
+                  </option>
+                ))}
+              </select>
+            </FieldLine>
+          )}
+        </div>
+      </div>
 
-          <div className="flex items-center justify-between">
-            <div className="space-y-0.5">
-              <Label className="text-base text-white">
-                Default Report Format
-              </Label>
-              <p className="text-sm text-foreground/60">
-                Set the default format for new reports
-              </p>
-            </div>
-            <Select defaultValue="pdf">
-              <SelectTrigger className="w-[180px] bg-zinc-950 high-dpi:bg-zinc-950/20 rounded-xs border-red-950/30 text-white">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent className="bg-background/95 border-red-950/30 text-white">
-                <SelectItem
-                  value="pdf"
-                  className="text-foreground hover:bg-red-950/30"
-                >
-                  PDF Document
-                </SelectItem>
-                <SelectItem
-                  value="csv"
-                  className="text-foreground hover:bg-red-950/30"
-                >
-                  CSV Spreadsheet
-                </SelectItem>
-                <SelectItem
-                  value="excel"
-                  className="text-foreground hover:bg-red-950/30"
-                >
-                  Excel Workbook
-                </SelectItem>
-                <SelectItem
-                  value="json"
-                  className="text-foreground hover:bg-red-950/30"
-                >
-                  JSON Data
-                </SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
+      {/* ─── Template fields / Freeform body ─── */}
+      <div className="rounded-lg border border-border bg-card/40 backdrop-blur-sm p-5 md:p-6 space-y-5">
+        <div className="flex items-center gap-2">
+          <typeMeta.icon className="h-3.5 w-3.5" style={{ color: typeMeta.accent }} />
+          <h2 className="text-[12px] font-mono uppercase tracking-widest text-muted-foreground">
+            {template && template.fields.length > 0
+              ? `${template.name} details`
+              : "Details"}
+          </h2>
+        </div>
 
-          <Separator className="border-red-950/20" />
-
-          <div className="flex items-center justify-between">
-            <div className="space-y-0.5">
-              <Label className="text-base text-white">
-                Report Retention Period
-              </Label>
-              <p className="text-sm text-foreground/60">
-                How long to keep generated reports in the system
-              </p>
-            </div>
-            <Select defaultValue="90">
-              <SelectTrigger className="w-[180px] bg-zinc-950 high-dpi:bg-zinc-950/20 rounded-xs border-red-950/30 text-white">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent className="bg-background/95 border-red-950/30 text-white">
-                <SelectItem
-                  value="30"
-                  className="text-foreground hover:bg-red-950/30"
-                >
-                  30 Days
-                </SelectItem>
-                <SelectItem
-                  value="60"
-                  className="text-foreground hover:bg-red-950/30"
-                >
-                  60 Days
-                </SelectItem>
-                <SelectItem
-                  value="90"
-                  className="text-foreground hover:bg-red-950/30"
-                >
-                  90 Days
-                </SelectItem>
-                <SelectItem
-                  value="180"
-                  className="text-foreground hover:bg-red-950/30"
-                >
-                  180 Days
-                </SelectItem>
-                <SelectItem
-                  value="365"
-                  className="text-foreground hover:bg-red-950/30"
-                >
-                  1 Year
-                </SelectItem>
-                <SelectItem
-                  value="forever"
-                  className="text-foreground hover:bg-red-950/30"
-                >
-                  Forever
-                </SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-
-          <Separator className="border-red-950/20" />
-
-          <div className="flex items-center justify-between">
-            <div className="space-y-0.5">
-              <Label className="text-base text-white">
-                Automatic Report Generation
-              </Label>
-              <p className="text-sm text-foreground/60">
-                Allow scheduled reports to generate automatically
-              </p>
-            </div>
-            <Switch
-              defaultChecked
-              className="data-[state=checked]:bg-red-900"
+        {template && template.fields.length > 0 ? (
+          template.fields.map((f) => (
+            <FieldLine
+              key={f.key}
+              label={f.label}
+              hint={f.hint}
+              optional={f.optional}
+            >
+              {f.kind === "line" ? (
+                <input
+                  type="text"
+                  value={values[f.key] ?? ""}
+                  onChange={(e) =>
+                    setValues((v) => ({ ...v, [f.key]: e.target.value }))
+                  }
+                  placeholder={f.placeholder}
+                  className="w-full rounded-md border border-border bg-background/50 px-3.5 py-2.5 text-[13px] text-foreground placeholder:text-muted-foreground/50 outline-none focus:border-primary/50 focus:ring-2 focus:ring-primary/20 transition-colors"
+                />
+              ) : (
+                <textarea
+                  value={values[f.key] ?? ""}
+                  onChange={(e) =>
+                    setValues((v) => ({ ...v, [f.key]: e.target.value }))
+                  }
+                  rows={f.rows ?? 3}
+                  placeholder={f.placeholder}
+                  className="w-full resize-y rounded-md border border-border bg-background/50 px-3.5 py-2.5 text-[13px] text-foreground placeholder:text-muted-foreground/50 leading-relaxed outline-none focus:border-primary/50 focus:ring-2 focus:ring-primary/20 transition-colors"
+                />
+              )}
+            </FieldLine>
+          ))
+        ) : (
+          <FieldLine
+            label="Details"
+            hint="Everything worth saying. Plain text — line breaks preserved."
+          >
+            <textarea
+              value={values["__freeform"] ?? ""}
+              onChange={(e) =>
+                setValues((v) => ({ ...v, __freeform: e.target.value }))
+              }
+              rows={10}
+              placeholder="What's the situation, what's the ask, what does leadership need to know."
+              className="w-full resize-y rounded-md border border-border bg-background/50 px-3.5 py-2.5 text-[13px] text-foreground placeholder:text-muted-foreground/50 leading-relaxed outline-none focus:border-primary/50 focus:ring-2 focus:ring-primary/20 transition-colors"
             />
+          </FieldLine>
+        )}
+      </div>
+
+      {/* ─── Submit bar ─── */}
+      <div className="flex items-center justify-between gap-3 rounded-lg border border-border bg-card/60 backdrop-blur-sm px-5 py-4">
+        <div className="min-w-0 flex-1 text-[11.5px]">
+          {submitState === "sent" && (
+            <span className="inline-flex items-center gap-1.5 text-emerald-300 font-semibold">
+              <Check className="h-3.5 w-3.5" />
+              Submitted. Leadership will see it in their inbox.
+            </span>
+          )}
+          {submitState === "error" && (
+            <span className="inline-flex items-center gap-1.5 text-red-300">
+              <AlertCircle className="h-3.5 w-3.5" />
+              {submitError ?? "Failed to submit"}
+            </span>
+          )}
+          {submitState === "idle" && (
+            <span className="inline-flex items-center gap-2 text-muted-foreground">
+              <typeMeta.icon className="h-3.5 w-3.5" style={{ color: typeMeta.accent }} />
+              Submitting to <b className="text-foreground">CEO / COO / CFO / Admin</b>.
+            </span>
+          )}
+        </div>
+        <button
+          type="button"
+          onClick={submit}
+          disabled={submitState === "submitting" || !title.trim()}
+          className="inline-flex items-center gap-1.5 rounded-md bg-primary px-5 py-2.5 text-[12.5px] font-semibold text-primary-foreground hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors shadow-lg"
+        >
+          {submitState === "submitting" ? (
+            <Loader2 className="h-3.5 w-3.5 animate-spin" />
+          ) : (
+            <Send className="h-3.5 w-3.5" />
+          )}
+          {submitState === "submitting" ? "Submitting…" : "Submit report"}
+        </button>
+      </div>
+
+      {/* ─── Your recent reports ─── */}
+      <section className="pt-2">
+        <div className="flex items-center justify-between mb-3">
+          <div className="flex items-center gap-2">
+            <Sparkles className="h-3.5 w-3.5 text-muted-foreground" />
+            <h2 className="text-[12px] font-mono uppercase tracking-widest text-muted-foreground">
+              Your recent reports
+            </h2>
           </div>
-        </CardContent>
-        <CardFooter className="flex justify-end">
-          <Button className="bg-gradient-to-r from-red-950 to-red-900 hover:from-red-900 hover:to-red-800 text-foreground border border-red-800/30 shadow-lg shadow-red-950/20">
-            Save Settings
-          </Button>
-        </CardFooter>
-      </Card>
+          {myReports.length > 0 && (
+            <span className="text-[10.5px] text-muted-foreground">
+              Last {myReports.length}
+            </span>
+          )}
+        </div>
+
+        {loadingReports ? (
+          <div className="flex items-center gap-2 p-3 text-[11.5px] text-muted-foreground">
+            <Loader2 className="h-3.5 w-3.5 animate-spin" /> Loading…
+          </div>
+        ) : myReports.length === 0 ? (
+          <div className="rounded-lg border border-dashed border-border bg-card/30 p-6 text-center">
+            <Send className="mx-auto h-6 w-6 text-muted-foreground/40" />
+            <p className="mt-2 text-[12px] text-foreground">
+              Nothing yet.
+            </p>
+            <p className="text-[11px] text-muted-foreground mt-0.5">
+              Your submitted reports will show up here.
+            </p>
+          </div>
+        ) : (
+          <ul className="space-y-2">
+            {myReports.map((r) => (
+              <MyReportRow key={r.id} report={r} />
+            ))}
+          </ul>
+        )}
+      </section>
     </div>
   );
-};
+}
 
-export default ReportSettings;
+// ── Section wrapper ─────────────────────────────────────────────
+
+function Section({
+  label, hint, children,
+}: {
+  label: string;
+  hint?: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <div>
+      <div className="mb-2">
+        <h2 className="text-[12.5px] font-semibold text-foreground">{label}</h2>
+        {hint && (
+          <p className="mt-0.5 text-[11px] text-muted-foreground">{hint}</p>
+        )}
+      </div>
+      {children}
+    </div>
+  );
+}
+
+// ── Field wrapper — label + optional hint + the input ──────────
+
+function FieldLine({
+  label, hint, optional, children,
+}: {
+  label: string;
+  hint?: string;
+  optional?: boolean;
+  children: React.ReactNode;
+}) {
+  return (
+    <div>
+      <div className="flex items-baseline justify-between mb-1.5">
+        <label className="text-[11.5px] font-semibold text-foreground/90">
+          {label}
+          {optional && (
+            <span className="ml-1.5 text-[10px] font-normal text-muted-foreground">
+              (optional)
+            </span>
+          )}
+        </label>
+      </div>
+      {children}
+      {hint && (
+        <p className="mt-1 text-[10.5px] text-muted-foreground leading-snug">
+          {hint}
+        </p>
+      )}
+    </div>
+  );
+}
+
+// ── Recent report row ──────────────────────────────────────────
+
+function MyReportRow({ report }: { report: ReportRow }) {
+  const TypeIcon = TYPE_META[report.type]?.icon ?? FileText;
+  const accent = TYPE_META[report.type]?.accent ?? "#64748b";
+  return (
+    <li className="group rounded-lg border border-border bg-card/40 px-4 py-3 hover:bg-card/60 transition-colors">
+      <div className="flex items-start gap-3">
+        <div
+          className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md"
+          style={{ background: `${accent}22`, color: accent }}
+        >
+          <TypeIcon className="h-4 w-4" />
+        </div>
+        <div className="min-w-0 flex-1">
+          <p className="text-[12.5px] font-semibold text-foreground truncate">
+            {report.title}
+          </p>
+          {report.body && (
+            <p className="mt-1 text-[11.5px] text-muted-foreground line-clamp-2 leading-snug whitespace-pre-wrap">
+              {report.body}
+            </p>
+          )}
+          <div className="mt-1.5 flex items-center gap-3 text-[10px] text-muted-foreground">
+            <span
+              className={`rounded-full border px-1.5 py-0.5 font-semibold ${PRIORITY_META[report.priority].cls}`}
+            >
+              {PRIORITY_META[report.priority].label}
+            </span>
+            <span className="inline-flex items-center gap-1">
+              <Clock className="h-2.5 w-2.5" />
+              {report.submitted_at
+                ? new Date(report.submitted_at).toLocaleDateString()
+                : "draft"}
+            </span>
+            <StatusBadge status={report.status} reviewed={!!report.reviewed_at} />
+          </div>
+          {report.review_notes && (
+            <div className="mt-2 rounded-md border border-primary/30 bg-primary/[0.05] px-3 py-2">
+              <p className="text-[10px] font-semibold text-primary/80 uppercase tracking-wider mb-0.5">
+                Leadership note
+              </p>
+              <p className="text-[11.5px] text-foreground/90 leading-snug whitespace-pre-wrap">
+                {report.review_notes}
+              </p>
+            </div>
+          )}
+        </div>
+      </div>
+    </li>
+  );
+}
+
+function StatusBadge({
+  status, reviewed,
+}: {
+  status: ReportStatus;
+  reviewed: boolean;
+}) {
+  if (status === "reviewed" || reviewed) {
+    return (
+      <span className="inline-flex items-center gap-1 rounded-full border border-emerald-500/40 bg-emerald-500/10 px-1.5 py-0.5 text-emerald-300 font-semibold">
+        <Eye className="h-2.5 w-2.5" />
+        Reviewed
+      </span>
+    );
+  }
+  if (status === "archived") {
+    return (
+      <span className="rounded-full border border-zinc-600/40 bg-zinc-700/10 px-1.5 py-0.5 text-zinc-400 font-semibold">
+        Archived
+      </span>
+    );
+  }
+  return (
+    <span className="rounded-full border border-amber-500/40 bg-amber-500/10 px-1.5 py-0.5 text-amber-300 font-semibold">
+      Submitted
+    </span>
+  );
+}

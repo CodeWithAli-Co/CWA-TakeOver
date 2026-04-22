@@ -28,6 +28,7 @@ import {
   FileText,
   Package,
   ClipboardCheck,
+  Inbox,
   type LucideIcon,
 } from "lucide-react";
 
@@ -314,6 +315,12 @@ export const adminData = {
       url: "/onboarding",
       isActive: false,
       icon: ClipboardCheck,
+    },
+    {
+      title: "Reports",
+      url: "/reports",
+      isActive: false,
+      icon: Inbox,
     },
     {
       title: "Components",
@@ -754,6 +761,12 @@ export const cooData = {
       icon: ClipboardCheck,
     },
     {
+      title: "Reports",
+      url: "/reports",
+      isActive: false,
+      icon: Inbox,
+    },
+    {
       title: "Components",
       url: "/components",
       isActive: false,
@@ -1000,6 +1013,12 @@ export const ceoData = {
       icon: ClipboardCheck,
     },
     {
+      title: "Reports",
+      url: "/reports",
+      isActive: false,
+      icon: Inbox,
+    },
+    {
       title: "Components",
       url: "/components",
       isActive: false,
@@ -1242,6 +1261,12 @@ export const cfoData = {
       url: "/onboarding",
       isActive: false,
       icon: ClipboardCheck,
+    },
+    {
+      title: "Reports",
+      url: "/reports",
+      isActive: false,
+      icon: Inbox,
     },
     {
       title: "Components",

@@ -1,551 +1,808 @@
-import { useState } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+/**
+ * TeamProject.tsx — real projects + members, replacing the dummy
+ * preset data that used to ship here.
+ *
+ * CEO / COO / CFO / Admin can:
+ *   · Create projects scoped to a company (CodeWithAli or Simplicity)
+ *   · Edit project name / description / status
+ *   · Add / remove members from app_users (either company,
+ *     elevated roles can mix members across brands on a project)
+ *   · Delete projects (cascades to project_members)
+ *
+ * Everyone else sees the project list read-only.
+ *
+ * RLS enforces the elevated-role gate server-side; this UI just
+ * reflects the same rule so non-admins don't see edit affordances.
+ */
+
+import { useEffect, useMemo, useState } from "react";
 import {
-  Users2,
-  UserPlus,
-  Briefcase,
-  FolderPlus,
-  Search,
-  MoreHorizontal,
-  CheckCircle,
-  Clock,
-  AlertCircle,
-  Edit,
-  Trash,
-  Plus,
+  FolderKanban, Plus, Search, X, Loader2, AlertCircle, Trash2,
+  Users, Pencil, Check, Building2, Circle,
 } from "lucide-react";
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-  CardDescription,
-} from "@/components/ui/shadcnComponents/card";
-import { Button } from "@/components/ui/shadcnComponents/button";
-import {
-  Avatar,
-  AvatarFallback,
-} from "@/components/ui/shadcnComponents/avatar";
-import { Input } from "@/components/ui/shadcnComponents/input";
-import { Badge } from "@/components/ui/shadcnComponents/badge";
-import {
-  Tabs,
-  TabsList,
-  TabsTrigger,
-  TabsContent,
-} from "@/components/ui/shadcnComponents/tabs";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/shadcnComponents/dialog";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/shadcnComponents/dropdown-menu";
-import { ScrollArea } from "@/components/ui/shadcnComponents/scroll-area";
+import supabase from "@/MyComponents/supabase";
+import { ActiveUser } from "@/stores/query";
 
-// Sample data - replace with real data from your database
-const teams = [
-  {
-    id: 1,
-    name: "Development Team",
-    members: 8,
-    projects: 5,
-    description: "Core product development and engineering",
-    avatars: ["JD", "AK", "MR", "BL", "TS"],
-  },
-  {
-    id: 2,
-    name: "Marketing",
-    members: 6,
-    projects: 3,
-    description: "Product marketing and growth strategies",
-    avatars: ["EM", "JB", "KL"],
-  },
-  {
-    id: 3,
-    name: "Design",
-    members: 4,
-    projects: 7,
-    description: "UI/UX design and product experience",
-    avatars: ["PK", "RS", "LM", "JT"],
-  },
-  {
-    id: 4,
-    name: "Operations",
-    members: 5,
-    projects: 2,
-    description: "Business operations and internal processes",
-    avatars: ["AG", "BH"],
-  },
-];
+// ── Types ───────────────────────────────────────────────────────
 
-const projects = [
-  {
-    id: 1,
-    name: "Dashboard Redesign",
-    team: "Design",
-    status: "in-progress",
-    deadline: "May 15, 2025",
-    completion: 65,
-    description: "Redesigning the main dashboard interface for better UX",
-  },
-  {
-    id: 2,
-    name: "API Integration",
-    team: "Development Team",
-    status: "to-do",
-    deadline: "June 02, 2025",
-    completion: 10,
-    description: "Integrating third-party APIs for enhanced functionality",
-  },
-  {
-    id: 3,
-    name: "Marketing Campaign",
-    team: "Marketing",
-    status: "done",
-    deadline: "April 30, 2025",
-    completion: 100,
-    description: "Q2 marketing campaign for new features",
-  },
-  {
-    id: 4,
-    name: "Database Optimization",
-    team: "Development Team",
-    status: "in-progress",
-    deadline: "May 20, 2025",
-    completion: 45,
-    description: "Improving database performance and query optimization",
-  },
-  {
-    id: 5,
-    name: "User Onboarding Flow",
-    team: "Design",
-    status: "to-do",
-    deadline: "June 10, 2025",
-    completion: 5,
-    description: "Designing new user onboarding experience",
-  },
-];
+type ProjectStatus = "active" | "paused" | "completed" | "cancelled";
+type CompanyKey = "codewithali" | "simplicity";
 
-// Status badge component
-const StatusBadge = ({ status }: { status: any }) => {
-  const variants = {
-    "to-do": "bg-blue-500/20 text-blue-400 border-blue-500/30",
-    "in-progress": "bg-amber-500/20 text-amber-400 border-amber-500/30",
-    done: "bg-emerald-500/20 text-emerald-400 border-emerald-500/30",
+interface Project {
+  id: string;
+  name: string;
+  description: string | null;
+  company: CompanyKey;
+  status: ProjectStatus;
+  owner_user_id: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+interface ProjectMember {
+  project_id: string;
+  user_id: string;
+  role: "member" | "lead";
+}
+
+interface AppUserLite {
+  supa_id: string;
+  username: string;
+  role: string;
+  company: string | null;
+  avatarURL: string | null;
+}
+
+// ── Main component ──────────────────────────────────────────────
+
+export default function TeamsAndProjects() {
+  const { data: currentUser } = ActiveUser();
+  const myRole = currentUser?.[0]?.role ?? "";
+  const canEdit = ["CEO", "COO", "CFO", "Admin"].includes(myRole);
+
+  const [projects, setProjects] = useState<Project[]>([]);
+  const [members, setMembers] = useState<ProjectMember[]>([]);
+  const [users, setUsers] = useState<AppUserLite[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  const [companyFilter, setCompanyFilter] = useState<CompanyKey | "all">("all");
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [isCreating, setIsCreating] = useState(false);
+
+  // ── Load ────────────────────────────────────────────────────
+  const reload = async () => {
+    setLoading(true);
+    setError(null);
+
+    const [p, m, u] = await Promise.all([
+      supabase
+        .from("projects")
+        .select("id, name, description, company, status, owner_user_id, created_at, updated_at")
+        .order("updated_at", { ascending: false }),
+      supabase
+        .from("project_members")
+        .select("project_id, user_id, role"),
+      supabase
+        .from("app_users")
+        .select("supa_id, username, role, company, avatarURL")
+        .not("supa_id", "is", null)
+        .order("username"),
+    ]);
+
+    if (p.error) {
+      const msg = (p.error.message || "").toLowerCase();
+      if (msg.includes("does not exist") || (p.error as any).code === "42P01") {
+        setError(
+          "Projects tables aren't set up yet. Run migrations/projects_init.sql on your Supabase project.",
+        );
+      } else {
+        setError(p.error.message);
+      }
+      setLoading(false);
+      return;
+    }
+    setProjects((p.data ?? []) as Project[]);
+    setMembers((m.data ?? []) as ProjectMember[]);
+    setUsers((u.data ?? []) as AppUserLite[]);
+    setLoading(false);
   };
 
-  const icons = {
-    "to-do": <Clock className="h-3 w-3 mr-1" />,
-    "in-progress": <AlertCircle className="h-3 w-3 mr-1" />,
-    done: <CheckCircle className="h-3 w-3 mr-1" />,
-  };
+  useEffect(() => {
+    reload();
+  }, []);
 
-  const labels = {
-    "to-do": "To Do",
-    "in-progress": "In Progress",
-    done: "Completed",
-  };
-
-  return (
-    <Badge
-      variant="outline"
-      className={`${variants[status]} flex items-center px-2 py-1`}
-    >
-      {icons[status]}
-      {labels[status]}
-    </Badge>
+  const filtered = useMemo(
+    () =>
+      projects.filter((p) => companyFilter === "all" || p.company === companyFilter),
+    [projects, companyFilter],
   );
-};
 
-// Team member avatars group
-const TeamAvatars = ({ avatars, max = 4 }: { avatars: any; max?: number }) => {
-  const displayedAvatars = avatars.slice(0, max);
-  const remaining = avatars.length - max;
+  const selected = projects.find((p) => p.id === selectedId) ?? null;
+  const selectedMembers = useMemo(
+    () => members.filter((m) => m.project_id === selectedId),
+    [members, selectedId],
+  );
 
   return (
-    <div className="flex -space-x-2">
-      {displayedAvatars.map((avatar: any, idx: any) => (
-        <Avatar
-          key={idx}
-          className="h-7 w-7 border-2 border-black/40 bg-red-900 text-foreground text-xs"
-        >
-          <AvatarFallback>{avatar}</AvatarFallback>
-        </Avatar>
-      ))}
-      {remaining > 0 && (
-        <Avatar className="h-7 w-7 border-2 border-black/40 bg-red-950 text-foreground text-xs">
-          <AvatarFallback>+{remaining}</AvatarFallback>
-        </Avatar>
+    <div className="space-y-4">
+      <header className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <div className="flex items-center gap-2">
+            <FolderKanban className="h-4 w-4 text-muted-foreground" />
+            <h2 className="text-[13px] font-mono uppercase tracking-widest text-muted-foreground">
+              Projects
+            </h2>
+          </div>
+          <p className="mt-1 text-[12.5px] text-muted-foreground leading-snug">
+            {canEdit
+              ? "Create projects, pick members, track status. Leadership-only editing."
+              : "Projects you can see. Ask leadership to add or change any of these."}
+          </p>
+        </div>
+        <div className="flex items-center gap-2">
+          <CompanyFilter value={companyFilter} onChange={setCompanyFilter} />
+          {canEdit && (
+            <button
+              type="button"
+              onClick={() => {
+                setIsCreating(true);
+                setSelectedId(null);
+              }}
+              className="inline-flex items-center gap-1.5 rounded-md bg-primary px-3 py-1.5 text-[12px] font-semibold text-primary-foreground hover:bg-primary/90 transition-colors"
+            >
+              <Plus className="h-3.5 w-3.5" />
+              New project
+            </button>
+          )}
+        </div>
+      </header>
+
+      {error && (
+        <div className="flex items-start gap-2 rounded-md border border-amber-500/30 bg-amber-500/10 px-3 py-2">
+          <AlertCircle className="h-3.5 w-3.5 mt-0.5 text-amber-400 shrink-0" />
+          <p className="text-[11.5px] text-amber-200">{error}</p>
+        </div>
+      )}
+
+      {loading ? (
+        <div className="flex items-center gap-2 p-3 text-[11.5px] text-muted-foreground">
+          <Loader2 className="h-3.5 w-3.5 animate-spin" /> Loading projects…
+        </div>
+      ) : filtered.length === 0 && !isCreating ? (
+        <EmptyState canEdit={canEdit} onCreate={() => setIsCreating(true)} />
+      ) : (
+        <div className="grid gap-4 lg:grid-cols-[1fr_400px]">
+          <div className="space-y-2">
+            {filtered.map((p) => (
+              <ProjectCard
+                key={p.id}
+                project={p}
+                memberCount={members.filter((m) => m.project_id === p.id).length}
+                selected={p.id === selectedId}
+                onClick={() => {
+                  setSelectedId(p.id);
+                  setIsCreating(false);
+                }}
+              />
+            ))}
+          </div>
+          <aside className="lg:sticky lg:top-4 self-start">
+            {isCreating ? (
+              <CreateProjectPanel
+                users={users}
+                onCancel={() => setIsCreating(false)}
+                onSaved={async () => {
+                  setIsCreating(false);
+                  await reload();
+                }}
+              />
+            ) : selected ? (
+              <ProjectDetailPanel
+                project={selected}
+                members={selectedMembers}
+                users={users}
+                canEdit={canEdit}
+                onChanged={reload}
+                onClose={() => setSelectedId(null)}
+              />
+            ) : (
+              <div className="rounded-lg border border-dashed border-border p-6 text-center">
+                <FolderKanban className="mx-auto h-8 w-8 text-muted-foreground/40" />
+                <p className="mt-2 text-[12px] text-muted-foreground">
+                  Pick a project to view details.
+                </p>
+              </div>
+            )}
+          </aside>
+        </div>
       )}
     </div>
   );
-};
+}
 
-// Team Card Component
-const TeamCard = ({ team }: { team: any }) => (
-  <motion.div
-    whileHover={{ scale: 1.01 }}
-    className="rounded-lg bg-background/40 border border-red-900/30 overflow-hidden hover:bg-red-950/10 hover:border-red-900/50 transition-all"
-  >
-    <div className="p-4">
-      <div className="flex justify-between items-start mb-3">
-        <h3 className="text-lg font-semibold text-white">{team.name}</h3>
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button
-              variant="ghost"
-              size="icon"
-              className="text-foreground/60 hover:text-foreground hover:bg-red-950/20"
-            >
-              <MoreHorizontal className="h-4 w-4" />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent className="max-w-lg">
-            <DropdownMenuLabel>Team Actions</DropdownMenuLabel>
-            <DropdownMenuSeparator className="bg-red-950/30" />
-            <DropdownMenuItem className="hover:bg-red-950/30">
-              <Edit className="h-4 w-4 mr-2" /> Edit Team
-            </DropdownMenuItem>
-            <DropdownMenuItem className="hover:bg-red-950/30">
-              <UserPlus className="h-4 w-4 mr-2" /> Add Member
-            </DropdownMenuItem>
-            <DropdownMenuSeparator className="bg-red-950/30" />
-            <DropdownMenuItem className="text-primary hover:bg-red-950/40">
-              <Trash className="h-4 w-4 mr-2" /> Delete Team
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
-      </div>
-      <p className="text-foreground/60 text-sm mb-4">{team.description}</p>
-      <div className="flex justify-between items-center">
-        <div className="flex items-center gap-4">
-          <div className="flex items-center text-foreground/60 text-sm">
-            <Users2 className="h-4 w-4 mr-1 text-primary" />
-            {team.members} Members
-          </div>
-          <div className="flex items-center text-foreground/60 text-sm">
-            <Briefcase className="h-4 w-4 mr-1 text-primary" />
-            {team.projects} Projects
-          </div>
-        </div>
-        <TeamAvatars avatars={team.avatars} />
-      </div>
-    </div>
-  </motion.div>
-);
-
-// Project Card Component
-const ProjectCard = ({ project }: { project: any }) => {
-  const completionBarWidth = `${project.completion}%`;
-
+function EmptyState({
+  canEdit, onCreate,
+}: {
+  canEdit: boolean;
+  onCreate: () => void;
+}) {
   return (
-    <motion.div
-      whileHover={{ scale: 1.01 }}
-      className="rounded-lg bg-background/40 border border-red-900/30 overflow-hidden hover:bg-red-950/10 hover:border-red-900/50 transition-all"
+    <div className="rounded-lg border border-dashed border-border bg-card/30 p-8 text-center">
+      <FolderKanban className="mx-auto h-10 w-10 text-muted-foreground/40" />
+      <p className="mt-3 text-[13px] font-semibold text-foreground">
+        No projects yet.
+      </p>
+      <p className="mt-1 text-[11.5px] text-muted-foreground">
+        {canEdit
+          ? "Start by creating your first project. You'll pick members from the current roster."
+          : "Leadership hasn't set any projects up yet."}
+      </p>
+      {canEdit && (
+        <button
+          type="button"
+          onClick={onCreate}
+          className="mt-4 inline-flex items-center gap-1.5 rounded-md bg-primary px-3 py-2 text-[12px] font-semibold text-primary-foreground hover:bg-primary/90 transition-colors"
+        >
+          <Plus className="h-3.5 w-3.5" />
+          Create a project
+        </button>
+      )}
+    </div>
+  );
+}
+
+function CompanyFilter({
+  value, onChange,
+}: {
+  value: CompanyKey | "all";
+  onChange: (v: CompanyKey | "all") => void;
+}) {
+  return (
+    <div className="inline-flex rounded-md border border-border bg-card/40 p-1 text-[11px]">
+      {([
+        ["all", "All", "#64748b"],
+        ["codewithali", "CWA", "#DC2626"],
+        ["simplicity", "Simplicity", "#059669"],
+      ] as const).map(([v, label, dot]) => (
+        <button
+          key={v}
+          type="button"
+          onClick={() => onChange(v as CompanyKey | "all")}
+          className={[
+            "inline-flex items-center gap-1.5 rounded-sm px-2.5 py-1 font-semibold transition-colors",
+            value === v
+              ? "bg-card text-foreground shadow-sm"
+              : "text-muted-foreground hover:text-foreground",
+          ].join(" ")}
+        >
+          <span className="h-1.5 w-1.5 rounded-full" style={{ background: dot }} />
+          {label}
+        </button>
+      ))}
+    </div>
+  );
+}
+
+function ProjectCard({
+  project, memberCount, selected, onClick,
+}: {
+  project: Project;
+  memberCount: number;
+  selected: boolean;
+  onClick: () => void;
+}) {
+  const brandColor = project.company === "simplicity" ? "#059669" : "#DC2626";
+  const brandLabel = project.company === "simplicity" ? "Simplicity" : "CodeWithAli";
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={[
+        "w-full rounded-lg border px-4 py-3 text-left transition-colors",
+        selected
+          ? "border-primary/60 bg-primary/[0.06]"
+          : "border-border bg-card/40 hover:border-border hover:bg-card/60",
+      ].join(" ")}
     >
-      <div className="p-4">
-        <div className="flex justify-between items-start mb-3">
-          <h3 className="text-lg font-semibold text-white">{project.name}</h3>
-          <StatusBadge status={project.status} />
-        </div>
-        <p className="text-foreground/60 text-sm mb-4">{project.description}</p>
-
-        <div className="space-y-3">
-          <div className="flex justify-between text-sm mb-1">
-            <span className="text-foreground/70">Team: {project.team}</span>
-            <span className="text-foreground/70">
-              Deadline: {project.deadline}
-            </span>
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0 flex-1">
+          <div className="flex items-center gap-2">
+            <span
+              className="h-2 w-2 rounded-full shrink-0"
+              style={{ background: brandColor }}
+              title={brandLabel}
+            />
+            <h3 className="text-[13.5px] font-semibold text-foreground truncate">
+              {project.name}
+            </h3>
           </div>
-
-          <div>
-            <div className="flex justify-between text-sm mb-1">
-              <span className="text-foreground/70">Completion</span>
-              <span className="text-foreground">{project.completion}%</span>
-            </div>
-            <div className="h-2 bg-red-950/20 rounded-full overflow-hidden">
-              <motion.div
-                initial={{ width: 0 }}
-                animate={{ width: completionBarWidth }}
-                transition={{ duration: 0.8, ease: "easeOut" }}
-                className={`h-full ${
-                  project.status === "done"
-                    ? "bg-emerald-500/70"
-                    : project.completion > 50
-                      ? "bg-amber-500/70"
-                      : "bg-red-500/70"
-                }`}
-              />
-            </div>
+          {project.description && (
+            <p className="mt-1 text-[11.5px] text-muted-foreground line-clamp-2 leading-snug">
+              {project.description}
+            </p>
+          )}
+          <div className="mt-2 flex items-center gap-3 text-[10.5px] text-muted-foreground">
+            <StatusPill status={project.status} />
+            <span className="inline-flex items-center gap-1">
+              <Users className="h-3 w-3" />
+              {memberCount} {memberCount === 1 ? "member" : "members"}
+            </span>
+            <span>Updated {new Date(project.updated_at).toLocaleDateString()}</span>
           </div>
         </div>
       </div>
-    </motion.div>
+    </button>
   );
-};
+}
 
-// Create Team Dialog
-const CreateTeamDialog = () => {
-  const [open, setOpen] = useState(false);
+function StatusPill({ status }: { status: ProjectStatus }) {
+  const cfg: Record<ProjectStatus, { label: string; cls: string }> = {
+    active:    { label: "Active",    cls: "border-emerald-500/40 bg-emerald-500/10 text-emerald-300" },
+    paused:    { label: "Paused",    cls: "border-amber-500/40 bg-amber-500/10 text-amber-300" },
+    completed: { label: "Completed", cls: "border-blue-500/40 bg-blue-500/10 text-blue-300" },
+    cancelled: { label: "Cancelled", cls: "border-zinc-600/40 bg-zinc-700/10 text-zinc-400" },
+  };
+  const c = cfg[status];
+  return (
+    <span className={`inline-flex items-center gap-1 rounded-full border px-1.5 py-0.5 text-[9.5px] font-semibold ${c.cls}`}>
+      <Circle className="h-1.5 w-1.5 fill-current" />
+      {c.label}
+    </span>
+  );
+}
+
+function CreateProjectPanel({
+  users, onCancel, onSaved,
+}: {
+  users: AppUserLite[];
+  onCancel: () => void;
+  onSaved: () => void;
+}) {
+  const [name, setName] = useState("");
+  const [description, setDescription] = useState("");
+  const [company, setCompany] = useState<CompanyKey>("codewithali");
+  const [memberIds, setMemberIds] = useState<Set<string>>(new Set());
+  const [saving, setSaving] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
+
+  const save = async () => {
+    if (!name.trim()) {
+      setErr("Project needs a name.");
+      return;
+    }
+    setSaving(true);
+    setErr(null);
+
+    const ins = await supabase
+      .from("projects")
+      .insert({
+        name: name.trim(),
+        description: description.trim() || null,
+        company,
+      })
+      .select("id")
+      .single();
+
+    if (ins.error) {
+      setErr(ins.error.message);
+      setSaving(false);
+      return;
+    }
+
+    if (memberIds.size > 0) {
+      const rows = Array.from(memberIds).map((user_id) => ({
+        project_id: (ins.data as any).id,
+        user_id,
+        role: "member" as const,
+      }));
+      const mi = await supabase.from("project_members").insert(rows);
+      if (mi.error) {
+        setErr(`Project created but couldn't add members: ${mi.error.message}`);
+        setSaving(false);
+        return;
+      }
+    }
+    setSaving(false);
+    onSaved();
+  };
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
-        <Button
-          className="group relative overflow-hidden bg-gradient-to-r from-red-950 to-red-900 
-          hover:from-red-900 hover:to-red-800 text-foreground border border-red-800/30 
-          shadow-lg shadow-red-950/20 transition-all duration-300 
-          hover:scale-[1.02] active:scale-[0.98]"
+    <div className="rounded-lg border border-border bg-card/60 p-4 space-y-4">
+      <div className="flex items-center justify-between">
+        <h3 className="text-[13px] font-semibold text-foreground">New project</h3>
+        <button
+          type="button"
+          onClick={onCancel}
+          className="text-muted-foreground hover:text-foreground transition-colors"
         >
-          <span className="absolute inset-0 bg-red-700/10 opacity-0 group-hover:opacity-20 transition-opacity"></span>
-          <UserPlus className="h-4 w-4 mr-2 transition-transform group-hover:rotate-12" />
-          Create Team
-        </Button>
-      </DialogTrigger>
-      <DialogContent className="max-w-lg">
-        <DialogHeader>
-          <DialogTitle className="text-foreground text-xl">
-            Create New Team
-          </DialogTitle>
-          <DialogDescription className="text-foreground/60">
-            Create a new team and add members to collaborate on projects.
-          </DialogDescription>
-        </DialogHeader>
-        <div className="grid gap-4 py-4">
-          <div className="grid gap-2">
-            <label className="text-sm text-white">Team Name</label>
-            <Input
-              className="bg-background/40 border-red-950/30 text-white"
-              placeholder="Enter team name..."
-            />
-          </div>
-          <div className="grid gap-2">
-            <label className="text-sm text-white">Description</label>
-            <Input
-              className="bg-background/40 border-red-950/30 text-white"
-              placeholder="Team description..."
-            />
-          </div>
-          <div className="grid gap-2">
-            <label className="text-sm text-white">Initial Members</label>
-            <div className="flex items-center gap-2">
-              <Input
-                className="bg-background/40 border-red-950/30 text-white"
-                placeholder="Search members..."
-              />
-              <Button
-                size="icon"
-                variant="outline"
-                className="border-red-950/30 text-foreground hover:bg-red-950/20"
+          <X className="h-3.5 w-3.5" />
+        </button>
+      </div>
+
+      <div>
+        <label className="block text-[11px] font-semibold text-foreground/80 mb-1.5">Name</label>
+        <input
+          type="text"
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          placeholder="Q4 Marketing Site Redesign"
+          className="w-full rounded-md border border-border bg-background/50 px-3 py-2 text-[13px] text-foreground placeholder:text-muted-foreground/50 outline-none focus:border-primary/50 focus:ring-2 focus:ring-primary/20 transition-colors"
+        />
+      </div>
+
+      <div>
+        <label className="block text-[11px] font-semibold text-foreground/80 mb-1.5">Description</label>
+        <textarea
+          value={description}
+          onChange={(e) => setDescription(e.target.value)}
+          rows={3}
+          placeholder="What this project is, who's it for, success criteria."
+          className="w-full resize-none rounded-md border border-border bg-background/50 px-3 py-2 text-[13px] text-foreground placeholder:text-muted-foreground/50 outline-none focus:border-primary/50 focus:ring-2 focus:ring-primary/20 transition-colors"
+        />
+      </div>
+
+      <div>
+        <label className="block text-[11px] font-semibold text-foreground/80 mb-1.5">Company</label>
+        <div className="inline-flex rounded-md border border-border bg-background/50 p-1">
+          {([["codewithali", "CodeWithAli", "#DC2626"], ["simplicity", "Simplicity", "#059669"]] as const).map(
+            ([v, label, dot]) => (
+              <button
+                key={v}
+                type="button"
+                onClick={() => setCompany(v)}
+                className={[
+                  "inline-flex items-center gap-1.5 rounded-sm px-3 py-1 text-[11.5px] font-semibold transition-colors",
+                  company === v
+                    ? "bg-card text-foreground shadow-sm"
+                    : "text-muted-foreground hover:text-foreground",
+                ].join(" ")}
               >
-                <Plus className="h-4 w-4" />
-              </Button>
-            </div>
-          </div>
+                <span className="h-1.5 w-1.5 rounded-full" style={{ background: dot }} />
+                {label}
+              </button>
+            ),
+          )}
         </div>
-        <DialogFooter>
-          <Button
-            variant="outline"
-            onClick={() => setOpen(false)}
-            className="border-red-800/30 text-foreground hover:bg-red-950/20"
-          >
-            Cancel
-          </Button>
-          <Button
-            className="bg-gradient-to-r from-red-950 to-red-900 hover:from-red-900 hover:to-red-800 
-            text-foreground border border-red-800/30"
-            onClick={() => setOpen(false)}
-          >
-            Create Team
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
-  );
-};
+      </div>
 
-// Create Project Dialog
-const CreateProjectDialog = () => {
-  const [open, setOpen] = useState(false);
+      <MemberPicker
+        users={users}
+        selectedIds={memberIds}
+        onToggle={(id) => {
+          const next = new Set(memberIds);
+          if (next.has(id)) next.delete(id); else next.add(id);
+          setMemberIds(next);
+        }}
+      />
 
-  return (
-    <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
-        <Button
-          className="group relative overflow-hidden bg-gradient-to-r from-red-950 to-red-900 
-          hover:from-red-900 hover:to-red-800 text-foreground border border-red-800/30 
-          shadow-lg shadow-red-950/20 transition-all duration-300 
-          hover:scale-[1.02] active:scale-[0.98]"
+      {err && (
+        <p className="rounded-md border border-red-500/30 bg-red-500/10 px-3 py-2 text-[11px] text-red-200">
+          {err}
+        </p>
+      )}
+
+      <div className="flex items-center justify-end gap-2">
+        <button
+          type="button"
+          onClick={onCancel}
+          className="rounded-md border border-border bg-background px-3 py-1.5 text-[11.5px] font-medium text-foreground hover:bg-muted/60 transition-colors"
         >
-          <span className="absolute inset-0 bg-red-700/10 opacity-0 group-hover:opacity-20 transition-opacity"></span>
-          <FolderPlus className="h-4 w-4 mr-2 transition-transform group-hover:rotate-12" />
-          New Project
-        </Button>
-      </DialogTrigger>
-      <DialogContent className="max-w-lg">
-        <DialogHeader>
-          <DialogTitle className="text-foreground text-xl">
-            Create New Project
-          </DialogTitle>
-          <DialogDescription className="text-foreground/60">
-            Add a new project and assign it to a team.
-          </DialogDescription>
-        </DialogHeader>
-        <div className="grid gap-4 py-4">
-          <div className="grid gap-2">
-            <label className="text-sm text-white">Project Name</label>
-            <Input
-              className="bg-background/40 border-red-950/30 text-white"
-              placeholder="Enter project name..."
-            />
-          </div>
-          <div className="grid gap-2">
-            <label className="text-sm text-white">Description</label>
-            <Input
-              className="bg-background/40 border-red-950/30 text-white"
-              placeholder="Project description..."
-            />
-          </div>
-          <div className="grid gap-2">
-            <label className="text-sm text-white">Assign Team</label>
-            <Input
-              className="bg-background/40 border-red-950/30 text-white"
-              placeholder="Select team..."
-            />
-          </div>
-          <div className="grid gap-2">
-            <label className="text-sm text-white">Deadline</label>
-            <Input
-              className="bg-background/40 border-red-950/30 text-white"
-              type="date"
-            />
-          </div>
-        </div>
-        <DialogFooter>
-          <Button
-            variant="outline"
-            onClick={() => setOpen(false)}
-            className="border-red-800/30 text-foreground hover:bg-red-950/20"
-          >
-            Cancel
-          </Button>
-          <Button
-            className="bg-gradient-to-r from-red-950 to-red-900 hover:from-red-900 hover:to-red-800 
-            text-foreground border border-red-800/30"
-            onClick={() => setOpen(false)}
-          >
-            Create Project
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
-  );
-};
-
-// Main Teams & Projects Component
-const TeamsAndProjects = () => {
-  const [activeTab, setActiveTab] = useState("teams");
-
-  return (
-    <div className="space-y-6">
-      <Card className="bg-zinc-950 high-dpi:bg-zinc-950/20 rounded-xs border-red-950/30 backdrop-blur-sm">
-        <CardHeader>
-          <div className="flex justify-between items-center">
-            <div>
-              <CardTitle className="text-foreground flex items-center">
-                <Users2 className="h-5 w-5 mr-2 text-red-500" />
-                Teams & Projects
-              </CardTitle>
-              <CardDescription className="text-foreground/60">
-                Manage your teams and project assignments
-              </CardDescription>
-            </div>
-            <div className="flex items-center gap-2">
-              {activeTab === "teams" ? (
-                <CreateTeamDialog />
-              ) : (
-                <CreateProjectDialog />
-              )}
-            </div>
-          </div>
-        </CardHeader>
-        <CardContent>
-          <Tabs
-            value={activeTab}
-            onValueChange={setActiveTab}
-            className="space-y-6"
-          >
-            <div className="flex justify-between items-center">
-              <TabsList className="bg-background/40 border border-red-950/20">
-                <TabsTrigger
-                  value="teams"
-                  className="data-[state=active]:bg-red-950/20 data-[state=active]:text-foreground hover:text-foreground text-foreground/60"
-                >
-                  <Users2 className="h-4 w-4 mr-2" />
-                  Teams
-                </TabsTrigger>
-                <TabsTrigger
-                  value="projects"
-                  className="data-[state=active]:bg-red-950/20 data-[state=active]:text-foreground hover:text-foreground text-foreground/60"
-                >
-                  <Briefcase className="h-4 w-4 mr-2" />
-                  Projects
-                </TabsTrigger>
-              </TabsList>
-              <div className="relative">
-                <Search className="h-4 w-4 absolute left-3 top-3 text-foreground/60" />
-                <Input
-                  placeholder={`Search ${activeTab}...`}
-                  className="bg-background/40 border-red-950/30 text-foreground pl-10 w-[250px]"
-                />
-              </div>
-            </div>
-
-            <AnimatePresence mode="wait">
-              <motion.div
-                key={activeTab}
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -20 }}
-                transition={{ duration: 0.2 }}
-              >
-                <TabsContent value="teams" className="mt-4">
-                  <ScrollArea className="h-[600px] pr-4">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      {teams.map((team) => (
-                        <TeamCard key={team.id} team={team} />
-                      ))}
-                    </div>
-                  </ScrollArea>
-                </TabsContent>
-
-                <TabsContent value="projects" className="mt-4">
-                  <ScrollArea className="h-[600px] pr-4">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      {projects.map((project) => (
-                        <ProjectCard key={project.id} project={project} />
-                      ))}
-                    </div>
-                  </ScrollArea>
-                </TabsContent>
-              </motion.div>
-            </AnimatePresence>
-          </Tabs>
-        </CardContent>
-      </Card>
+          Cancel
+        </button>
+        <button
+          type="button"
+          onClick={save}
+          disabled={saving || !name.trim()}
+          className="inline-flex items-center gap-1.5 rounded-md bg-primary px-3 py-1.5 text-[11.5px] font-semibold text-primary-foreground hover:bg-primary/90 disabled:opacity-50 transition-colors"
+        >
+          {saving ? <Loader2 className="h-3 w-3 animate-spin" /> : <Check className="h-3 w-3" />}
+          {saving ? "Creating…" : "Create project"}
+        </button>
+      </div>
     </div>
   );
-};
+}
 
-export default TeamsAndProjects;
+function ProjectDetailPanel({
+  project, members, users, canEdit, onChanged, onClose,
+}: {
+  project: Project;
+  members: ProjectMember[];
+  users: AppUserLite[];
+  canEdit: boolean;
+  onChanged: () => void;
+  onClose: () => void;
+}) {
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState<Project>(project);
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
+  const memberIds = new Set(members.map((m) => m.user_id));
+  const memberUsers = users.filter((u) => memberIds.has(u.supa_id));
+
+  useEffect(() => { setDraft(project); setEditing(false); }, [project.id]);
+
+  const saveEdit = async () => {
+    setBusy(true); setErr(null);
+    const { error } = await supabase
+      .from("projects")
+      .update({
+        name: draft.name.trim(),
+        description: draft.description?.trim() || null,
+        status: draft.status,
+        company: draft.company,
+      })
+      .eq("id", project.id);
+    setBusy(false);
+    if (error) { setErr(error.message); return; }
+    setEditing(false);
+    onChanged();
+  };
+
+  const toggleMember = async (userId: string) => {
+    setBusy(true); setErr(null);
+    if (memberIds.has(userId)) {
+      const { error } = await supabase
+        .from("project_members")
+        .delete()
+        .eq("project_id", project.id)
+        .eq("user_id", userId);
+      if (error) { setErr(error.message); setBusy(false); return; }
+    } else {
+      const { error } = await supabase
+        .from("project_members")
+        .insert({ project_id: project.id, user_id: userId, role: "member" });
+      if (error) { setErr(error.message); setBusy(false); return; }
+    }
+    setBusy(false);
+    onChanged();
+  };
+
+  const deleteProject = async () => {
+    if (!confirm(`Delete "${project.name}"? Member assignments are removed too. This can't be undone.`)) return;
+    setBusy(true); setErr(null);
+    const { error } = await supabase.from("projects").delete().eq("id", project.id);
+    setBusy(false);
+    if (error) { setErr(error.message); return; }
+    onClose();
+    onChanged();
+  };
+
+  return (
+    <div className="rounded-lg border border-border bg-card/60 p-4 space-y-4">
+      <div className="flex items-start justify-between gap-2">
+        <div className="min-w-0">
+          {editing ? (
+            <input
+              type="text"
+              value={draft.name}
+              onChange={(e) => setDraft({ ...draft, name: e.target.value })}
+              className="w-full rounded-md border border-border bg-background/50 px-2 py-1 text-[14px] font-semibold text-foreground outline-none focus:border-primary/50"
+            />
+          ) : (
+            <h3 className="text-[14px] font-semibold text-foreground truncate">{project.name}</h3>
+          )}
+          <div className="mt-1 flex items-center gap-2 text-[10.5px] text-muted-foreground">
+            <StatusPill status={editing ? draft.status : project.status} />
+            <span>· {memberUsers.length} {memberUsers.length === 1 ? "member" : "members"}</span>
+          </div>
+        </div>
+        <button type="button" onClick={onClose} className="text-muted-foreground hover:text-foreground transition-colors">
+          <X className="h-3.5 w-3.5" />
+        </button>
+      </div>
+
+      {editing ? (
+        <>
+          <div>
+            <label className="block text-[11px] font-semibold text-foreground/80 mb-1.5">Description</label>
+            <textarea
+              value={draft.description ?? ""}
+              onChange={(e) => setDraft({ ...draft, description: e.target.value })}
+              rows={3}
+              className="w-full resize-none rounded-md border border-border bg-background/50 px-3 py-2 text-[12.5px] text-foreground outline-none focus:border-primary/50"
+            />
+          </div>
+          <div className="flex gap-3">
+            <div className="flex-1">
+              <label className="block text-[11px] font-semibold text-foreground/80 mb-1.5">Status</label>
+              <select
+                value={draft.status}
+                onChange={(e) => setDraft({ ...draft, status: e.target.value as ProjectStatus })}
+                className="w-full rounded-md border border-border bg-background/50 px-2 py-1.5 text-[12px] text-foreground outline-none focus:border-primary/50"
+              >
+                <option value="active">Active</option>
+                <option value="paused">Paused</option>
+                <option value="completed">Completed</option>
+                <option value="cancelled">Cancelled</option>
+              </select>
+            </div>
+            <div className="flex-1">
+              <label className="block text-[11px] font-semibold text-foreground/80 mb-1.5">Company</label>
+              <select
+                value={draft.company}
+                onChange={(e) => setDraft({ ...draft, company: e.target.value as CompanyKey })}
+                className="w-full rounded-md border border-border bg-background/50 px-2 py-1.5 text-[12px] text-foreground outline-none focus:border-primary/50"
+              >
+                <option value="codewithali">CodeWithAli</option>
+                <option value="simplicity">Simplicity</option>
+              </select>
+            </div>
+          </div>
+        </>
+      ) : (
+        <>
+          {project.description && (
+            <p className="text-[12px] text-muted-foreground leading-relaxed">
+              {project.description}
+            </p>
+          )}
+          <div className="flex items-center gap-2 text-[10.5px] text-muted-foreground">
+            <Building2 className="h-3 w-3" />
+            <span>{project.company === "simplicity" ? "Simplicity" : "CodeWithAli"}</span>
+            <span>· Created {new Date(project.created_at).toLocaleDateString()}</span>
+          </div>
+        </>
+      )}
+
+      <div>
+        <label className="block text-[11px] font-semibold text-foreground/80 mb-2">Members</label>
+        {canEdit ? (
+          <MemberPicker
+            users={users}
+            selectedIds={memberIds}
+            onToggle={toggleMember}
+            compact
+          />
+        ) : memberUsers.length === 0 ? (
+          <p className="text-[11.5px] text-muted-foreground italic">No members assigned.</p>
+        ) : (
+          <ul className="space-y-1.5">
+            {memberUsers.map((u) => (
+              <li key={u.supa_id} className="flex items-center gap-2 text-[12px]">
+                <Avatar user={u} />
+                <span className="text-foreground">{u.username}</span>
+                <span className="text-muted-foreground">· {u.role}</span>
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
+
+      {err && (
+        <p className="rounded-md border border-red-500/30 bg-red-500/10 px-3 py-2 text-[11px] text-red-200">
+          {err}
+        </p>
+      )}
+
+      {canEdit && (
+        <div className="flex items-center justify-between pt-2 border-t border-border">
+          <button
+            type="button"
+            onClick={deleteProject}
+            disabled={busy}
+            className="inline-flex items-center gap-1 text-[11px] text-red-400 hover:text-red-300 transition-colors disabled:opacity-50"
+          >
+            <Trash2 className="h-3 w-3" />
+            Delete
+          </button>
+          {editing ? (
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={() => { setDraft(project); setEditing(false); setErr(null); }}
+                className="rounded-md border border-border bg-background px-3 py-1.5 text-[11px] font-medium text-foreground hover:bg-muted/60 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={saveEdit}
+                disabled={busy || !draft.name.trim()}
+                className="inline-flex items-center gap-1 rounded-md bg-primary px-3 py-1.5 text-[11px] font-semibold text-primary-foreground hover:bg-primary/90 disabled:opacity-50 transition-colors"
+              >
+                {busy ? <Loader2 className="h-3 w-3 animate-spin" /> : <Check className="h-3 w-3" />}
+                Save
+              </button>
+            </div>
+          ) : (
+            <button
+              type="button"
+              onClick={() => setEditing(true)}
+              className="inline-flex items-center gap-1 rounded-md border border-border bg-background px-3 py-1.5 text-[11px] font-medium text-foreground hover:bg-muted/60 transition-colors"
+            >
+              <Pencil className="h-3 w-3" />
+              Edit
+            </button>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function MemberPicker({
+  users, selectedIds, onToggle, compact,
+}: {
+  users: AppUserLite[];
+  selectedIds: Set<string>;
+  onToggle: (id: string) => void;
+  compact?: boolean;
+}) {
+  const [query, setQuery] = useState("");
+  const filtered = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    if (!q) return users;
+    return users.filter(
+      (u) =>
+        (u.username ?? "").toLowerCase().includes(q) ||
+        (u.role ?? "").toLowerCase().includes(q),
+    );
+  }, [users, query]);
+
+  return (
+    <div className="space-y-2">
+      {!compact && (
+        <label className="block text-[11px] font-semibold text-foreground/80">Team members</label>
+      )}
+      <div className="relative">
+        <Search className="absolute left-2 top-1/2 h-3 w-3 -translate-y-1/2 text-muted-foreground" />
+        <input
+          type="text"
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          placeholder="Filter by name or role…"
+          className="w-full rounded-md border border-border bg-background/50 pl-7 pr-2 py-1.5 text-[12px] placeholder:text-muted-foreground/50 outline-none focus:border-primary/50"
+        />
+      </div>
+      <div className={`${compact ? "max-h-48" : "max-h-52"} overflow-y-auto space-y-1 rounded-md border border-border bg-background/40 p-1`}>
+        {filtered.length === 0 ? (
+          <p className="p-3 text-center text-[11px] text-muted-foreground italic">No matches.</p>
+        ) : (
+          filtered.map((u) => {
+            const on = selectedIds.has(u.supa_id);
+            return (
+              <button
+                key={u.supa_id}
+                type="button"
+                onClick={() => onToggle(u.supa_id)}
+                className={[
+                  "flex w-full items-center gap-2 rounded-sm px-2 py-1.5 text-left transition-colors",
+                  on ? "bg-primary/[0.12] text-foreground" : "text-foreground/90 hover:bg-muted/60",
+                ].join(" ")}
+              >
+                <Avatar user={u} />
+                <div className="min-w-0 flex-1">
+                  <p className="text-[12px] font-medium truncate">{u.username}</p>
+                  <p className="text-[10.5px] text-muted-foreground truncate">
+                    {u.role} · {u.company === "simplicity" ? "Simplicity" : "CodeWithAli"}
+                  </p>
+                </div>
+                {on && <Check className="h-3.5 w-3.5 text-primary shrink-0" />}
+              </button>
+            );
+          })
+        )}
+      </div>
+      <p className="text-[10.5px] text-muted-foreground">
+        {selectedIds.size} selected
+      </p>
+    </div>
+  );
+}
+
+function Avatar({ user }: { user: AppUserLite }) {
+  const initials = (user.username ?? "??").slice(0, 2).toUpperCase();
+  return user.avatarURL ? (
+    <img
+      src={user.avatarURL}
+      alt={user.username}
+      className="h-6 w-6 rounded-sm object-cover shrink-0"
+    />
+  ) : (
+    <div className="h-6 w-6 rounded-sm bg-muted flex items-center justify-center text-[9px] font-semibold text-muted-foreground shrink-0">
+      {initials}
+    </div>
+  );
+}

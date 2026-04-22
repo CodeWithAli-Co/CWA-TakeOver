@@ -21,7 +21,7 @@ import { useState } from "react";
 import {
   Building2, Globe, Mail, Phone, MapPin, Users,
   Linkedin, Facebook, Instagram, Twitter,
-  Save, Check, Loader2, AlertCircle, Palette,
+  Save, Check, Loader2, AlertCircle,
   FileText, Briefcase, Hash,
 } from "lucide-react";
 
@@ -266,26 +266,6 @@ export function CompanySettings() {
             value={current.signerTitle}
             onChange={(v) => patch({ signerTitle: v })}
           />
-        </div>
-      </Card>
-
-      {/* Branding */}
-      <Card icon={Palette} label="Branding">
-        <div className="grid gap-4 md:grid-cols-[1fr_200px]">
-          <InputField
-            label="Accent color"
-            hint="Used in offer PDFs, emails, and accept/receipt pages."
-            placeholder="#DC2626"
-            value={current.accent}
-            onChange={(v) => patch({ accent: v })}
-          />
-          <div className="flex items-center justify-center rounded-md border border-border bg-background/40 p-3">
-            <div
-              className="h-12 w-12 rounded-md shadow-sm"
-              style={{ background: current.accent }}
-              aria-label="Color preview"
-            />
-          </div>
         </div>
       </Card>
 

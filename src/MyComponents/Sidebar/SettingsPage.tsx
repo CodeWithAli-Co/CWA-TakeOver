@@ -24,7 +24,6 @@ import {
   Bell,
   Users2,
   Building2,
-  CreditCard,
   Database,
   LineChart,
   Plug,
@@ -40,7 +39,6 @@ import { CompanySettings } from "@/MyComponents/SettingNavComponents/company";
 import ReportSettings from "../SettingNavComponents/reports";
 import TeamsAndProjects from "../SettingNavComponents/TeamProject";
 import UserView, { Role } from "../Reusables/userView";
-import BillingPage from "../Beginning/billingPage";
 import { ProfileSettings } from "./settings/ProfileSettings";
 import { SecuritySettings } from "./settings/SecuritySettings";
 
@@ -97,13 +95,6 @@ const TABS: TabDef[] = [
     label: "Integrations",
     description: "Third-party services connected to Takeover.",
     icon: Plug,
-    elevatedOnly: true,
-  },
-  {
-    value: "billing",
-    label: "Billing",
-    description: "Subscription, invoices, and payment methods.",
-    icon: CreditCard,
     elevatedOnly: true,
   },
   {
@@ -336,11 +327,6 @@ function TabContent({
             {activeTab === "integrations" && (
               <SectionCard>
                 <IntegrationsSettings />
-              </SectionCard>
-            )}
-            {activeTab === "billing" && (
-              <SectionCard>
-                <BillingPage />
               </SectionCard>
             )}
           </UserView>
