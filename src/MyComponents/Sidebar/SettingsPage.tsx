@@ -1,10 +1,27 @@
-import React from "react";
+/**
+ * SettingsPage.tsx — left-sidebar settings layout.
+ *
+ * Layout:
+ *   · Left rail (220px on desktop, collapses to a top dropdown on
+ *     mobile): vertical list of sections with icons + labels.
+ *   · Right pane: header (title + description) + the section's
+ *     content component.
+ *
+ * Navigation state is URL-synced via `?tab=…` so sharing a link to
+ * "/settings?tab=integrations" lands directly on that section. This
+ * also lets other parts of the app deep-link (e.g. the nav-user
+ * dropdown pointing at /settings for notifications).
+ *
+ * Styling is theme-var driven (bg-background, text-foreground,
+ * border-border) so the whole page follows the platform theme
+ * instead of hardcoded red-950 accents everywhere.
+ */
+
+import React, { useEffect, useMemo, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   UserCircle,
   Bell,
-  Moon,
-  Menu,
   Users2,
   Building2,
   CreditCard,
@@ -12,461 +29,340 @@ import {
   LineChart,
   Plug,
   Shield,
+  Menu,
+  ChevronRight,
 } from "lucide-react";
-import { Button } from "@/components/ui/shadcnComponents/button";
-import {
-  Tabs,
-  TabsList,
-  TabsTrigger,
-  TabsContent,
-} from "@/components/ui/shadcnComponents/tabs";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/shadcnComponents/card";
-import {
-  Form,
-  FormControl,
-  FormDescription,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from "@/components/ui/shadcnComponents/form";
-import { Input } from "@/components/ui/shadcnComponents/input";
-import { Separator } from "@/components/ui/shadcnComponents/separator";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/shadcnComponents/dropdown-menu";
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import * as z from "zod";
 import { ActiveUser } from "@/stores/query";
 import { DeveloperResourceHub } from "@/MyComponents/HomeDashboard/ResourceHub";
 import { IntegrationsSettings } from "@/MyComponents/SettingNavComponents/integrations";
 import { NotificationSetting } from "@/MyComponents/SettingNavComponents/notification";
 import { CompanySettings } from "@/MyComponents/SettingNavComponents/company";
-import { createLazyFileRoute } from "@tanstack/react-router";
-import UploadAvatar from "../Reusables/uploadAvatar";
 import ReportSettings from "../SettingNavComponents/reports";
 import TeamsAndProjects from "../SettingNavComponents/TeamProject";
-import ToggleSwitch from "../Reusables/switchUI";
-import UserView from "../Reusables/userView";
+import UserView, { Role } from "../Reusables/userView";
 import BillingPage from "../Beginning/billingPage";
+import { ProfileSettings } from "./settings/ProfileSettings";
+import { SecuritySettings } from "./settings/SecuritySettings";
 
-const formSchema = z.object({
-  name: z.string().min(2).max(50),
-  emailNotifications: z.boolean(),
-  darkMode: z.boolean(),
-});
+// ── Tab registry ────────────────────────────────────────────────
 
-const settingsTabs = [
-  { value: "profile", label: "Profile Settings", icon: UserCircle },
-  { value: "teams", label: "Teams & Projects", icon: Users2 },
-  { value: "company", label: "Company", icon: Building2 },
-  { value: "reports", label: "Reports", icon: LineChart },
-  { value: "resources", label: "Resources", icon: Database },
-  { value: "integrations", label: "Integrations", icon: Plug },
-  { value: "billing", label: "Billing", icon: CreditCard },
-  { value: "notifications", label: "Notifications", icon: Bell },
-  { value: "security", label: "Security & Access Logs", icon: Shield },
+interface TabDef {
+  value: string;
+  label: string;
+  description: string;
+  icon: React.ComponentType<{ className?: string }>;
+  /** Elevated roles see the full breadth of tabs. Everyone else
+   *  sees Profile + Notifications + Security only — no access to
+   *  billing, teams, company data, etc. */
+  elevatedOnly?: boolean;
+}
+
+const TABS: TabDef[] = [
+  {
+    value: "profile",
+    label: "Profile",
+    description: "Your personal info, avatar, and display preferences.",
+    icon: UserCircle,
+  },
+  {
+    value: "teams",
+    label: "Teams & Projects",
+    description: "Team memberships, project assignments, and collaboration.",
+    icon: Users2,
+    elevatedOnly: true,
+  },
+  {
+    value: "company",
+    label: "Company",
+    description: "Legal info, branding, and configuration for each company you operate.",
+    icon: Building2,
+    elevatedOnly: true,
+  },
+  {
+    value: "reports",
+    label: "Reports",
+    description: "Automated report cadence and delivery preferences.",
+    icon: LineChart,
+    elevatedOnly: true,
+  },
+  {
+    value: "resources",
+    label: "Resources",
+    description: "Internal knowledge base, docs, and shared developer assets.",
+    icon: Database,
+    elevatedOnly: true,
+  },
+  {
+    value: "integrations",
+    label: "Integrations",
+    description: "Third-party services connected to Takeover.",
+    icon: Plug,
+    elevatedOnly: true,
+  },
+  {
+    value: "billing",
+    label: "Billing",
+    description: "Subscription, invoices, and payment methods.",
+    icon: CreditCard,
+    elevatedOnly: true,
+  },
+  {
+    value: "notifications",
+    label: "Notifications",
+    description: "How and when Takeover contacts you.",
+    icon: Bell,
+  },
+  {
+    value: "security",
+    label: "Security",
+    description: "Password, sessions, recent sign-ins.",
+    icon: Shield,
+  },
 ];
 
-export const Route = createLazyFileRoute("/settings")({
-  component: SettingsPage,
-});
+// ── Page ────────────────────────────────────────────────────────
 
 export default function SettingsPage() {
-  const searchParams = new URLSearchParams(window.location.search);
-  const [activeTab, setActiveTab] = React.useState(
-    searchParams.get("tab") ?? "profile"
-  );
-  const navigate = Route.useNavigate();
-  const [isSaving, setIsSaving] = React.useState(false);
   const { data: user } = ActiveUser();
-  const [isMobileMenuOpen, setIsMobileMenuOpen] = React.useState(false);
-
-  // Handle screen width for responsive design
-  const [windowWidth, setWindowWidth] = React.useState(
-    typeof window !== "undefined" ? window.innerWidth : 0
+  const role = user?.[0]?.role ?? "";
+  const isElevated = ["CEO", "COO", "CFO", "Admin", "ProjectManager"].includes(role);
+  const visibleTabs = useMemo(
+    () => TABS.filter((t) => !t.elevatedOnly || isElevated),
+    [isElevated],
   );
 
-  React.useEffect(() => {
-    const handleResize = () => {
-      setWindowWidth(window.innerWidth);
-    };
+  // URL-synced active tab. Using plain URLSearchParams because the
+  // route is registered with no `validateSearch` — keeps this file
+  // route-agnostic and portable.
+  const readUrlTab = (): string => {
+    if (typeof window === "undefined") return "profile";
+    const q = new URLSearchParams(window.location.search).get("tab");
+    return visibleTabs.some((t) => t.value === q) ? q! : visibleTabs[0]!.value;
+  };
+  const [activeTab, setActiveTab] = useState<string>(readUrlTab());
 
-    window.addEventListener("resize", handleResize);
-    return () => window.removeEventListener("resize", handleResize);
-  }, []);
+  useEffect(() => {
+    const onPop = () => setActiveTab(readUrlTab());
+    window.addEventListener("popstate", onPop);
+    return () => window.removeEventListener("popstate", onPop);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [visibleTabs.length]);
 
-  const isMobile = windowWidth < 768;
-  const isTablet = windowWidth >= 768 && windowWidth < 1024;
-  const isDesktop = windowWidth >= 1024;
-  const is4K = windowWidth >= 2560;
-
-  // Update URL when tab changes
-  const handleTabChange = (value: any) => {
+  const selectTab = (value: string) => {
     setActiveTab(value);
-    navigate({
-      to: "/settings",
-      // search: { tab: value } // Uncomment to add tab to URL
-    });
-
-    // Close mobile menu after selection on mobile
-    if (isMobile) {
-      setIsMobileMenuOpen(false);
+    if (typeof window !== "undefined") {
+      const url = new URL(window.location.href);
+      url.searchParams.set("tab", value);
+      window.history.replaceState(null, "", url.toString());
     }
+    setMobileOpen(false);
   };
 
-  const form = useForm({
-    resolver: zodResolver(formSchema),
-    defaultValues: {
-      name: user ? user[0].username : "",
-      emailNotifications: true,
-      darkMode: true,
-    },
-  });
+  // Responsive
+  const [windowWidth, setWindowWidth] = useState(
+    typeof window !== "undefined" ? window.innerWidth : 1400,
+  );
+  useEffect(() => {
+    const h = () => setWindowWidth(window.innerWidth);
+    window.addEventListener("resize", h);
+    return () => window.removeEventListener("resize", h);
+  }, []);
+  const isMobile = windowWidth < 1024;
+  const [mobileOpen, setMobileOpen] = useState(false);
 
-  const onSubmit = async (data: any) => {
-    setIsSaving(true);
-    await new Promise((resolve) => setTimeout(resolve, 1000));
-    console.log(data);
-    setIsSaving(false);
-  };
-
-  const handleReset = () => {
-    form.reset();
-  };
+  const active = visibleTabs.find((t) => t.value === activeTab) ?? visibleTabs[0]!;
+  const ActiveIcon = active.icon;
 
   return (
-    // Main container - no padding or position adjustments to respect app layout
-    <div className="min-h-screen bg-background/95 flex">
-      {/* Content container - full width with overflow control */}
-      <div className="w-full max-w-[1400px] overflow-x-auto">
-        <div className="w-full px-4 py-4">
-          {/* Header with title and action buttons */}
-          <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
-            <div>
-              <h2 className="text-2xl md:text-3xl font-bold tracking-tight text-white">
-                Settings
-              </h2>
-              <p className="text-slate-300 text-sm md:text-base">
-                Manage your account settings and preferences.
-              </p>
-            </div>
+    <div className="min-h-screen bg-background text-foreground">
+      {/* Page header strip */}
+      <header className="border-b border-border/60 bg-card/30 backdrop-blur">
+        <div className="mx-auto w-full max-w-[1400px] px-5 md:px-8 py-5">
+          <div className="flex items-center gap-2">
+            <UserCircle className="h-4 w-4 text-muted-foreground" />
+            <p className="text-[11px] font-mono uppercase tracking-widest text-muted-foreground">
+              Settings
+            </p>
           </div>
-
-          {/* Tabs container */}
-          <Tabs
-            value={activeTab}
-            onValueChange={handleTabChange}
-            className="space-y-4 md:space-y-6"
-          >
-            {/* Mobile dropdown for tabs */}
-            {isMobile && (
-              <div className="w-full mb-4">
-                <DropdownMenu
-                  open={isMobileMenuOpen}
-                  onOpenChange={setIsMobileMenuOpen}
-                >
-                  <DropdownMenuTrigger asChild>
-                    <Button
-                      variant="outline"
-                      className="w-full justify-between bg-background/40 text-foreground border border-red-950/20"
-                    >
-                      <div className="flex items-center">
-                        {(() => {
-                          const activeTabInfo = settingsTabs.find(
-                            (tab) => tab.value === activeTab
-                          );
-                          if (activeTabInfo?.icon) {
-                            const IconComponent = activeTabInfo.icon;
-                            return <IconComponent className="mr-2 h-4 w-4" />;
-                          }
-                          return null;
-                        })()}
-                        <span>
-                          {settingsTabs.find((tab) => tab.value === activeTab)
-                            ?.label || "Settings"}
-                        </span>
-                      </div>
-                      <Menu className="h-4 w-4 ml-2" />
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent className="w-[94vw] max-w-md bg-background/90 border-red-950/30 text-white">
-                    {settingsTabs.map((tab) => (
-                      <DropdownMenuItem
-                        key={tab.value}
-                        onClick={() => handleTabChange(tab.value)}
-                        className="flex items-center py-2 px-3 hover:bg-red-950/20 cursor-pointer"
-                      >
-                        <tab.icon className="mr-2 h-4 w-4" />
-                        <span>{tab.label}</span>
-                      </DropdownMenuItem>
-                    ))}
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              </div>
-            )}
-
-            {/* Tablet & desktop horizontal tabs with scroll capability */}
-            {!isMobile && (
-              <div className="overflow-x-auto">
-                <TabsList className="h-12 w-full justify-start space-x-2 bg-background/40 p-1 text-foreground border border-red-950/20 flex-nowrap">
-                  {settingsTabs.map((tab) => (
-                    <TabsTrigger
-                      key={tab.value}
-                      value={tab.value}
-                      className="data-[state=active]:bg-red-950/20 data-[state=active]:text-foreground 
-                              hover:text-foreground transition-colors duration-200 flex items-center space-x-2 px-3 py-2 whitespace-nowrap"
-                    >
-                      <tab.icon className="h-4 w-4" />
-                      <span className={isTablet ? "hidden lg:inline" : ""}>
-                        {tab.label}
-                      </span>
-                    </TabsTrigger>
-                  ))}
-                </TabsList>
-              </div>
-            )}
-
-            <AnimatePresence mode="wait">
-              <motion.div
-                key={activeTab}
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -20 }}
-                transition={{ duration: 0.2 }}
-              >
-                {/* Profile Settings Tab */}
-                <TabsContent value="profile" className="space-y-4">
-                  <Card className="bg-zinc-950 high-dpi:bg-zinc-950/20 border-red-950/30 backdrop-blur-sm rounded-xs">
-                    <CardHeader className="p-4 sm:p-6">
-                      <CardTitle className="text-xl md:text-2xl text-white">
-                        Profile Settings
-                      </CardTitle>
-                      <CardDescription className="text-xs md:text-sm text-white">
-                        Manage your profile information and preferences.
-                      </CardDescription>
-                    </CardHeader>
-                    <CardContent className="p-4 sm:p-6">
-                      <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
-                        <div className="xl:col-span-2">
-                          <Form {...form}>
-                            <form
-                              onSubmit={form.handleSubmit(onSubmit)}
-                              className="space-y-6"
-                            >
-                              <FormField
-                                control={form.control}
-                                name="name"
-                                render={({ field }) => (
-                                  <FormItem>
-                                    <FormLabel className="text-foreground">
-                                      <UserCircle className="h-4 w-4 inline mr-2" />
-                                      Name
-                                    </FormLabel>
-                                    <FormControl>
-                                      <Input
-                                        {...field}
-                                        className="bg-background/40 border-red-950/30 text-foreground 
-                                                focus:border-red-500 focus:ring-red-500/20"
-                                      />
-                                    </FormControl>
-                                    <FormDescription className="text-xs sm:text-sm text-white">
-                                      This is your public display name.
-                                    </FormDescription>
-                                    <FormMessage className="text-red-500" />
-                                  </FormItem>
-                                )}
-                              />
-
-                              <Separator className="border-red-950/20" />
-
-                              <FormField
-                                control={form.control}
-                                name="emailNotifications"
-                                render={({ field }) => (
-                                  <FormItem className="flex flex-col sm:flex-row justify-between sm:items-center space-y-2 sm:space-y-0">
-                                    <div>
-                                      <FormLabel className="text-foreground">
-                                        <Bell className="h-4 w-4 inline mr-2" />
-                                        Email Notifications
-                                      </FormLabel>
-                                      <FormDescription className="text-xs sm:text-sm text-white">
-                                        Receive email notifications about
-                                        account activity.
-                                      </FormDescription>
-                                    </div>
-                                    <FormControl>
-                                      <ToggleSwitch
-                                        checked={true}
-                                        onChange={(checked) =>
-                                          console.log(
-                                            "Switch toggled:",
-                                            checked
-                                          )
-                                        }
-                                      />
-                                    </FormControl>
-                                  </FormItem>
-                                )}
-                              />
-
-                              <FormField
-                                control={form.control}
-                                name="darkMode"
-                                render={({ field }) => (
-                                  <FormItem className="flex flex-col sm:flex-row justify-between sm:items-center space-y-2 sm:space-y-0">
-                                    <div>
-                                      <FormLabel className="text-foreground">
-                                        <Moon className="h-4 w-4 inline mr-2" />
-                                        Dark Mode
-                                      </FormLabel>
-                                      <FormDescription className="text-xs sm:text-sm text-white">
-                                        Toggle between light and dark mode.
-                                      </FormDescription>
-                                    </div>
-                                    <FormControl>
-                                      <ToggleSwitch
-                                        checked={true}
-                                        onChange={(checked) =>
-                                          console.log(
-                                            "Switch toggled:",
-                                            checked
-                                          )
-                                        }
-                                      />
-                                    </FormControl>
-                                  </FormItem>
-                                )}
-                              />
-                            </form>
-                          </Form>
-                        </div>
-
-                        <div className="xl:col-span-1 flex flex-col items-center justify-start">
-                          <UploadAvatar
-                            className="bg-gradient-to-r from-red-950 to-red-900 hover:from-red-900 hover:to-red-800
-                       text-foreground border border-red-800/30 shadow-lg shadow-red-950/20 p-2"
-                          />
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                </TabsContent>
-
-                {/* Only visible for higher ups for now until finished */}
-                <UserView userRole={["ProjectManager", "COO", "CEO"]}>
-                  {/* Teams & Projects Tab */}
-                  <TabsContent value="teams" className="space-y-4">
-                    <Card className="bg-background/60 border-red-950/30 backdrop-blur-sm p-4 sm:p-6  rounded-xs">
-                      <TeamsAndProjects />
-                    </Card>
-                  </TabsContent>
-
-                  {/* Company Tab */}
-                  <TabsContent value="company" className="space-y-4">
-                    <Card className="bg-background/60 border-red-950/30 backdrop-blur-sm p-4 sm:p-6  rounded-xs">
-                      <CompanySettings />
-                    </Card>
-                  </TabsContent>
-
-                  {/* Reports Tab */}
-                  <TabsContent value="reports" className="space-y-4">
-                    <Card className="bg-background/60 border-red-950/30 backdrop-blur-sm p-4 sm:p-6 rounded-xs">
-                      <ReportSettings />
-                    </Card>
-                  </TabsContent>
-
-                  {/* Resources Tab */}
-                  <TabsContent value="resources" className="space-y-4">
-                    <Card className="bg-zinc-950 high-dpi:bg-zinc-950/20 border-red-950/30 backdrop-blur-sm rounded-xs ">
-                      <DeveloperResourceHub />
-                    </Card>
-                  </TabsContent>
-
-                  {/* Integrations Tab */}
-                  <TabsContent value="integrations" className="space-y-4">
-                    <Card className="bg-zinc-950 high-dpi:bg-zinc-950/20 border-red-950/30 backdrop-blur-sm rounded-xs">
-                      <CardHeader className="p-4 sm:p-6">
-                        <CardTitle className="text-xl md:text-2xl text-white">
-                          Integrations
-                        </CardTitle>
-                        <CardDescription className="text-xs md:text-sm text-white">
-                          Configure and manage third-party integrations.
-                        </CardDescription>
-                      </CardHeader>
-                      <CardContent className="p-4 sm:p-6">
-                        <IntegrationsSettings />
-                      </CardContent>
-                    </Card>
-                  </TabsContent>
-
-                  {/* Billing Tab */}
-                  <TabsContent value="billing" className="space-y-4">
-                    <Card className="bg-zinc-950 high-dpi:bg-zinc-950/20 border-red-950/30 backdrop-blur-sm rounded-xs">
-                      <CardHeader className="p-4 sm:p-6">
-                        <CardTitle className="text-xl md:text-2xl text-white">
-                          Billing & Subscription
-                        </CardTitle>
-                        <CardDescription className="text-xs md:text-sm text-white">
-                          Manage billing information and subscription details.
-                        </CardDescription>
-                      </CardHeader>
-                      <CardContent className="p-4 sm:p-6">
-                        {/* Billing content goes here */}
-                        <BillingPage />
-                      </CardContent>
-                    </Card>
-                  </TabsContent>
-
-                  {/* Notifications Tab */}
-                  <TabsContent value="notifications" className="space-y-4">
-                    <Card className="bg-zinc-950 high-dpi:bg-zinc-950/20 border-red-950/30 backdrop-blur-sm rounded-xs">
-                      <CardHeader className="p-4 sm:p-6">
-                        <CardTitle className="text-xl md:text-2xl text-white">
-                          Notification Settings
-                        </CardTitle>
-                        <CardDescription className="text-xs md:text-sm text-white">
-                          Customize your notification preferences.
-                        </CardDescription>
-                      </CardHeader>
-                      <CardContent className="p-4 sm:p-6">
-                        <NotificationSetting />
-                      </CardContent>
-                    </Card>
-                  </TabsContent>
-
-                  {/* Security Tab */}
-                  <TabsContent value="security" className="space-y-4">
-                    <Card className="bg-zinc-950 high-dpi:bg-zinc-950/20 border-red-950/30 backdrop-blur-sm rounded-xs">
-                      <CardHeader className="p-4 sm:p-6">
-                        <CardTitle className="text-xl md:text-2xl text-white">
-                          Security & Access Logs
-                        </CardTitle>
-                        <CardDescription className="text-xs md:text-sm text-white">
-                          Manage security settings and view access history.
-                        </CardDescription>
-                      </CardHeader>
-                      <CardContent className="p-4 sm:p-6">
-                        {/* Security content goes here */}
-                      </CardContent>
-                    </Card>
-                  </TabsContent>
-                </UserView>
-              </motion.div>
-            </AnimatePresence>
-          </Tabs>
+          <h1 className="mt-1 text-[22px] md:text-[26px] font-bold tracking-tight text-foreground">
+            {active.label}
+          </h1>
+          <p className="mt-1 text-[13px] text-muted-foreground">
+            {active.description}
+          </p>
         </div>
+      </header>
+
+      {/* Body */}
+      <div className="mx-auto w-full max-w-[1400px] px-5 md:px-8 py-6">
+        {isMobile ? (
+          // ── Mobile / narrow: tab dropdown on top ──
+          <div className="mb-5">
+            <button
+              type="button"
+              onClick={() => setMobileOpen((v) => !v)}
+              className="flex w-full items-center justify-between rounded-md border border-border bg-card px-3 py-2.5 text-[13px] font-semibold text-foreground hover:bg-muted/50 transition-colors"
+            >
+              <span className="flex items-center gap-2">
+                <ActiveIcon className="h-4 w-4 text-muted-foreground" />
+                {active.label}
+              </span>
+              <Menu className="h-4 w-4 text-muted-foreground" />
+            </button>
+            <AnimatePresence>
+              {mobileOpen && (
+                <motion.div
+                  initial={{ opacity: 0, y: -4 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -4 }}
+                  transition={{ duration: 0.15 }}
+                  className="mt-1 overflow-hidden rounded-md border border-border bg-card shadow-lg"
+                >
+                  <ul className="p-1">
+                    {visibleTabs.map((t) => (
+                      <li key={t.value}>
+                        <TabRow
+                          tab={t}
+                          active={activeTab === t.value}
+                          onClick={() => selectTab(t.value)}
+                        />
+                      </li>
+                    ))}
+                  </ul>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
+        ) : (
+          // ── Desktop: left rail + right content ──
+          <div className="grid gap-6 grid-cols-[220px_1fr] lg:grid-cols-[240px_1fr]">
+            <aside>
+              <nav className="sticky top-6 flex flex-col gap-0.5 rounded-md border border-border bg-card/40 p-1.5">
+                {visibleTabs.map((t) => (
+                  <TabRow
+                    key={t.value}
+                    tab={t}
+                    active={activeTab === t.value}
+                    onClick={() => selectTab(t.value)}
+                  />
+                ))}
+              </nav>
+              <p className="mt-3 px-2 text-[10.5px] text-muted-foreground/70">
+                Some sections are visible only to elevated roles.
+              </p>
+            </aside>
+
+            <TabContent activeTab={activeTab} user={user?.[0]} />
+          </div>
+        )}
+
+        {/* On mobile, the content goes below the dropdown */}
+        {isMobile && <TabContent activeTab={activeTab} user={user?.[0]} />}
       </div>
+    </div>
+  );
+}
+
+// ── Tab row ─────────────────────────────────────────────────────
+
+function TabRow({
+  tab, active, onClick,
+}: {
+  tab: TabDef;
+  active: boolean;
+  onClick: () => void;
+}) {
+  const Icon = tab.icon;
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={[
+        "flex w-full items-center gap-2.5 rounded-sm px-2.5 py-2 text-left text-[12.5px] transition-colors",
+        active
+          ? "bg-primary/[0.12] text-primary font-semibold"
+          : "text-foreground/85 hover:bg-muted/60 hover:text-foreground font-medium",
+      ].join(" ")}
+    >
+      <Icon className={`h-3.5 w-3.5 shrink-0 ${active ? "text-primary" : "text-muted-foreground"}`} />
+      <span className="flex-1 truncate">{tab.label}</span>
+      {active && <ChevronRight className="h-3 w-3 text-primary shrink-0" />}
+    </button>
+  );
+}
+
+// ── Tab content dispatcher ──────────────────────────────────────
+
+function TabContent({
+  activeTab, user,
+}: {
+  activeTab: string;
+  user: any;
+}) {
+  return (
+    <main className="min-w-0">
+      <AnimatePresence mode="wait">
+        <motion.div
+          key={activeTab}
+          initial={{ opacity: 0, y: 8 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: -8 }}
+          transition={{ duration: 0.18 }}
+          className="space-y-4"
+        >
+          {activeTab === "profile" && <ProfileSettings user={user} />}
+
+          <UserView userRole={[Role.ProjectManager, Role.COO, Role.CEO, Role.CFO, Role.Admin]}>
+            {activeTab === "teams" && (
+              <SectionCard>
+                <TeamsAndProjects />
+              </SectionCard>
+            )}
+            {activeTab === "company" && (
+              <SectionCard>
+                <CompanySettings />
+              </SectionCard>
+            )}
+            {activeTab === "reports" && (
+              <SectionCard>
+                <ReportSettings />
+              </SectionCard>
+            )}
+            {activeTab === "resources" && (
+              <SectionCard>
+                <DeveloperResourceHub />
+              </SectionCard>
+            )}
+            {activeTab === "integrations" && (
+              <SectionCard>
+                <IntegrationsSettings />
+              </SectionCard>
+            )}
+            {activeTab === "billing" && (
+              <SectionCard>
+                <BillingPage />
+              </SectionCard>
+            )}
+          </UserView>
+
+          {activeTab === "notifications" && (
+            <SectionCard>
+              <NotificationSetting />
+            </SectionCard>
+          )}
+          {activeTab === "security" && <SecuritySettings />}
+        </motion.div>
+      </AnimatePresence>
+    </main>
+  );
+}
+
+// ── Section card shell (shared between wrapped subcomponents) ──
+
+function SectionCard({ children }: { children: React.ReactNode }) {
+  return (
+    <div className="rounded-lg border border-border bg-card/40 backdrop-blur-sm p-5 md:p-6">
+      {children}
     </div>
   );
 }
