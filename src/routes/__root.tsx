@@ -67,6 +67,22 @@ const HuddleHost = lazy(() =>
   })),
 );
 
+// New-hire welcome + onboarding progress — mounted globally so a
+// brand-new employee who just went through the invite flow lands
+// into a guided experience instead of a blank app. WelcomeModal
+// fires once per user (localStorage-gated). OnboardingBanner sticks
+// around until their checklist is complete.
+const WelcomeModal = lazy(() =>
+  import("@/MyComponents/Onboarding/WelcomeModal").then((m) => ({
+    default: m.WelcomeModal,
+  })),
+);
+const OnboardingBanner = lazy(() =>
+  import("@/MyComponents/Onboarding/OnboardingBanner").then((m) => ({
+    default: m.OnboardingBanner,
+  })),
+);
+
 // Route-aware skeleton fallback picks a loader shape that roughly
 // matches the destination page, so the transition feels seamless.
 import { PageSkeleton, ChatSkeleton, RoadmapSkeleton, SplitSkeleton, TableSkeleton, FormSkeleton } from "@/MyComponents/Reusables/PageSkeletons";
@@ -739,6 +755,15 @@ export const Route = createRootRoute({
              *  aren't dropped when user clicks Home or another page. */}
             <Suspense fallback={null}>
               <HuddleHost />
+            </Suspense>
+            {/* New-hire welcome modal (first sign-in only) + persistent
+             *  onboarding progress banner. Both self-gate: welcome fires
+             *  once per user-device, banner hides when checklist is done. */}
+            <Suspense fallback={null}>
+              <WelcomeModal />
+            </Suspense>
+            <Suspense fallback={null}>
+              <OnboardingBanner />
             </Suspense>
           </SidebarProvider>
         ) : (

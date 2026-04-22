@@ -1,35 +1,32 @@
 /**
- * reports.tsx (settings tab) — structured report submission.
+ * reports.tsx (settings tab) — single-surface report submission.
  *
- * Layout philosophy: this is a form for working adults, not a
- * tutorial. No step numbers, no hero marketing card, no monospace
- * scratchpad. Just:
+ * The layout is one continuous document, not a sequence of
+ * question boxes. Title at the top. Compact metadata row below
+ * (type, framework, priority, project). Below that, one large
+ * textarea the user writes into. When a template is picked, the
+ * body is pre-seeded with section headings + blank lines — you
+ * edit the doc, not fill out a form.
  *
- *   1. Report-type pill row
- *   2. Starting-framework row (templates for that type)
- *   3. Basics card (title, priority, project when relevant)
- *   4. Structured fields generated from the chosen template —
- *      each template field renders as a labeled input/textarea
- *   5. Submit
- *   6. Your recent reports
+ * No per-field labels, no card-in-card nesting, no decorative
+ * icons in headers. Matches how Linear, GitHub, and Apple's
+ * Feedback Assistant handle structured reports.
  *
- * When the user picks a template, the form expands to show real
- * labeled fields for each section of that template. Empty fields
- * are skipped on submit; values are serialized to a readable
- * "Label:\n<value>" body string that the inbox renders as prose.
+ * On submit: the textarea content goes to reports.body as-is.
+ * The admin inbox's StructuredBody component parses "Label:\n..."
+ * sections and renders them with section headings.
  */
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
-  Send, Loader2, Check, AlertCircle, Sparkles, AlertTriangle,
-  MessageSquare, FileText, FolderKanban, ClipboardList,
-  Clock, Eye, Pencil,
+  Send, Loader2, AlertCircle, Clock, Eye, FileText, FolderKanban,
+  ClipboardList, AlertTriangle, MessageSquare,
 } from "lucide-react";
 import supabase from "@/MyComponents/supabase";
 import { ActiveUser } from "@/stores/query";
 import {
   REPORT_TEMPLATES,
-  serializeTemplate,
+  renderTemplateScaffold,
   type ReportTypeKey,
   type ReportTemplate,
 } from "./reportTemplates";
@@ -56,22 +53,27 @@ interface ProjectLite {
   company: string;
 }
 
-const TYPE_META: Record<
-  ReportTypeKey,
-  { label: string; icon: typeof FileText; accent: string }
-> = {
-  status:         { label: "Status update",   icon: ClipboardList,  accent: "#3b82f6" },
-  project_update: { label: "Project update",  icon: FolderKanban,   accent: "#8b5cf6" },
-  incident:       { label: "Incident",        icon: AlertTriangle,  accent: "#ef4444" },
-  feedback:       { label: "Feedback",        icon: MessageSquare,  accent: "#10b981" },
-  other:          { label: "Other",           icon: FileText,       accent: "#64748b" },
+const TYPE_LABELS: Record<ReportTypeKey, string> = {
+  status: "Status",
+  project_update: "Project",
+  incident: "Incident",
+  feedback: "Feedback",
+  other: "Other",
 };
 
-const PRIORITY_META: Record<ReportPriority, { label: string; cls: string }> = {
-  low:    { label: "Low",    cls: "border-zinc-500/40 bg-zinc-500/10 text-zinc-300" },
-  normal: { label: "Normal", cls: "border-blue-500/40 bg-blue-500/10 text-blue-300" },
-  high:   { label: "High",   cls: "border-amber-500/40 bg-amber-500/10 text-amber-300" },
-  urgent: { label: "Urgent", cls: "border-red-500/40 bg-red-500/10 text-red-300" },
+const TYPE_ICONS: Record<ReportTypeKey, typeof FileText> = {
+  status: ClipboardList,
+  project_update: FolderKanban,
+  incident: AlertTriangle,
+  feedback: MessageSquare,
+  other: FileText,
+};
+
+const PRIORITY_LABELS: Record<ReportPriority, string> = {
+  low: "Low",
+  normal: "Normal",
+  high: "High",
+  urgent: "Urgent",
 };
 
 // ── Main component ──────────────────────────────────────────────
@@ -85,55 +87,65 @@ export default function ReportSettings() {
   const [myReports, setMyReports] = useState<ReportRow[]>([]);
   const [loadingReports, setLoadingReports] = useState(true);
 
-  // Form state
   const [type, setType] = useState<ReportTypeKey>("status");
   const [priority, setPriority] = useState<ReportPriority>("normal");
   const [projectId, setProjectId] = useState<string>("");
   const [title, setTitle] = useState("");
   const [templateId, setTemplateId] = useState<string>("weekly-checkin");
-  /** Values for each template field, keyed by field.key. Also
-   *  stores a `__freeform` key for when no template is picked. */
-  const [values, setValues] = useState<Record<string, string>>({});
+  const [body, setBody] = useState<string>("");
 
   const [submitState, setSubmitState] = useState<
     "idle" | "submitting" | "sent" | "error"
   >("idle");
   const [submitError, setSubmitError] = useState<string | null>(null);
 
-  const typeMeta = TYPE_META[type];
+  const titleRef = useRef<HTMLInputElement>(null);
+  const bodyRef = useRef<HTMLTextAreaElement>(null);
+
   const templatesForType = REPORT_TEMPLATES[type] ?? [];
   const template: ReportTemplate | undefined =
     templatesForType.find((t) => t.id === templateId) ?? templatesForType[0];
 
-  // Re-pick default template when type changes.
+  // When type changes: pick first template, seed title + body if both empty.
   useEffect(() => {
     const first = REPORT_TEMPLATES[type]?.[0];
-    if (first) {
-      setTemplateId(first.id);
-      // Seed title if user hasn't typed one.
-      if (!title.trim()) {
-        setTitle(first.defaultTitle);
-      }
-    }
-    // Wipe field values since old ones won't match new fields.
-    setValues({});
+    if (!first) return;
+    setTemplateId(first.id);
+    if (!title.trim()) setTitle(first.defaultTitle);
+    const scaffold = renderTemplateScaffold(first);
+    // Only replace body if it's empty OR matches any template scaffold
+    // for the previous type (i.e. unchanged pre-fill).
+    const isPristine = !body.trim() || isAnyTemplateScaffold(body);
+    if (isPristine) setBody(scaffold);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [type]);
 
-  // Re-seed title when template changes (unless user has edited it
-  // to something non-empty and non-matching the old default).
+  // When template changes within a type: swap scaffold if pristine.
   useEffect(() => {
     if (!template) return;
-    // If title is empty OR equals any template's default for the
-    // current type, treat it as "safe to replace".
+    const scaffold = renderTemplateScaffold(template);
+    const isPristine = !body.trim() || isAnyTemplateScaffold(body);
+    if (isPristine) setBody(scaffold);
+
+    // Re-seed title if safe.
     const allDefaults = new Set(
       templatesForType.map((t) => t.defaultTitle).filter(Boolean),
     );
     if (!title.trim() || allDefaults.has(title.trim())) {
       setTitle(template.defaultTitle);
     }
-    // Wipe field values so stale keys don't bleed across templates.
-    setValues({});
+    // Place cursor in the body on template change so the user can start typing.
+    setTimeout(() => {
+      const el = bodyRef.current;
+      if (!el) return;
+      // Move cursor to the first empty line after the first heading.
+      const firstHeadingNL = scaffold.indexOf("\n");
+      const target = firstHeadingNL === -1 ? scaffold.length : firstHeadingNL + 1;
+      try {
+        el.focus();
+        el.setSelectionRange(target, target);
+      } catch { /* noop */ }
+    }, 0);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [templateId]);
 
@@ -168,38 +180,33 @@ export default function ReportSettings() {
     setProjectId("");
     setTitle("");
     setTemplateId("weekly-checkin");
-    setValues({});
-  };
-
-  // Body preview — used both for the Submit button's title and the
-  // actual payload. When there's no template (Blank / freeform),
-  // we fall back to the `__freeform` field.
-  const buildBody = (): string => {
-    if (!template || template.fields.length === 0) {
-      return (values["__freeform"] ?? "").trim();
-    }
-    return serializeTemplate(template, values);
+    setBody("");
   };
 
   const submit = async () => {
     if (!mySupaId) {
-      setSubmitError("Your account isn't fully provisioned. Contact an admin.");
+      setSubmitError("Your account is not fully provisioned. Contact an admin.");
       setSubmitState("error");
       return;
     }
     if (!title.trim()) {
-      setSubmitError("Give the report a title.");
+      setSubmitError("Title is required.");
       setSubmitState("error");
+      titleRef.current?.focus();
       return;
     }
+
     setSubmitState("submitting");
     setSubmitError(null);
 
-    const body = buildBody();
+    // Strip out empty template headings (user didn't fill in that
+    // section) so the inbox doesn't show "Timeline:\n\nBudget:\n..."
+    // with nothing under the heading.
+    const cleanedBody = stripEmptyScaffoldHeadings(body).trim();
 
     const { error } = await supabase.from("reports").insert({
       title: title.trim(),
-      body: body || null,
+      body: cleanedBody || null,
       type,
       priority,
       project_id: projectId || null,
@@ -212,7 +219,7 @@ export default function ReportSettings() {
       const msg = (error.message || "").toLowerCase();
       if (msg.includes("does not exist") || (error as any).code === "42P01") {
         setSubmitError(
-          "Reports table isn't set up yet. Ask an admin to run migrations/reports_init.sql.",
+          "Reports table is not set up. Run migrations/reports_init.sql.",
         );
       } else {
         setSubmitError(error.message);
@@ -227,340 +234,248 @@ export default function ReportSettings() {
     setTimeout(() => setSubmitState("idle"), 3500);
   };
 
+  const TypeIcon = TYPE_ICONS[type];
+
   return (
-    <div className="mx-auto max-w-[820px] space-y-6">
-      {/* ─── Heading ─── */}
-      <div>
-        <h1 className="text-[20px] font-bold tracking-tight text-foreground">
-          New report
+    <div className="mx-auto max-w-[820px]">
+      {/* Header */}
+      <div className="pb-4 border-b border-border/60">
+        <h1 className="text-[17px] font-semibold text-foreground tracking-tight">
+          Submit a report
         </h1>
-        <p className="mt-1 text-[12.5px] text-muted-foreground">
-          Send to CEO / COO / CFO. Pick a type + framework, fill in the
-          relevant sections, submit.
+        <p className="mt-0.5 text-[12px] text-muted-foreground">
+          Leadership reviews everything in the reports inbox.
         </p>
       </div>
 
-      {/* ─── Type row ─── */}
-      <Section
-        label="Report type"
-        hint="What kind of report is this?"
-      >
-        <div className="flex flex-wrap gap-1.5">
-          {(Object.keys(TYPE_META) as ReportTypeKey[]).map((t) => {
-            const meta = TYPE_META[t];
-            const Icon = meta.icon;
-            const active = t === type;
-            return (
-              <button
-                key={t}
-                type="button"
-                onClick={() => setType(t)}
-                className={[
-                  "inline-flex items-center gap-1.5 rounded-md border px-3 py-1.5 text-[12px] font-semibold transition-colors",
-                  active
-                    ? "border-transparent text-white shadow-sm"
-                    : "border-border bg-card/40 text-foreground/80 hover:text-foreground hover:bg-card/70",
-                ].join(" ")}
-                style={active ? { background: meta.accent } : undefined}
-              >
-                <Icon className="h-3.5 w-3.5" />
-                {meta.label}
-              </button>
-            );
-          })}
-        </div>
-      </Section>
-
-      {/* ─── Template row ─── */}
-      {templatesForType.length > 0 && (
-        <Section
-          label="Starting framework"
-          hint="Each framework guides you through the right sections. You can leave fields blank."
-        >
-          <div className="flex flex-wrap gap-1.5">
-            {templatesForType.map((tpl) => {
-              const active = tpl.id === templateId;
-              return (
-                <button
-                  key={tpl.id}
-                  type="button"
-                  onClick={() => setTemplateId(tpl.id)}
-                  className={[
-                    "inline-flex items-center gap-1.5 rounded-md border px-3 py-1.5 text-[12px] transition-colors",
-                    active
-                      ? "border-primary/60 bg-primary/10 text-primary font-semibold"
-                      : "border-border bg-card/40 text-foreground/80 hover:text-foreground hover:bg-card/70 font-medium",
-                  ].join(" ")}
-                  title={tpl.blurb}
-                >
-                  {tpl.name}
-                </button>
-              );
-            })}
-          </div>
-          {template && (
-            <p className="mt-2 text-[11px] text-muted-foreground italic">
-              {template.blurb}
-            </p>
-          )}
-        </Section>
-      )}
-
-      {/* ─── Basics card ─── */}
-      <div className="rounded-lg border border-border bg-card/40 backdrop-blur-sm p-5 md:p-6 space-y-5">
-        <div className="flex items-center gap-2">
-          <Pencil className="h-3.5 w-3.5 text-muted-foreground" />
-          <h2 className="text-[12px] font-mono uppercase tracking-widest text-muted-foreground">
-            Basics
-          </h2>
-        </div>
-
-        <FieldLine
-          label="Title"
-          hint="One-line summary. Shows up as the subject in the inbox."
-        >
-          <input
-            type="text"
-            value={title}
-            onChange={(e) => setTitle(e.target.value)}
-            maxLength={140}
-            placeholder="Short, specific, action-oriented"
-            className="w-full rounded-md border border-border bg-background/50 px-3.5 py-2.5 text-[13.5px] text-foreground placeholder:text-muted-foreground/50 outline-none focus:border-primary/50 focus:ring-2 focus:ring-primary/20 transition-colors"
-          />
-        </FieldLine>
-
-        <div className="grid gap-5 md:grid-cols-2">
-          <FieldLine label="Priority">
-            <div className="flex flex-wrap gap-1.5">
-              {(Object.keys(PRIORITY_META) as ReportPriority[]).map((p) => {
-                const active = priority === p;
-                return (
-                  <button
-                    key={p}
-                    type="button"
-                    onClick={() => setPriority(p)}
-                    className={[
-                      "rounded-full border px-3 py-1 text-[11.5px] font-semibold transition-all",
-                      active
-                        ? `${PRIORITY_META[p].cls} ring-2 ring-offset-1 ring-offset-card ring-primary/30`
-                        : "border-border bg-background/30 text-muted-foreground hover:text-foreground",
-                    ].join(" ")}
-                  >
-                    {PRIORITY_META[p].label}
-                  </button>
-                );
-              })}
-            </div>
-          </FieldLine>
-
-          {type === "project_update" && (
-            <FieldLine label="Project">
-              <select
-                value={projectId}
-                onChange={(e) => setProjectId(e.target.value)}
-                className="w-full rounded-md border border-border bg-background/50 px-3 py-2 text-[13px] text-foreground outline-none focus:border-primary/50 focus:ring-2 focus:ring-primary/20 transition-colors"
-              >
-                <option value="">Select a project…</option>
-                {projects.map((p) => (
-                  <option key={p.id} value={p.id}>
-                    {p.name}{" "}({p.company === "simplicity" ? "Simplicity" : "CodeWithAli"})
-                  </option>
-                ))}
-              </select>
-            </FieldLine>
-          )}
-        </div>
+      {/* Title */}
+      <div className="pt-5">
+        <input
+          ref={titleRef}
+          type="text"
+          value={title}
+          onChange={(e) => setTitle(e.target.value)}
+          maxLength={140}
+          placeholder="Title"
+          className="w-full bg-transparent border-0 px-0 py-1 text-[22px] font-semibold tracking-tight text-foreground placeholder:text-muted-foreground/40 outline-none focus:ring-0"
+        />
       </div>
 
-      {/* ─── Template fields / Freeform body ─── */}
-      <div className="rounded-lg border border-border bg-card/40 backdrop-blur-sm p-5 md:p-6 space-y-5">
-        <div className="flex items-center gap-2">
-          <typeMeta.icon className="h-3.5 w-3.5" style={{ color: typeMeta.accent }} />
-          <h2 className="text-[12px] font-mono uppercase tracking-widest text-muted-foreground">
-            {template && template.fields.length > 0
-              ? `${template.name} details`
-              : "Details"}
-          </h2>
-        </div>
-
-        {template && template.fields.length > 0 ? (
-          template.fields.map((f) => (
-            <FieldLine
-              key={f.key}
-              label={f.label}
-              hint={f.hint}
-              optional={f.optional}
-            >
-              {f.kind === "line" ? (
-                <input
-                  type="text"
-                  value={values[f.key] ?? ""}
-                  onChange={(e) =>
-                    setValues((v) => ({ ...v, [f.key]: e.target.value }))
-                  }
-                  placeholder={f.placeholder}
-                  className="w-full rounded-md border border-border bg-background/50 px-3.5 py-2.5 text-[13px] text-foreground placeholder:text-muted-foreground/50 outline-none focus:border-primary/50 focus:ring-2 focus:ring-primary/20 transition-colors"
-                />
-              ) : (
-                <textarea
-                  value={values[f.key] ?? ""}
-                  onChange={(e) =>
-                    setValues((v) => ({ ...v, [f.key]: e.target.value }))
-                  }
-                  rows={f.rows ?? 3}
-                  placeholder={f.placeholder}
-                  className="w-full resize-y rounded-md border border-border bg-background/50 px-3.5 py-2.5 text-[13px] text-foreground placeholder:text-muted-foreground/50 leading-relaxed outline-none focus:border-primary/50 focus:ring-2 focus:ring-primary/20 transition-colors"
-                />
-              )}
-            </FieldLine>
-          ))
-        ) : (
-          <FieldLine
-            label="Details"
-            hint="Everything worth saying. Plain text — line breaks preserved."
-          >
-            <textarea
-              value={values["__freeform"] ?? ""}
-              onChange={(e) =>
-                setValues((v) => ({ ...v, __freeform: e.target.value }))
-              }
-              rows={10}
-              placeholder="What's the situation, what's the ask, what does leadership need to know."
-              className="w-full resize-y rounded-md border border-border bg-background/50 px-3.5 py-2.5 text-[13px] text-foreground placeholder:text-muted-foreground/50 leading-relaxed outline-none focus:border-primary/50 focus:ring-2 focus:ring-primary/20 transition-colors"
-            />
-          </FieldLine>
+      {/* Metadata row — all the picks that aren't the document itself */}
+      <div className="mt-2 flex items-center flex-wrap gap-2">
+        <MetaSelect
+          icon={TypeIcon}
+          value={type}
+          onChange={(v) => setType(v as ReportTypeKey)}
+          options={(Object.keys(TYPE_LABELS) as ReportTypeKey[]).map((k) => [
+            k, TYPE_LABELS[k],
+          ])}
+        />
+        {templatesForType.length > 0 && (
+          <MetaSelect
+            value={templateId}
+            onChange={(v) => setTemplateId(v)}
+            options={templatesForType.map((t) => [t.id, t.name])}
+          />
+        )}
+        <MetaSelect
+          value={priority}
+          onChange={(v) => setPriority(v as ReportPriority)}
+          options={(Object.keys(PRIORITY_LABELS) as ReportPriority[]).map((k) => [
+            k, `${PRIORITY_LABELS[k]} priority`,
+          ])}
+        />
+        {type === "project_update" && (
+          <MetaSelect
+            value={projectId}
+            onChange={setProjectId}
+            placeholder="No project"
+            options={[
+              ["", "No project"],
+              ...projects.map((p): [string, string] => [
+                p.id,
+                `${p.name} · ${p.company === "simplicity" ? "Simplicity" : "CWA"}`,
+              ]),
+            ]}
+          />
         )}
       </div>
 
-      {/* ─── Submit bar ─── */}
-      <div className="flex items-center justify-between gap-3 rounded-lg border border-border bg-card/60 backdrop-blur-sm px-5 py-4">
-        <div className="min-w-0 flex-1 text-[11.5px]">
+      {/* Body — single continuous writing surface */}
+      <div className="mt-4">
+        <textarea
+          ref={bodyRef}
+          value={body}
+          onChange={(e) => setBody(e.target.value)}
+          rows={22}
+          placeholder="Write your report. Pick a framework above to start with scaffolding, or just write."
+          className="w-full resize-y bg-transparent border-0 px-0 py-2 text-[14px] text-foreground/95 placeholder:text-muted-foreground/40 leading-[1.65] outline-none focus:ring-0"
+          style={{
+            fontFamily:
+              'ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
+          }}
+        />
+        {template && template.blurb && (
+          <p className="text-[10.5px] text-muted-foreground/80 italic border-t border-border/40 pt-2 mt-1">
+            {template.blurb}
+          </p>
+        )}
+      </div>
+
+      {/* Submit row */}
+      <div className="mt-4 flex items-center justify-between gap-3 pt-4 border-t border-border/60">
+        <div className="text-[11.5px] text-muted-foreground min-w-0 flex-1">
           {submitState === "sent" && (
-            <span className="inline-flex items-center gap-1.5 text-emerald-300 font-semibold">
-              <Check className="h-3.5 w-3.5" />
-              Submitted. Leadership will see it in their inbox.
-            </span>
+            <span className="text-emerald-400">Submitted.</span>
           )}
           {submitState === "error" && (
-            <span className="inline-flex items-center gap-1.5 text-red-300">
-              <AlertCircle className="h-3.5 w-3.5" />
-              {submitError ?? "Failed to submit"}
+            <span className="inline-flex items-center gap-1 text-red-400">
+              <AlertCircle className="h-3 w-3" />
+              {submitError ?? "Failed to submit."}
             </span>
           )}
           {submitState === "idle" && (
-            <span className="inline-flex items-center gap-2 text-muted-foreground">
-              <typeMeta.icon className="h-3.5 w-3.5" style={{ color: typeMeta.accent }} />
-              Submitting to <b className="text-foreground">CEO / COO / CFO / Admin</b>.
-            </span>
+            <span>Goes to CEO · COO · CFO · Admin.</span>
           )}
         </div>
         <button
           type="button"
           onClick={submit}
           disabled={submitState === "submitting" || !title.trim()}
-          className="inline-flex items-center gap-1.5 rounded-md bg-primary px-5 py-2.5 text-[12.5px] font-semibold text-primary-foreground hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors shadow-lg"
+          className="inline-flex items-center gap-1.5 rounded-sm bg-foreground px-3.5 py-1.5 text-[12px] font-semibold text-background hover:bg-foreground/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
         >
           {submitState === "submitting" ? (
-            <Loader2 className="h-3.5 w-3.5 animate-spin" />
+            <Loader2 className="h-3 w-3 animate-spin" />
           ) : (
-            <Send className="h-3.5 w-3.5" />
+            <Send className="h-3 w-3" />
           )}
-          {submitState === "submitting" ? "Submitting…" : "Submit report"}
+          {submitState === "submitting" ? "Submitting" : "Submit"}
         </button>
       </div>
 
-      {/* ─── Your recent reports ─── */}
-      <section className="pt-2">
+      {/* Recent reports */}
+      <div className="mt-10 pt-6 border-t border-border/60">
         <div className="flex items-center justify-between mb-3">
-          <div className="flex items-center gap-2">
-            <Sparkles className="h-3.5 w-3.5 text-muted-foreground" />
-            <h2 className="text-[12px] font-mono uppercase tracking-widest text-muted-foreground">
-              Your recent reports
-            </h2>
-          </div>
+          <h2 className="text-[13px] font-semibold text-foreground">Recent</h2>
           {myReports.length > 0 && (
             <span className="text-[10.5px] text-muted-foreground">
-              Last {myReports.length}
+              {myReports.length} of your reports
             </span>
           )}
         </div>
 
         {loadingReports ? (
-          <div className="flex items-center gap-2 p-3 text-[11.5px] text-muted-foreground">
-            <Loader2 className="h-3.5 w-3.5 animate-spin" /> Loading…
-          </div>
+          <p className="py-2 text-[11.5px] text-muted-foreground">Loading…</p>
         ) : myReports.length === 0 ? (
-          <div className="rounded-lg border border-dashed border-border bg-card/30 p-6 text-center">
-            <Send className="mx-auto h-6 w-6 text-muted-foreground/40" />
-            <p className="mt-2 text-[12px] text-foreground">
-              Nothing yet.
-            </p>
-            <p className="text-[11px] text-muted-foreground mt-0.5">
-              Your submitted reports will show up here.
-            </p>
-          </div>
+          <p className="py-3 text-[11.5px] text-muted-foreground">
+            No reports yet.
+          </p>
         ) : (
-          <ul className="space-y-2">
+          <ul className="divide-y divide-border/60 border border-border/60 rounded-sm">
             {myReports.map((r) => (
               <MyReportRow key={r.id} report={r} />
             ))}
           </ul>
         )}
-      </section>
+      </div>
     </div>
   );
 }
 
-// ── Section wrapper ─────────────────────────────────────────────
+// ── Body-pristine detection ─────────────────────────────────────
+//
+// "Pristine" = the body is either empty, or it exactly matches a
+// scaffold rendered by any template. We use this to know when it's
+// safe to replace the body on template/type change without asking.
 
-function Section({
-  label, hint, children,
-}: {
-  label: string;
-  hint?: string;
-  children: React.ReactNode;
-}) {
-  return (
-    <div>
-      <div className="mb-2">
-        <h2 className="text-[12.5px] font-semibold text-foreground">{label}</h2>
-        {hint && (
-          <p className="mt-0.5 text-[11px] text-muted-foreground">{hint}</p>
-        )}
-      </div>
-      {children}
-    </div>
-  );
+function isAnyTemplateScaffold(body: string): boolean {
+  for (const typeKey of Object.keys(REPORT_TEMPLATES) as ReportTypeKey[]) {
+    for (const tpl of REPORT_TEMPLATES[typeKey]) {
+      if (renderTemplateScaffold(tpl) === body) return true;
+    }
+  }
+  return false;
 }
 
-// ── Field wrapper — label + optional hint + the input ──────────
+// ── Empty-heading stripper ─────────────────────────────────────
+//
+// If the user left a scaffold heading ("Timeline:") with no content
+// beneath it, drop it on submit so the inbox shows a clean report.
+// Handles both "Label:" and "Label (optional):" styles.
 
-function FieldLine({
-  label, hint, optional, children,
+function stripEmptyScaffoldHeadings(body: string): string {
+  const lines = body.split("\n");
+  const out: string[] = [];
+
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i] ?? "";
+    const isHeading = /^[A-Z][^:]{0,80}(?: \(optional\))?:\s*$/.test(line.trim());
+    if (!isHeading) {
+      out.push(line);
+      continue;
+    }
+    // Look ahead for any non-blank, non-heading content before the next heading.
+    let hasContent = false;
+    for (let j = i + 1; j < lines.length; j++) {
+      const peek = lines[j] ?? "";
+      const peekIsHeading = /^[A-Z][^:]{0,80}(?: \(optional\))?:\s*$/.test(peek.trim());
+      if (peekIsHeading) break;
+      if (peek.trim() !== "") { hasContent = true; break; }
+    }
+    if (hasContent) {
+      // Normalize "Label (optional):" to "Label:" on submission so the
+      // inbox parser doesn't carry the optional marker forward.
+      out.push(line.replace(/ \(optional\):/, ":"));
+    }
+    // Else drop the heading entirely — skip.
+  }
+
+  // Collapse triple-plus blank lines to a single blank line separator.
+  return out.join("\n").replace(/\n{3,}/g, "\n\n");
+}
+
+// ── MetaSelect — compact dropdown in the metadata row ──────────
+
+function MetaSelect({
+  icon: Icon, value, onChange, options, placeholder,
 }: {
-  label: string;
-  hint?: string;
-  optional?: boolean;
-  children: React.ReactNode;
+  icon?: typeof FileText;
+  value: string;
+  onChange: (v: string) => void;
+  options: Array<[string, string]>;
+  placeholder?: string;
 }) {
+  // Find the currently-selected label so the button can display it.
+  const current =
+    options.find(([v]) => v === value)?.[1] ?? placeholder ?? "—";
+
   return (
-    <div>
-      <div className="flex items-baseline justify-between mb-1.5">
-        <label className="text-[11.5px] font-semibold text-foreground/90">
-          {label}
-          {optional && (
-            <span className="ml-1.5 text-[10px] font-normal text-muted-foreground">
-              (optional)
-            </span>
-          )}
-        </label>
-      </div>
-      {children}
-      {hint && (
-        <p className="mt-1 text-[10.5px] text-muted-foreground leading-snug">
-          {hint}
-        </p>
+    <div className="relative inline-flex items-center">
+      {Icon && (
+        <Icon className="pointer-events-none absolute left-2 top-1/2 -translate-y-1/2 h-3 w-3 text-muted-foreground" />
       )}
+      <select
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        className={[
+          "appearance-none rounded-sm border border-border bg-background text-foreground/90 hover:bg-muted/40 hover:text-foreground transition-colors outline-none focus:border-primary/50",
+          "py-1 pr-7 text-[11.5px] font-medium cursor-pointer",
+          Icon ? "pl-6" : "pl-2.5",
+        ].join(" ")}
+        title={current}
+      >
+        {options.map(([v, label]) => (
+          <option key={v || "__empty"} value={v}>
+            {label}
+          </option>
+        ))}
+      </select>
+      <span
+        aria-hidden
+        className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground text-[9px]"
+      >
+        ▾
+      </span>
     </div>
   );
 }
@@ -568,46 +483,35 @@ function FieldLine({
 // ── Recent report row ──────────────────────────────────────────
 
 function MyReportRow({ report }: { report: ReportRow }) {
-  const TypeIcon = TYPE_META[report.type]?.icon ?? FileText;
-  const accent = TYPE_META[report.type]?.accent ?? "#64748b";
+  const TypeIcon = TYPE_ICONS[report.type] ?? FileText;
   return (
-    <li className="group rounded-lg border border-border bg-card/40 px-4 py-3 hover:bg-card/60 transition-colors">
-      <div className="flex items-start gap-3">
-        <div
-          className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md"
-          style={{ background: `${accent}22`, color: accent }}
-        >
-          <TypeIcon className="h-4 w-4" />
-        </div>
+    <li className="px-3 py-2.5 hover:bg-muted/30 transition-colors">
+      <div className="flex items-start gap-2.5">
+        <TypeIcon className="h-3.5 w-3.5 mt-0.5 text-muted-foreground shrink-0" />
         <div className="min-w-0 flex-1">
-          <p className="text-[12.5px] font-semibold text-foreground truncate">
-            {report.title}
-          </p>
-          {report.body && (
-            <p className="mt-1 text-[11.5px] text-muted-foreground line-clamp-2 leading-snug whitespace-pre-wrap">
-              {report.body}
+          <div className="flex items-start justify-between gap-2">
+            <p className="text-[12.5px] font-medium text-foreground truncate">
+              {report.title}
             </p>
-          )}
-          <div className="mt-1.5 flex items-center gap-3 text-[10px] text-muted-foreground">
-            <span
-              className={`rounded-full border px-1.5 py-0.5 font-semibold ${PRIORITY_META[report.priority].cls}`}
-            >
-              {PRIORITY_META[report.priority].label}
-            </span>
-            <span className="inline-flex items-center gap-1">
-              <Clock className="h-2.5 w-2.5" />
+            <span className="text-[10px] text-muted-foreground whitespace-nowrap">
               {report.submitted_at
                 ? new Date(report.submitted_at).toLocaleDateString()
                 : "draft"}
             </span>
-            <StatusBadge status={report.status} reviewed={!!report.reviewed_at} />
+          </div>
+          <div className="mt-0.5 flex items-center gap-2 text-[10.5px] text-muted-foreground">
+            <span>{TYPE_LABELS[report.type]}</span>
+            <span>·</span>
+            <span>{PRIORITY_LABELS[report.priority]}</span>
+            <span>·</span>
+            <StatusLabel status={report.status} reviewed={!!report.reviewed_at} />
           </div>
           {report.review_notes && (
-            <div className="mt-2 rounded-md border border-primary/30 bg-primary/[0.05] px-3 py-2">
-              <p className="text-[10px] font-semibold text-primary/80 uppercase tracking-wider mb-0.5">
+            <div className="mt-2 border-l-2 border-primary/40 pl-2.5 py-0.5">
+              <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide">
                 Leadership note
               </p>
-              <p className="text-[11.5px] text-foreground/90 leading-snug whitespace-pre-wrap">
+              <p className="mt-0.5 text-[11.5px] text-foreground/90 leading-snug whitespace-pre-wrap">
                 {report.review_notes}
               </p>
             </div>
@@ -618,7 +522,7 @@ function MyReportRow({ report }: { report: ReportRow }) {
   );
 }
 
-function StatusBadge({
+function StatusLabel({
   status, reviewed,
 }: {
   status: ReportStatus;
@@ -626,22 +530,14 @@ function StatusBadge({
 }) {
   if (status === "reviewed" || reviewed) {
     return (
-      <span className="inline-flex items-center gap-1 rounded-full border border-emerald-500/40 bg-emerald-500/10 px-1.5 py-0.5 text-emerald-300 font-semibold">
+      <span className="inline-flex items-center gap-0.5 text-emerald-400">
         <Eye className="h-2.5 w-2.5" />
         Reviewed
       </span>
     );
   }
   if (status === "archived") {
-    return (
-      <span className="rounded-full border border-zinc-600/40 bg-zinc-700/10 px-1.5 py-0.5 text-zinc-400 font-semibold">
-        Archived
-      </span>
-    );
+    return <span className="text-zinc-500">Archived</span>;
   }
-  return (
-    <span className="rounded-full border border-amber-500/40 bg-amber-500/10 px-1.5 py-0.5 text-amber-300 font-semibold">
-      Submitted
-    </span>
-  );
+  return <span className="text-amber-400">Submitted</span>;
 }
