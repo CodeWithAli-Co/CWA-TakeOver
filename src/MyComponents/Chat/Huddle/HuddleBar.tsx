@@ -181,51 +181,63 @@ export function HuddleBar({
   const peopleCount = peers.length + 1;
 
   // ── Minimized state — small pill, always in the corner ──
+  // Critically, the <PeerAudioSink> elements are rendered here as
+  // siblings to the pill so remote audio keeps playing even though
+  // the full panel (and its PeerTiles) are unmounted. Without this
+  // the WebRTC connection stays alive but you can't hear anyone.
   if (minimized) {
     return (
-      <AnimatePresence>
-        <motion.button
-          key="huddle-pill"
-          type="button"
-          initial={{ y: 20, opacity: 0, scale: 0.9 }}
-          animate={{ y: 0, opacity: 1, scale: 1 }}
-          exit={{ y: 20, opacity: 0, scale: 0.9 }}
-          transition={{ duration: 0.18, ease: [0.16, 1, 0.3, 1] }}
-          onClick={() => {
-            setMinimized(false);
-            persistMinimized(false);
-          }}
-          className="fixed bottom-4 right-4 z-30 flex items-center gap-2 rounded-full border border-primary/40 bg-card/95 px-3.5 py-2 shadow-xl backdrop-blur-md hover:bg-card transition-colors cursor-pointer"
-          title="Restore huddle"
-          style={{ boxShadow: "0 12px 36px rgba(0,0,0,0.5)" }}
-        >
-          <span className="relative flex h-2 w-2">
-            <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-70" />
-            <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-400" />
-          </span>
-          <Volume2 className="h-3.5 w-3.5 text-primary" />
-          <span className="text-[11.5px] font-semibold text-foreground">
-            #{group}
-          </span>
-          <span className="text-[10.5px] text-muted-foreground">
-            {peopleCount} {peopleCount === 1 ? "person" : "ppl"}
-          </span>
-          {muted && <MicOff className="h-3 w-3 text-destructive" />}
-          {sharing && <Monitor className="h-3 w-3 text-blue-400" />}
-          {/* Close/leave button — stops propagation so it doesn't restore. */}
-          <span
-            role="button"
-            onClick={(e) => {
-              e.stopPropagation();
-              onLeave();
+      <>
+        {/* Hidden audio sinks — one per remote peer with a stream.
+            Must stay mounted for remote voices to keep playing while
+            the panel is collapsed to a pill. */}
+        {peers.map(
+          (p) => p.stream && <PeerAudioSink key={p.id} stream={p.stream} />,
+        )}
+        <AnimatePresence>
+          <motion.button
+            key="huddle-pill"
+            type="button"
+            initial={{ y: 20, opacity: 0, scale: 0.9 }}
+            animate={{ y: 0, opacity: 1, scale: 1 }}
+            exit={{ y: 20, opacity: 0, scale: 0.9 }}
+            transition={{ duration: 0.18, ease: [0.16, 1, 0.3, 1] }}
+            onClick={() => {
+              setMinimized(false);
+              persistMinimized(false);
             }}
-            className="ml-1 flex h-5 w-5 items-center justify-center rounded-full text-muted-foreground hover:bg-destructive/20 hover:text-destructive transition-colors"
-            title="Leave huddle"
+            className="fixed bottom-4 right-4 z-30 flex items-center gap-2 rounded-full border border-primary/40 bg-card/95 px-3.5 py-2 shadow-xl backdrop-blur-md hover:bg-card transition-colors cursor-pointer"
+            title="Restore huddle"
+            style={{ boxShadow: "0 12px 36px rgba(0,0,0,0.5)" }}
           >
-            <PhoneOff className="h-2.5 w-2.5" />
-          </span>
-        </motion.button>
-      </AnimatePresence>
+            <span className="relative flex h-2 w-2">
+              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-70" />
+              <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-400" />
+            </span>
+            <Volume2 className="h-3.5 w-3.5 text-primary" />
+            <span className="text-[11.5px] font-semibold text-foreground">
+              #{group}
+            </span>
+            <span className="text-[10.5px] text-muted-foreground">
+              {peopleCount} {peopleCount === 1 ? "person" : "ppl"}
+            </span>
+            {muted && <MicOff className="h-3 w-3 text-destructive" />}
+            {sharing && <Monitor className="h-3 w-3 text-blue-400" />}
+            {/* Close/leave button — stops propagation so it doesn't restore. */}
+            <span
+              role="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                onLeave();
+              }}
+              className="ml-1 flex h-5 w-5 items-center justify-center rounded-full text-muted-foreground hover:bg-destructive/20 hover:text-destructive transition-colors"
+              title="Leave huddle"
+            >
+              <PhoneOff className="h-2.5 w-2.5" />
+            </span>
+          </motion.button>
+        </AnimatePresence>
+      </>
     );
   }
 
@@ -716,6 +728,36 @@ function PeerTile({
       )}
     </div>
   );
+}
+
+// ── PeerAudioSink ────────────────────────────────────────────────
+// A zero-UI component whose only job is to play a remote peer's
+// audio. We render one of these PER PEER, unconditionally, at the
+// root of both the minimized-pill branch and the full-panel branch
+// — that way remote audio keeps playing while the user is in pill
+// mode. Previously, audio playback was coupled to PeerTile, which
+// unmounts when the pill collapses the panel, so minimizing cut
+// all remote audio on our side (peers still heard us fine since
+// our outgoing mic comes from getUserMedia, not a DOM element).
+//
+// Kept intentionally tiny: no speaking analyser, no volume UI, no
+// muted-state icon — those all belong to the visible PeerTile. This
+// is purely an audio playback surface.
+
+function PeerAudioSink({ stream }: { stream: MediaStream }) {
+  const ref = useRef<HTMLAudioElement>(null);
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    if (el.srcObject !== stream) {
+      el.srcObject = stream;
+    }
+    // Some browsers pause the element when srcObject is reassigned
+    // on an already-playing sink. Kicking play() fixes it; silently
+    // ignore AbortError (happens when React re-renders mid-promise).
+    el.play().catch(() => { /* noop — autoplay policy or re-render */ });
+  }, [stream]);
+  return <audio ref={ref} autoPlay playsInline className="hidden" />;
 }
 
 function ScreenShareTile({ name, stream }: { name: string; stream: MediaStream }) {
