@@ -358,6 +358,22 @@ export function useHuddle({ group, username, joined, muted, camera, quality = "s
     pc.onnegotiationneeded = async () => {
       const meta = peerMetaMap.get(pc);
       if (!meta) return;
+
+      // Initial-connect latency cut: on the VERY first negotiation,
+      // only the impolite peer drives the offer. The polite peer
+      // waits for the offer to arrive. This skips the
+      // offer/answer-then-rollback round-trip the polite side would
+      // otherwise do (because attaching tracks on mount fires this
+      // handler on BOTH sides at once). Saves ~300-500ms to first
+      // audio packet.
+      //
+      // For any SUBSEQUENT negotiation (camera toggle, screen share,
+      // track replacement), pc.remoteDescription is set, so either
+      // side is free to drive renegotiation — the polite peer can
+      // initiate too, and perfect-negotiation handles any collision
+      // the normal way.
+      if (meta.polite && !pc.remoteDescription) return;
+
       try {
         meta.makingOffer = true;
         await pc.setLocalDescription(); // auto-creates the right description

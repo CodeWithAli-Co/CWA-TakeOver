@@ -53,7 +53,44 @@ function getRingChannel() {
   return ringChannel;
 }
 
+// Tracks huddles the local user just started, keyed by group name.
+// Any incoming ring broadcast for a group within the suppression
+// window (10s) is silently dropped — belt-and-suspenders against
+// two failure modes that were both happening in production:
+//   1. Supabase Realtime's `broadcast.self: false` occasionally
+//      delivers the broadcast back to the sender anyway (race
+//      between subscribe + send).
+//   2. Stale useEffect handlers with a captured empty username
+//      from pre-auth mount — the `p.starter === username` check
+//      trivially fails against `""`, so the handler rings.
+// Checking this map first sidesteps both.
+const recentlyStartedByMe = new Map<string, number>();
+const START_SUPPRESSION_MS = 10_000;
+
+function wasJustStartedByMe(group: string): boolean {
+  const at = recentlyStartedByMe.get(group);
+  if (!at) return false;
+  if (Date.now() - at > START_SUPPRESSION_MS) {
+    recentlyStartedByMe.delete(group);
+    return false;
+  }
+  return true;
+}
+
 export async function announceHuddleStart(group: string, starter: string) {
+  // Stamp the start BEFORE broadcasting. Even if Realtime echoes the
+  // broadcast back to us faster than this function resolves, the
+  // incoming handler will see the entry and suppress the ring.
+  recentlyStartedByMe.set(group, Date.now());
+  // Lazy cleanup — stops the map growing if a user starts 100 huddles
+  // without closing the tab.
+  if (recentlyStartedByMe.size > 50) {
+    const cutoff = Date.now() - START_SUPPRESSION_MS;
+    for (const [g, t] of recentlyStartedByMe) {
+      if (t < cutoff) recentlyStartedByMe.delete(g);
+    }
+  }
+
   const ch = getRingChannel();
   // Wait briefly for subscribe if needed — Realtime.send queues if not.
   try {
@@ -133,6 +170,11 @@ export function HuddleRing({ username, channelNames }: Props) {
     const handler = (evt: any) => {
       const p = evt?.payload as { group?: string; starter?: string; at?: number };
       if (!p || !p.group || !p.starter) return;
+      // Absolute defense: if WE just started this group's huddle,
+      // never ring — regardless of whose username is in the payload
+      // or which handler closure caught the event. Catches both the
+      // Realtime self-echo bug and the stale-closure-username bug.
+      if (wasJustStartedByMe(p.group)) return;
       if (p.starter === username) return;
       if (!channelNames.includes(p.group) && p.group !== "General") return;
 
