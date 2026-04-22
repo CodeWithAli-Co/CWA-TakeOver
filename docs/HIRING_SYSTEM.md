@@ -454,6 +454,29 @@ page and assign a Supabase auth id first").
 
 ---
 
+## 8b. Auto-reminders for stale offers
+
+The cwa_takeover website runs a daily Vercel Cron that scans for
+offers we sent ≥ 2 days ago without a response and sends a single
+friendly nudge. One reminder per offer — no spam loops.
+
+Full details in [`OFFER_REMINDERS.md`](./OFFER_REMINDERS.md).
+Short version:
+
+- Migration `migrations/offer_letters_reminder.sql` adds a
+  `reminder_sent_at` column + partial index.
+- Cron route: `cwa_takeover/src/app/api/cron/offer-reminders/route.ts`.
+- Schedule: `0 15 * * *` (15:00 UTC daily).
+- Email template: `cwa_takeover/emails/offer-reminder.tsx`.
+- Auth: `CRON_SECRET` bearer token that Vercel sends automatically.
+- Uses `SUPABASE_SERVICE_ROLE` (cron can't present an anon token).
+
+The cron is idempotent: after sending, `reminder_sent_at` is
+stamped so the row never qualifies again. On send failure the
+stamp is skipped so the next run retries.
+
+---
+
 ## 9. Environment variables
 
 ### Takeover desktop (`.env.local`)
@@ -473,6 +496,13 @@ RESEND_API_KEY=<Resend key>  # or RESEND_EMAIL_KEY — both accepted
 EMAIL_TIMESTAMP_WINDOW_SECONDS=300  # optional, default 300
 NEXT_PUBLIC_SUPABASE_URL=<takeover project url>
 NEXT_PUBLIC_SUPABASE_ANON_KEY=<takeover anon key>
+
+# Cron reminders:
+CRON_SECRET=<long random string — Vercel Cron sends this as Bearer auth>
+SUPABASE_URL=<takeover project url>          # same as NEXT_PUBLIC_
+SUPABASE_SERVICE_ROLE=<service-role key>     # CRON ONLY — never in client bundles
+REMINDER_DELAY_DAYS=2                        # optional, default 2
+REMINDER_MAX_PER_RUN=25                      # optional, safety cap
 ```
 
 **Important**: `NEXT_PUBLIC_SUPABASE_URL` must point at the
@@ -486,7 +516,6 @@ table is the actual security layer.
 
 ## 10. What the system DOESN'T do (yet)
 
-- **Auto-reminders** for stale unsigned offers.
 - **Final-PDF archival** to Supabase Storage for compliance. Right
   now the canonical record lives in the DB (signed_name +
   signed_at) plus whatever the candidate saved to their disk. A
