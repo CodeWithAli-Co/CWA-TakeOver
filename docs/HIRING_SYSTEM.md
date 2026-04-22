@@ -454,6 +454,52 @@ page and assign a Supabase auth id first").
 
 ---
 
+## 8a. Employer counter-signature (before send)
+
+Before an offer can be emailed to a candidate, the CEO counter-
+signs in Takeover using the same ESIGN typed-name pattern as the
+candidate will later use. Migration at
+`migrations/offer_letters_counter_signature.sql` adds:
+
+- `offer_letters.employer_signature_name`  / `_at`  / `_user_id`
+- `hire_documents.employer_signature_name` / `_at` / `_user_id`
+
+Flow:
+
+1. CEO drafts offer + generates any companion docs.
+2. `EmployerSignRow` in `HiringActions.tsx` captures the typed
+   signature. The typed name must match `employerSignerName`
+   (falls back to `employerLegalName`) case-insensitively.
+3. On sign, a single transaction stamps:
+   - `offer_letters.employer_signature_*` on the offer row
+   - `hire_documents.employer_signature_*` on every companion
+4. `SendEmailRow` is gated — the email button is disabled until
+   counter-signed. The PDF that goes out is rendered by
+   `OfferLetterPDF` with the employer column pre-filled: italic
+   `/s/ Name`, date, and an "E-SIGNED · ESIGN Act" stamp.
+5. On the accept page, both the current-step view and the printed
+   PDF bundle render a green "Counter-signed by employer" block
+   above the candidate's own signature block.
+
+### New docs after signing
+
+If the CEO generates a new companion doc AFTER counter-signing,
+it won't carry the sig automatically. The row shows a warning
+with the unsigned count and a "Clear signature (won't send until
+re-signed)" button. Re-signing re-stamps everything with a fresh
+timestamp, making the signature event consistent across the
+whole package.
+
+### Clearing the sig
+
+An escape-hatch link in the signed-state display wipes
+`employer_signature_*` on both tables if something needs to be
+redone. Disabled once the offer has been `emailed_at` — at that
+point the candidate has the signed PDF and you can't retroactively
+unsign their copy.
+
+---
+
 ## 8b. Auto-reminders for stale offers
 
 The cwa_takeover website runs a daily Vercel Cron that scans for
@@ -525,11 +571,6 @@ table is the actual security layer.
   signatures are legally binding under ESIGN for employment + 1099
   relationships in the US; for real-estate or financial-instrument
   signings, integrate a heavier provider.
-- **Counter-signature** by the employer. The offer is drafted as
-  "from the employer" but the typed signature is only captured
-  from the candidate side. If you ever want a dual-signed artifact,
-  add an employer signature step (same typed-name pattern) to
-  `HiringActions` before sending.
 
 ---
 

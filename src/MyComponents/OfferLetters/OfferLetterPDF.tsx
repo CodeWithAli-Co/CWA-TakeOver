@@ -115,6 +115,22 @@ function buildStyles(brand: Brand) {
       marginTop: 32,
       marginBottom: 4,
     },
+    // Italic script-style representation of the typed signature.
+    // Sits above sigHr so the signature "rests on" the line.
+    sigScript: {
+      fontFamily: "Times-Italic",
+      fontSize: 15,
+      color: brand.ink,
+      marginBottom: 2,
+    },
+    sigStamp: {
+      fontFamily: "Helvetica",
+      fontSize: 8,
+      color: brand.accent,
+      letterSpacing: 0.3,
+      textTransform: "uppercase",
+      marginTop: 10,
+    },
     footer: {
       position: "absolute",
       bottom: 24,
@@ -148,6 +164,13 @@ interface Props {
   employerSignerTitle?: string;
   candidateName: string;
   body: string;
+  /** Typed legal name the employer used to counter-sign this offer.
+   *  When present, the PDF renders the employer column as already
+   *  signed — /s/ name on the signature line, with the timestamp.
+   *  Candidate receives a dual-signed document and only adds theirs. */
+  employerSignatureName?: string;
+  /** ISO timestamp when the employer counter-signed. */
+  employerSignatureAt?: string;
 }
 
 export function OfferLetterPDF({
@@ -158,6 +181,8 @@ export function OfferLetterPDF({
   employerSignerTitle,
   candidateName,
   body,
+  employerSignatureName,
+  employerSignatureAt,
 }: Props) {
   const b = BRANDS[brand];
   const styles = buildStyles(b);
@@ -166,6 +191,20 @@ export function OfferLetterPDF({
     .split(/\n{2,}/)
     .map((p) => p.trim())
     .filter(Boolean);
+
+  const counterSigned =
+    !!employerSignatureName && !!employerSignatureAt;
+
+  // Localized date for the Signed: field. `toLocaleDateString`
+  // with undefined locale uses the build machine's locale; for
+  // consistency across builds we lock to en-US.
+  const signedDateText = employerSignatureAt
+    ? new Date(employerSignatureAt).toLocaleDateString("en-US", {
+        year: "numeric",
+        month: "long",
+        day: "numeric",
+      })
+    : null;
 
   return (
     <Document
@@ -198,15 +237,35 @@ export function OfferLetterPDF({
 
           <View style={styles.signatureBlock}>
             <View style={styles.sigRow}>
+              {/* Employer column — when counter-signed, we render
+                  the typed name in italic above the signature line
+                  (acts as the "drawn signature" stand-in) plus a
+                  small "E-SIGNED" stamp beneath with the date. */}
               <View style={styles.sigCol}>
+                {counterSigned ? (
+                  <Text style={styles.sigScript}>
+                    {`/s/ ${employerSignatureName}`}
+                  </Text>
+                ) : null}
                 <View style={styles.sigHr} />
-                <Text style={styles.sigName}>{employerSignerName || "—"}</Text>
+                <Text style={styles.sigName}>
+                  {employerSignatureName || employerSignerName || "—"}
+                </Text>
                 <Text style={styles.sigMeta}>
                   {employerSignerTitle ? `${employerSignerTitle}, ` : ""}
                   {employerLegalName}
                 </Text>
-                <Text style={styles.sigMeta}>Date: _______________</Text>
+                {counterSigned ? (
+                  <>
+                    <Text style={styles.sigMeta}>{`Date: ${signedDateText}`}</Text>
+                    <Text style={styles.sigStamp}>E-Signed · ESIGN Act</Text>
+                  </>
+                ) : (
+                  <Text style={styles.sigMeta}>Date: _______________</Text>
+                )}
               </View>
+              {/* Candidate column — always blank in the PDF; the
+                  real candidate signature happens on the accept page. */}
               <View style={styles.sigCol}>
                 <View style={styles.sigHr} />
                 <Text style={styles.sigName}>{candidateName}</Text>

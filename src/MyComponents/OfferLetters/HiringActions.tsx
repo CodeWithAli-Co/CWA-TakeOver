@@ -12,6 +12,7 @@ import { useEffect, useState } from "react";
 import {
   Link2, Mail, FilePlus2, UserPlus, Loader2, Check, Copy,
   AlertTriangle, Download, Sparkles, X, ShieldCheck, FileSignature,
+  PenLine,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import supabase from "@/MyComponents/supabase";
@@ -37,6 +38,10 @@ interface CurrentOffer {
   emailed_at?: string | null;
   candidate_signature_name?: string | null;
   candidate_signature_at?: string | null;
+  /** Employer-side counter-signature. Captured in Takeover BEFORE
+   *  the offer is emailed. If null, the Send row is gated. */
+  employer_signature_name?: string | null;
+  employer_signature_at?: string | null;
 }
 
 interface Props {
@@ -67,13 +72,16 @@ export function HiringActions({ current, form, generatedBody, onMutated }: Props
     <div className="space-y-3">
       <SignatureRecordRow current={current} />
       <AcceptLinkRow current={current} />
+      <CompanionDocsRow current={current} form={form} />
+      {/* Counter-sign gates send — has to come AFTER companion docs
+          because it stamps them too. */}
+      <EmployerSignRow current={current} form={form} onMutated={onMutated} />
       <SendEmailRow
         current={current}
         form={form}
         generatedBody={generatedBody}
         onMutated={onMutated}
       />
-      <CompanionDocsRow current={current} form={form} />
       <ConvertRow current={current} form={form} onMutated={onMutated} />
     </div>
   );
@@ -146,8 +154,18 @@ function SendEmailRow({
   const [isError, setIsError] = useState(false);
 
   const sent = !!current.emailed_at;
+  // Counter-signature gate: can't send an offer the CEO hasn't
+  // signed. The button stays disabled and we show a clear message
+  // pointing at the Sign offer row above.
+  const counterSigned = !!current.employer_signature_at
+    && !!current.employer_signature_name;
 
   const send = async () => {
+    if (!counterSigned) {
+      setIsError(true);
+      setResult("Counter-sign the offer above before sending.");
+      return;
+    }
     if (!email || !email.includes("@")) {
       setIsError(true);
       setResult("Enter a valid email.");
@@ -164,6 +182,9 @@ function SendEmailRow({
 
     try {
       // 1. Render the PDF once; base64-encode for the email attachment.
+      //    Pass the counter-signature fields so the PDF shows it as
+      //    already signed on the employer side — candidate gets a
+      //    dual-signed artifact.
       const pdfBlob = await pdf(
         <OfferLetterPDF
           brand={form.brand}
@@ -173,6 +194,8 @@ function SendEmailRow({
           employerSignerTitle={form.employerSignerTitle}
           candidateName={form.candidateName}
           body={generatedBody}
+          employerSignatureName={current.employer_signature_name ?? undefined}
+          employerSignatureAt={current.employer_signature_at ?? undefined}
         />,
       ).toBlob();
       const pdfBase64 = await pdfBlobToBase64(pdfBlob);
@@ -259,7 +282,9 @@ function SendEmailRow({
       subtitle={
         sent
           ? `Sent ${new Date(current.emailed_at!).toLocaleString()}.`
-          : "Sends the PDF + the accept-link in a branded email."
+          : !counterSigned
+            ? "Counter-sign the offer above, then you can email it."
+            : "Sends the PDF + the accept-link in a branded email."
       }
     >
       <div className="flex items-center gap-2">
@@ -268,13 +293,15 @@ function SendEmailRow({
           placeholder="candidate@email.com"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
-          className="flex-1 rounded-md border border-border bg-background px-2.5 py-1.5 text-[12px] placeholder:text-muted-foreground/50 focus:outline-none focus:border-primary/50 focus:ring-2 focus:ring-primary/20"
+          disabled={!counterSigned && !sent}
+          className="flex-1 rounded-md border border-border bg-background px-2.5 py-1.5 text-[12px] placeholder:text-muted-foreground/50 focus:outline-none focus:border-primary/50 focus:ring-2 focus:ring-primary/20 disabled:opacity-50 disabled:cursor-not-allowed"
         />
         <button
           type="button"
           onClick={send}
-          disabled={sending}
-          className="flex h-8 items-center gap-1 rounded-md bg-primary px-2.5 text-[11.5px] font-semibold text-primary-foreground hover:bg-primary/90 disabled:opacity-60"
+          disabled={sending || (!counterSigned && !sent)}
+          className="flex h-8 items-center gap-1 rounded-md bg-primary px-2.5 text-[11.5px] font-semibold text-primary-foreground hover:bg-primary/90 disabled:opacity-60 disabled:cursor-not-allowed"
+          title={!counterSigned && !sent ? "Counter-sign first" : undefined}
         >
           {sending ? <Loader2 className="h-3 w-3 animate-spin" /> : <Mail className="h-3 w-3" />}
           {sent ? "Resend" : "Send"}
@@ -707,6 +734,250 @@ function ConvertRow({
       )}
       {error && (
         <p className="mt-2 text-[10.5px] text-red-300">{error}</p>
+      )}
+    </Row>
+  );
+}
+
+// ── Employer counter-signature ─────────────────────────────────────
+// Captures the CEO-side typed signature BEFORE the offer can be
+// emailed. Same ESIGN pattern as the candidate accept page: type
+// your legal name exactly, tick the consent box, click sign.
+//
+// Clicking sign:
+//   1. Updates offer_letters with employer_signature_name / _at.
+//   2. Stamps every existing hire_documents row for this offer
+//      with the same signature — so companion agreements go out
+//      dual-signed too, not just the main offer letter.
+//
+// If any companion doc is generated AFTER counter-signing, it won't
+// carry the sig automatically. The row shows a "re-sign to include
+// new docs" warning so the CEO knows to click sign again.
+
+function EmployerSignRow({
+  current, form, onMutated,
+}: {
+  current: CurrentOffer;
+  form: OfferInput;
+  onMutated: () => void;
+}) {
+  const [typedName, setTypedName] = useState("");
+  const [confirmed, setConfirmed] = useState(false);
+  const [signing, setSigning] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  // Check for unsigned companion docs so we can show the re-sign hint.
+  const [unsignedDocCount, setUnsignedDocCount] = useState(0);
+
+  const alreadySigned = !!current.employer_signature_at
+    && !!current.employer_signature_name;
+  const sent = !!current.emailed_at;
+
+  // The legal name we expect the operator to type. Falls back to
+  // the brand legal name if a specific signer name isn't set.
+  const expectedName = form.employerSignerName
+    || form.employerLegalName
+    || "CEO";
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      if (!alreadySigned) {
+        setUnsignedDocCount(0);
+        return;
+      }
+      // Count companion docs that exist but aren't stamped with the
+      // employer sig yet — means we signed, then generated more docs.
+      const { count } = await supabase
+        .from("hire_documents")
+        .select("id", { count: "exact", head: true })
+        .eq("offer_letter_id", current.id)
+        .is("employer_signature_at", null);
+      if (!cancelled) setUnsignedDocCount(count ?? 0);
+    })();
+    return () => { cancelled = true; };
+  }, [current.id, current.employer_signature_at, alreadySigned]);
+
+  const nameMatches =
+    typedName.trim().toLowerCase() === expectedName.trim().toLowerCase();
+  const canSign = nameMatches && confirmed && !signing;
+
+  const sign = async () => {
+    if (!canSign) return;
+    setSigning(true);
+    setError(null);
+    const now = new Date().toISOString();
+    const sigName = typedName.trim();
+
+    try {
+      // 1. Stamp the offer row.
+      const offerUpd = await supabase
+        .from("offer_letters")
+        .update({
+          employer_signature_name: sigName,
+          employer_signature_at: now,
+        })
+        .eq("id", current.id);
+      if (offerUpd.error) throw new Error(offerUpd.error.message);
+
+      // 2. Stamp every existing hire_document row for this offer.
+      //    We overwrite — if they're re-signing to pick up new docs,
+      //    re-stamping the old ones with today's timestamp is the
+      //    right move (single consistent signature event).
+      const docsUpd = await supabase
+        .from("hire_documents")
+        .update({
+          employer_signature_name: sigName,
+          employer_signature_at: now,
+        })
+        .eq("offer_letter_id", current.id);
+      if (docsUpd.error) {
+        // Non-fatal — offer is signed, companions might not have
+        // the columns yet (pre-migration schema). Show a soft warn.
+        setError(
+          `Offer counter-signed, but couldn't stamp companion docs: ${docsUpd.error.message}. Run migrations/offer_letters_counter_signature.sql.`,
+        );
+      }
+
+      setTypedName("");
+      setConfirmed(false);
+      onMutated();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+    } finally {
+      setSigning(false);
+    }
+  };
+
+  const clearSignature = async () => {
+    // Escape hatch — wipes the counter-sig if something's wrong.
+    // Also wipes it from companion docs so they don't diverge.
+    if (!confirm("Clear the counter-signature on the offer and all companion docs? You'll need to sign again before sending.")) return;
+    setSigning(true);
+    try {
+      await supabase
+        .from("offer_letters")
+        .update({
+          employer_signature_name: null,
+          employer_signature_at: null,
+        })
+        .eq("id", current.id);
+      await supabase
+        .from("hire_documents")
+        .update({
+          employer_signature_name: null,
+          employer_signature_at: null,
+        })
+        .eq("offer_letter_id", current.id);
+      onMutated();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+    } finally {
+      setSigning(false);
+    }
+  };
+
+  return (
+    <Row
+      icon={PenLine}
+      title="Counter-sign the offer"
+      subtitle={
+        alreadySigned
+          ? `Signed ${new Date(current.employer_signature_at!).toLocaleString()} by ${current.employer_signature_name}.`
+          : "Type your legal name to counter-sign. Applies to the offer + every companion agreement."
+      }
+    >
+      {alreadySigned ? (
+        <div className="space-y-2">
+          {/* Signed-state display */}
+          <div className="rounded-md border border-emerald-500/40 bg-emerald-500/10 p-3">
+            <p className="text-[10.5px] font-mono uppercase tracking-widest text-emerald-400 mb-1">
+              Counter-signed
+            </p>
+            <p
+              className="text-[14px] text-foreground italic"
+              style={{ fontFamily: "ui-serif, Georgia, serif" }}
+            >
+              /s/ {current.employer_signature_name}
+            </p>
+            <p className="mt-0.5 text-[10.5px] text-muted-foreground">
+              {new Date(current.employer_signature_at!).toLocaleString()}
+            </p>
+          </div>
+
+          {/* Re-sign warning if new docs have been generated since. */}
+          {unsignedDocCount > 0 && (
+            <div className="flex items-start gap-2 rounded-md border border-amber-500/40 bg-amber-500/10 p-2.5">
+              <AlertTriangle className="h-3.5 w-3.5 mt-0.5 text-amber-400 shrink-0" />
+              <div className="min-w-0">
+                <p className="text-[11px] text-amber-200">
+                  {unsignedDocCount} companion doc{unsignedDocCount === 1 ? "" : "s"} generated after you signed.
+                  Clear the signature and re-sign to include them in the counter-signature record.
+                </p>
+              </div>
+            </div>
+          )}
+
+          {!sent && (
+            <button
+              type="button"
+              onClick={clearSignature}
+              disabled={signing}
+              className="text-[10.5px] text-muted-foreground hover:text-foreground underline underline-offset-2 disabled:opacity-50"
+            >
+              Clear signature (won't send until re-signed)
+            </button>
+          )}
+        </div>
+      ) : (
+        <div className="space-y-2.5">
+          <div>
+            <label className="block text-[10px] font-mono uppercase tracking-widest text-muted-foreground mb-1">
+              Type your legal name exactly ({expectedName})
+            </label>
+            <input
+              type="text"
+              value={typedName}
+              onChange={(e) => setTypedName(e.target.value)}
+              placeholder={expectedName}
+              autoComplete="off"
+              className="w-full rounded-md border border-border bg-background px-2.5 py-1.5 text-[13px] placeholder:text-muted-foreground/40 focus:outline-none focus:border-primary/50 focus:ring-2 focus:ring-primary/20"
+            />
+          </div>
+
+          <label className="flex items-start gap-2 cursor-pointer select-none">
+            <input
+              type="checkbox"
+              checked={confirmed}
+              onChange={(e) => setConfirmed(e.target.checked)}
+              className="mt-0.5 accent-primary"
+            />
+            <span className="text-[11px] text-muted-foreground leading-snug">
+              I agree to the terms of this offer and every companion
+              document generated for it. My typed name above is my
+              electronic signature under the ESIGN Act.
+            </span>
+          </label>
+
+          {error && (
+            <p className="rounded-md border border-red-500/30 bg-red-500/10 px-2 py-1.5 text-[11px] text-red-200">
+              {error}
+            </p>
+          )}
+
+          <button
+            type="button"
+            onClick={sign}
+            disabled={!canSign}
+            className="flex h-8 items-center gap-1.5 rounded-md bg-primary px-3 text-[11.5px] font-semibold text-primary-foreground hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {signing ? (
+              <Loader2 className="h-3 w-3 animate-spin" />
+            ) : (
+              <PenLine className="h-3 w-3" />
+            )}
+            Sign offer + companion docs
+          </button>
+        </div>
       )}
     </Row>
   );
