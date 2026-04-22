@@ -585,7 +585,7 @@ async function spawnOnboarding(
           (tpl.error.message || "").toLowerCase().includes("does not exist")) {
         return {
           ok: false,
-          note: "Onboarding not spawned — run migrations/onboarding_init.sql first.",
+          note: "Onboarding not spawned — run migrations/onboarding.sql in Supabase first.",
         };
       }
       return { ok: false, note: `Onboarding template lookup failed: ${tpl.error.message}` };

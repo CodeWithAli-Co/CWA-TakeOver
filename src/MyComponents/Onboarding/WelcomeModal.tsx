@@ -4,8 +4,16 @@
  * Fires once per user (tracked via localStorage key
  * `cwa-welcomed-<supa_id>`). Shown when:
  *   1. The user is signed in
- *   2. Their app_users row was created recently (within 14 days)
+ *   2. Either (a) they have an active onboarding_instance — meaning
+ *      leadership has explicitly assigned them a checklist — OR (b)
+ *      their app_users row was created recently (14-day fallback for
+ *      hires whose onboarding hasn't been provisioned yet).
  *   3. They haven't been welcomed on this device
+ *
+ * Gating by onboarding_instance rather than created_at alone means
+ * admins testing the flow with their own account won't be blocked
+ * just because their account is old — as long as someone assigned
+ * them an onboarding to rehearse, they'll see the modal.
  *
  * Content: greeting, pointers to what to do next, CTA to their
  * onboarding checklist. No pep-talk, no corporate "Your journey
@@ -20,6 +28,7 @@ import {
   ClipboardCheck, MessageSquare, User, X, ArrowRight, Sparkles,
 } from "lucide-react";
 import { useNavigate } from "@tanstack/react-router";
+import supabase from "@/MyComponents/supabase";
 import { ActiveUser } from "@/stores/query";
 
 const RECENT_USER_WINDOW_MS = 14 * 24 * 60 * 60 * 1000; // 14 days
@@ -38,13 +47,38 @@ export function WelcomeModal() {
       if (window.localStorage.getItem(key) === "1") return;
     } catch { /* noop */ }
 
-    // Only show for recently-created accounts. Prevents existing
-    // users from seeing the welcome if they clear localStorage on
-    // some future device — they're clearly not new hires.
-    const createdAt = me.created_at ? Date.parse(me.created_at) : 0;
-    if (!createdAt || Date.now() - createdAt > RECENT_USER_WINDOW_MS) return;
+    let cancelled = false;
 
-    setOpen(true);
+    (async () => {
+      // Primary gate: does this user have an ACTIVE onboarding
+      // instance? RLS narrows the query to the caller's own rows.
+      // If yes, they're clearly a hire in progress — welcome them.
+      const { data: inst, error } = await supabase
+        .from("onboarding_instances")
+        .select("id")
+        .eq("employee_user_id", me.supa_id)
+        .eq("status", "active")
+        .limit(1)
+        .maybeSingle();
+      if (cancelled) return;
+
+      const hasActiveOnboarding = !error && !!inst;
+
+      if (hasActiveOnboarding) {
+        setOpen(true);
+        return;
+      }
+
+      // Fallback: recently-created account without a provisioned
+      // onboarding yet. Keeps the welcome reachable on day one while
+      // leadership is still wiring up their checklist.
+      const createdAt = me.created_at ? Date.parse(me.created_at) : 0;
+      if (createdAt && Date.now() - createdAt <= RECENT_USER_WINDOW_MS) {
+        setOpen(true);
+      }
+    })();
+
+    return () => { cancelled = true; };
   }, [me?.supa_id, me?.created_at]);
 
   const dismiss = (gotoOnboarding: boolean) => {
