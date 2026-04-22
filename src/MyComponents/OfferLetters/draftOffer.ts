@@ -8,6 +8,8 @@
  * the Axon brain already uses for desktop-app calls.
  */
 
+import { sanitizeLegalDraft } from "./draftCompanion";
+
 const API_URL = "https://api.anthropic.com/v1/messages";
 const MODEL = "claude-sonnet-4-5";
 
@@ -82,8 +84,12 @@ Requirements — include ALL of these, in this order, in the letter body:
 11. At-will employment clause — EXACT phrasing for W-2: "Your employment with {employer} is at-will, meaning either you or the Company may terminate the employment relationship at any time, with or without cause, and with or without notice." (Skip for 1099 — instead say the agreement can be terminated per its terms by either party.) Montana residents: soften to "subject to Montana's Wrongful Discharge from Employment Act."
 12. Confidentiality + IP: one line saying the candidate will be asked to sign a separate Confidentiality and Invention Assignment Agreement as a condition of employment.
 13. Offer expiration: "This offer expires on {offerExpiresAt}."
-14. Acceptance: close with a line inviting the candidate to sign below to accept, and include signature blocks for both employer (signer name + title) and candidate (printed name + signature + date).
-15. Signature block at the end with the employer signer's name and title, then blank candidate signature / date lines.
+14. Closing: a warm closing paragraph inviting the candidate to review and respond. Mention that the offer is signed electronically — both the employer and candidate will sign online.
+
+CRITICAL OUTPUT RULES:
+- Do NOT include any signature block, signature lines, "Name:", "Title:", "Date:", or blank underscore lines at the bottom of the letter. The PDF template renders the employer's typed signature and the candidate's signature line separately, and a second set of signature lines in the prose would be duplicated in the final artifact.
+- Do NOT use runs of underscores or escaped underscores anywhere.
+- End the letter with the closing paragraph (item 14) and the standard sign-off (e.g., "Warm regards," followed by the employer's name and title). Nothing after that.
 
 Tone: warm but formal. Short paragraphs. No markdown. No emoji. No headings — the letter reads as continuous prose with paragraph breaks. Do NOT include legal advice disclaimers in the letter body (those live in the UI around it, not inside the letter itself). Do NOT invent benefits or terms not provided.
 
@@ -200,9 +206,12 @@ export async function draftOfferLetter(
     const block = Array.isArray(j?.content)
       ? j.content.find((b: any) => b?.type === "text")
       : null;
-    const text = (block?.text || "").trim();
-    if (!text) return { ok: false, error: "Empty response from Claude." };
-    return { ok: true, text };
+    const rawText = (block?.text || "").trim();
+    if (!rawText) return { ok: false, error: "Empty response from Claude." };
+    // Defense-in-depth: strip any signature/exhibit/underscore
+    // artifacts if Claude regresses to boilerplate. The PDF template
+    // owns the actual signature rendering.
+    return { ok: true, text: sanitizeLegalDraft(rawText) };
   } catch (err) {
     return {
       ok: false,

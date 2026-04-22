@@ -25,27 +25,46 @@ export type CompanionDocType =
 
 // ── System prompts, one per doc ─────────────────────────────────────
 
-const PROMPT_ICA = `You are drafting a US INDEPENDENT CONTRACTOR AGREEMENT for a small LLC. Output plain-prose legal text with numbered section headers (1., 2., etc.) — NOT markdown. This is a first draft the founder will have an attorney review before sending.
+// House rules every prompt inherits. Keeps the signature/exhibit
+// handling consistent across docs and prevents Claude from
+// generating the underscore-filled paper-signing placeholders that
+// look like "\_\_\_\_\_\_" when rendered as Markdown.
+const DOC_HOUSE_RULES = `CRITICAL OUTPUT RULES — follow these exactly:
+
+1. Do NOT include any signature block, signature page, signature lines, "IN WITNESS WHEREOF" section, "Name:" / "Title:" / "Date:" fields, or anything that resembles a paper-signing layout. The document will be signed electronically by a separate system that stamps the typed signatures and timestamps as legal metadata — a printed signature area in the body is redundant and will render incorrectly.
+
+2. Do NOT include Exhibits, Schedules, Appendices, or Attachments with blank fill-in areas. If an exhibit would be empty or require the signer to write something in, omit it entirely. If an exhibit has real content derivable from the inputs, include it as a numbered section of the main document instead.
+
+3. Do NOT use runs of underscores ("____"), dashes ("----"), or any blank-line markers for signatures, initials, or fill-ins ANYWHERE in the document. This breaks the Markdown renderer.
+
+4. End the document at the last substantive numbered section (typically General Provisions). After that section, add ONE short closing line: "This Agreement is executed electronically by both Parties as of the date each Party's typed signature is recorded." and nothing else.
+
+5. Plain prose with numbered section headers (1., 2., 3., ...). No Markdown syntax — no **bold**, no # headings, no bullet characters. Paragraph breaks between sections are fine.`;
+
+const PROMPT_ICA = `You are drafting a US INDEPENDENT CONTRACTOR AGREEMENT for a small LLC. This is a first draft the founder will have an attorney review before sending.
+
+${DOC_HOUSE_RULES}
 
 Required sections in this order:
 
 1. Parties — identify the Company (employer legal name) and the Contractor (candidate) with addresses.
 2. Services — describe the work the Contractor will perform. Reference the attached offer letter or job description.
-3. Term — start date; the Agreement continues until terminated per Section 10.
+3. Term — start date; the Agreement continues until terminated per the Termination section.
 4. Compensation — for commission-only: state the commission rate, basis, payment timing, and when earned. For TBD: state that compensation will be finalized in a written addendum signed by both parties before any commission period. Contractor invoices the Company on the agreed pay schedule.
-5. Independent Contractor Status — explicit declaration that Contractor is NOT an employee, partner, or agent; is responsible for all federal + state + local taxes; provides own tools and sets own hours; and is free to perform services for others. Include a sentence that neither party will hold out the other as anything other than independent contracting parties.
+5. Independent Contractor Status — explicit declaration that Contractor is NOT an employee, partner, or agent; is responsible for all federal + state + local taxes; provides own tools and sets own hours; and is free to perform services for others.
 6. Confidential Information — Contractor will receive confidential info and agrees to keep it confidential during and after the engagement. Define Confidential Information broadly. Standard carve-outs: publicly known, independently developed, required by law.
-7. Intellectual Property — all Work Product created by Contractor in the performance of Services is "work made for hire" under US copyright law and, to the extent not, is hereby assigned to the Company. Contractor waives moral rights to the extent permitted. Contractor represents prior inventions are listed in Exhibit A (or none if blank).
-8. Non-Solicitation — during the Term and for 12 months after, Contractor will not solicit the Company's employees or customers for a competing purpose. (Keep mild — non-competes are unenforceable in California and under federal scrutiny.)
+7. Intellectual Property — all Work Product created by Contractor in the performance of Services is "work made for hire" under US copyright law and, to the extent not, is hereby assigned to the Company. Contractor waives moral rights to the extent permitted.
+8. Non-Solicitation — during the Term and for 12 months after, Contractor will not solicit the Company's employees or customers for a competing purpose.
 9. Representations + Warranties — each party has authority to enter; Contractor will perform in a professional manner; work will not infringe third-party IP; no prior obligations conflict.
-10. Termination — either party may terminate with 14 days written notice. Company may terminate immediately for material breach. Surviving sections: 5 Confidentiality, 6 IP, 7 Non-Solicitation, 10 Indemnification, 12 General.
-11. Indemnification — Contractor indemnifies Company against claims arising from Contractor's negligence, willful misconduct, or breach. Mutual for the Company in its own capacity.
-12. General Provisions — governing law = State (from employer_state); entire agreement; amendments in writing; severability; assignment requires written consent; counterparts.
-13. Signatures — Company by {employer_signer_name}, {employer_signer_title}; Contractor by {candidate_name}. Date lines.
+10. Termination — either party may terminate with 14 days written notice. Company may terminate immediately for material breach.
+11. Indemnification — Contractor indemnifies Company against claims arising from Contractor's negligence, willful misconduct, or breach.
+12. General Provisions — governing law = State (from employer_state); entire agreement; amendments in writing; severability; assignment requires written consent.
 
-Tone: formal. No markdown, no headings beyond the numbered sections. Paragraph breaks between sections. Do not invent obligations not implied by the inputs. Output ONLY the agreement text.`;
+End with the single electronic-execution closing line per rule 4. Do not invent obligations not implied by the inputs. Output ONLY the agreement text.`;
 
-const PROMPT_EMPLOYMENT = `You are drafting a US EMPLOYMENT AGREEMENT for a W-2 employee of a small LLC. Output plain-prose legal text with numbered section headers (1., 2., etc.) — NOT markdown. First draft; founder will have an attorney review.
+const PROMPT_EMPLOYMENT = `You are drafting a US EMPLOYMENT AGREEMENT for a W-2 employee of a small LLC. First draft; founder will have an attorney review.
+
+${DOC_HOUSE_RULES}
 
 Required sections in this order:
 
@@ -55,34 +74,36 @@ Required sections in this order:
 4. Compensation — base salary OR hourly rate with schedule. If commission component, describe per the offer-letter terms or reference an addendum. FLSA exempt vs non-exempt status stated explicitly; if non-exempt, mention overtime eligibility.
 5. Benefits — list only what's in the benefits array. If empty, state the role does not currently include company-sponsored benefits.
 6. Confidentiality — standard mutual non-disclosure obligation, survives termination.
-7. Intellectual Property Assignment — all work product created within the scope of employment is assigned to the Company; prior inventions listed in Exhibit A if any.
-8. Non-Solicitation — 12 months post-termination, no soliciting of Company employees or material customers for a competing venture. No non-compete (state-dependent; safer to omit).
+7. Intellectual Property Assignment — all work product created within the scope of employment is assigned to the Company.
+8. Non-Solicitation — 12 months post-termination, no soliciting of Company employees or material customers for a competing venture. No non-compete.
 9. Background Check + I-9 — offer is contingent on I-9 employment eligibility verification and (if listed) a background check.
-10. Termination — at-will applies; on termination Employee returns all Company property, final wages paid per applicable state law, survival of Sections 6, 7, 8.
-11. General Provisions — governing law, entire agreement, amendments in writing, severability, assignment, counterparts.
-12. Signatures — Company authorized signer + Employee. Date lines.
+10. Termination — at-will applies; on termination Employee returns all Company property, final wages paid per applicable state law.
+11. General Provisions — governing law, entire agreement, amendments in writing, severability, assignment.
 
-Tone: formal. Paragraph breaks between sections. Do not invent benefits or clauses. Output ONLY the agreement text.`;
+End with the single electronic-execution closing line per rule 4. Do not invent benefits or clauses. Output ONLY the agreement text.`;
 
-const PROMPT_NDA = `You are drafting a MUTUAL NON-DISCLOSURE AGREEMENT (NDA) for a small LLC engaging a new hire. Output plain-prose legal text with numbered section headers. First draft; attorney review required.
+const PROMPT_NDA = `You are drafting a MUTUAL NON-DISCLOSURE AGREEMENT (NDA) for a small LLC engaging a new hire. First draft; attorney review required.
+
+${DOC_HOUSE_RULES}
 
 Required sections:
 
 1. Parties — Company + Individual identified.
 2. Purpose — evaluating and engaging in an employment or contracting relationship.
-3. Definition of Confidential Information — broad: technical, business, financial, customer, product info disclosed in any form. Include "Company Information" and "Personal Information of Others" categories. Mark whether marked "confidential" or obviously sensitive.
+3. Definition of Confidential Information — broad: technical, business, financial, customer, product info disclosed in any form. Include "Company Information" and "Personal Information of Others" categories.
 4. Obligations — recipient must (a) hold in confidence, (b) use only for the Purpose, (c) limit access to people with need-to-know bound by similar obligations, (d) protect with at least reasonable care.
 5. Exclusions — info that is publicly known, independently developed, rightfully received from a third party, or required to be disclosed by law (with notice).
 6. Term — confidentiality obligations survive for 3 years after termination of the relationship; trade secrets protected indefinitely per applicable law.
 7. Return of Materials — on request or termination, recipient returns or destroys all Confidential Information.
 8. Remedies — money damages may be inadequate; each party entitled to seek injunctive relief.
 9. No License — disclosure does not grant any license or ownership.
-10. General Provisions — governing law, entire agreement re confidentiality, amendments in writing, severability, counterparts.
-11. Signatures — both parties.
+10. General Provisions — governing law, entire agreement re confidentiality, amendments in writing, severability.
 
-Tone: formal. Output ONLY the agreement text.`;
+End with the single electronic-execution closing line per rule 4. Output ONLY the agreement text.`;
 
-const PROMPT_IP_ASSIGNMENT = `You are drafting an INVENTION ASSIGNMENT AGREEMENT (also called Proprietary Information and Inventions Agreement, PIIA) for a small LLC. Output plain-prose legal text with numbered section headers. First draft; attorney review required.
+const PROMPT_IP_ASSIGNMENT = `You are drafting an INVENTION ASSIGNMENT AGREEMENT (also called Proprietary Information and Inventions Agreement, PIIA) for a small LLC. First draft; attorney review required.
+
+${DOC_HOUSE_RULES}
 
 Required sections:
 
@@ -90,15 +111,14 @@ Required sections:
 2. Recitals — Individual is being engaged; Company is relying on Individual assigning rights to Work Product.
 3. Definitions — "Work Product" means all inventions, discoveries, designs, software, content, improvements, trade secrets, trademarks, and other intellectual property created in connection with the engagement.
 4. Assignment — Individual assigns to Company all right, title, and interest in Work Product. To the extent such Work is not "work made for hire" under US copyright law, Individual hereby assigns it. Individual waives moral rights to the extent permitted.
-5. Prior Inventions — Individual represents that prior inventions owned by Individual and excluded from assignment are listed in Exhibit A. If Exhibit A is blank, Individual represents there are none. (In California, reference Labor Code §2870 — inventions developed entirely on Individual's own time without Company resources and unrelated to Company's business are NOT assignable.)
+5. Prior Inventions — Individual represents that, by entering this Agreement, Individual is not bringing any prior inventions owned by Individual that would be inconsistent with this assignment. Any such prior inventions must be disclosed in writing to the Company before the effective date of this Agreement; failing that, Individual represents there are none. (In California, reference Labor Code §2870 — inventions developed entirely on Individual's own time without Company resources and unrelated to Company's business are NOT assignable.) DO NOT include an Exhibit A or any blank-fill list.
 6. Cooperation — Individual will sign any further papers reasonably necessary to perfect the assignment, including patent applications, at Company's expense.
 7. Third-Party Rights — Individual represents Work Product does not infringe third-party IP and discloses any third-party components used.
 8. Confidentiality — reaffirms confidentiality of Work Product and Company information.
 9. Term + Survival — the assignment is perpetual; confidentiality survives termination.
-10. General Provisions — governing law, entire agreement re IP, severability, counterparts.
-11. Signatures — both parties.
+10. General Provisions — governing law, entire agreement re IP, severability.
 
-Tone: formal. Output ONLY the agreement text.`;
+End with the single electronic-execution closing line per rule 4. Output ONLY the agreement text.`;
 
 function systemFor(docType: CompanionDocType): string {
   switch (docType) {
@@ -200,6 +220,54 @@ function buildUserMessage(input: OfferInput, docType: CompanionDocType): string 
   return lines.join("\n");
 }
 
+/**
+ * Defense-in-depth cleanup on the Claude output.
+ *
+ * Even with explicit instructions to skip signature blocks +
+ * exhibits, models occasionally regress to boilerplate patterns
+ * they've seen millions of times in legal corpora. This strips
+ * the fallout:
+ *
+ * 1. Runs of escaped underscores (`\_\_\_\_\_`) → literal underscore
+ *    or removed entirely if they're signature/date lines.
+ * 2. Runs of plain underscores (`______`) used for fill-ins.
+ * 3. Trailing "## SIGNATURES", "## EXHIBIT A", etc. sections.
+ * 4. "IN WITNESS WHEREOF" preamble lines.
+ * 5. `**Name:**`, `**Title:**`, `**Date:**` paper-signing labels.
+ */
+export function sanitizeLegalDraft(raw: string): string {
+  let text = raw;
+
+  // 1. Cut everything from the first signature-ish heading onward.
+  //    Regex covers: "SIGNATURES", "IN WITNESS WHEREOF",
+  //    "EXHIBIT A/B/C", "SCHEDULE A/B/C", "APPENDIX A/B/C".
+  const trailingSectionRe =
+    /(^|\n)\s*(?:#+\s*)?(?:\d+\.\s*)?(SIGNATURES?|IN WITNESS WHEREOF|EXHIBIT [A-Z]|SCHEDULE [A-Z]|APPENDIX [A-Z])\b[\s\S]*$/i;
+  text = text.replace(trailingSectionRe, "");
+
+  // 2. Remove any surviving line that's JUST underscores, backslash-
+  //    underscores, or whitespace (a fill-in line).
+  text = text.replace(
+    /^[ \t]*(?:[\\]?_[ \t]*){3,}$/gm,
+    "",
+  );
+
+  // 3. Remove "**Name:** ___", "**Date:** ___" and plain variants.
+  text = text.replace(
+    /^[ \t]*\*{0,2}(?:Name|Title|Date|By|Signature)\*{0,2}:?[ \t]*(?:[\\]?_[ \t]*){0,}$/gim,
+    "",
+  );
+
+  // 4. Unescape any remaining `\_` in-line (single underscores that
+  //    got escaped but aren't signature lines).
+  text = text.replace(/\\_/g, "_");
+
+  // 5. Collapse runs of 3+ blank lines that the cuts left behind.
+  text = text.replace(/\n{3,}/g, "\n\n");
+
+  return text.trim();
+}
+
 export async function draftCompanion(
   input: OfferInput,
   docType: CompanionDocType,
@@ -236,9 +304,9 @@ export async function draftCompanion(
     const block = Array.isArray(j?.content)
       ? j.content.find((b: any) => b?.type === "text")
       : null;
-    const text = (block?.text || "").trim();
-    if (!text) return { ok: false, error: "Empty response from Claude." };
-    return { ok: true, text };
+    const rawText = (block?.text || "").trim();
+    if (!rawText) return { ok: false, error: "Empty response from Claude." };
+    return { ok: true, text: sanitizeLegalDraft(rawText) };
   } catch (err) {
     return {
       ok: false,
