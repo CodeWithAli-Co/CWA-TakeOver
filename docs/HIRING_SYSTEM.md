@@ -378,6 +378,47 @@ screen, they still get the full signed package.
 
 ---
 
+## 6b. The Acceptance Receipt (shareable proof)
+
+Every offer has a public, read-only receipt page at
+`/offer/receipt/[token]` on the cwa_takeover website. Same token
+as the accept page, same RLS security model — the unguessable
+token in the URL is the only credential.
+
+What the receipt shows:
+
+- Status ribbon (accepted / declined / awaiting response)
+- Candidate + employer identity blocks
+- Both typed signatures in italic script with exact timestamps
+- Every document card (offer + each companion) with its signed
+  state, per-doc counter-signature, and expandable full text body
+- Verification footer: offer ID, token fingerprint, emailed-at,
+  accepted-at, receipt-generated-at
+- ESIGN Act legal footnote
+
+Two ways to use it:
+
+- **CEO side**: In `HiringActions` → Signing record row → "Open
+  receipt" button. Launches the page in the user's default browser
+  (uses the Tauri shell plugin when installed, falls back to
+  `window.open`). "Copy link" button copies the URL for sharing.
+- **Candidate side**: Same URL they can bookmark from the accept
+  page's "Save a copy" link. Serves as their personal permanent
+  record of the offer acceptance.
+
+The receipt is print-friendly — Cmd/Ctrl+P renders a clean paged
+document with collapsed bodies auto-expanded, screen chrome
+hidden. Save-as-PDF gives you a self-contained artifact any time
+you need one. No Supabase Storage, no cron, no service-role keys.
+
+Why a live page instead of a frozen PDF snapshot: the receipt
+reflects current DB state every time it loads, so if counter-sig
+timestamps or any metadata is ever updated the receipt always
+shows accurate truth. For a frozen copy, print-to-PDF produces
+one on demand.
+
+---
+
 ## 7. Proof of signature — back in Takeover
 
 `SignatureRecordRow` in `HiringActions.tsx`.
@@ -562,15 +603,15 @@ table is the actual security layer.
 
 ## 10. What the system DOESN'T do (yet)
 
-- **Final-PDF archival** to Supabase Storage for compliance. Right
-  now the canonical record lives in the DB (signed_name +
-  signed_at) plus whatever the candidate saved to their disk. A
-  periodic job could assemble a timestamped PDF and dump it in a
-  private bucket.
 - **DocuSign escalation** for higher-stakes roles. Typed-name
   signatures are legally binding under ESIGN for employment + 1099
   relationships in the US; for real-estate or financial-instrument
   signings, integrate a heavier provider.
+- **Automatic Supabase Storage archival** of a frozen PDF snapshot
+  per offer. Intentionally skipped — the Acceptance Receipt page
+  renders the full signed package on demand from live DB state,
+  which is sufficient proof for our scale. Revisit if audit
+  requirements ever need immutable file-level storage (e.g., SOC 2).
 
 ---
 

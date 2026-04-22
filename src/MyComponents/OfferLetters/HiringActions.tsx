@@ -12,7 +12,7 @@ import { useEffect, useState } from "react";
 import {
   Link2, Mail, FilePlus2, UserPlus, Loader2, Check, Copy,
   AlertTriangle, Download, Sparkles, X, ShieldCheck, FileSignature,
-  PenLine,
+  PenLine, Receipt, ExternalLink,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import supabase from "@/MyComponents/supabase";
@@ -136,6 +136,17 @@ function buildAcceptUrl(token: string): string {
   const base = siteUrl?.replace(/\/+$/, "")
     ?? (typeof window !== "undefined" ? window.location.origin : "");
   return `${base}/offer/accept/${token}`;
+}
+
+function buildReceiptUrl(token: string): string {
+  // Same host as the accept page, different route. The receipt page
+  // is a read-only polished view of the signed offer + timestamps
+  // that serves as shareable proof of acceptance for both the
+  // candidate and the employer.
+  const siteUrl = import.meta.env.VITE_TAKEOVER_SITE_URL as string | undefined;
+  const base = siteUrl?.replace(/\/+$/, "")
+    ?? (typeof window !== "undefined" ? window.location.origin : "");
+  return `${base}/offer/receipt/${token}`;
 }
 
 // ── 2. Send the offer by email ─────────────────────────────────────
@@ -1252,23 +1263,30 @@ function SignatureRecordRow({ current }: { current: CurrentOffer }) {
           )}
 
           {/* Actions */}
-          <div className="flex items-center gap-2 pt-1">
+          <div className="flex items-center gap-2 pt-1 flex-wrap">
+            {/* Primary: open the polished receipt page in the user's
+                default browser. That page is shareable, printable,
+                and has the full document bodies inline. */}
+            <OpenReceiptButton current={current} />
+            <CopyReceiptLinkButton current={current} />
             <button
               type="button"
               onClick={copyReceipt}
               className="flex h-8 items-center gap-1 rounded-md border border-border bg-background px-2 text-[11px] font-medium hover:border-primary/40"
+              title="Copy a plain-text summary to the clipboard"
             >
               {copyState === "copied" ? (
                 <Check className="h-3 w-3 text-emerald-400" />
               ) : (
                 <Copy className="h-3 w-3" />
               )}
-              {copyState === "copied" ? "Copied" : "Copy receipt"}
+              {copyState === "copied" ? "Copied" : "Copy text summary"}
             </button>
             <button
               type="button"
               onClick={downloadReceipt}
               className="flex h-8 items-center gap-1 rounded-md border border-border bg-background px-2 text-[11px] font-medium hover:border-primary/40"
+              title="Download the plain-text summary as a .txt file"
             >
               <Download className="h-3 w-3" />
               Save .txt
@@ -1277,6 +1295,66 @@ function SignatureRecordRow({ current }: { current: CurrentOffer }) {
         </div>
       )}
     </Row>
+  );
+}
+
+// ── Open receipt / Copy link helpers ───────────────────────────────
+// Pulled into their own components so the copy-state bookkeeping stays
+// scoped and doesn't get tangled with the text-summary copy state
+// inside SignatureRecordRow.
+
+function OpenReceiptButton({ current }: { current: CurrentOffer }) {
+  const open = async () => {
+    const url = buildReceiptUrl(current.acceptance_token);
+    // Prefer the Tauri shell plugin if installed — opens in the
+    // user's actual default browser rather than spawning a webview.
+    // Gracefully falls back to window.open if the plugin isn't
+    // available (dev environment or older Tauri build).
+    try {
+      const shell = await import("@tauri-apps/plugin-shell").catch(() => null);
+      if (shell?.open) {
+        await shell.open(url);
+        return;
+      }
+    } catch { /* noop */ }
+    try {
+      window.open(url, "_blank", "noopener,noreferrer");
+    } catch { /* noop */ }
+  };
+  return (
+    <button
+      type="button"
+      onClick={open}
+      className="flex h-8 items-center gap-1 rounded-md bg-primary px-2.5 text-[11px] font-semibold text-primary-foreground hover:bg-primary/90"
+      title="Open the shareable receipt page in your default browser"
+    >
+      <Receipt className="h-3 w-3" />
+      Open receipt
+      <ExternalLink className="h-3 w-3 opacity-70" />
+    </button>
+  );
+}
+
+function CopyReceiptLinkButton({ current }: { current: CurrentOffer }) {
+  const [copied, setCopied] = useState(false);
+  const copy = async () => {
+    const url = buildReceiptUrl(current.acceptance_token);
+    try {
+      await navigator.clipboard.writeText(url);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1400);
+    } catch { /* noop */ }
+  };
+  return (
+    <button
+      type="button"
+      onClick={copy}
+      className="flex h-8 items-center gap-1 rounded-md border border-border bg-background px-2 text-[11px] font-medium hover:border-primary/40"
+      title="Copy a shareable URL to the receipt page"
+    >
+      {copied ? <Check className="h-3 w-3 text-emerald-400" /> : <Link2 className="h-3 w-3" />}
+      {copied ? "Copied link" : "Copy link"}
+    </button>
   );
 }
 
