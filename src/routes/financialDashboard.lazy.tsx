@@ -15,7 +15,7 @@
 
 import React, { useState, useEffect, useMemo } from "react";
 import { createLazyFileRoute } from "@tanstack/react-router";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion } from "framer-motion";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   AreaChart, Area, BarChart, Bar, PieChart, Pie, Cell,
@@ -24,15 +24,14 @@ import {
 } from "recharts";
 import {
   RefreshCcw, TrendingUp, TrendingDown, DollarSign, Wallet,
-  CreditCard, ChevronDown, ChevronUp, Receipt, Activity,
+  CreditCard, Receipt, Activity,
   BarChart3, Building2, FileBarChart, Download,
-  Flame, Gauge, AlertTriangle,
+  Flame, Gauge, AlertTriangle, Sparkles,
 } from "lucide-react";
 import { AllInvoices, InvoiceType } from "@/stores/invoiceQuery";
 import supabase from "@/MyComponents/supabase";
 import { FinancialProvider } from "@/MyComponents/Financial/FinancialContext";
-import FinancialModeler from "@/MyComponents/Financial/FinancialModeler";
-import FinancialProjections from "@/MyComponents/Financial/FinancialProjections";
+import ModelerBentoView from "@/MyComponents/Financial/ModelerBentoView";
 import { EXPENSE_COLORS, REVENUE_COLORS } from "@/stores/FinancialConstants";
 
 // ════════════════════════════════════════════
@@ -133,9 +132,18 @@ const OverviewTabImpl: React.FC<{
   const netProfit = totalRevenueFromCategories - expenseTotal;
 
   return (
-    <div className="space-y-4">
-      {/* Metrics Strip */}
-      <div className="bg-card border border-border rounded-sm overflow-hidden">
+    // ════════════════════════════════════════════
+    // BENTO LAYOUT — 12-col grid with varied row splits so each tile earns
+    // its real estate. Row heights are not forced, but h-full on each tile
+    // keeps siblings within a row aligned.
+    //
+    //   Row 1 (12): KPI strip (single card, 5 metric cells)
+    //   Row 2:      Invoice Revenue (8) · Invoice Volume (4)
+    //   Row 3:      Revenue Sources (4) · Expense Breakdown (4) · Recent Transactions (4)
+    // ════════════════════════════════════════════
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-12 gap-4">
+      {/* ROW 1 — KPI strip spans full width */}
+      <div className="col-span-1 md:col-span-2 lg:col-span-12 bg-card border border-border rounded-sm overflow-hidden">
         <div className="flex">
           <MetricCell icon={<Wallet className="h-3 w-3" />} label="Bank" value={`$${bankBalance.toLocaleString()}`} />
           <MetricCell icon={<TrendingUp className="h-3 w-3" />} label="Revenue (annual)" value={`$${totalRevenueFromCategories.toLocaleString()}`} />
@@ -145,9 +153,8 @@ const OverviewTabImpl: React.FC<{
         </div>
       </div>
 
-      {/* Charts row 1 */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        <div className="bg-card border border-border rounded-sm p-5">
+      {/* ROW 2 — Invoice Revenue (8) + Invoice Volume (4) */}
+      <div className="col-span-1 md:col-span-2 lg:col-span-8 bg-card border border-border rounded-sm p-5">
           <div className="flex items-center justify-between mb-4">
             <div>
               <p className="text-[11px] text-muted-foreground/40 uppercase tracking-[0.15em] font-medium">Invoice Revenue</p>
@@ -183,36 +190,34 @@ const OverviewTabImpl: React.FC<{
           </div>
         </div>
 
-        <div className="bg-card border border-border rounded-sm p-5">
-          <div className="flex items-center justify-between mb-4">
-            <div>
-              <p className="text-[11px] text-muted-foreground/40 uppercase tracking-[0.15em] font-medium">Invoice Volume</p>
-              <p className="text-[11px] text-muted-foreground mt-0.5">Last 6 months · all invoices</p>
-            </div>
-            <span className="text-[18px] font-bold text-foreground">{invoices.length}</span>
+      <div className="col-span-1 md:col-span-2 lg:col-span-4 bg-card border border-border rounded-sm p-5">
+        <div className="flex items-center justify-between mb-4">
+          <div>
+            <p className="text-[11px] text-muted-foreground/40 uppercase tracking-[0.15em] font-medium">Invoice Volume</p>
+            <p className="text-[11px] text-muted-foreground mt-0.5">Last 6 months · all invoices</p>
           </div>
-          <div className="h-56">
-            {monthlyChartData.length > 0 ? (
-              <ResponsiveContainer>
-                <BarChart data={monthlyChartData}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.04)" />
-                  <XAxis dataKey="month" tick={{ fill: "rgba(255,255,255,0.3)", fontSize: 11 }} axisLine={false} tickLine={false} />
-                  <YAxis tick={{ fill: "rgba(255,255,255,0.3)", fontSize: 11 }} axisLine={false} tickLine={false} />
-                  <Tooltip contentStyle={{ backgroundColor: "#0a0a0a", border: "1px solid rgba(255,255,255,0.08)", borderRadius: "2px", fontSize: "12px" }} itemStyle={{ color: "#fff" }} />
-                  <Bar dataKey="count" fill="#ef4444" radius={[2, 2, 0, 0]} />
-                </BarChart>
-              </ResponsiveContainer>
-            ) : (
-              <div className="h-full flex items-center justify-center"><p className="text-[12px] text-muted-foreground/40">No invoice data yet</p></div>
-            )}
-          </div>
+          <span className="text-[18px] font-bold text-foreground">{invoices.length}</span>
+        </div>
+        <div className="h-56">
+          {monthlyChartData.length > 0 ? (
+            <ResponsiveContainer>
+              <BarChart data={monthlyChartData}>
+                <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.04)" />
+                <XAxis dataKey="month" tick={{ fill: "rgba(255,255,255,0.3)", fontSize: 11 }} axisLine={false} tickLine={false} />
+                <YAxis tick={{ fill: "rgba(255,255,255,0.3)", fontSize: 11 }} axisLine={false} tickLine={false} />
+                <Tooltip contentStyle={{ backgroundColor: "#0a0a0a", border: "1px solid rgba(255,255,255,0.08)", borderRadius: "2px", fontSize: "12px" }} itemStyle={{ color: "#fff" }} />
+                <Bar dataKey="count" fill="#ef4444" radius={[2, 2, 0, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          ) : (
+            <div className="h-full flex items-center justify-center"><p className="text-[12px] text-muted-foreground/40">No invoice data yet</p></div>
+          )}
         </div>
       </div>
 
-      {/* Charts row 2 — pies */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        <div className="bg-card border border-border rounded-sm p-5">
-          <p className="text-[11px] text-muted-foreground/40 uppercase tracking-[0.15em] font-medium mb-4">Revenue Sources</p>
+      {/* ROW 3 — Revenue Sources (4) + Expense Breakdown (4) + Recent Transactions (4) */}
+      <div className="col-span-1 md:col-span-1 lg:col-span-4 bg-card border border-border rounded-sm p-5">
+        <p className="text-[11px] text-muted-foreground/40 uppercase tracking-[0.15em] font-medium mb-4">Revenue Sources</p>
           {revenueByCategory.length > 0 ? (
             <div className="grid grid-cols-2 gap-3">
               <div className="h-48">
@@ -242,40 +247,41 @@ const OverviewTabImpl: React.FC<{
           )}
         </div>
 
-        <div className="bg-card border border-border rounded-sm p-5">
-          <p className="text-[11px] text-muted-foreground/40 uppercase tracking-[0.15em] font-medium mb-4">Expense Breakdown</p>
-          {expenseByCategory.length > 0 ? (
-            <div className="grid grid-cols-2 gap-3">
-              <div className="h-48">
-                <ResponsiveContainer>
-                  <PieChart>
-                    <Pie data={expenseByCategory} dataKey="value" cx="50%" cy="50%" innerRadius={36} outerRadius={70} stroke="none">
-                      {expenseByCategory.map((entry, i) => <Cell key={i} fill={EXPENSE_COLORS[entry.name] || "#ef4444"} />)}
-                    </Pie>
-                    <Tooltip contentStyle={{ backgroundColor: "#0a0a0a", border: "1px solid rgba(255,255,255,0.08)", borderRadius: "2px", fontSize: "12px" }} itemStyle={{ color: "#fff" }} formatter={(v: any) => [`$${Number(v).toLocaleString()}`, ""]} />
-                  </PieChart>
-                </ResponsiveContainer>
-              </div>
-              <div className="space-y-1.5 self-center">
-                {expenseByCategory.slice(0, 6).map((e) => (
-                  <div key={e.name} className="flex items-center justify-between text-[11px]">
-                    <div className="flex items-center gap-1.5">
-                      <div className="h-1.5 w-1.5 rounded-full" style={{ background: EXPENSE_COLORS[e.name] || "#ef4444" }} />
-                      <span className="text-muted-foreground/70 truncate">{e.name}</span>
-                    </div>
-                    <span className="text-foreground/60">${(e.value / 1000).toFixed(1)}k</span>
-                  </div>
-                ))}
-              </div>
+      <div className="col-span-1 md:col-span-1 lg:col-span-4 bg-card border border-border rounded-sm p-5">
+        <p className="text-[11px] text-muted-foreground/40 uppercase tracking-[0.15em] font-medium mb-4">Expense Breakdown</p>
+        {expenseByCategory.length > 0 ? (
+          <div className="grid grid-cols-2 gap-3">
+            <div className="h-48">
+              <ResponsiveContainer>
+                <PieChart>
+                  <Pie data={expenseByCategory} dataKey="value" cx="50%" cy="50%" innerRadius={36} outerRadius={70} stroke="none">
+                    {expenseByCategory.map((entry, i) => <Cell key={i} fill={EXPENSE_COLORS[entry.name] || "#ef4444"} />)}
+                  </Pie>
+                  <Tooltip contentStyle={{ backgroundColor: "#0a0a0a", border: "1px solid rgba(255,255,255,0.08)", borderRadius: "2px", fontSize: "12px" }} itemStyle={{ color: "#fff" }} formatter={(v: any) => [`$${Number(v).toLocaleString()}`, ""]} />
+                </PieChart>
+              </ResponsiveContainer>
             </div>
-          ) : (
-            <div className="h-48 flex items-center justify-center"><p className="text-[12px] text-muted-foreground/40">No expense data yet</p></div>
-          )}
-        </div>
+            <div className="space-y-1.5 self-center">
+              {expenseByCategory.slice(0, 6).map((e) => (
+                <div key={e.name} className="flex items-center justify-between text-[11px]">
+                  <div className="flex items-center gap-1.5">
+                    <div className="h-1.5 w-1.5 rounded-full" style={{ background: EXPENSE_COLORS[e.name] || "#ef4444" }} />
+                    <span className="text-muted-foreground/70 truncate">{e.name}</span>
+                  </div>
+                  <span className="text-foreground/60">${(e.value / 1000).toFixed(1)}k</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        ) : (
+          <div className="h-48 flex items-center justify-center"><p className="text-[12px] text-muted-foreground/40">No expense data yet</p></div>
+        )}
       </div>
 
-      {/* Recent Transactions */}
-      <div className="bg-card border border-border rounded-sm overflow-hidden">
+      {/* Recent Transactions — narrowed to col-span-4, top 5 invoices as
+          a simple stacked list (the 4-col table didn't fit a quarter-width
+          card). */}
+      <div className="col-span-1 md:col-span-2 lg:col-span-4 bg-card border border-border rounded-sm overflow-hidden">
         <div className="px-5 pt-4 pb-3 flex items-center justify-between border-b border-border">
           <div className="flex items-center gap-3">
             <div className="p-1.5 rounded-sm bg-muted/40"><Receipt className="h-3.5 w-3.5 text-primary/70" /></div>
@@ -284,22 +290,37 @@ const OverviewTabImpl: React.FC<{
               <p className="text-[11px] text-muted-foreground/60 mt-0.5">{invoices.length} total invoices</p>
             </div>
           </div>
-          <span className="text-[18px] font-bold text-foreground">${totalRevenue.toLocaleString()}</span>
+          <span className="text-[14px] font-bold text-foreground tabular-nums">${totalRevenue.toLocaleString()}</span>
         </div>
         <div>
-          <div className="grid grid-cols-[2fr_1.5fr_1fr_1fr] gap-4 px-5 py-2.5 border-b border-border text-[10px] text-muted-foreground/60 uppercase tracking-[0.15em]">
-            <span>Invoice</span><span>Client</span><span className="text-right">Amount</span><span className="text-right">Status</span>
-          </div>
           {invoices.length === 0 ? (
             <div className="py-12 text-center"><p className="text-[13px] text-muted-foreground/40">No invoices yet</p></div>
           ) : (
-            invoices.slice(0, 8).map((inv: InvoiceType, i) => (
-              <motion.div key={inv.invoice_id} initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: i * 0.03 }} className="grid grid-cols-[2fr_1.5fr_1fr_1fr] gap-4 items-center px-5 py-3 border-b border-white/[0.025] last:border-b-0 hover:bg-card transition-colors">
-                <span className="text-[13px] font-medium text-white/75 truncate">{inv.invoice_title}</span>
-                <span className="text-[12px] text-muted-foreground/70 truncate">{inv.client_name}</span>
-                <span className="text-[13px] font-medium text-right text-foreground/80">${Number(inv.outcome).toFixed(2)}</span>
-                <div className="flex justify-end">
-                  <span className={`text-[10px] uppercase tracking-wider px-2 py-0.5 rounded-sm border ${inv.status === "paid" ? "bg-emerald-500/[0.08] text-emerald-400 border-emerald-500/15" : "bg-primary/[0.08] text-primary border-primary/15"}`}>{inv.status}</span>
+            invoices.slice(0, 5).map((inv: InvoiceType, i) => (
+              <motion.div
+                key={inv.invoice_id}
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ delay: i * 0.03 }}
+                className="flex items-center gap-3 px-5 py-3 border-b border-white/[0.025] last:border-b-0 hover:bg-muted/20 transition-colors"
+              >
+                <div className="flex-1 min-w-0">
+                  <div className="text-[13px] font-medium text-white/80 truncate">{inv.invoice_title}</div>
+                  <div className="text-[11px] text-muted-foreground/60 truncate">{inv.client_name}</div>
+                </div>
+                <div className="shrink-0 flex flex-col items-end gap-0.5">
+                  <span className="text-[13px] font-semibold text-foreground/80 tabular-nums">
+                    ${Number(inv.outcome).toFixed(2)}
+                  </span>
+                  <span
+                    className={`text-[9px] uppercase tracking-wider px-1.5 py-0.5 rounded-sm border ${
+                      inv.status === "paid"
+                        ? "bg-emerald-500/[0.08] text-emerald-400 border-emerald-500/15"
+                        : "bg-primary/[0.08] text-primary border-primary/15"
+                    }`}
+                  >
+                    {inv.status}
+                  </span>
                 </div>
               </motion.div>
             ))
@@ -747,7 +768,6 @@ const FinancialDashboardContent: React.FC = () => {
   const [expenseTotal, setExpenseTotal] = useState(0);
   const [revenueByCategory, setRevenueByCategory] = useState<{ name: string; value: number }[]>([]);
   const [expenseByCategory, setExpenseByCategory] = useState<{ name: string; value: number }[]>([]);
-  const [showModeler, setShowModeler] = useState(false);
   const [tab, setTab] = useState("overview");
 
   // Load Supabase aggregates
@@ -843,6 +863,9 @@ const FinancialDashboardContent: React.FC = () => {
             <TabsTrigger value="reports" className="data-[state=active]:bg-primary/10 data-[state=active]:text-primary text-muted-foreground rounded-sm text-[12px] h-7 px-4">
               <FileBarChart className="h-3.5 w-3.5 mr-1.5" /> Reports
             </TabsTrigger>
+            <TabsTrigger value="modeler" className="data-[state=active]:bg-primary/10 data-[state=active]:text-primary text-muted-foreground rounded-sm text-[12px] h-7 px-4">
+              <Sparkles className="h-3.5 w-3.5 mr-1.5" /> Modeler
+            </TabsTrigger>
           </TabsList>
 
           <div className="pt-4 pb-10 space-y-4">
@@ -878,36 +901,17 @@ const FinancialDashboardContent: React.FC = () => {
             <TabsContent value="reports">
               <ReportsTab invoices={invoices} />
             </TabsContent>
+
+            {/* Scenario modeler lives in its own tab and is rendered as a
+                true bento grid — config inputs, KPI strip, charts, and
+                category breakdowns are all separate tiles instead of the
+                two giant stacked cards the old FinancialModeler +
+                FinancialProjections produced. */}
+            <TabsContent value="modeler">
+              <ModelerBentoView />
+            </TabsContent>
           </div>
         </Tabs>
-
-        {/* Modeler section (always visible at bottom) */}
-        <div className="space-y-4 pb-10">
-          <button
-            onClick={() => setShowModeler(!showModeler)}
-            className="w-full flex items-center justify-between px-5 py-3 bg-card border border-border hover:border-primary/15 rounded-sm transition-colors group"
-          >
-            <div className="flex items-center gap-3">
-              <div className="p-1.5 rounded-sm bg-primary/[0.08]">
-                <Activity className="h-3.5 w-3.5 text-primary" />
-              </div>
-              <div className="text-left">
-                <p className="text-[13px] font-medium text-foreground/80 group-hover:text-foreground transition-colors">Financial Modeler & Projections</p>
-                <p className="text-[11px] text-muted-foreground/60">Advanced scenario modeling and multi-year projections</p>
-              </div>
-            </div>
-            {showModeler ? <ChevronUp className="h-4 w-4 text-muted-foreground" /> : <ChevronDown className="h-4 w-4 text-muted-foreground" />}
-          </button>
-
-          <AnimatePresence>
-            {showModeler && (
-              <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className="space-y-4">
-                <FinancialModeler />
-                <FinancialProjections />
-              </motion.div>
-            )}
-          </AnimatePresence>
-        </div>
       </div>
     </div>
   );
