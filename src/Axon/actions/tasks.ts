@@ -7,10 +7,50 @@
 import supabase from "@/MyComponents/supabase";
 import type { AxonAction } from "../types";
 import { registerAction } from "./registry";
+import { registerUndoHandler } from "../engine/undoStack";
 
 function companyLabel(active: string): "CodeWithAli" | "simplicity" {
   return active === "simplicityFunds" ? "simplicity" : "CodeWithAli";
 }
+
+// ─── Persistable undo handlers ────────────────────────────────────
+// Registered once at module load. The `kind` strings are stable keys
+// that round-trip through localStorage alongside the serialized payload,
+// so "undo that" still works after a page reload.
+
+registerUndoHandler<{ todoId: number; title: string }>(
+  "task.delete-created",
+  async ({ todoId, title }) => {
+    const { error } = await supabase
+      .from("cwa_todos")
+      .delete()
+      .eq("todo_id", todoId);
+    if (error) throw new Error(error.message);
+    return `Reverted — deleted task "${title}".`;
+  },
+);
+
+registerUndoHandler<{
+  todoId: number;
+  title: string;
+  previousStatus: string;
+}>("task.restore-status", async ({ todoId, title, previousStatus }) => {
+  const { error } = await supabase
+    .from("cwa_todos")
+    .update({ status: previousStatus })
+    .eq("todo_id", todoId);
+  if (error) throw new Error(error.message);
+  return `Reverted "${title}" back to ${previousStatus}.`;
+});
+
+registerUndoHandler<{
+  snapshot: Record<string, unknown>;
+  title: string;
+}>("task.restore-deleted", async ({ snapshot, title }) => {
+  const { error } = await supabase.from("cwa_todos").insert(snapshot);
+  if (error) throw new Error(error.message);
+  return `Restored "${title}".`;
+});
 
 // Parse deadline from a natural phrase. Conservative — returns null if unsure.
 function parseDeadline(phrase: string | undefined): string | null {
@@ -166,18 +206,16 @@ export const createTaskAction: AxonAction<
       return { summary: `Failed to create task: ${error.message}` };
     }
 
-    // Register undo — delete the just-created row.
+    // Register undo — delete the just-created row. Descriptor-style so
+    // it survives a reload (resolved via the "task.delete-created"
+    // handler registered at module load).
     const createdId = data.todo_id;
     ctx.pushUndo({
       actionName: "create_task",
       label: `create of "${input.title}"`,
-      undo: async () => {
-        const { error: e2 } = await supabase
-          .from("cwa_todos")
-          .delete()
-          .eq("todo_id", createdId);
-        if (e2) throw new Error(e2.message);
-        return `Reverted — deleted task "${input.title}".`;
+      descriptor: {
+        kind: "task.delete-created",
+        payload: { todoId: createdId, title: input.title },
       },
     });
 
@@ -333,20 +371,18 @@ export const updateTaskStatusAction: AxonAction<
 
     if (error) return { summary: `Update failed: ${error.message}`, data: { matched: null } };
 
-    // Register undo — restore previous status.
-    if (previousStatus && previousStatus !== status) {
-      const restoreId = targetId;
-      const restoreStatus = previousStatus;
+    // Register undo — restore previous status (persists across reload).
+    if (previousStatus && previousStatus !== status && targetId != null) {
       ctx.pushUndo({
         actionName: "update_task_status",
         label: `status change on "${taskTitle}"`,
-        undo: async () => {
-          const { error: e2 } = await supabase
-            .from("cwa_todos")
-            .update({ status: restoreStatus })
-            .eq("todo_id", restoreId);
-          if (e2) throw new Error(e2.message);
-          return `Reverted "${taskTitle}" back to ${restoreStatus}.`;
+        descriptor: {
+          kind: "task.restore-status",
+          payload: {
+            todoId: targetId,
+            title: taskTitle,
+            previousStatus,
+          },
         },
       });
     }
@@ -423,17 +459,14 @@ export const deleteTaskAction: AxonAction<
     const { error } = await supabase.from("cwa_todos").delete().eq("todo_id", targetId);
     if (error) return { summary: `Delete failed: ${error.message}` };
 
-    // Register undo — reinsert the full snapshot.
+    // Register undo — reinsert the full snapshot (persists across reload).
     if (snapshot) {
-      const restoreSnap = snapshot;
-      const restoredTitle = title;
       ctx.pushUndo({
         actionName: "delete_task",
-        label: `deletion of "${restoredTitle}"`,
-        undo: async () => {
-          const { error: e2 } = await supabase.from("cwa_todos").insert(restoreSnap);
-          if (e2) throw new Error(e2.message);
-          return `Restored "${restoredTitle}".`;
+        label: `deletion of "${title}"`,
+        descriptor: {
+          kind: "task.restore-deleted",
+          payload: { snapshot, title },
         },
       });
     }

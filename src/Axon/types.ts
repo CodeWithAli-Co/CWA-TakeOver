@@ -106,8 +106,24 @@ export interface ActionContext {
   logActivity: (entry: Omit<ExecutedAction, "id" | "timestamp">) => void;
   /** Ask the operator for a yes/no confirmation. Resolves with the answer. */
   requestConfirmation: (message: string) => Promise<boolean>;
-  /** Register a reversible-action entry. AXON can then run undo_last. */
-  pushUndo: (entry: { actionName: string; label: string; undo: () => Promise<string> }) => void;
+  /** Register a reversible-action entry. AXON can then run undo_last.
+   *
+   *  Two flavors:
+   *   - Closure-style: `{ undo: async () => { ... } }` — session-scoped,
+   *     lost on reload. Fine for volatile state but won't persist.
+   *   - Descriptor-style: `{ descriptor: { kind, payload } }` — the kind
+   *     must match a handler registered with `registerUndoHandler`; the
+   *     payload must be JSON-safe. These entries survive page reloads.
+   *
+   *  Prefer descriptor-style for any action whose undo is meaningful
+   *  across sessions (DB writes, deletes, status changes, etc).
+   */
+  pushUndo: (entry: {
+    actionName: string;
+    label: string;
+    undo?: () => Promise<string>;
+    descriptor?: { kind: string; payload: Record<string, unknown> };
+  }) => void;
 }
 
 export interface OperatorContext {

@@ -16,6 +16,7 @@ import { registerChatActions } from "./chat";
 import { registerUndoActions } from "./undo";
 import { registerCeoPowerActions } from "./ceo_powers";
 import { registerCwaRegistryActions } from "./cwa_registry";
+import { registerHelpActions } from "./help";
 
 let registered = false;
 
@@ -38,4 +39,5 @@ export function registerAllActions() {
   registerUndoActions();
   registerCeoPowerActions();
   registerCwaRegistryActions();
+  registerHelpActions();
 }

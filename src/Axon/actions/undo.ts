@@ -5,7 +5,7 @@
 // ───────────────────────────────────────────────────────────────────
 
 import type { AxonAction } from "../types";
-import { popUndo, peekUndo, listUndo } from "../engine/undoStack";
+import { popUndo, peekUndo, listUndo, resolveUndo } from "../engine/undoStack";
 import { registerAction } from "./registry";
 
 export const undoLastAction: AxonAction<{}, { undone: boolean; label?: string }> = {
@@ -21,15 +21,26 @@ export const undoLastAction: AxonAction<{}, { undone: boolean; label?: string }>
     if (!entry) {
       return { summary: "Nothing to undo.", data: { undone: false } };
     }
+    // Entry may be closure-style (session-scoped) or descriptor-style
+    // (persisted across reloads). resolveUndo handles both — or returns
+    // null if we hydrated a descriptor whose handler isn't registered
+    // yet (e.g. a stale entry from an older build).
+    const reversal = resolveUndo(entry);
+    if (!reversal) {
+      return {
+        summary: `I can't undo "${entry.label}" — the reversal handler for that action isn't available (likely a stale entry from an older session).`,
+        data: { undone: false, label: entry.label },
+      };
+    }
     try {
-      const reversal = await entry.undo();
+      const message = await reversal();
       ctx.logActivity({
         actionName: "undo_last",
         params: { target: entry.actionName, label: entry.label },
-        summary: `Undid "${entry.label}" — ${reversal}`,
+        summary: `Undid "${entry.label}" — ${message}`,
       });
       return {
-        summary: `Reverted: ${entry.label}. ${reversal}`,
+        summary: `Reverted: ${entry.label}. ${message}`,
         data: { undone: true, label: entry.label },
       };
     } catch (err) {

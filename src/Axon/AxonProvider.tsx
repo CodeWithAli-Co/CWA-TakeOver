@@ -55,7 +55,10 @@ import { MONITORS } from "./engine/monitors";
 import { loadMemory, saveMemory } from "./engine/memory";
 import { summarizeTurns } from "./engine/summarizer";
 import { observeRoute } from "./engine/routeObservations";
-import { pushUndo as pushUndoStack } from "./engine/undoStack";
+import {
+  pushUndo as pushUndoStack,
+  hydrateUndoStack,
+} from "./engine/undoStack";
 
 registerAllActions();
 
@@ -84,7 +87,16 @@ interface ConfirmRequest {
   id: string;
   message: string;
   resolve: (ok: boolean) => void;
+  /** Auto-expiry timer — if the operator doesn't answer within
+   *  CONFIRM_TIMEOUT_MS the request resolves as `false` (cancel) so the UI
+   *  can never lock up waiting on a missing response. */
+  timeoutId?: ReturnType<typeof setTimeout>;
 }
+
+/** Confirmation auto-cancel window. Long enough for a distracted operator
+ *  to come back to the screen; short enough that they can't walk away and
+ *  leave the assistant spinning forever. */
+const CONFIRM_TIMEOUT_MS = 30_000;
 
 const AxonContext = createContext<AxonContextValue | null>(null);
 interface ConfirmContextValue {
@@ -178,6 +190,14 @@ export function AxonProvider({ children }: { children: React.ReactNode }) {
   // stream in).
   const lastSpokenTextRef = useRef("");
 
+  // Rehydrate persisted undo entries on mount. Closure-style undos are
+  // session-scoped (lost on reload); descriptor-style undos round-trip
+  // through localStorage and are restored here so "undo that" keeps
+  // working across refreshes for any action that opted in.
+  useEffect(() => {
+    hydrateUndoStack();
+  }, []);
+
   // orb default position
   useEffect(() => {
     if (orbPosition.y === 0) {
@@ -229,13 +249,35 @@ export function AxonProvider({ children }: { children: React.ReactNode }) {
           resolve(true);
           return;
         }
-        setPendingConfirm({ id: newId("c"), message, resolve });
+        const id = newId("c");
+        // Schedule auto-cancel. If the operator never answers, resolve as
+        // `false` so callers proceed with the "user said no" path and the
+        // dialog doesn't wedge the UI. The timer is cancelled in
+        // answerConfirmation when a real answer arrives.
+        const timeoutId = setTimeout(() => {
+          setPendingConfirm((cur) => {
+            if (cur && cur.id === id) {
+              appendTurn({
+                id: newId("t"),
+                role: "system",
+                text: `confirmation timed out — action cancelled`,
+                modality: "system",
+                timestamp: Date.now(),
+              });
+              cur.resolve(false);
+              return null;
+            }
+            return cur;
+          });
+        }, CONFIRM_TIMEOUT_MS);
+        setPendingConfirm({ id, message, resolve, timeoutId });
       }),
     [appendTurn]
   );
   const answerConfirmation = useCallback((id: string, ok: boolean) => {
     setPendingConfirm((cur) => {
       if (cur && cur.id === id) {
+        if (cur.timeoutId) clearTimeout(cur.timeoutId);
         cur.resolve(ok);
         return null;
       }

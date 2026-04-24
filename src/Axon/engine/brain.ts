@@ -17,7 +17,7 @@ import {
   CLAUDE_MODEL,
   SYSTEM_PROMPT,
 } from "../config";
-import { buildToolDefinitions } from "../actions/registry";
+import { buildToolDefinitions, listActions } from "../actions/registry";
 import { executeAction } from "./executor";
 import { captureScreenContext } from "./screenContext";
 import { loadMemory, memoryPreamble, sinceLastSeen } from "./memory";
@@ -90,6 +90,27 @@ function humanizeApiError(raw: string): string {
   return "Something went wrong on my end.";
 }
 
+/**
+ * Build a compact inventory of registered action names so Claude can
+ * answer "what can you do?" without having to introspect its own tool
+ * list. Tool schemas are already sent via the Anthropic tools API — this
+ * is a human-readable mirror for conversational "capabilities" prompts.
+ * We only include the action names; Claude already has the rich
+ * descriptions in the tool schemas.
+ */
+function buildCapabilitiesBlock(): string {
+  const names = listActions().map((a) => a.name);
+  if (!names.length) return "";
+  return (
+    `\n<capabilities>\n` +
+    names.join(", ") +
+    `\n</capabilities>\n` +
+    `(When the operator asks "what can you do" / "help me" / similar, ` +
+    `summarize these capabilities conversationally — group related ones, ` +
+    `don't read them verbatim. Use the tool descriptions for specifics.)`
+  );
+}
+
 function buildContextPreamble(ctx: ActionContext, summary?: string | null): string {
   const now = new Date();
   const companyDisplay =
@@ -121,6 +142,9 @@ function buildContextPreamble(ctx: ActionContext, summary?: string | null): stri
       `\n<visible_screen>\n${screen}\n</visible_screen>\n(Use this to resolve pronouns like "that", "this", "the first one". Do NOT quote it verbatim.)`
     );
   }
+  // Capabilities roster — helps Claude respond coherently to "what can
+  // you do?" and related discoverability prompts.
+  parts.push(buildCapabilitiesBlock());
   return parts.join("\n");
 }
 

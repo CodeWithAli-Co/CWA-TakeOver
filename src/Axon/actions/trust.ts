@@ -4,7 +4,7 @@
 
 import type { AxonAction } from "../types";
 import { registerAction } from "./registry";
-import { listUndo, peekUndo, popUndo } from "../engine/undoStack";
+import { listUndo, peekUndo, popUndo, resolveUndo } from "../engine/undoStack";
 
 export const undoLastAction: AxonAction<
   Record<string, never>,
@@ -22,8 +22,15 @@ export const undoLastAction: AxonAction<
         data: { undone: false, summary: "empty" },
       };
     }
+    const reversal = resolveUndo(entry);
+    if (!reversal) {
+      return {
+        summary: `That undo entry is stale (reversal handler not registered). Action was "${entry.label}".`,
+        data: { undone: false, summary: "no-handler" },
+      };
+    }
     try {
-      const reverseSummary = await entry.undo();
+      const reverseSummary = await reversal();
       ctx.logActivity({
         actionName: "undo_last",
         params: { targetAction: entry.actionName },
