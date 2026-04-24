@@ -103,7 +103,12 @@ const MetricCell: React.FC<{
 // ════════════════════════════════════════════
 // OVERVIEW TAB
 // ════════════════════════════════════════════
-const OverviewTab: React.FC<{
+// PERF: OverviewTab does a non-trivial amount of per-invoice aggregation and
+// chart rendering. Without memoization, every sibling tab-switch on the
+// parent's <Tabs> re-renders this tree (Tabs keep all TabsContent mounted).
+// Wrapping the impl with React.memo means the heavy Recharts trees only
+// re-render when one of the props actually changes reference.
+const OverviewTabImpl: React.FC<{
   invoices: InvoiceType[];
   bankBalance: number;
   expenseTotal: number;
@@ -304,6 +309,10 @@ const OverviewTab: React.FC<{
     </div>
   );
 };
+
+// Memoized export — renders only when props change reference, not on every
+// parent tab-switch.
+const OverviewTab = React.memo(OverviewTabImpl);
 
 // ════════════════════════════════════════════
 // COMPANIES TAB — side-by-side comparison

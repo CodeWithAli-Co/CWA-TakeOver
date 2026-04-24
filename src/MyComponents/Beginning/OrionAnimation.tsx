@@ -1,6 +1,8 @@
 import React from "react"
 import { useEffect, useRef, useState } from "react"
-import gsap from "gsap"
+// PERF: gsap is large (~40KB gzipped) and only used by this splash animation
+// on first-run. Import it dynamically inside the effect so it ships in its
+// own chunk and stays out of the main bundle.
 
 // Define props interface
 interface OrionAnimationProps {
@@ -46,13 +48,23 @@ const OrionAnimation: React.FC<OrionAnimationProps> = ({ onAnimationComplete }) 
   useEffect(() => {
     if (!isMounted || !svgRef.current) return
 
+    // Shared across the async IIFE and the cleanup fn so cleanup can kill
+    // the timeline whether or not the dynamic import has resolved yet.
+    let tl: any = null;
+    let cancelled = false;
+
+    (async () => {
+      const mod = await import("gsap");
+      const gsap = (mod as any).default ?? mod;
+      if (cancelled || !svgRef.current) return;
+
     console.log("🔵 OrionAnimation: Starting GSAP animations...")
     const svg = svgRef.current
 
     // Set initial state - completely hidden SVG
     gsap.set(svg, { opacity: 0 })
 
-    const tl = gsap.timeline({
+    tl = gsap.timeline({
       onComplete: () => {
         console.log("✅ OrionAnimation: GSAP finished all animations")
 
@@ -496,9 +508,14 @@ const OrionAnimation: React.FC<OrionAnimationProps> = ({ onAnimationComplete }) 
     tl.add(tlOutlines, 0)
     tl.add(tlInside, 0)
     tl.add(tlParticles, 0)
+    })();
 
-    // Cleanup function
-    return () => tl.kill()
+    // Cleanup function — runs synchronously even if the dynamic import is
+    // still in flight; cancelled guards against starting a killed effect.
+    return () => {
+      cancelled = true;
+      if (tl) tl.kill();
+    };
   }, [isMounted, onAnimationComplete])
 
   return (

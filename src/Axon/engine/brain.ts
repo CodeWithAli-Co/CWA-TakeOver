@@ -389,9 +389,14 @@ export async function runTurn(
   const wantVision =
     visionMode === "always" || (visionMode === "auto" && suggestsVision(userText));
 
-  let screenshot: { dataUrl: string; mediaType: "image/png" } | null = null;
+  let screenshot: {
+    dataUrl: string;
+    mediaType: "image/png" | "image/jpeg";
+  } | null = null;
   if (wantVision) {
-    screenshot = await captureScreenshot({ maxWidth: 1400 });
+    // captureScreenshot now clamps to ≤1568px on the longer side and
+    // defaults to JPEG so we don't blow upload bandwidth on big monitors.
+    screenshot = await captureScreenshot();
   }
 
   const historyMsgs = serializeHistory(history);

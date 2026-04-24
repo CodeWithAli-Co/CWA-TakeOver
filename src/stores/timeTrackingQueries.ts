@@ -65,41 +65,20 @@ export function useProjects(companyId?: string) {
 }
 
 // ============================================
-// Helper: Fetch and combine entries with relations
-// ============================================
-
-async function fetchEntriesWithRelations(
-  entries: TimeEntry[]
-): Promise<TimeEntryWithRelations[]> {
-  if (entries.length === 0) return [];
-
-  // Fetch all companies
-  const { data: companies, error: companyError } = await supabase
-    .from("time_companies")
-    .select("*");
-  if (companyError) throw companyError;
-
-  // Fetch all projects
-  const { data: projects, error: projectError } = await supabase
-    .from("time_projects")
-    .select("*");
-  if (projectError) throw projectError;
-
-  // Create lookup maps
-  const companyMap = new Map(companies?.map((c) => [c.id, c]) || []);
-  const projectMap = new Map(projects?.map((p) => [p.id, p]) || []);
-
-  // Combine entries with their relations
-  return entries.map((entry) => ({
-    ...entry,
-    company: companyMap.get(entry.company_id) || null,
-    project: entry.project_id ? projectMap.get(entry.project_id) || null : null,
-  })) as TimeEntryWithRelations[];
-}
-
-// ============================================
 // Time Entries Queries
 // ============================================
+//
+// PERF NOTE: All three entry-fetching queries use a PostgREST embedded
+// resource expression so Supabase returns the joined company + project on
+// each row in a single round-trip. This replaces an older pattern that made
+// three separate queries (entries, all companies, all projects) and joined
+// client-side — which scaled as O(N) queries per page load and produced
+// classic N+1 behavior on pages rendering dozens of entries.
+//
+// The select string is shared so all three hooks stay in lock-step; if a
+// future caller needs a different shape it should be a separate constant.
+const ENTRY_SELECT_WITH_RELATIONS =
+  "*, company:time_companies(*), project:time_projects(*)";
 
 export function useTimeEntries(filters?: TimeEntryFilters) {
   return useSuspenseQuery({
@@ -107,7 +86,7 @@ export function useTimeEntries(filters?: TimeEntryFilters) {
     queryFn: async () => {
       let query = supabase
         .from("time_entries")
-        .select("*")
+        .select(ENTRY_SELECT_WITH_RELATIONS)
         .order("date", { ascending: false })
         .order("start_time", { ascending: false });
 
@@ -135,8 +114,7 @@ export function useTimeEntries(filters?: TimeEntryFilters) {
 
       const { data, error } = await query;
       if (error) throw error;
-
-      return fetchEntriesWithRelations(data as TimeEntry[]);
+      return (data ?? []) as unknown as TimeEntryWithRelations[];
     },
   });
 }
@@ -147,12 +125,12 @@ export function useTimeEntriesByDate(date: string) {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("time_entries")
-        .select("*")
+        .select(ENTRY_SELECT_WITH_RELATIONS)
         .eq("date", date)
         .order("start_time", { ascending: true });
 
       if (error) throw error;
-      return fetchEntriesWithRelations(data as TimeEntry[]);
+      return (data ?? []) as unknown as TimeEntryWithRelations[];
     },
   });
 }
@@ -163,14 +141,14 @@ export function useTimeEntriesByDateRange(startDate: string, endDate: string) {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("time_entries")
-        .select("*")
+        .select(ENTRY_SELECT_WITH_RELATIONS)
         .gte("date", startDate)
         .lte("date", endDate)
         .order("date", { ascending: false })
         .order("start_time", { ascending: true });
 
       if (error) throw error;
-      return fetchEntriesWithRelations(data as TimeEntry[]);
+      return (data ?? []) as unknown as TimeEntryWithRelations[];
     },
   });
 }

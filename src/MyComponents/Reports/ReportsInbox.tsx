@@ -21,13 +21,14 @@
  * Supabase policies server-side.
  */
 
-import { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import {
   Inbox, Search, Loader2, AlertCircle, Clock, Archive,
   Eye, Check, FileText, FolderKanban, ClipboardList, AlertTriangle,
   MessageSquare, Building2, User, Flag, X, Save, SlidersHorizontal,
   TrendingUp, CalendarClock,
 } from "lucide-react";
+import { Virtuoso } from "react-virtuoso";
 import supabase from "@/MyComponents/supabase";
 
 // ── Types ───────────────────────────────────────────────────────
@@ -407,8 +408,10 @@ export function ReportsInbox() {
             </div>
           </div>
 
-          {/* List */}
-          <div className="flex-1 min-h-0 overflow-y-auto">
+          {/* List — virtualized via react-virtuoso so long inboxes don't
+              balloon the DOM. Only visible rows render; scroll is owned by
+              Virtuoso's internal viewport. */}
+          <div className="flex-1 min-h-0">
             {loading ? (
               <div className="flex items-center gap-2 p-4 text-[11.5px] text-muted-foreground">
                 <Loader2 className="h-3.5 w-3.5 animate-spin" />
@@ -440,17 +443,25 @@ export function ReportsInbox() {
                 )}
               </div>
             ) : (
-              <ul className="p-2 space-y-1">
-                {filtered.map((r) => (
-                  <li key={r.id}>
-                    <ReportRow
-                      report={r}
-                      active={r.id === selectedId}
-                      onClick={() => setSelectedId(r.id)}
-                    />
-                  </li>
-                ))}
-              </ul>
+              <Virtuoso
+                className="h-full"
+                style={{ height: "100%" }}
+                data={filtered}
+                computeItemKey={(_, r) => r.id}
+                // Inner padding + row gap matched to the prior <ul className="p-2 space-y-1">
+                components={{
+                  List: React.forwardRef(function VList(props, ref) {
+                    return <div {...props} ref={ref} className="p-2 space-y-1" />;
+                  }),
+                }}
+                itemContent={(_index, r) => (
+                  <ReportRow
+                    report={r}
+                    active={r.id === selectedId}
+                    onClick={() => setSelectedId(r.id)}
+                  />
+                )}
+              />
             )}
           </div>
         </aside>
