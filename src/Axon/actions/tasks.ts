@@ -242,12 +242,14 @@ export const listTasksAction: AxonAction<
     dueWithinDays?: number;
     company?: "CodeWithAli" | "simplicity" | "all";
     limit?: number;
+    /** Zero-based offset for pagination. Default 0. */
+    offset?: number;
   },
-  { count: number; tasks: unknown[] }
+  { count: number; tasks: unknown[]; nextOffset: number | null }
 > = {
   name: "list_tasks",
   description:
-    "Query the task list. Filters: status ('overdue' returns tasks with a past deadline and status !== 'done'), assignee, dueWithinDays (e.g. 7 = this week), company override. Defaults to active company.",
+    "Query the task list. Filters: status ('overdue' returns tasks with a past deadline and status !== 'done'), assignee, dueWithinDays (e.g. 7 = this week), company override. Defaults to active company. Supports limit + offset pagination so the operator can page through large backlogs ('next 25', 'show me 50 more').",
   input_schema: {
     type: "object",
     properties: {
@@ -255,16 +257,22 @@ export const listTasksAction: AxonAction<
       assignee: { type: "string" },
       dueWithinDays: { type: "number" },
       company: { type: "string", enum: ["CodeWithAli", "simplicity", "all"] },
-      limit: { type: "number", description: "Max rows. Defaults to 25." },
+      limit: { type: "number", description: "Max rows. Defaults to 25. Capped at 200." },
+      offset: {
+        type: "number",
+        description: "Zero-based offset for pagination. Use `nextOffset` from the previous response to advance.",
+      },
     },
   },
   handler: async (input, ctx) => {
-    const limit = input.limit ?? 25;
+    // Clamp to sane bounds so a bad prompt can't request 10k rows.
+    const limit = Math.max(1, Math.min(input.limit ?? 25, 200));
+    const offset = Math.max(0, input.offset ?? 0);
     let q = supabase
       .from("cwa_todos")
       .select("*")
       .order("priorityOrder", { ascending: false })
-      .limit(limit);
+      .range(offset, offset + limit - 1);
 
     const co = input.company ?? companyLabel(ctx.activeCompany);
     if (co !== "all") q = q.eq("company", co);
@@ -300,13 +308,21 @@ export const listTasksAction: AxonAction<
             .map((r: any) => `"${r.title}"`)
             .join(", ")}${rows.length > 5 ? ", and more" : ""}.`;
 
+    // If the caller got a full page back, more rows probably exist —
+    // hand the brain a nextOffset so it knows how to paginate without
+    // re-deriving the arithmetic.
+    const nextOffset = rows.length >= limit ? offset + limit : null;
+
     ctx.logActivity({
       actionName: "list_tasks",
       params: input as Record<string, unknown>,
-      summary: `Listed ${rows.length} task(s)`,
+      summary: `Listed ${rows.length} task(s)${offset > 0 ? ` (offset ${offset})` : ""}`,
     });
 
-    return { summary, data: { count: rows.length, tasks: rows } };
+    return {
+      summary,
+      data: { count: rows.length, tasks: rows, nextOffset },
+    };
   },
 };
 

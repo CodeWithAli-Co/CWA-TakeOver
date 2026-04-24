@@ -67,4 +67,50 @@
 
 ### Shipped
 
-Commit: _pending_ (first autonomous sprint commit)
+Commit `52c12bb` — "feat(axon): persistable undo, confirm timeout, help action, capabilities roster"
+
+---
+
+## Sprint 2 — core features filled in
+
+### ✅ T3.5 — Announcements actually broadcast now
+
+- `src/Axon/actions/announcements.ts` — `confirm_announcement` now
+  inserts into `cwa_chat` with a `📢 Announcement · <audience>` prefix
+  so it reads as a company-wide post in the existing #General channel.
+  Also fires the local Tauri notification for immediate operator
+  feedback. Registered a new descriptor-style undo handler
+  `announcement.delete-posted` that removes the row by id, so "undo
+  that" retracts a broadcast cleanly (even after reload).
+
+### ✅ T3.6 — Recurring meetings
+
+- `src/Axon/actions/meetings.ts` — `create_meeting` now accepts
+  `recurrence` (daily / weekly / biweekly / monthly), plus `endDate`
+  or `occurrences` to bound the series. Single-call inserts up to 52
+  rows in one batch. Registered `meeting.delete-batch` undo handler
+  that takes the full id array — "undo that" cancels the entire
+  series in one stroke.
+
+### ✅ T4.5 — Paginated data queries
+
+- `src/Axon/actions/tasks.ts` — `list_tasks` now accepts `offset` and
+  returns a `nextOffset` cursor. Limit clamped to `[1, 200]`. The
+  brain can chain "next 25" without re-deriving the arithmetic.
+- `src/Axon/actions/cwa_registry.ts` — `search_registry` got the same
+  treatment: `limit` + `offset` inputs, `nextOffset` output, 100-row
+  cap. Prevents pathological full-table scans.
+
+### ✅ T3.1 — Persistent automations
+
+- `src/Axon/actions/automations.ts` — all mutations now mirror to
+  localStorage (`axon:automations:v1`). `hydrateAutomations()` runs
+  the moment `_bindAutomationExecutor` lands an executor; it restores
+  recurring automations by restarting the interval, and reminders by
+  computing the remaining delay. Reminders whose fire time has passed
+  are silently dropped (missing a late reminder beats a surprise
+  burst of them on reload).
+
+### Shipped
+
+Commit: _pending_ (sprint 2)

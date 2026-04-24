@@ -111,29 +111,48 @@ export const registryStatsAction: AxonAction<
 
 /** Search by substring across name + description. */
 export const registrySearchAction: AxonAction<
-  { query: string; kind?: RegistryKind; company?: RegistryCompany },
-  { hits: Array<{ name: string; kind: string; company: string; version: string | null; description: string | null }> }
+  {
+    query: string;
+    kind?: RegistryKind;
+    company?: RegistryCompany;
+    limit?: number;
+    offset?: number;
+  },
+  {
+    hits: Array<{
+      name: string;
+      kind: string;
+      company: string;
+      version: string | null;
+      description: string | null;
+    }>;
+    nextOffset: number | null;
+  }
 > = {
   name: "search_registry",
   description:
-    "Search the component/template registry by text. Matches names and descriptions. Optional kind and company filters. Use when the operator asks 'search for X in the registry' / 'find components matching X' / 'what do we have related to X'.",
+    "Search the component/template registry by text. Matches names and descriptions. Optional kind and company filters. Supports limit + offset for pagination ('next 15', 'show me more'). Use when the operator asks 'search for X in the registry' / 'find components matching X' / 'what do we have related to X'.",
   input_schema: {
     type: "object",
     properties: {
       query: { type: "string", description: "Text to search for in names and descriptions." },
       kind: { type: "string", enum: ["component", "template"], description: "Optional — limit to components or templates." },
       company: { type: "string", enum: ["cwa", "simplicity", "shared"], description: "Optional — scope by company." },
+      limit: { type: "number", description: "Max hits. Defaults to 15. Capped at 100." },
+      offset: { type: "number", description: "Zero-based offset for pagination. Use `nextOffset` from the previous response." },
     },
     required: ["query"],
   },
-  handler: async ({ query, kind, company }) => {
+  handler: async ({ query, kind, company, limit: inLimit, offset: inOffset }) => {
     const q = (query || "").trim();
     if (q.length < 2) return { summary: "Search query must be at least 2 characters." };
+    const limit = Math.max(1, Math.min(inLimit ?? 15, 100));
+    const offset = Math.max(0, inOffset ?? 0);
     let sb = supabase
       .from("registry_items_with_latest")
       .select("name, kind, company, latest_version_str, description")
       .order("install_count", { ascending: false })
-      .limit(15);
+      .range(offset, offset + limit - 1);
     if (kind)    sb = sb.eq("kind", kind);
     if (company) sb = sb.eq("company", company);
     const safe = q.replace(/[%_]/g, "");
@@ -151,9 +170,11 @@ export const registrySearchAction: AxonAction<
       description: r.description ?? null,
     }));
     const top3 = hits.slice(0, 3).map((h) => h.name).join(", ");
+    // If we got a full page back, more matches probably exist.
+    const nextOffset = hits.length >= limit ? offset + limit : null;
     return {
-      summary: `Found ${hits.length} match${hits.length === 1 ? "" : "es"} for "${q}"${hits.length > 3 ? ` — top: ${top3}.` : `: ${top3}.`}`,
-      data: { hits },
+      summary: `Found ${hits.length} match${hits.length === 1 ? "" : "es"} for "${q}"${offset > 0 ? ` (from offset ${offset})` : ""}${hits.length > 3 ? ` — top: ${top3}.` : `: ${top3}.`}`,
+      data: { hits, nextOffset },
     };
   },
 };

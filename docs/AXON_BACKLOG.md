@@ -42,27 +42,27 @@ demand confirmation; operator says "undo that" if wrong.
 ## Tier 1 — Stability & Error Handling
 
 - [ ] **T1.1 Refactor AxonProvider into hooks** — **M** — Split the 889-line provider into `useAxonState`, `useVoiceEngine`, `useConversationSummarizer`, `useMonitors`, `useKeyboardShortcuts`. Enables testing + reduces cognitive load.
-- [ ] **T1.2 Confirmation dialog timeout** — **S** — Pending confirms auto-expire after 30s with a cancel message so the UI never freezes.
-- [ ] **T1.3 Persist undo stack to localStorage** — **S** — Serialize on each action; restore on mount. "Undo that" should survive reload.
+- [x] **T1.2 Confirmation dialog timeout** — **S** — Pending confirms auto-expire after 30s with a cancel message so the UI never freezes.
+- [x] **T1.3 Persist undo stack to localStorage** — **S** — Serialize on each action; restore on mount. "Undo that" should survive reload.
 - [ ] **T1.4 Action dispatch queue + rate limiting** — **M** — Queue outgoing tool calls, dispatch serially with a short cooldown. Prevents accidental double-fires.
 - [ ] **T1.5 Offline fallback for brain downtime** — **M** — If Anthropic is unreachable, surface a helpful message + list 5 built-in voice macros so the assistant isn't dead.
 
 ## Tier 2 — UX & Discoverability
 
-- [ ] **T2.1 Inject available actions into system prompt** — **S** — Append the full action roster to the preamble so "what can you do?" has a real answer.
-- [ ] **T2.2 Voice-friendly `help` action** — **S** — Trigger on "help" / "what can I do". Returns top 10 actions with examples. Depends on T2.1.
+- [x] **T2.1 Inject available actions into system prompt** — **S** — Append the full action roster to the preamble so "what can you do?" has a real answer.
+- [x] **T2.2 Voice-friendly `help` action** — **S** — Trigger on "help" / "what can I do". Returns top 10 actions with examples. Depends on T2.1.
 - [ ] **T2.3 Low-confidence transcription toast** — **S** — When confidence < 0.55, non-modal toast: "Did you say '…'?" auto-dismisses.
 - [ ] **T2.4 Editable transcript in SubtitleOverlay** — **M** — Click/tap the live transcript, edit, then submit the corrected text.
 - [ ] **T2.5 Activity log search + replay** — **M** — Search past 50 activities; click one to re-run (with confirm).
 
 ## Tier 3 — Core Features
 
-- [ ] **T3.1 Persist automations to localStorage** — **M** — Survive reload; recalc `nextFire` on mount. Unblocks "remind me tomorrow".
+- [x] **T3.1 Persist automations to localStorage** — **M** — Survive reload; recalc `nextFire` on mount. Unblocks "remind me tomorrow".
 - [ ] **T3.2 Cron-like scheduling** — **M** — `schedule_automation({ schedule: "0 9 * * *" })`. Depends on T3.1.
 - [ ] **T3.3 Multi-step workflow action** — **M** — `chain_commands({ commands: [...] })` so compound utterances don't re-prompt.
 - [ ] **T3.4 Email drafting + sending** — **M** — `draft_email` + `send_email` (send is destructive, requires confirm). Needs backend email integration.
-- [ ] **T3.5 Complete announcements** — **S** — Finish the broadcast-table TODO in `announcements.ts`; `confirm_announcement` should actually post.
-- [ ] **T3.6 Recurring meetings** — **S** — Extend `create_meeting` schema with `recurrence: "daily" | "weekly" | "biweekly"` + optional end date.
+- [x] **T3.5 Complete announcements** — **S** — Finish the broadcast-table TODO in `announcements.ts`; `confirm_announcement` should actually post.
+- [x] **T3.6 Recurring meetings** — **S** — Extend `create_meeting` schema with `recurrence: "daily" | "weekly" | "biweekly"` + optional end date.
 
 ## Tier 4 — Advanced UX & Capability
 
@@ -70,7 +70,7 @@ demand confirmation; operator says "undo that" if wrong.
 - [ ] **T4.2 Structured DOM awareness** — **M** — Enhance `read_screen` to return table structure, interactive element positions, computed styles. Enables reliable "click the second row".
 - [ ] **T4.3 Vision-feedback loop** — **S** — When vision captures, Claude narrates: "I see a chart with 3 lines…" before answering.
 - [ ] **T4.4 Voice-print re-enrollment UI + test** — **M** — Settings button: re-enroll, then run a "say this phrase" test showing the similarity score.
-- [ ] **T4.5 Paginated data queries** — **S** — `limit` + `offset` on `list_tasks`, `list_undo`, registry searches. No more 200-cap.
+- [x] **T4.5 Paginated data queries** — **S** — `limit` + `offset` on `list_tasks`, `list_undo`, registry searches. No more 200-cap.
 - [ ] **T4.6 Prompt caching for actions + schemas** — **S** — Cache the action registry + tool schemas per operator; save tokens per turn.
 
 ## Tier 5 — Advanced Features

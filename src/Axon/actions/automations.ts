@@ -1,9 +1,20 @@
 // ───────────────────────────────────────────────────────────────────
-// Automations — session-scoped scheduled commands.
-// Intentionally NOT persisted. Automations that survive reload would
-// need a server-side scheduler; this layer gives the operator live
-// session-scheduled commands the way the spec describes.
-// Adding persistence later = one new backing store, no UI changes.
+// Automations — scheduled commands that survive reloads.
+//
+// Two concepts in one store:
+//   1. Recurring — setInterval, runs forever until cancelled.
+//   2. Reminder  — setTimeout, runs once then self-deletes.
+//
+// Persistence: on every push / cancel we mirror a serializable record
+// to localStorage (key `axon:automations:v1`). On mount, the provider
+// calls `hydrateAutomations()` which restores both kinds:
+//   · Recurring: restart the interval with the original cadence.
+//   · Reminder : if the nextFire time is still in the future, schedule
+//     with the remaining delay; otherwise drop the entry (a missed
+//     reminder is better than a surprise fire 2 days late).
+//
+// The persisted shape never includes timer handles — those are recreated
+// locally on each hydrate.
 // ───────────────────────────────────────────────────────────────────
 
 import type { AxonAction, Automation } from "../types";
@@ -19,6 +30,92 @@ export function _bindAutomationExecutor(
   exec: (command: string, modality: "voice" | "text") => Promise<void>
 ) {
   executor = exec;
+  // Auto-hydrate the moment the executor wires up. If hydrate is called
+  // before an executor exists, the restored fires would just no-op.
+  hydrateAutomations();
+}
+
+// ─── persistence ──────────────────────────────────────────────────
+
+const STORAGE_KEY = "axon:automations:v1";
+
+type PersistedAutomation = Omit<Automation, "_handle">;
+
+/** Write the live registry to localStorage. Called on every mutation. */
+function persistAutomations() {
+  if (typeof window === "undefined") return;
+  try {
+    const snapshot: PersistedAutomation[] = Array.from(live.values()).map(
+      ({ _handle: _, ...rest }) => rest,
+    );
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(snapshot));
+  } catch (err) {
+    if (typeof console !== "undefined") {
+      console.warn("[AXON] automation persist failed:", err);
+    }
+  }
+}
+
+/** Rehydrate persisted automations. Safe to call multiple times — a
+ *  guard + id-check prevents double-scheduling. Intended to be called
+ *  from _bindAutomationExecutor once the executor is ready. */
+let hydrated = false;
+export function hydrateAutomations() {
+  if (hydrated || typeof window === "undefined" || !executor) return;
+  hydrated = true;
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (!raw) return;
+    const parsed = JSON.parse(raw) as PersistedAutomation[];
+    if (!Array.isArray(parsed)) return;
+
+    const now = Date.now();
+    for (const rec of parsed) {
+      if (!rec || live.has(rec.id)) continue;
+      if (rec.kind === "reminder") {
+        // Skip reminders whose fire time has passed — we'd rather miss a
+        // late fire than spam the operator on reload with a stack of
+        // backlogged reminders.
+        const delay = rec.nextFire - now;
+        if (delay <= 0) continue;
+        const fire = async () => {
+          if (!executor) return;
+          try {
+            await executor(rec.command, "text");
+          } catch (e) {
+            console.warn("[AXON] automation fire failed:", e);
+          }
+          live.delete(rec.id);
+          persistAutomations();
+        };
+        const handle = window.setTimeout(fire, delay);
+        live.set(rec.id, { ...rec, _handle: handle });
+      } else {
+        // Recurring: restart the interval fresh. nextFire gets recomputed
+        // from "now" so a long-offline app doesn't cause a burst catch-up.
+        const fire = async () => {
+          if (!executor) return;
+          try {
+            await executor(rec.command, "text");
+          } catch (e) {
+            console.warn("[AXON] automation fire failed:", e);
+          }
+        };
+        const handle = window.setInterval(fire, rec.intervalMs);
+        live.set(rec.id, {
+          ...rec,
+          nextFire: now + rec.intervalMs,
+          _handle: handle,
+        });
+      }
+    }
+    // Re-persist to prune stale reminders that we just dropped.
+    persistAutomations();
+  } catch (err) {
+    if (typeof console !== "undefined") {
+      console.warn("[AXON] automation hydrate failed:", err);
+    }
+  }
 }
 
 function parseInterval(spec: string): number | null {
@@ -79,6 +176,7 @@ export const scheduleAutomationAction: AxonAction<
       }
       if (kind === "reminder") {
         live.delete(id);
+        persistAutomations();
       }
     };
 
@@ -98,6 +196,7 @@ export const scheduleAutomationAction: AxonAction<
       _handle: handle,
     };
     live.set(id, record);
+    persistAutomations();
 
     ctx.logActivity({
       actionName: "schedule_automation",
@@ -144,6 +243,7 @@ export const cancelAutomationAction: AxonAction<
     if (r.kind === "reminder") clearTimeout(r._handle!);
     else clearInterval(r._handle!);
     live.delete(id);
+    persistAutomations();
     ctx.logActivity({
       actionName: "cancel_automation",
       params: { id },
@@ -163,6 +263,7 @@ export function _cancelAllAutomations() {
     else clearInterval(r._handle!);
   }
   live.clear();
+  persistAutomations();
 }
 
 export function registerAutomationActions() {
