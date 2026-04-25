@@ -44,6 +44,8 @@ import { registerAllActions } from "./actions";
 import { _bindAutomationExecutor, _getLiveAutomations } from "./actions/automations";
 import { bindCommandExecutor } from "./engine/commandExecutor";
 import { _bindVoicePrintAccessors } from "./actions/voiceauth";
+import { _bindVoiceAccessors } from "./actions/voice";
+import { _bindCodegenAccessors } from "./actions/code";
 import { runTurn } from "./engine/brain";
 import { handleDirectDisrespect } from "./engine/loyaltyMonitor";
 import {
@@ -643,6 +645,7 @@ export function AxonProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     voiceOutRef.current = new VoiceOutput(
       {
+        voicePresetId: settings.voicePresetId,
         preferredVoice: settings.preferredVoice,
         rate: settings.rate,
         pitch: settings.pitch,
@@ -685,6 +688,7 @@ export function AxonProvider({ children }: { children: React.ReactNode }) {
       voiceOutRef.current = null;
     };
   }, [
+    settings.voicePresetId,
     settings.preferredVoice,
     settings.rate,
     settings.pitch,
@@ -924,6 +928,14 @@ export function AxonProvider({ children }: { children: React.ReactNode }) {
         voicePrintGate: settingsRef.current.voicePrintGate,
       }),
       (partial) => updateSettings(partial),
+    );
+    _bindVoiceAccessors(
+      (presetId) => updateSettings({ voicePresetId: presetId }),
+      () => settingsRef.current.voicePresetId ?? null,
+    );
+    _bindCodegenAccessors(
+      () => settingsRef.current.codegenWorkspace ?? null,
+      (workspace) => updateSettings({ codegenWorkspace: workspace }),
     );
   }, [updateSettings]);
 

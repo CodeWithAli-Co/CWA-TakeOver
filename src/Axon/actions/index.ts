@@ -24,6 +24,8 @@ import { registerIngestActions } from "./ingest";
 import { registerWorkflowActions } from "./workflows";
 import { registerJournalActions } from "./journal";
 import { registerVoiceAuthActions } from "./voiceauth";
+import { registerVoiceActions } from "./voice";
+import { registerCodeActions } from "./code";
 
 let registered = false;
 
@@ -54,4 +56,6 @@ export function registerAllActions() {
   registerWorkflowActions();
   registerJournalActions();
   registerVoiceAuthActions();
+  registerVoiceActions();
+  registerCodeActions();
 }

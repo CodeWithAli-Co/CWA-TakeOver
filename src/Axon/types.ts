@@ -169,6 +169,10 @@ export interface AxonSettings {
   voicePrintGate: boolean;
   /** Push-to-talk keyboard shortcut. */
   pushToTalkShortcut: string;
+  /** Curated preset id from voiceCatalog.ts (e.g. "british-george").
+   *  When set, takes precedence over preferredVoice / elevenLabsVoiceId
+   *  and uses the preset's tuned rate/pitch + ElevenLabs voice settings. */
+  voicePresetId: string | null;
   /** Preferred synthesis voice name. */
   preferredVoice: string | null;
   /** Speech rate 0.5 – 2.0. */
@@ -179,6 +183,10 @@ export interface AxonSettings {
   volume: number;
   /** ElevenLabs voice id — if set + env key is present, used instead of Web Speech. */
   elevenLabsVoiceId: string | null;
+  /** Workspace root for code-generation actions. Tauri-side path that
+   *  must be inside the app's allowed FS scope. When null, code-generation
+   *  actions ask the operator to set one. */
+  codegenWorkspace: string | null;
   /** Which monitors are active. */
   enabledMonitors: string[];
   /** Low-confidence voice threshold for confirming before acting. */
@@ -224,11 +232,13 @@ export const DEFAULT_SETTINGS: AxonSettings = {
   voicePrintThreshold: 0.7,
   voicePrintGate: false,
   pushToTalkShortcut: "Control+Space",
+  voicePresetId: "british-george",
   preferredVoice: null,
-  rate: 1.02,
+  rate: 1.0,
   pitch: 0.95,
   volume: 1.0,
   elevenLabsVoiceId: null,
+  codegenWorkspace: null,
   enabledMonitors: [],
   confidenceThreshold: 0.55,
   autoApprove: true,

@@ -12,6 +12,11 @@
 // ───────────────────────────────────────────────────────────────────
 
 import { ELEVENLABS_API_KEY } from "../config";
+import {
+  getVoicePreset,
+  pickWebSpeechVoiceForPreset,
+  type VoicePreset,
+} from "./voiceCatalog";
 
 const PREFERRED_VOICE_ORDER = [
   "Google UK English Male",
@@ -22,6 +27,10 @@ const PREFERRED_VOICE_ORDER = [
 ];
 
 export interface VoiceOutputConfig {
+  /** Preset id from voiceCatalog (e.g. "british-george"). Optional —
+   *  if set, takes precedence over `preferredVoice`/`elevenLabsVoiceId`
+   *  and overrides per-preset rate/pitch/voice_settings. */
+  voicePresetId?: string | null;
   preferredVoice: string | null;
   rate: number;
   pitch: number;
@@ -67,8 +76,17 @@ export async function getAvailableVoices(): Promise<SpeechSynthesisVoice[]> {
   return loadVoices();
 }
 
-function pickVoice(preferred: string | null, voices: SpeechSynthesisVoice[]): SpeechSynthesisVoice | null {
+function pickVoice(
+  preset: VoicePreset | null,
+  preferred: string | null,
+  voices: SpeechSynthesisVoice[]
+): SpeechSynthesisVoice | null {
   if (voices.length === 0) return null;
+  // Preset wins when present.
+  if (preset) {
+    const m = pickWebSpeechVoiceForPreset(preset, voices);
+    if (m) return m;
+  }
   if (preferred) {
     const explicit = voices.find((v) => v.name === preferred);
     if (explicit) return explicit;
@@ -207,8 +225,12 @@ export class VoiceOutput {
     while (this.queue.length > 0 && this.gen === myGen) {
       const next = this.queue.shift()!;
       try {
-        if (this.config.elevenLabsVoiceId && ELEVENLABS_API_KEY) {
-          await this.speakElevenLabs(next, myGen);
+        // Preset wins; fall back to operator-set elevenLabsVoiceId.
+        const presetEleven =
+          getVoicePreset(this.config.voicePresetId ?? null)?.elevenLabsVoiceId ?? null;
+        const effectiveEleven = presetEleven ?? this.config.elevenLabsVoiceId;
+        if (effectiveEleven && ELEVENLABS_API_KEY) {
+          await this.speakElevenLabs(next, myGen, effectiveEleven);
         } else {
           await this.speakWebSpeech(next, myGen);
         }
@@ -231,11 +253,13 @@ export class VoiceOutput {
     }
     if (this.gen !== genAtCall) return;
     const voices = await getAvailableVoices();
-    const voice = pickVoice(this.config.preferredVoice, voices);
+    const preset = getVoicePreset(this.config.voicePresetId ?? null);
+    const voice = pickVoice(preset, this.config.preferredVoice, voices);
     const utt = new SpeechSynthesisUtterance(cadence(text));
     if (voice) utt.voice = voice;
-    utt.rate = this.config.rate;
-    utt.pitch = this.config.pitch;
+    // Preset rate/pitch take precedence — keeps each voice in character.
+    utt.rate = preset?.rate ?? this.config.rate;
+    utt.pitch = preset?.pitch ?? this.config.pitch;
     utt.volume = this.config.volume;
 
     return new Promise<void>((resolve) => {
@@ -250,15 +274,25 @@ export class VoiceOutput {
     });
   }
 
-  /** ElevenLabs streaming endpoint — lower latency than the regular TTS. */
-  private async speakElevenLabs(text: string, genAtCall: number): Promise<void> {
-    if (!ELEVENLABS_API_KEY || !this.config.elevenLabsVoiceId) {
+  /** ElevenLabs streaming endpoint — lower latency than the regular TTS.
+   *  voiceId is resolved by the caller (preset wins over config). */
+  private async speakElevenLabs(text: string, genAtCall: number, voiceId: string): Promise<void> {
+    if (!ELEVENLABS_API_KEY || !voiceId) {
       throw new Error("ElevenLabs not configured");
     }
     if (this.gen !== genAtCall) return;
 
+    const preset = getVoicePreset(this.config.voicePresetId ?? null);
+    // Smoother default than v3's hardcoded values.
+    const voice_settings = preset?.elevenLabsSettings ?? {
+      stability: 0.55,
+      similarity_boost: 0.8,
+      style: 0.1,
+      use_speaker_boost: true,
+    };
+
     const res = await fetch(
-      `https://api.elevenlabs.io/v1/text-to-speech/${this.config.elevenLabsVoiceId}/stream?optimize_streaming_latency=3&output_format=mp3_44100_128`,
+      `https://api.elevenlabs.io/v1/text-to-speech/${voiceId}/stream?optimize_streaming_latency=3&output_format=mp3_44100_128`,
       {
         method: "POST",
         headers: {
@@ -269,7 +303,7 @@ export class VoiceOutput {
         body: JSON.stringify({
           text: cadence(text),
           model_id: "eleven_turbo_v2_5",
-          voice_settings: { stability: 0.45, similarity_boost: 0.75, style: 0.15, use_speaker_boost: true },
+          voice_settings,
         }),
       }
     );
@@ -285,8 +319,9 @@ export class VoiceOutput {
     const url = URL.createObjectURL(blob);
     const audio = new Audio(url);
     audio.volume = this.config.volume;
-    // Rate influences speed on HTMLAudio too.
-    audio.playbackRate = Math.max(0.5, Math.min(2, this.config.rate));
+    // Rate influences speed on HTMLAudio too. Preset rate wins.
+    const effectiveRate = preset?.rate ?? this.config.rate;
+    audio.playbackRate = Math.max(0.5, Math.min(2, effectiveRate));
     this.currentAudio = audio;
 
     return new Promise<void>((resolve) => {

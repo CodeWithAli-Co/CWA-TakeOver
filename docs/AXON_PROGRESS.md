@@ -275,3 +275,92 @@ Commit `d5e3ed2` — "feat(axon): outbound reach (Discord/GitHub/webhooks) + ext
 ### Shipped
 
 Commit: _pending_ (sprint 5)
+
+---
+
+## Sprint 6 — Voice catalog + code generation by voice
+
+Operator request: "give axon alot more options for voice, make it
+smoother, even add a british accent voice — and let me build tools,
+features, and code files on my voice prompt."
+
+### ✅ T7.10 — Curated voice catalog (presets + smoother cadence)
+
+- `src/Axon/engine/voiceCatalog.ts` — new module with 10 curated
+  presets across **British**, **American**, **Australian** accents.
+  Each preset bundles:
+    - public ElevenLabs voice id (Daniel, George, Lily, Charlotte,
+      Dorothy on the British side; Adam, Brian, Rachel, Matilda
+      American; Charlie Australian)
+    - Web-Speech fallback name list (Google UK English Male, Microsoft
+      Sonia, Daniel, Karen, etc) tried in priority order
+    - per-preset `rate` + `pitch` so each voice keeps its character
+    - tuned `voice_settings` (stability/similarity_boost/style) — two
+      profiles: `SMOOTH_TUNED` for news/calm voices, `EXPRESSIVE_TUNED`
+      for storyteller voices. Smoother than the v3 hardcoded defaults.
+- `src/Axon/engine/voiceOutput.ts` — accepts `voicePresetId` in its
+  config; preset wins over operator-set voice id, and the preset's
+  rate/pitch + voice_settings flow through to both Web-Speech and
+  ElevenLabs paths.
+- `src/Axon/types.ts` — `AxonSettings.voicePresetId` added; default
+  changed to `"british-george"` (warm British male).
+- `src/Axon/config.ts` — settings storage key bumped v3 → v4 to drop
+  stale per-operator settings cleanly.
+- `src/Axon/ui/AxonSettings.tsx` — voice picker with `<optgroup>` per
+  accent, plus the existing system-voice fallback dropdown.
+- `src/Axon/actions/voice.ts` — three new actions:
+    - `set_voice({ id?, description? })` — exact id OR free-text
+      ("British male", "warm female English voice"); writes preset id
+      to settings and immediately speaks a confirmation in the new
+      voice for an audible settling effect.
+    - `list_voices` — returns all presets grouped by accent.
+    - `current_voice` — reports the active preset.
+- System prompt extended with a "Voice switching" section so the
+  brain proactively reaches for `set_voice` when the operator asks
+  for a different accent.
+
+### ✅ T7.11 — Code generation by voice
+
+Axon now writes and modifies code in a folder the operator picks.
+
+- `src/Axon/engine/codegen.ts` — engine module:
+    - `pickWorkspaceDirectory` (Tauri dialog plugin)
+    - `safeJoin` rejects path traversal (`..`)
+    - `listWorkspace`, `readWorkspaceFile`, `writeWorkspaceFile`,
+      `deleteWorkspaceFile` (Tauri FS plugin, scoped to workspace)
+    - `generateFile` — calls Anthropic with a code-writer system
+      prompt that forces a single fenced code block; extractor strips
+      the fence and returns `{ code, language, raw }`.
+    - `modifyFile` — sends current file + change brief; gets back the
+      full revised file.
+    - `scaffoldFeature` — multi-file output via a single
+      `\`\`\`json { "files": [{ "path", "content" }] }\`\`\`` block.
+- `src/Axon/actions/code.ts` — voice-callable actions:
+    - `set_workspace` (folder picker), `current_workspace`,
+      `list_workspace`, `read_workspace_file`
+    - `generate_file({ filename, brief })` — mutating, requiresConfirmation;
+      pre-checks for clobber, registers undo (delete on first-write,
+      restore-from-snapshot on overwrite).
+    - `modify_file({ filename, brief })` — mutating, requiresConfirmation;
+      undo restores the prior bytes.
+    - `scaffold_feature({ name, brief })` — creates ≤5 files under
+      `src/features/<name>/`; bulk-undo deletes the whole scaffold.
+    - `delete_workspace_file` — destructive; snapshot-restore undo.
+- `src/Axon/types.ts` — `AxonSettings.codegenWorkspace` + null default.
+- `src/Axon/AxonProvider.tsx` — binds `_bindCodegenAccessors` so
+  actions can read/write the workspace setting without prop drilling.
+- `src/Axon/ui/AxonSettings.tsx` — Code generation block with a
+  "Pick…" button that opens the Tauri folder dialog.
+- `src-tauri/capabilities/default.json` — added scoped FS permissions
+  (`read-text-file`, `write-text-file`, `read-dir`, `mkdir`, `exists`,
+  `remove`) plus an `fs:scope` covering `$HOME/**`, `$DOCUMENT/**`,
+  `$DESKTOP/**`, `$DOWNLOAD/**`. Without this scope, writes outside
+  AppData would have been rejected by Tauri's permission system.
+- System prompt extended with a "Code generation" section so the brain
+  knows when to reach for `generate_file` / `modify_file` /
+  `scaffold_feature` and that it should call `set_workspace` first if
+  no workspace is set.
+
+### Shipped
+
+Commit: _pending_ (sprint 6)

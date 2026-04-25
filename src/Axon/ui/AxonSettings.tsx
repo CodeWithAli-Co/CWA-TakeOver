@@ -7,6 +7,7 @@ import { useAxon } from "../AxonProvider";
 import { getAvailableVoices } from "../engine/voiceOutput";
 import { MONITORS } from "../engine/monitors";
 import { enrollVoice } from "../engine/voicePrint";
+import { VOICE_PRESETS, presetsByAccent } from "../engine/voiceCatalog";
 
 export function AxonSettingsPane() {
   const { settings, updateSettings, automations } = useAxon();
@@ -330,8 +331,41 @@ export function AxonSettingsPane() {
       {/* Voice */}
       <div className="axon-settings-group">
         <label className="axon-settings-label">Voice</label>
+
         <label className="axon-settings-label" style={{ fontSize: 9.5, opacity: 0.7 }}>
-          Preferred voice
+          Voice preset
+        </label>
+        <select
+          className="axon-settings-select"
+          value={settings.voicePresetId ?? ""}
+          onChange={(e) => updateSettings({ voicePresetId: e.target.value || null })}
+        >
+          <option value="">Off — use system voice below</option>
+          {(["british", "american", "australian"] as const).flatMap((accent) => {
+            const items = presetsByAccent()[accent];
+            if (items.length === 0) return [];
+            return [
+              <optgroup
+                key={accent}
+                label={accent[0].toUpperCase() + accent.slice(1)}
+              >
+                {items.map((p) => (
+                  <option key={p.id} value={p.id}>
+                    {p.label}
+                  </option>
+                ))}
+              </optgroup>,
+            ];
+          })}
+        </select>
+        <div className="axon-hint">
+          Curated presets bundle ElevenLabs voice id + tuned cadence.{" "}
+          {VOICE_PRESETS.length} voices · British, American, Australian.
+        </div>
+
+        <div style={{ height: 12 }} />
+        <label className="axon-settings-label" style={{ fontSize: 9.5, opacity: 0.7 }}>
+          System voice fallback (Web Speech)
         </label>
         <select
           className="axon-settings-select"
@@ -396,6 +430,59 @@ export function AxonSettingsPane() {
         />
         <div className="axon-hint">
           Needs <code>VITE_ELEVENLABS_API_KEY</code> in your env. Voice id goes here.
+        </div>
+      </div>
+
+      {/* Code generation */}
+      <div className="axon-settings-group">
+        <label className="axon-settings-label">Code generation</label>
+        <div style={{ fontSize: 11, color: "var(--axon-muted)", marginBottom: 8 }}>
+          AXON can write and modify code by voice. Pick a workspace folder
+          and AXON will only read/write inside it.
+        </div>
+        <label className="axon-settings-label" style={{ fontSize: 9.5, opacity: 0.7 }}>
+          Workspace folder
+        </label>
+        <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+          <input
+            className="axon-settings-input"
+            value={settings.codegenWorkspace ?? ""}
+            placeholder="No workspace selected"
+            readOnly
+            style={{ flex: 1 }}
+          />
+          <button
+            className="axon-btn"
+            type="button"
+            onClick={async () => {
+              const { open } = await import("@tauri-apps/plugin-dialog");
+              const chosen = await open({
+                directory: true,
+                multiple: false,
+                title: "Select AXON code-generation workspace",
+              });
+              if (chosen && !Array.isArray(chosen)) {
+                updateSettings({ codegenWorkspace: chosen });
+              }
+            }}
+          >
+            Pick…
+          </button>
+          {settings.codegenWorkspace && (
+            <button
+              className="axon-btn"
+              type="button"
+              onClick={() => updateSettings({ codegenWorkspace: null })}
+              style={{ opacity: 0.7 }}
+            >
+              Clear
+            </button>
+          )}
+        </div>
+        <div className="axon-hint" style={{ marginTop: 8 }}>
+          Try: "Axon, generate a React card component called UserBadge",
+          "modify the dashboard header to show the date", or "scaffold an
+          auth feature".
         </div>
       </div>
 

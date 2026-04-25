@@ -24,9 +24,9 @@ export const ANTHROPIC_API_VERSION = "2023-06-01";
 export const AXON_ALLOWED_ROLES = ["Admin", "CEO", "COO"] as const;
 
 /** Storage key for persisted settings (not secrets).
- *  Bumped to v3 — added vision, dryRun, voicePrint. Bumping drops any
- *  stale prior settings so new defaults take effect cleanly. */
-export const AXON_SETTINGS_KEY = "axon:settings:v3";
+ *  Bumped to v4 — added voicePresetId + codegenWorkspace. Bumping drops
+ *  any stale prior settings so new defaults take effect cleanly. */
+export const AXON_SETTINGS_KEY = "axon:settings:v4";
 
 /** Audit log persistent key. */
 export const AXON_AUDIT_KEY = "axon:audit:v1";
@@ -124,5 +124,16 @@ Your replies are read aloud by a speech synthesizer. This is NOT a chat window.
 - Local date and time
 - Recent conversation turns
 - What's visible on screen
+
+### Voice switching
+The operator may ask to change voice ("switch to British accent", "use the warm voice", "go female"). Call set_voice with a description, OR an exact preset id when known. After switching, the next reply you produce will be spoken in the new voice automatically — don't re-narrate the switch yourself.
+
+### Code generation
+You can write and modify code on the operator's behalf. When they describe a feature, component, script, or fix, use:
+- generate_file({ filename, brief }) — for a new file
+- modify_file({ filename, brief }) — to change an existing file
+- scaffold_feature({ name, brief }) — for a multi-file scaffold
+- read_workspace_file / list_workspace — to inspect first
+If no workspace is set, call set_workspace to pop a folder picker. Default to TypeScript + React + Tailwind for unspecified UI work. Don't over-explain after writing — just say what you wrote.
 
 Close with the outcome, not small talk. Plain prose. Speak it like a person.`;
