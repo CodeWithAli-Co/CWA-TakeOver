@@ -152,4 +152,63 @@ now feels like a phone conversation, not a command-shell prompt.
 
 ### Shipped
 
-Commit: _pending_ (sprint 3)
+Commit `b39a2ea` — "feat(axon): call mode + serial dispatch queue"
+
+---
+
+## Sprint 4 — Outbound reach + multi-step workflows + external data
+
+> Triggered by Axon's own self-audit: "outbound reach is the biggest
+> gap." This sprint closes the outbound family + the data-ingestion
+> family + multi-step workflows in a single push.
+
+### ✅ T7.9 — Credentials store
+
+- `src/Axon/engine/credentials.ts` (new) — keyed localStorage backing
+  for webhook URLs, API tokens, secrets. Convention: `<kind>:<label>`.
+- `src/Axon/actions/credentials.ts` (new) — `set_credential`,
+  `forget_credential`, `list_credentials` actions. Forget pushes a
+  descriptor-style undo so "undo that" restores the value. Audit log
+  captures the key but never the secret.
+
+### ✅ T7.1-T7.3 — Outbound integrations
+
+- `src/Axon/actions/outbound.ts` (new) — three actions, all gated by
+  credential lookups (returns a "set up first" message if missing):
+    - `send_webhook` — generic POST/PUT to a stored URL. Foundation
+      for everything else.
+    - `send_discord_message` — wraps the webhook primitive with
+      Discord's payload shape (`content` + optional `username`).
+    - `create_github_issue` — POSTs to api.github.com/repos/{o}/{r}/issues
+      with a Bearer PAT (default credential key `github:pat`).
+      Returns the issue number + URL on success.
+
+### ✅ T7.5-T7.6 — External data ingestion
+
+- `src/Axon/actions/ingest.ts` (new):
+    - `fetch_url` — generic HTTPS GET. Returns text body truncated to
+      8KB to keep the LLM context healthy. Optional `bearerKey`
+      threads a credential through as `Authorization: Bearer …`.
+    - `read_github_pr` — calls api.github.com/.../pulls/{n} and
+      returns title, state (open/closed/merged), author, body summary,
+      and diff stats. Optional PAT for higher rate limits / private
+      repos.
+
+### ✅ T3.3 — chain_commands (multi-step workflows)
+
+- `src/Axon/engine/commandExecutor.ts` (new) — extracted shared
+  binding for "submit a natural-language command back to AXON's
+  brain". The provider binds it once on mount; both the existing
+  automation executor and the new chain_commands hook off this.
+- `src/Axon/actions/workflows.ts` (new) — `chain_commands` action
+  takes `{ description, commands[], stopOnError? }` and runs each
+  command sequentially through the brain pipeline (so each step gets
+  full context, confirmations, undo). Capped at 12 steps with a 350ms
+  pause between fires to avoid hammering Anthropic. `stopOnError`
+  defaults to true.
+- `src/Axon/AxonProvider.tsx` — calls `bindCommandExecutor` alongside
+  `_bindAutomationExecutor` so both consumers see the same handler.
+
+### Shipped
+
+Commit: _pending_ (sprint 4)

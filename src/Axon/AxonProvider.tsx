@@ -42,6 +42,7 @@ import {
 } from "./config";
 import { registerAllActions } from "./actions";
 import { _bindAutomationExecutor, _getLiveAutomations } from "./actions/automations";
+import { bindCommandExecutor } from "./engine/commandExecutor";
 import { runTurn } from "./engine/brain";
 import { handleDirectDisrespect } from "./engine/loyaltyMonitor";
 import {
@@ -449,11 +450,15 @@ export function AxonProvider({ children }: { children: React.ReactNode }) {
     [runCommand],
   );
 
-  // automation executor hookup
+  // automation executor hookup — also wires the shared
+  // commandExecutor binding used by chain_commands and other workflow
+  // actions, so we have one place to point at submitCommand.
   useEffect(() => {
-    _bindAutomationExecutor(async (command) => {
+    const exec = async (command: string) => {
       await submitCommand(command, "text");
-    });
+    };
+    _bindAutomationExecutor(exec);
+    bindCommandExecutor(exec);
   }, [submitCommand]);
 
   // live automation poll

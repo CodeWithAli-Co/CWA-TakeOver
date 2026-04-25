@@ -18,6 +18,10 @@ import { registerCeoPowerActions } from "./ceo_powers";
 import { registerCwaRegistryActions } from "./cwa_registry";
 import { registerHelpActions } from "./help";
 import { registerCallActions } from "./call";
+import { registerCredentialActions } from "./credentials";
+import { registerOutboundActions } from "./outbound";
+import { registerIngestActions } from "./ingest";
+import { registerWorkflowActions } from "./workflows";
 
 let registered = false;
 
@@ -42,4 +46,8 @@ export function registerAllActions() {
   registerCwaRegistryActions();
   registerHelpActions();
   registerCallActions();
+  registerCredentialActions();
+  registerOutboundActions();
+  registerIngestActions();
+  registerWorkflowActions();
 }

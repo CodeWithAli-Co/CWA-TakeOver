@@ -59,7 +59,7 @@ demand confirmation; operator says "undo that" if wrong.
 
 - [x] **T3.1 Persist automations to localStorage** — **M** — Survive reload; recalc `nextFire` on mount. Unblocks "remind me tomorrow".
 - [ ] **T3.2 Cron-like scheduling** — **M** — `schedule_automation({ schedule: "0 9 * * *" })`. Depends on T3.1.
-- [ ] **T3.3 Multi-step workflow action** — **M** — `chain_commands({ commands: [...] })` so compound utterances don't re-prompt.
+- [x] **T3.3 Multi-step workflow action** — **M** — `chain_commands({ commands: [...] })` so compound utterances don't re-prompt.
 - [ ] **T3.4 Email drafting + sending** — **M** — `draft_email` + `send_email` (send is destructive, requires confirm). Needs backend email integration.
 - [x] **T3.5 Complete announcements** — **S** — Finish the broadcast-table TODO in `announcements.ts`; `confirm_announcement` should actually post.
 - [x] **T3.6 Recurring meetings** — **S** — Extend `create_meeting` schema with `recurrence: "daily" | "weekly" | "biweekly"` + optional end date.
@@ -80,6 +80,22 @@ demand confirmation; operator says "undo that" if wrong.
 - [x] **T5.3 Call mode (bidirectional conversation)** — **L** — New mode where Axon speaks a question, waits for reply, continues naturally. Refactor `voiceInput` for continuous back-and-forth.
 - [ ] **T5.4 Proactive anomaly alerts** — **M** — Monitors run continuously; when a new anomaly fires, Axon interrupts and speaks: "Heads up — task overdue."
 - [ ] **T5.5 Full-text search over Supabase** — **M** — `search_data({ table, query })` using PG FTS or Supabase vector. "Find invoices over $5000."
+
+## Tier 7 — Outbound + Elite (per Axon's own self-assessment)
+
+> Axon was asked what was missing and identified six gaps. These map
+> across earlier tiers but several are entirely new. Listed here as a
+> coherent push toward "elite" capability.
+
+- [x] **T7.1 Generic outbound webhook** — **M** — `send_webhook` action that fires an HTTP POST to a registered URL with a JSON payload. Foundation for the rest of the outbound family.
+- [x] **T7.2 Discord message send** — **S** — `send_discord_message` wrapping the webhook primitive with Discord's payload shape.
+- [x] **T7.3 GitHub issue creation** — **M** — `create_github_issue` against api.github.com/repos/{owner}/{repo}/issues using a stored PAT.
+- [ ] **T7.4 Google Calendar event** — **L** — `create_calendar_event` via Calendar API. Requires OAuth setup; may stub initially.
+- [x] **T7.5 Generic URL fetch** — **M** — `fetch_url` action that GETs a URL, returns text + a Claude-friendly summary. Lets the operator say "Axon, what does this page say?"
+- [x] **T7.6 GitHub PR reader** — **S** — `read_github_pr` wraps fetch_url with GitHub-aware shape (title, body, diff stat).
+- [ ] **T7.7 Persistent session summary + decision log** — **M** — At session close (or every N turns), summarize and persist: what we discussed, decisions made, things deferred, work patterns. Surfaces in the next session's preamble so Axon "knows you" over time.
+- [ ] **T7.8 Voice-print gate on sensitive actions** — **M** — Wire the existing voicePrint enrollment to actually block destructive/CEO actions when the speaker doesn't match. Configurable threshold + whitelist of locked actions.
+- [x] **T7.9 Credentials store** — **S** — `engine/credentials.ts` keyed localStorage backing for webhooks / API tokens, plus `set_credential` + `forget_credential` actions. Foundation for T7.1-T7.6.
 
 ## Tier 6 — Polish & Accessibility
 
