@@ -63,9 +63,13 @@
     {
       "identifier": "fs:scope",
       "allow": [
+        { "path": "$HOME" },
         { "path": "$HOME/**" },
+        { "path": "$DOCUMENT" },
         { "path": "$DOCUMENT/**" },
+        { "path": "$DESKTOP" },
         { "path": "$DESKTOP/**" },
+        { "path": "$DOWNLOAD" },
         { "path": "$DOWNLOAD/**" }
       ]
     }

@@ -214,11 +214,16 @@ export const listWorkspaceAction: AxonAction<
 
 export const findFileAction: AxonAction<
   { pattern: string; base?: string; maxResults?: number; maxDepth?: number },
-  { matches: Array<{ path: string; isDir: boolean }> }
+  {
+    matches: Array<{ path: string; isDir: boolean }>;
+    dirsScanned: number;
+    errors: string[];
+    topLevelDirs: string[];
+  }
 > = {
   name: "find_file",
   description:
-    "FAST recursive file search. Returns paths whose name or full path matches `pattern` (case-insensitive substring; `*` and `?` wildcards work). Skips node_modules / .git / dist / .next / build automatically. Use this FIRST when looking for a specific file — never walk the tree manually with list_workspace. Examples: pattern='reports/page' finds the reports page; pattern='*.tsx' finds all React files; pattern='auth' finds anything with 'auth' in the path.",
+    "FAST recursive file search. Returns paths whose name or full path matches `pattern` (case-insensitive substring; `*` and `?` wildcards work). Skips node_modules / .git / dist / .next / build automatically. Use this FIRST when looking for a specific file — never walk the tree manually with list_workspace. Examples: pattern='reports' finds anything with 'reports' in the path; pattern='*.tsx' finds all React files.",
   input_schema: {
     type: "object",
     properties: {
@@ -233,23 +238,51 @@ export const findFileAction: AxonAction<
     const ws = workspaceOrNull();
     if (!ws) return { summary: "No workspace set." };
     try {
-      const matches = await findFiles(ws, { pattern, base, maxResults, maxDepth });
-      if (matches.length === 0) {
+      const result = await findFiles(ws, { pattern, base, maxResults, maxDepth });
+      if (result.matches.length === 0) {
+        // Be honest about why nothing matched. Surface scan stats and any
+        // permission errors so the brain knows whether it's a missing
+        // file vs. a broken scan.
+        const parts: string[] = [`No match for "${pattern}".`];
+        parts.push(`Scanned ${result.dirsScanned} ${result.dirsScanned === 1 ? "dir" : "dirs"}.`);
+        if (result.topLevelDirs.length > 0) {
+          parts.push(
+            `Top-level dirs: ${result.topLevelDirs.slice(0, 12).join(", ")}${result.topLevelDirs.length > 12 ? "…" : ""}.`,
+          );
+        }
+        if (result.errors.length > 0) {
+          parts.push(
+            `${result.errors.length} readDir error${result.errors.length === 1 ? "" : "s"} (likely permission/scope): ${result.errors[0]}`,
+          );
+        }
         return {
-          summary: `No match for "${pattern}". Try a shorter substring or a glob like "*${pattern}*".`,
-          data: { matches: [] },
+          summary: parts.join(" "),
+          data: {
+            matches: [],
+            dirsScanned: result.dirsScanned,
+            errors: result.errors,
+            topLevelDirs: result.topLevelDirs,
+          },
         };
       }
-      const top = matches
+      const top = result.matches
         .slice(0, 6)
         .map((m) => (m.isDir ? `${m.path}/` : m.path))
         .join(", ");
       return {
-        summary: `${matches.length} match${matches.length === 1 ? "" : "es"}: ${top}${matches.length > 6 ? "…" : ""}.`,
-        data: { matches },
+        summary: `${result.matches.length} match${result.matches.length === 1 ? "" : "es"}: ${top}${result.matches.length > 6 ? "…" : ""}.`,
+        data: {
+          matches: result.matches,
+          dirsScanned: result.dirsScanned,
+          errors: result.errors,
+          topLevelDirs: result.topLevelDirs,
+        },
       };
     } catch (e) {
-      return { summary: `Find failed: ${(e as Error).message}`, data: { matches: [] } };
+      return {
+        summary: `Find failed: ${(e as Error).message}`,
+        data: { matches: [], dirsScanned: 0, errors: [(e as Error).message], topLevelDirs: [] },
+      };
     }
   },
 };

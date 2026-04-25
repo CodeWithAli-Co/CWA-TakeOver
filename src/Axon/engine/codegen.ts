@@ -38,15 +38,29 @@ function normalizeSlashes(p: string): string {
   return p.replace(/\\/g, "/").replace(/\/+$/g, "");
 }
 
-/** Reject any path that escapes its workspace root or contains traversal. */
+/** Detect the separator the workspace path uses. On Windows, paths from
+ *  Tauri's dialog come back with `\\` and the readDir backend on
+ *  Windows is fussy about which separator you pass in.
+ *  We KEEP whatever separator the workspace used and append children
+ *  with the same one. */
+function pathSeparator(workspace: string): "/" | "\\" {
+  return workspace.includes("\\") ? "\\" : "/";
+}
+
+/** Reject any path that escapes its workspace root or contains traversal.
+ *  Returns a path using the workspace's native separator. */
 export function safeJoin(workspace: string, relative: string): string {
-  const wsNorm = normalizeSlashes(workspace);
-  const rel = normalizeSlashes(relative).replace(/^\/+/, "");
-  if (rel.includes("..")) {
+  const wsTrimmed = workspace.replace(/[\\/]+$/g, "");
+  const sep = pathSeparator(workspace);
+  // Validate using forward-slash form so traversal check is uniform.
+  const relForCheck = normalizeSlashes(relative).replace(/^\/+/, "");
+  if (relForCheck.includes("..")) {
     throw new Error("Path traversal not allowed.");
   }
-  if (rel.length === 0) return wsNorm;
-  return `${wsNorm}/${rel}`;
+  if (relForCheck.length === 0) return wsTrimmed;
+  // Convert forward-slash relative back to native separator for the OS.
+  const relNative = relForCheck.split("/").join(sep);
+  return `${wsTrimmed}${sep}${relNative}`;
 }
 
 /** Pop a folder picker; returns the chosen absolute path or null. */
@@ -139,10 +153,26 @@ export async function listWorkspace(
   return out;
 }
 
+export interface FindFilesResult {
+  matches: Array<{ path: string; isDir: boolean }>;
+  /** Number of directories successfully scanned. */
+  dirsScanned: number;
+  /** First few readDir errors encountered — surfaced so callers can
+   *  show a useful failure message instead of "no match". */
+  errors: string[];
+  /** Top-level dirs that exist in the workspace — useful when find
+   *  returns nothing so the caller can suggest where to look. */
+  topLevelDirs: string[];
+}
+
 /** Fast recursive find. Walks the workspace tree skipping ignored dirs,
  *  returning relative paths whose filename or full path matches the
  *  pattern (case-insensitive substring; supports `*` as a single
- *  wildcard). Caps depth + results so it stays bounded on huge repos. */
+ *  wildcard). Caps depth + results so it stays bounded on huge repos.
+ *
+ *  Reports errors instead of swallowing them — silently catching every
+ *  readDir failure was the bug that caused "no match" results when the
+ *  file existed but Tauri couldn't enter the subdirectories. */
 export async function findFiles(
   workspace: string,
   args: {
@@ -152,7 +182,7 @@ export async function findFiles(
     maxResults?: number;
     maxDepth?: number;
   },
-): Promise<Array<{ path: string; isDir: boolean }>> {
+): Promise<FindFilesResult> {
   const { readDir } = await fs();
   const maxResults = args.maxResults ?? 40;
   const maxDepth = args.maxDepth ?? 10;
@@ -178,6 +208,9 @@ export async function findFiles(
   })();
 
   const out: Array<{ path: string; isDir: boolean }> = [];
+  const errors: string[] = [];
+  const topLevelDirs: string[] = [];
+  let dirsScanned = 0;
   const stack: Array<{ rel: string; depth: number }> = [
     { rel: startRel, depth: 0 },
   ];
@@ -188,12 +221,18 @@ export async function findFiles(
     let entries: any[];
     try {
       entries = await readDir(target);
-    } catch {
+      dirsScanned++;
+    } catch (e) {
+      const msg = `${cur.rel || "(root)"}: ${(e as Error).message ?? e}`;
+      console.warn("[AXON] findFiles readDir failed:", msg);
+      // Surface the first 5 errors for the action's summary.
+      if (errors.length < 5) errors.push(msg);
       continue;
     }
     for (const e of entries) {
       const isDir: boolean = e.isDirectory ?? false;
       const childRel = cur.rel ? `${cur.rel}/${e.name}` : e.name;
+      if (cur.depth === 0 && isDir) topLevelDirs.push(e.name);
       if (isDir && DEFAULT_IGNORE_DIRS.has(e.name)) continue;
 
       if (matcher(childRel, e.name)) {
@@ -210,7 +249,7 @@ export async function findFiles(
     if (a.path.length !== b.path.length) return a.path.length - b.path.length;
     return a.path.localeCompare(b.path);
   });
-  return out;
+  return { matches: out, dirsScanned, errors, topLevelDirs };
 }
 
 /** Grep-style search across workspace files. Reads matching files
