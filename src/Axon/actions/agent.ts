@@ -88,6 +88,11 @@ export const accomplishGoalAction: AxonAction<
     ctx.note(`Agent goal: ${goal} (project: ${project.name})`);
     if (narrate) ctx.speak(`On it. Working on ${project.name} now.`);
 
+    // Drop the orb into the green coding visual for the duration of
+    // the agent loop. The provider auto-reverts to idle/speaking when
+    // the turn finishes.
+    ctx.setStatus?.("coding");
+
     const result = await runAgent({
       goal,
       ctx,

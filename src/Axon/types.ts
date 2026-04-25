@@ -12,6 +12,7 @@ export type AxonStatus =
   | "processing"
   | "speaking"
   | "executing"
+  | "coding"
   | "error";
 
 /** Role of a conversation turn. */
@@ -128,6 +129,11 @@ export interface ActionContext {
    *  reply so the operator can keep talking without re-invoking the
    *  wake word — a phone-conversation-style flow. */
   setCallMode?: (on: boolean) => void;
+  /** Override AXON's high-level status — used by long-running actions
+   *  (code generation, agent loop) to switch the orb into a dedicated
+   *  visual state. The provider auto-reverts to processing/idle as the
+   *  brain advances or the turn ends. */
+  setStatus?: (status: AxonStatus) => void;
 }
 
 export interface OperatorContext {

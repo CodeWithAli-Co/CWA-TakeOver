@@ -876,3 +876,20 @@
   white-space: nowrap;
 }
 
+/* Coding badge — green glow that pulses faster than thinking. */
+@keyframes axon-coding-pulse {
+  0%, 100% {
+    opacity: 0.7;
+    box-shadow: 0 0 0 0 rgba(64, 220, 150, 0.0);
+  }
+  50% {
+    opacity: 1;
+    box-shadow: 0 0 22px 3px rgba(64, 220, 150, 0.45);
+  }
+}
+.axon-coding-badge {
+  font-family: inherit;
+  font-weight: 500;
+  white-space: nowrap;
+}
+

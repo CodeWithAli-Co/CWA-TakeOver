@@ -134,26 +134,35 @@ export function Orb() {
       // ─ Hue shift per state ─
       const isError = s === "error";
       const isDormant = vs === "dormant";
-      const isThinking = s === "processing" || s === "executing";
-      // Subtle pulse on intensity while thinking — helps the operator see
-      // the orb is actively working, not stuck.
+      const isCoding = s === "coding";
+      const isThinking = !isCoding && (s === "processing" || s === "executing");
+      // Subtle pulse on intensity while thinking/coding — helps the operator
+      // see the orb is actively working, not stuck.
       const thinkingPulse = isThinking ? 0.85 + Math.sin(t * 3.2) * 0.18 : 0;
+      const codingPulse = isCoding ? 0.95 + Math.sin(t * 4.0) * 0.1 : 0;
       const intensity =
         isDormant ? 0.2 :
         s === "listening" ? 1.0 + lvl * 0.4 :
         s === "speaking" ? 0.9 + Math.sin(t * 6) * 0.12 :
+        isCoding ? codingPulse :
         isThinking ? thinkingPulse :
         0.6;
 
-      // Color per state. Thinking shifts to cyan-violet so the operator
-      // immediately sees Axon flipped from listening (red) to thinking.
+      // Color per state.
+      //   default = red (listening / idle)
+      //   thinking = cyan-violet
+      //   coding = emerald-green (creation, growth)
+      //   error = orange
       let accentR = R;
       let accentG = G;
       let accentB = B;
       if (isError) {
         accentR = 255; accentG = 90; accentB = 60;
+      } else if (isCoding) {
+        // Emerald — saturated green with a hint of teal. Distinct from
+        // both the default red and the thinking cyan-violet.
+        accentR = 64; accentG = 220; accentB = 150;
       } else if (isThinking) {
-        // Cyan-violet — distinct from the default red without clashing.
         accentR = 120; accentG = 160; accentB = 255;
       }
 
@@ -184,6 +193,7 @@ export function Orb() {
         isDormant ? 0.1 :
         s === "listening" ? 0.8 + lvl * 1.4 :
         s === "speaking" ? 1.0 :
+        isCoding ? 2.0 :
         isThinking ? 1.6 :
         0.35;
       const waves = 4;
@@ -256,6 +266,100 @@ export function Orb() {
       ctx.strokeStyle = `rgba(255, 255, 255, ${0.18 * intensity})`;
       ctx.lineWidth = 1.5 * dpr;
       ctx.stroke();
+
+      // ═══════════════════════════════════════════════════════════
+      // CODING — green sphere with horizontal scan lines + bracket
+      // glyphs orbiting + raining "binary stream" of dots inside.
+      // Reads as "writing code" at a glance. Distinct enough from the
+      // thinking arcs that there's no confusion.
+      // ═══════════════════════════════════════════════════════════
+      if (isCoding) {
+        // ─ Inside-the-sphere scan lines ─
+        ctx.save();
+        ctx.beginPath();
+        ctx.arc(cx, cy, radius, 0, Math.PI * 2);
+        ctx.clip();
+        const lineCount = 6;
+        for (let i = 0; i < lineCount; i++) {
+          const phase = (t * 0.4 + i / lineCount) % 1; // 0..1, scrolls down
+          const y = cy - radius + phase * radius * 2;
+          const fade = 1 - Math.abs(0.5 - phase) * 1.6;
+          if (fade <= 0) continue;
+          ctx.beginPath();
+          ctx.moveTo(cx - radius, y);
+          ctx.lineTo(cx + radius, y);
+          ctx.strokeStyle = `rgba(${accentR}, ${accentG}, ${accentB}, ${0.2 * fade})`;
+          ctx.lineWidth = 1 * dpr;
+          ctx.stroke();
+        }
+
+        // ─ Binary-stream sparkles falling inside the sphere ─
+        const streamCount = 18;
+        for (let i = 0; i < streamCount; i++) {
+          const seed = (i * 9301 + 49297) % 233280;
+          const xOff = ((seed / 233280) * 2 - 1) * radius * 0.85;
+          const phase = (t * 0.7 + i * 0.13) % 1;
+          const y = cy - radius * 0.95 + phase * radius * 1.9;
+          const x = cx + xOff;
+          const len = 4 + (seed % 5);
+          const fade = 1 - Math.abs(0.5 - phase) * 1.4;
+          if (fade <= 0) continue;
+          ctx.fillStyle = `rgba(${accentR}, ${accentG}, ${accentB}, ${0.85 * fade})`;
+          ctx.beginPath();
+          ctx.rect(x - 0.5 * dpr, y, 1.4 * dpr, len * dpr);
+          ctx.fill();
+        }
+
+        // ─ Bright leading dot at the head of every binary stream ─
+        for (let i = 0; i < streamCount; i++) {
+          const seed = (i * 9301 + 49297) % 233280;
+          const xOff = ((seed / 233280) * 2 - 1) * radius * 0.85;
+          const phase = (t * 0.7 + i * 0.13) % 1;
+          const y = cy - radius * 0.95 + phase * radius * 1.9;
+          const x = cx + xOff;
+          const fade = 1 - Math.abs(0.5 - phase) * 1.4;
+          if (fade <= 0) continue;
+          ctx.beginPath();
+          ctx.arc(x, y, 1.6 * dpr, 0, Math.PI * 2);
+          ctx.fillStyle = `rgba(255, 255, 255, ${0.9 * fade})`;
+          ctx.fill();
+        }
+        ctx.restore();
+
+        // ─ Orbiting bracket glyphs around the sphere — { } ─
+        ctx.save();
+        ctx.translate(cx, cy);
+        ctx.rotate(t * 0.8);
+        const brR = radius + 7 * dpr;
+        ctx.font = `bold ${10 * dpr}px ui-monospace, "JetBrains Mono", monospace`;
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+        ctx.fillStyle = `rgba(${accentR}, ${accentG}, ${accentB}, 0.9)`;
+        ctx.fillText("{", brR, 0);
+        ctx.fillStyle = `rgba(${accentR}, ${accentG}, ${accentB}, 0.9)`;
+        ctx.fillText("}", -brR, 0);
+        ctx.fillStyle = `rgba(${accentR}, ${accentG}, ${accentB}, 0.6)`;
+        ctx.fillText("/", 0, brR);
+        ctx.fillText(">", 0, -brR);
+        ctx.restore();
+
+        // ─ Outer ring — slow rotating, segmented (like a progress bar) ─
+        const segments = 24;
+        const ringR = radius + 4 * dpr;
+        const fillCount = Math.floor(((t * 0.7) % 1) * segments);
+        for (let i = 0; i < segments; i++) {
+          const a0 = (i / segments) * Math.PI * 2 - Math.PI / 2;
+          const a1 = ((i + 0.7) / segments) * Math.PI * 2 - Math.PI / 2;
+          const lit = i <= fillCount;
+          ctx.beginPath();
+          ctx.arc(cx, cy, ringR, a0, a1);
+          ctx.strokeStyle = lit
+            ? `rgba(${accentR}, ${accentG}, ${accentB}, 0.9)`
+            : `rgba(${accentR}, ${accentG}, ${accentB}, 0.18)`;
+          ctx.lineWidth = 1.6 * dpr;
+          ctx.stroke();
+        }
+      }
 
       // ═══════════════════════════════════════════════════════════
       // THINKING — rotating arc orbit + concentric pulse
@@ -376,9 +480,11 @@ export function Orb() {
         </div>
       )}
 
-      {(status === "processing" || status === "executing") && (
+      {(status === "processing" || status === "executing" || status === "coding") && (
         <div
-          className="axon-thinking-badge"
+          className={
+            status === "coding" ? "axon-coding-badge" : "axon-thinking-badge"
+          }
           style={{
             left: orbPosition.x + ORB_SIZE / 2 - 38,
             top: orbPosition.y + ORB_SIZE + 14,
@@ -389,15 +495,47 @@ export function Orb() {
             fontSize: 10.5,
             letterSpacing: "0.18em",
             textTransform: "uppercase",
-            background: "rgba(120, 160, 255, 0.18)",
-            border: "1px solid rgba(120, 160, 255, 0.45)",
-            color: "rgba(200, 220, 255, 0.95)",
+            background:
+              status === "coding"
+                ? "rgba(64, 220, 150, 0.18)"
+                : "rgba(120, 160, 255, 0.18)",
+            border:
+              status === "coding"
+                ? "1px solid rgba(64, 220, 150, 0.5)"
+                : "1px solid rgba(120, 160, 255, 0.45)",
+            color:
+              status === "coding"
+                ? "rgba(190, 250, 220, 0.95)"
+                : "rgba(200, 220, 255, 0.95)",
             backdropFilter: "blur(10px)",
             zIndex: 9999,
-            animation: "axon-thinking-pulse 1.4s ease-in-out infinite",
+            animation:
+              status === "coding"
+                ? "axon-coding-pulse 1.1s ease-in-out infinite"
+                : "axon-thinking-pulse 1.4s ease-in-out infinite",
+            display: "flex",
+            alignItems: "center",
+            gap: 6,
           }}
         >
-          {status === "executing" ? "Working…" : "Thinking…"}
+          {status === "coding" && (
+            <span
+              aria-hidden="true"
+              style={{
+                fontFamily: "ui-monospace, 'JetBrains Mono', monospace",
+                fontSize: 11,
+                opacity: 0.95,
+                letterSpacing: 0,
+              }}
+            >
+              {"</>"}
+            </span>
+          )}
+          {status === "coding"
+            ? "Coding…"
+            : status === "executing"
+              ? "Working…"
+              : "Thinking…"}
         </div>
       )}
     </>

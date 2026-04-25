@@ -331,6 +331,7 @@ export function AxonProvider({ children }: { children: React.ReactNode }) {
       requestConfirmation,
       pushUndo: (entry) => pushUndoStack(entry),
       setCallMode,
+      setStatus: (s) => setStatus(s),
     };
   }, [navigate, setActiveCompany, appendActivity, appendTurn, requestConfirmation, setCallMode]);
 
@@ -564,8 +565,16 @@ export function AxonProvider({ children }: { children: React.ReactNode }) {
         onStateChange: (s) => {
           setVoiceState(s);
           setStatus((cur) => {
-            // Orb reflects voice state when idle-ish.
-            if (cur === "speaking" || cur === "processing") return cur;
+            // Orb reflects voice state when idle-ish — but never overwrite
+            // a "busy" status (the brain is mid-flight).
+            if (
+              cur === "speaking" ||
+              cur === "processing" ||
+              cur === "executing" ||
+              cur === "coding"
+            ) {
+              return cur;
+            }
             return s === "armed" ? "listening" : "idle";
           });
         },

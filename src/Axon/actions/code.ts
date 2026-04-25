@@ -51,6 +51,23 @@ function workspaceLabel(ws: string): string {
   return parts.slice(-2).join("/") || norm;
 }
 
+/** Run a thunk in the "coding" status state. The orb shifts to its
+ *  green coding visual while the closure runs; reverts to "processing"
+ *  on completion (the brain will re-set status as the loop continues). */
+async function withCodingStatus<T>(
+  ctx: { setStatus?: (s: any) => void },
+  fn: () => Promise<T>,
+): Promise<T> {
+  ctx.setStatus?.("coding");
+  try {
+    return await fn();
+  } finally {
+    // Brain's next turn will overwrite this; falling back to processing
+    // is the right default while we wait for the next iteration.
+    ctx.setStatus?.("processing");
+  }
+}
+
 /** Detect a sensible language tag from a filename. */
 function languageFromFilename(filename: string): string {
   const ext = filename.split(".").pop()?.toLowerCase() ?? "";
@@ -266,7 +283,9 @@ export const generateFileAction: AxonAction<
       }
     }
     const lang = language ?? languageFromFilename(filename);
-    const { code } = await generateFile({ brief, filename, language: lang, context });
+    const { code } = await withCodingStatus(ctx, () =>
+      generateFile({ brief, filename, language: lang, context }),
+    );
     await writeWorkspaceFile(ws, filename, code);
 
     const undoLabel = `restore ${filename}`;
@@ -356,7 +375,9 @@ export const modifyFileAction: AxonAction<
       return { summary: `Can't open ${filename}: ${(e as Error).message}` };
     }
     const lang = language ?? languageFromFilename(filename);
-    const { code } = await modifyFile({ brief, filename, current, language: lang });
+    const { code } = await withCodingStatus(ctx, () =>
+      modifyFile({ brief, filename, current, language: lang }),
+    );
     if (code.trim() === current.trim()) {
       return { summary: `No changes needed for ${filename}.` };
     }
@@ -412,7 +433,9 @@ export const scaffoldFeatureAction: AxonAction<
     const base = (basePath ?? `src/features/${name}`).replace(/^\/+/, "").replace(/\/+$/g, "");
     let scaffold: Awaited<ReturnType<typeof scaffoldFeature>>;
     try {
-      scaffold = await scaffoldFeature({ brief, basePath: base, context });
+      scaffold = await withCodingStatus(ctx, () =>
+        scaffoldFeature({ brief, basePath: base, context }),
+      );
     } catch (e) {
       return { summary: `Scaffold failed: ${(e as Error).message}` };
     }
