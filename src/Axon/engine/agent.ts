@@ -32,6 +32,7 @@ import {
 } from "../config";
 import { buildToolDefinitions } from "../actions/registry";
 import { executeAction } from "./executor";
+import { axonGraph } from "./graphStore";
 
 const AGENT_MAX_ITER = 14;
 const AGENT_MAX_TOKENS = 4096;
@@ -157,6 +158,12 @@ export async function runAgent(opts: AgentRunOpts): Promise<AgentRunResult> {
   let iter = 0;
   let stoppedAtCap = false;
 
+  // Mind-map: open a session for this autonomous run so the canvas
+  // shows the goal at the center and every iteration's tool calls
+  // branch off it. The session closes in the finally-style returns
+  // below with the final summary.
+  axonGraph.startSession({ kind: "agent", prompt: goal });
+
   for (iter = 0; iter < maxIters; iter++) {
     const body = {
       model: CLAUDE_MODEL,
@@ -207,11 +214,16 @@ export async function runAgent(opts: AgentRunOpts): Promise<AgentRunResult> {
           ctx.speak(txt);
         }
         finalSummary = txt;
+        // Mind-map: record the agent's spoken beat as a "thought" node
+        // so the operator can read what the agent was reasoning about
+        // between tool calls.
+        axonGraph.addThought(txt);
       }
     }
 
     if (toolUses.length === 0 || stopReason === "end_turn") {
       // Done — Claude has nothing more to do.
+      axonGraph.endSession({ summary: finalSummary || "Done.", failed: false });
       return { finalSummary: finalSummary || "Done.", actions, iterations: iter + 1, stoppedAtCap: false };
     }
 

@@ -26,6 +26,7 @@ import {
   dataUrlToBase64,
   suggestsVision,
 } from "./visionCapture";
+import { axonGraph } from "./graphStore";
 
 // ── types ─────────────────────────────────────────────────────
 type TextBlock = { type: "text"; text: string };
@@ -459,6 +460,11 @@ export async function runTurn(
   let finalText = "";
   const MAX_ITER = 4;
 
+  // Mind-map: open a session for this conversational turn so the
+  // canvas shows the prompt + every tool call branching off it. The
+  // executor's startTool/endTool hooks already emit per-action nodes.
+  axonGraph.startSession({ kind: "conversation", prompt: userText });
+
   for (let iter = 0; iter < MAX_ITER; iter++) {
     let response: StreamTurnResult;
 
@@ -484,6 +490,7 @@ export async function runTurn(
     } catch (e) {
       const message = e instanceof Error ? e.message : String(e);
       console.error("[AXON] Brain stream error:", message);
+      axonGraph.endSession({ summary: humanizeApiError(message), failed: true });
       return {
         assistantText: humanizeApiError(message),
         detail: message,
@@ -510,6 +517,8 @@ export async function runTurn(
         const tail = liveBuf.trim();
         if (tail.length > 0) opts.onSentence(tail);
       }
+      // Mind-map: settle the session with the final spoken text.
+      axonGraph.endSession({ summary: finalText, failed: false });
       return { assistantText: finalText, actions, fallback: false };
     }
 

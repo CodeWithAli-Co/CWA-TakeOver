@@ -10,8 +10,9 @@ import { ANTHROPIC_API_KEY } from "../config";
 import { AxonSettingsPane } from "./AxonSettings";
 import { quicksFor } from "./quickCommandsMap";
 import { listAudit, type AuditEntry } from "../engine/auditLog";
+import { MindMap } from "./MindMap";
 
-type Tab = "conversation" | "activity" | "audit" | "settings";
+type Tab = "conversation" | "mind" | "activity" | "audit" | "settings";
 
 function formatTime(ms: number): string {
   return new Date(ms).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
@@ -53,7 +54,18 @@ export function CommandPanel() {
 
   const [tab, setTab] = useState<Tab>("conversation");
   const [draft, setDraft] = useState("");
+  const [mindFullScreen, setMindFullScreen] = useState(false);
   const scrollRef = useRef<HTMLDivElement | null>(null);
+
+  // Esc closes the full-screen Mind Map without exiting the tab.
+  useEffect(() => {
+    if (!mindFullScreen) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setMindFullScreen(false);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [mindFullScreen]);
 
   useEffect(() => {
     if (scrollRef.current) {
@@ -74,6 +86,13 @@ export function CommandPanel() {
   const quicks = quicksFor(loc.pathname, activeCompany);
 
   return (
+    <>
+    {/* Full-screen Mind Map portal — escapes the panel when maximized
+        so the canvas owns the whole viewport. Esc closes; the
+        keydown listener above wires that up. */}
+    {tab === "mind" && mindFullScreen && (
+      <MindMap fullScreen />
+    )}
     <aside className="axon-panel" data-open={panelOpen} aria-hidden={!panelOpen}>
       <header className="axon-panel-header">
         <div className="axon-panel-title">
@@ -133,6 +152,14 @@ export function CommandPanel() {
           </button>
           <button
             className="axon-tab"
+            data-active={tab === "mind"}
+            onClick={() => setTab("mind")}
+            title="Live Mind Map — see Axon's thinking in real time"
+          >
+            Mind
+          </button>
+          <button
+            className="axon-tab"
             data-active={tab === "activity"}
             onClick={() => setTab("activity")}
           >
@@ -152,10 +179,24 @@ export function CommandPanel() {
           >
             Settings
           </button>
+
+          {/* Maximize / restore — only visible on the Mind tab. */}
+          {tab === "mind" && (
+            <button
+              className="axon-mindmap-maximize"
+              data-active={mindFullScreen}
+              onClick={() => setMindFullScreen((v) => !v)}
+              title={mindFullScreen ? "Exit full screen (Esc)" : "Open full screen"}
+              aria-label={mindFullScreen ? "Exit full screen" : "Open full screen"}
+            >
+              {mindFullScreen ? "⤡" : "⤢"}
+            </button>
+          )}
         </div>
 
         <div ref={scrollRef} className="axon-pane">
           {tab === "conversation" && <ConversationPane />}
+          {tab === "mind" && !mindFullScreen && <MindMap />}
           {tab === "activity" && <ActivityPane />}
           {tab === "audit" && <AuditPane />}
           {tab === "settings" && <AxonSettingsPane />}
@@ -221,6 +262,7 @@ export function CommandPanel() {
         )}
       </div>
     </aside>
+    </>
   );
 }
 

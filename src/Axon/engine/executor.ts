@@ -7,6 +7,7 @@ import type { ActionContext, AxonActionResult } from "../types";
 import { getAction } from "../actions/registry";
 import { appendAudit } from "./auditLog";
 import { verifyVoice } from "./voicePrint";
+import { axonGraph } from "./graphStore";
 
 export interface ExecuteOutcome {
   ok: boolean;
@@ -125,6 +126,14 @@ export async function executeAction(
     }
   }
 
+  // Mind-map event: tool start. We only track non-trivial tool names so
+  // internal/utility actions (set_status, etc) don't pollute the graph.
+  const t0 = performance.now();
+  const graphNode = axonGraph.startTool({
+    toolName: actionName,
+    input,
+  });
+
   try {
     const result = await action.handler(input as any, ctx);
     // Audit mutating actions (both real runs and dry-runs).
@@ -137,6 +146,15 @@ export async function executeAction(
         operator: ctx.operator.username,
         activeCompany: ctx.activeCompany,
         dryRun: ctx.dryRun,
+      });
+    }
+    // Mind-map event: tool ok.
+    if (graphNode) {
+      axonGraph.endTool({
+        nodeId: graphNode.id,
+        ok: true,
+        summary: result.summary,
+        durationMs: Math.round(performance.now() - t0),
       });
     }
     return { ok: true, result, actionName };
@@ -153,6 +171,15 @@ export async function executeAction(
         operator: ctx.operator.username,
         activeCompany: ctx.activeCompany,
         dryRun: ctx.dryRun,
+      });
+    }
+    // Mind-map event: tool error.
+    if (graphNode) {
+      axonGraph.endTool({
+        nodeId: graphNode.id,
+        ok: false,
+        error: message,
+        durationMs: Math.round(performance.now() - t0),
       });
     }
     return { ok: false, error: message, actionName };

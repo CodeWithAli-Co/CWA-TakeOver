@@ -18,6 +18,7 @@ import {
   ANTHROPIC_API_VERSION,
   CLAUDE_MODEL,
 } from "../config";
+import { axonGraph } from "./graphStore";
 
 // Tauri plugins are dynamic-imported so this module can also be parsed
 // in non-Tauri contexts (tests, storybook). At runtime in the desktop
@@ -157,6 +158,13 @@ export async function listWorkspace(
     if (a.isDir !== b.isDir) return a.isDir ? -1 : 1;
     return a.path.localeCompare(b.path);
   });
+  // Mind-map: emit one node for the directory we listed. Don't emit a
+  // node per child entry — that would explode the graph.
+  axonGraph.addFile({
+    op: "list",
+    path: rel || "(root)",
+    detail: `list · ${out.length} entries`,
+  });
   return out;
 }
 
@@ -256,6 +264,15 @@ export async function findFiles(
     if (a.path.length !== b.path.length) return a.path.length - b.path.length;
     return a.path.localeCompare(b.path);
   });
+  // Mind-map: a find counts as touching the matched files. Cap to
+  // first 5 matches so a wildcard search doesn't drown the canvas.
+  for (const m of out.slice(0, 5)) {
+    axonGraph.addFile({
+      op: "find",
+      path: m.path,
+      detail: `find · matched "${args.pattern}"`,
+    });
+  }
   return { matches: out, dirsScanned, errors, topLevelDirs };
 }
 
@@ -307,6 +324,7 @@ export async function searchFiles(
     }
     if (text.length > maxFileSize) continue;
     const lines = text.split(/\r?\n/);
+    let fileHadHit = false;
     for (let i = 0; i < lines.length; i++) {
       if (queryRe.test(lines[i])) {
         const lo = Math.max(0, i - contextLines);
@@ -316,8 +334,18 @@ export async function searchFiles(
           .map((l, idx) => `${lo + idx + 1}: ${l}`)
           .join("\n");
         hits.push({ path: f.path, line: i + 1, preview });
+        fileHadHit = true;
         if (hits.length >= maxHits) break;
       }
+    }
+    // Mind-map: emit one node per file that had any hit so the graph
+    // shows the search trail across the codebase.
+    if (fileHadHit) {
+      axonGraph.addFile({
+        op: "search",
+        path: f.path,
+        detail: `search · "${args.query}"`,
+      });
     }
   }
   return hits;
@@ -328,7 +356,10 @@ export async function readWorkspaceFile(
   rel: string,
 ): Promise<string> {
   const { readTextFile } = await fs();
-  return await readTextFile(safeJoin(workspace, rel));
+  const content = await readTextFile(safeJoin(workspace, rel));
+  // Mind-map: a read counts as a touch.
+  axonGraph.addFile({ op: "read", path: rel, detail: `read · ${content.length}b` });
+  return content;
 }
 
 export async function writeWorkspaceFile(
@@ -344,7 +375,15 @@ export async function writeWorkspaceFile(
   if (!(await exists(parent))) {
     await mkdir(parent, { recursive: true });
   }
+  const existed = await exists(fullPath);
   await writeTextFile(fullPath, content);
+  // Mind-map: distinguish create vs modify so the canvas can color
+  // them differently (teal write vs amber modify).
+  axonGraph.addFile({
+    op: existed ? "modify" : "write",
+    path: rel,
+    detail: `${existed ? "modify" : "write"} · ${content.length}b`,
+  });
 }
 
 export async function deleteWorkspaceFile(
@@ -353,6 +392,7 @@ export async function deleteWorkspaceFile(
 ): Promise<void> {
   const { remove } = await fs();
   await remove(safeJoin(workspace, rel));
+  axonGraph.addFile({ op: "delete", path: rel, detail: "delete" });
 }
 
 // ── claude code-writer ────────────────────────────────────────────────
