@@ -251,9 +251,19 @@ export const findFileAction: AxonAction<
           );
         }
         if (result.errors.length > 0) {
-          parts.push(
-            `${result.errors.length} readDir error${result.errors.length === 1 ? "" : "s"} (likely permission/scope): ${result.errors[0]}`,
-          );
+          // If the errors are scope/permission, the workspace was
+          // probably saved before the dialog gained recursive: true.
+          // The fix is one round-trip: re-open the picker.
+          const isScopeError = result.errors.some((m) => /forbidden path|allow-read-dir|capability/i.test(m));
+          if (isScopeError) {
+            parts.push(
+              `STOP — this is a Tauri scope problem, not a missing file. The agent cannot read subdirectories of this workspace. Tell the operator to say "set workspace" again so the folder picker re-registers the path with recursive scope. Do NOT keep retrying find_file. First scope error: ${result.errors[0]}`,
+            );
+          } else {
+            parts.push(
+              `${result.errors.length} readDir error${result.errors.length === 1 ? "" : "s"}: ${result.errors[0]}`,
+            );
+          }
         }
         return {
           summary: parts.join(" "),

@@ -63,12 +63,19 @@ export function safeJoin(workspace: string, relative: string): string {
   return `${wsTrimmed}${sep}${relNative}`;
 }
 
-/** Pop a folder picker; returns the chosen absolute path or null. */
+/** Pop a folder picker; returns the chosen absolute path or null.
+ *  CRITICAL: pass `recursive: true` so Tauri auto-adds the picked
+ *  folder AND all its subdirectories to the runtime fs scope. Without
+ *  this, readDir on subdirectories fails with "forbidden path" because
+ *  the static fs:scope in capabilities/default.json only covers
+ *  $HOME / $DOCUMENT / $DESKTOP / $DOWNLOAD — and many devs keep code
+ *  on other drives (C:\Dev, D:\Projects, etc). */
 export async function pickWorkspaceDirectory(): Promise<string | null> {
   const { open } = await dialogPlugin();
   const result = await open({
     directory: true,
     multiple: false,
+    recursive: true,
     title: "Select AXON code-generation workspace",
   });
   if (!result || Array.isArray(result)) return null;
