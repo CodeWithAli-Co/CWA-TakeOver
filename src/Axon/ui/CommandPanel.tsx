@@ -45,6 +45,8 @@ export function CommandPanel() {
     startListening,
     clearConversation,
     liveTranscript,
+    callMode,
+    setCallMode,
   } = useAxon();
   const { activeCompany } = useCompanyFilter();
   const loc = useLocation();
@@ -89,6 +91,25 @@ export function CommandPanel() {
             />
             {VOICE_LABEL[voiceState] ?? voiceState}
           </span>
+          {/* Call-mode toggle — click flips the flag locally. Voice-wise
+              the operator can also say "start a call" / "hang up". */}
+          <button
+            className="axon-btn"
+            onClick={() => setCallMode(!callMode)}
+            title={callMode ? "Exit call mode" : "Enter call mode"}
+            data-active={callMode}
+            style={
+              callMode
+                ? {
+                    background: "rgba(239,68,68,0.15)",
+                    borderColor: "rgba(239,68,68,0.5)",
+                    color: "#fca5a5",
+                  }
+                : undefined
+            }
+          >
+            {callMode ? "📞 On Call" : "📞 Call"}
+          </button>
           <button className="axon-btn" onClick={interrupt} title="Stop speaking">
             Stop
           </button>

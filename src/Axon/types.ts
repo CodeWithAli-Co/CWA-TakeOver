@@ -124,6 +124,10 @@ export interface ActionContext {
     undo?: () => Promise<string>;
     descriptor?: { kind: string; payload: Record<string, unknown> };
   }) => void;
+  /** Toggle call mode. When on, Axon re-arms the microphone after each
+   *  reply so the operator can keep talking without re-invoking the
+   *  wake word — a phone-conversation-style flow. */
+  setCallMode?: (on: boolean) => void;
 }
 
 export interface OperatorContext {
@@ -280,6 +284,10 @@ export interface AxonContextValue {
   audioLevel: number;
   isAdmin: boolean;
   voiceState: "dormant" | "standby" | "armed";
+  /** Call mode — when true, Axon re-arms the mic after every TTS reply
+   *  so the operator can keep talking without re-invoking the wake word.
+   *  Feels like a phone conversation rather than single-shot commands. */
+  callMode: boolean;
 
   // Actions
   openPanel: () => void;
@@ -294,4 +302,7 @@ export interface AxonContextValue {
   clearConversation: () => void;
   addAutomation: (a: Omit<Automation, "id" | "createdAt" | "_handle" | "nextFire">) => Automation;
   removeAutomation: (id: string) => void;
+  /** Turn call mode on or off. Exposed so voice actions + UI controls
+   *  can toggle it without having to touch private state. */
+  setCallMode: (on: boolean) => void;
 }

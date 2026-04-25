@@ -44,7 +44,7 @@ demand confirmation; operator says "undo that" if wrong.
 - [ ] **T1.1 Refactor AxonProvider into hooks** — **M** — Split the 889-line provider into `useAxonState`, `useVoiceEngine`, `useConversationSummarizer`, `useMonitors`, `useKeyboardShortcuts`. Enables testing + reduces cognitive load.
 - [x] **T1.2 Confirmation dialog timeout** — **S** — Pending confirms auto-expire after 30s with a cancel message so the UI never freezes.
 - [x] **T1.3 Persist undo stack to localStorage** — **S** — Serialize on each action; restore on mount. "Undo that" should survive reload.
-- [ ] **T1.4 Action dispatch queue + rate limiting** — **M** — Queue outgoing tool calls, dispatch serially with a short cooldown. Prevents accidental double-fires.
+- [x] **T1.4 Action dispatch queue + rate limiting** — **M** — Queue outgoing tool calls, dispatch serially with a short cooldown. Prevents accidental double-fires.
 - [ ] **T1.5 Offline fallback for brain downtime** — **M** — If Anthropic is unreachable, surface a helpful message + list 5 built-in voice macros so the assistant isn't dead.
 
 ## Tier 2 — UX & Discoverability
@@ -77,7 +77,7 @@ demand confirmation; operator says "undo that" if wrong.
 
 - [ ] **T5.1 Agent mode** — **L** — `navigate_and_complete({ task })`: chain `click_button` + `fill_input` in a loop until the task is done.
 - [ ] **T5.2 Meeting transcription + recap** — **L** — If a meeting is detected, capture audio, transcribe via Whisper, summarize with Claude.
-- [ ] **T5.3 Call mode (bidirectional conversation)** — **L** — New mode where Axon speaks a question, waits for reply, continues naturally. Refactor `voiceInput` for continuous back-and-forth.
+- [x] **T5.3 Call mode (bidirectional conversation)** — **L** — New mode where Axon speaks a question, waits for reply, continues naturally. Refactor `voiceInput` for continuous back-and-forth.
 - [ ] **T5.4 Proactive anomaly alerts** — **M** — Monitors run continuously; when a new anomaly fires, Axon interrupts and speaks: "Heads up — task overdue."
 - [ ] **T5.5 Full-text search over Supabase** — **M** — `search_data({ table, query })` using PG FTS or Supabase vector. "Find invoices over $5000."
 

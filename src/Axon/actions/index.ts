@@ -17,6 +17,7 @@ import { registerUndoActions } from "./undo";
 import { registerCeoPowerActions } from "./ceo_powers";
 import { registerCwaRegistryActions } from "./cwa_registry";
 import { registerHelpActions } from "./help";
+import { registerCallActions } from "./call";
 
 let registered = false;
 
@@ -40,4 +41,5 @@ export function registerAllActions() {
   registerCeoPowerActions();
   registerCwaRegistryActions();
   registerHelpActions();
+  registerCallActions();
 }

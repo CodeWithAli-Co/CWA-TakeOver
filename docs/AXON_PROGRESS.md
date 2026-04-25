@@ -113,4 +113,43 @@ Commit `52c12bb` — "feat(axon): persistable undo, confirm timeout, help action
 
 ### Shipped
 
-Commit: _pending_ (sprint 2)
+Commit `5585810` — "feat(axon): announcements broadcast, recurring meetings, pagination, persistent automations"
+
+---
+
+## Sprint 3 — robustness + the big feature (call mode)
+
+### ✅ T1.4 — Serial dispatch queue
+
+- `src/Axon/AxonProvider.tsx` — `submitCommand` is now a thin wrapper
+  that chains off an `inFlightRef` promise. Rapid-fire triggers (voice
+  intent + automation fire + keyboard shortcut landing at the same
+  time) now execute one-at-a-time instead of racing each other's
+  conversation history / activity log / pending-confirm state.
+
+### ✅ T5.3 — CALL MODE (the big ticket item)
+
+- `src/Axon/types.ts` — `AxonContextValue` gained `callMode: boolean`
+  and `setCallMode(on: boolean)`. `ActionContext` gained `setCallMode?`
+  so actions can toggle it themselves.
+- `src/Axon/AxonProvider.tsx` — new `callMode` state + `callModeRef`
+  for use inside stale-closure callbacks. The TTS `onEnd` handler now
+  arms the recognizer whenever `callModeRef.current` is true (not just
+  when Axon's line ended with a question). Exposed through the context
+  value + plugged into the ActionContext.
+- `src/Axon/actions/call.ts` (new) — `start_call` and `end_call`
+  actions. Trigger phrases: "start a call" / "call me" / "let's chat"
+  / "conversation mode" to engage; "hang up" / "end call" / "that's
+  all for now" to disengage.
+- `src/Axon/actions/index.ts` — registered both call-mode actions.
+- `src/Axon/ui/CommandPanel.tsx` — added a "📞 Call" / "📞 On Call"
+  toggle button in the header that reflects + flips callMode. Turns
+  red when active.
+
+Under the hood it's a tiny change — just "arm the mic after every
+reply instead of only after questions." The UX payoff is huge: Axon
+now feels like a phone conversation, not a command-shell prompt.
+
+### Shipped
+
+Commit: _pending_ (sprint 3)

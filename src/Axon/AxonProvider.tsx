@@ -186,6 +186,18 @@ export function AxonProvider({ children }: { children: React.ReactNode }) {
   // is a question. When TTS finishes, we auto-arm the recognizer so the
   // user can reply immediately without saying "Axon" again.
   const awaitReplyRef = useRef(false);
+
+  // Call mode — when true, Axon re-arms the mic after every reply (not
+  // just when it ended with a question). Operators can say "start a
+  // call" / "call me" to flip it on, or "hang up" / "end call" to flip
+  // it off. Stored as state so UI can reflect it + as a ref so onEnd
+  // (stale closure land) reads the live value.
+  const [callMode, setCallModeState] = useState(false);
+  const callModeRef = useRef(false);
+  const setCallMode = useCallback((on: boolean) => {
+    setCallModeState(on);
+    callModeRef.current = on;
+  }, []);
   // Best-effort text of the last line TTS spoke (collected as sentences
   // stream in).
   const lastSpokenTextRef = useRef("");
@@ -308,14 +320,22 @@ export function AxonProvider({ children }: { children: React.ReactNode }) {
       logActivity: appendActivity,
       requestConfirmation,
       pushUndo: (entry) => pushUndoStack(entry),
+      setCallMode,
     };
-  }, [navigate, setActiveCompany, appendActivity, appendTurn, requestConfirmation]);
+  }, [navigate, setActiveCompany, appendActivity, appendTurn, requestConfirmation, setCallMode]);
 
   // Summary ref — latest conversation summary (if any).
   const summaryRef = useRef<string | null>(null);
 
   // ── core: submit a command ──────────────────────────────────────
-  const submitCommand = useCallback(
+  // Serial dispatch queue — every submitCommand chains off the previous
+  // in-flight promise so rapid-fire triggers (simultaneous voice intent
+  // + automation fire + keyboard shortcut) execute one-at-a-time rather
+  // than stepping on each other. Without this the conversation history,
+  // activity log, and pending-confirmation state can all race.
+  const inFlightRef = useRef<Promise<void>>(Promise.resolve());
+
+  const runCommand = useCallback(
     async (text: string, modality: "voice" | "text" = "text", confidence?: number) => {
       const clean = text.trim();
       if (!clean) return;
@@ -411,6 +431,22 @@ export function AxonProvider({ children }: { children: React.ReactNode }) {
       }
     },
     [appendTurn, buildActionContext]
+  );
+
+  // Public submitCommand — serializes through inFlightRef. Always returns
+  // a promise that resolves after the operator's turn finishes, so any
+  // awaiter (automation executor, keyboard shortcut) sees completion.
+  const submitCommand = useCallback(
+    (text: string, modality: "voice" | "text" = "text", confidence?: number) => {
+      const next = inFlightRef.current
+        .catch(() => {
+          // Swallow earlier errors — queue must keep draining.
+        })
+        .then(() => runCommand(text, modality, confidence));
+      inFlightRef.current = next;
+      return next;
+    },
+    [runCommand],
   );
 
   // automation executor hookup
@@ -598,12 +634,16 @@ export function AxonProvider({ children }: { children: React.ReactNode }) {
         onEnd: () => {
           voiceInRef.current?.setMuted(false);
           setStatus("idle");
-          // Conversation mode: if the line ended with a question, arm the
-          // recognizer so the operator can reply without saying "Axon"
-          // again. We give the browser 300ms to clear the TTS buffer
-          // before arming, otherwise STT can pick up Axon's own trailing
-          // syllables.
-          if (awaitReplyRef.current) {
+          // Re-arm the microphone after every reply under two conditions:
+          //   1. awaitReplyRef — Axon's line ended with a question, so
+          //      the operator is expected to answer without re-invoking
+          //      the wake word.
+          //   2. callModeRef — call mode is on, so we *always* arm. This
+          //      is the phone-call-style continuous back-and-forth.
+          // We give the browser 300ms to clear the TTS buffer before
+          // arming, otherwise STT can pick up Axon's trailing syllables.
+          const shouldArm = awaitReplyRef.current || callModeRef.current;
+          if (shouldArm) {
             awaitReplyRef.current = false;
             window.setTimeout(() => {
               voiceInRef.current?.pushToTalk();
@@ -871,6 +911,7 @@ export function AxonProvider({ children }: { children: React.ReactNode }) {
       audioLevel,
       isAdmin,
       voiceState,
+      callMode,
       openPanel: () => setPanelOpen(true),
       closePanel: () => setPanelOpen(false),
       togglePanel: () => setPanelOpen((v) => !v),
@@ -883,6 +924,7 @@ export function AxonProvider({ children }: { children: React.ReactNode }) {
       clearConversation,
       addAutomation,
       removeAutomation,
+      setCallMode,
     }),
     [
       status,
@@ -896,6 +938,7 @@ export function AxonProvider({ children }: { children: React.ReactNode }) {
       audioLevel,
       isAdmin,
       voiceState,
+      callMode,
       submitCommand,
       startListening,
       stopListening,
@@ -904,6 +947,7 @@ export function AxonProvider({ children }: { children: React.ReactNode }) {
       clearConversation,
       addAutomation,
       removeAutomation,
+      setCallMode,
     ]
   );
 
