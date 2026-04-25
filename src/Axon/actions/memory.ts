@@ -76,7 +76,14 @@ export const forgetAllAction: AxonAction<
   handler: async (_input, ctx) => {
     const ok = await ctx.requestConfirmation("Wipe all of AXON's persistent memory?");
     if (!ok) return { summary: "Cancelled.", data: { cleared: false } };
-    saveMemory({ notes: [], lastSeen: Date.now(), prefs: {} });
+    saveMemory({
+      notes: [],
+      lastSeen: Date.now(),
+      prefs: {},
+      sessionSummaries: [],
+      decisions: [],
+      defers: [],
+    });
     ctx.logActivity({
       actionName: "forget_all_memory",
       params: {},

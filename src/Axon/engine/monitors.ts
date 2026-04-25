@@ -37,6 +37,99 @@ export const MONITORS: Monitor[] = [
     },
   },
   {
+    id: "stale-meetings",
+    label: "Meetings without follow-up",
+    description:
+      "Alerts when a meeting from 2+ days ago has no task whose title overlaps the meeting title — a likely missed follow-up.",
+    intervalMs: 30 * 60 * 1000,
+    check: (() => {
+      // Closure-keyed dedupe so the same meeting doesn't fire every
+      // 30 minutes. Cleared on session reload.
+      const alerted = new Set<string>();
+      return async (ctx) => {
+        const today = new Date();
+        const twoDaysAgo = new Date(today);
+        twoDaysAgo.setDate(twoDaysAgo.getDate() - 2);
+        const fiveDaysAgo = new Date(today);
+        fiveDaysAgo.setDate(fiveDaysAgo.getDate() - 5);
+
+        let mq = supabase
+          .from("cwa_meetings")
+          .select("id, meeting_title, date")
+          .lte("date", twoDaysAgo.toISOString().slice(0, 10))
+          .gte("date", fiveDaysAgo.toISOString().slice(0, 10))
+          .limit(20);
+        if (ctx.activeCompany !== "all")
+          mq = mq.eq("company", companyLabel(ctx.activeCompany));
+        const { data: meetings, error } = await mq;
+        if (error || !meetings || meetings.length === 0) return null;
+
+        for (const m of meetings) {
+          const id = String((m as any).id);
+          if (alerted.has(id)) continue;
+          const title = ((m as any).meeting_title as string | undefined)?.trim();
+          if (!title || title.length < 4) continue;
+          const safeTitle = title.replace(/[%_]/g, "").slice(0, 40);
+          const { count: matches } = await supabase
+            .from("cwa_todos")
+            .select("todo_id", { count: "exact", head: true })
+            .ilike("title", `%${safeTitle}%`);
+          if ((matches ?? 0) === 0) {
+            alerted.add(id);
+            return `That ${(m as any).date} meeting "${title}" has no follow-up task. Want me to create one?`;
+          }
+        }
+        return null;
+      };
+    })(),
+  },
+  {
+    id: "revenue-swing",
+    label: "Revenue week-over-week swing",
+    description:
+      "Compares the last 7 days of invoice income to the prior 7 days. Alerts on >25% jumps or drops.",
+    intervalMs: 60 * 60 * 1000,
+    check: (() => {
+      let lastReportedBucket: string | null = null;
+      return async (ctx) => {
+        const now = new Date();
+        const cutoff7 = new Date(now);
+        cutoff7.setDate(cutoff7.getDate() - 7);
+        const cutoff14 = new Date(now);
+        cutoff14.setDate(cutoff14.getDate() - 14);
+
+        let q = supabase
+          .from("cwa_invoices")
+          .select("outcome, creation_date")
+          .gte("creation_date", cutoff14.toISOString())
+          .limit(500);
+        if (ctx.activeCompany !== "all")
+          q = q.eq("company", companyLabel(ctx.activeCompany));
+        const { data, error } = await q;
+        if (error || !data) return null;
+
+        const cur = data
+          .filter((r: any) => new Date(r.creation_date) >= cutoff7)
+          .reduce((s: number, r: any) => s + (Number(r.outcome) || 0), 0);
+        const prev = data
+          .filter((r: any) => new Date(r.creation_date) < cutoff7)
+          .reduce((s: number, r: any) => s + (Number(r.outcome) || 0), 0);
+
+        if (prev <= 0) return null;
+        const delta = ((cur - prev) / prev) * 100;
+        // Bucket key combines the week boundary + rounded delta so the
+        // alert only repeats when the situation materially changes.
+        const bucket = `${cutoff7.toISOString().slice(0, 10)}-${Math.round(delta / 5) * 5}`;
+        if (lastReportedBucket === bucket) return null;
+        if (Math.abs(delta) < 25) return null;
+
+        lastReportedBucket = bucket;
+        const direction = delta > 0 ? "up" : "down";
+        return `Revenue is ${direction} ${Math.abs(Math.round(delta))}% week-over-week. Want a breakdown?`;
+      };
+    })(),
+  },
+  {
     id: "new-signups",
     label: "New user signups",
     description: "Alerts when new users appear in `app_users` since the last check.",

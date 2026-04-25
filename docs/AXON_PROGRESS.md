@@ -211,4 +211,67 @@ Commit `b39a2ea` — "feat(axon): call mode + serial dispatch queue"
 
 ### Shipped
 
-Commit: _pending_ (sprint 4)
+Commit `d5e3ed2` — "feat(axon): outbound reach (Discord/GitHub/webhooks) + external fetch + chain_commands"
+
+---
+
+## Sprint 5 — closing the elite gap (memory · voice auth · proactive)
+
+> Three of the six gaps Axon flagged were partially in earlier tiers
+> but not yet shipped. This sprint closes them all.
+
+### ✅ T7.7 — Persistent session memory (texture, not just raw notes)
+
+- `src/Axon/engine/memory.ts` — `PersistentMemory` extended with three
+  new arrays: `sessionSummaries[]`, `decisions[]`, `defers[]`. Each
+  with its own age cap. New helpers: `appendSessionSummary`,
+  `appendDecision`, `appendDefer`. `memoryPreamble` now surfaces the
+  last 3 session recaps + last 5 decisions + last 5 defers in the
+  brain's context — Axon now has continuity across reloads ("you've
+  been working on X for the past few days").
+- `src/Axon/AxonProvider.tsx` — the existing summarizer now also
+  writes its compressed output to `appendSessionSummary` whenever it
+  fires, so every conversation collapse becomes a durable recap.
+- `src/Axon/actions/journal.ts` (new) — `record_decision` and
+  `record_defer` actions give the brain a dedicated channel to commit
+  these moments to durable memory. No confirmation required —
+  capturing should feel weightless.
+- `src/Axon/actions/memory.ts` — `forget_all_memory` updated to wipe
+  the new fields too.
+
+### ✅ T7.8 — Voice-print actually gates sensitive actions now
+
+- `src/Axon/types.ts` — added `voicePrintGate: boolean` to `AxonSettings`.
+- `src/Axon/actions/voiceauth.ts` (new) — four actions: `enroll_voice_print`,
+  `enable_voice_gate`, `disable_voice_gate` (with confirm), and
+  `test_voice_print` (snapshot + score for tuning). Provider binds
+  read/write accessors so actions can mutate settings without prop-
+  drilling.
+- `src/Axon/engine/executor.ts` — when `opts.voicePrintGate` is set,
+  every mutating action snapshots the speaker's voice and rejects if
+  cosine similarity falls below threshold. Bypass list covers the
+  enroll / enable / disable / test actions themselves so the operator
+  can't lock themselves out. Fail-closed if the mic isn't reachable.
+- `src/Axon/engine/brain.ts` — `BrainRunOpts.voicePrintGate` threads
+  the gate descriptor through to `executeAction`.
+- `src/Axon/AxonProvider.tsx` — builds the gate descriptor from
+  current settings and passes it to `runTurn`.
+
+### ✅ T5.4 — Proactive intelligence: new monitors
+
+- `src/Axon/engine/monitors.ts` — added two monitors that match the
+  examples Axon gave in its self-audit:
+    - **stale-meetings** — meetings 2-5 days old whose title doesn't
+      appear in any task title get flagged as missed follow-ups.
+      Closure-keyed dedupe so the same meeting doesn't fire twice.
+      Polls every 30 min.
+    - **revenue-swing** — compares last 7 days of invoice income to
+      the prior 7. Alerts on >25% jumps or drops. Bucketed dedupe so
+      the same anomaly only fires once per direction shift. Polls
+      hourly.
+- The monitor system already had voice-speaking infrastructure —
+  every alert says "Heads up — …" and lands in the conversation log.
+
+### Shipped
+
+Commit: _pending_ (sprint 5)

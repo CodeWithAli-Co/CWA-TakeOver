@@ -78,7 +78,7 @@ demand confirmation; operator says "undo that" if wrong.
 - [ ] **T5.1 Agent mode** — **L** — `navigate_and_complete({ task })`: chain `click_button` + `fill_input` in a loop until the task is done.
 - [ ] **T5.2 Meeting transcription + recap** — **L** — If a meeting is detected, capture audio, transcribe via Whisper, summarize with Claude.
 - [x] **T5.3 Call mode (bidirectional conversation)** — **L** — New mode where Axon speaks a question, waits for reply, continues naturally. Refactor `voiceInput` for continuous back-and-forth.
-- [ ] **T5.4 Proactive anomaly alerts** — **M** — Monitors run continuously; when a new anomaly fires, Axon interrupts and speaks: "Heads up — task overdue."
+- [x] **T5.4 Proactive anomaly alerts** — **M** — Monitors run continuously; when a new anomaly fires, Axon interrupts and speaks: "Heads up — task overdue."
 - [ ] **T5.5 Full-text search over Supabase** — **M** — `search_data({ table, query })` using PG FTS or Supabase vector. "Find invoices over $5000."
 
 ## Tier 7 — Outbound + Elite (per Axon's own self-assessment)
@@ -93,8 +93,8 @@ demand confirmation; operator says "undo that" if wrong.
 - [ ] **T7.4 Google Calendar event** — **L** — `create_calendar_event` via Calendar API. Requires OAuth setup; may stub initially.
 - [x] **T7.5 Generic URL fetch** — **M** — `fetch_url` action that GETs a URL, returns text + a Claude-friendly summary. Lets the operator say "Axon, what does this page say?"
 - [x] **T7.6 GitHub PR reader** — **S** — `read_github_pr` wraps fetch_url with GitHub-aware shape (title, body, diff stat).
-- [ ] **T7.7 Persistent session summary + decision log** — **M** — At session close (or every N turns), summarize and persist: what we discussed, decisions made, things deferred, work patterns. Surfaces in the next session's preamble so Axon "knows you" over time.
-- [ ] **T7.8 Voice-print gate on sensitive actions** — **M** — Wire the existing voicePrint enrollment to actually block destructive/CEO actions when the speaker doesn't match. Configurable threshold + whitelist of locked actions.
+- [x] **T7.7 Persistent session summary + decision log** — **M** — At session close (or every N turns), summarize and persist: what we discussed, decisions made, things deferred, work patterns. Surfaces in the next session's preamble so Axon "knows you" over time.
+- [x] **T7.8 Voice-print gate on sensitive actions** — **M** — Wire the existing voicePrint enrollment to actually block destructive/CEO actions when the speaker doesn't match. Configurable threshold + whitelist of locked actions.
 - [x] **T7.9 Credentials store** — **S** — `engine/credentials.ts` keyed localStorage backing for webhooks / API tokens, plus `set_credential` + `forget_credential` actions. Foundation for T7.1-T7.6.
 
 ## Tier 6 — Polish & Accessibility

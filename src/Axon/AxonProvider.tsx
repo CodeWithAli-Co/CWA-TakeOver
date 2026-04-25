@@ -43,6 +43,7 @@ import {
 import { registerAllActions } from "./actions";
 import { _bindAutomationExecutor, _getLiveAutomations } from "./actions/automations";
 import { bindCommandExecutor } from "./engine/commandExecutor";
+import { _bindVoicePrintAccessors } from "./actions/voiceauth";
 import { runTurn } from "./engine/brain";
 import { handleDirectDisrespect } from "./engine/loyaltyMonitor";
 import {
@@ -53,7 +54,11 @@ import {
 } from "./engine/voiceInput";
 import { VoiceOutput } from "./engine/voiceOutput";
 import { MONITORS } from "./engine/monitors";
-import { loadMemory, saveMemory } from "./engine/memory";
+import {
+  loadMemory,
+  saveMemory,
+  appendSessionSummary,
+} from "./engine/memory";
 import { summarizeTurns } from "./engine/summarizer";
 import { observeRoute } from "./engine/routeObservations";
 import {
@@ -385,10 +390,21 @@ export function AxonProvider({ children }: { children: React.ReactNode }) {
 
       // Stream sentences into TTS as they arrive — speech starts fast.
       let spokeAny = false;
+      // Voice-print gate: if enrolled and the gate is on, build the
+      // verifier descriptor here so the executor can snapshot the
+      // speaker before any mutating action.
+      const gate =
+        settingsRef.current.voicePrintGate && settingsRef.current.voicePrint
+          ? {
+              vector: settingsRef.current.voicePrint,
+              threshold: settingsRef.current.voicePrintThreshold,
+            }
+          : undefined;
       const res = await runTurn(clean, conversationRef.current, ctx, {
         confidence,
         summary: summaryRef.current,
         visionMode: settingsRef.current.visionMode,
+        voicePrintGate: gate,
         onSentence: (s) => {
           // Skip empty-after-sanitize fragments (pure markdown/bullets).
           const meaningful = s.replace(/[*_`|#~\-•>]/g, "").trim();
@@ -460,6 +476,9 @@ export function AxonProvider({ children }: { children: React.ReactNode }) {
     _bindAutomationExecutor(exec);
     bindCommandExecutor(exec);
   }, [submitCommand]);
+
+  // (Voice-print accessor binding lives later in the file, after
+  // updateSettings is declared — TDZ safety.)
 
   // live automation poll
   useEffect(() => {
@@ -805,7 +824,10 @@ export function AxonProvider({ children }: { children: React.ReactNode }) {
 
   // ── Conversation summarization ─────────────────────────────────
   // When the turn count exceeds SUMMARY_TRIGGER_TURNS, background-summarize
-  // the older half and keep the last SUMMARY_KEEP_RECENT verbatim.
+  // the older half and keep the last SUMMARY_KEEP_RECENT verbatim. Each
+  // successful summarization is also written to persistent memory as a
+  // session-summary entry — that's how AXON gets continuity across
+  // reloads ("you've been working on X for the last few days").
   const summarizingRef = useRef(false);
   useEffect(() => {
     if (summarizingRef.current) return;
@@ -821,6 +843,13 @@ export function AxonProvider({ children }: { children: React.ReactNode }) {
           : result;
         // Drop the summarized turns from the live conversation.
         setConversation((prev) => prev.slice(-SUMMARY_KEEP_RECENT));
+        // Persist this batch as a session summary for cross-reload memory.
+        try {
+          const cur = loadMemory();
+          saveMemory(appendSessionSummary(cur, result));
+        } catch {
+          /* memory persist is best-effort */
+        }
       }
       summarizingRef.current = false;
     }).catch(() => {
@@ -882,6 +911,22 @@ export function AxonProvider({ children }: { children: React.ReactNode }) {
       return next;
     });
   }, []);
+
+  // Voice-print accessor binding — placed after updateSettings to avoid
+  // the temporal-dead-zone reference that const+useEffect would create
+  // earlier in the function body. Re-binds whenever updateSettings
+  // changes (which is once, but defensive).
+  useEffect(() => {
+    _bindVoicePrintAccessors(
+      () => ({
+        voicePrint: settingsRef.current.voicePrint,
+        voicePrintThreshold: settingsRef.current.voicePrintThreshold,
+        voicePrintGate: settingsRef.current.voicePrintGate,
+      }),
+      (partial) => updateSettings(partial),
+    );
+  }, [updateSettings]);
+
   const startListening = useCallback(() => voiceInRef.current?.pushToTalk(), []);
   const stopListening = useCallback(() => {
     voiceInRef.current?.stop();

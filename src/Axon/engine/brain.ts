@@ -67,6 +67,9 @@ export interface BrainRunOpts {
   onTextDelta?: (chunk: string) => void;
   /** Fires once per completed sentence — handy for sentence-by-sentence TTS. */
   onSentence?: (sentence: string) => void;
+  /** When set, mutating actions verify the speaker's voice against the
+   *  enrolled print before running. Threaded through to executeAction. */
+  voicePrintGate?: { vector: number[]; threshold: number };
 }
 
 export interface BrainRunResult {
@@ -518,6 +521,7 @@ export async function runTurn(
     for (const tu of toolUses) {
       const outcome = await executeAction(tu.name, tu.input, ctx, {
         confidence: opts.confidence,
+        voicePrintGate: opts.voicePrintGate,
       });
       const logged: ExecutedAction = {
         id: tu.id,

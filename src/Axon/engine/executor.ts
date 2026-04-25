@@ -6,6 +6,7 @@
 import type { ActionContext, AxonActionResult } from "../types";
 import { getAction } from "../actions/registry";
 import { appendAudit } from "./auditLog";
+import { verifyVoice } from "./voicePrint";
 
 export interface ExecuteOutcome {
   ok: boolean;
@@ -19,7 +20,23 @@ export interface ExecuteOpts {
   confidence?: number;
   /** Threshold below which mutating actions gate on explicit confirmation. */
   confidenceThreshold?: number;
+  /** When set, mutating actions run a voice-print check first.
+   *  `vector` is the enrolled print, `threshold` the cosine cutoff. */
+  voicePrintGate?: {
+    vector: number[];
+    threshold: number;
+  };
 }
+
+/** Actions that bypass voice-print gating regardless of mutating flag.
+ *  These are the ways the operator turns the gate on/off — gating
+ *  them would lock the operator out of their own controls. */
+const VOICE_GATE_BYPASS = new Set<string>([
+  "enroll_voice_print",
+  "enable_voice_gate",
+  "disable_voice_gate",
+  "test_voice_print",
+]);
 
 export async function executeAction(
   actionName: string,
@@ -57,6 +74,54 @@ export async function executeAction(
         result: { summary: "Cancelled — unclear transcript." },
         actionName,
       };
+    }
+  }
+
+  // Voice-print gate: if enabled and the operator has enrolled a
+  // print, snapshot the speaker before any mutating action and refuse
+  // when the cosine similarity falls below the configured threshold.
+  // The gate-management actions themselves (enroll / enable / disable
+  // / test) bypass this check so the operator can't lock themselves
+  // out of their own controls.
+  if (
+    action.mutating &&
+    opts.voicePrintGate &&
+    !VOICE_GATE_BYPASS.has(actionName)
+  ) {
+    try {
+      const result = await verifyVoice(
+        opts.voicePrintGate.vector,
+        opts.voicePrintGate.threshold,
+      );
+      if (result && !result.pass) {
+        const msg =
+          `Voice didn't match (similarity ${result.score.toFixed(2)} ` +
+          `vs threshold ${opts.voicePrintGate.threshold.toFixed(2)}). ` +
+          `Action blocked.`;
+        appendAudit({
+          actionName,
+          params: input,
+          summary: msg,
+          success: false,
+          error: "voice-print-mismatch",
+          operator: ctx.operator.username,
+          activeCompany: ctx.activeCompany,
+          dryRun: ctx.dryRun,
+        });
+        return { ok: false, error: msg, actionName };
+      }
+      // If verifyVoice returned null (mic unavailable, etc.) we fail
+      // closed — don't run the action when we can't verify.
+      if (!result) {
+        return {
+          ok: false,
+          error: "Voice gate is on but the microphone wasn't reachable.",
+          actionName,
+        };
+      }
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e);
+      return { ok: false, error: `Voice gate failed: ${msg}`, actionName };
     }
   }
 

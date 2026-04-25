@@ -163,6 +163,10 @@ export interface AxonSettings {
   voicePrint: number[] | null;
   /** Cosine-similarity threshold for voice identity; below this → reject. */
   voicePrintThreshold: number;
+  /** When true and `voicePrint` is set, mutating actions verify the
+   *  speaker's voice against the enrolled print before running. Adds
+   *  ~1.5s of latency per gated action (mic snapshot + comparison). */
+  voicePrintGate: boolean;
   /** Push-to-talk keyboard shortcut. */
   pushToTalkShortcut: string;
   /** Preferred synthesis voice name. */
@@ -218,6 +222,7 @@ export const DEFAULT_SETTINGS: AxonSettings = {
   dryRun: false,
   voicePrint: null,
   voicePrintThreshold: 0.7,
+  voicePrintGate: false,
   pushToTalkShortcut: "Control+Space",
   preferredVoice: null,
   rate: 1.02,
