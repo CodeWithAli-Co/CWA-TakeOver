@@ -879,6 +879,15 @@ function ReportDetail({
         ? "CodeWithAli"
         : null;
 
+  // Color tokens for the detail pane. Dropped indigo entirely — the
+  // operator wanted a darker, more grounded tone. We use deep slate
+  // (close to graphite) for the avatar, leadership-note label, and
+  // primary action button. The TYPE accent (red for incidents, etc.)
+  // still does the visual heavy-lifting on the page.
+  const SLATE_BG = "rgba(30,41,59,0.55)";       // slate-800 / 55%
+  const SLATE_BORDER = "rgba(71,85,105,0.55)";  // slate-600 / 55%
+  const SLATE_FG = "rgb(203,213,225)";          // slate-300
+
   // Type accent rail at the very top of the card.
   return (
     <div className="flex h-full flex-col">
@@ -892,26 +901,28 @@ function ReportDetail({
 
       {/* Scrollable body */}
       <div className="flex-1 min-h-0 overflow-y-auto">
-        <div className="max-w-[820px] mx-auto w-full px-7 py-7 space-y-6">
-          {/* Sender hero block */}
-          <div className="flex items-start gap-4">
+        <div className="max-w-[820px] mx-auto w-full px-7 py-6 space-y-5">
+          {/* ── Top row: sender + status pill — compact, single line. */}
+          <div className="flex items-center gap-3">
             <div
-              className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-indigo-500/15 text-indigo-200 text-[16px] font-black overflow-hidden border border-indigo-500/25"
+              className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl text-[13px] font-bold overflow-hidden"
+              style={{
+                background: SLATE_BG,
+                border: `1px solid ${SLATE_BORDER}`,
+                color: SLATE_FG,
+              }}
             >
               {report._senderAvatar ? (
-                <img src={report._senderAvatar} alt="" className="h-14 w-14 rounded-2xl object-cover" />
+                <img src={report._senderAvatar} alt="" className="h-11 w-11 rounded-xl object-cover" />
               ) : (
                 senderInitials
               )}
             </div>
             <div className="min-w-0 flex-1">
-              <p className="text-[11px] font-mono uppercase tracking-widest text-muted-foreground">
-                From
-              </p>
-              <p className="text-[15px] font-bold text-foreground tracking-tight truncate">
+              <p className="text-[14px] font-bold text-foreground tracking-tight truncate leading-tight">
                 {report._senderName}
               </p>
-              <div className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[11.5px] text-muted-foreground">
+              <div className="flex flex-wrap items-center gap-x-2 gap-y-0 text-[11px] text-muted-foreground">
                 {report._senderRole && <span>{report._senderRole}</span>}
                 {report._senderRole && companyLabel && <span className="opacity-50">·</span>}
                 {companyLabel && (
@@ -922,7 +933,6 @@ function ReportDetail({
                 )}
               </div>
             </div>
-            {/* Status pill on the far right */}
             {report.status === "reviewed" && (
               <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-500/15 text-emerald-300 px-3 py-1 text-[11px] font-bold">
                 <Eye className="h-3 w-3" />
@@ -949,78 +959,71 @@ function ReportDetail({
             )}
           </div>
 
-          {/* Title */}
-          <h1 className="text-[1.85rem] font-black tracking-tight text-foreground leading-[1.15]">
-            {report.title}
-          </h1>
-
-          {/* Spec-sheet metadata grid */}
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 rounded-xl border border-border/60 bg-card/40 backdrop-blur-sm p-3">
-            <SpecCell
-              label="Type"
-              value={
-                <span
-                  className="inline-flex items-center gap-1 font-bold"
-                  style={{ color: meta.accent }}
-                >
-                  <TypeIcon className="h-3 w-3" />
-                  {meta.label}
-                </span>
-              }
-            />
-            <SpecCell
-              label="Priority"
-              value={
-                <span className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[10.5px] font-bold ${PRIORITY_META[report.priority].cls}`}>
-                  <span className={`h-1.5 w-1.5 rounded-full ${PRIORITY_META[report.priority].dot}`} />
-                  {PRIORITY_META[report.priority].label}
-                </span>
-              }
-            />
-            <SpecCell
-              label="Submitted"
-              value={
-                <span className="inline-flex items-center gap-1 text-foreground/90">
-                  <Clock className="h-3 w-3 opacity-60" />
-                  {report.submitted_at
-                    ? new Date(report.submitted_at).toLocaleString(undefined, {
-                        month: "short", day: "numeric", hour: "numeric", minute: "2-digit",
-                      })
-                    : "—"}
-                </span>
-              }
-            />
-            <SpecCell
-              label="Project"
-              value={
-                report._projectName ? (
-                  <span className="inline-flex items-center gap-1 text-foreground/90">
-                    <FolderKanban className="h-3 w-3 opacity-60" />
+          {/* ── Title + inline meta row. Inline is leaner than the
+              old separate spec-sheet card and keeps the eye flowing. */}
+          <div className="space-y-2">
+            <h1 className="text-[1.85rem] font-black tracking-tight text-foreground leading-[1.15]">
+              {report.title}
+            </h1>
+            <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5 text-[11.5px]">
+              <span
+                className="inline-flex items-center gap-1.5 font-bold"
+                style={{ color: meta.accent }}
+              >
+                <TypeIcon className="h-3.5 w-3.5" />
+                {meta.label}
+              </span>
+              <span className="text-muted-foreground/40">·</span>
+              <span className={`inline-flex items-center gap-1.5 rounded-full border px-2 py-0.5 text-[10.5px] font-bold ${PRIORITY_META[report.priority].cls}`}>
+                <span className={`h-1.5 w-1.5 rounded-full ${PRIORITY_META[report.priority].dot}`} />
+                {PRIORITY_META[report.priority].label}
+              </span>
+              <span className="text-muted-foreground/40">·</span>
+              <span className="inline-flex items-center gap-1.5 text-muted-foreground">
+                <Clock className="h-3 w-3 opacity-70" />
+                {report.submitted_at
+                  ? new Date(report.submitted_at).toLocaleString(undefined, {
+                      month: "short", day: "numeric", hour: "numeric", minute: "2-digit",
+                    })
+                  : "—"}
+              </span>
+              {report._projectName && (
+                <>
+                  <span className="text-muted-foreground/40">·</span>
+                  <span className="inline-flex items-center gap-1.5 text-muted-foreground">
+                    <FolderKanban className="h-3 w-3 opacity-70" />
                     {report._projectName}
                   </span>
-                ) : (
-                  <span className="text-muted-foreground/70 italic">none</span>
-                )
-              }
-            />
+                </>
+              )}
+            </div>
           </div>
 
-          {/* Body — letter style */}
+          {/* ── Divider — separates header from document body. */}
+          <div className="h-px bg-border/60" />
+
+          {/* ── Body — softer treatment, indented blockquote feel
+              instead of a heavy bordered panel. Reads as flowing copy. */}
           {report.body ? (
-            <div className="rounded-2xl border border-border/60 bg-zinc-950/40 backdrop-blur-sm p-7 shadow-inner">
-              <StructuredBody body={report.body} />
+            <div className="relative pl-5">
+              <span
+                aria-hidden="true"
+                className="absolute left-0 top-1 bottom-1 w-[2px] rounded-full"
+                style={{ background: `${meta.accent}55` }}
+              />
+              <div className="text-[14px] text-foreground/90 leading-relaxed">
+                <StructuredBody body={report.body} />
+              </div>
             </div>
           ) : (
-            <div className="rounded-2xl border border-dashed border-border/60 bg-card/30 p-7 text-center">
-              <p className="text-[13px] text-muted-foreground italic">
-                No details provided — just the title.
-              </p>
-            </div>
+            <p className="text-[13px] text-muted-foreground/80 italic pl-5">
+              No details provided — just the title.
+            </p>
           )}
 
-          {/* Reviewed-at footer */}
+          {/* ── Reviewed-at note (small, inline) */}
           {report.reviewed_at && (
-            <div className="flex items-center gap-2 text-[11px] text-muted-foreground pl-1">
+            <div className="flex items-center gap-2 text-[10.5px] text-muted-foreground pl-1">
               <CalendarClock className="h-3.5 w-3.5" />
               <span>
                 Reviewed on{" "}
@@ -1031,44 +1034,31 @@ function ReportDetail({
             </div>
           )}
 
-          {/* Leadership note */}
-          <div
-            className="rounded-2xl border border-indigo-500/20 bg-card/50 backdrop-blur-sm overflow-hidden"
-            style={{ boxShadow: "0 0 0 1px rgba(99,102,241,0.10), 0 8px 32px -16px rgba(99,102,241,0.25)" }}
-          >
-            <div className="px-6 pt-6 pb-5 space-y-4">
-              <div className="flex items-center gap-3">
-                <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-indigo-500/15 border border-indigo-500/20">
-                  <MessageSquare className="h-4 w-4 text-indigo-400" />
-                </div>
-                <div>
-                  <h2 className="text-[13px] font-black text-foreground tracking-wide">
-                    Leadership Note
-                  </h2>
-                  <p className="text-[11px] text-muted-foreground mt-0.5">
-                    Feedback, follow-ups, or acknowledgment for the sender.
-                  </p>
-                </div>
-              </div>
-
-              <textarea
-                value={notes}
-                onChange={(e) => setNotes(e.target.value)}
-                rows={6}
-                placeholder="Acknowledged. Let's pick this up in our 1-on-1."
-                className="w-full resize-y rounded-xl border border-border/70 bg-background/60 px-4 py-3.5 text-[13px] text-foreground placeholder:text-muted-foreground/60 outline-none focus:border-indigo-500/50 focus:ring-2 focus:ring-indigo-500/15 transition-all"
-              />
-
-              {err && (
-                <p className="rounded-lg border border-red-500/30 bg-red-500/10 px-4 py-2.5 text-[11.5px] text-red-300">
-                  {err}
-                </p>
-              )}
+          {/* ── Leadership note — inline label, no heavy panel,
+              no glow. Just a label and the textarea. Cleaner. */}
+          <div className="space-y-2 pt-1">
+            <div className="flex items-center gap-2">
+              <MessageSquare className="h-3.5 w-3.5 text-muted-foreground" />
+              <h2 className="text-[10.5px] font-mono uppercase tracking-widest text-muted-foreground">
+                Leadership note
+              </h2>
             </div>
+            <textarea
+              value={notes}
+              onChange={(e) => setNotes(e.target.value)}
+              rows={5}
+              placeholder="Acknowledged. Let's pick this up in our 1-on-1."
+              className="w-full resize-y rounded-xl border border-border/60 bg-background/40 px-4 py-3 text-[13px] text-foreground placeholder:text-muted-foreground/50 outline-none focus:border-slate-500/60 focus:ring-2 focus:ring-slate-500/15 transition-all"
+            />
+            {err && (
+              <p className="rounded-lg border border-red-500/30 bg-red-500/10 px-4 py-2 text-[11.5px] text-red-300">
+                {err}
+              </p>
+            )}
           </div>
 
-          {/* Spacer so the sticky bar doesn't cover content */}
-          <div className="h-4" />
+          {/* Bottom spacer */}
+          <div className="h-2" />
         </div>
       </div>
 
@@ -1080,7 +1070,7 @@ function ReportDetail({
               type="button"
               onClick={markReviewed}
               disabled={saving}
-              className="flex-1 inline-flex items-center justify-center gap-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 px-6 py-2.5 text-[13px] font-black text-white disabled:opacity-50 transition-all shadow-lg shadow-indigo-500/20"
+              className="flex-1 inline-flex items-center justify-center gap-2 rounded-xl bg-slate-700 hover:bg-slate-600 px-6 py-2.5 text-[13px] font-black text-slate-50 disabled:opacity-50 transition-all shadow-lg shadow-slate-900/40 ring-1 ring-slate-600/40"
             >
               {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
               Mark Reviewed
@@ -1092,7 +1082,7 @@ function ReportDetail({
                 type="button"
                 onClick={saveNotesOnly}
                 disabled={saving || notes === (report.review_notes ?? "")}
-                className="flex-1 inline-flex items-center justify-center gap-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 px-6 py-2.5 text-[13px] font-black text-white disabled:opacity-50 transition-all shadow-lg shadow-indigo-500/20"
+                className="flex-1 inline-flex items-center justify-center gap-2 rounded-xl bg-slate-700 hover:bg-slate-600 px-6 py-2.5 text-[13px] font-black text-slate-50 disabled:opacity-50 transition-all shadow-lg shadow-slate-900/40 ring-1 ring-slate-600/40"
               >
                 {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
                 Save Note
@@ -1120,26 +1110,6 @@ function ReportDetail({
             </button>
           )}
         </div>
-      </div>
-    </div>
-  );
-}
-
-// ── Spec cell (metadata grid) ───────────────────────────────────
-
-function SpecCell({
-  label, value,
-}: {
-  label: string;
-  value: React.ReactNode;
-}) {
-  return (
-    <div className="min-w-0">
-      <p className="text-[9.5px] font-mono uppercase tracking-widest text-muted-foreground/80">
-        {label}
-      </p>
-      <div className="mt-1 text-[12px] text-foreground truncate">
-        {value}
       </div>
     </div>
   );
