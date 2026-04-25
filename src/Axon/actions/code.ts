@@ -24,6 +24,8 @@ import {
   modifyFile,
   scaffoldFeature,
   safeJoin,
+  findFiles,
+  searchFiles,
 } from "../engine/codegen";
 
 // Workspace accessors — bound by AxonProvider on mount so we can
@@ -169,19 +171,21 @@ export const currentWorkspaceAction: AxonAction<
 // ── reads (non-mutating, no confirm) ────────────────────────────────────
 
 export const listWorkspaceAction: AxonAction<
-  { path?: string },
+  { path?: string; recursive?: boolean; maxDepth?: number },
   { entries: Array<{ name: string; isDir: boolean; path: string }> }
 > = {
   name: "list_workspace",
   description:
-    "List files and folders inside the workspace. Pass `path` to scope to a subfolder.",
+    "List files and folders inside the workspace. Pass `path` to scope to a subfolder. Set `recursive: true` to walk subdirectories (skips node_modules / .git / dist / .next / build / etc, and is depth + entry capped). Prefer `find_file` when you're hunting for a specific filename — it's faster.",
   input_schema: {
     type: "object",
     properties: {
       path: { type: "string", description: "Subfolder path relative to workspace root." },
+      recursive: { type: "boolean", description: "Walk into subdirectories. Default false." },
+      maxDepth: { type: "number", description: "Max recursion depth when recursive is true. Default 4." },
     },
   },
-  handler: async ({ path = "" }, _ctx) => {
+  handler: async ({ path = "", recursive, maxDepth }, _ctx) => {
     const ws = workspaceOrNull();
     if (!ws) {
       return {
@@ -190,13 +194,13 @@ export const listWorkspaceAction: AxonAction<
       };
     }
     try {
-      const entries = await listWorkspace(ws, path);
+      const entries = await listWorkspace(ws, path, { recursive, maxDepth });
       const summary =
         entries.length === 0
           ? "Folder is empty."
           : `${entries.length} ${entries.length === 1 ? "entry" : "entries"}: ${entries
               .slice(0, 8)
-              .map((e) => e.name)
+              .map((e) => (e.isDir ? `${e.path}/` : e.path))
               .join(", ")}${entries.length > 8 ? "…" : ""}.`;
       return { summary, data: { entries } };
     } catch (e) {
@@ -204,6 +208,84 @@ export const listWorkspaceAction: AxonAction<
         summary: `Couldn't list: ${(e as Error).message}`,
         data: { entries: [] },
       };
+    }
+  },
+};
+
+export const findFileAction: AxonAction<
+  { pattern: string; base?: string; maxResults?: number; maxDepth?: number },
+  { matches: Array<{ path: string; isDir: boolean }> }
+> = {
+  name: "find_file",
+  description:
+    "FAST recursive file search. Returns paths whose name or full path matches `pattern` (case-insensitive substring; `*` and `?` wildcards work). Skips node_modules / .git / dist / .next / build automatically. Use this FIRST when looking for a specific file — never walk the tree manually with list_workspace. Examples: pattern='reports/page' finds the reports page; pattern='*.tsx' finds all React files; pattern='auth' finds anything with 'auth' in the path.",
+  input_schema: {
+    type: "object",
+    properties: {
+      pattern: { type: "string", description: "Substring or glob (`*`, `?`) to match against the relative path." },
+      base: { type: "string", description: "Optional starting subfolder. Defaults to workspace root." },
+      maxResults: { type: "number", description: "Cap on results. Default 40." },
+      maxDepth: { type: "number", description: "Max recursion depth. Default 10." },
+    },
+    required: ["pattern"],
+  },
+  handler: async ({ pattern, base, maxResults, maxDepth }, _ctx) => {
+    const ws = workspaceOrNull();
+    if (!ws) return { summary: "No workspace set." };
+    try {
+      const matches = await findFiles(ws, { pattern, base, maxResults, maxDepth });
+      if (matches.length === 0) {
+        return {
+          summary: `No match for "${pattern}". Try a shorter substring or a glob like "*${pattern}*".`,
+          data: { matches: [] },
+        };
+      }
+      const top = matches
+        .slice(0, 6)
+        .map((m) => (m.isDir ? `${m.path}/` : m.path))
+        .join(", ");
+      return {
+        summary: `${matches.length} match${matches.length === 1 ? "" : "es"}: ${top}${matches.length > 6 ? "…" : ""}.`,
+        data: { matches },
+      };
+    } catch (e) {
+      return { summary: `Find failed: ${(e as Error).message}`, data: { matches: [] } };
+    }
+  },
+};
+
+export const searchFilesAction: AxonAction<
+  { query: string; pathFilter?: string; maxHits?: number; contextLines?: number },
+  { hits: Array<{ path: string; line: number; preview: string }> }
+> = {
+  name: "search_files",
+  description:
+    "Grep-style content search across workspace files. Returns lines that match `query` (case-insensitive) with surrounding context. Use to locate where a function, prop, or string is defined or used. Pass `pathFilter` to scope (e.g. '.tsx', 'reports'). Caps file size at 240KB and total hits at 30.",
+  input_schema: {
+    type: "object",
+    properties: {
+      query: { type: "string", description: "String to search for (case-insensitive)." },
+      pathFilter: { type: "string", description: "Optional substring filter on file path." },
+      maxHits: { type: "number", description: "Cap on hits. Default 30." },
+      contextLines: { type: "number", description: "Lines of context around each hit. Default 1." },
+    },
+    required: ["query"],
+  },
+  handler: async ({ query, pathFilter, maxHits, contextLines }, _ctx) => {
+    const ws = workspaceOrNull();
+    if (!ws) return { summary: "No workspace set." };
+    try {
+      const hits = await searchFiles(ws, { query, pathFilter, maxHits, contextLines });
+      if (hits.length === 0) {
+        return { summary: `No matches for "${query}".`, data: { hits: [] } };
+      }
+      const filesWithHits = new Set(hits.map((h) => h.path));
+      return {
+        summary: `${hits.length} hit${hits.length === 1 ? "" : "s"} in ${filesWithHits.size} file${filesWithHits.size === 1 ? "" : "s"}.`,
+        data: { hits },
+      };
+    } catch (e) {
+      return { summary: `Search failed: ${(e as Error).message}`, data: { hits: [] } };
     }
   },
 };
@@ -540,6 +622,8 @@ export function registerCodeActions() {
   registerAction(setWorkspaceAction);
   registerAction(currentWorkspaceAction);
   registerAction(listWorkspaceAction);
+  registerAction(findFileAction);
+  registerAction(searchFilesAction);
   registerAction(readWorkspaceFileAction);
   registerAction(generateFileAction);
   registerAction(modifyFileAction);

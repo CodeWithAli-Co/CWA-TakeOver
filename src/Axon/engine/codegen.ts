@@ -70,23 +70,211 @@ export async function ensureWorkspaceExists(workspace: string): Promise<boolean>
   }
 }
 
+// Directories we never recurse into. Walking them murders performance
+// (node_modules can have hundreds of thousands of files) and they're
+// almost never what the operator wants anyway.
+const DEFAULT_IGNORE_DIRS = new Set<string>([
+  "node_modules",
+  ".git",
+  "dist",
+  "build",
+  ".next",
+  ".turbo",
+  ".vercel",
+  ".cache",
+  "out",
+  ".svelte-kit",
+  "target",       // rust
+  "venv",         // python
+  ".venv",
+  "__pycache__",
+  ".pytest_cache",
+  ".idea",
+  ".vscode",
+  ".DS_Store",
+  "coverage",
+]);
+
 export async function listWorkspace(
   workspace: string,
   rel: string = "",
+  opts: { recursive?: boolean; maxDepth?: number; maxEntries?: number } = {},
 ): Promise<Array<{ name: string; isDir: boolean; path: string }>> {
   const { readDir } = await fs();
-  const target = safeJoin(workspace, rel);
-  const entries = await readDir(target);
+  const recursive = opts.recursive ?? false;
+  const maxDepth = opts.maxDepth ?? (recursive ? 4 : 1);
+  const maxEntries = opts.maxEntries ?? 400;
+
   const out: Array<{ name: string; isDir: boolean; path: string }> = [];
-  for (const e of entries) {
-    const childRel = rel ? `${rel}/${e.name}` : e.name;
-    out.push({ name: e.name, isDir: e.isDirectory ?? false, path: childRel });
+  // BFS so the closest entries to the requested path come first.
+  const queue: Array<{ rel: string; depth: number }> = [{ rel, depth: 0 }];
+  while (queue.length > 0 && out.length < maxEntries) {
+    const cur = queue.shift()!;
+    const target = safeJoin(workspace, cur.rel);
+    let entries: any[];
+    try {
+      entries = await readDir(target);
+    } catch {
+      continue;
+    }
+    for (const e of entries) {
+      const isDir = e.isDirectory ?? false;
+      const childRel = cur.rel ? `${cur.rel}/${e.name}` : e.name;
+      out.push({ name: e.name, isDir, path: childRel });
+      if (out.length >= maxEntries) break;
+      if (
+        recursive &&
+        isDir &&
+        cur.depth + 1 < maxDepth &&
+        !DEFAULT_IGNORE_DIRS.has(e.name)
+      ) {
+        queue.push({ rel: childRel, depth: cur.depth + 1 });
+      }
+    }
   }
   out.sort((a, b) => {
     if (a.isDir !== b.isDir) return a.isDir ? -1 : 1;
-    return a.name.localeCompare(b.name);
+    return a.path.localeCompare(b.path);
   });
   return out;
+}
+
+/** Fast recursive find. Walks the workspace tree skipping ignored dirs,
+ *  returning relative paths whose filename or full path matches the
+ *  pattern (case-insensitive substring; supports `*` as a single
+ *  wildcard). Caps depth + results so it stays bounded on huge repos. */
+export async function findFiles(
+  workspace: string,
+  args: {
+    pattern: string;
+    /** Optional starting subfolder. */
+    base?: string;
+    maxResults?: number;
+    maxDepth?: number;
+  },
+): Promise<Array<{ path: string; isDir: boolean }>> {
+  const { readDir } = await fs();
+  const maxResults = args.maxResults ?? 40;
+  const maxDepth = args.maxDepth ?? 10;
+  const startRel = (args.base ?? "").replace(/^\/+|\/+$/g, "");
+
+  // Compile pattern. If it contains a wildcard, build a regex; else
+  // case-insensitive substring match against the full relative path.
+  const usesGlob = args.pattern.includes("*") || args.pattern.includes("?");
+  const matcher: (rel: string, name: string) => boolean = (() => {
+    if (usesGlob) {
+      const escape = args.pattern
+        .replace(/[.+^${}()|[\]\\]/g, "\\$&")
+        .replace(/\*\*/g, "::DOUBLESTAR::")
+        .replace(/\*/g, "[^/]*")
+        .replace(/::DOUBLESTAR::/g, ".*")
+        .replace(/\?/g, ".");
+      const re = new RegExp(`^${escape}$|/${escape}$|^${escape}|${escape}$`, "i");
+      return (rel: string, name: string) => re.test(rel) || re.test(name);
+    }
+    const needle = args.pattern.toLowerCase();
+    return (rel: string, name: string) =>
+      rel.toLowerCase().includes(needle) || name.toLowerCase().includes(needle);
+  })();
+
+  const out: Array<{ path: string; isDir: boolean }> = [];
+  const stack: Array<{ rel: string; depth: number }> = [
+    { rel: startRel, depth: 0 },
+  ];
+
+  while (stack.length > 0 && out.length < maxResults) {
+    const cur = stack.pop()!;
+    const target = safeJoin(workspace, cur.rel);
+    let entries: any[];
+    try {
+      entries = await readDir(target);
+    } catch {
+      continue;
+    }
+    for (const e of entries) {
+      const isDir: boolean = e.isDirectory ?? false;
+      const childRel = cur.rel ? `${cur.rel}/${e.name}` : e.name;
+      if (isDir && DEFAULT_IGNORE_DIRS.has(e.name)) continue;
+
+      if (matcher(childRel, e.name)) {
+        out.push({ path: childRel, isDir });
+        if (out.length >= maxResults) break;
+      }
+      if (isDir && cur.depth + 1 < maxDepth) {
+        stack.push({ rel: childRel, depth: cur.depth + 1 });
+      }
+    }
+  }
+  // Sort: shorter paths first (closer matches), then alphabetical.
+  out.sort((a, b) => {
+    if (a.path.length !== b.path.length) return a.path.length - b.path.length;
+    return a.path.localeCompare(b.path);
+  });
+  return out;
+}
+
+/** Grep-style search across workspace files. Reads matching files
+ *  (capped size) and returns hits with surrounding context lines. */
+export async function searchFiles(
+  workspace: string,
+  args: {
+    query: string;
+    /** Optional substring filter on file path (e.g. ".tsx"). */
+    pathFilter?: string;
+    maxFileSize?: number;
+    maxFiles?: number;
+    maxHits?: number;
+    contextLines?: number;
+  },
+): Promise<Array<{ path: string; line: number; preview: string }>> {
+  const { readTextFile } = await fs();
+  const maxFileSize = args.maxFileSize ?? 240_000;   // 240 KB
+  const maxFiles = args.maxFiles ?? 200;
+  const maxHits = args.maxHits ?? 30;
+  const contextLines = args.contextLines ?? 1;
+  const pathFilter = (args.pathFilter ?? "").toLowerCase();
+  const queryRe = new RegExp(
+    args.query.replace(/[.+^${}()|[\]\\]/g, "\\$&"),
+    "i",
+  );
+
+  // Gather candidate text files via the recursive walker, capped.
+  const candidates = await listWorkspace(workspace, "", {
+    recursive: true,
+    maxDepth: 12,
+    maxEntries: maxFiles * 4,
+  });
+  const files = candidates
+    .filter((c) => !c.isDir)
+    .filter((c) => /\.(ts|tsx|js|jsx|css|scss|html|md|json|yml|yaml|toml|rs|py|go|java|kt|swift|sh|env|sql)$/i.test(c.name))
+    .filter((c) => (pathFilter ? c.path.toLowerCase().includes(pathFilter) : true))
+    .slice(0, maxFiles);
+
+  const hits: Array<{ path: string; line: number; preview: string }> = [];
+  for (const f of files) {
+    if (hits.length >= maxHits) break;
+    let text: string;
+    try {
+      text = await readTextFile(safeJoin(workspace, f.path));
+    } catch {
+      continue;
+    }
+    if (text.length > maxFileSize) continue;
+    const lines = text.split(/\r?\n/);
+    for (let i = 0; i < lines.length; i++) {
+      if (queryRe.test(lines[i])) {
+        const lo = Math.max(0, i - contextLines);
+        const hi = Math.min(lines.length, i + contextLines + 1);
+        const preview = lines
+          .slice(lo, hi)
+          .map((l, idx) => `${lo + idx + 1}: ${l}`)
+          .join("\n");
+        hits.push({ path: f.path, line: i + 1, preview });
+        if (hits.length >= maxHits) break;
+      }
+    }
+  }
+  return hits;
 }
 
 export async function readWorkspaceFile(
