@@ -134,17 +134,28 @@ export function Orb() {
       // ─ Hue shift per state ─
       const isError = s === "error";
       const isDormant = vs === "dormant";
+      const isThinking = s === "processing" || s === "executing";
+      // Subtle pulse on intensity while thinking — helps the operator see
+      // the orb is actively working, not stuck.
+      const thinkingPulse = isThinking ? 0.85 + Math.sin(t * 3.2) * 0.18 : 0;
       const intensity =
         isDormant ? 0.2 :
         s === "listening" ? 1.0 + lvl * 0.4 :
         s === "speaking" ? 0.9 + Math.sin(t * 6) * 0.12 :
-        s === "processing" ? 0.75 :
+        isThinking ? thinkingPulse :
         0.6;
 
-      // Override color when error.
-      const accentR = isError ? 255 : R;
-      const accentG = isError ? 90 : G;
-      const accentB = isError ? 60 : B;
+      // Color per state. Thinking shifts to cyan-violet so the operator
+      // immediately sees Axon flipped from listening (red) to thinking.
+      let accentR = R;
+      let accentG = G;
+      let accentB = B;
+      if (isError) {
+        accentR = 255; accentG = 90; accentB = 60;
+      } else if (isThinking) {
+        // Cyan-violet — distinct from the default red without clashing.
+        accentR = 120; accentG = 160; accentB = 255;
+      }
 
       // Rectangular halo fill removed — nothing outside the sphere
       // except the orbiting particles (drawn at the end).
@@ -169,7 +180,12 @@ export function Orb() {
       ctx.fillRect(cx - radius, cy - radius, radius * 2, radius * 2);
 
       // ─ Flowing plasma waves inside the sphere ─
-      const waveSpeed = isDormant ? 0.1 : s === "listening" ? 0.8 + lvl * 1.4 : s === "speaking" ? 1.0 : s === "processing" ? 0.6 : 0.35;
+      const waveSpeed =
+        isDormant ? 0.1 :
+        s === "listening" ? 0.8 + lvl * 1.4 :
+        s === "speaking" ? 1.0 :
+        isThinking ? 1.6 :
+        0.35;
       const waves = 4;
       for (let w = 0; w < waves; w++) {
         const phase = w * (Math.PI * 2 / waves);
@@ -242,6 +258,56 @@ export function Orb() {
       ctx.stroke();
 
       // ═══════════════════════════════════════════════════════════
+      // THINKING — rotating arc orbit + concentric pulse
+      // Only renders during processing/executing. Distinct from any
+      // other state so the operator can read it at a glance.
+      // ═══════════════════════════════════════════════════════════
+      if (isThinking) {
+        // Rotating arc — moves clockwise around the rim, fades head-to-tail.
+        const arcAngle = t * 3.4; // rad/sec
+        const arcSpan = Math.PI * 0.55;
+        const segs = 24;
+        for (let i = 0; i < segs; i++) {
+          const a0 = arcAngle + (i / segs) * arcSpan;
+          const a1 = arcAngle + ((i + 1) / segs) * arcSpan;
+          const fade = i / segs; // 0 at head, 1 at tail
+          const alpha = (1 - fade) * 0.95;
+          ctx.beginPath();
+          ctx.arc(cx, cy, radius + 4 * dpr, a0, a1);
+          ctx.strokeStyle = `rgba(${accentR}, ${accentG}, ${accentB}, ${alpha})`;
+          ctx.lineWidth = 2.4 * dpr;
+          ctx.stroke();
+        }
+
+        // Counter-rotating second arc on the other side — gives a
+        // gyroscope feel, reinforces the "computing" read.
+        const arcAngle2 = -t * 2.1 + Math.PI;
+        const arcSpan2 = Math.PI * 0.35;
+        const segs2 = 16;
+        for (let i = 0; i < segs2; i++) {
+          const a0 = arcAngle2 + (i / segs2) * arcSpan2;
+          const a1 = arcAngle2 + ((i + 1) / segs2) * arcSpan2;
+          const fade = i / segs2;
+          const alpha = (1 - fade) * 0.7;
+          ctx.beginPath();
+          ctx.arc(cx, cy, radius + 9 * dpr, a0, a1);
+          ctx.strokeStyle = `rgba(255, 255, 255, ${alpha * 0.6})`;
+          ctx.lineWidth = 1.4 * dpr;
+          ctx.stroke();
+        }
+
+        // Concentric expanding ring — "pulse" that emanates from center.
+        const pulseT = (t * 1.4) % 1; // 0..1 every ~700ms
+        const pulseR = radius * (0.4 + pulseT * 1.1);
+        const pulseAlpha = (1 - pulseT) * 0.55;
+        ctx.beginPath();
+        ctx.arc(cx, cy, pulseR, 0, Math.PI * 2);
+        ctx.strokeStyle = `rgba(${accentR}, ${accentG}, ${accentB}, ${pulseAlpha})`;
+        ctx.lineWidth = 1.2 * dpr;
+        ctx.stroke();
+      }
+
+      // ═══════════════════════════════════════════════════════════
       // DUST — orbiting sparks around the sphere
       // ═══════════════════════════════════════════════════════════
       if (!isDormant) {
@@ -307,6 +373,31 @@ export function Orb() {
             HEARING
           </div>
           <div>{liveTranscript}</div>
+        </div>
+      )}
+
+      {(status === "processing" || status === "executing") && (
+        <div
+          className="axon-thinking-badge"
+          style={{
+            left: orbPosition.x + ORB_SIZE / 2 - 38,
+            top: orbPosition.y + ORB_SIZE + 14,
+            position: "fixed",
+            pointerEvents: "none",
+            padding: "4px 10px",
+            borderRadius: 999,
+            fontSize: 10.5,
+            letterSpacing: "0.18em",
+            textTransform: "uppercase",
+            background: "rgba(120, 160, 255, 0.18)",
+            border: "1px solid rgba(120, 160, 255, 0.45)",
+            color: "rgba(200, 220, 255, 0.95)",
+            backdropFilter: "blur(10px)",
+            zIndex: 9999,
+            animation: "axon-thinking-pulse 1.4s ease-in-out infinite",
+          }}
+        >
+          {status === "executing" ? "Working…" : "Thinking…"}
         </div>
       )}
     </>

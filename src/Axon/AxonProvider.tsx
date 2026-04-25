@@ -46,6 +46,8 @@ import { bindCommandExecutor } from "./engine/commandExecutor";
 import { _bindVoicePrintAccessors } from "./actions/voiceauth";
 import { _bindVoiceAccessors } from "./actions/voice";
 import { _bindCodegenAccessors } from "./actions/code";
+import { _bindProjectAccessors } from "./actions/projects";
+import { _bindAgentAccessors } from "./actions/agent";
 import { runTurn } from "./engine/brain";
 import { handleDirectDisrespect } from "./engine/loyaltyMonitor";
 import {
@@ -542,7 +544,12 @@ export function AxonProvider({ children }: { children: React.ReactNode }) {
         sleepPhrases: settings.sleepPhrases,
         resumePhrases: settings.resumePhrases,
         interruptPhrases: settings.interruptPhrases,
-        dispatchCooldownMs: 1400,
+        // Tightened from 1400 — we now have early-dispatch + final-dedup,
+        // so a long cooldown only adds perceived latency.
+        dispatchCooldownMs: 700,
+        // Force-finalize an interim transcript after this much silence —
+        // 650ms feels instant vs. browser's ~1.8s endpointing.
+        earlyDispatchSilenceMs: 650,
         continuousAfterWake: settings.continuousAfterWake,
         standDownPhrases: settings.standDownPhrases,
         forceSleep: settings.forceSleep,
@@ -934,9 +941,22 @@ export function AxonProvider({ children }: { children: React.ReactNode }) {
       () => settingsRef.current.voicePresetId ?? null,
     );
     _bindCodegenAccessors(
-      () => settingsRef.current.codegenWorkspace ?? null,
+      () => {
+        const s = settingsRef.current;
+        // Active project wins, with codegenWorkspace as legacy fallback.
+        if (s.activeProjectId) {
+          const proj = (s.projects ?? []).find((p) => p.id === s.activeProjectId);
+          if (proj) return proj.path;
+        }
+        return s.codegenWorkspace ?? null;
+      },
       (workspace) => updateSettings({ codegenWorkspace: workspace }),
     );
+    _bindProjectAccessors(
+      () => settingsRef.current,
+      (patch) => updateSettings(patch),
+    );
+    _bindAgentAccessors(() => settingsRef.current);
   }, [updateSettings]);
 
   const startListening = useCallback(() => voiceInRef.current?.pushToTalk(), []);

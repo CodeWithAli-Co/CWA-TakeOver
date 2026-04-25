@@ -65,6 +65,14 @@ export interface VoiceInputConfig {
    * phrase, no command dispatch. The user toggles this from Settings.
    */
   forceSleep?: boolean;
+  /**
+   * Early-dispatch silence threshold (ms). When the recognizer's interim
+   * transcript stops growing for this long AND the engine is armed, we
+   * force-finalize and dispatch the command instead of waiting for the
+   * browser's much slower endpointing (typically 1.5–2s of trailing
+   * silence). Default 750ms — feels instant, almost no false-cuts.
+   */
+  earlyDispatchSilenceMs?: number;
 }
 
 type SpeechRecognitionLike = any;
@@ -206,6 +214,14 @@ export class VoiceInput {
   private micStream: MediaStream | null = null;
   private meterRaf: number | null = null;
 
+  // Early-dispatch — interim stability tracking.
+  /** Most recent normalized interim transcript while armed. */
+  private lastInterimNorm = "";
+  /** Last time the interim text actually changed. */
+  private lastInterimChangedAt = 0;
+  /** Pending early-dispatch timer id. */
+  private earlyDispatchTimer: number | null = null;
+
   constructor(config: VoiceInputConfig, callbacks: VoiceInputCallbacks = {}) {
     this.config = config;
     this.callbacks = callbacks;
@@ -324,8 +340,18 @@ export class VoiceInput {
 
       const live = (finalText + " " + interim).trim();
       if (live) this.callbacks.onTranscript?.(live, !!finalText);
+
+      // ── Early-dispatch: respond before the browser endpointer
+      //    decides the user is done. We only do this when armed and
+      //    not muted, with at least a few words.
+      if (!finalText && interim) {
+        this.scheduleEarlyDispatch(interim, confidence);
+      }
+
       if (!finalText) return;
 
+      // Real final result — cancel any pending early-dispatch timer.
+      this.clearEarlyDispatchTimer();
       this.handleFinal(finalText.trim(), confidence);
     };
 
@@ -470,6 +496,59 @@ export class VoiceInput {
     this.lastDispatchedAt = now;
     this.suppressUntil = now + this.config.dispatchCooldownMs;
     this.callbacks.onIntent?.(intent);
+  }
+
+  /** Schedule a one-shot timer that promotes a stable interim transcript
+   *  into a command faster than browser endpointing would. Called on every
+   *  fresh interim chunk while the engine is armed. */
+  private scheduleEarlyDispatch(interim: string, confidence: number) {
+    if (this.muted) return;
+    if (this.state !== "armed") return;
+    const silenceMs = this.config.earlyDispatchSilenceMs ?? 750;
+    const now = Date.now();
+    const n = norm(interim);
+    if (n !== this.lastInterimNorm) {
+      this.lastInterimNorm = n;
+      this.lastInterimChangedAt = now;
+    }
+    // Need a few real words before we'll early-dispatch — single-word
+    // false alarms are too easy.
+    const wordCount = n.split(" ").filter(Boolean).length;
+    if (wordCount < 2) return;
+    this.clearEarlyDispatchTimer();
+    this.earlyDispatchTimer = window.setTimeout(() => {
+      this.earlyDispatchTimer = null;
+      // Re-check conditions at fire time — operator may have started
+      // talking again, or we may have been muted by TTS startup.
+      if (this.muted) return;
+      if (this.state !== "armed") return;
+      const elapsed = Date.now() - this.lastInterimChangedAt;
+      if (elapsed < silenceMs - 30) return;
+      const text = this.lastInterimNorm;
+      if (!text) return;
+      // Strip wake prefix if it's still in there.
+      const cleaned = hasWakeIntent(text, this.config.wakeWord)
+        ? this.stripWakePrefix(text)
+        : text;
+      if (cleaned.trim().length < 2) return;
+      this.dispatch(
+        { kind: "command", text: cleaned.trim(), confidence },
+        cleaned.trim(),
+        Date.now(),
+      );
+      // Extend the suppress window so the eventual real isFinal (which
+      // arrives 1-2s later) doesn't re-fire the same command.
+      this.suppressUntil = Date.now() + 3000;
+      this.lastInterimNorm = "";
+      this.lastInterimChangedAt = 0;
+    }, silenceMs);
+  }
+
+  private clearEarlyDispatchTimer() {
+    if (this.earlyDispatchTimer !== null) {
+      clearTimeout(this.earlyDispatchTimer);
+      this.earlyDispatchTimer = null;
+    }
   }
 
   private stripWakePrefix(text: string): string {

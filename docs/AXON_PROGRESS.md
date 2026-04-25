@@ -364,3 +364,88 @@ Axon now writes and modifies code in a folder the operator picks.
 ### Shipped
 
 Commit: _pending_ (sprint 6)
+
+---
+
+## Sprint 7 — Snappy voice + thinking orb + multi-project + autonomous agent
+
+Operator request: "axon feels slow / forgets to respond — animate him +
+change color when thinking — give him max-claude-plan capability with
+multi-project access — I just want to tell him the end result and he
+breaks it down + executes himself."
+
+### ✅ T1.6 — Voice dispatch latency cut
+
+- `engine/voiceInput.ts` — added an early-dispatch path. When the
+  recognizer's interim transcript stops growing for `earlyDispatchSilenceMs`
+  (default 650ms) while in `armed` state, we promote the interim to a
+  command instead of waiting for browser endpointing (~1.8s). The
+  trailing real `isFinal` event is suppressed by extending `suppressUntil`
+  + the existing exact-match dedup.
+- `AxonProvider.tsx` — wired `earlyDispatchSilenceMs: 650`. Tightened
+  `dispatchCooldownMs: 1400 → 700` since early-dispatch + final-dedup
+  already cover the duplicate-guard case.
+
+### ✅ T6.4 — Orb thinking animation + color
+
+- `ui/Orb.tsx` — new visual treatment for `processing` / `executing`:
+    - Accent shifts from CWA red to cyan-violet (R 120, G 160, B 255).
+    - Rotating arc orbits the rim clockwise, fading head-to-tail.
+    - Counter-rotating second arc on the outer ring (gyroscope feel).
+    - Concentric pulse ring expands from center every ~700ms.
+    - Wave speed bumped to 1.6 during thinking — interior plasma
+      churns faster.
+    - Thinking-state intensity gets a subtle sin-pulse so the operator
+      can see Axon is alive, not stuck.
+- New `axon-thinking-badge` rendered below the orb with "Thinking…"
+  or "Working…" text. CSS keyframe `axon-thinking-pulse` glows the
+  badge in sync with the orb's pulse.
+
+### ✅ T7.12 — Multi-project workspaces
+
+- `types.ts` — added `CodegenProject { id, name, path, language?, notes? }`,
+  `AxonSettings.projects: CodegenProject[]`, `AxonSettings.activeProjectId`.
+  Legacy `codegenWorkspace` kept as fallback.
+- `actions/projects.ts` — five new actions:
+    - `add_project({ name, path?, language?, notes?, activate? })` —
+      opens picker if no path, rejects duplicate names.
+    - `list_projects` — returns all + which is active.
+    - `current_project` — reports active.
+    - `switch_project({ name? | id? })` — fuzzy-matched name; voice
+      can say "switch to simplicity" or "work on cwa-manager".
+    - `remove_project` — destructive, confirmed; auto-promotes another
+      project to active if the removed one was active.
+- `AxonProvider.tsx` — `_bindCodegenAccessors` resolves active project
+  first (falls back to legacy `codegenWorkspace`); `_bindProjectAccessors`
+  threads settings read/write to the projects module.
+- `config.ts` — settings storage key bumped v4 → v5.
+
+### ✅ T5.1 — Autonomous agent mode
+
+- `engine/agent.ts` — new `runAgent({ goal, ctx, project, maxIters,
+  onProgress, onAction, narrate })` runs a planner+executor loop against
+  Anthropic with the FULL action registry as tools. Specialized
+  `AGENT_SYSTEM` prompt frames Claude as an autonomous engineer:
+    - Plan briefly, call tools, course-correct on errors, stop when
+      done with a 1-2 sentence spoken summary.
+    - Higher iteration cap (14 vs. 4 for the conversational brain).
+    - Non-streaming — full content blocks per turn so tool_use chains
+      stay clean.
+    - Project context (name, path, language, notes) injected into the
+      first user message.
+- `actions/agent.ts` — `accomplish_goal({ goal, projectName?,
+  maxIterations?, narrate? })` action. Resolves the project (named or
+  active), runs the agent, narrates progress aloud between steps via
+  `ctx.speak`, logs every sub-action to the activity feed prefixed
+  `agent:`. Marked `silent: true` when narrating so the brain doesn't
+  re-speak the final summary on top.
+- `AxonProvider.tsx` — `_bindAgentAccessors` gives the agent action a
+  reader for current settings (active project resolution).
+- System prompt: new "Multi-project + autonomous mode" section. Tells
+  the brain to prefer `accomplish_goal` for multi-step requests
+  ("build a settings page", "scaffold the auth flow") and single
+  tool calls for atomic file changes.
+
+### Shipped
+
+Commit: _pending_ (sprint 7)

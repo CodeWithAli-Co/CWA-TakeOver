@@ -183,10 +183,15 @@ export interface AxonSettings {
   volume: number;
   /** ElevenLabs voice id — if set + env key is present, used instead of Web Speech. */
   elevenLabsVoiceId: string | null;
-  /** Workspace root for code-generation actions. Tauri-side path that
-   *  must be inside the app's allowed FS scope. When null, code-generation
-   *  actions ask the operator to set one. */
+  /** [legacy / single-workspace fallback] Workspace root for code-gen.
+   *  When `projects` is non-empty, the active project takes precedence. */
   codegenWorkspace: string | null;
+  /** Multiple named projects the operator can switch between by voice
+   *  ("switch to simplicity", "work on cwa-manager"). The first added
+   *  is active by default. */
+  projects: CodegenProject[];
+  /** Active project id — code-gen + agent actions operate inside it. */
+  activeProjectId: string | null;
   /** Which monitors are active. */
   enabledMonitors: string[];
   /** Low-confidence voice threshold for confirming before acting. */
@@ -239,6 +244,8 @@ export const DEFAULT_SETTINGS: AxonSettings = {
   volume: 1.0,
   elevenLabsVoiceId: null,
   codegenWorkspace: null,
+  projects: [],
+  activeProjectId: null,
   enabledMonitors: [],
   confidenceThreshold: 0.55,
   autoApprove: true,
@@ -252,6 +259,22 @@ export const DEFAULT_SETTINGS: AxonSettings = {
   ],
   forceSleep: false,
 };
+
+// ── Code projects ──────────────────────────────────────────────────
+
+export interface CodegenProject {
+  id: string;
+  /** Human-readable name; voice-resolved. */
+  name: string;
+  /** Absolute filesystem path. */
+  path: string;
+  /** Optional default language hint (typescript, python, etc). */
+  language?: string;
+  /** Optional context blob Claude reads when generating in this project
+   *  (conventions, stack, what to avoid). */
+  notes?: string;
+  createdAt: number;
+}
 
 // ── Automations ────────────────────────────────────────────────────
 

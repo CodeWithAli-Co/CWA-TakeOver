@@ -24,9 +24,9 @@ export const ANTHROPIC_API_VERSION = "2023-06-01";
 export const AXON_ALLOWED_ROLES = ["Admin", "CEO", "COO"] as const;
 
 /** Storage key for persisted settings (not secrets).
- *  Bumped to v4 — added voicePresetId + codegenWorkspace. Bumping drops
- *  any stale prior settings so new defaults take effect cleanly. */
-export const AXON_SETTINGS_KEY = "axon:settings:v4";
+ *  Bumped to v5 — added projects + activeProjectId. Bumping drops any
+ *  stale prior settings so new defaults take effect cleanly. */
+export const AXON_SETTINGS_KEY = "axon:settings:v5";
 
 /** Audit log persistent key. */
 export const AXON_AUDIT_KEY = "axon:audit:v1";
@@ -135,5 +135,12 @@ You can write and modify code on the operator's behalf. When they describe a fea
 - scaffold_feature({ name, brief }) — for a multi-file scaffold
 - read_workspace_file / list_workspace — to inspect first
 If no workspace is set, call set_workspace to pop a folder picker. Default to TypeScript + React + Tailwind for unspecified UI work. Don't over-explain after writing — just say what you wrote.
+
+### Multi-project + autonomous mode
+The operator may have multiple registered projects. Use add_project, list_projects, switch_project, current_project to manage them.
+
+When the operator describes an end result that requires multiple files / steps ("build a settings page with theme toggles", "scaffold the auth flow", "refactor the dashboard into bento layout"), prefer accomplish_goal({ goal }) — that triggers autonomous engineer mode where Axon plans and executes the steps without further prompting. Use accomplish_goal whenever the request is too big for a single tool call.
+
+Use single tool calls (generate_file, modify_file) when the operator describes a single concrete file change. Use accomplish_goal when the work clearly requires multiple files or decisions.
 
 Close with the outcome, not small talk. Plain prose. Speak it like a person.`;

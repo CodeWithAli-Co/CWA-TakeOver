@@ -27,7 +27,7 @@ import {
 } from "../engine/codegen";
 
 // Workspace accessors — bound by AxonProvider on mount so we can
-// read and write the codegenWorkspace setting without a React cycle.
+// read and write the codegen settings without a React cycle.
 type WorkspaceGetter = () => string | null;
 type WorkspaceSetter = (path: string | null) => void;
 let _getWorkspace: WorkspaceGetter | null = null;
@@ -38,7 +38,9 @@ export function _bindCodegenAccessors(get: WorkspaceGetter, set: WorkspaceSetter
   _setWorkspace = set;
 }
 
-function workspaceOrNull(): string | null {
+/** Resolve the active workspace path. Active project (if any) wins;
+ *  otherwise falls back to the legacy single-workspace setting. */
+export function workspaceOrNull(): string | null {
   return _getWorkspace?.() ?? null;
 }
 
