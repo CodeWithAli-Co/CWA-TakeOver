@@ -364,6 +364,17 @@ export function AxonProvider({ children }: { children: React.ReactNode }) {
 
       setStatus("processing");
       voiceOutRef.current?.interrupt();
+      // Mute the mic for the entire turn — brain reasoning + tool calls +
+      // TTS playback. Without this, background noise (or Axon's own voice
+      // bleeding through echo cancellation) creates interim transcripts
+      // while the orb is processing, and the early-dispatch path re-fires
+      // the same command. Symptom: Axon repeats "let me find the file
+      // first" multiple times. The voice output's onStart/onEnd will
+      // keep this state during speech; the finally below restores it if
+      // no TTS was queued (e.g. silent action). Interrupt phrases still
+      // work — they're checked before the muted gate in handleFinal.
+      voiceInRef.current?.setMuted(true);
+      let queuedSpeech = false;
       // Reset conversation flag each turn — we'll re-set if the reply is a question.
       awaitReplyRef.current = false;
       lastSpokenTextRef.current = "";
@@ -405,20 +416,31 @@ export function AxonProvider({ children }: { children: React.ReactNode }) {
               threshold: settingsRef.current.voicePrintThreshold,
             }
           : undefined;
-      const res = await runTurn(clean, conversationRef.current, ctx, {
-        confidence,
-        summary: summaryRef.current,
-        visionMode: settingsRef.current.visionMode,
-        voicePrintGate: gate,
-        onSentence: (s) => {
-          // Skip empty-after-sanitize fragments (pure markdown/bullets).
-          const meaningful = s.replace(/[*_`|#~\-•>]/g, "").trim();
-          if (meaningful.length < 2) return;
-          spokeAny = true;
-          lastSpokenTextRef.current = s;
-          voiceOutRef.current?.queueSentence(s);
-        },
-      });
+      let res: Awaited<ReturnType<typeof runTurn>>;
+      try {
+        res = await runTurn(clean, conversationRef.current, ctx, {
+          confidence,
+          summary: summaryRef.current,
+          visionMode: settingsRef.current.visionMode,
+          voicePrintGate: gate,
+          onSentence: (s) => {
+            // Skip empty-after-sanitize fragments (pure markdown/bullets).
+            const meaningful = s.replace(/[*_`|#~\-•>]/g, "").trim();
+            if (meaningful.length < 2) return;
+            spokeAny = true;
+            queuedSpeech = true;
+            lastSpokenTextRef.current = s;
+            voiceOutRef.current?.queueSentence(s);
+          },
+        });
+      } catch (e) {
+        // Always unmute on error — otherwise the mic stays dead until
+        // the next manual push-to-talk. Re-throw so the inFlightRef
+        // catch sees it.
+        if (!queuedSpeech) voiceInRef.current?.setMuted(false);
+        setStatus("idle");
+        throw e;
+      }
 
       // Conversation mode: if Axon's assistant text ends with a question
       // (by punctuation or by phrasing), flag auto-arm. The onEnd TTS
@@ -450,6 +472,14 @@ export function AxonProvider({ children }: { children: React.ReactNode }) {
         setTimeout(() => {
           voiceOutRef.current?.speak(res.assistantText);
         }, NARRATION_DELAY_MS);
+        queuedSpeech = true;
+      }
+
+      // Unmute the mic if no TTS was actually queued. When TTS DID get
+      // queued, the voiceOutput onEnd callback will unmute on our behalf
+      // once playback finishes.
+      if (!queuedSpeech) {
+        voiceInRef.current?.setMuted(false);
       }
     },
     [appendTurn, buildActionContext]

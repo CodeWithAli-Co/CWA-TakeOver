@@ -241,12 +241,26 @@ export class VoiceInput {
     this.callbacks.onStateChange?.(next);
   }
 
-  /** Called by the provider while AXON speaks. Keeps recognition alive but quiet. */
+  /** Called by the provider while AXON speaks OR thinks. Keeps the
+   *  recognition session alive but ignores results. Also clears the
+   *  early-dispatch state so a stale interim doesn't leak across the
+   *  mute boundary and re-fire as a duplicate command. */
   setMuted(m: boolean) {
     this.muted = m;
+    // Always clear pending early-dispatch and interim memory — both on
+    // mute (any in-flight stuff is now stale) and on unmute (start fresh
+    // from the next real interim chunk).
+    this.clearEarlyDispatchTimer();
+    this.lastInterimNorm = "";
+    this.lastInterimChangedAt = 0;
     if (m) {
-      // Drop any in-flight interim so the resume is clean.
+      // Suppress any imminent isFinal that might land just after the mute.
       this.suppressUntil = Date.now() + 500;
+    } else {
+      // After unmute, give the recognizer a brief grace period before
+      // the next dispatch — covers tail audio leaking from TTS
+      // (~250ms) plus the operator's own breath/click.
+      this.suppressUntil = Math.max(this.suppressUntil, Date.now() + 350);
     }
   }
 
@@ -504,10 +518,12 @@ export class VoiceInput {
   private scheduleEarlyDispatch(interim: string, confidence: number) {
     if (this.muted) return;
     if (this.state !== "armed") return;
+    if (Date.now() < this.suppressUntil) return;
     const silenceMs = this.config.earlyDispatchSilenceMs ?? 750;
     const now = Date.now();
     const n = norm(interim);
-    if (n !== this.lastInterimNorm) {
+    const changed = n !== this.lastInterimNorm;
+    if (changed) {
       this.lastInterimNorm = n;
       this.lastInterimChangedAt = now;
     }
@@ -515,6 +531,12 @@ export class VoiceInput {
     // false alarms are too easy.
     const wordCount = n.split(" ").filter(Boolean).length;
     if (wordCount < 2) return;
+    // CRITICAL: only (re)schedule the timer when the interim text
+    // actually changed. Chrome occasionally re-emits the SAME interim
+    // chunk every ~200ms while you're silent — without this guard, each
+    // repeat resets the timer back to silenceMs and the dispatch never
+    // fires.
+    if (!changed && this.earlyDispatchTimer !== null) return;
     this.clearEarlyDispatchTimer();
     this.earlyDispatchTimer = window.setTimeout(() => {
       this.earlyDispatchTimer = null;
