@@ -41,9 +41,13 @@ export function FilterBar({
   };
 
   return (
-    <div className="flex h-14 shrink-0 items-center gap-4 border-b border-border bg-background/50 px-5 backdrop-blur">
-      {/* Lane chips */}
-      <div className="flex items-center gap-1.5">
+    <div className="flex shrink-0 flex-wrap items-center gap-3 border-b border-border bg-background/30 px-5 py-3 backdrop-blur-sm">
+      {/* Group A — lanes. Wraps as a single visual unit on narrow
+          viewports so chips don't get split mid-row. */}
+      <div className="flex flex-wrap items-center gap-1.5">
+        <span className="mr-1 hidden font-mono text-[9.5px] uppercase tracking-[0.18em] text-muted-foreground/70 lg:inline">
+          Lanes
+        </span>
         {lanes.map((lane) => {
           const active = filter.lanes.has(lane.id);
           const allSelected = filter.lanes.size === 0;
@@ -56,16 +60,16 @@ export function FilterBar({
               className={cn(
                 "flex h-7 items-center gap-1.5 rounded-full border px-2.5 text-[11px] font-medium transition-all",
                 active
-                  ? "border-transparent text-foreground"
+                  ? "border-transparent text-foreground shadow-sm"
                   : visuallyOn
-                    ? "border-border text-muted-foreground hover:border-foreground/30 hover:text-foreground"
-                    : "border-border/50 text-muted-foreground/40 hover:text-muted-foreground",
+                    ? "border-border/80 text-muted-foreground hover:border-foreground/40 hover:bg-muted/40 hover:text-foreground"
+                    : "border-border/40 text-muted-foreground/45 hover:text-muted-foreground",
               )}
               style={
                 active
                   ? {
-                      background: `color-mix(in srgb, hsl(${lane.accentHsl}) 18%, transparent)`,
-                      boxShadow: `inset 0 0 0 1px color-mix(in srgb, hsl(${lane.accentHsl}) 40%, transparent)`,
+                      background: `color-mix(in srgb, hsl(${lane.accentHsl}) 22%, transparent)`,
+                      boxShadow: `inset 0 0 0 1px color-mix(in srgb, hsl(${lane.accentHsl}) 50%, transparent), 0 0 14px -6px hsl(${lane.accentHsl} / 0.6)`,
                     }
                   : undefined
               }
@@ -91,57 +95,59 @@ export function FilterBar({
           <button
             type="button"
             onClick={() => setFilter({ ...filter, lanes: new Set() })}
-            className="ml-1 text-[10px] text-muted-foreground hover:text-foreground"
+            className="ml-0.5 rounded-full border border-border/40 px-2 text-[10px] text-muted-foreground transition-colors hover:bg-muted/40 hover:text-foreground"
+            title="Clear lane filter"
           >
             clear
           </button>
         )}
       </div>
 
-      <div className="h-5 w-px bg-border" aria-hidden />
+      <div className="hidden h-5 w-px bg-border lg:block" aria-hidden />
 
-      {/* Status tabs */}
-      <Tabs
-        value={filter.status}
-        onValueChange={(v) =>
-          setFilter({ ...filter, status: v as StatusFilter })
-        }
-      >
-        <TabsList className="h-8 bg-muted/60">
-          <TabsTrigger value="all" className="h-6 text-[11px]">All</TabsTrigger>
-          <TabsTrigger value="active" className="h-6 text-[11px]">Active</TabsTrigger>
-          <TabsTrigger value="upcoming" className="h-6 text-[11px]">Upcoming</TabsTrigger>
-          <TabsTrigger value="shipped" className="h-6 text-[11px]">Shipped</TabsTrigger>
-        </TabsList>
-      </Tabs>
-
-      {/* Hide shipped switch */}
-      <label className="flex items-center gap-2 text-[11px] text-muted-foreground">
-        <Switch
-          checked={filter.hideShipped}
-          onCheckedChange={(v) =>
-            setFilter({ ...filter, hideShipped: v })
+      {/* Group B — status + flags */}
+      <div className="flex flex-wrap items-center gap-3">
+        <Tabs
+          value={filter.status}
+          onValueChange={(v) =>
+            setFilter({ ...filter, status: v as StatusFilter })
           }
-        />
-        Hide shipped
-      </label>
+        >
+          <TabsList className="h-7 bg-muted/40 p-0.5">
+            <TabsTrigger value="all" className="h-6 px-2.5 text-[11px]">All</TabsTrigger>
+            <TabsTrigger value="active" className="h-6 px-2.5 text-[11px]">Active</TabsTrigger>
+            <TabsTrigger value="upcoming" className="h-6 px-2.5 text-[11px]">Upcoming</TabsTrigger>
+            <TabsTrigger value="shipped" className="h-6 px-2.5 text-[11px]">Shipped</TabsTrigger>
+          </TabsList>
+        </Tabs>
 
-      {/* Search */}
-      <div className="relative ml-auto flex items-center">
-        <Search className="pointer-events-none absolute left-2.5 size-3.5 text-muted-foreground" />
-        <Input
-          type="search"
-          value={filter.search}
-          onChange={(e) => setFilter({ ...filter, search: e.target.value })}
-          placeholder="Search checkpoints…"
-          className="h-8 w-56 pl-8 text-[12px]"
-        />
+        <label className="flex cursor-pointer items-center gap-2 text-[11px] text-muted-foreground">
+          <Switch
+            checked={filter.hideShipped}
+            onCheckedChange={(v) =>
+              setFilter({ ...filter, hideShipped: v })
+            }
+          />
+          Hide shipped
+        </label>
       </div>
 
-      {/* Visible count */}
-      <span className="font-mono text-[10.5px] uppercase tracking-[0.15em] text-muted-foreground tabular-nums">
-        {totalVisible}/{totalAll}
-      </span>
+      {/* Group C — right-aligned: search + count */}
+      <div className="ml-auto flex items-center gap-3">
+        <div className="relative flex items-center">
+          <Search className="pointer-events-none absolute left-2.5 size-3.5 text-muted-foreground" />
+          <Input
+            type="search"
+            value={filter.search}
+            onChange={(e) => setFilter({ ...filter, search: e.target.value })}
+            placeholder="Search checkpoints…"
+            className="h-8 w-56 rounded-full border-border/70 bg-muted/30 pl-8 text-[12px] focus-visible:bg-background focus-visible:ring-2 focus-visible:ring-primary/30"
+          />
+        </div>
+        <span className="rounded-full border border-border/60 bg-muted/30 px-2.5 py-0.5 font-mono text-[10px] uppercase tracking-[0.16em] text-muted-foreground tabular-nums">
+          {totalVisible}/{totalAll}
+        </span>
+      </div>
     </div>
   );
 }

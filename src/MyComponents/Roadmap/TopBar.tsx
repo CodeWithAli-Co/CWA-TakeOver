@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
-import { Clock, Zap } from "lucide-react";
+import { Activity, Clock, Map as MapIcon } from "lucide-react";
 import { YC_DEADLINE_ISO } from "./lib/constants";
 
 interface Props {
@@ -25,42 +25,62 @@ function useCountdown(targetIso: string) {
 }
 
 /**
- * Page header. Matches the app's home-dashboard voice:
- *   · big title
- *   · small context line underneath
- *   · right-side action widget (YC countdown) that looks card-shaped.
+ * Roadmap header. Cleaner / lighter than the previous version:
+ *   · brand mark + title on the left, all in a single row
+ *   · stats inline as small chip-style pills under the title
+ *   · YC countdown collapsed to a tighter accent capsule on the right
+ *
+ * No dual-row stack, no fighting widgets. Reads as a calm command
+ * surface, not a dashboard control bar.
  */
 export function RoadmapTopBar({ activeCount, totalCount }: Props) {
   const { d, h, m, s, mounted } = useCountdown(YC_DEADLINE_ISO);
 
   return (
-    <header className="flex shrink-0 items-end justify-between gap-6 border-b border-border bg-background/70 px-6 pt-5 pb-4 backdrop-blur">
-      <div className="min-w-0">
-        <motion.h1
-          initial={{ opacity: 0, y: -6 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="text-[22px] font-bold tracking-tight text-foreground"
+    <header className="flex shrink-0 items-center justify-between gap-6 border-b border-border bg-background/40 px-6 py-4 backdrop-blur-sm">
+      <div className="flex min-w-0 items-center gap-3">
+        {/* Brand glyph — soft circle with a map icon. Identifies the page
+            without screaming for attention. */}
+        <div
+          className="flex size-9 shrink-0 items-center justify-center rounded-lg"
+          style={{
+            background: "color-mix(in srgb, hsl(var(--primary)) 12%, transparent)",
+            color: "hsl(var(--primary))",
+          }}
         >
-          Sovereign Roadmap
-        </motion.h1>
-        <motion.p
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 0.08 }}
-          className="mt-1 flex items-center gap-3 text-[11.5px] text-muted-foreground"
-        >
-          <span className="inline-flex items-center gap-1.5">
-            <Zap className="size-3" />
-            {activeCount} active
-          </span>
-          <span className="opacity-40">·</span>
-          <span className="inline-flex items-center gap-1.5">
-            <Clock className="size-3" />
-            {totalCount} total
-          </span>
-          <span className="opacity-40">·</span>
-          <span>CodeWithAli + SimplicityFunds + Takeover</span>
-        </motion.p>
+          <MapIcon className="size-4.5" />
+        </div>
+        <div className="min-w-0">
+          <motion.h1
+            initial={{ opacity: 0, y: -4 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="text-[19px] font-bold leading-tight tracking-tight text-foreground"
+          >
+            Sovereign Roadmap
+          </motion.h1>
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.06 }}
+            className="mt-1 flex flex-wrap items-center gap-1.5 text-[11px]"
+          >
+            <Stat
+              icon={<Activity className="size-3" />}
+              value={activeCount}
+              label="active"
+              tone="primary"
+            />
+            <Stat
+              icon={<Clock className="size-3" />}
+              value={totalCount}
+              label="total"
+              tone="muted"
+            />
+            <span className="rounded-full bg-muted/40 px-2 py-0.5 text-[10.5px] uppercase tracking-[0.14em] text-muted-foreground">
+              CWA · Simplicity · Takeover
+            </span>
+          </motion.div>
+        </div>
       </div>
 
       <motion.div
@@ -69,46 +89,79 @@ export function RoadmapTopBar({ activeCount, totalCount }: Props) {
         role="status"
         aria-live="polite"
         aria-label="Y Combinator countdown"
-        className="flex items-center gap-3 rounded-xl border bg-card px-3.5 py-2 text-card-foreground"
+        className="flex shrink-0 items-center gap-2.5 rounded-full border bg-card/80 px-3 py-1.5 backdrop-blur"
         style={{
-          borderColor: "hsl(42 95% 58% / 0.35)",
-          boxShadow: "0 0 30px -12px hsl(42 95% 58% / 0.45)",
+          borderColor: "hsl(42 95% 58% / 0.32)",
+          boxShadow: "0 0 24px -10px hsl(42 95% 58% / 0.42)",
         }}
       >
         <div
-          className="flex size-7 items-center justify-center rounded-md"
+          className="flex size-5 shrink-0 items-center justify-center rounded-full"
           style={{
-            background: "hsl(42 95% 58% / 0.12)",
+            background: "hsl(42 95% 58% / 0.16)",
             color: "hsl(42 95% 58%)",
           }}
         >
-          <Clock className="size-3.5" />
+          <Clock className="size-2.5" />
         </div>
-        <div className="flex flex-col leading-tight">
-          <span className="font-mono text-[9px] uppercase tracking-[0.18em] text-muted-foreground">
-            YC deadline
+        <span className="font-mono text-[8.5px] uppercase tracking-[0.20em] text-muted-foreground">
+          YC
+        </span>
+        {mounted ? (
+          <span
+            className="font-mono text-[12px] font-semibold tabular-nums"
+            style={{ color: "hsl(42 95% 58%)" }}
+          >
+            {d}d {h.toString().padStart(2, "0")}h {m.toString().padStart(2, "0")}m
           </span>
-          {mounted ? (
-            <span
-              className="font-mono text-[13px] font-semibold tabular-nums"
-              style={{ color: "hsl(42 95% 58%)" }}
-            >
-              {d}d · {h.toString().padStart(2, "0")}h ·{" "}
-              {m.toString().padStart(2, "0")}m
-            </span>
-          ) : (
-            <span className="font-mono text-[13px] opacity-60">— d · — h · — m</span>
-          )}
-        </div>
+        ) : (
+          <span className="font-mono text-[12px] opacity-50">— d — h — m</span>
+        )}
         <motion.span
-          animate={{ opacity: [0.45, 1, 0.45] }}
-          transition={{ duration: 2.4, repeat: Infinity, ease: "easeInOut" }}
-          className="font-mono text-[10.5px] tabular-nums"
+          animate={{ opacity: [0.5, 1, 0.5] }}
+          transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
+          className="font-mono text-[10px] tabular-nums opacity-70"
           style={{ color: "hsl(42 95% 58%)" }}
         >
           {mounted ? `${s.toString().padStart(2, "0")}s` : "--s"}
         </motion.span>
       </motion.div>
     </header>
+  );
+}
+
+// Small inline stat chip — same shape regardless of tone.
+function Stat({
+  icon,
+  value,
+  label,
+  tone,
+}: {
+  icon: React.ReactNode;
+  value: number;
+  label: string;
+  tone: "primary" | "muted";
+}) {
+  return (
+    <span
+      className="inline-flex items-center gap-1.5 rounded-full px-2 py-0.5 font-medium"
+      style={
+        tone === "primary"
+          ? {
+              background: "color-mix(in srgb, hsl(var(--primary)) 14%, transparent)",
+              color: "hsl(var(--primary))",
+              boxShadow: "inset 0 0 0 1px color-mix(in srgb, hsl(var(--primary)) 28%, transparent)",
+            }
+          : {
+              background: "hsl(var(--muted) / 0.4)",
+              color: "hsl(var(--muted-foreground))",
+              boxShadow: "inset 0 0 0 1px hsl(var(--border))",
+            }
+      }
+    >
+      {icon}
+      <span className="font-mono tabular-nums text-[11px] font-semibold">{value}</span>
+      <span className="text-[10px] uppercase tracking-[0.12em] opacity-80">{label}</span>
+    </span>
   );
 }
