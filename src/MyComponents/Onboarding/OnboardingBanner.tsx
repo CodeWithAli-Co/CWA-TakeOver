@@ -137,7 +137,22 @@ export function OnboardingBanner() {
 
         <button
           type="button"
-          onClick={() => navigate({ to: "/onboarding" }).catch(() => {})}
+          onClick={() => {
+            const instanceId = instance?.id;
+            // Navigate first; on /onboarding already? still fine — the
+            // event listener below will auto-select the instance even
+            // when the URL doesn\'t actually change.
+            navigate({ to: "/onboarding" }).catch(() => {});
+            // Tiny delay so the dashboard is mounted before we
+            // dispatch — covers the cold-load case.
+            setTimeout(() => {
+              if (instanceId) {
+                window.dispatchEvent(
+                  new CustomEvent("onboarding:focus", { detail: { instanceId } }),
+                );
+              }
+            }, 50);
+          }}
           className="inline-flex items-center gap-1 rounded-sm bg-primary px-2.5 py-1 text-[11px] font-semibold text-primary-foreground hover:bg-primary/90 transition-colors"
         >
           {allDone ? "Review" : "Continue"}
