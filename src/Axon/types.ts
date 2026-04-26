@@ -349,4 +349,11 @@ export interface AxonContextValue {
   /** Turn call mode on or off. Exposed so voice actions + UI controls
    *  can toggle it without having to touch private state. */
   setCallMode: (on: boolean) => void;
+
+  /** When true, every mutating tool call from the agent returns a
+   *  simulated success without running. The Mind Map shows the
+   *  proposed plan so the operator can review before approving a
+   *  real run. Toggled by the operator via a Command Panel button. */
+  simulationMode: boolean;
+  setSimulationMode: (on: boolean) => void;
 }

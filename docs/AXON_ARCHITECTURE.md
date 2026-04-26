@@ -104,7 +104,33 @@ src/Axon/
 
 ---
 
+
+### Mind Map + DiffOverlay layer
+
+The visual-aid layer that lets operators see Axon thinking in
+real time and inspect every file edit.
+
+- `engine/graphStore.ts` — pure event store. Sessions, nodes, edges.
+  Subscribe via `useSyncExternalStore` from React; mutate via
+  `startSession`, `addPlan`, `addThought`, `startTool`, `endTool`,
+  `addFile`, `endSession`. Nodes carry optional `before` / `after` /
+  `diffTruncated` for write/modify events, and `simulated: boolean`
+  when produced during a simulation run.
+- `engine/diffUtil.ts` — pure LCS-based unified line diff with a
+  compactDiff helper that collapses unchanged stretches.
+- `engine/simulationFlag.ts` — module-level signal for the
+  simulation toggle. AxonProvider syncs React state to this flag;
+  executor + agent read from it.
+- `ui/MindMap.tsx` — custom canvas renderer with force-directed
+  layout, replay scrubber (play/pause/speed), boxy CWA-style node
+  rendering. Simulated nodes render with dashed border + SIM pill.
+- `ui/DiffOverlay.tsx` — floating side panel mounted at AxonRoot.
+  Auto-pops on every write/modify with the unified diff. Pin to
+  keep open; window.__axonOpenDiff lets MindMap clicks open a
+  specific node's diff.
+
 ## 3. How a command flows (end-to-end)
+
 
 Follow one utterance, "Hey Axon, what's overdue?", from mic to speech:
 

@@ -46,6 +46,7 @@ const BroadcastLazyRouteImport = createFileRoute('/broadcast')()
 const BotLazyRouteImport = createFileRoute('/bot')()
 const BookkeepingLazyRouteImport = createFileRoute('/bookkeeping')()
 const BioLazyRouteImport = createFileRoute('/bio')()
+const BillingLazyRouteImport = createFileRoute('/billing')()
 const ArabicLazyRouteImport = createFileRoute('/arabic')()
 const AnalyticsLazyRouteImport = createFileRoute('/analytics')()
 const IndexLazyRouteImport = createFileRoute('/')()
@@ -218,6 +219,11 @@ const BioLazyRoute = BioLazyRouteImport.update({
   path: '/bio',
   getParentRoute: () => rootRouteImport,
 } as any).lazy(() => import('./routes/bio.lazy').then((d) => d.Route))
+const BillingLazyRoute = BillingLazyRouteImport.update({
+  id: '/billing',
+  path: '/billing',
+  getParentRoute: () => rootRouteImport,
+} as any).lazy(() => import('./routes/billing.lazy').then((d) => d.Route))
 const ArabicLazyRoute = ArabicLazyRouteImport.update({
   id: '/arabic',
   path: '/arabic',
@@ -250,6 +256,7 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexLazyRoute
   '/analytics': typeof AnalyticsLazyRoute
   '/arabic': typeof ArabicLazyRoute
+  '/billing': typeof BillingLazyRoute
   '/bio': typeof BioLazyRoute
   '/bookkeeping': typeof BookkeepingLazyRoute
   '/bot': typeof BotLazyRoute
@@ -289,6 +296,7 @@ export interface FileRoutesByTo {
   '/': typeof IndexLazyRoute
   '/analytics': typeof AnalyticsLazyRoute
   '/arabic': typeof ArabicLazyRoute
+  '/billing': typeof BillingLazyRoute
   '/bio': typeof BioLazyRoute
   '/bookkeeping': typeof BookkeepingLazyRoute
   '/bot': typeof BotLazyRoute
@@ -329,6 +337,7 @@ export interface FileRoutesById {
   '/': typeof IndexLazyRoute
   '/analytics': typeof AnalyticsLazyRoute
   '/arabic': typeof ArabicLazyRoute
+  '/billing': typeof BillingLazyRoute
   '/bio': typeof BioLazyRoute
   '/bookkeeping': typeof BookkeepingLazyRoute
   '/bot': typeof BotLazyRoute
@@ -370,6 +379,7 @@ export interface FileRouteTypes {
     | '/'
     | '/analytics'
     | '/arabic'
+    | '/billing'
     | '/bio'
     | '/bookkeeping'
     | '/bot'
@@ -409,6 +419,7 @@ export interface FileRouteTypes {
     | '/'
     | '/analytics'
     | '/arabic'
+    | '/billing'
     | '/bio'
     | '/bookkeeping'
     | '/bot'
@@ -448,6 +459,7 @@ export interface FileRouteTypes {
     | '/'
     | '/analytics'
     | '/arabic'
+    | '/billing'
     | '/bio'
     | '/bookkeeping'
     | '/bot'
@@ -488,6 +500,7 @@ export interface RootRouteChildren {
   IndexLazyRoute: typeof IndexLazyRoute
   AnalyticsLazyRoute: typeof AnalyticsLazyRoute
   ArabicLazyRoute: typeof ArabicLazyRoute
+  BillingLazyRoute: typeof BillingLazyRoute
   BioLazyRoute: typeof BioLazyRoute
   BookkeepingLazyRoute: typeof BookkeepingLazyRoute
   BotLazyRoute: typeof BotLazyRoute
@@ -750,6 +763,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof BioLazyRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/billing': {
+      id: '/billing'
+      path: '/billing'
+      fullPath: '/billing'
+      preLoaderRoute: typeof BillingLazyRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/arabic': {
       id: '/arabic'
       path: '/arabic'
@@ -792,6 +812,7 @@ const rootRouteChildren: RootRouteChildren = {
   IndexLazyRoute: IndexLazyRoute,
   AnalyticsLazyRoute: AnalyticsLazyRoute,
   ArabicLazyRoute: ArabicLazyRoute,
+  BillingLazyRoute: BillingLazyRoute,
   BioLazyRoute: BioLazyRoute,
   BookkeepingLazyRoute: BookkeepingLazyRoute,
   BotLazyRoute: BotLazyRoute,

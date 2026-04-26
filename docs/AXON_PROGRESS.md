@@ -449,3 +449,159 @@ breaks it down + executes himself."
 ### Shipped
 
 Commit: _pending_ (sprint 7)
+
+
+### ✅ T8.1 — Live Mind Map (week 1 of the $1M upgrade)
+
+- `engine/graphStore.ts` (new) — pure event store with subscribe /
+  getState pattern. Sessions hold {nodes, edges, activeNodeId},
+  with node kinds: root | plan | tool | file | thought | error |
+  summary. Mutations are emit-driven; React reads via
+  useSyncExternalStore.
+- `engine/agent.ts` — wires `axonGraph.startSession({ kind: "agent",
+  prompt: goal })` at run start, `addThought(text)` between turns,
+  `endSession({ summary, failed })` on terminal states or cap-hit.
+- `engine/brain.ts` — same pattern for conversational turns.
+- `engine/executor.ts` — `startTool` + `endTool` wrap every action
+  call with input args, error message, duration.
+- `engine/codegen.ts` — `addFile` events on every find / search /
+  read / list / write / modify / delete.
+- `ui/MindMap.tsx` (new) — custom canvas at devicePixelRatio with
+  force-directed layout. Boxy CWA-style nodes (rectangular tags
+  with monospace labels, dashed left accent bar, kind-color border).
+  Hover tooltips, click-to-pin, replay scrubber across the bottom.
+- `ui/CommandPanel.tsx` — new "Mind" tab + maximize button (⤢) for
+  full-screen Mind Map.
+- `axon.css` — sovereign-tech styling.
+
+### ✅ T8.2 — Live diff overlay (week 2)
+
+- `engine/diffUtil.ts` (new) — pure LCS-based unified line diff,
+  ~140 lines, no deps. `diffLines(before, after)` returns
+  {kind: "eq"|"add"|"del", text, lineNo}. `compactDiff(raw)` collapses
+  long unchanged stretches into "skip" markers with N context lines.
+- `engine/graphStore.ts` — GraphNode gains `before` / `after` /
+  `diffTruncated` fields with a 64KB cap helper.
+- `engine/codegen.ts` — `writeWorkspaceFile` reads existing bytes
+  BEFORE overwriting and threads before+after through `addFile`.
+- `ui/DiffOverlay.tsx` (new) — floating side panel mounted at
+  AxonRoot level so it's visible without opening the Command Panel.
+  Auto-shows on every write/modify, auto-hides after 7s. Pin button
+  cancels auto-hide. `window.__axonOpenDiff(id)` lets the Mind Map
+  pop the overlay for a clicked file node.
+- `ui/MindMap.tsx` — click handler fires `__axonOpenDiff` for
+  write/modify file nodes.
+- `AxonRoot.tsx` — mounts <DiffOverlay /> alongside the other
+  overlays.
+
+### ✅ T8.3 — Mind Map render fixes
+
+- Canvas was crashing every frame because KIND_COLOR.root resolved
+  to "rgb(var(--axon-accent-rgb))" — a CSS variable. Canvas color
+  APIs need a fully-resolved literal; the .replace("rgb","rgba")...
+  shorthand produced "rgba(var(--axon-accent-rgb, 0.55))" which
+  addColorStop refused. Fix: `resolveAccentRgb()` calls
+  getComputedStyle once at module load and caches the literal
+  rgb(R,G,B) form.
+- useSyncExternalStore was bailing out because mutating `state` in
+  place returned the same reference forever. Fix: emit() now
+  shallow-copies the active session's nodes + edges and
+  `getState()` returns a cached snapshot wrapper that invalidates
+  on every emit. React-side memos finally see fresh data;
+  DiffOverlay actually appears now.
+
+### ✅ T8.4 — `add_page` action
+
+- `actions/code.ts` — new mutating action. Detects the project's
+  router by probing for marker files: `routeTree.gen.ts` /
+  `__root.tsx` (TanStack file-based), `app/layout.tsx` (Next App),
+  `pages/_app.tsx` (Next Pages), or vanilla Vite fallback.
+  Generates the route file at the correct location with a working
+  scaffold; if a `brief` is provided, hands the scaffold off to
+  Claude as code-writer to flesh out the inner JSX while preserving
+  the route registration. Confirmation-gated, undo-pushed. Action
+  description nudges Claude to use it whenever the operator says
+  "page" or "route".
+
+### ✅ T8.5 — Cross-turn agent memory
+
+- `engine/agent.ts` — `buildRecentContext()` walks the last 2-3
+  graph store sessions and returns a structured summary of file
+  events (write / modify / find / read / delete) grouped by op,
+  capped at 12 entries. Prepended to the first user message in
+  every `runAgent` call. System prompt explicitly directs Claude to
+  scan this block before calling find_file. Eliminates the
+  rediscovery loop where every follow-up turn ("now wire it into
+  the home page") burned iterations re-finding files the previous
+  turn already located.
+
+### ✅ T8.6 — Workspace picker auto-fallback
+
+- `actions/code.ts` — `set_workspace` handler now auto-pops the
+  folder picker dialog when a verbal path can't be reached (either
+  doesn't exist OR outside Tauri's static fs:scope). The picker's
+  recursive:true flag adds the chosen folder to runtime scope,
+  fixing the scope rejection AND letting the operator correct
+  typos in one click.
+- `src-tauri/capabilities/default.json` — fs:scope widened to allow
+  C:/Dev/**, D:/Dev/**, C:/Projects/**, D:/Projects/** so common
+  dev locations don't trip the scope guard.
+
+### ✅ T8.7 — Iteration budget + anti-loop rules
+
+- `engine/agent.ts` — AGENT_MAX_ITER bumped 14 → 50 (real coding
+  tasks routinely chew 20+ tool calls). Added explicit ITERATION
+  BUDGET + ANTI-LOOP RULES sections to AGENT_SYSTEM:
+    - "After find_file, your NEXT call MUST be modify_file, not
+      another find_file or read_file."
+    - "DO NOT call read_workspace_file before modify_file —
+      modify_file reads internally."
+    - "DO NOT call read_workspace_file to verify what generate_file
+      or modify_file just wrote."
+    - "If the operator says 'import X here', that's ONE
+      modify_file call. No more lookups."
+- On cap-hit, `axonGraph.endSession({ failed: true })` runs so the
+  Mind Map root settles red instead of pulsing forever.
+
+### ✅ T8.8 — Boxy CWA-style node redesign
+
+- `ui/MindMap.tsx` — replaced spherical gradient nodes with
+  rectangular tags. Dark fill (rgba(10,11,14,0.94)), 1px kind-color
+  border, 1.5px left-edge accent bar, monospace label inside
+  ("GOAL", "TOOL FIND_FILE", "WRITE src/billing/page.tsx", etc).
+  Active state gets a brand-color glow shadow; hover/pin lights up
+  the border. Diamond + pill special shapes are gone — every kind
+  is one consistent boxy family. Hit-test switched from circle to
+  bounding-rect.
+
+### ✅ T8.9 — Replay polish + simulation mode
+
+- `ui/MindMap.tsx` scrubber:
+    - New ▶ Play / ❚❚ Pause button auto-advances replayIndex
+      step-by-step, RAF-driven for smoothness.
+    - 1× / 2× / 4× speed toggle (600ms / 300ms / 150ms per step).
+    - Auto-stops + flips back to live mode at the end.
+    - ● Live also pauses if playing — no orphan animation loops.
+- `engine/simulationFlag.ts` (new) — module-level signal
+  (`getSimulationMode` / `setSimulationModeFlag`) so engine reads
+  the toggle without threading through every action context.
+- `engine/executor.ts` — when simulationMode is on AND action is
+  mutating, returns synthetic `(simulated)` result without calling
+  the handler. Non-mutating actions (find_file, read_workspace_file)
+  still run so the agent can plan accurately. Graph node tagged
+  `simulated: true`.
+- `engine/agent.ts` — `runAgent` defaults `simulationMode` from the
+  flag, passes through to `executeAction` so the whole tool chain
+  stays consistent for the run.
+- `engine/graphStore.ts` — GraphNode gains `simulated?: boolean`,
+  threaded through `startTool`.
+- `ui/MindMap.tsx` canvas — simulated nodes render with dashed
+  border (setLineDash([3,3])) plus an amber "SIM" pill above the
+  box. Visually distinct from real activity.
+- `types.ts` / `AxonProvider.tsx` — `simulationMode` + setter
+  exposed via context. Operator-facing toggle pending wiring into
+  Command Panel.
+
+### Shipped
+
+Commit: _pending_ (sprint 8)

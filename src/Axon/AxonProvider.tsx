@@ -15,6 +15,7 @@ import { useLocation, useNavigate } from "@tanstack/react-router";
 
 import { ActiveUser } from "@/stores/query";
 import { useCompanyFilter, type CompanyFilter } from "@/stores/store";
+import { setSimulationModeFlag } from "./engine/simulationFlag";
 
 import type {
   ActionContext,
@@ -203,6 +204,11 @@ export function AxonProvider({ children }: { children: React.ReactNode }) {
   // it off. Stored as state so UI can reflect it + as a ref so onEnd
   // (stale closure land) reads the live value.
   const [callMode, setCallModeState] = useState(false);
+  const [simulationMode, setSimulationModeState] = useState(false);
+  const setSimulationMode = useCallback((on: boolean) => {
+    setSimulationModeState(on);
+    setSimulationModeFlag(on);
+  }, []);
   const callModeRef = useRef(false);
   const setCallMode = useCallback((on: boolean) => {
     setCallModeState(on);
@@ -1046,6 +1052,8 @@ export function AxonProvider({ children }: { children: React.ReactNode }) {
       addAutomation,
       removeAutomation,
       setCallMode,
+      simulationMode,
+      setSimulationMode,
     }),
     [
       status,
@@ -1069,6 +1077,8 @@ export function AxonProvider({ children }: { children: React.ReactNode }) {
       addAutomation,
       removeAutomation,
       setCallMode,
+      simulationMode,
+      setSimulationMode,
     ]
   );
 

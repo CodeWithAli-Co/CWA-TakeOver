@@ -73,6 +73,10 @@ export interface GraphNode {
   after?: string;
   /** True when before/after was capped to fit the size limit. */
   diffTruncated?: boolean;
+  /** True when this node was created during a simulation run — the
+   *  agent proposed the action but did NOT actually execute it. Mind
+   *  Map renders simulated nodes with a dashed border + SIM badge. */
+  simulated?: boolean;
 }
 
 const DIFF_PAYLOAD_CAP = 64 * 1024;
@@ -334,6 +338,7 @@ export const axonGraph = {
     toolName: string;
     iter?: number;
     input?: Record<string, unknown>;
+    simulated?: boolean;
   }): GraphNode | null {
     const s = getOrCreateSession();
     const node: GraphNode = {
@@ -346,6 +351,7 @@ export const axonGraph = {
       toolName: args.toolName,
       iter: args.iter,
       meta: args.input,
+      simulated: args.simulated,
     };
     const parent = s.activeNodeId ?? s.nodes[0]?.id;
     s.nodes.push(node);

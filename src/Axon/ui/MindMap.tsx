@@ -283,6 +283,8 @@ export function MindMap({ fullScreen = false }: { fullScreen?: boolean }) {
   const sizeRef = useRef({ w: 600, h: 400, dpr: 1 });
   const hoverRef = useRef<{ id: string | null; x: number; y: number }>({ id: null, x: 0, y: 0 });
   const [pinnedId, setPinnedId] = useState<string | null>(null);
+  const [replayPlaying, setReplayPlaying] = useState(false);
+  const [replaySpeed, setReplaySpeed] = useState<1 | 2 | 4>(1);
 
   // Pick the active session — the latest one that has nodes, or the
   // most recent overall.
@@ -295,6 +297,35 @@ export function MindMap({ fullScreen = false }: { fullScreen?: boolean }) {
 
   // Apply replay slicing. When replayIndex >= 0, only events created
   // up through that index are visible — the canvas effectively rewinds.
+  // Replay auto-advance — when playing, step the replay index forward
+  // at a rate driven by the speed setting. Stops at the end and
+  // resumes live mode (replayIndex = -1) so the visual flips back to
+  // showing fresh activity.
+  useEffect(() => {
+    if (!replayPlaying) return;
+    let raf = 0;
+    let last = performance.now();
+    const stepMs = 600 / replaySpeed; // 600ms per step at 1x
+    const tick = (now: number) => {
+      const cur = axonGraph.getState().replayIndex;
+      const sess = axonGraph.getState().sessions.find((s) => s.id === axonGraph.getState().currentSessionId);
+      const total = sess ? sess.nodes.length - 1 : 0;
+      if (now - last >= stepMs) {
+        last = now;
+        const next = cur < 0 ? 0 : cur + 1;
+        if (next >= total) {
+          axonGraph.setReplayIndex(-1);
+          setReplayPlaying(false);
+          return;
+        }
+        axonGraph.setReplayIndex(next);
+      }
+      raf = requestAnimationFrame(tick);
+    };
+    raf = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(raf);
+  }, [replayPlaying, replaySpeed]);
+
   const visible = useMemo(() => {
     if (!session) return { nodes: [] as GraphNode[], edges: [] as GraphEdge[] };
     if (state.replayIndex < 0) return { nodes: session.nodes, edges: session.edges };
@@ -501,14 +532,19 @@ export function MindMap({ fullScreen = false }: { fullScreen?: boolean }) {
         }
 
         // Border — kind-color accent, brighter when interactive.
+        // Simulated nodes get a dashed stroke so they read as preview.
         const borderAlpha =
           isError ? 0.9 : isActive || isHover || isPinned ? 0.95 : 0.5;
         ctx.strokeStyle = (isError ? "rgb(248, 113, 113)" : color)
           .replace("rgb", "rgba")
           .replace(")", `, ${borderAlpha})`);
         ctx.lineWidth = n.kind === "root" ? 1.5 : 1;
+        if (n.simulated) {
+          ctx.setLineDash([3, 3]);
+        }
         drawRoundRect(ctx, x, y, boxW, boxH, radius);
         ctx.stroke();
+        if (n.simulated) ctx.setLineDash([]);
 
         // Left edge accent bar (1.5px) — gives the box a tag look.
         ctx.fillStyle = isError ? "rgb(248, 113, 113)" : color;
@@ -527,6 +563,26 @@ export function MindMap({ fullScreen = false }: { fullScreen?: boolean }) {
               ? "rgba(255, 255, 255, 0.96)"
               : "rgba(225, 225, 232, 0.78)";
         ctx.fillText(label, n.x + 0.75, n.y + 0.5);
+
+        // SIM pill above simulated nodes.
+        if (n.simulated) {
+          const pillW = 24;
+          const pillH = 11;
+          const pillX = n.x - pillW / 2;
+          const pillY = y - pillH - 3;
+          ctx.fillStyle = "rgba(252, 211, 77, 0.16)";
+          drawRoundRect(ctx, pillX, pillY, pillW, pillH, 2);
+          ctx.fill();
+          ctx.strokeStyle = "rgba(252, 211, 77, 0.55)";
+          ctx.lineWidth = 0.8;
+          drawRoundRect(ctx, pillX, pillY, pillW, pillH, 2);
+          ctx.stroke();
+          ctx.fillStyle = "rgba(254, 240, 138, 0.95)";
+          ctx.font = `600 8px ui-monospace, "JetBrains Mono", Menlo, Consolas, monospace`;
+          ctx.textAlign = "center";
+          ctx.textBaseline = "middle";
+          ctx.fillText("SIM", n.x, pillY + pillH / 2);
+        }
 
         ctx.globalAlpha = 1;
       }
@@ -693,11 +749,29 @@ export function MindMap({ fullScreen = false }: { fullScreen?: boolean }) {
         <footer className="axon-mindmap-scrubber">
           <button
             className="axon-mindmap-scrub-btn"
-            onClick={() => axonGraph.setReplayIndex(-1)}
+            onClick={() => {
+              setReplayPlaying(false);
+              axonGraph.setReplayIndex(-1);
+            }}
             data-active={state.replayIndex === -1}
             title="Resume live"
           >
             ● Live
+          </button>
+          <button
+            className="axon-mindmap-scrub-btn"
+            onClick={() => setReplayPlaying((p) => !p)}
+            data-active={replayPlaying}
+            title={replayPlaying ? "Pause replay" : "Play replay"}
+          >
+            {replayPlaying ? "❚❚ Pause" : "▶ Play"}
+          </button>
+          <button
+            className="axon-mindmap-scrub-btn"
+            onClick={() => setReplaySpeed((s) => (s === 1 ? 2 : s === 2 ? 4 : 1))}
+            title="Replay speed"
+          >
+            {replaySpeed}×
           </button>
           <input
             type="range"

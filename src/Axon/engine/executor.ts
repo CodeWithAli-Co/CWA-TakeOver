@@ -8,6 +8,7 @@ import { getAction } from "../actions/registry";
 import { appendAudit } from "./auditLog";
 import { verifyVoice } from "./voicePrint";
 import { axonGraph } from "./graphStore";
+import { getSimulationMode } from "./simulationFlag";
 
 export interface ExecuteOutcome {
   ok: boolean;
@@ -21,6 +22,10 @@ export interface ExecuteOpts {
   confidence?: number;
   /** Threshold below which mutating actions gate on explicit confirmation. */
   confidenceThreshold?: number;
+  /** When true, every mutating action returns a simulated success
+   *  without running the handler. Lets the agent build a full plan
+   *  the operator can review before re-running for real. */
+  simulationMode?: boolean;
   /** When set, mutating actions run a voice-print check first.
    *  `vector` is the enrolled print, `threshold` the cosine cutoff. */
   voicePrintGate?: {
@@ -126,13 +131,45 @@ export async function executeAction(
     }
   }
 
-  // Mind-map event: tool start. We only track non-trivial tool names so
-  // internal/utility actions (set_status, etc) don't pollute the graph.
+  // Simulation short-circuit — when on, mutating actions return a
+  // synthetic "simulated" result without running the handler.
+  const isSimulated = (opts.simulationMode ?? getSimulationMode()) && action.mutating;
+
+  // Mind-map event: tool start.
   const t0 = performance.now();
   const graphNode = axonGraph.startTool({
     toolName: actionName,
     input,
+    simulated: isSimulated,
   });
+
+  if (isSimulated) {
+    const summary = `(simulated) ${actionName.replace(/_/g, " ")}`;
+    if (graphNode) {
+      axonGraph.endTool({
+        nodeId: graphNode.id,
+        ok: true,
+        summary,
+        durationMs: 0,
+      });
+    }
+    return {
+      ok: true,
+      result: {
+        summary,
+        data: {
+          simulated: true,
+          actionName,
+          input,
+          note:
+            "Operator is in simulation mode. Continue planning as if " +
+            "this action had succeeded; the operator will approve before " +
+            "anything is actually executed.",
+        },
+      },
+      actionName,
+    };
+  }
 
   try {
     const result = await action.handler(input as any, ctx);

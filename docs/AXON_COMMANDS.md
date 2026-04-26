@@ -427,3 +427,49 @@ If he goes silent and you don't know why, check the three things in order:
 1. The subtitle overlay — any system note about mic or API?
 2. Settings → Always-on listening toggle.
 3. Dev console (`[AXON]` filter) — warnings will tell you the story.
+
+### Visual aids — see what Axon is doing
+
+- **Mind Map** — Open the Command Panel → "Mind" tab. Live graph of
+  every step Axon takes: prompt → tool calls → file touches →
+  summary. Click any node to inspect its details. Click the maximize
+  button (⤢) to expand to full-screen.
+- **Replay** — When a session has more than one event, a scrubber
+  appears at the bottom of the Mind Map. Drag the slider to rewind
+  through events one at a time, hit ▶ to auto-advance, toggle
+  1× / 2× / 4× to control speed. Click ● Live to resume real-time.
+- **DiffOverlay** — Whenever Axon writes or modifies a file, a glassy
+  diff card slides in from the top-right edge of the screen showing
+  exactly what changed (green adds, red dels). Auto-hides after 7s
+  unless you pin it. Click any past write/modify node in the Mind
+  Map to re-open its diff.
+
+### Simulation mode
+
+Toggle simulation mode (`useAxon().setSimulationMode(true)`) before
+issuing a goal and Axon will plan the entire chain WITHOUT actually
+running mutating actions. Every generate_file / modify_file /
+delete_workspace_file call returns a synthetic success; the Mind
+Map renders those nodes with a dashed border and an amber **SIM**
+badge. Read-only actions (find_file, read_workspace_file) still run
+normally so the plan accounts for the real workspace state. Toggle
+back off and re-issue the same goal to actually execute.
+
+### Cross-turn memory
+
+Each new agent run reads the last 2-3 sessions from the Mind Map
+graph store and includes a "Recent file activity" block at the top
+of its first prompt. So when you say "now wire it into the home
+page" right after Axon created a component, it already knows where
+both files live and goes straight to `modify_file` instead of
+re-running `find_file`. No special syntax needed — just speak
+naturally across turns.
+
+### Workspace picker fallback
+
+Say `set workspace` with a verbal path. If the path doesn't exist,
+or is outside Tauri's static fs:scope, the folder picker dialog
+auto-pops so you can correct it in one click — the picker also
+extends Tauri's runtime scope to the chosen folder, so subsequent
+`generate_file` calls work without "forbidden path" errors.
+

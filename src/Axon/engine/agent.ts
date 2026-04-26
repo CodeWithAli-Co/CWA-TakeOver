@@ -33,6 +33,7 @@ import {
 import { buildToolDefinitions } from "../actions/registry";
 import { executeAction } from "./executor";
 import { axonGraph } from "./graphStore";
+import { getSimulationMode } from "./simulationFlag";
 
 // Real coding tasks (multi-file features, refactors, scaffolds, plus
 // the inevitable "now wire it up over there" follow-ups) routinely
@@ -145,6 +146,10 @@ export interface AgentRunOpts {
   onAction?: (action: ExecutedAction) => void;
   /** When true, narrate progress out loud via ctx.speak. Default true. */
   narrate?: boolean;
+  /** When true, every mutating tool call returns a simulated success
+   *  without running. The agent builds a complete plan the operator
+   *  can review in the Mind Map before re-running for real. */
+  simulationMode?: boolean;
 }
 
 export interface AgentRunResult {
@@ -242,7 +247,7 @@ function buildRecentContext(): string {
 }
 
 export async function runAgent(opts: AgentRunOpts): Promise<AgentRunResult> {
-  const { goal, ctx, project, maxIters = AGENT_MAX_ITER, onProgress, onAction, narrate = true } = opts;
+  const { goal, ctx, project, maxIters = AGENT_MAX_ITER, onProgress, onAction, narrate = true, simulationMode = getSimulationMode() } = opts;
   if (!ANTHROPIC_API_KEY) {
     return {
       finalSummary: "I can't reach my brain — the Anthropic API key is missing.",
@@ -349,7 +354,7 @@ export async function runAgent(opts: AgentRunOpts): Promise<AgentRunResult> {
 
     const toolResults: AnthropicContent[] = [];
     for (const tu of toolUses) {
-      const outcome = await executeAction(tu.name, tu.input, ctx, {});
+      const outcome = await executeAction(tu.name, tu.input, ctx, { simulationMode });
       const logged: ExecutedAction = {
         id: tu.id,
         actionName: tu.name,
