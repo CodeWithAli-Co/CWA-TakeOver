@@ -11,6 +11,7 @@ import { Orb } from "./ui/Orb";
 import { CommandPanel } from "./ui/CommandPanel";
 import { ConfirmDialog } from "./ui/ConfirmDialog";
 import { SubtitleOverlay } from "./ui/SubtitleOverlay";
+import { DiffOverlay } from "./ui/DiffOverlay";
 import "./axon.css";
 
 export function AxonRoot() {
@@ -31,6 +32,10 @@ export function AxonRoot() {
         <SubtitleOverlay />
         <CommandPanel />
         <ConfirmDialog />
+        {/* Live diff — auto-pops in the corner when Axon writes/modifies
+            a file. Mounted at root level (not inside CommandPanel) so
+            it's visible even when the panel is closed. */}
+        <DiffOverlay />
       </AxonProvider>
     </div>
   );

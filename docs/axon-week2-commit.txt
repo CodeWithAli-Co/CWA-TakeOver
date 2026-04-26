@@ -1,0 +1,49 @@
+feat(axon): live diff overlay — week 2 of the $1M upgrade
+
+Watch Axon edit code in real time. Whenever the agent writes or
+modifies a file, a glassy diff card slides in from the top-right
+corner — visible regardless of whether the Command Panel is open —
+and shows a unified line diff (green adds, red dels) of exactly
+what changed. Auto-hides after 7s unless pinned. Click any
+write/modify node in the Mind Map to re-open its diff.
+
+Pieces:
+
+  src/Axon/engine/diffUtil.ts (new)
+    Pure LCS-based unified line diff. ~140 lines, no deps. Returns
+    {kind: 'eq'|'add'|'del', text, lineNo} entries, plus a
+    compactDiff helper that collapses long unchanged stretches into
+    'skip' markers with N lines of context per side.
+
+  src/Axon/engine/graphStore.ts
+    Extended GraphNode with optional before/after/diffTruncated
+    fields. New 64KB cap helper. addFile() now accepts and stores
+    before/after for write/modify events.
+
+  src/Axon/engine/codegen.ts
+    writeWorkspaceFile() now reads existing file BEFORE overwriting
+    and passes before+after through addFile so the Mind Map and
+    DiffOverlay can render a meaningful diff.
+
+  src/Axon/ui/DiffOverlay.tsx (new)
+    Floating side panel mounted at AxonRoot level. Auto-shows on
+    new write/modify, auto-hides after 7s. Pin button cancels
+    auto-hide. window.__axonOpenDiff lets the Mind Map pop the
+    overlay for a specific node.
+
+  src/Axon/ui/MindMap.tsx
+    Click handler also calls window.__axonOpenDiff for clicked
+    write/modify file nodes.
+
+  src/Axon/AxonRoot.tsx
+    Mounts <DiffOverlay /> alongside the other overlays.
+
+  src/Axon/axon.css
+    +220 lines: slide-in card with brand-accent rim glow, op chip
+    (CREATED teal / MODIFIED amber), +/- counts, glass backdrop
+    blur, monospace diff body with green/red rails, dashed dividers
+    for skipped runs. Responsive — drops to bottom on narrow viewports.
+
+Compile: tsc clean.
+
+Next: week 3 — replay/rewind beyond the scrubber + simulation mode

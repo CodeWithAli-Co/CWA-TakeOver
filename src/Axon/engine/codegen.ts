@@ -367,7 +367,7 @@ export async function writeWorkspaceFile(
   rel: string,
   content: string,
 ): Promise<void> {
-  const { writeTextFile, mkdir, exists } = await fs();
+  const { writeTextFile, mkdir, exists, readTextFile } = await fs();
   const { dirname } = await pathPlugin();
   const fullPath = safeJoin(workspace, rel);
   const parent = await dirname(fullPath);
@@ -376,13 +376,28 @@ export async function writeWorkspaceFile(
     await mkdir(parent, { recursive: true });
   }
   const existed = await exists(fullPath);
+  // Capture the file's prior contents BEFORE we overwrite it so the
+  // Mind Map's DiffOverlay can render a meaningful diff. We swallow
+  // read errors silently — the diff just shows up as a clean "create"
+  // in that case.
+  let before: string | undefined;
+  if (existed) {
+    try {
+      before = await readTextFile(fullPath);
+    } catch {
+      before = undefined;
+    }
+  }
   await writeTextFile(fullPath, content);
   // Mind-map: distinguish create vs modify so the canvas can color
-  // them differently (teal write vs amber modify).
+  // them differently (teal write vs amber modify). Pass before+after
+  // so DiffOverlay can render a unified diff.
   axonGraph.addFile({
     op: existed ? "modify" : "write",
     path: rel,
     detail: `${existed ? "modify" : "write"} · ${content.length}b`,
+    before,
+    after: content,
   });
 }
 

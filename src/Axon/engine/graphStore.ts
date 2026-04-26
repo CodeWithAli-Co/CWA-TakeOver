@@ -67,6 +67,19 @@ export interface GraphNode {
   /** Layout position — set lazily by the renderer's force-directed pass. */
   x?: number;
   y?: number;
+  /** For file write/modify events: file content BEFORE write. */
+  before?: string;
+  /** For file write/modify events: file content AFTER write. */
+  after?: string;
+  /** True when before/after was capped to fit the size limit. */
+  diffTruncated?: boolean;
+}
+
+const DIFF_PAYLOAD_CAP = 64 * 1024;
+function capPayload(s: string | undefined): { text?: string; truncated: boolean } {
+  if (typeof s !== "string") return { text: undefined, truncated: false };
+  if (s.length <= DIFF_PAYLOAD_CAP) return { text: s, truncated: false };
+  return { text: s.slice(0, DIFF_PAYLOAD_CAP), truncated: true };
 }
 
 export interface GraphEdge {
@@ -114,7 +127,31 @@ const state: AxonGraphState = {
 const listeners = new Set<() => void>();
 const MAX_SESSIONS = 25;
 
+// React useSyncExternalStore uses Object.is on snapshots — without
+// fresh wrappers, the canvas/diff overlay never re-render even though
+// state mutated. On every emit():
+//   1) Replace the current session with a shallow-copy whose
+//      nodes/edges arrays are also fresh slices. The inner GraphNode
+//      objects are shared so live state mutations (running → done)
+//      propagate.
+//   2) Replace state.sessions with a fresh slice.
+//   3) Invalidate the snapshot wrapper.
+let _snapshot: AxonGraphState | null = null;
+
 function emit() {
+  if (state.currentSessionId) {
+    const idx = state.sessions.findIndex((s) => s.id === state.currentSessionId);
+    if (idx >= 0) {
+      const cur = state.sessions[idx];
+      state.sessions[idx] = {
+        ...cur,
+        nodes: cur.nodes.slice(),
+        edges: cur.edges.slice(),
+      };
+    }
+  }
+  state.sessions = state.sessions.slice();
+  _snapshot = null;
   for (const fn of listeners) fn();
 }
 
@@ -135,7 +172,16 @@ function getOrCreateSession(): GraphSession {
 // ── public API ─────────────────────────────────────────────────────
 
 export const axonGraph = {
-  getState: (): AxonGraphState => state,
+  getState: (): AxonGraphState => {
+    if (_snapshot === null) {
+      _snapshot = {
+        sessions: state.sessions,
+        currentSessionId: state.currentSessionId,
+        replayIndex: state.replayIndex,
+      };
+    }
+    return _snapshot;
+  },
 
   /** React subscription hook — pairs with useSyncExternalStore. */
   subscribe: (fn: () => void) => {
@@ -345,9 +391,13 @@ export const axonGraph = {
     op: FileOp;
     path: string;
     detail?: string;
+    before?: string;
+    after?: string;
   }): GraphNode | null {
     const s = getOrCreateSession();
     const baseLabel = args.path.split(/[\\/]/).slice(-2).join("/") || args.path;
+    const beforeCap = capPayload(args.before);
+    const afterCap = capPayload(args.after);
     const node: GraphNode = {
       id: nodeId("file"),
       kind: "file",
@@ -357,6 +407,9 @@ export const axonGraph = {
       state: "done",
       fileOp: args.op,
       filePath: args.path,
+      before: beforeCap.text,
+      after: afterCap.text,
+      diffTruncated: beforeCap.truncated || afterCap.truncated,
     };
     const parent = s.activeNodeId ?? s.nodes[0]?.id;
     s.nodes.push(node);

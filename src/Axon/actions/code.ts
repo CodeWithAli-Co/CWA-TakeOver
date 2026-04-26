@@ -109,7 +109,7 @@ export const setWorkspaceAction: AxonAction<
 > = {
   name: "set_workspace",
   description:
-    "Choose or set the folder where AXON writes generated code. If `path` is given, sets it directly. Otherwise opens a folder picker. Required before any code-generation action runs.",
+    "Choose or set the folder where AXON writes generated code. If `path` is given, tries to set it directly; if the path can't be reached (doesn't exist or is outside the app fs scope) a folder-picker dialog pops automatically — the operator clicks the real folder and you're set. If `path` is omitted, the picker opens straight away. Required before any code-generation action runs. DO NOT call set_workspace repeatedly with the same path that just failed — wait for the picker to resolve.",
   input_schema: {
     type: "object",
     properties: {
@@ -124,6 +124,9 @@ export const setWorkspaceAction: AxonAction<
       return { summary: "Workspace mutator not bound." };
     }
     let chosen = path?.trim() || null;
+    let pickerFallbackUsed = false;
+
+    // No path given → straight to picker.
     if (!chosen) {
       chosen = await pickWorkspaceDirectory();
       if (!chosen) {
@@ -132,21 +135,45 @@ export const setWorkspaceAction: AxonAction<
           data: { workspace: workspaceOrNull() },
         };
       }
+    } else if (!(await ensureWorkspaceExists(chosen))) {
+      // Path was given but couldn't be reached. Two common reasons:
+      //   1. The path actually doesn't exist (typo / wrong drive).
+      //   2. The path exists but is outside Tauri's static fs:scope —
+      //      capabilities/default.json only lists $HOME / $DOCUMENT /
+      //      $DESKTOP / $DOWNLOAD by default; anything under C:\\Dev\\
+      //      etc gets rejected as "forbidden path".
+      // Either way the right move is to pop the picker. The picker's
+      // recursive:true flag adds the chosen folder to the runtime
+      // fs:scope, fixing case (2), and is the operator's chance to
+      // correct case (1) in one click.
+      const fallback = await pickWorkspaceDirectory();
+      if (!fallback) {
+        return {
+          summary: `Couldn't reach ${chosen}, and no folder picked. Workspace unchanged.`,
+          data: { workspace: workspaceOrNull() },
+        };
+      }
+      chosen = fallback;
+      pickerFallbackUsed = true;
     }
+
     if (!(await ensureWorkspaceExists(chosen))) {
       return {
-        summary: `That path doesn't exist: ${chosen}.`,
+        summary: `Couldn't access that folder either: ${chosen}.`,
         data: { workspace: workspaceOrNull() },
       };
     }
+
     _setWorkspace(chosen);
     ctx.logActivity({
       actionName: "set_workspace",
-      params: { path: chosen },
+      params: { path: chosen, pickerFallbackUsed },
       summary: `Workspace set to ${workspaceLabel(chosen)}`,
     });
     return {
-      summary: `Workspace set to ${workspaceLabel(chosen)}.`,
+      summary: pickerFallbackUsed
+        ? `Couldn't reach the path you said — picked ${workspaceLabel(chosen)} via folder dialog.`
+        : `Workspace set to ${workspaceLabel(chosen)}.`,
       data: { workspace: chosen },
     };
   },

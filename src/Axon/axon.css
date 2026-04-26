@@ -1269,3 +1269,293 @@
   border-color: rgba(94, 234, 212, 0.5);
   background: rgba(94, 234, 212, 0.10);
 }
+
+/* ══════════════════════════════════════════════════════════════════
+   DIFF OVERLAY — floating panel that surfaces every file write/modify
+   in real time. Lives at AxonRoot level so it shows even when the
+   Command Panel is closed.
+   ════════════════════════════════════════════════════════════════ */
+
+.axon-diff-overlay {
+  position: fixed;
+  top: 24px;
+  right: 24px;
+  width: 460px;
+  max-width: calc(100vw - 48px);
+  max-height: 70vh;
+  z-index: 9998; /* under the orb (9999), above everything else */
+  display: flex;
+  flex-direction: column;
+  background:
+    linear-gradient(180deg, rgba(20, 20, 24, 0.92) 0%, rgba(8, 8, 10, 0.96) 100%);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 14px;
+  box-shadow:
+    0 24px 64px rgba(0, 0, 0, 0.6),
+    0 0 0 1px rgba(var(--axon-accent-rgb), 0.12) inset,
+    var(--axon-glow-md);
+  backdrop-filter: blur(18px) saturate(120%);
+  -webkit-backdrop-filter: blur(18px) saturate(120%);
+  overflow: hidden;
+  font-family: var(--axon-font);
+  /* Slide-in from the right + fade. */
+  transform: translateX(20px);
+  opacity: 0;
+  pointer-events: none;
+  transition:
+    transform 280ms cubic-bezier(0.18, 0.9, 0.25, 1),
+    opacity 280ms ease;
+}
+.axon-diff-overlay[data-visible="true"] {
+  transform: translateX(0);
+  opacity: 1;
+  pointer-events: auto;
+}
+.axon-diff-overlay[data-pinned="true"] {
+  /* When pinned, brighten the rim glow so the operator can see at a
+     glance that this isn't an auto-fade panel. */
+  box-shadow:
+    0 24px 64px rgba(0, 0, 0, 0.6),
+    0 0 0 1px rgba(var(--axon-accent-rgb), 0.32) inset,
+    var(--axon-glow-md);
+}
+
+/* Header — file path, op chip, +/- counts, action buttons. */
+.axon-diff-head {
+  flex: 0 0 auto;
+  padding: 12px 14px 10px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.02), rgba(255, 255, 255, 0));
+}
+.axon-diff-head-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+.axon-diff-op {
+  font-family: var(--axon-mono);
+  font-size: 9.5px;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  padding: 3px 7px;
+  border-radius: 4px;
+  white-space: nowrap;
+  border: 1px solid currentColor;
+}
+.axon-diff-op--teal {
+  color: rgb(94, 234, 212);
+  background: rgba(94, 234, 212, 0.10);
+}
+.axon-diff-op--amber {
+  color: rgb(252, 211, 77);
+  background: rgba(252, 211, 77, 0.10);
+}
+.axon-diff-op--neutral {
+  color: rgba(255, 255, 255, 0.55);
+  background: rgba(255, 255, 255, 0.04);
+}
+.axon-diff-path {
+  flex: 1;
+  min-width: 0;
+  font-family: var(--axon-mono);
+  font-size: 12px;
+  color: var(--axon-fg);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-weight: 500;
+}
+.axon-diff-actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-left: auto;
+}
+.axon-diff-iconbtn {
+  width: 26px;
+  height: 26px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  color: var(--axon-muted);
+  font-size: 12px;
+  cursor: pointer;
+  transition: color 160ms, background 160ms, border-color 160ms;
+}
+.axon-diff-iconbtn:hover {
+  color: var(--axon-fg);
+  background: rgba(var(--axon-accent-rgb), 0.10);
+  border-color: rgba(var(--axon-accent-rgb), 0.40);
+}
+.axon-diff-iconbtn[data-active="true"] {
+  color: rgb(94, 234, 212);
+  border-color: rgba(94, 234, 212, 0.5);
+  background: rgba(94, 234, 212, 0.10);
+}
+
+.axon-diff-meta {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 8px;
+  font-family: var(--axon-mono);
+  font-size: 10.5px;
+  color: var(--axon-muted);
+  font-variant-numeric: tabular-nums;
+}
+.axon-diff-stat {
+  white-space: nowrap;
+}
+.axon-diff-stat--add {
+  color: rgb(134, 239, 172);
+  font-weight: 600;
+}
+.axon-diff-stat--del {
+  color: rgb(252, 165, 165);
+  font-weight: 600;
+}
+.axon-diff-stat--eq {
+  color: rgba(255, 255, 255, 0.4);
+}
+.axon-diff-stat--dur {
+  margin-left: auto;
+  color: var(--axon-muted);
+}
+.axon-diff-stat--trunc {
+  color: rgb(252, 211, 77);
+  border: 1px solid rgba(252, 211, 77, 0.4);
+  border-radius: 4px;
+  padding: 1px 6px;
+  font-size: 9.5px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+/* Body — scrollable diff lines. */
+.axon-diff-body {
+  flex: 1 1 auto;
+  overflow-y: auto;
+  overflow-x: auto;
+  padding: 4px 0;
+  font-family: var(--axon-mono);
+  font-size: 11.5px;
+  line-height: 1.55;
+  color: rgba(255, 255, 255, 0.92);
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.18) transparent;
+}
+.axon-diff-body::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+.axon-diff-body::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.18);
+  border-radius: 4px;
+}
+.axon-diff-body::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.axon-diff-lines {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.axon-diff-line {
+  display: grid;
+  grid-template-columns: 36px 36px 16px 1fr;
+  align-items: stretch;
+  gap: 0;
+  min-height: 18px;
+  padding: 0;
+  border-left: 2px solid transparent;
+  white-space: pre;
+}
+.axon-diff-line--add {
+  background: rgba(34, 197, 94, 0.10);
+  border-left-color: rgb(74, 222, 128);
+}
+.axon-diff-line--del {
+  background: rgba(248, 113, 113, 0.08);
+  border-left-color: rgb(248, 113, 113);
+}
+.axon-diff-line--eq {
+  background: transparent;
+}
+.axon-diff-line--skip {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 6px 14px;
+  color: rgba(255, 255, 255, 0.32);
+  font-size: 10.5px;
+  font-style: italic;
+  border-top: 1px dashed rgba(255, 255, 255, 0.08);
+  border-bottom: 1px dashed rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.015);
+  margin: 4px 0;
+}
+
+.axon-diff-lineno {
+  text-align: right;
+  padding-right: 6px;
+  color: rgba(255, 255, 255, 0.28);
+  font-variant-numeric: tabular-nums;
+  font-size: 10.5px;
+  user-select: none;
+}
+.axon-diff-lineno--before {
+  border-right: 1px solid rgba(255, 255, 255, 0.05);
+}
+.axon-diff-lineno--after {
+  border-right: 1px solid rgba(255, 255, 255, 0.05);
+}
+.axon-diff-gutter {
+  text-align: center;
+  padding: 0;
+  color: rgba(255, 255, 255, 0.4);
+  user-select: none;
+  font-weight: 600;
+}
+.axon-diff-line--add .axon-diff-gutter {
+  color: rgb(74, 222, 128);
+}
+.axon-diff-line--del .axon-diff-gutter {
+  color: rgb(248, 113, 113);
+}
+.axon-diff-gutter--skip {
+  color: rgba(255, 255, 255, 0.25);
+}
+.axon-diff-skip-label {
+  flex: 1;
+}
+.axon-diff-code {
+  padding: 0 12px 0 8px;
+  white-space: pre;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.axon-diff-empty {
+  padding: 24px 16px;
+  text-align: center;
+  color: var(--axon-muted);
+  font-size: 12px;
+}
+
+/* On narrow viewports: drop to bottom-left, full-width minus margins. */
+@media (max-width: 720px) {
+  .axon-diff-overlay {
+    top: auto;
+    bottom: 88px;
+    right: 16px;
+    left: 16px;
+    width: auto;
+    max-height: 60vh;
+  }
+}

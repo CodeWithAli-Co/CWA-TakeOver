@@ -40,8 +40,28 @@ import {
 
 // ── color tokens — tuned per node kind, sourced from the brand
 // accent rgb to keep the map cohesive with the Orb. ────────────────
+//
+// IMPORTANT: canvas color strings can't reference CSS variables —
+// addColorStop/strokeStyle expects a fully-resolved literal. We
+// resolve --axon-accent-rgb once at module load and stash the
+// literal "rgb(R, G, B)" form so the rest of the renderer can
+// blindly do the .replace("rgb","rgba")... trick without blowing up.
+function resolveAccentRgb(): string {
+  if (typeof window === "undefined") return "rgb(248, 113, 113)";
+  try {
+    const raw = getComputedStyle(document.documentElement)
+      .getPropertyValue("--axon-accent-rgb")
+      .trim();
+    if (raw && /^\d+\s*,\s*\d+\s*,\s*\d+$/.test(raw)) {
+      return `rgb(${raw})`;
+    }
+  } catch {}
+  return "rgb(248, 113, 113)"; // rose-400 fallback — matches Orb tone.
+}
+const ACCENT_RGB = resolveAccentRgb();
+
 const KIND_COLOR: Record<GraphNodeKind, string> = {
-  root: "rgb(var(--axon-accent-rgb))",
+  root: ACCENT_RGB,
   plan: "rgb(165, 180, 252)", // indigo-300
   tool: "rgb(94, 234, 212)", // teal-300
   file: "rgb(125, 211, 252)", // sky-300 (overridden per fileOp)

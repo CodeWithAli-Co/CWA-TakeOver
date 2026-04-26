@@ -16,7 +16,7 @@
 //      summary, OR when MAX_ITER is hit.
 //
 // Different from the conversational brain in three ways:
-//   • Higher iteration cap (12 vs 4) — multi-step features need it.
+//   • Higher iteration cap (32 vs 4) — multi-step features need it.
 //   • Specialized system prompt — autonomous engineer, not casual
 //     conversational assistant.
 //   • Non-streaming — we want full content blocks per turn so we can
@@ -34,7 +34,13 @@ import { buildToolDefinitions } from "../actions/registry";
 import { executeAction } from "./executor";
 import { axonGraph } from "./graphStore";
 
-const AGENT_MAX_ITER = 14;
+// Real coding tasks (multi-file features, refactors, scaffolds) routinely
+// chew through a dozen+ tool calls before they're done — find the file,
+// read context, generate, modify a sibling, fix an import, recheck.
+// 14 was leaving the operator stranded mid-task. 32 lets a meaningful
+// feature finish without changing the early-exit semantics (Claude
+// still ends the loop the moment it stops calling tools).
+const AGENT_MAX_ITER = 32;
 const AGENT_MAX_TOKENS = 4096;
 
 const AGENT_SYSTEM = `You are AXON in autonomous engineer mode. The operator gave you a high-level goal — your job is to make it real.
@@ -49,6 +55,17 @@ CORE LOOP:
 4. After each tool result, decide: keep going, course-correct, or finish.
 5. When the goal is met, produce a SHORT spoken summary (1-2 sentences,
    no markdown, no list) and stop calling tools. That ends the loop.
+
+ITERATION BUDGET:
+- You have a hard cap on tool-using turns. Burn them on action, not
+  on exploration. Two find_files + one read_file + one modify_file is
+  a healthy budget for a small change.
+- DO NOT read files just to "verify" something you already wrote — the
+  modify_file action returned the new bytes; trust it.
+- DO NOT read sibling files speculatively to "understand the project"
+  before making the change the operator asked for. Locate, edit, ship.
+- If you find yourself about to make the 4th read_file in a row,
+  STOP — make the edit instead.
 
 FILE LOCATION RULES — CRITICAL:
 - Goal mentions a "page" or "route"? Run find_file with a name pattern.
@@ -263,6 +280,14 @@ export async function runAgent(opts: AgentRunOpts): Promise<AgentRunResult> {
   }
 
   stoppedAtCap = true;
+  // Settle the mind-map session so the canvas doesn't keep pulsing the
+  // root forever. Mark as failed so the canvas tints the root red.
+  axonGraph.endSession({
+    summary:
+      finalSummary ||
+      `Hit the iteration cap (${maxIters}). Operator: continue with a follow-up.`,
+    failed: true,
+  });
   return {
     finalSummary:
       finalSummary ||
