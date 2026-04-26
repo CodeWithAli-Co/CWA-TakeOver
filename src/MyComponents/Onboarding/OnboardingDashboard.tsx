@@ -170,72 +170,85 @@ export function OnboardingDashboard() {
 
   const selected = instances.find((i) => i.id === selectedId) ?? null;
 
+  // Inbox-style stats — counts that read across the top of the page.
+  const activeCount = instances.filter((i) => i.status === "active").length;
+  const completedCount = instances.filter((i) => i.status === "completed").length;
+  const allHires = instances.length;
+
   return (
     <div className="flex h-full min-h-0 flex-col">
-      <header className="flex items-center justify-between border-b border-border/50 px-6 py-4">
-        <div>
-          <div className="flex items-center gap-2">
-            <ClipboardCheck className="h-4 w-4 text-primary" />
-            <h1 className="text-[15px] font-bold text-foreground">Onboarding</h1>
-            <span className="text-[11px] text-muted-foreground">
-              · {instances.length} {instances.length === 1 ? "hire" : "hires"}
-            </span>
+      {/* ── Header — icon tile + title stack on the left, stats + admin
+            actions on the right (inbox-style). ──────────────────── */}
+      <header className="flex items-start justify-between gap-6 border-b border-border/50 px-7 py-5">
+        <div className="flex items-start gap-3 min-w-0">
+          <div className="inline-flex h-10 w-10 items-center justify-center rounded-lg bg-primary/15 text-primary shrink-0">
+            <ClipboardCheck className="h-5 w-5" />
           </div>
-          <p className="mt-0.5 text-[11.5px] text-muted-foreground">
-            {isAdmin
-              ? "All active and completed onboarding flows. Convert an accepted offer to start one, or provision retroactively."
-              : "Your onboarding tasks. Check off items as you complete them."}
-          </p>
+          <div className="min-w-0">
+            <h1 className="text-[20px] font-bold text-foreground tracking-tight">Onboarding</h1>
+            <p className="mt-0.5 text-[12px] text-muted-foreground leading-relaxed max-w-[640px]">
+              {isAdmin
+                ? "All active and completed onboarding flows. Auto-provisioned on first sign-in, or convert an accepted offer to spawn one."
+                : "Your onboarding tasks. Check off items as you complete them."}
+            </p>
+          </div>
         </div>
-        {isAdmin && (
-          <div className="flex items-center gap-2">
-            <button
-              type="button"
-              onClick={() => {
-                const cleared = resetAllWelcomeFlags();
-                alert(
-                  cleared > 0
-                    ? `Cleared ${cleared} welcome flag${cleared === 1 ? "" : "s"} on this device. Sign in as the test user to retest the welcome modal.`
-                    : "No welcome flags were set on this device.",
-                );
-              }}
-              className="inline-flex items-center gap-1.5 rounded-sm border border-border bg-background px-2.5 py-1.5 text-[11px] font-medium text-muted-foreground hover:text-foreground hover:bg-muted/60"
-              title="Clear all cwa-welcomed-* localStorage flags so the welcome modal fires again on next sign-in (this device only)"
-            >
-              <RotateCcw className="h-3 w-3" />
-              Reset welcome (this device)
-            </button>
-            <button
-              type="button"
-              onClick={() => setShowProvision(true)}
-              className="inline-flex items-center gap-1.5 rounded-sm bg-primary px-2.5 py-1.5 text-[11px] font-semibold text-primary-foreground hover:bg-primary/90"
-              title="Manually create an onboarding instance for any user without one"
-            >
-              <Sparkles className="h-3 w-3" />
-              Provision onboarding
-            </button>
-          </div>
-        )}
+
+        <div className="flex items-center gap-4 shrink-0">
+          {/* Inline stats — only on Instances tab */}
+          {activeTab === "instances" && (
+            <div className="flex items-center gap-3 text-[11px]">
+              <Stat icon={ClipboardCheck} value={allHires} label="hires" />
+              <Stat icon={CheckCircle2} value={activeCount} label="active" tone={activeCount > 0 ? "good" : "muted"} />
+              {completedCount > 0 && (
+                <Stat icon={Circle} value={completedCount} label="done" tone="muted" />
+              )}
+            </div>
+          )}
+          {isAdmin && (
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => {
+                  const cleared = resetAllWelcomeFlags();
+                  alert(
+                    cleared > 0
+                      ? `Cleared ${cleared} welcome flag${cleared === 1 ? "" : "s"} on this device. Sign in as the test user to retest the welcome modal.`
+                      : "No welcome flags were set on this device.",
+                  );
+                }}
+                className="inline-flex items-center gap-1.5 rounded-md border border-border bg-background px-3 py-1.5 text-[11.5px] font-medium text-muted-foreground hover:text-foreground hover:bg-muted/60 transition-colors"
+                title="Clear all cwa-welcomed-* localStorage flags so the welcome modal fires again on next sign-in (this device only)"
+              >
+                <RotateCcw className="h-3 w-3" />
+                Reset welcome
+              </button>
+              <button
+                type="button"
+                onClick={() => setShowProvision(true)}
+                className="inline-flex items-center gap-1.5 rounded-md bg-primary px-3 py-1.5 text-[11.5px] font-semibold text-primary-foreground hover:bg-primary/90 transition-colors shadow-sm"
+                title="Manually create an onboarding instance for any user without one"
+              >
+                <Sparkles className="h-3 w-3" />
+                Provision onboarding
+              </button>
+            </div>
+          )}
+        </div>
       </header>
 
       {isAdmin && (
-        <nav className="flex items-center gap-1 border-b border-border/40 px-6 py-1.5 text-[11.5px]">
-          <button
-            type="button"
+        <nav className="flex items-center gap-0 border-b border-border/40 px-7">
+          <TabBtn
+            active={activeTab === "instances"}
             onClick={() => setActiveTab("instances")}
-            data-active={activeTab === "instances"}
-            className="rounded-sm px-2.5 py-1 font-medium text-muted-foreground hover:text-foreground data-[active=true]:bg-muted/60 data-[active=true]:text-foreground"
-          >
-            Instances
-          </button>
-          <button
-            type="button"
+            label="Instances"
+          />
+          <TabBtn
+            active={activeTab === "templates"}
             onClick={() => setActiveTab("templates")}
-            data-active={activeTab === "templates"}
-            className="rounded-sm px-2.5 py-1 font-medium text-muted-foreground hover:text-foreground data-[active=true]:bg-muted/60 data-[active=true]:text-foreground"
-          >
-            Templates
-          </button>
+            label="Templates"
+          />
         </nav>
       )}
 
@@ -676,5 +689,56 @@ function StatusPill({
     >
       {c.label}
     </span>
+  );
+}
+
+
+// ── Inbox-style header helpers ──────────────────────────
+
+function Stat({
+  icon: Icon, value, label, tone,
+}: {
+  icon: typeof ClipboardCheck;
+  value: number;
+  label: string;
+  tone?: "good" | "muted";
+}) {
+  const dotCls =
+    tone === "good"
+      ? "bg-emerald-400"
+      : tone === "muted"
+        ? "bg-muted-foreground/40"
+        : "bg-primary";
+  return (
+    <span className="inline-flex items-center gap-1.5 rounded-md border border-border/50 bg-card/40 px-2.5 py-1.5 text-muted-foreground">
+      <Icon className="h-3 w-3" />
+      <span className="tabular-nums font-semibold text-foreground">{value}</span>
+      <span className="text-[10.5px] uppercase tracking-wider">{label}</span>
+      <span className={`ml-0.5 h-1.5 w-1.5 rounded-full ${dotCls}`} />
+    </span>
+  );
+}
+
+function TabBtn({
+  active, onClick, label,
+}: {
+  active: boolean;
+  onClick: () => void;
+  label: string;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      data-active={active}
+      className="relative px-4 py-2.5 text-[12px] font-semibold text-muted-foreground hover:text-foreground data-[active=true]:text-foreground transition-colors"
+    >
+      {label}
+      <span
+        aria-hidden
+        className="absolute inset-x-3 bottom-0 h-[2px] rounded-t-full bg-primary opacity-0 data-[a=true]:opacity-100"
+        data-a={active}
+      />
+    </button>
   );
 }
