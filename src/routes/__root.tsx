@@ -24,7 +24,10 @@ import supabase from "@/MyComponents/supabase";
 import { useEffect, useState, lazy, Suspense } from "react";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import LoginPage from "@/MyComponents/Beginning/login";
-import PinPage from "@/MyComponents/Beginning/pinPage";
+// PinPage import removed — the SecurityBreach "command center"
+// design is now the default lock screen for everyone except COO,
+// who keeps CyberpunkPinPage. The legacy pinPage.tsx file is left
+// in place in case it's needed as a fallback.
 import { SignUpPage } from "@/MyComponents/Beginning/signup";
 import { ActiveUser, DMGroups, Messages } from "@/stores/query";
 import UserView from "@/MyComponents/Reusables/userView";
@@ -710,7 +713,7 @@ export const Route = createRootRoute({
                 "Partner",
               ]}
             >
-              <PinPage />
+              <SecurityBreach />
             </UserView>
             <UserView userRole={"COO"}>
               <CyberpunkPinPage />
