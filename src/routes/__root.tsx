@@ -28,6 +28,7 @@ import LoginPage from "@/MyComponents/Beginning/login";
 // design is now the default lock screen for everyone except COO,
 // who keeps CyberpunkPinPage. The legacy pinPage.tsx file is left
 // in place in case it's needed as a fallback.
+import { ensureOnboardingFor } from "@/MyComponents/Onboarding/ensureOnboarding";
 import { SignUpPage } from "@/MyComponents/Beginning/signup";
 import { ActiveUser, DMGroups, Messages } from "@/stores/query";
 import UserView from "@/MyComponents/Reusables/userView";
@@ -115,6 +116,36 @@ export const Route = createRootRoute({
     const userChannelNames: string[] = (dmGroupsData || [])
       .map((g: any) => g?.name)
       .filter(Boolean);
+
+    // Auto-provision onboarding on sign-in. Idempotent — does nothing
+    // when the user already has an active onboarding_instance, otherwise
+    // picks the best-matching template (or seeds a default if the
+    // templates table is empty) and creates the instance + items so the
+    // WelcomeModal + OnboardingBanner have something to show. Closes
+    // the gap where HiringActions.spawnOnboarding silently failed
+    // because no template matched the hire's brand/employmentType.
+    useEffect(() => {
+      const supaId = user?.[0]?.supa_id;
+      if (!supaId) return;
+      if (!(pinCheck === "true" && isLoggedIn === "true")) return;
+      let cancelled = false;
+      (async () => {
+        try {
+          const res = await ensureOnboardingFor(supaId);
+          if (cancelled) return;
+          if (import.meta.env.DEV) {
+            // eslint-disable-next-line no-console
+            console.info("[ensureOnboarding]", res);
+          }
+        } catch (e) {
+          if (import.meta.env.DEV) {
+            // eslint-disable-next-line no-console
+            console.warn("[ensureOnboarding] threw:", e);
+          }
+        }
+      })();
+      return () => { cancelled = true; };
+    }, [user?.[0]?.supa_id, pinCheck, isLoggedIn]);
 
     // Keep DMGroups in sync across the app (channel is idempotent for same name)
     useEffect(() => {
