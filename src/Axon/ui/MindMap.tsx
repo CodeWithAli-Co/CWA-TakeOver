@@ -69,6 +69,7 @@ const KIND_COLOR: Record<GraphNodeKind, string> = {
   error: "rgb(248, 113, 113)", // rose-400
   summary: "rgb(134, 239, 172)", // emerald-300
   critique: "rgb(252, 211, 77)", // amber-300 — Critic verdict node
+  vision: "rgb(186, 230, 253)", // sky-200 — ambient observation
 };
 
 const FILE_OP_COLOR: Record<FileOp, string> = {
@@ -176,6 +177,8 @@ function nodeRadius(n: GraphNode): number {
       return 22;
     case "critique":
       return 22;
+    case "vision":
+      return 20;
   }
 }
 
@@ -197,6 +200,7 @@ function nodeBoxLabel(n: GraphNode): string {
   if (n.kind === "thought") return trunc(n.label, 24);
   if (n.kind === "error") return `ERR  ${trunc(n.label.toUpperCase(), 18)}`;
   if (n.kind === "critique") return `CRITIC  ${trunc(n.label, 18)}`;
+  if (n.kind === "vision") return `👁  ${trunc(n.label, 28)}`;
   return n.label.toUpperCase();
 }
 

@@ -698,6 +698,54 @@ session prompt.
   pulsing in its own color and rhythm. Architect at 2.4s, Engineer
   at 1.2s, Critic at 3s — cadence mirrors the canvas animations.
 
+### ✅ T9.0 — Simulation toggle wired into Command Panel
+
+Engine respected `simulationMode` since T8.9 but the operator had
+no switch — it could only be flipped via the AxonContext. Now there
+is a SIM button in the Command Panel header next to the call-mode
+toggle. Click flips `useAxon().setSimulationMode()` which mirrors
+through to the module-level signal that `executor.ts` reads at
+mutating-action time. When ON the button glows amber and reads
+"🟡 SIM"; when OFF it's plain "SIM". The Mind Map already paints
+simulated nodes with a dashed border + SIM pill, so the operator
+gets clear visual feedback that nothing's actually being written.
+
+### ✅ T9.1 — Continuous vision (Week 5.1)
+
+Axon can now ambiently SEE — not just respond when asked.
+
+- `engine/visionLoop.ts` (new) — periodic screenshot → Claude
+  Sonnet vision → Mind Map vision node. Default interval 30s.
+  Skips when status is busy (coding / executing / processing /
+  speaking), when the document is hidden, when the visible-text
+  hash hasn't changed since the last successful capture, or
+  while a previous capture is still in-flight. Goes through
+  `anthropicFetch` for graceful 429 handling. Returns a
+  one-sentence read like "you're on the transactions page,
+  ledger has 3 unreconciled items" — or `"No change."` /
+  `"Loading."` which we treat as silent skips.
+- `engine/graphStore.ts` — new `vision` node kind + `addVision`
+  helper. Vision nodes hang off the session root so they don't
+  visually entangle with the agent's tool tree. Detail field
+  carries the screenshot data URL via `meta.thumbnailUrl` for
+  future click-to-view.
+- `ui/MindMap.tsx` — sky-200 color, 👁 prefix in the box label,
+  20px layout radius. Reuses the existing rectangular tag style
+  with no extra ceremony.
+- `types.ts` / `AxonProvider.tsx` — new `continuousVision: boolean`
+  setting (default false). `AxonProvider` `configureVisionLoop`s
+  the loop with an `isBusy` getter at mount, then toggles
+  `startVisionLoop` / `stopVisionLoop` whenever the setting
+  changes.
+- `ui/CommandPanel.tsx` — 👁 EYES / 👁 SEEING button in the header
+  next to SIM. Sky-blue glow when active. Flipping it persists
+  via the existing settings persistence so it survives reloads.
+
+Operator-facing: enable, work normally, glance at the Mind Map
+every so often to see what Axon noticed. Future agent runs can
+read these vision notes via `buildRecentContext` for spatial
+awareness.
+
 ### ✅ T8.13 — Orb visual modes for ensemble agents
 
 The Mind Map showed which agent was active, but the Orb was still

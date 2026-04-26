@@ -48,6 +48,10 @@ export function CommandPanel() {
     liveTranscript,
     callMode,
     setCallMode,
+    simulationMode,
+    setSimulationMode,
+    settings,
+    updateSettings,
   } = useAxon();
   const { activeCompany } = useCompanyFilter();
   const loc = useLocation();
@@ -128,6 +132,59 @@ export function CommandPanel() {
             }
           >
             {callMode ? "📞 On Call" : "📞 Call"}
+          </button>
+          {/* Simulation toggle — when ON, every mutating tool call (file
+              writes, modifies, scaffolds) returns a fake success without
+              actually running. The Mind Map shows the proposed plan with
+              a SIM pill so the operator can review before flipping back
+              off and re-running for real. Engine reads via getSimulation
+              Mode(); this button is the operator-facing switch. */}
+          <button
+            className="axon-btn"
+            onClick={() => setSimulationMode(!simulationMode)}
+            title={
+              simulationMode
+                ? "Simulation ON — file ops are dry-runs"
+                : "Enable simulation mode (dry-run all mutations)"
+            }
+            data-active={simulationMode}
+            style={
+              simulationMode
+                ? {
+                    background: "rgba(252, 211, 77, 0.15)",
+                    borderColor: "rgba(252, 211, 77, 0.55)",
+                    color: "#fde68a",
+                  }
+                : undefined
+            }
+          >
+            {simulationMode ? "🟡 SIM" : "SIM"}
+          </button>
+          {/* Continuous-vision toggle. When ON, Axon takes a screenshot
+              every ~30s and posts a 1-sentence read of the screen as
+              a vision node on the Mind Map. Skips automatically while
+              he's mid-task. Wired to the persisted setting so it
+              survives reloads. */}
+          <button
+            className="axon-btn"
+            onClick={() => updateSettings({ continuousVision: !settings.continuousVision })}
+            title={
+              settings.continuousVision
+                ? "Vision ON — ambient screenshots every 30s"
+                : "Enable ambient screen vision (every 30s)"
+            }
+            data-active={settings.continuousVision}
+            style={
+              settings.continuousVision
+                ? {
+                    background: "rgba(56, 189, 248, 0.15)",
+                    borderColor: "rgba(56, 189, 248, 0.55)",
+                    color: "#bae6fd",
+                  }
+                : undefined
+            }
+          >
+            {settings.continuousVision ? "👁 SEEING" : "👁 EYES"}
           </button>
           <button className="axon-btn" onClick={interrupt} title="Stop speaking">
             Stop

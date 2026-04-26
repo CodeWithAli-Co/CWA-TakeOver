@@ -37,7 +37,8 @@ export type GraphNodeKind =
   | "thought"
   | "error"
   | "summary"
-  | "critique";
+  | "critique"
+  | "vision";
 
 export type FileOp = "find" | "search" | "read" | "list" | "write" | "modify" | "delete";
 
@@ -328,6 +329,40 @@ export const axonGraph = {
       s.edges.push({
         id: edgeId(parent, node.id),
         from: parent,
+        to: node.id,
+        createdAt: Date.now(),
+      });
+    }
+    emit();
+    return node;
+  },
+
+  /** Append a vision observation — produced by the continuous vision
+   *  loop. Hangs off the session root so it doesn't visually entangle
+   *  with the agent's tool tree. The label is the short read; detail
+   *  holds the full description; meta carries the data URL of the
+   *  thumbnail so the operator can click and see what Axon saw. */
+  addVision(args: {
+    label: string;
+    detail?: string;
+    thumbnailUrl?: string;
+  }): GraphNode | null {
+    const s = getOrCreateSession();
+    const root = s.nodes[0];
+    const node: GraphNode = {
+      id: nodeId("vision"),
+      kind: "vision",
+      label: args.label.slice(0, 64) + (args.label.length > 64 ? "…" : ""),
+      detail: args.detail,
+      createdAt: Date.now(),
+      state: "done",
+      meta: args.thumbnailUrl ? { thumbnailUrl: args.thumbnailUrl } : undefined,
+    };
+    s.nodes.push(node);
+    if (root) {
+      s.edges.push({
+        id: edgeId(root.id, node.id),
+        from: root.id,
         to: node.id,
         createdAt: Date.now(),
       });

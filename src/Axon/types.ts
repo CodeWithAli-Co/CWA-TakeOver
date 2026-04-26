@@ -163,6 +163,12 @@ export interface AxonSettings {
   proactiveRouteObservations: boolean;
   /** Vision mode — off / auto (on visual-intent keywords) / always capture. */
   visionMode: "off" | "auto" | "always";
+  /** Continuous vision — ambient screenshot loop. When true, Axon
+   *  takes a screenshot every ~30s, asks the vision model for a
+   *  one-sentence read of what's on screen, and appends a vision
+   *  node to the Mind Map. Independent of `visionMode` (which only
+   *  governs command-time vision). Default: false. */
+  continuousVision: boolean;
   /** Dry-run: mutating actions report what they would do without doing it. */
   dryRun: boolean;
   /** Voice identity enrollment vector (mean MFCC-ish features). null = disabled. */
@@ -238,6 +244,7 @@ export const DEFAULT_SETTINGS: AxonSettings = {
   autoGreet: true,
   proactiveRouteObservations: true,
   visionMode: "auto",
+  continuousVision: false,
   dryRun: false,
   voicePrint: null,
   voicePrintThreshold: 0.7,

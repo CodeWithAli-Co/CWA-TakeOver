@@ -20,6 +20,11 @@ import {
   subscribeEnsemblePhase,
   type EnsemblePhase,
 } from "./engine/ensemblePhase";
+import {
+  configureVisionLoop,
+  startVisionLoop,
+  stopVisionLoop,
+} from "./engine/visionLoop";
 
 import type {
   ActionContext,
@@ -223,6 +228,63 @@ export function AxonProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     return subscribeEnsemblePhase((p) => setEnsemblePhaseState(p));
   }, []);
+
+  // Continuous-vision loop. The loop module owns the timer + screenshot
+  // + Anthropic call. We just give it an "isBusy" check (so it skips
+  // ambient pings while Axon is mid-task) and toggle start/stop based
+  // on the operator's settings flag.
+  const statusRef = useRef<AxonStatus>("idle");
+  statusRef.current = status;
+  useEffect(() => {
+    configureVisionLoop({
+      isBusy: () => {
+        const s = statusRef.current;
+        return (
+          s === "coding" ||
+          s === "executing" ||
+          s === "processing" ||
+          s === "speaking"
+        );
+      },
+    });
+  }, []);
+  // Toggle the loop on/off whenever the operator flips the setting.
+  useEffect(() => {
+    if (settings.continuousVision && settings.enabled) {
+      startVisionLoop();
+    } else {
+      stopVisionLoop();
+    }
+    return () => stopVisionLoop();
+  }, [settings.continuousVision, settings.enabled]);
+
+  // CEO auto-enable for continuous vision. We default the setting OFF
+  // for everyone (employees don't need to burn tokens watching a Tasks
+  // page). The CEO is different — he's running the business, vision is
+  // worth the cost. Auto-enable fires ONCE per user (per-supa-id
+  // localStorage flag). If the CEO turns it off afterward, his choice
+  // sticks across reloads — we don't fight him.
+  useEffect(() => {
+    const supaId = user?.supa_id;
+    const role = user?.role;
+    if (!supaId || !role) return;
+    if (role !== "CEO") return;
+    const flagKey = `cwa-axon-vision-auto-on-v1-${supaId}`;
+    let alreadyAutoEnabled = false;
+    try {
+      alreadyAutoEnabled = window.localStorage.getItem(flagKey) === "1";
+    } catch {
+      /* private mode etc — bail */
+      return;
+    }
+    if (alreadyAutoEnabled) return;
+    // Stamp first so a re-render of this effect can't double-enable.
+    try { window.localStorage.setItem(flagKey, "1"); } catch { /* ignore */ }
+    setSettings((prev) =>
+      prev.continuousVision ? prev : { ...prev, continuousVision: true },
+    );
+  }, [user?.supa_id, user?.role]);
+
   const callModeRef = useRef(false);
   const setCallMode = useCallback((on: boolean) => {
     setCallModeState(on);
