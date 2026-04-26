@@ -688,6 +688,275 @@ export const deleteWorkspaceFileAction: AxonAction<
   },
 };
 
+// ── add_page — one-shot page creation ───────────────────────────────────
+//
+// "Create a billing page" → one tool call. Detects the project's
+// router (TanStack Router file-based, Next.js App Router, Next.js
+// Pages, or generic fallback), generates the route file at the
+// correct path with a sensible component scaffold, and reports
+// back what (if anything) the operator still needs to do
+// (typically just "wire it into your sidebar" since sidebar
+// configs vary too much across projects to safely auto-edit).
+
+type RouterKind = "tanstack-file" | "next-app" | "next-pages" | "vite-only";
+
+interface RouterDetection {
+  kind: RouterKind;
+  /** Where new route files should land. Relative to workspace root. */
+  routesDir: string;
+  /** Optional notes for the operator. */
+  note?: string;
+}
+
+async function detectRouter(ws: string): Promise<RouterDetection> {
+  // Probe in order of specificity. Use ensureWorkspaceExists for each
+  // candidate to avoid raising on missing dirs.
+  const exists = async (rel: string) => {
+    try {
+      await readWorkspaceFile(ws, rel);
+      return true;
+    } catch {
+      return false;
+    }
+  };
+  // TanStack Router file-based — distinguishing marker is the
+  // generated route tree OR the root route file pattern.
+  if (
+    (await exists("src/routeTree.gen.ts")) ||
+    (await exists("src/routes/__root.tsx")) ||
+    (await exists("routes/__root.tsx"))
+  ) {
+    const root = (await exists("src/routes/__root.tsx"))
+      ? "src/routes"
+      : "routes";
+    return { kind: "tanstack-file", routesDir: root };
+  }
+  // Next.js App Router — `app/` or `src/app/` with a layout.tsx.
+  if (await exists("src/app/layout.tsx")) {
+    return { kind: "next-app", routesDir: "src/app" };
+  }
+  if (await exists("app/layout.tsx")) {
+    return { kind: "next-app", routesDir: "app" };
+  }
+  // Next.js Pages Router — `pages/` or `src/pages/`.
+  if (await exists("src/pages/_app.tsx") || await exists("src/pages/index.tsx")) {
+    return { kind: "next-pages", routesDir: "src/pages" };
+  }
+  if (await exists("pages/_app.tsx") || await exists("pages/index.tsx")) {
+    return { kind: "next-pages", routesDir: "pages" };
+  }
+  // Fallback — vanilla Vite/CRA. Drop a component into src/pages.
+  return {
+    kind: "vite-only",
+    routesDir: "src/pages",
+    note: "No router detected — generated a standalone component. You'll need to register the route in your router yourself.",
+  };
+}
+
+function toKebab(s: string): string {
+  return s
+    .replace(/([a-z0-9])([A-Z])/g, "$1-$2")
+    .replace(/[^a-zA-Z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .toLowerCase();
+}
+
+function toPascal(s: string): string {
+  return s
+    .replace(/[^a-zA-Z0-9]+/g, " ")
+    .trim()
+    .split(/\s+/)
+    .map((w) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
+    .join("");
+}
+
+function normalizeRoutePath(input: string | undefined, kebab: string): string {
+  if (!input) return `/${kebab}`;
+  const cleaned = input.trim().replace(/^\/+/, "").replace(/\/+$/, "");
+  return `/${cleaned || kebab}`;
+}
+
+function tanstackRouteTemplate(componentName: string, routePath: string): string {
+  return `import { createLazyFileRoute } from "@tanstack/react-router";
+
+function ${componentName}Route() {
+  return (
+    <div className="p-6">
+      <h1 className="text-2xl font-semibold">${componentName}</h1>
+      <p className="text-muted-foreground mt-2">
+        TODO: replace this placeholder with the real ${componentName} content.
+      </p>
+    </div>
+  );
+}
+
+export const Route = createLazyFileRoute("${routePath}")({
+  component: ${componentName}Route,
+});
+
+export default ${componentName}Route;
+`;
+}
+
+function nextAppRouteTemplate(componentName: string): string {
+  return `export default function ${componentName}Page() {
+  return (
+    <div className="p-6">
+      <h1 className="text-2xl font-semibold">${componentName}</h1>
+      <p className="text-muted-foreground mt-2">
+        TODO: replace this placeholder with the real ${componentName} content.
+      </p>
+    </div>
+  );
+}
+`;
+}
+
+function nextPagesRouteTemplate(componentName: string): string {
+  return `export default function ${componentName}Page() {
+  return (
+    <div style={{ padding: 24 }}>
+      <h1>${componentName}</h1>
+      <p>TODO: replace this placeholder with the real ${componentName} content.</p>
+    </div>
+  );
+}
+`;
+}
+
+export const addPageAction: AxonAction<
+  { name: string; brief?: string; routePath?: string },
+  { path: string; routerKind: RouterKind; routePath: string }
+> = {
+  name: "add_page",
+  description:
+    "Create a new page in one shot. Detects the project router (TanStack file-based, Next.js App or Pages router, or vanilla) and generates the route file at the correct location with a working scaffold — no need to ask the operator to create the file first. `name` is the page name (e.g. \"Billing\", \"User Settings\"); `routePath` overrides the URL (defaults to /<kebab-name>); `brief` lets you customize what the page should render. Use this whenever the operator says \"page\" or \"route\" — it beats two separate generate_file + manual-route-edit calls.",
+  input_schema: {
+    type: "object",
+    properties: {
+      name: {
+        type: "string",
+        description: "Page display name. e.g. 'Billing', 'User Settings'.",
+      },
+      brief: {
+        type: "string",
+        description: "Optional description of what the page should contain (used to customize the scaffold via Claude).",
+      },
+      routePath: {
+        type: "string",
+        description: "Optional URL path, e.g. '/billing' or '/admin/users'. Defaults to /<kebab-cased-name>.",
+      },
+    },
+    required: ["name"],
+  },
+  mutating: true,
+  requiresConfirmation: true,
+  handler: async ({ name, brief, routePath }, ctx) => {
+    const ws = workspaceOrNull();
+    if (!ws) return { summary: "No workspace set. Say 'set workspace' first." };
+
+    const kebab = toKebab(name);
+    const pascal = toPascal(name);
+    const finalPath = normalizeRoutePath(routePath, kebab);
+    const detection = await detectRouter(ws);
+
+    // Pick destination + template based on detected router.
+    let destFile: string;
+    let scaffold: string;
+    switch (detection.kind) {
+      case "tanstack-file":
+        destFile = `${detection.routesDir}/${kebab}.lazy.tsx`;
+        scaffold = tanstackRouteTemplate(pascal, finalPath);
+        break;
+      case "next-app":
+        destFile = `${detection.routesDir}${finalPath}/page.tsx`;
+        scaffold = nextAppRouteTemplate(pascal);
+        break;
+      case "next-pages":
+        destFile = `${detection.routesDir}${finalPath}.tsx`;
+        scaffold = nextPagesRouteTemplate(pascal);
+        break;
+      case "vite-only":
+        destFile = `${detection.routesDir}/${pascal}.tsx`;
+        scaffold = tanstackRouteTemplate(pascal, finalPath).replace(
+          /import \{ createLazyFileRoute[^;]*;\n\n/,
+          ""
+        ).replace(/export const Route[\s\S]*$/, "");
+        break;
+    }
+
+    // If a brief is provided, hand the scaffold off to Claude so the
+    // body matches what the operator asked for. Otherwise ship the
+    // template as-is.
+    let body = scaffold;
+    if (brief && brief.trim().length > 0) {
+      try {
+        const { code } = await withCodingStatus(ctx, () =>
+          generateFile({
+            brief: `Build the ${name} page. ${brief.trim()}\n\nIMPORTANT: keep the route registration and exports EXACTLY as in the scaffold below. Only customize the inner JSX.\n\nScaffold:\n${scaffold}`,
+            filename: destFile,
+            language: "tsx",
+          })
+        );
+        if (code && code.trim().length > 0) body = code;
+      } catch {
+        // Fall back to the plain scaffold if Claude generation fails.
+      }
+    }
+
+    // Refuse to clobber unless the operator confirms.
+    let alreadyExists = false;
+    try {
+      await readWorkspaceFile(ws, destFile);
+      alreadyExists = true;
+    } catch {
+      alreadyExists = false;
+    }
+    if (alreadyExists) {
+      const ok = await ctx.requestConfirmation(
+        `${destFile} already exists. Overwrite it?`,
+      );
+      if (!ok) {
+        return { summary: `Cancelled — ${destFile} kept as is.` };
+      }
+    }
+
+    await writeWorkspaceFile(ws, destFile, body);
+
+    ctx.pushUndo({
+      actionName: "add_page",
+      label: `remove ${destFile}`,
+      undo: async () => {
+        try {
+          await deleteWorkspaceFile(ws, destFile);
+          return `Removed ${destFile}.`;
+        } catch (e) {
+          return `Couldn't remove ${destFile}: ${(e as Error).message}`;
+        }
+      },
+    });
+
+    ctx.logActivity({
+      actionName: "add_page",
+      params: { name, routePath: finalPath, routerKind: detection.kind },
+      summary: `Added ${name} page at ${finalPath} (${detection.kind})`,
+      confirmed: true,
+    });
+
+    const sidebarHint =
+      detection.kind === "tanstack-file"
+        ? " Route tree auto-regenerates via the TanStack Vite plugin — page is live at " + finalPath + " once Vite reloads. Add a sidebar entry yourself if you want it in the nav."
+        : detection.kind === "vite-only"
+        ? " " + (detection.note ?? "")
+        : "";
+
+    return {
+      summary: `Created ${name} at ${destFile}.${sidebarHint}`,
+      data: { path: safeJoin(ws, destFile), routerKind: detection.kind, routePath: finalPath },
+    };
+  },
+};
+
 export function registerCodeActions() {
   registerAction(setWorkspaceAction);
   registerAction(currentWorkspaceAction);
@@ -698,5 +967,6 @@ export function registerCodeActions() {
   registerAction(generateFileAction);
   registerAction(modifyFileAction);
   registerAction(scaffoldFeatureAction);
+  registerAction(addPageAction);
   registerAction(deleteWorkspaceFileAction);
 }
