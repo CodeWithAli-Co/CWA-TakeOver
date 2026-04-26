@@ -317,6 +317,24 @@ export const MessageBubble: React.FC<Props> = ({
   const readBy = (msg.read_by || []).filter((u) => u !== msg.sent_by);
   const isPinned = !!msg.pinned_at;
 
+  // Read receipts ONLY render under the LAST own message in the
+  // channel — not under every single one. Avatar tails after every
+  // message looked like spam. We compute "is this the last own
+  // message" by walking allMessages once. Cheap because it's just a
+  // .findLast on a finite array.
+  const isLastOwnMessage = (() => {
+    if (msg.sent_by !== currentUsername) return false;
+    if (!allMessages || allMessages.length === 0) return true;
+    // Find the largest msg_id authored by currentUsername.
+    let lastOwnId = -1;
+    for (const m of allMessages) {
+      if (m.sent_by === currentUsername && m.msg_id > lastOwnId) {
+        lastOwnId = m.msg_id;
+      }
+    }
+    return msg.msg_id === lastOwnId;
+  })();
+
   // Strip embedded markers before rendering. The composer prepends reply
   // + reactions markers + appends image URLs so each survives even when
   // the corresponding DB column doesn't exist.
@@ -740,27 +758,34 @@ export const MessageBubble: React.FC<Props> = ({
           </button>
         )}
 
-        {/* Read receipts — horizontal avatar stack */}
-        {isOwn && readBy.length > 0 && (
-          <div className="mt-1.5 flex items-center gap-1.5">
-            <CheckCheck className="h-3 w-3 text-emerald-400/70" />
-            <div className="flex -space-x-1.5">
-              {readBy.slice(0, 5).map((u) => (
+        {/* Read receipts — only on the LAST own message in the channel.
+            Renders as a small "Read by [avatars]" chip aligned right
+            so it doesn't crowd message bodies. iMessage-style: one
+            indicator at the bottom of your own thread, not under
+            every single bubble. */}
+        {isOwn && isLastOwnMessage && readBy.length > 0 && (
+          <div className="mt-1 flex items-center justify-end gap-1.5 opacity-70">
+            <span className="text-[10px] font-medium tracking-wide text-muted-foreground">
+              Read
+            </span>
+            <CheckCheck className="h-3 w-3 text-emerald-400/80" />
+            <div className="flex -space-x-1">
+              {readBy.slice(0, 3).map((u) => (
                 <div
                   key={u}
                   title={u}
-                  className="flex h-4 w-4 items-center justify-center rounded-full border border-background bg-muted text-[8px] font-semibold text-muted-foreground"
+                  className="flex h-3.5 w-3.5 items-center justify-center rounded-full border border-background text-[7.5px] font-semibold text-white/95"
                   style={{ background: colorForName(u) }}
                 >
                   {u.slice(0, 1).toUpperCase()}
                 </div>
               ))}
-              {readBy.length > 5 && (
+              {readBy.length > 3 && (
                 <div
-                  title={readBy.slice(5).join(", ")}
-                  className="flex h-4 items-center justify-center rounded-full border border-background bg-muted px-1.5 text-[8.5px] font-semibold text-muted-foreground"
+                  title={readBy.slice(3).join(", ")}
+                  className="flex h-3.5 items-center justify-center rounded-full border border-background bg-muted/80 px-1 text-[7.5px] font-semibold text-muted-foreground"
                 >
-                  +{readBy.length - 5}
+                  +{readBy.length - 3}
                 </div>
               )}
             </div>
