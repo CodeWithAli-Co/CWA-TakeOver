@@ -169,6 +169,18 @@ export interface AxonSettings {
    *  node to the Mind Map. Independent of `visionMode` (which only
    *  governs command-time vision). Default: false. */
   continuousVision: boolean;
+  /** Filesystem watcher — when true, Axon watches the active project
+   *  for files changed outside the agent (saving in VS Code, pulling
+   *  a branch, etc.) and surfaces them as Mind Map notes. Default
+   *  false because watcher events can be noisy on large repos with
+   *  generated files. */
+  fsWatcher: boolean;
+  /** Diary — when true, Axon writes a Markdown reflection to
+   *  <activeProject>/docs/diary/YYYY-MM-DD/HH-MM-SS-<slug>.md after
+   *  every session ends. Foundation for long-term memory. Default
+   *  true on the active project so the operator gets a free history
+   *  log without thinking about it. */
+  diary: boolean;
   /** Dry-run: mutating actions report what they would do without doing it. */
   dryRun: boolean;
   /** Voice identity enrollment vector (mean MFCC-ish features). null = disabled. */
@@ -245,6 +257,8 @@ export const DEFAULT_SETTINGS: AxonSettings = {
   proactiveRouteObservations: true,
   visionMode: "auto",
   continuousVision: false,
+  fsWatcher: false,
+  diary: true,
   dryRun: false,
   voicePrint: null,
   voicePrintThreshold: 0.7,

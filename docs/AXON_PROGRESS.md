@@ -746,6 +746,78 @@ every so often to see what Axon noticed. Future agent runs can
 read these vision notes via `buildRecentContext` for spatial
 awareness.
 
+CEO auto-enable: a per-user localStorage flag
+(`cwa-axon-vision-auto-on-v1-{supaId}`) auto-flips the setting to
+ON the first time a CEO signs in. After that the flag is set
+forever and we respect whatever the CEO's persisted choice is
+(turn off → stays off). Other roles default OFF.
+
+### ✅ T9.2 — Filesystem watcher (Week 5.2)
+
+Axon now notices when files change OUTSIDE the agent — saving in
+VS Code, pulling a branch, generating types, anything. Each
+external edit lands as a 📝 thought beat on the Mind Map and
+fires a `axon:file-modified` `CustomEvent` on `window` for future
+toasts to hook into ("I see you edited transactions.tsx — want me
+to update the related types?").
+
+- `engine/fsWatcher.ts` (new) — wraps `@tauri-apps/plugin-fs`'s
+  `watch` API. Active project's full tree is watched recursively.
+  Filters: ignores `node_modules`, `.git`, `dist`, `build`,
+  `.next`, `.turbo`, `.cache`, `target`, `coverage`, `.DS_Store`;
+  only surfaces files matching a curated extension set
+  (ts/tsx/js/jsx/rs/py/go/css/scss/md/json/toml/yaml/html/svg/sql).
+  Per-path 280ms debounce so editor save-bursts coalesce. Rolling
+  history capped at 24 entries.
+- `types.ts` — new `fsWatcher: boolean` setting (default false —
+  watcher events can be noisy on heavy refactors).
+- `AxonProvider.tsx` — `configureFsWatcher` with active-project
+  getter, then start/stop hook gated on `settings.fsWatcher && enabled`.
+  Reconfigures whenever the active project changes.
+- `ui/CommandPanel.tsx` — 📝 FS toggle button next to 👁 EYES.
+  Emerald glow when active.
+
+### ✅ T9.3 — Axon Diary (Week 6.1)
+
+Foundation for Axon's long-term memory. Every session that ends
+writes a Markdown reflection to:
+
+```
+<activeProject>/docs/diary/YYYY-MM-DD/HH-MM-SS-<slug>.md
+```
+
+The file captures: goal, kind (conversation / agent / ensemble),
+duration, status (✅ done / ❌ failed), final summary, Critic
+verdict (ensemble only), every file touched (with op + duration),
+every tool called (with success/error), vision notes that fired
+during the session, blockers / errors, last 8 reasoning beats,
+and external FS-watcher edits.
+
+- `engine/diary.ts` (new) — `configureDiary` + `startDiary` /
+  `stopDiary`. Subscribes to `axonGraph` and writes a diary entry
+  whenever a session transitions from active to ended. Skips
+  empty sessions (just a root, no real activity). Uses
+  `@tauri-apps/plugin-fs` `mkdir` + `writeTextFile`. Surfaces the
+  write-path as a 📔 thought so the operator sees it land.
+- `types.ts` — new `diary: boolean` setting (default TRUE — empty
+  sessions don't write, so the cost is effectively zero, and the
+  operator gets a free history log).
+- `AxonProvider.tsx` — diary configure + start/stop hook gated
+  on `settings.diary && enabled && activeProjectPath`.
+- `ui/CommandPanel.tsx` — 📔 LOG toggle button. Indigo glow when
+  active.
+
+Why a daily folder + timestamped filename: multiple sessions per
+day stay grouped, lex-sorting filenames inside the day folder
+gives chronological order for free, slug pulled from the goal
+makes filenames actually scannable.
+
+Future T-tasks build on top:
+- T9.4 (Improvement loop) reads recent diary entries to feed the
+  Critic / Architect "lessons learned" context.
+- T9.5 (Memory tab in Command Panel) surfaces recent diary entries
+  with click-to-open.
+
 ### ✅ T8.13 — Orb visual modes for ensemble agents
 
 The Mind Map showed which agent was active, but the Orb was still

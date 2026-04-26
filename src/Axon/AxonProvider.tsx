@@ -25,6 +25,12 @@ import {
   startVisionLoop,
   stopVisionLoop,
 } from "./engine/visionLoop";
+import {
+  configureFsWatcher,
+  startFsWatcher,
+  stopFsWatcher,
+} from "./engine/fsWatcher";
+import { configureDiary, startDiary, stopDiary } from "./engine/diary";
 
 import type {
   ActionContext,
@@ -257,6 +263,47 @@ export function AxonProvider({ children }: { children: React.ReactNode }) {
     }
     return () => stopVisionLoop();
   }, [settings.continuousVision, settings.enabled]);
+
+  // ── Filesystem watcher (Week 5.2) ────────────────────────────────
+  // Watches the active project's source tree for changes made outside
+  // Axon (saving in VS Code, pulling a branch, etc.). The module owns
+  // the Tauri fs subscription + per-path debounce; this effect just
+  // toggles it based on the operator's setting and rebinds when the
+  // active project changes.
+  const activeProjectPath = useMemo(() => {
+    const proj = settings.projects.find((p) => p.id === settings.activeProjectId);
+    return proj?.path ?? null;
+  }, [settings.projects, settings.activeProjectId]);
+  useEffect(() => {
+    configureFsWatcher({ activeRoot: () => activeProjectPath });
+  }, [activeProjectPath]);
+  useEffect(() => {
+    if (settings.fsWatcher && settings.enabled && activeProjectPath) {
+      void startFsWatcher();
+    } else {
+      stopFsWatcher();
+    }
+    return () => stopFsWatcher();
+  }, [settings.fsWatcher, settings.enabled, activeProjectPath]);
+
+  // ── Axon Diary (Week 6.1) ────────────────────────────────────────
+  // Writes a Markdown reflection to the active project on every
+  // session end. Same shape as the watcher / vision wiring: configure
+  // the module with an active-project getter + enabled flag, then
+  // start/stop the subscription. Default ON because the diary is a
+  // free history log — it costs nothing if no sessions run.
+  useEffect(() => {
+    configureDiary({
+      activeProjectPath: () => activeProjectPath,
+      enabled: settings.diary && !!activeProjectPath,
+    });
+    if (settings.diary && settings.enabled) {
+      startDiary();
+    } else {
+      stopDiary();
+    }
+    return () => stopDiary();
+  }, [settings.diary, settings.enabled, activeProjectPath]);
 
   // CEO auto-enable for continuous vision. We default the setting OFF
   // for everyone (employees don't need to burn tokens watching a Tasks

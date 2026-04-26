@@ -6,4 +6,5 @@
 
 export default function Capitalize(props: string) {
   return props.replace(/\b[a-z]/g, (char) => char.toUpperCase());
+  
 }

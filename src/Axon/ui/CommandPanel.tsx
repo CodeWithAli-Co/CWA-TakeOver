@@ -186,6 +186,58 @@ export function CommandPanel() {
           >
             {settings.continuousVision ? "👁 SEEING" : "👁 EYES"}
           </button>
+          {/* FS watcher — when ON, Axon notices when you edit files
+              outside the agent (saving in VS Code, pulling a branch).
+              Each external edit lands as a 📝 thought on the Mind
+              Map and fires an "axon:file-modified" CustomEvent that
+              future "want me to update related types?" toasts can
+              hook into. */}
+          <button
+            className="axon-btn"
+            onClick={() => updateSettings({ fsWatcher: !settings.fsWatcher })}
+            title={
+              settings.fsWatcher
+                ? "FS watcher ON — external edits surface on the Mind Map"
+                : "Enable filesystem watcher (active project)"
+            }
+            data-active={settings.fsWatcher}
+            style={
+              settings.fsWatcher
+                ? {
+                    background: "rgba(134, 239, 172, 0.15)",
+                    borderColor: "rgba(134, 239, 172, 0.55)",
+                    color: "#bbf7d0",
+                  }
+                : undefined
+            }
+          >
+            {settings.fsWatcher ? "📝 FS" : "📝 FS"}
+          </button>
+          {/* Diary — when ON, every session ends with a markdown
+              reflection written to docs/diary/YYYY-MM-DD/. Foundation
+              for Axon's long-term memory. Default ON because empty
+              sessions don't write anything, so the cost is zero. */}
+          <button
+            className="axon-btn"
+            onClick={() => updateSettings({ diary: !settings.diary })}
+            title={
+              settings.diary
+                ? "Diary ON — sessions write markdown to docs/diary/"
+                : "Enable session diary (markdown reflections)"
+            }
+            data-active={settings.diary}
+            style={
+              settings.diary
+                ? {
+                    background: "rgba(165, 180, 252, 0.15)",
+                    borderColor: "rgba(165, 180, 252, 0.55)",
+                    color: "#c7d2fe",
+                  }
+                : undefined
+            }
+          >
+            📔 LOG
+          </button>
           <button className="axon-btn" onClick={interrupt} title="Stop speaking">
             Stop
           </button>
