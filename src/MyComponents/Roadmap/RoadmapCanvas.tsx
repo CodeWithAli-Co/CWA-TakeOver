@@ -6,11 +6,9 @@ import type {
   Lane,
   RoadmapProfile,
 } from "./lib/types";
-import { computeDagLayout, computeLineage } from "./lib/layout";
-import { usePanZoom } from "./hooks/usePanZoom";
-import { CheckpointNode } from "./CheckpointNode";
-import { DependencyArrow } from "./DependencyArrow";
-import { LaneLegend } from "./LaneLegend";
+import { computeLineage } from "./lib/layout";
+import { computeRadialLayout } from "./lib/radialLayout";
+import { RadialNode } from "./RadialNode";
 
 interface Props {
   lanes: Lane[];
@@ -22,18 +20,16 @@ interface Props {
 }
 
 /**
- * Pure DAG renderer.
+ * Radial / orbit roadmap renderer.
  *
- * Layout + lineage computation are pure functions of (checkpoints,
- * dependencies, selectedId). RoadmapPage owns all state above this line.
+ *   • Center  — TODAY disc with a soft pulse
+ *   • Sectors — angular slice per lane (60° each for 6 lanes)
+ *   • Rings   — inner ring (urgent), deadline ring (e.g. YC), outer
+ *   • Nodes   — RadialNode chips orbit at radius ∝ days remaining
+ *   • Edges   — dependency arcs curve toward the center
  *
- * Click on the canvas background (not on a node) clears the selection.
- *
- * Zoom: the SVG renders at its native layout.width/height, but a
- * wrapper applies a CSS scale so the operator can fit-to-viewport
- * without horizontal scrolling. On mount we auto-fit so the entire
- * roadmap is visible at a glance; the operator can zoom in/out via
- * the bottom-right toolbar.
+ * Replaces the previous DAG-with-arrows display. Time becomes
+ * distance: closer to center = more urgent. Lane = angular sector.
  */
 export function RoadmapCanvas({
   lanes,
@@ -45,11 +41,10 @@ export function RoadmapCanvas({
 }: Props) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const innerRef = useRef<HTMLDivElement>(null);
-  usePanZoom(scrollRef);
 
   const layout = useMemo(
-    () => computeDagLayout(checkpoints, dependencies),
-    [checkpoints, dependencies],
+    () => computeRadialLayout(checkpoints, lanes, 1200),
+    [checkpoints, lanes],
   );
 
   const cpById = useMemo(
@@ -61,42 +56,27 @@ export function RoadmapCanvas({
     [profiles],
   );
 
-  // Lineage: nodes in the selected node's upstream/downstream chain.
   const lineage = useMemo(
     () => (selectedId ? computeLineage(selectedId, dependencies) : null),
     [selectedId, dependencies],
   );
 
-  // ── Zoom state ────────────────────────────────────────────────────
-  // 1.0 = native scale. We auto-fit on mount + on layout changes so
-  // the operator never has to scroll horizontally just to see the
-  // last column on first load. Manual zoom buttons override this.
+  // ── Auto-fit on mount + on resize. The radial canvas is square at
+  //     `layout.width` (1200 by default); we scale-fit so the entire
+  //     wheel is visible without scrolling. ──────────────────────────
   const [scale, setScale] = useState(1);
-  const [autoFitOnce, setAutoFitOnce] = useState(true);
-
   const fitToViewport = () => {
     const el = scrollRef.current;
     if (!el) return;
-    // Leave 32px of padding on each side so nodes never kiss the rim.
-    const usableW = Math.max(1, el.clientWidth - 64);
-    const usableH = Math.max(1, el.clientHeight - 96);
-    const scaleX = usableW / layout.width;
-    const scaleY = usableH / layout.height;
-    const next = Math.min(1, Math.min(scaleX, scaleY));
-    // Don't let auto-fit shrink past 0.45 — past that, labels become
-    // unreadable. Operator can still pinch-zoom in.
-    setScale(Math.max(0.45, next));
+    const usableW = Math.max(1, el.clientWidth - 32);
+    const usableH = Math.max(1, el.clientHeight - 32);
+    const next = Math.min(1, Math.min(usableW, usableH) / layout.width);
+    setScale(Math.max(0.3, next));
   };
-
   useEffect(() => {
-    if (!autoFitOnce) return;
     fitToViewport();
-    setAutoFitOnce(false);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [layout.width, layout.height]);
-
-  // Re-fit when the viewport resizes — keeps the whole roadmap in
-  // view as the operator drags the panel / changes monitors.
   useEffect(() => {
     const el = scrollRef.current;
     if (!el) return;
@@ -104,117 +84,262 @@ export function RoadmapCanvas({
     ro.observe(el);
     return () => ro.disconnect();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [layout.width, layout.height]);
-
-  // Reset scroll to top-left whenever the checkpoint set changes so
-  // the entire graph is visible without manual panning.
-  useEffect(() => {
-    const el = scrollRef.current;
-    if (!el) return;
-    el.scrollLeft = 0;
-    el.scrollTop = 0;
-  }, [layout.height, layout.width]);
+  }, [layout.width]);
 
   return (
     <div
       ref={scrollRef}
       className="relative h-full w-full select-none overflow-auto"
       style={{
-        // Lighter, paper-like canvas — was reading too dark / HUD-y.
-        // Three layers: warm top-left wash, cool bottom-right wash,
-        // and a near-card base so the panel reads as a designed
-        // surface, not a void. Plus a subtle 24px dot grid that
-        // adds texture without noise.
         background: [
-          "radial-gradient(ellipse 70% 50% at 8% 0%, color-mix(in srgb, hsl(var(--primary)) 9%, transparent), transparent 55%)",
-          "radial-gradient(ellipse 55% 45% at 96% 100%, color-mix(in srgb, hsl(var(--ring)) 7%, transparent), transparent 55%)",
+          "radial-gradient(ellipse 70% 50% at 50% 50%, color-mix(in srgb, hsl(var(--primary)) 8%, transparent), transparent 60%)",
           "radial-gradient(circle, color-mix(in srgb, hsl(var(--foreground)) 5%, transparent) 1px, transparent 1px) 0 0/24px 24px",
           "linear-gradient(180deg, color-mix(in srgb, hsl(var(--card)) 96%, hsl(var(--foreground)) 4%) 0%, hsl(var(--card)) 100%)",
         ].join(", "),
       }}
       onClick={(e) => {
-        // Only clear on bare-canvas clicks — clicks on nodes / toolbar
-        // bubble up here too but we want them to win. Cheap guard:
-        // ignore if the click target wasn't us.
         if (e.target === e.currentTarget || e.target === innerRef.current) {
           onSelect(null);
         }
       }}
     >
-      {/* Inner scaled wrapper. Width/height stay native so scroll
-          containers can size correctly when zoomed in past 1.0. */}
       <div
         ref={innerRef}
-        style={{
-          width: layout.width * scale,
-          height: layout.height * scale,
-          transform: `scale(${scale})`,
-          transformOrigin: "0 0",
-          // We sized the wrapper to the SCALED dimensions, so the
-          // inner SVG (still at native size) needs to compensate.
-          // Apply scale via transform instead of letting the wrapper
-          // crop — the parent already accounts for size.
-        }}
+        className="flex h-full w-full items-center justify-center"
       >
-        <svg
-          width={layout.width}
-          height={layout.height}
-          viewBox={`0 0 ${layout.width} ${layout.height}`}
-          style={{ display: "block", shapeRendering: "geometricPrecision" }}
+        <div
+          style={{
+            width: layout.width * scale,
+            height: layout.height * scale,
+            transform: `scale(${scale})`,
+            transformOrigin: "center center",
+          }}
         >
-          {/* Edges */}
-          <g>
-            {dependencies.map((d) => {
-              const from = cpById.get(d.fromId);
-              const fromPos = layout.positions.get(d.fromId);
-              const toPos = layout.positions.get(d.toId);
-              if (!from || !fromPos || !toPos) return null;
-              const highlighted =
-                !!lineage && lineage.has(d.fromId) && lineage.has(d.toId);
-              const dimmed = !!lineage && !highlighted;
-              return (
-                <DependencyArrow
-                  key={d.id}
-                  from={from}
-                  fromPos={fromPos}
-                  toPos={toPos}
-                  dimmed={dimmed}
-                  highlighted={highlighted}
-                />
-              );
-            })}
-          </g>
+          <svg
+            width={layout.width}
+            height={layout.height}
+            viewBox={`0 0 ${layout.width} ${layout.height}`}
+            style={{ display: "block", shapeRendering: "geometricPrecision" }}
+          >
+            {/* ── Lane sectors (background tint) ──────────────────── */}
+            <g>
+              {layout.sectors.map((s) => {
+                const inner = layout.innerRadius - 6;
+                const outer = layout.outerRadius + 12;
+                const path = describeSector(
+                  layout.cx,
+                  layout.cy,
+                  inner,
+                  outer,
+                  s.startAngle,
+                  s.endAngle,
+                );
+                return (
+                  <path
+                    key={s.laneId}
+                    d={path}
+                    fill={`color-mix(in srgb, hsl(${s.accentHsl}) 4%, transparent)`}
+                    stroke={`color-mix(in srgb, hsl(${s.accentHsl}) 12%, transparent)`}
+                    strokeWidth={1}
+                  />
+                );
+              })}
+            </g>
 
-          {/* Nodes */}
-          <g>
-            {checkpoints.map((cp) => {
-              const pos = layout.positions.get(cp.id);
-              const author = profileById.get(cp.authorId);
-              if (!pos || !author) return null;
-              const owner = cp.ownerId ? profileById.get(cp.ownerId) : undefined;
-              const selected = selectedId === cp.id;
-              const dimmed = !!lineage && !lineage.has(cp.id);
-              return (
-                <CheckpointNode
-                  key={cp.id}
-                  cp={cp}
-                  pos={pos}
-                  author={author}
-                  owner={owner}
-                  selected={selected}
-                  dimmed={dimmed}
-                  onSelect={(picked) => onSelect(picked)}
-                />
-              );
-            })}
-          </g>
-        </svg>
+            {/* ── Concentric rings (deadline + outer horizon) ─────── */}
+            <g>
+              <circle
+                cx={layout.cx}
+                cy={layout.cy}
+                r={layout.deadlineRadius}
+                fill="none"
+                stroke="hsl(42 95% 58% / 0.35)"
+                strokeWidth={1.2}
+                strokeDasharray="4 4"
+              />
+              <circle
+                cx={layout.cx}
+                cy={layout.cy}
+                r={layout.outerRadius}
+                fill="none"
+                stroke="hsl(var(--border))"
+                strokeWidth={1}
+                strokeDasharray="2 6"
+                opacity={0.45}
+              />
+            </g>
+
+            {/* ── Lane labels (around the outer ring) ─────────────── */}
+            <g>
+              {layout.sectors.map((s) => {
+                const labelR = layout.outerRadius + 30;
+                const lx = layout.cx + Math.cos(s.midAngle) * labelR;
+                const ly = layout.cy + Math.sin(s.midAngle) * labelR;
+                return (
+                  <text
+                    key={s.laneId}
+                    x={lx}
+                    y={ly}
+                    textAnchor="middle"
+                    dominantBaseline="middle"
+                    style={{
+                      fontFamily: "ui-monospace, monospace",
+                      fontSize: 11,
+                      fontWeight: 700,
+                      letterSpacing: "0.18em",
+                      textTransform: "uppercase",
+                      fill: `hsl(${s.accentHsl})`,
+                    }}
+                  >
+                    {s.title}
+                  </text>
+                );
+              })}
+            </g>
+
+            {/* Deadline marker — small "MAY 4 ▸ YC" label on the
+                deadline ring at the 12 o'clock-ish position. */}
+            <g>
+              <text
+                x={layout.cx}
+                y={layout.cy - layout.deadlineRadius - 8}
+                textAnchor="middle"
+                style={{
+                  fontFamily: "ui-monospace, monospace",
+                  fontSize: 9.5,
+                  fontWeight: 700,
+                  letterSpacing: "0.18em",
+                  textTransform: "uppercase",
+                  fill: "hsl(42 95% 58%)",
+                }}
+              >
+                YC DEADLINE
+              </text>
+            </g>
+
+            {/* ── Dependency arcs ─────────────────────────────────── */}
+            <g>
+              {dependencies.map((d) => {
+                const fromPos = layout.positions.get(d.fromId);
+                const toPos = layout.positions.get(d.toId);
+                if (!fromPos || !toPos) return null;
+                const highlighted =
+                  !!lineage && lineage.has(d.fromId) && lineage.has(d.toId);
+                const dimmed = !!lineage && !highlighted;
+                // Curve toward the center — control point pulled
+                // ~30% toward the canvas center so the arcs don't
+                // criss-cross the wheel.
+                const mx = (fromPos.x + toPos.x) / 2;
+                const my = (fromPos.y + toPos.y) / 2;
+                const cx = mx + (layout.cx - mx) * 0.45;
+                const cy = my + (layout.cy - my) * 0.45;
+                return (
+                  <path
+                    key={d.id}
+                    d={`M ${fromPos.x} ${fromPos.y} Q ${cx} ${cy} ${toPos.x} ${toPos.y}`}
+                    fill="none"
+                    stroke={
+                      highlighted
+                        ? "hsl(var(--primary))"
+                        : "hsl(var(--foreground) / 0.18)"
+                    }
+                    strokeWidth={highlighted ? 1.5 : 0.8}
+                    strokeDasharray={highlighted ? "0" : "3 3"}
+                    opacity={dimmed ? 0.15 : 1}
+                  />
+                );
+              })}
+            </g>
+
+            {/* ── TODAY disc (center) ─────────────────────────────── */}
+            <g>
+              {/* Outer pulse halo */}
+              <circle
+                cx={layout.cx}
+                cy={layout.cy}
+                r={layout.todayRadius + 14}
+                fill="none"
+                stroke="hsl(var(--primary) / 0.18)"
+                strokeWidth={1}
+                style={{
+                  transformOrigin: `${layout.cx}px ${layout.cy}px`,
+                  animation: "roadmapTodayPulse 3s ease-in-out infinite",
+                }}
+              />
+              <circle
+                cx={layout.cx}
+                cy={layout.cy}
+                r={layout.todayRadius}
+                fill="hsl(var(--card))"
+                stroke="hsl(var(--primary) / 0.55)"
+                strokeWidth={1.5}
+                style={{
+                  filter: "drop-shadow(0 0 24px hsl(var(--primary) / 0.35))",
+                }}
+              />
+              <text
+                x={layout.cx}
+                y={layout.cy - 8}
+                textAnchor="middle"
+                style={{
+                  fontFamily: "ui-monospace, monospace",
+                  fontSize: 10,
+                  fontWeight: 700,
+                  letterSpacing: "0.22em",
+                  textTransform: "uppercase",
+                  fill: "hsl(var(--muted-foreground))",
+                }}
+              >
+                TODAY
+              </text>
+              <text
+                x={layout.cx}
+                y={layout.cy + 14}
+                textAnchor="middle"
+                style={{
+                  fontFamily: "ui-sans-serif, system-ui",
+                  fontSize: 16,
+                  fontWeight: 700,
+                  fill: "hsl(var(--foreground))",
+                }}
+              >
+                {new Date().toLocaleDateString(undefined, {
+                  month: "short",
+                  day: "numeric",
+                })}
+              </text>
+            </g>
+
+            {/* ── Nodes (orbital chips) ───────────────────────────── */}
+            <g>
+              {checkpoints.map((cp) => {
+                const pos = layout.positions.get(cp.id);
+                const author = profileById.get(cp.authorId);
+                if (!pos || !author) return null;
+                const owner = cp.ownerId
+                  ? profileById.get(cp.ownerId)
+                  : undefined;
+                const selected = selectedId === cp.id;
+                const dimmed = !!lineage && !lineage.has(cp.id);
+                return (
+                  <RadialNode
+                    key={cp.id}
+                    cp={cp}
+                    pos={pos}
+                    author={author}
+                    owner={owner}
+                    selected={selected}
+                    dimmed={dimmed}
+                    onSelect={(picked) => onSelect(picked)}
+                  />
+                );
+              })}
+            </g>
+          </svg>
+        </div>
       </div>
 
-      <LaneLegend lanes={lanes} />
-
-      {/* Zoom toolbar — bottom-right corner. Sticky so it follows the
-          viewport even if the operator pans away. */}
+      {/* Zoom toolbar */}
       <div className="pointer-events-none sticky bottom-4 left-0 right-0 z-10 flex justify-end px-4">
         <div className="pointer-events-auto flex items-center gap-1 rounded-lg border border-border bg-card/85 p-1 shadow-lg backdrop-blur">
           <button
@@ -254,10 +379,40 @@ export function RoadmapCanvas({
         </div>
       </div>
 
-      {/* Bottom-left hint pill — slimmer, more discreet. */}
-      <div className="pointer-events-none absolute bottom-4 left-4 z-10 hidden rounded-md border border-border/70 bg-card/70 px-2.5 py-1 font-mono text-[9.5px] uppercase tracking-[0.16em] text-muted-foreground/70 backdrop-blur md:inline-block">
-        scroll · shift-wheel · space-drag
+      {/* Legend pill — explains the metaphor */}
+      <div className="pointer-events-none absolute bottom-4 left-4 z-10 hidden rounded-md border border-border/70 bg-card/70 px-2.5 py-1 font-mono text-[9.5px] uppercase tracking-[0.16em] text-muted-foreground/80 backdrop-blur md:inline-block">
+        center = today · radius = days due · sector = lane
       </div>
     </div>
   );
+}
+
+// ── Helpers ─────────────────────────────────────────────────────────
+
+/** Annular-sector path: a wedge between two angles bounded by an
+ *  inner and outer radius. Used to tint the lane background. */
+function describeSector(
+  cx: number,
+  cy: number,
+  innerR: number,
+  outerR: number,
+  startA: number,
+  endA: number,
+): string {
+  const x1 = cx + Math.cos(startA) * outerR;
+  const y1 = cy + Math.sin(startA) * outerR;
+  const x2 = cx + Math.cos(endA) * outerR;
+  const y2 = cy + Math.sin(endA) * outerR;
+  const x3 = cx + Math.cos(endA) * innerR;
+  const y3 = cy + Math.sin(endA) * innerR;
+  const x4 = cx + Math.cos(startA) * innerR;
+  const y4 = cy + Math.sin(startA) * innerR;
+  const largeArc = endA - startA > Math.PI ? 1 : 0;
+  return [
+    `M ${x1} ${y1}`,
+    `A ${outerR} ${outerR} 0 ${largeArc} 1 ${x2} ${y2}`,
+    `L ${x3} ${y3}`,
+    `A ${innerR} ${innerR} 0 ${largeArc} 0 ${x4} ${y4}`,
+    "Z",
+  ].join(" ");
 }

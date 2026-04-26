@@ -18,20 +18,22 @@ interface Props {
 }
 
 /**
- * Modern DAG node card — 264×104. Visual language mirrors the app's
- * existing BentoCard: `bg-card border-border rounded-lg`, subtle hover
- * lift, lane accent used as a decorative tint not a blunt stripe.
+ * Code-window / terminal node — 296×112.
  *
- * Layout inside the card:
+ *   ┌────────────────────────────────────────────────┐
+ *   │ ●●●  ~/fundraising/yc.md            FUND-04    │  ← titlebar
+ *   ├────────────────────────────────────────────────┤
+ *   │  $ Y Combinator application                     │  ← title with prompt
+ *   │  ● active · 16d · 0/1                           │  ← meta line
+ *   │  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 0%           │  ← progress
+ *   └────────────────────────────────────────────────┘
  *
- *   ┌──────────────────────────────────────────┐
- *   │  ● FUNDRAISING            ◉ (owner AL)   │   ← lane badge + avatar
- *   │                                           │
- *   │  Y Combinator application                 │   ← title 13px
- *   │  Learn investor talk, cut 60s script…     │   ← desc 11px muted
- *   │                                           │
- *   │  ● in progress · 16d left   ███▁▁▁ 0/1   │   ← status + metric
- *   └──────────────────────────────────────────┘
+ * Each ticket reads as a tiny editor / terminal window — matches the
+ * CWA Manager brand language (CLI-tech-red), and feels radically
+ * different from the bento-tile / Linear-card patterns. The titlebar
+ * has macOS-style traffic light dots, a faux file path, and the
+ * shortcode (FUND-04 etc) flush right. The body is full mono with a
+ * `$` prompt before the title.
  */
 export function CheckpointNode({
   cp,
@@ -49,41 +51,70 @@ export function CheckpointNode({
   const atRisk = cp.status === "at_risk";
   const inProgress = cp.status === "in_progress";
 
-  const statusTone = completed
-    ? "hsl(220 6% 55%)"
+  // ── Status visuals ───────────────────────────────────────────────
+  const statusColor = completed
+    ? "hsl(150 60% 55%)"           // emerald — shipped
     : atRisk
-      ? "hsl(14 85% 62%)"
+      ? "hsl(14 85% 62%)"           // rose — at risk
       : inProgress
-        ? accent
-        : "hsl(220 8% 50%)";
+        ? accent                     // lane color — active
+        : "hsl(220 8% 55%)";         // muted — upcoming
 
-  const statusText = completed
-    ? "Shipped"
+  const statusLabel = completed
+    ? "shipped"
     : atRisk
-      ? "At risk"
+      ? "at-risk"
       : inProgress
-        ? `${Math.max(0, daysRemaining(cp))}d left`
-        : "Upcoming";
+        ? "active"
+        : "upcoming";
 
-  // Card background gradient: card surface with a whisper of lane accent
-  // from the top-left corner. Keeps the card firmly in "card" territory but
-  // adds a modern tint so every node feels alive.
-  const cardBg = completed
-    ? "hsl(var(--card))"
-    : `linear-gradient(135deg, color-mix(in srgb, ${accent} 8%, hsl(var(--card))) 0%, hsl(var(--card)) 55%)`;
+  const daysLabel =
+    inProgress || atRisk ? `${Math.max(0, daysRemaining(cp))}d` : null;
+
+  const metricPct =
+    cp.metricTarget != null && cp.metricTarget > 0 && cp.metricCurrent != null
+      ? Math.min(100, (cp.metricCurrent / cp.metricTarget) * 100)
+      : null;
+
+  // ── Faux file path for the titlebar ──────────────────────────────
+  // Slug the title to a kebab filename. Uses the lane id as the
+  // folder so the path reads "fundraising/yc-application.md".
+  const filename = (() => {
+    const slug = (cp.title || "untitled")
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/^-+|-+$/g, "")
+      .split("-")
+      .slice(0, 4)
+      .join("-")
+      .slice(0, 28);
+    return `~/${cp.laneId}/${slug || "untitled"}.md`;
+  })();
+
+  // ── Window chrome colors ─────────────────────────────────────────
+  const windowBg = completed
+    ? "color-mix(in srgb, hsl(var(--card)) 92%, hsl(var(--foreground)) 6%)"
+    : "hsl(var(--card))";
+
+  const titlebarBg = `linear-gradient(
+    180deg,
+    color-mix(in srgb, ${accent} 14%, hsl(var(--card))) 0%,
+    color-mix(in srgb, ${accent} 6%, hsl(var(--card))) 100%
+  )`;
 
   const borderColor = selected
     ? accent
     : pending
       ? author.authorColor
       : hover
-        ? "hsl(var(--foreground) / 0.25)"
-        : "hsl(var(--border))";
+        ? "hsl(var(--foreground) / 0.22)"
+        : "hsl(var(--border) / 0.85)";
 
-  const metricPct =
-    cp.metricTarget != null && cp.metricTarget > 0 && cp.metricCurrent != null
-      ? Math.min(100, (cp.metricCurrent / cp.metricTarget) * 100)
-      : null;
+  const shadow = selected
+    ? `0 0 0 1.5px ${accent}, 0 0 32px -8px ${accent}, 0 14px 32px -10px rgba(0,0,0,0.55)`
+    : hover
+      ? `0 0 0 1px ${borderColor}, 0 12px 28px -12px rgba(0,0,0,0.5)`
+      : `0 0 0 1px ${borderColor}, 0 1px 2px rgba(0,0,0,0.18)`;
 
   return (
     <motion.g
@@ -121,22 +152,179 @@ export function CheckpointNode({
         style={{ overflow: "visible" }}
       >
         <div
-          className="relative h-full w-full overflow-hidden rounded-xl"
+          className="relative h-full w-full overflow-hidden rounded-lg"
           style={{
-            background: cardBg,
-            boxShadow: selected
-              ? `0 0 0 1px ${accent}, 0 10px 28px -8px rgba(0,0,0,0.6)`
-              : hover
-                ? `0 0 0 1px ${borderColor}, 0 10px 24px -10px rgba(0,0,0,0.55)`
-                : `0 0 0 1px ${borderColor}`,
-            opacity: completed ? 0.82 : 1,
+            background: windowBg,
+            boxShadow: shadow,
+            opacity: completed ? 0.88 : 1,
           }}
         >
-          {/* Pending dashed halo */}
+          {/* ── Titlebar ─────────────────────────────────────────── */}
+          <div
+            className="flex h-[26px] items-center gap-2 border-b px-2.5"
+            style={{
+              background: titlebarBg,
+              borderColor: "hsl(var(--border) / 0.5)",
+            }}
+          >
+            {/* Traffic lights — pure decoration, signals "this is a
+                window". Pending approval flips one to a softer dot
+                (like an unsaved-changes indicator) instead of the
+                green close button. */}
+            <div className="flex shrink-0 items-center gap-1">
+              <span
+                className="block size-[8px] rounded-full"
+                style={{
+                  background: "hsl(354 70% 60%)",
+                  boxShadow: "inset 0 0 0 0.5px rgba(0,0,0,0.2)",
+                }}
+              />
+              <span
+                className="block size-[8px] rounded-full"
+                style={{
+                  background: pending ? author.authorColor : "hsl(42 95% 60%)",
+                  boxShadow: "inset 0 0 0 0.5px rgba(0,0,0,0.2)",
+                }}
+                title={pending ? "Awaiting approval" : undefined}
+              />
+              <span
+                className="block size-[8px] rounded-full"
+                style={{
+                  background: completed
+                    ? "hsl(150 60% 55%)"
+                    : "hsl(150 30% 35%)",
+                  boxShadow: "inset 0 0 0 0.5px rgba(0,0,0,0.2)",
+                }}
+              />
+            </div>
+
+            {/* Filename — mono, muted, truncates */}
+            <span
+              className="min-w-0 flex-1 truncate text-center font-mono text-[10.5px] text-muted-foreground"
+              title={filename}
+            >
+              {filename}
+            </span>
+
+            {/* Shortcode flush right */}
+            <span
+              className="shrink-0 font-mono text-[9.5px] font-semibold uppercase tracking-[0.14em]"
+              style={{ color: accent }}
+            >
+              {cp.shortCode || cp.laneId.slice(0, 4).toUpperCase()}
+            </span>
+          </div>
+
+          {/* ── Body ─────────────────────────────────────────────── */}
+          <div className="flex h-[calc(100%-26px)] flex-col justify-center gap-1 px-3 py-2">
+            {/* Line 1 — title with prompt sigil */}
+            <div className="flex min-w-0 items-baseline gap-1.5 font-mono">
+              <span
+                className="shrink-0 text-[12px] font-semibold"
+                style={{ color: accent }}
+                aria-hidden
+              >
+                $
+              </span>
+              <span
+                className="min-w-0 truncate text-[12.5px] font-semibold"
+                style={{
+                  color: completed
+                    ? "hsl(var(--muted-foreground))"
+                    : "hsl(var(--foreground))",
+                  letterSpacing: "-0.005em",
+                  textDecoration: completed ? "line-through" : undefined,
+                  textDecorationColor: completed
+                    ? "hsl(var(--muted-foreground) / 0.4)"
+                    : undefined,
+                }}
+                title={cp.title}
+              >
+                {cp.title}
+              </span>
+            </div>
+
+            {/* Line 2 — status · days · metric */}
+            <div className="flex items-center gap-1.5 font-mono text-[10px] text-muted-foreground">
+              <span
+                aria-hidden
+                className="inline-block size-[6px] rounded-full"
+                style={{
+                  background: statusColor,
+                  boxShadow:
+                    inProgress || atRisk
+                      ? `0 0 6px ${statusColor}`
+                      : undefined,
+                }}
+              />
+              <span style={{ color: statusColor }}>{statusLabel}</span>
+              {daysLabel && (
+                <>
+                  <span className="opacity-30">·</span>
+                  <span
+                    className="tabular-nums"
+                    style={{
+                      color: atRisk ? "hsl(14 85% 62%)" : undefined,
+                    }}
+                  >
+                    {daysLabel}
+                  </span>
+                </>
+              )}
+              {cp.metricTarget != null && cp.metricCurrent != null && (
+                <>
+                  <span className="opacity-30">·</span>
+                  <span className="tabular-nums">
+                    {cp.metricCurrent}/{cp.metricTarget}
+                  </span>
+                </>
+              )}
+              <div className="ml-auto">
+                <OwnerAvatar person={owner ?? author} />
+              </div>
+            </div>
+
+            {/* Line 3 — progress bar */}
+            <div className="flex items-center gap-2">
+              <div className="h-[3px] flex-1 overflow-hidden rounded-full bg-border/50">
+                <div
+                  className="h-full rounded-full transition-all"
+                  style={{
+                    width:
+                      metricPct != null
+                        ? `${metricPct}%`
+                        : completed
+                          ? "100%"
+                          : inProgress
+                            ? "50%"
+                            : atRisk
+                              ? "30%"
+                              : "0%",
+                    background: completed ? "hsl(150 60% 55%)" : statusColor,
+                    boxShadow:
+                      inProgress || atRisk
+                        ? `0 0 8px ${statusColor}`
+                        : undefined,
+                  }}
+                />
+              </div>
+              <span className="font-mono text-[9.5px] tabular-nums text-muted-foreground/70">
+                {metricPct != null
+                  ? `${Math.round(metricPct)}%`
+                  : completed
+                    ? "100%"
+                    : inProgress
+                      ? "~50%"
+                      : "—"}
+              </span>
+            </div>
+          </div>
+
+          {/* Pending dashed halo — overlay on top of everything */}
           {pending && (
             <div
               aria-hidden
-              className="pointer-events-none absolute inset-0 rounded-xl"
+              className="pointer-events-none absolute inset-0 rounded-lg"
               style={{
                 background:
                   "repeating-linear-gradient(45deg, transparent 0 6px, color-mix(in srgb, currentColor 6%, transparent) 6px 8px)",
@@ -145,74 +333,16 @@ export function CheckpointNode({
             />
           )}
 
-          <div className="flex h-full flex-col gap-1.5 p-3">
-            {/* Top row — lane chip + owner avatar */}
-            <div className="flex items-center justify-between gap-2">
-              <div
-                className="flex items-center gap-1.5 rounded-full px-2 py-0.5 text-[9.5px] font-medium uppercase tracking-[0.12em]"
-                style={{
-                  background: `color-mix(in srgb, ${accent} 18%, transparent)`,
-                  color: accent,
-                }}
-              >
-                <span
-                  aria-hidden
-                  className="inline-block size-[5px] rounded-full"
-                  style={{ background: accent }}
-                />
-                {laneLabel(cp.laneId)}
-              </div>
-              <OwnerAvatar person={owner ?? author} />
-            </div>
-
-            {/* Title + description */}
-            <div className="min-h-0 flex-1 overflow-hidden">
-              <div
-                className="truncate text-[12.5px] font-semibold leading-snug"
-                style={{
-                  color: completed
-                    ? "hsl(var(--muted-foreground))"
-                    : "hsl(var(--foreground))",
-                }}
-                title={cp.title}
-              >
-                {cp.title}
-              </div>
-              {cp.description && (
-                <div
-                  className="mt-0.5 line-clamp-2 text-[10.5px] leading-snug text-muted-foreground"
-                  title={cp.description}
-                >
-                  {cp.description}
-                </div>
-              )}
-            </div>
-
-            {/* Bottom row — status + metric */}
-            <div className="flex items-center gap-2 text-[9.5px] font-mono uppercase tracking-[0.1em]">
-              <span
-                aria-hidden
-                className="inline-block size-[6px] rounded-full"
-                style={{ background: statusTone }}
-              />
-              <span style={{ color: "hsl(var(--muted-foreground))" }}>
-                {statusText}
-              </span>
-              {metricPct != null && (
-                <div className="ml-auto flex items-center gap-1.5">
-                  <div className="h-[3px] w-10 overflow-hidden rounded-full bg-border">
-                    <div
-                      className="h-full"
-                      style={{ width: `${metricPct}%`, background: accent }}
-                    />
-                  </div>
-                  <span style={{ color: "hsl(var(--muted-foreground))" }}>
-                    {cp.metricCurrent}/{cp.metricTarget}
-                  </span>
-                </div>
-              )}
-            </div>
-          </div>
+          {/* Selected glow ring */}
+          {selected && (
+            <div
+              aria-hidden
+              className="pointer-events-none absolute inset-0 rounded-lg"
+              style={{
+                boxShadow: `inset 0 0 0 1px ${accent}, inset 0 0 20px -8px ${accent}`,
+              }}
+            />
+          )}
         </div>
       </foreignObject>
 
@@ -243,34 +373,15 @@ function OwnerAvatar({ person }: { person: RoadmapProfile }) {
     .toUpperCase();
   return (
     <div
-      className="flex size-5 items-center justify-center rounded-full text-[9px] font-semibold"
+      className="flex size-4 items-center justify-center rounded-full text-[8.5px] font-semibold"
       style={{
         background: `color-mix(in srgb, ${person.authorColor} 22%, hsl(var(--background)))`,
         color: person.authorColor,
-        boxShadow: `inset 0 0 0 1px color-mix(in srgb, ${person.authorColor} 45%, transparent)`,
+        boxShadow: `inset 0 0 0 1px color-mix(in srgb, ${person.authorColor} 50%, transparent)`,
       }}
       title={person.displayName}
     >
       {initials}
     </div>
   );
-}
-
-function laneLabel(id: Checkpoint["laneId"]): string {
-  switch (id) {
-    case "fundraising":
-      return "Fundraising";
-    case "codewithali":
-      return "CWA";
-    case "simplicity":
-      return "Simplicity";
-    case "takeover":
-      return "Takeover";
-    case "brand":
-      return "Brand";
-    case "ops":
-      return "Ops";
-    default:
-      return "";
-  }
 }

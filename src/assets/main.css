@@ -389,3 +389,34 @@ ul { list-style-type: disc; margin-left: var(--page-marginL); }
 .bento-card:hover::after {
   opacity: 1;
 }
+
+/* ── Roadmap node animations ──────────────────────────────────────
+   Used by CheckpointNode.tsx. The slow spin keeps the in-progress
+   loader spinning at a calm pace (3s instead of Tailwind's default
+   1s, which feels frantic on a static board). The pulse fires only
+   when a node is selected — a soft outline ripple that draws the
+   eye without strobing. */
+@keyframes roadmapSpinSlow {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
+.animate-spin-slow {
+  animation: roadmapSpinSlow 3s linear infinite;
+}
+@keyframes roadmapNodePulse {
+  0%, 100% { opacity: 0.55; }
+  50%      { opacity: 1; }
+}
+
+/* TODAY disc pulse — the center of the radial roadmap. A soft halo
+   ring breathes outward to anchor the eye on "now." */
+@keyframes roadmapTodayPulse {
+  0%, 100% {
+    transform: scale(1);
+    opacity: 0.6;
+  }
+  50% {
+    transform: scale(1.08);
+    opacity: 0.95;
+  }
+}

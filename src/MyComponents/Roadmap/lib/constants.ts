@@ -6,9 +6,12 @@ export const YC_DEADLINE_ISO = "2026-05-04T20:00:00-07:00";
 
 // --- DAG layout dimensions ------------------------------------------------
 
-/** Node card size. Generous on purpose — modern dashboards breathe. */
-export const NODE_W = 264;
-export const NODE_H = 104;
+/** Node card size. Code-window/terminal aesthetic — width 296 for
+ *  filename + shortcode in the titlebar, height 112 to fit a 22px
+ *  titlebar + three body lines (title prompt, status meta, progress
+ *  bar) with proper mono breathing room. */
+export const NODE_W = 296;
+export const NODE_H = 112;
 
 /** Horizontal gap between adjacent layers. Nodes hop layer → layer + 1. */
 export const LAYER_GAP = 92;
