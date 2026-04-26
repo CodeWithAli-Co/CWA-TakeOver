@@ -13,6 +13,8 @@ import { ClipboardCheck, ArrowRight, X, PartyPopper, Sparkles } from "lucide-rea
 import { useNavigate } from "@tanstack/react-router";
 import supabase from "@/MyComponents/supabase";
 import { ActiveUser } from "@/stores/query";
+import { useTourStore } from "./tourStore";
+import { DEFAULT_TOUR_STOPS } from "./tourSteps";
 
 interface Instance {
   id: string;
@@ -141,8 +143,9 @@ export function OnboardingBanner() {
         if (window.localStorage.getItem(key) !== "1") {
           setShowCelebration(true);
           window.localStorage.setItem(key, "1");
-          // Auto-dismiss after a generous read window.
-          window.setTimeout(() => setShowCelebration(false), 6500);
+          // No auto-dismiss anymore — the modal asks "Take the tour?"
+          // and the user picks. Closing happens via the Maybe-later
+          // button or the X.
         }
       } catch { /* noop */ }
     }
@@ -176,6 +179,14 @@ export function OnboardingBanner() {
   };
 
   const handleContinue = () => {
+    // When all tasks are done, Continue kicks off the guided page tour
+    // — that's the "what now?" answer the user needs after finishing
+    // their list. Otherwise, jump them to /onboarding and pulse the
+    // first pending task they own.
+    if (allDone) {
+      useTourStore.getState().start(DEFAULT_TOUR_STOPS);
+      return;
+    }
     const instanceId = instance?.id;
     navigate({ to: "/onboarding" }).catch(() => {});
     setTimeout(() => {
@@ -316,6 +327,10 @@ function pct(done: number, total: number): number {
 // ── Celebration overlay — one-time confetti moment ─────────────
 
 function CelebrationOverlay({ onClose }: { onClose: () => void }) {
+  const startTour = () => {
+    useTourStore.getState().start(DEFAULT_TOUR_STOPS);
+    onClose();
+  };
   return (
     <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 pointer-events-none">
       <div
@@ -323,7 +338,7 @@ function CelebrationOverlay({ onClose }: { onClose: () => void }) {
         onClick={onClose}
       />
       <div
-        className="relative w-full max-w-[440px] rounded-xl border border-primary/30 bg-card shadow-2xl pointer-events-auto"
+        className="relative w-full max-w-[460px] rounded-xl border border-primary/30 bg-card shadow-2xl pointer-events-auto"
         style={{ animation: "cwa-onb-pop 320ms cubic-bezier(0.34, 1.56, 0.64, 1)" }}
       >
         <button
@@ -343,11 +358,26 @@ function CelebrationOverlay({ onClose }: { onClose: () => void }) {
             Onboarding complete.
           </h2>
           <p className="mt-1.5 text-[13px] text-muted-foreground">
-            Welcome to the team. We\'re glad you\'re here.
+            Welcome to the team. Want a quick tour of the app to see
+            where everything lives?
           </p>
-          <div className="mt-5 inline-flex items-center gap-1.5 text-[11px] text-muted-foreground/80">
-            <Sparkles className="h-3 w-3" />
-            This message will auto-dismiss in a few seconds.
+
+          <div className="mt-5 flex items-center justify-center gap-2">
+            <button
+              type="button"
+              onClick={onClose}
+              className="rounded-md border border-border/60 bg-transparent px-3.5 py-1.5 text-[12.5px] font-medium text-muted-foreground hover:text-foreground hover:bg-muted/40 transition-colors"
+            >
+              Maybe later
+            </button>
+            <button
+              type="button"
+              onClick={startTour}
+              className="rounded-md bg-primary px-3.5 py-1.5 text-[12.5px] font-medium text-primary-foreground shadow-md shadow-primary/30 hover:bg-primary/90 transition-colors inline-flex items-center gap-1.5"
+            >
+              <Sparkles className="h-3.5 w-3.5" />
+              Take the 2-minute tour
+            </button>
           </div>
         </div>
       </div>

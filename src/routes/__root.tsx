@@ -29,6 +29,8 @@ import LoginPage from "@/MyComponents/Beginning/login";
 // who keeps CyberpunkPinPage. The legacy pinPage.tsx file is left
 // in place in case it's needed as a fallback.
 import { ensureOnboardingFor } from "@/MyComponents/Onboarding/ensureOnboarding";
+import { GuidedTourOverlay } from "@/MyComponents/Onboarding/GuidedTourOverlay";
+import "@/MyComponents/Onboarding/guidedTour.css";
 import { SignUpPage } from "@/MyComponents/Beginning/signup";
 import { ActiveUser, DMGroups, Messages } from "@/stores/query";
 import UserView from "@/MyComponents/Reusables/userView";
@@ -770,6 +772,8 @@ export const Route = createRootRoute({
             <Suspense fallback={null}>
               <AxonRoot />
             </Suspense>
+            {/* Guided tour overlay — only renders when tourStore.active. */}
+            <GuidedTourOverlay />
             {/* Global Cmd+K message search */}
             <Suspense fallback={null}>
               <GlobalSearch open={searchOpen} onOpenChange={setSearchOpen} />

@@ -304,6 +304,23 @@ export function OnboardingDashboard() {
               </button>
             </div>
           )}
+          {/* Tour launcher — visible to everyone. Replays the post-
+              onboarding walkthrough whenever the user wants a refresher. */}
+          <button
+            type="button"
+            onClick={() => {
+              import("./tourStore").then(({ useTourStore }) =>
+                import("./tourSteps").then(({ DEFAULT_TOUR_STOPS }) => {
+                  useTourStore.getState().start(DEFAULT_TOUR_STOPS, { reset: true });
+                }),
+              );
+            }}
+            className="cwa-tour-launcher"
+            title="Walk through the app — see what each page does"
+          >
+            <Sparkles className="h-3.5 w-3.5" />
+            Take a tour
+          </button>
         </div>
       </header>
 

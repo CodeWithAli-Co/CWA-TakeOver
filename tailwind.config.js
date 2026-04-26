@@ -80,11 +80,16 @@ export default {
 				shimmer: {
 				  "100%": { transform: "translateX(100%)" },
 				},
+				"revenue-pulse": {
+				  from: { transform: "scale(1)", opacity: "0.6" },
+				  to: { transform: "scale(1.8)", opacity: "0" },
+				},
 			  },
 			  animation: {
 				"accordion-down": "accordion-down 0.2s ease-out",
 				"accordion-up": "accordion-up 0.2s ease-out",
 				shimmer: "shimmer 1.4s infinite",
+				"revenue-pulse": "revenue-pulse 1.5s ease-out infinite",
 			  },
   			sidebar: {
   				DEFAULT: 'hsl(var(--sidebar-background))',
@@ -101,4 +106,3 @@ export default {
   },
   plugins: [require("tailwindcss-animate")],
 }
-
