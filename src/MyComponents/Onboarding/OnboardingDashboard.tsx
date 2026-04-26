@@ -188,22 +188,39 @@ export function OnboardingDashboard() {
   }, [isAdmin]); // selectedId intentionally excluded — only auto-select once
 
   // Listen for "onboarding:focus" events fired by the banner\'s
-  // Continue button. When fired, switch the active tab to Instances
-  // and select the requested instance so the right pane shows it.
+  // Continue button. When fired, switch the active tab to Instances,
+  // select the requested instance, and (optionally) pulse-highlight
+  // the first pending task the operator owns so they know exactly
+  // where to start.
   useEffect(() => {
     const handler = (e: Event) => {
-      const detail = (e as CustomEvent<{ instanceId?: string }>).detail;
+      const detail = (e as CustomEvent<{
+        instanceId?: string;
+        focusFirstPending?: boolean;
+      }>).detail;
       if (!detail?.instanceId) return;
       setActiveTab("instances");
       setSelectedId(detail.instanceId);
-      // Scroll the right pane into view (helps when the banner is
-      // pinned and the dashboard sits below the fold).
       requestAnimationFrame(() => {
         const main = document.querySelector(
           "[data-onboarding-detail]",
         ) as HTMLElement | null;
         main?.scrollIntoView({ behavior: "smooth", block: "start" });
       });
+      // Defer the pulse a tick so InstanceDetail has rendered its tasks.
+      if (detail.focusFirstPending) {
+        window.setTimeout(() => {
+          const list = document.querySelectorAll<HTMLElement>(
+            "[data-task-id][data-task-pending=\"true\"][data-task-mine=\"true\"]",
+          );
+          const first = list[0];
+          if (first) {
+            first.scrollIntoView({ behavior: "smooth", block: "center" });
+            first.setAttribute("data-pulse-task", "true");
+            window.setTimeout(() => first.removeAttribute("data-pulse-task"), 2600);
+          }
+        }, 220);
+      }
     };
     window.addEventListener("onboarding:focus", handler);
     return () => window.removeEventListener("onboarding:focus", handler);
@@ -659,6 +676,9 @@ function TaskGroup({
           return (
             <li
               key={item.id}
+              data-task-id={item.id}
+              data-task-pending={item.status === "pending" ? "true" : "false"}
+              data-task-mine={interactive ? "true" : "false"}
               className={[
                 "rounded-md border p-3 transition-colors",
                 done
