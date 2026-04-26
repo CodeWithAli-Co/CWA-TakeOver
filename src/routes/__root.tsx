@@ -28,8 +28,15 @@ import LoginPage from "@/MyComponents/Beginning/login";
 // design is now the default lock screen for everyone except COO,
 // who keeps CyberpunkPinPage. The legacy pinPage.tsx file is left
 // in place in case it's needed as a fallback.
-import { ensureOnboardingFor } from "@/MyComponents/Onboarding/ensureOnboarding";
+// Onboarding for users themselves was simplified: instead of spawning
+// a task-list instance + welcome modal + banner, we just play the
+// role-aware GuidedTour on first sign-in. The Onboarding page still
+// exists for admins to manage templates / spawn flows for hires that
+// need a structured checklist, but it no longer auto-fires for
+// everyone. ensureOnboardingFor / WelcomeModal / OnboardingBanner are
+// retained in the codebase but no longer mounted globally.
 import { GuidedTourOverlay } from "@/MyComponents/Onboarding/GuidedTourOverlay";
+import { FirstSignInTour } from "@/MyComponents/Onboarding/FirstSignInTour";
 import "@/MyComponents/Onboarding/guidedTour.css";
 import { SignUpPage } from "@/MyComponents/Beginning/signup";
 import { ActiveUser, DMGroups, Messages } from "@/stores/query";
@@ -73,17 +80,15 @@ const HuddleHost = lazy(() =>
   })),
 );
 
-// New-hire welcome + onboarding progress — mounted globally so a
-// brand-new employee who just went through the invite flow lands
-// into a guided experience instead of a blank app. WelcomeModal
-// fires once per user (localStorage-gated). OnboardingBanner sticks
-// around until their checklist is complete.
-const WelcomeModal = lazy(() =>
+// (Legacy) — kept here as an importable lazy chunk in case the admin
+// Onboarding page wants to surface them again, but they are no longer
+// mounted at the app root. The tour replaces the welcome flow.
+const _LegacyWelcomeModal = lazy(() =>
   import("@/MyComponents/Onboarding/WelcomeModal").then((m) => ({
     default: m.WelcomeModal,
   })),
 );
-const OnboardingBanner = lazy(() =>
+const _LegacyOnboardingBanner = lazy(() =>
   import("@/MyComponents/Onboarding/OnboardingBanner").then((m) => ({
     default: m.OnboardingBanner,
   })),
@@ -119,35 +124,13 @@ export const Route = createRootRoute({
       .map((g: any) => g?.name)
       .filter(Boolean);
 
-    // Auto-provision onboarding on sign-in. Idempotent — does nothing
-    // when the user already has an active onboarding_instance, otherwise
-    // picks the best-matching template (or seeds a default if the
-    // templates table is empty) and creates the instance + items so the
-    // WelcomeModal + OnboardingBanner have something to show. Closes
-    // the gap where HiringActions.spawnOnboarding silently failed
-    // because no template matched the hire's brand/employmentType.
-    useEffect(() => {
-      const supaId = user?.[0]?.supa_id;
-      if (!supaId) return;
-      if (!(pinCheck === "true" && isLoggedIn === "true")) return;
-      let cancelled = false;
-      (async () => {
-        try {
-          const res = await ensureOnboardingFor(supaId);
-          if (cancelled) return;
-          if (import.meta.env.DEV) {
-            // eslint-disable-next-line no-console
-            console.info("[ensureOnboarding]", res);
-          }
-        } catch (e) {
-          if (import.meta.env.DEV) {
-            // eslint-disable-next-line no-console
-            console.warn("[ensureOnboarding] threw:", e);
-          }
-        }
-      })();
-      return () => { cancelled = true; };
-    }, [user?.[0]?.supa_id, pinCheck, isLoggedIn]);
+    // Onboarding for the user themselves was simplified — the tour
+    // is now the entire welcome experience (see <FirstSignInTour />).
+    // We no longer auto-provision an onboarding_instance with a task
+    // list on sign-in. ensureOnboardingFor is still exported for
+    // admins who explicitly want to spawn a checklist for a hire via
+    // the Provision Onboarding modal on the /onboarding page — it
+    // just doesn't fire automatically.
 
     // Keep DMGroups in sync across the app (channel is idempotent for same name)
     useEffect(() => {
@@ -794,15 +777,15 @@ export const Route = createRootRoute({
             <Suspense fallback={null}>
               <HuddleHost />
             </Suspense>
-            {/* New-hire welcome modal (first sign-in only) + persistent
-             *  onboarding progress banner. Both self-gate: welcome fires
-             *  once per user-device, banner hides when checklist is done. */}
-            <Suspense fallback={null}>
-              <WelcomeModal />
-            </Suspense>
-            <Suspense fallback={null}>
-              <OnboardingBanner />
-            </Suspense>
+            {/* First-sign-in tour. Auto-fires the role-appropriate
+             *  walkthrough on first sign-in (admin/exec see the
+             *  finance + bookkeeping stack; employees see chat /
+             *  tasks / quotas; PMs / AMs / marketing get their own
+             *  variants). Replaces the legacy WelcomeModal +
+             *  OnboardingBanner + task-list flow for the user
+             *  themselves. The Onboarding page still works for
+             *  admins managing other people's templates / instances. */}
+            <FirstSignInTour />
           </SidebarProvider>
         ) : (
           <h3>Error Loading App Components</h3>
