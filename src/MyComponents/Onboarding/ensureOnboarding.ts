@@ -138,12 +138,30 @@ export async function ensureOnboardingFor(
   }
 
   // (2) Pull the user\'s row so we can match templates by brand/type.
+  // Use SELECT * because app_users column names vary across environments
+  // (some installs have brand/employment_type columns, some don\'t).
+  // Read fields off the resulting record only if they exist.
   const userRes = await supabase
     .from("app_users")
-    .select("supa_id, username, email, role, company, employment_type")
+    .select("*")
     .eq("supa_id", supaId)
     .maybeSingle();
-  const user = (userRes.data as AppUserShape | null) ?? null;
+  const userRow = (userRes.data as Record<string, unknown> | null) ?? null;
+  const user: AppUserShape | null = userRow
+    ? {
+        supa_id: String(userRow.supa_id ?? supaId),
+        username: (userRow.username as string | null | undefined) ?? null,
+        email: (userRow.email as string | null | undefined) ?? null,
+        role: (userRow.role as string | null | undefined) ?? null,
+        // brand may be stored as `company` OR `brand`; check both.
+        company:
+          (userRow.company as string | null | undefined) ??
+          (userRow.brand as string | null | undefined) ??
+          null,
+        employment_type:
+          (userRow.employment_type as string | null | undefined) ?? null,
+      }
+    : null;
 
   // (3) Look for a matching template — relaxed waterfall.
   const tplRes = await supabase

@@ -139,6 +139,37 @@ export function OnboardingDashboard() {
         }
       }
 
+      // Auto-provisioned instances have offer_letter_id = null — fall
+      // back to looking the hire up in app_users for a real name.
+      const userIds = Array.from(
+        new Set(
+          withOffers
+            .filter((i) => !i._candidateName && i.employee_user_id)
+            .map((i) => i.employee_user_id!),
+        ),
+      );
+      if (userIds.length > 0) {
+        const users = await supabase
+          .from("app_users")
+          .select("supa_id, username, role")
+          .in("supa_id", userIds);
+        if (!users.error && users.data) {
+          const userById = new Map(
+            (users.data as Array<{ supa_id: string; username?: string; role?: string }>)
+              .map((u) => [u.supa_id, u]),
+          );
+          for (const inst of withOffers) {
+            if (!inst._candidateName && inst.employee_user_id) {
+              const u = userById.get(inst.employee_user_id);
+              if (u) {
+                inst._candidateName = u.username ?? "Unknown hire";
+                inst._positionTitle = u.role ?? "—";
+              }
+            }
+          }
+        }
+      }
+
       setInstances(withOffers);
       setLoadingInstances(false);
 
@@ -176,7 +207,7 @@ export function OnboardingDashboard() {
   const allHires = instances.length;
 
   return (
-    <div className="flex h-full min-h-0 flex-col">
+    <div className="flex h-full min-h-[calc(100vh-2rem)] flex-col">
       {/* ── Header — icon tile + title stack on the left, stats + admin
             actions on the right (inbox-style). ──────────────────── */}
       <header className="flex items-start justify-between gap-6 border-b border-border/50 px-7 py-5">
@@ -272,9 +303,9 @@ export function OnboardingDashboard() {
       {activeTab === "templates" && isAdmin ? (
         <TemplateManager />
       ) : (
-      <div className="flex flex-1 min-h-0">
+      <div className="flex flex-1 min-h-[640px]">
         {/* Left pane — instance list */}
-        <aside className="flex w-[380px] shrink-0 flex-col border-r border-border/40 bg-card/30">
+        <aside className="flex w-[380px] shrink-0 flex-col border-r border-border/40 bg-card/30 min-h-[640px]">
           {/* Search + filter strip — taller, denser, inbox-style. */}
           <div className="border-b border-border/40 px-4 py-3.5 space-y-2.5">
             <div className="relative">
@@ -366,7 +397,7 @@ export function OnboardingDashboard() {
         </aside>
 
         {/* Right pane — detail */}
-        <main className="flex-1 min-h-0 overflow-y-auto">
+        <main className="flex-1 min-h-[640px] overflow-y-auto">
           {selected ? (
             <InstanceDetail
               instance={selected}
@@ -711,7 +742,7 @@ function EmptyMain({
   ] as const;
 
   return (
-    <div className="flex h-full flex-col">
+    <div className="flex h-full min-h-[640px] flex-col">
       {/* Hero strip — title + CTA, full width */}
       <div className="border-b border-border/40 px-8 py-7 bg-gradient-to-b from-primary/[0.04] to-transparent">
         <div className="flex items-start justify-between gap-6 max-w-[1100px] mx-auto">

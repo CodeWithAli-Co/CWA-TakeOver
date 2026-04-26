@@ -243,9 +243,9 @@ export function TemplateManager() {
   };
 
   return (
-    <div className="flex h-full min-h-0">
+    <div className="flex h-full min-h-[640px]">
       {/* Left column — sidebar with template cards */}
-      <aside className="flex w-[380px] shrink-0 flex-col border-r border-border/40 bg-card/30">
+      <aside className="flex w-[380px] shrink-0 flex-col border-r border-border/40 bg-card/30 min-h-[640px]">
         {/* Search-row + New button at the top */}
         <div className="flex items-center gap-2 px-4 py-3 border-b border-border/40">
           <div className="relative flex-1 min-w-0">
@@ -327,7 +327,7 @@ export function TemplateManager() {
       </aside>
 
       {/* Right column — editor / preview / empty */}
-      <main className="flex-1 min-h-0 overflow-y-auto">
+      <main className="flex-1 min-h-[640px] overflow-y-auto">
         {!draft && !selected ? (
           <CenterEmpty onCreate={beginCreate} hasTemplates={templates.length > 0} />
         ) : draft ? (
@@ -384,7 +384,7 @@ function SidebarEmpty({ onCreate }: { onCreate: () => void }) {
 
 function CenterEmpty({ onCreate, hasTemplates }: { onCreate: () => void; hasTemplates: boolean }) {
   return (
-    <div className="flex h-full items-center justify-center px-6">
+    <div className="flex h-full min-h-[640px] items-center justify-center px-6">
       <div className="text-center max-w-[420px]">
         <div className="mx-auto inline-flex h-12 w-12 items-center justify-center rounded-xl bg-primary/10 text-primary mb-4">
           <ClipboardList className="h-5 w-5" />
