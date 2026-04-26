@@ -1,17 +1,449 @@
-// cyberpunkPinPage.tsx
+// bluePinPage.tsx — COO (BlazeHp) lock screen.
+//
+// History: this file used to host a cyberpunk-HUD PIN page named
+// CyberpunkPinPage. That component is preserved at the bottom as
+// _DeprecatedCyberpunkPinPage (commented-out / inert — kept so it's
+// recoverable without git archaeology).
+//
+// The active default export is now CyberpunkPinPage = a blue,
+// personalized version of the Editorial split-screen sign-in that
+// every other role sees in red. Same auth logic ("8821" PIN,
+// setPinCheck on success, OrionAnimation intro, Tauri dialog on
+// fail) — only the visual language differs:
+//   • Blue / sky / indigo color scheme (BlazeHp's preference).
+//   • Headline reads "Welcome back, BlazeHp" with his name front
+//     and center.
+//   • Brand statement on the left names the COO directly.
+
 import { useForm } from "@tanstack/react-form";
 import cwa_logo_full from "/codewithali-removebg-preview.png";
-import { useEffect, useState } from "react";
+// Legacy imports — kept because the deprecated component still
+// references them. New component below uses its own minimal set.
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+import { useCallback, useEffect, useState } from "react";
 import { useAppStore } from "@/stores/store";
 import OrionAnimation from "./OrionAnimation";
 import { message } from "@tauri-apps/plugin-dialog";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 import ParticleBackground from "./particleBackground";
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 import { ActiveUser } from "@/stores/query";
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 import LiveTime from "../Reusables/liveTime";
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 import { Navigate, useNavigate } from "@tanstack/react-router";
+import { ArrowRight, Delete } from "lucide-react";
+
+// ════════════════════════════════════════════════════════════════
+// NEW — BlazeHp blue editorial PIN page (active default export).
+// ════════════════════════════════════════════════════════════════
+
+const COO_NAME = "BlazeHp";
+
+const BluePinDot: React.FC<{ filled: boolean; error: boolean }> = ({
+  filled,
+  error,
+}) => (
+  <div
+    className={`h-3 w-3 rounded-full border-2 transition-all duration-200 ${
+      error
+        ? "border-red-400 bg-red-400 shadow-[0_0_12px_rgba(248,113,113,0.5)]"
+        : filled
+          ? "border-sky-500 bg-sky-500 shadow-[0_0_14px_rgba(56,189,248,0.65)]"
+          : "border-zinc-700 bg-transparent"
+    }`}
+  />
+);
+
+const BlueKeypadKey: React.FC<{
+  value: number | "del" | null;
+  onPress: () => void;
+}> = ({ value, onPress }) => {
+  if (value === null) return <div aria-hidden />;
+  const isDel = value === "del";
+  return (
+    <motion.button
+      type="button"
+      onClick={onPress}
+      whileHover={{ scale: 1.06 }}
+      whileTap={{ scale: 0.94 }}
+      className={`group h-14 rounded-full text-2xl font-light flex items-center justify-center transition-colors duration-150 ${
+        isDel
+          ? "text-zinc-500 hover:text-sky-400"
+          : "text-zinc-200 hover:text-white"
+      } hover:bg-sky-950/40`}
+    >
+      {isDel ? <Delete className="h-5 w-5" /> : value}
+    </motion.button>
+  );
+};
+
+const BlueAuroraOrbs: React.FC = () => (
+  <>
+    <motion.div
+      className="absolute -top-40 -left-20 h-[520px] w-[520px] rounded-full bg-sky-500/22 blur-3xl"
+      animate={{ x: [0, 40, -20, 0], y: [0, 20, -10, 0] }}
+      transition={{ duration: 22, repeat: Infinity, ease: "easeInOut" }}
+    />
+    <motion.div
+      className="absolute bottom-0 -right-20 h-[560px] w-[560px] rounded-full bg-blue-600/18 blur-3xl"
+      animate={{
+        x: [0, -30, 15, 0],
+        y: [0, -20, 10, 0],
+        scale: [1, 1.08, 1],
+      }}
+      transition={{ duration: 26, repeat: Infinity, ease: "easeInOut" }}
+    />
+    <motion.div
+      className="absolute top-1/3 left-1/3 h-[360px] w-[360px] rounded-full bg-indigo-500/12 blur-3xl"
+      animate={{ x: [0, 20, -10, 0], y: [0, -15, 8, 0] }}
+      transition={{ duration: 30, repeat: Infinity, ease: "easeInOut" }}
+    />
+  </>
+);
+
+const BlueHexagonWireframe: React.FC = () => (
+  <motion.div
+    className="absolute inset-0 flex items-center justify-center pointer-events-none"
+    animate={{ rotate: 360 }}
+    transition={{ duration: 120, repeat: Infinity, ease: "linear" }}
+  >
+    <svg viewBox="0 0 300 300" className="w-[58%] max-w-[540px] opacity-[0.14]">
+      <circle
+        cx="150"
+        cy="150"
+        r="138"
+        fill="none"
+        stroke="#38bdf8"
+        strokeWidth="1"
+        strokeDasharray="2 6"
+      />
+      <polygon
+        points="150,30 254,90 254,210 150,270 46,210 46,90"
+        fill="none"
+        stroke="#38bdf8"
+        strokeWidth="1.5"
+      />
+      <line x1="150" y1="30" x2="150" y2="270" stroke="#38bdf8" strokeWidth="0.75" />
+      <line x1="46" y1="90" x2="254" y2="210" stroke="#38bdf8" strokeWidth="0.75" />
+      <line x1="254" y1="90" x2="46" y2="210" stroke="#38bdf8" strokeWidth="0.75" />
+    </svg>
+  </motion.div>
+);
 
 export default function CyberpunkPinPage() {
+  const { setPinCheck, setIsLoggedIn } = useAppStore();
+  const [showContent, setShowContent] = useState(false);
+  const [, setPinValue] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState(false);
+
+  useEffect(() => {
+    const checkLogin = localStorage.getItem("isLoggedIn");
+    if (checkLogin === "true") {
+      setIsLoggedIn("true");
+    }
+  }, [setIsLoggedIn]);
+
+  const handleAnimationComplete = useCallback(() => {
+    setTimeout(() => setShowContent(true), 300);
+  }, []);
+
+  const form = useForm({
+    defaultValues: { pin: "" },
+    onSubmit: async ({ value }) => {
+      setIsLoading(true);
+      setError(false);
+      await new Promise((resolve) => setTimeout(resolve, 700));
+      if (value.pin === "8821") {
+        document.startViewTransition(() => {
+          setPinCheck("true");
+        });
+      } else {
+        setError(true);
+        setIsLoading(false);
+        await message("Invalid PIN. Access denied.", {
+          title: "Authentication Failed",
+          kind: "error",
+        });
+      }
+    },
+  });
+
+  return (
+    <>
+      <OrionAnimation onAnimationComplete={handleAnimationComplete} />
+
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{
+          opacity: showContent ? 1 : 0,
+          visibility: showContent ? "visible" : "hidden",
+        }}
+        transition={{ duration: 0.8 }}
+        className="relative flex w-screen h-screen bg-black overflow-hidden"
+      >
+        {/* ═════ LEFT — BRAND STATEMENT (md+), personalized for COO ═════ */}
+        <div className="relative hidden md:flex flex-[1.15] flex-col justify-between p-12 lg:p-16 overflow-hidden">
+          <div className="absolute inset-0 bg-gradient-to-br from-black via-sky-950/40 to-black" />
+          <BlueAuroraOrbs />
+          <BlueHexagonWireframe />
+
+          <motion.div
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6, delay: 0.3 }}
+            className="relative flex items-center gap-3"
+          >
+            <img
+              src={cwa_logo_full}
+              alt=""
+              className="h-8 w-auto opacity-80"
+              draggable={false}
+            />
+            <div className="flex flex-col leading-tight">
+              <span className="text-[13px] font-semibold text-zinc-200 tracking-tight">
+                CodeWithAli
+              </span>
+              <span className="text-[10px] text-sky-400 tracking-[0.2em] uppercase">
+                COO Console · {COO_NAME}
+              </span>
+            </div>
+          </motion.div>
+
+          <motion.div
+            initial={{ opacity: 0, y: 14 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.8, delay: 0.5 }}
+            className="relative max-w-2xl"
+          >
+            <h1 className="text-5xl lg:text-[64px] xl:text-[72px] font-bold text-white leading-[1.05] tracking-tight">
+              Welcome,
+              <br />
+              <span className="text-sky-500 italic font-semibold">
+                {COO_NAME}
+              </span>
+              .
+            </h1>
+            <p className="mt-6 text-base lg:text-lg text-zinc-400 max-w-lg leading-relaxed">
+              The deck is yours. Operations, hires, projections, finance —
+              every lever in one place. Built for the people who run the show.
+            </p>
+          </motion.div>
+
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 0.6, delay: 0.9 }}
+            className="relative flex items-center gap-3 text-[11px] text-zinc-600"
+          >
+            <span>v1.4.0</span>
+            <span className="text-zinc-800">·</span>
+            <span className="inline-flex items-center gap-1.5">
+              <span className="h-1.5 w-1.5 rounded-full bg-sky-400/90" />
+              End-to-end encrypted
+            </span>
+            <span className="text-zinc-800">·</span>
+            <span className="text-sky-500/80 tracking-[0.18em] uppercase text-[10px]">
+              Authorized: COO
+            </span>
+          </motion.div>
+        </div>
+
+        {/* ═════════════════ RIGHT — PIN ENTRY ═════════════════ */}
+        <div className="relative flex w-full md:w-[480px] lg:w-[520px] flex-col items-center justify-center bg-zinc-950 border-l border-sky-950/40 px-8 py-10 shrink-0">
+          <motion.div
+            initial={{ opacity: 0, y: 16 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6, delay: 0.6 }}
+            className="w-full max-w-[320px] space-y-8"
+          >
+            <div className="md:hidden flex items-center gap-3">
+              <img
+                src={cwa_logo_full}
+                alt=""
+                className="h-7 w-auto opacity-80"
+                draggable={false}
+              />
+              <span className="text-[11px] text-sky-400 tracking-[0.25em] uppercase">
+                COO · {COO_NAME}
+              </span>
+            </div>
+
+            <div>
+              <h2 className="text-3xl font-semibold text-white tracking-tight">
+                Welcome back, <span className="text-sky-400">{COO_NAME}</span>
+              </h2>
+              <p className="mt-1.5 text-sm text-zinc-500">
+                Enter your 4-digit PIN to continue.
+              </p>
+            </div>
+
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                if (!isLoading) form.handleSubmit();
+              }}
+              className="space-y-8"
+            >
+              <form.Field
+                name="pin"
+                children={(field) => {
+                  const handleChange = (next: string) => {
+                    setPinValue(next);
+                    field.handleChange(next);
+                    setError(false);
+                    if (next.length === 4 && !isLoading) {
+                      setTimeout(() => form.handleSubmit(), 150);
+                    }
+                  };
+
+                  return (
+                    <>
+                      <motion.div
+                        animate={
+                          error
+                            ? { x: [0, -10, 10, -6, 6, -3, 3, 0] }
+                            : { x: 0 }
+                        }
+                        transition={{ duration: 0.45 }}
+                        className="flex justify-center gap-4"
+                      >
+                        {[0, 1, 2, 3].map((idx) => (
+                          <BluePinDot
+                            key={idx}
+                            filled={field.state.value.length > idx}
+                            error={error}
+                          />
+                        ))}
+                      </motion.div>
+
+                      <div className="h-4 text-center">
+                        <AnimatePresence>
+                          {error && (
+                            <motion.p
+                              initial={{ opacity: 0, y: -4 }}
+                              animate={{ opacity: 1, y: 0 }}
+                              exit={{ opacity: 0, y: -4 }}
+                              className="text-xs text-red-400"
+                            >
+                              Incorrect PIN. Try again.
+                            </motion.p>
+                          )}
+                        </AnimatePresence>
+                      </div>
+
+                      <input
+                        name={field.name}
+                        type="password"
+                        className="sr-only"
+                        value={field.state.value}
+                        onChange={(e) => {
+                          const value = e.target.value
+                            .replace(/\D/g, "")
+                            .slice(0, 4);
+                          handleChange(value);
+                        }}
+                        autoFocus={showContent}
+                        maxLength={4}
+                      />
+
+                      <div className="grid grid-cols-3 gap-2">
+                        {[1, 2, 3, 4, 5, 6, 7, 8, 9, null, 0, "del"].map(
+                          (num, i) => (
+                            <BlueKeypadKey
+                              key={i}
+                              value={num as number | "del" | null}
+                              onPress={() => {
+                                if (num === null) return;
+                                if (num === "del") {
+                                  handleChange(field.state.value.slice(0, -1));
+                                } else if (field.state.value.length < 4) {
+                                  handleChange(field.state.value + num);
+                                }
+                              }}
+                            />
+                          ),
+                        )}
+                      </div>
+
+                      <motion.button
+                        type="submit"
+                        disabled={isLoading || field.state.value.length !== 4}
+                        whileHover={
+                          field.state.value.length === 4 && !isLoading
+                            ? { scale: 1.01 }
+                            : undefined
+                        }
+                        whileTap={
+                          field.state.value.length === 4 && !isLoading
+                            ? { scale: 0.99 }
+                            : undefined
+                        }
+                        className={`w-full flex items-center justify-center gap-2 py-3 rounded-full text-[13px] font-medium transition-colors duration-200 ${
+                          field.state.value.length === 4 && !isLoading
+                            ? "bg-sky-500 text-white hover:bg-sky-600 shadow-[0_0_24px_rgba(56,189,248,0.35)]"
+                            : "bg-zinc-900 text-zinc-600 cursor-not-allowed"
+                        }`}
+                      >
+                        {isLoading ? (
+                          <>
+                            <svg
+                              className="animate-spin h-4 w-4"
+                              viewBox="0 0 24 24"
+                              fill="none"
+                            >
+                              <circle
+                                className="opacity-30"
+                                cx="12"
+                                cy="12"
+                                r="10"
+                                stroke="currentColor"
+                                strokeWidth="3"
+                              />
+                              <path
+                                className="opacity-90"
+                                fill="currentColor"
+                                d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
+                              />
+                            </svg>
+                            Verifying
+                          </>
+                        ) : (
+                          <>
+                            Continue
+                            <ArrowRight className="h-4 w-4" />
+                          </>
+                        )}
+                      </motion.button>
+                    </>
+                  );
+                }}
+              />
+            </form>
+
+            <div className="pt-2 text-center text-[11px] text-zinc-600">
+              Secured by CWA · COO · Contact an admin if you&apos;re locked out.
+            </div>
+          </motion.div>
+        </div>
+      </motion.div>
+    </>
+  );
+}
+
+// ════════════════════════════════════════════════════════════════
+// LEGACY — preserved but inert. The original cyberpunk-HUD PIN
+// page that lived at default export. Kept as a renamed function
+// (not commented out) so TS / Vite don't choke on stale tokens.
+// Reachable only via deep import for fallback / debugging.
+// ════════════════════════════════════════════════════════════════
+
+// @ts-ignore — intentionally unused; preserved for reference
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+function _DeprecatedCyberpunkPinPage() {
   const { setPinCheck, setIsLoggedIn } = useAppStore();
   const [showContent, setShowContent] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
