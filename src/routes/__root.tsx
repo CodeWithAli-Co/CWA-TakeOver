@@ -532,6 +532,9 @@ export const Route = createRootRoute({
     useEffect(() => {
       async function RunUpdater() {
         const update = await check();
+        if (import.meta.env.DEV) {
+          console.log("Checking for app update...");
+        }
         // Run when update has an actual version and has 'rid' value
         if (update && update.rid !== null && update.version !== null) {
           sendNotification({

@@ -30,6 +30,7 @@ import supabase from "@/MyComponents/supabase";
 import { ActiveUser } from "@/stores/query";
 import { useRolePreview } from "@/stores/store";
 import { useNavigate } from "@tanstack/react-router";
+import UserView, { Role } from "@/MyComponents/Reusables/userView";
 
 interface NavUserProps {
   userData: {
@@ -142,13 +143,15 @@ export function NavUser({ }: NavUserProps) {
                 <BadgeCheck className="h-3.5 w-3.5 mr-2 text-muted-foreground" />
                 My Tasks
               </DropdownMenuItem>
-              <DropdownMenuItem
+              <UserView userRole={[Role.CEO, Role.COO]}>
+                <DropdownMenuItem
                 onClick={() => goTo("/employee")}
                 className="text-foreground/90 hover:text-foreground hover:bg-muted/60 focus:bg-muted/60 cursor-pointer rounded-sm text-[12px] font-medium"
               >
                 <CreditCard className="h-3.5 w-3.5 mr-2 text-muted-foreground" />
                 Manage Teams
               </DropdownMenuItem>
+              </UserView>
               <DropdownMenuItem
                 onClick={() => goTo("/settings")}
                 className="text-foreground/90 hover:text-foreground hover:bg-muted/60 focus:bg-muted/60 cursor-pointer rounded-sm text-[12px] font-medium"
