@@ -34,13 +34,13 @@ import { buildToolDefinitions } from "../actions/registry";
 import { executeAction } from "./executor";
 import { axonGraph } from "./graphStore";
 
-// Real coding tasks (multi-file features, refactors, scaffolds) routinely
-// chew through a dozen+ tool calls before they're done — find the file,
-// read context, generate, modify a sibling, fix an import, recheck.
-// 14 was leaving the operator stranded mid-task. 32 lets a meaningful
-// feature finish without changing the early-exit semantics (Claude
-// still ends the loop the moment it stops calling tools).
-const AGENT_MAX_ITER = 32;
+// Real coding tasks (multi-file features, refactors, scaffolds, plus
+// the inevitable "now wire it up over there" follow-ups) routinely
+// chew through 20+ tool calls before they're done. 50 gives breathing
+// room for legitimate multi-step work without changing early-exit
+// semantics (Claude still ends the loop the moment it stops calling
+// tools).
+const AGENT_MAX_ITER = 50;
 const AGENT_MAX_TOKENS = 4096;
 
 const AGENT_SYSTEM = `You are AXON in autonomous engineer mode. The operator gave you a high-level goal — your job is to make it real.
@@ -56,16 +56,35 @@ CORE LOOP:
 5. When the goal is met, produce a SHORT spoken summary (1-2 sentences,
    no markdown, no list) and stop calling tools. That ends the loop.
 
-ITERATION BUDGET:
-- You have a hard cap on tool-using turns. Burn them on action, not
-  on exploration. Two find_files + one read_file + one modify_file is
-  a healthy budget for a small change.
-- DO NOT read files just to "verify" something you already wrote — the
-  modify_file action returned the new bytes; trust it.
-- DO NOT read sibling files speculatively to "understand the project"
-  before making the change the operator asked for. Locate, edit, ship.
-- If you find yourself about to make the 4th read_file in a row,
-  STOP — make the edit instead.
+ITERATION BUDGET — READ THIS TWICE:
+- Your tool calls are scarce. Spend them on EDITS, not lookups.
+- A small change should cost ONE find_file + ONE modify_file. That's it.
+- A "wire X into Y" change should cost ONE find_file (for Y) + ONE
+  modify_file. You DO NOT need to read Y first — modify_file reads it
+  for you and returns the revised bytes.
+- DO NOT call find_file twice for the same target. If a previous
+  find_file in this conversation already returned the path you need,
+  USE IT. Re-finding the same file is the #1 way to burn the cap.
+- DO NOT call read_workspace_file before modify_file. The modifier
+  reads the file internally. Reading it yourself first wastes a turn
+  and accomplishes nothing.
+- DO NOT call read_workspace_file to "verify" what generate_file or
+  modify_file just wrote. The action returned the bytes. Trust it.
+- DO NOT call list_workspace to "explore" — find_file with a name
+  pattern is always faster.
+- If your last 2 calls were both read/find/list and produced no edit,
+  STOP exploring and CALL THE EDITOR (modify_file or generate_file).
+
+ANTI-LOOP RULES — VIOLATING THESE STRANDS THE OPERATOR:
+- After a successful find_file that gave you the target path, your
+  NEXT call MUST be modify_file (or generate_file if creating new) —
+  not another find_file, not read_workspace_file.
+- "Could you import X here" / "use it in Y" → ONE modify_file on Y.
+  The brief says "add an import for X from <path> and render <X />
+  in the right spot." That's the entire task. No more lookups.
+- If the operator's previous turn already had you find a file and
+  you didn't end up editing it, that file is STILL in scope — don't
+  re-find it just because a new turn started. Reuse the path.
 
 FILE LOCATION RULES — CRITICAL:
 - Goal mentions a "page" or "route"? Run find_file with a name pattern.
