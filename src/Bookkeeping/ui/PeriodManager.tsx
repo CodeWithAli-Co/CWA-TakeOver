@@ -1,18 +1,19 @@
-// PeriodManager — list periods for the active entity, lock or
-// unlock them. Locked periods refuse new posts (enforced by the
-// validation engine).
+// PeriodManager — list periods for the active entity, with an
+// embedded close workflow (8-step checklist) per period.
 
+import { useState } from "react";
 import type { Entity, FiscalPeriod } from "../types/entity";
 import { usePeriods, selectPeriods } from "../stores/periodStore";
 import { buildMonthPeriod } from "../utils/periods";
 import { newId } from "../stores/ledgerStore";
 import { todayIso, formatDate } from "../utils/format";
+import { PeriodCloseWorkflow } from "./PeriodCloseWorkflow";
 
 export function PeriodManager({ entity }: { entity: Entity }) {
   usePeriods((s) => s.periods);
   const periods = selectPeriods(entity.id);
   const upsert = usePeriods((s) => s.upsert);
-  const setStatus = usePeriods((s) => s.setStatus);
+  const [openId, setOpenId] = useState<string | null>(null);
 
   const ensureCurrent = () => {
     const today = todayIso();
@@ -26,9 +27,9 @@ export function PeriodManager({ entity }: { entity: Entity }) {
     <section className="bk-section">
       <h2 className="bk-section-title">Periods · {entity.name}</h2>
       <p className="bk-section-blurb">
-        Periods are calendar months by default. Lock a period after
-        reconciliation to prevent retroactive edits — corrections then go
-        through reversing entries instead.
+        Periods are calendar months. Click any row to open its close
+        workflow — eight checks that confirm the books are healthy
+        before locking. Locked periods refuse new entries.
       </p>
 
       <div className="bk-period-actions">
@@ -51,9 +52,36 @@ export function PeriodManager({ entity }: { entity: Entity }) {
             </tr>
           </thead>
           <tbody>
-            {periods.map((p) => (
-              <PeriodRow key={p.id} p={p} setStatus={setStatus} />
-            ))}
+            {periods.map((p) => {
+              const isOpen = openId === p.id;
+              return (
+                <>
+                  <tr
+                    key={p.id}
+                    className="bk-row-clickable"
+                    data-open={isOpen}
+                    onClick={() => setOpenId(isOpen ? null : p.id)}
+                  >
+                    <td className="bk-mono">
+                      {formatDate(p.start)} — {formatDate(p.end)}
+                    </td>
+                    <td>
+                      <span className={`bk-pill bk-pill--${pillFor(p.status)}`}>{p.status}</span>
+                    </td>
+                    <td className="bk-muted bk-mono" style={{ paddingRight: 14 }}>
+                      {isOpen ? "▾" : "▸"}
+                    </td>
+                  </tr>
+                  {isOpen && (
+                    <tr key={`${p.id}-workflow`} className="bk-row-detail">
+                      <td colSpan={3}>
+                        <PeriodCloseWorkflow entity={entity} period={p} />
+                      </td>
+                    </tr>
+                  )}
+                </>
+              );
+            })}
           </tbody>
         </table>
       )}
@@ -61,45 +89,7 @@ export function PeriodManager({ entity }: { entity: Entity }) {
   );
 }
 
-function PeriodRow({
-  p,
-  setStatus,
-}: {
-  p: FiscalPeriod;
-  setStatus: (id: string, status: FiscalPeriod["status"], actor?: string) => void;
-}) {
-  return (
-    <tr>
-      <td className="bk-mono">
-        {formatDate(p.start)} — {formatDate(p.end)}
-      </td>
-      <td>
-        <span className={`bk-pill bk-pill--${pillFor(p.status)}`}>{p.status}</span>
-      </td>
-      <td>
-        {p.status === "locked" ? (
-          <button
-            type="button"
-            className="bk-btn-ghost"
-            onClick={() => setStatus(p.id, "open", "operator")}
-          >
-            Unlock
-          </button>
-        ) : (
-          <button
-            type="button"
-            className="bk-btn-primary"
-            onClick={() => setStatus(p.id, "locked", "operator")}
-          >
-            Lock
-          </button>
-        )}
-      </td>
-    </tr>
-  );
-}
-
-function pillFor(s: string): string {
+function pillFor(s: FiscalPeriod["status"]): string {
   if (s === "locked") return "warn";
   if (s === "soft_closed") return "neutral";
   return "good";

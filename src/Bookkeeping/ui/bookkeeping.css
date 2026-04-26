@@ -454,3 +454,115 @@
 @media (max-width: 720px) {
   .bk-bs-grid { grid-template-columns: 1fr; }
 }
+
+
+/* ── Period close workflow ─────────────────────────────────── */
+
+.bk-close-workflow {
+  padding: 10px 4px;
+}
+
+.bk-close-summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 8px 12px;
+  margin-bottom: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 6px;
+  background: rgba(14, 16, 20, 0.5);
+}
+
+.bk-close-summary-label {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: rgba(255, 255, 255, 0.55);
+  font-weight: 500;
+}
+
+.bk-close-summary-count {
+  display: inline-flex;
+  align-items: center;
+}
+
+.bk-close-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.bk-check {
+  display: flex;
+  gap: 12px;
+  padding: 10px 12px;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  border-radius: 6px;
+  background: rgba(14, 16, 20, 0.4);
+}
+.bk-check[data-status="pass"] {
+  border-color: rgba(94, 234, 212, 0.18);
+  background: rgba(94, 234, 212, 0.03);
+}
+.bk-check[data-status="warn"] {
+  border-color: rgba(252, 211, 77, 0.18);
+  background: rgba(252, 211, 77, 0.03);
+}
+.bk-check[data-status="fail"] {
+  border-color: rgba(248, 113, 113, 0.22);
+  background: rgba(248, 113, 113, 0.04);
+}
+
+.bk-check-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  font-size: 11px;
+  font-weight: 600;
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+.bk-check[data-status="pass"] .bk-check-icon {
+  color: rgb(134, 239, 195);
+  background: rgba(94, 234, 212, 0.12);
+}
+.bk-check[data-status="warn"] .bk-check-icon {
+  color: rgb(252, 211, 77);
+  background: rgba(252, 211, 77, 0.12);
+}
+.bk-check[data-status="fail"] .bk-check-icon {
+  color: rgb(252, 165, 165);
+  background: rgba(248, 113, 113, 0.14);
+}
+
+.bk-check-body {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.bk-check-label {
+  font-size: 12.5px;
+  font-weight: 500;
+  color: rgba(255, 255, 255, 0.92);
+}
+
+.bk-check-detail {
+  font-size: 11.5px;
+  color: rgba(255, 255, 255, 0.55);
+  line-height: 1.5;
+}
+
+.bk-close-actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 14px;
+}

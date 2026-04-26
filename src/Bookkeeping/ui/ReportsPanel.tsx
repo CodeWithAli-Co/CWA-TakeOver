@@ -3,11 +3,13 @@ import type { Entity } from "../types/entity";
 import { TrialBalanceReport } from "./reports/TrialBalance";
 import { ProfitAndLossReport } from "./reports/ProfitAndLoss";
 import { BalanceSheetReport } from "./reports/BalanceSheet";
+import { CashflowStatementReport } from "./reports/CashflowStatement";
 
 const REPORT_TABS = [
   { id: "tb", label: "Trial Balance" },
   { id: "pnl", label: "P&L" },
   { id: "bs", label: "Balance Sheet" },
+  { id: "cfs", label: "Cashflow" },
 ] as const;
 type ReportTab = (typeof REPORT_TABS)[number]["id"];
 
@@ -31,6 +33,7 @@ export function ReportsPanel({ entity }: { entity: Entity }) {
       {tab === "tb" && <TrialBalanceReport entity={entity} />}
       {tab === "pnl" && <ProfitAndLossReport entity={entity} />}
       {tab === "bs" && <BalanceSheetReport entity={entity} />}
+      {tab === "cfs" && <CashflowStatementReport entity={entity} />}
     </div>
   );
 }

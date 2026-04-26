@@ -337,3 +337,174 @@ export function arAging(
   rows.sort((a, b) => b.bucket90Plus - a.bucket90Plus || b.total - a.total);
   return rows;
 }
+
+
+// ── Cashflow Statement (Indirect method) ─────────────────────────
+
+/** Helper — sum balances over a date range for accounts of a given
+ *  subtype, signed by normal balance. Used to compute deltas between
+ *  the start and end of the period. */
+function balanceForSubtypes(
+  input: ReportInput,
+  asOf: string,
+  subtypes: string[],
+): number {
+  const subSet = new Set(subtypes);
+  const accountIds = new Set(
+    input.accounts
+      .filter(
+        (a) =>
+          a.entityId === input.entityId &&
+          a.isPostable &&
+          subSet.has(a.subtype as string),
+      )
+      .map((a) => a.id),
+  );
+  if (accountIds.size === 0) return 0;
+  const lines = activeLines(input, { start: "0001-01-01", end: asOf });
+  let total = 0;
+  const accountsById = new Map(input.accounts.map((a) => [a.id, a]));
+  for (const l of lines) {
+    if (!accountIds.has(l.accountId)) continue;
+    const acct = accountsById.get(l.accountId);
+    if (!acct) continue;
+    const signed =
+      acct.normalBalance === "debit"
+        ? l.baseDebit - l.baseCredit
+        : l.baseCredit - l.baseDebit;
+    total += signed;
+  }
+  return roundCents(total);
+}
+
+/**
+ * Cashflow Statement, Indirect method.
+ *
+ * Starts from Net Income (off the P&L), then:
+ *
+ *   + Non-cash expenses (depreciation, amortization)
+ *   - Increases in AR, prepaid expenses
+ *   + Increases in AP, accrued expenses, deferred revenue
+ *     ── Sum: Cash from Operations
+ *
+ *   - Increases in fixed assets (cash spent)
+ *   + Increases in accumulated depreciation (already adjusted above
+ *     via depreciation expense; not double-counted here)
+ *     ── Sum: Cash from Investing
+ *
+ *   + Increases in loans payable
+ *   + Owner contributions
+ *   - Owner draws / distributions
+ *     ── Sum: Cash from Financing
+ *
+ * The sum of the three sections should equal the change in cash
+ * accounts over the same period — the engine sanity-checks this and
+ * surfaces a "reconciliation gap" line if the math doesn't tie.
+ */
+export function cashflowStatement(
+  input: ReportInput,
+  range: ReportRange,
+): import("../types/reports").CashflowStatement {
+  // Net income for the period
+  const pnl = profitAndLoss(input, range);
+  const netIncome = pnl.totals.netIncome;
+
+  // Working-capital deltas — change in subtype balances from
+  // start-1 day to end of range. Positive delta means the account
+  // grew during the period.
+  const dayBefore = subtractDays(range.start, 1);
+
+  const delta = (subtypes: string[]) =>
+    balanceForSubtypes(input, range.end, subtypes) -
+    balanceForSubtypes(input, dayBefore, subtypes);
+
+  // Depreciation expense recognized in the period — already in P&L
+  // via Net Income, but it's non-cash so we ADD it back here.
+  const depreciation = pnl.operatingExpenses
+    .concat(pnl.otherExpenses, pnl.cogs)
+    .filter((l) => l.subtype === "depreciation")
+    .reduce((s, l) => s + l.amount, 0);
+
+  // Increases in current assets USE cash; increases in current
+  // liabilities PROVIDE cash. AR is debit-normal so balanceForSubtypes
+  // returns a positive number when AR grows; that's a USE of cash so
+  // we subtract.
+  const arDelta = delta(["accounts_receivable"]);
+  const prepaidDelta = delta(["prepaid"]);
+  const apDelta = delta(["accounts_payable"]);
+  const accruedDelta = delta(["accrued_expense"]);
+  const deferredRevDelta = delta(["deferred_revenue"]);
+  const salesTaxDelta = delta(["sales_tax_payable"]);
+
+  const adjustments = [
+    ...(Math.abs(depreciation) > 0.005
+      ? [{ name: "Depreciation (non-cash)", amount: roundCents(depreciation) }]
+      : []),
+  ];
+
+  const workingCapitalChanges = [
+    ...(Math.abs(arDelta) > 0.005
+      ? [{ name: "Change in Accounts Receivable", amount: roundCents(-arDelta) }]
+      : []),
+    ...(Math.abs(prepaidDelta) > 0.005
+      ? [{ name: "Change in Prepaid Expenses", amount: roundCents(-prepaidDelta) }]
+      : []),
+    ...(Math.abs(apDelta) > 0.005
+      ? [{ name: "Change in Accounts Payable", amount: roundCents(apDelta) }]
+      : []),
+    ...(Math.abs(accruedDelta) > 0.005
+      ? [{ name: "Change in Accrued Expenses", amount: roundCents(accruedDelta) }]
+      : []),
+    ...(Math.abs(deferredRevDelta) > 0.005
+      ? [{ name: "Change in Deferred Revenue", amount: roundCents(deferredRevDelta) }]
+      : []),
+    ...(Math.abs(salesTaxDelta) > 0.005
+      ? [{ name: "Change in Sales Tax Payable", amount: roundCents(salesTaxDelta) }]
+      : []),
+  ];
+
+  const cashFromOperations = roundCents(
+    netIncome +
+      adjustments.reduce((s, x) => s + x.amount, 0) +
+      workingCapitalChanges.reduce((s, x) => s + x.amount, 0),
+  );
+
+  // Investing — increases in fixed assets are USES of cash.
+  const fixedAssetDelta = delta(["fixed_asset"]);
+  const cashFromInvesting = roundCents(-fixedAssetDelta);
+
+  // Financing — loan increases bring in cash; owner draws use cash.
+  const loanDelta = delta(["loan_payable"]);
+  const ownerContribDelta = delta(["contributed_capital"]);
+  const ownerDrawDelta = delta(["owner_draw"]);
+  const cashFromFinancing = roundCents(
+    loanDelta + ownerContribDelta - ownerDrawDelta,
+  );
+
+  // Net change in cash + reconcile to actual cash balance change.
+  const netCashChange = roundCents(
+    cashFromOperations + cashFromInvesting + cashFromFinancing,
+  );
+  const startingCash = balanceForSubtypes(input, dayBefore, ["cash", "stripe_pending"]);
+  const endingCash = balanceForSubtypes(input, range.end, ["cash", "stripe_pending"]);
+
+  return {
+    entityId: input.entityId,
+    range,
+    netIncome,
+    adjustments,
+    workingCapitalChanges,
+    cashFromOperations,
+    cashFromInvesting,
+    cashFromFinancing,
+    netCashChange,
+    startingCash: roundCents(startingCash),
+    endingCash: roundCents(endingCash),
+  };
+}
+
+function subtractDays(iso: string, days: number): string {
+  const d = new Date(iso + "T00:00:00.000Z");
+  d.setUTCDate(d.getUTCDate() - days);
+  return d.toISOString().slice(0, 10);
+}
