@@ -86,22 +86,89 @@ function nodeColor(n: GraphNode): string {
 }
 
 function nodeRadius(n: GraphNode): number {
+  // Used for force-directed layout repulsion — keeps spacing right
+  // even though we render rectangles. The actual hit-test uses the
+  // box bounds stored on the LayoutNode (see hit-test below).
   switch (n.kind) {
     case "root":
       return 28;
     case "summary":
-      return 20;
+      return 22;
     case "plan":
-      return 14;
+      return 18;
     case "tool":
-      return 16;
+      return 22;
     case "file":
-      return 12;
+      return 24;
     case "thought":
-      return 9;
+      return 14;
     case "error":
-      return 16;
+      return 22;
   }
+}
+
+// ── Tech / CWA-style boxy node helpers ───────────────────────────────
+// Replaces the cartoon sphere look with terminal-window tags: dark
+// fill, monospace label inside, 1px accent-color border, optional
+// brand-glow shadow when active. Boxes are sized to fit their label.
+
+function nodeBoxLabel(n: GraphNode): string {
+  const trunc = (s: string, len: number) =>
+    s.length > len ? s.slice(0, len - 1) + "…" : s;
+  if (n.kind === "root") return "GOAL";
+  if (n.kind === "summary") return "DONE";
+  if (n.kind === "file" && n.fileOp) {
+    return `${n.fileOp.toUpperCase()}  ${trunc(n.label, 22)}`;
+  }
+  if (n.kind === "tool") return `TOOL  ${trunc(n.label.toUpperCase(), 18)}`;
+  if (n.kind === "plan") return `PLAN  ${trunc(n.label.toUpperCase(), 18)}`;
+  if (n.kind === "thought") return trunc(n.label, 24);
+  if (n.kind === "error") return `ERR  ${trunc(n.label.toUpperCase(), 18)}`;
+  return n.label.toUpperCase();
+}
+
+function nodeFontPx(n: GraphNode): number {
+  if (n.kind === "root") return 11;
+  if (n.kind === "thought") return 9.5;
+  if (n.kind === "summary") return 10.5;
+  return 10;
+}
+
+function nodeBoxDims(
+  n: GraphNode,
+  ctx: CanvasRenderingContext2D,
+): { w: number; h: number } {
+  const fontSize = nodeFontPx(n);
+  ctx.font = `500 ${fontSize}px ui-monospace, "JetBrains Mono", "Fira Code", Menlo, Consolas, monospace`;
+  const textW = ctx.measureText(nodeBoxLabel(n)).width;
+  const padX = n.kind === "root" || n.kind === "summary" ? 14 : 11;
+  const padY = n.kind === "thought" ? 4 : n.kind === "root" ? 8 : 6;
+  return {
+    w: Math.ceil(textW + padX * 2),
+    h: Math.ceil(fontSize + padY * 2),
+  };
+}
+
+function drawRoundRect(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  w: number,
+  h: number,
+  r: number,
+) {
+  const rr = Math.min(r, w / 2, h / 2);
+  ctx.beginPath();
+  ctx.moveTo(x + rr, y);
+  ctx.lineTo(x + w - rr, y);
+  ctx.quadraticCurveTo(x + w, y, x + w, y + rr);
+  ctx.lineTo(x + w, y + h - rr);
+  ctx.quadraticCurveTo(x + w, y + h, x + w - rr, y + h);
+  ctx.lineTo(x + rr, y + h);
+  ctx.quadraticCurveTo(x, y + h, x, y + h - rr);
+  ctx.lineTo(x, y + rr);
+  ctx.quadraticCurveTo(x, y, x + rr, y);
+  ctx.closePath();
 }
 
 // ── Layout — minimalist force-directed.
@@ -115,8 +182,12 @@ interface LayoutNode extends GraphNode {
   vx: number;
   vy: number;
   /** Time the layout first saw this node — used for the materialize-in
-   *  scale animation. */
+   *  fade animation. */
   bornAt: number;
+  /** Last-rendered box dimensions; written during draw, read during
+   *  the rect-based hit test. */
+  boxW?: number;
+  boxH?: number;
 }
 
 const LAYOUT_PARAMS = {
@@ -320,13 +391,13 @@ export function MindMap({ fullScreen = false }: { fullScreen?: boolean }) {
       // glass shows through).
       ctx.clearRect(0, 0, w, h);
 
-      // Background dot grid — subtle.
-      ctx.fillStyle = "rgba(255,255,255,0.025)";
-      const step = 28;
+      // Background dot grid — barely there. Sovereign restraint.
+      ctx.fillStyle = "rgba(255,255,255,0.014)";
+      const step = 36;
       for (let x = step; x < w; x += step) {
         for (let y = step; y < h; y += step) {
           ctx.beginPath();
-          ctx.arc(x, y, 0.7, 0, Math.PI * 2);
+          ctx.arc(x, y, 0.6, 0, Math.PI * 2);
           ctx.fill();
         }
       }
@@ -342,12 +413,12 @@ export function MindMap({ fullScreen = false }: { fullScreen?: boolean }) {
         const grad = ctx.createLinearGradient(a.x, a.y, b.x, b.y);
         const aColor = nodeColor(a);
         const bColor = nodeColor(b);
-        grad.addColorStop(0, aColor.replace("rgb", "rgba").replace(")", ", 0.55)"));
-        grad.addColorStop(1, bColor.replace("rgb", "rgba").replace(")", ", 0.85)"));
+        grad.addColorStop(0, aColor.replace("rgb", "rgba").replace(")", ", 0.32)"));
+        grad.addColorStop(1, bColor.replace("rgb", "rgba").replace(")", ", 0.62)"));
 
         ctx.strokeStyle = grad;
-        ctx.lineWidth = isActiveTrail ? 2.2 : 1.4;
-        ctx.shadowBlur = isActiveTrail ? 12 : 0;
+        ctx.lineWidth = isActiveTrail ? 1.6 : 0.9;
+        ctx.shadowBlur = isActiveTrail ? 10 : 0;
         ctx.shadowColor = isActiveTrail ? bColor : "transparent";
 
         ctx.beginPath();
@@ -373,110 +444,91 @@ export function MindMap({ fullScreen = false }: { fullScreen?: boolean }) {
 
       const now = performance.now();
       for (const n of nodes) {
-        // Materialize-in scale: a node born <300ms ago grows from 0 → 1.
+        // Materialize-in: quick fade, no bouncy scale (tech feel).
         const age = now - n.bornAt;
-        const intro = age < 300 ? Math.min(1, age / 300) : 1;
-        const ease = 1 - Math.pow(1 - intro, 3);
-        const r = nodeRadius(n) * ease;
+        const intro = age < 220 ? Math.min(1, age / 220) : 1;
 
         const color = nodeColor(n);
         const isActive = session?.activeNodeId === n.id;
         const isHover = hoverRef.current.id === n.id;
         const isPinned = pinnedId === n.id;
+        const isError = n.state === "error";
 
-        // Outer glow halo for active / running.
+        // Box dimensions, centered on n.x/n.y. Cache on the node so
+        // the rect-hit test below uses the same dims we're drawing.
+        const { w: boxW, h: boxH } = nodeBoxDims(n, ctx);
+        n.boxW = boxW;
+        n.boxH = boxH;
+        const x = n.x - boxW / 2;
+        const y = n.y - boxH / 2;
+        const radius = 2; // sharp, terminal-window corners
+
+        ctx.globalAlpha = intro;
+
+        // Drop shadow / brand glow when active or running.
         if (n.state === "running" || isActive) {
-          const pulse = 0.5 + 0.5 * Math.sin(now / 280);
-          const haloR = r * (1.6 + pulse * 0.5);
-          const halo = ctx.createRadialGradient(n.x, n.y, r * 0.6, n.x, n.y, haloR);
-          halo.addColorStop(0, color.replace("rgb", "rgba").replace(")", `, ${0.35 + pulse * 0.2})`));
-          halo.addColorStop(1, color.replace("rgb", "rgba").replace(")", ", 0)"));
-          ctx.fillStyle = halo;
-          ctx.beginPath();
-          ctx.arc(n.x, n.y, haloR, 0, Math.PI * 2);
+          const pulse = 0.45 + 0.25 * Math.sin(now / 360);
+          ctx.save();
+          ctx.shadowColor = (isError
+            ? "rgb(248, 113, 113)"
+            : color
+          )
+            .replace("rgb", "rgba")
+            .replace(")", `, ${pulse})`);
+          ctx.shadowBlur = 14;
+          ctx.fillStyle = "rgba(10, 11, 14, 0.96)";
+          drawRoundRect(ctx, x, y, boxW, boxH, radius);
           ctx.fill();
-        } else if (isHover || isPinned) {
-          // Hover / pinned glow — softer, no pulse.
-          const halo = ctx.createRadialGradient(n.x, n.y, r * 0.7, n.x, n.y, r * 2);
-          halo.addColorStop(0, color.replace("rgb", "rgba").replace(")", ", 0.3)"));
-          halo.addColorStop(1, color.replace("rgb", "rgba").replace(")", ", 0)"));
-          ctx.fillStyle = halo;
-          ctx.beginPath();
-          ctx.arc(n.x, n.y, r * 2, 0, Math.PI * 2);
-          ctx.fill();
-        }
-
-        // Body — gradient sphere.
-        const body = ctx.createRadialGradient(
-          n.x - r * 0.35,
-          n.y - r * 0.35,
-          r * 0.2,
-          n.x,
-          n.y,
-          r,
-        );
-        body.addColorStop(0, "rgba(255,255,255,0.9)");
-        body.addColorStop(0.4, color);
-        body.addColorStop(1, color.replace("rgb", "rgba").replace(")", ", 0.6)"));
-        ctx.fillStyle = body;
-        if (n.kind === "plan") {
-          // Diamond.
-          ctx.beginPath();
-          ctx.moveTo(n.x, n.y - r);
-          ctx.lineTo(n.x + r, n.y);
-          ctx.lineTo(n.x, n.y + r);
-          ctx.lineTo(n.x - r, n.y);
-          ctx.closePath();
-          ctx.fill();
-        } else if (n.kind === "file") {
-          // Pill.
-          const w2 = r * 1.7;
-          const h2 = r * 0.95;
-          const x = n.x - w2;
-          const y = n.y - h2;
-          const rad = h2;
-          ctx.beginPath();
-          ctx.moveTo(x + rad, y);
-          ctx.lineTo(x + w2 * 2 - rad, y);
-          ctx.quadraticCurveTo(x + w2 * 2, y, x + w2 * 2, y + rad);
-          ctx.lineTo(x + w2 * 2, y + h2 * 2 - rad);
-          ctx.quadraticCurveTo(x + w2 * 2, y + h2 * 2, x + w2 * 2 - rad, y + h2 * 2);
-          ctx.lineTo(x + rad, y + h2 * 2);
-          ctx.quadraticCurveTo(x, y + h2 * 2, x, y + h2 * 2 - rad);
-          ctx.lineTo(x, y + rad);
-          ctx.quadraticCurveTo(x, y, x + rad, y);
-          ctx.closePath();
-          ctx.fill();
+          ctx.restore();
         } else {
-          ctx.beginPath();
-          ctx.arc(n.x, n.y, r, 0, Math.PI * 2);
+          ctx.save();
+          ctx.shadowColor = "rgba(0, 0, 0, 0.55)";
+          ctx.shadowBlur = 6;
+          ctx.shadowOffsetY = 2;
+          ctx.fillStyle = "rgba(10, 11, 14, 0.94)";
+          drawRoundRect(ctx, x, y, boxW, boxH, radius);
+          ctx.fill();
+          ctx.restore();
+        }
+
+        // Subtle inner tint when active / hovered / pinned.
+        if (isActive || isHover || isPinned) {
+          ctx.fillStyle = (isError ? "rgb(248, 113, 113)" : color)
+            .replace("rgb", "rgba")
+            .replace(")", ", 0.10)");
+          drawRoundRect(ctx, x, y, boxW, boxH, radius);
           ctx.fill();
         }
 
-        // Outline — crisp.
-        ctx.strokeStyle =
-          n.state === "error"
-            ? "rgba(248,113,113,0.9)"
-            : "rgba(255,255,255,0.55)";
+        // Border — kind-color accent, brighter when interactive.
+        const borderAlpha =
+          isError ? 0.9 : isActive || isHover || isPinned ? 0.95 : 0.5;
+        ctx.strokeStyle = (isError ? "rgb(248, 113, 113)" : color)
+          .replace("rgb", "rgba")
+          .replace(")", `, ${borderAlpha})`);
         ctx.lineWidth = n.kind === "root" ? 1.5 : 1;
+        drawRoundRect(ctx, x, y, boxW, boxH, radius);
         ctx.stroke();
 
-        // Inner specular for non-pill kinds — sells the depth.
-        if (n.kind !== "file") {
-          ctx.fillStyle = "rgba(255,255,255,0.18)";
-          ctx.beginPath();
-          ctx.arc(n.x - r * 0.3, n.y - r * 0.35, r * 0.25, 0, Math.PI * 2);
-          ctx.fill();
-        }
+        // Left edge accent bar (1.5px) — gives the box a tag look.
+        ctx.fillStyle = isError ? "rgb(248, 113, 113)" : color;
+        ctx.fillRect(x, y + 1, 1.5, boxH - 2);
 
-        // Label below.
-        ctx.fillStyle = "rgba(240,240,245,0.86)";
-        ctx.font = `${n.kind === "root" ? 13 : 11}px ui-sans-serif, system-ui, sans-serif`;
+        // Label — monospace, centered inside.
+        const label = nodeBoxLabel(n);
+        const fontSize = nodeFontPx(n);
+        ctx.font = `500 ${fontSize}px ui-monospace, "JetBrains Mono", "Fira Code", Menlo, Consolas, monospace`;
         ctx.textAlign = "center";
-        ctx.textBaseline = "top";
-        const labelY = n.y + r + 6;
-        const truncated = n.label.length > 28 ? n.label.slice(0, 26) + "…" : n.label;
-        ctx.fillText(truncated, n.x, labelY);
+        ctx.textBaseline = "middle";
+        ctx.fillStyle =
+          isError
+            ? "rgba(255, 220, 220, 0.95)"
+            : isActive || isHover || isPinned
+              ? "rgba(255, 255, 255, 0.96)"
+              : "rgba(225, 225, 232, 0.78)";
+        ctx.fillText(label, n.x + 0.75, n.y + 0.5);
+
+        ctx.globalAlpha = 1;
       }
       ctx.restore();
     };
@@ -492,13 +544,18 @@ export function MindMap({ fullScreen = false }: { fullScreen?: boolean }) {
     let hit: string | null = null;
     let bestD = Infinity;
     for (const n of layoutRef.current.values()) {
+      // Rect-based hit test using last-rendered box dims. Falls back
+      // to a generous circle radius if the box hasn't been drawn yet.
+      const halfW = (n.boxW ?? nodeRadius(n) * 2) / 2 + 4;
+      const halfH = (n.boxH ?? nodeRadius(n) * 1.2) / 2 + 4;
       const dx = mx - n.x;
       const dy = my - n.y;
-      const d = Math.sqrt(dx * dx + dy * dy);
-      const r = nodeRadius(n) + 4;
-      if (d < r && d < bestD) {
-        bestD = d;
-        hit = n.id;
+      if (Math.abs(dx) <= halfW && Math.abs(dy) <= halfH) {
+        const d = Math.abs(dx) / halfW + Math.abs(dy) / halfH;
+        if (d < bestD) {
+          bestD = d;
+          hit = n.id;
+        }
       }
     }
     hoverRef.current = { id: hit, x: mx, y: my };
@@ -515,13 +572,18 @@ export function MindMap({ fullScreen = false }: { fullScreen?: boolean }) {
     let hit: string | null = null;
     let bestD = Infinity;
     for (const n of layoutRef.current.values()) {
+      // Rect-based hit test using last-rendered box dims. Falls back
+      // to a generous circle radius if the box hasn't been drawn yet.
+      const halfW = (n.boxW ?? nodeRadius(n) * 2) / 2 + 4;
+      const halfH = (n.boxH ?? nodeRadius(n) * 1.2) / 2 + 4;
       const dx = mx - n.x;
       const dy = my - n.y;
-      const d = Math.sqrt(dx * dx + dy * dy);
-      const r = nodeRadius(n) + 4;
-      if (d < r && d < bestD) {
-        bestD = d;
-        hit = n.id;
+      if (Math.abs(dx) <= halfW && Math.abs(dy) <= halfH) {
+        const d = Math.abs(dx) / halfW + Math.abs(dy) / halfH;
+        if (d < bestD) {
+          bestD = d;
+          hit = n.id;
+        }
       }
     }
     setPinnedId((cur) => (cur === hit ? null : hit));
@@ -662,8 +724,8 @@ export function MindMap({ fullScreen = false }: { fullScreen?: boolean }) {
         <div className="axon-mindmap-empty">
           <div className="axon-mindmap-empty-orb" />
           <p>
-            Mind Map awaits.<br />
-            <span>Speak a command or ask Axon to do something — the graph will draw itself.</span>
+            Quiet.<br />
+            <span>Speak when ready</span>
           </p>
         </div>
       )}

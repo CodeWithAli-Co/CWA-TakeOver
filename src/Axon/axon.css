@@ -895,8 +895,8 @@
 
 
 /* ══════════════════════════════════════════════════════════════════
-   MIND MAP — live graph of Axon's thinking. Matches the Orb's plasma
-   language: glass, accent-tinted glows, dark void background.
+   MIND MAP — live graph of Axon's thinking. Sovereign treatment:
+   quieter typography, restrained color, minimum visual weight.
    ════════════════════════════════════════════════════════════════ */
 
 .axon-mindmap {
@@ -907,114 +907,121 @@
   height: 100%;
   background:
     radial-gradient(
-      ellipse at 50% 30%,
-      rgba(var(--axon-accent-rgb), 0.10) 0%,
+      ellipse at 50% 18%,
+      rgba(var(--axon-accent-rgb), 0.06) 0%,
       rgba(0, 0, 0, 0) 55%
     ),
-    linear-gradient(180deg, rgba(8, 8, 10, 0.85) 0%, rgba(0, 0, 0, 0.96) 100%);
-  border: 1px solid rgba(255, 255, 255, 0.06);
-  border-radius: 12px;
+    linear-gradient(180deg, rgba(10, 10, 12, 0.92) 0%, rgba(0, 0, 0, 0.98) 100%);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  border-radius: 14px;
   overflow: hidden;
   box-shadow:
-    inset 0 0 60px rgba(0, 0, 0, 0.55),
-    0 8px 36px rgba(0, 0, 0, 0.45),
-    var(--axon-glow-sm);
+    inset 0 0 80px rgba(0, 0, 0, 0.5),
+    0 8px 36px rgba(0, 0, 0, 0.4);
 }
 
-/* Full-screen variant — used by the maximize button in CommandPanel.
-   Lifts above the panel and covers the viewport with a dark backdrop. */
 .axon-mindmap--full {
   position: fixed;
   inset: 32px;
   z-index: 10000;
   border-radius: 18px;
   box-shadow:
-    inset 0 0 90px rgba(0, 0, 0, 0.6),
+    inset 0 0 120px rgba(0, 0, 0, 0.55),
     0 32px 96px rgba(0, 0, 0, 0.7),
-    var(--axon-glow-md);
+    var(--axon-glow-sm);
 }
 
+/* Header — single row, generous space, no pseudo-badge.
+   The prompt text is the focus; everything else is whisper-quiet. */
 .axon-mindmap-header {
   position: relative;
   z-index: 2;
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 16px;
-  padding: 12px 16px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
-  background: linear-gradient(180deg, rgba(20, 20, 24, 0.55) 0%, rgba(20, 20, 24, 0.0) 100%);
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
+  gap: 14px;
+  padding: 14px 18px 12px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
 }
 
 .axon-mindmap-title {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 12px;
   min-width: 0;
   flex: 1;
 }
+/* Hide the redundant "Mind Map" caps badge — the tab label already
+   says it. The pulse dot stays as the only chrome on the left. */
 .axon-mindmap-title strong {
-  color: var(--axon-fg);
-  font-size: 13px;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
+  display: none;
 }
 .axon-mindmap-prompt {
-  color: var(--axon-muted);
-  font-size: 12px;
-  font-family: var(--axon-mono);
+  color: rgba(255, 255, 255, 0.78);
+  font-size: 13px;
+  font-weight: 400;
+  letter-spacing: 0.005em;
   min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  border-left: 1px solid rgba(255, 255, 255, 0.1);
-  padding-left: 10px;
-  margin-left: 2px;
 }
 
-/* Pulsing dot — green when a session is running, soft accent when idle. */
+/* Smaller, calmer pulse — no aggressive ring shadow animation. */
 .axon-mindmap-pulse {
   position: relative;
   display: inline-block;
-  width: 8px;
-  height: 8px;
+  width: 5px;
+  height: 5px;
   border-radius: 50%;
-  background: rgba(var(--axon-accent-rgb), 0.5);
-  box-shadow: 0 0 0 0 rgba(var(--axon-accent-rgb), 0.4);
+  background: rgba(255, 255, 255, 0.28);
+  flex-shrink: 0;
+  transition: background 200ms ease;
 }
 .axon-mindmap-pulse[data-running="true"] {
   background: rgb(94, 234, 212);
-  box-shadow: 0 0 0 0 rgba(94, 234, 212, 0.5);
-  animation: axon-mindmap-pulse 1.4s ease-out infinite;
+  animation: axon-mindmap-pulse 1.8s ease-in-out infinite;
 }
 @keyframes axon-mindmap-pulse {
-  0% {
-    box-shadow: 0 0 0 0 rgba(94, 234, 212, 0.5);
-  }
-  70% {
-    box-shadow: 0 0 0 8px rgba(94, 234, 212, 0);
-  }
-  100% {
-    box-shadow: 0 0 0 0 rgba(94, 234, 212, 0);
-  }
+  0%, 100% { opacity: 0.55; }
+  50% { opacity: 1; }
 }
 
+/* Stats — pushed right, ultra-quiet, dot-separated. The numbers
+   are the only thing that gets the foreground color. */
 .axon-mindmap-stats {
   display: flex;
   align-items: center;
-  gap: 12px;
-  font-size: 11px;
-  color: var(--axon-muted);
-  letter-spacing: 0.02em;
+  gap: 0;
+  font-size: 10.5px;
+  font-weight: 400;
+  color: rgba(255, 255, 255, 0.4);
+  letter-spacing: 0.01em;
+  flex-shrink: 0;
+}
+.axon-mindmap-stats > span {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 4px;
+  padding: 0 8px;
+  position: relative;
+}
+.axon-mindmap-stats > span + span::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 2px;
+  height: 2px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.18);
 }
 .axon-mindmap-stats em {
   font-style: normal;
   font-family: var(--axon-mono);
-  color: var(--axon-fg);
-  margin-right: 2px;
+  color: rgba(255, 255, 255, 0.85);
   font-variant-numeric: tabular-nums;
+  font-size: 11px;
 }
 .axon-mindmap-stat-error em {
   color: rgb(248, 113, 113);
@@ -1030,138 +1037,136 @@
   cursor: crosshair;
 }
 
-/* Tooltip — glassy card pinned next to the focused node. */
+/* Tooltip — refined glass card. Tighter, lighter, more breathing room. */
 .axon-mindmap-tooltip {
   position: absolute;
   z-index: 3;
-  width: 260px;
-  padding: 12px 14px;
+  width: 240px;
+  padding: 11px 13px 12px;
   border-radius: 10px;
-  background: var(--axon-glass-hi);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  backdrop-filter: blur(14px);
-  -webkit-backdrop-filter: blur(14px);
+  background: rgba(14, 14, 16, 0.86);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  backdrop-filter: blur(16px) saturate(1.2);
+  -webkit-backdrop-filter: blur(16px) saturate(1.2);
   box-shadow:
-    0 12px 36px rgba(0, 0, 0, 0.6),
-    inset 0 1px 0 rgba(255, 255, 255, 0.05);
+    0 16px 40px rgba(0, 0, 0, 0.55),
+    inset 0 1px 0 rgba(255, 255, 255, 0.04);
   pointer-events: none;
-  animation: axon-mindmap-tt-in 140ms ease-out;
+  animation: axon-mindmap-tt-in 160ms ease-out;
 }
 @keyframes axon-mindmap-tt-in {
-  from {
-    opacity: 0;
-    transform: translateY(2px) scale(0.98);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0) scale(1);
-  }
+  from { opacity: 0; transform: translateY(2px); }
+  to   { opacity: 1; transform: translateY(0); }
 }
 .axon-mindmap-tt-head {
   display: flex;
   align-items: center;
-  gap: 8px;
-  font-size: 10px;
+  gap: 7px;
+  font-size: 9.5px;
   text-transform: uppercase;
-  letter-spacing: 0.12em;
-  color: var(--axon-muted);
-  margin-bottom: 8px;
+  letter-spacing: 0.14em;
+  color: rgba(255, 255, 255, 0.45);
+  margin-bottom: 7px;
 }
 .axon-mindmap-tt-head strong {
-  color: var(--axon-fg);
-  font-weight: 600;
+  color: rgba(255, 255, 255, 0.78);
+  font-weight: 500;
 }
 .axon-mindmap-tt-dot {
-  width: 8px;
-  height: 8px;
+  width: 6px;
+  height: 6px;
   border-radius: 50%;
-  box-shadow: 0 0 8px currentColor;
+  box-shadow: 0 0 6px currentColor;
 }
 .axon-mindmap-tt-dur {
   margin-left: auto;
   font-family: var(--axon-mono);
-  font-weight: 500;
-  color: var(--axon-fg);
+  font-weight: 400;
+  color: rgba(255, 255, 255, 0.6);
   font-variant-numeric: tabular-nums;
+  text-transform: none;
+  letter-spacing: 0;
+  font-size: 10.5px;
 }
 .axon-mindmap-tt-label {
   font-size: 13px;
-  font-weight: 600;
-  color: var(--axon-fg);
+  font-weight: 500;
+  color: rgba(255, 255, 255, 0.92);
   word-break: break-word;
+  letter-spacing: 0.005em;
 }
 .axon-mindmap-tt-detail {
-  margin-top: 6px;
+  margin-top: 7px;
   font-size: 11.5px;
-  line-height: 1.45;
-  color: var(--axon-muted);
+  line-height: 1.5;
+  color: rgba(255, 255, 255, 0.55);
   word-break: break-word;
-  max-height: 120px;
-  overflow: hidden;
   display: -webkit-box;
-  -webkit-line-clamp: 5;
+  -webkit-line-clamp: 3;
   -webkit-box-orient: vertical;
+  overflow: hidden;
 }
 .axon-mindmap-tt-error {
   margin-top: 8px;
   padding: 6px 8px;
-  font-size: 11.5px;
+  font-size: 11px;
   color: rgb(252, 165, 165);
-  background: rgba(248, 113, 113, 0.08);
-  border: 1px solid rgba(248, 113, 113, 0.25);
+  background: rgba(248, 113, 113, 0.06);
+  border: 1px solid rgba(248, 113, 113, 0.2);
   border-radius: 6px;
   word-break: break-word;
+  line-height: 1.4;
 }
 .axon-mindmap-tt-path {
-  margin-top: 6px;
+  margin-top: 7px;
   font-family: var(--axon-mono);
-  font-size: 10.5px;
-  color: rgba(255, 255, 255, 0.45);
+  font-size: 10px;
+  color: rgba(255, 255, 255, 0.35);
   word-break: break-all;
+  letter-spacing: 0.01em;
 }
 
-/* Scrubber — bottom timeline. */
+/* Scrubber — minimum chrome, just an input rail with a tiny live pill. */
 .axon-mindmap-scrubber {
   position: relative;
   z-index: 2;
   display: flex;
   align-items: center;
-  gap: 12px;
-  padding: 10px 14px;
-  border-top: 1px solid rgba(255, 255, 255, 0.06);
-  background: linear-gradient(0deg, rgba(20, 20, 24, 0.55) 0%, rgba(20, 20, 24, 0.0) 100%);
+  gap: 14px;
+  padding: 10px 18px 12px;
+  border-top: 1px solid rgba(255, 255, 255, 0.04);
 }
 .axon-mindmap-scrub-btn {
-  font-size: 10.5px;
-  letter-spacing: 0.08em;
+  font-size: 9.5px;
+  letter-spacing: 0.12em;
   text-transform: uppercase;
-  color: var(--axon-muted);
-  background: rgba(255, 255, 255, 0.04);
+  color: rgba(255, 255, 255, 0.45);
+  background: transparent;
   border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: 999px;
-  padding: 4px 10px;
+  padding: 3px 9px;
   cursor: pointer;
-  transition: color 160ms, background 160ms, border-color 160ms;
+  transition: color 180ms, border-color 180ms;
+  font-weight: 500;
 }
 .axon-mindmap-scrub-btn:hover {
-  color: var(--axon-fg);
-  border-color: rgba(var(--axon-accent-rgb), 0.4);
+  color: rgba(255, 255, 255, 0.8);
+  border-color: rgba(255, 255, 255, 0.16);
 }
 .axon-mindmap-scrub-btn[data-active="true"] {
-  color: rgb(94, 234, 212);
-  border-color: rgba(94, 234, 212, 0.5);
-  background: rgba(94, 234, 212, 0.08);
-  box-shadow: 0 0 12px rgba(94, 234, 212, 0.25);
+  color: rgb(134, 239, 195);
+  border-color: rgba(94, 234, 212, 0.35);
+  background: rgba(94, 234, 212, 0.04);
 }
 .axon-mindmap-scrub-range {
   flex: 1;
   -webkit-appearance: none;
   appearance: none;
-  height: 4px;
+  height: 2px;
   background: linear-gradient(
     90deg,
-    rgba(var(--axon-accent-rgb), 0.6) 0%,
-    rgba(255, 255, 255, 0.12) 100%
+    rgba(255, 255, 255, 0.22) 0%,
+    rgba(255, 255, 255, 0.06) 100%
   );
   border-radius: 999px;
   outline: none;
@@ -1170,28 +1175,34 @@
 .axon-mindmap-scrub-range::-webkit-slider-thumb {
   -webkit-appearance: none;
   appearance: none;
-  width: 14px;
-  height: 14px;
+  width: 10px;
+  height: 10px;
   border-radius: 50%;
-  background: var(--axon-fg);
+  background: rgba(255, 255, 255, 0.92);
   box-shadow:
-    0 0 0 2px rgba(0, 0, 0, 0.5),
-    var(--axon-glow-sm);
+    0 0 0 3px rgba(0, 0, 0, 0.4),
+    0 1px 4px rgba(0, 0, 0, 0.4);
   cursor: grab;
+  transition: transform 140ms ease;
+}
+.axon-mindmap-scrub-range::-webkit-slider-thumb:hover {
+  transform: scale(1.15);
 }
 .axon-mindmap-scrub-range::-webkit-slider-thumb:active {
   cursor: grabbing;
+  transform: scale(1.25);
 }
 .axon-mindmap-scrub-pos {
   font-family: var(--axon-mono);
-  font-size: 11px;
-  color: var(--axon-muted);
+  font-size: 10.5px;
+  color: rgba(255, 255, 255, 0.4);
   font-variant-numeric: tabular-nums;
-  min-width: 56px;
+  min-width: 52px;
   text-align: right;
+  letter-spacing: 0.02em;
 }
 
-/* Empty state — shown when no session has run yet. */
+/* Empty state — single phrase, refined. No more orb-echo glow ball. */
 .axon-mindmap-empty {
   position: absolute;
   inset: 56px 0 56px 0;
@@ -1199,47 +1210,42 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 18px;
+  gap: 14px;
   pointer-events: none;
   text-align: center;
 }
 .axon-mindmap-empty-orb {
-  width: 64px;
-  height: 64px;
-  border-radius: 50%;
-  background: radial-gradient(
-    circle at 30% 30%,
-    rgba(var(--axon-accent-rgb), 0.85) 0%,
-    rgba(var(--axon-accent-rgb), 0.18) 50%,
-    rgba(0, 0, 0, 0) 80%
+  width: 36px;
+  height: 1px;
+  background: linear-gradient(
+    90deg,
+    rgba(255, 255, 255, 0) 0%,
+    rgba(255, 255, 255, 0.22) 50%,
+    rgba(255, 255, 255, 0) 100%
   );
-  box-shadow:
-    var(--axon-glow-md),
-    inset 0 0 14px rgba(0, 0, 0, 0.6);
+  border-radius: 0;
+  box-shadow: none;
   animation: axon-mindmap-empty-pulse 3.6s ease-in-out infinite;
 }
 @keyframes axon-mindmap-empty-pulse {
-  0%, 100% {
-    transform: scale(1);
-    opacity: 0.85;
-  }
-  50% {
-    transform: scale(1.06);
-    opacity: 1;
-  }
+  0%, 100% { opacity: 0.4; }
+  50% { opacity: 0.85; }
 }
 .axon-mindmap-empty p {
-  color: var(--axon-muted);
-  font-size: 13px;
-  max-width: 320px;
+  color: rgba(255, 255, 255, 0.42);
+  font-size: 12px;
+  font-weight: 400;
+  max-width: 280px;
   margin: 0;
-  line-height: 1.55;
+  line-height: 1.6;
+  letter-spacing: 0.02em;
 }
 .axon-mindmap-empty p span {
   display: block;
-  margin-top: 6px;
-  font-size: 11.5px;
-  color: rgba(255, 255, 255, 0.32);
+  margin-top: 8px;
+  font-size: 10.5px;
+  color: rgba(255, 255, 255, 0.22);
+  letter-spacing: 0.04em;
 }
 
 /* Maximize button — sits in the CommandPanel tab bar when Mind Map

@@ -38,20 +38,14 @@
     {
       "identifier": "fs:allow-applocaldata-write-recursive",
       "allow": [
-        {
-          "path": "$APPDATA/*"
-        }
+        { "path": "$APPDATA/*" }
       ]
     },
     {
       "identifier": "fs:allow-applocaldata-read-recursive",
       "allow": [
-        {
-          "path": "$APPDATA/*"
-        },
-        {
-          "path": "$DOWNLOAD/*"
-        }
+        { "path": "$APPDATA/*" },
+        { "path": "$DOWNLOAD/*" }
       ]
     },
     "fs:allow-read-text-file",
@@ -70,7 +64,15 @@
         { "path": "$DESKTOP" },
         { "path": "$DESKTOP/**" },
         { "path": "$DOWNLOAD" },
-        { "path": "$DOWNLOAD/**" }
+        { "path": "$DOWNLOAD/**" },
+        { "path": "C:/Dev" },
+        { "path": "C:/Dev/**" },
+        { "path": "D:/Dev" },
+        { "path": "D:/Dev/**" },
+        { "path": "C:/Projects" },
+        { "path": "C:/Projects/**" },
+        { "path": "D:/Projects" },
+        { "path": "D:/Projects/**" }
       ]
     }
   ]
