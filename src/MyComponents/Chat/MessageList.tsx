@@ -180,27 +180,57 @@ export const MessageList: React.FC<Props> = ({
         !(m.read_by || []).includes(currentUsername),
     );
     const batch = unread.slice(0, 10);
-    batch.forEach(async (msg) => {
-      if (isMissingColumn(table, "read_by")) return;
-      const newReadBy = [...(msg.read_by || []), currentUsername];
-      const { error } = await supabase
-        .from(table)
-        .update({ read_by: newReadBy })
-        .eq("msg_id", msg.msg_id);
-      if (!error) return;
-      const em = error.message || "";
-      if (
-        /column .* does not exist/i.test(em) ||
-        /could not find the .* column/i.test(em) ||
-        /PGRST204/i.test(em) ||
-        em.toLowerCase().includes("read_by")
-      ) {
-        markColumnMissing(table, "read_by");
-        return;
+    // Serial loop with bail-on-first-failure. The previous version
+    // fired all 10 PATCHes in parallel; if read_by was missing on the
+    // table, all 10 hit 400 before the missing-column cache kicked in
+    // — flooding the console. Awaiting each request means the moment
+    // we discover the column is missing, the loop short-circuits and
+    // no further requests fire.
+    let cancelled = false;
+    (async () => {
+      for (const msg of batch) {
+        if (cancelled) return;
+        if (isMissingColumn(table, "read_by")) return;
+        const newReadBy = [...(msg.read_by || []), currentUsername];
+        const { error } = await supabase
+          .from(table)
+          .update({ read_by: newReadBy })
+          .eq("msg_id", msg.msg_id);
+        if (!error) continue;
+        const em = error.message || "";
+        const code = (error as { code?: string }).code || "";
+        // PostgREST returns PGRST204 for "no row" but the actual
+        // missing-column error code is 42703. Accept both, plus the
+        // various human-readable variants that have been observed
+        // across Supabase versions.
+        if (
+          /column .* does not exist/i.test(em) ||
+          /could not find the .* column/i.test(em) ||
+          /PGRST204/i.test(em) ||
+          code === "42703" ||
+          code === "PGRST204" ||
+          em.toLowerCase().includes("read_by") ||
+          // Bare 400 with no body — assume it's the column issue too,
+          // since this code path has no other reason to 400.
+          em === "" ||
+          em.toLowerCase() === "bad request"
+        ) {
+          markColumnMissing(table, "read_by");
+          return;
+        }
+        console.warn("Read receipt update failed:", em);
       }
-      console.warn("Read receipt update failed:", em);
-    });
+    })();
+    return () => { cancelled = true; };
   }, [messages, currentUsername, table]);
+
+  // The followOutput prop on Virtuoso below reads this ref when
+  // deciding whether to scroll. We point it at the latest message's
+  // sender so that any time the user JUST sent (regardless of where
+  // the viewport currently is), Virtuoso scrolls to the new bottom.
+  // Other people's messages still respect the at-bottom gate.
+  const lastSenderRef = useRef<string>("");
+  const lastMsgIdForScrollRef = useRef<number>(-1);
 
   const handleReact = async (msgId: number, emoji: string) => {
     if (onReactOverride) {
@@ -308,6 +338,15 @@ export const MessageList: React.FC<Props> = ({
     return out;
   }, [messages, searchQuery, threadReplyCounts, currentUsername]);
 
+  // Capture the latest message's sender + msg_id during render so
+  // followOutput (called by Virtuoso when data changes) can decide
+  // whether to scroll based on whoever just spoke.
+  if (messages && messages.length > 0) {
+    const lastM = messages[messages.length - 1];
+    lastSenderRef.current = lastM.sent_by;
+    lastMsgIdForScrollRef.current = lastM.msg_id;
+  }
+
   // Loading state: messages is undefined (query still in flight).
   if (!messages) {
     return <MessageListSkeleton />;
@@ -401,10 +440,23 @@ export const MessageList: React.FC<Props> = ({
       <Virtuoso
         ref={virtuosoRef}
         data={feedRows}
-        // Auto-scroll to the latest row whenever `data` grows AND the
-        // user is already near the bottom. Returns "smooth" to scroll,
-        // false to stay put.
-        followOutput={(isAtBottom) => (isAtBottom ? "smooth" : false)}
+        // Auto-scroll behavior on new rows:
+        //   • If YOU just sent a message → always scroll smooth, even
+        //     if the viewport drifted off-bottom (composer expanded,
+        //     scrolled by a pixel, etc.). Critical UX: your own
+        //     message should ALWAYS appear in view.
+        //   • Otherwise (someone else sent / a vision note landed) →
+        //     respect the at-bottom gate so the user isn't yanked
+        //     while reading older messages.
+        followOutput={(isAtBottom) => {
+          if (lastSenderRef.current === currentUsername) return "smooth";
+          return isAtBottom ? "smooth" : false;
+        }}
+        // Wider at-bottom threshold — Virtuoso's default of 4px is
+        // jittery when the composer expands by 1 line or animations
+        // settle. 64px is generous enough that "near-bottom" still
+        // counts as "at-bottom" for follow purposes.
+        atBottomThreshold={64}
         // Start at the bottom on mount / group switch.
         initialTopMostItemIndex={Math.max(0, feedRows.length - 1)}
         // Feed dedup key so scroll position is preserved across renders.
@@ -424,7 +476,14 @@ export const MessageList: React.FC<Props> = ({
         itemContent={(_, row) => renderItem(row)}
         components={{
           Header: () => <div className="h-3" />,
-          Footer: () => <div className="h-2" />,
+          // Tall footer = bottom safety margin. The composer overlays
+          // the bottom of the scroll area in this layout, so without
+          // a generous spacer the last message gets clipped behind
+          // the input. 96px ≈ standard composer height + a comfortable
+          // breathing line above it. If the composer ever expands
+          // (image preview, reply quote), the user can still see the
+          // most recent message.
+          Footer: () => <div className="h-24" />,
         }}
       />
 

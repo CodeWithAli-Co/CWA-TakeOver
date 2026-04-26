@@ -40,6 +40,21 @@ import {
   type ScheduledMessage,
 } from "./scheduledStore";
 
+// ── Module-level missing-column cache ─────────────────────────────
+// Once an INSERT fails with "column X does not exist" on a given
+// table, we remember it for the rest of the page session and stop
+// pre-populating that column on subsequent sends. Without this, the
+// progressive-fallback retry loop below burns 3-4 wasted POSTs on
+// every single message — flooding the console with 400s the first
+// time the user notices any chat activity. Same pattern as
+// MessageList.tsx's read-receipt cache.
+const composerMissingColumns = new Set<string>();
+const isComposerMissing = (table: string, column: string) =>
+  composerMissingColumns.has(`${table}:${column}`);
+const markComposerMissing = (table: string, column: string) => {
+  composerMissingColumns.add(`${table}:${column}`);
+};
+
 interface Props {
   group: string;
   currentUsername: string;
@@ -465,7 +480,18 @@ export const MessageComposer: React.FC<Props> = ({
       "read_by",
       "reply_to",
     ];
+
+    // Pre-strip any columns we've ALREADY discovered are missing on
+    // this table during this page session. Without this, every single
+    // message send burns 3-4 wasted POSTs while the loop re-discovers
+    // the same gaps. The cache is module-level (see top of file) so
+    // it's shared across re-renders + composer remounts.
     let payload: Record<string, unknown> = { ...aggressivePayload };
+    for (const col of dropOrder) {
+      if (isComposerMissing(table, col) && col in payload) {
+        delete payload[col];
+      }
+    }
     let error: { message: string } | null = null;
     for (let attempt = 0; attempt <= dropOrder.length; attempt++) {
       const res = await supabase.from(table).insert(payload);
@@ -482,6 +508,9 @@ export const MessageComposer: React.FC<Props> = ({
       let dropped = false;
       if (offending && offending in payload) {
         console.warn(`[send] column "${offending}" missing, retrying without it`);
+        // Cache for the rest of the session so we don't keep
+        // discovering this on every message send.
+        markComposerMissing(table, offending);
         const next = { ...payload };
         delete next[offending];
         payload = next;
@@ -492,6 +521,7 @@ export const MessageComposer: React.FC<Props> = ({
         for (const col of dropOrder) {
           if (col in payload) {
             console.warn(`[send] retrying without "${col}" (error was: ${msg})`);
+            markComposerMissing(table, col);
             const next = { ...payload };
             delete next[col];
             payload = next;

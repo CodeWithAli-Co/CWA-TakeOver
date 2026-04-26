@@ -176,7 +176,18 @@ export const Route = createRootRoute({
       };
     }, [queryClient]);
 
-    // Checks if user is on DMChat or not. Using useEffect to prevent multiple rerenders
+    // Checks if user is on DMChat or not. Using useEffect to prevent multiple rerenders.
+    //
+    // CRITICAL: this effect MUST depend on stable primitives (the
+    // username string + supa_id + role string), NOT the React Query
+    // `user` array reference. Every refetch produces a new array
+    // reference even if the underlying row didn't change, which used
+    // to cause the realtime channel to tear down and re-subscribe on
+    // every refetch tick (CLOSED → SUBSCRIBED → CLOSED ping-pong in
+    // the console).
+    const currentUsername = user?.[0]?.username || "";
+    const currentSupaId = (user?.[0] as any)?.supa_id || "";
+    const currentRole = (user?.[0] as any)?.role || "";
     useEffect(() => {
       // If user's on DMChat, remove realtime channel so they wont receive notification while in chat
       // While not on DMChat, they will get notifications
@@ -184,7 +195,6 @@ export const Route = createRootRoute({
 
       // If user's on GeneralChat, remove realtime channel so they wont receive notification while in chat
       // Default value is General, so by default users wont receive notification from generalchat unless navigated to a DM
-      const currentUsername = user?.[0]?.username || "";
       const { incrementUnread } = useChatStore.getState();
 
       // Helper: read user's notification prefs from localStorage
@@ -363,7 +373,7 @@ export const Route = createRootRoute({
             );
             if (slander) {
               // "axon" display name is used for posting the public roast.
-              const ceoName = (user?.[0] as any)?.role === "CEO"
+              const ceoName = currentRole === "CEO"
                 ? currentUsername
                 : "aalibrahimi";
               void respondToSlander(slander, "Axon", ceoName).catch(() => {});
@@ -429,7 +439,7 @@ export const Route = createRootRoute({
               sentBy, body, "General", "cwa_chat", payload.new.msg_id,
             );
             if (slander) {
-              const ceoName = (user?.[0] as any)?.role === "CEO"
+              const ceoName = currentRole === "CEO"
                 ? currentUsername
                 : "aalibrahimi";
               void respondToSlander(slander, "Axon", ceoName).catch(() => {});
@@ -486,7 +496,10 @@ export const Route = createRootRoute({
         window.removeEventListener("keydown", unlockOnce);
         try { dingCtx?.close(); } catch { /* noop */ }
       };
-    }, [GroupName, user]);
+      // Depend on stable primitives only — see the comment at the top
+      // of this effect for why `user` itself can't be in the dep list.
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [GroupName, currentUsername, currentSupaId, currentRole]);
 
     // Check if can send notifications
     useEffect(() => {
