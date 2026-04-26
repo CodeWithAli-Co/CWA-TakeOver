@@ -98,7 +98,12 @@ export const useTourStore = create<TourState>()(
       },
     }),
     {
-      name: "cwa-onboarding-tour-v1",
+      // Bumped v1 → v2 to invalidate stale `{ seen: true }` blobs from
+      // earlier testing. zustand sees no v2 entry and hydrates with the
+      // default seen: false, so the tour auto-fires on the next
+      // sign-in for everyone. Once the user finishes / skips, this
+      // key flips to true and the tour stays quiet thereafter.
+      name: "cwa-onboarding-tour-v2",
       // Only persist seen — index/active/steps are always session-scoped.
       partialize: (s) => ({ seen: s.seen }),
     },
