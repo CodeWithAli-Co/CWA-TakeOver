@@ -1,15 +1,15 @@
 // Learn more about Tauri commands at https://tauri.app/develop/calling-rust/
 use aes_gcm::{
-    aead::{Aead, AeadCore, KeyInit, OsRng},
     Aes256Gcm, Key, Nonce,
+    aead::{Aead, AeadCore, KeyInit, OsRng},
 };
 use std::fs::File;
 use std::io::Read;
 use std::sync::atomic::{AtomicBool, Ordering};
 use tauri::{
+    Manager, WindowEvent,
     menu::{Menu, MenuItem},
     tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent},
-    Manager, WindowEvent,
 };
 use tauri_plugin_autostart::MacosLauncher;
 use tauri_plugin_updater::UpdaterExt;
@@ -20,11 +20,11 @@ static SHOULD_EXIT: AtomicBool = AtomicBool::new(false);
 
 use dotenv::dotenv;
 use resend_rs::{
-    types::{
-        Attachment, ContactChanges, ContactData, CreateBroadcastOptions, CreateEmailBaseOptions,
-        SendBroadcastOptions,
-    },
     Resend, Result,
+    types::{
+        ContactChanges, CreateAttachment, CreateBroadcastOptions, CreateContactOptions,
+        CreateEmailBaseOptions, SendBroadcastOptions,
+    },
 };
 
 // Add GitHub webhook module
@@ -71,14 +71,14 @@ async fn add_contact(email: &str, f_name: &str, l_name: &str, status: bool) -> R
     let _env = dotenv().unwrap();
 
     let resend = Resend::default();
-    let contact = ContactData::new(email)
+    let contact = CreateContactOptions::new(email)
         .with_first_name(f_name)
         .with_last_name(l_name)
         .with_unsubscribed(status);
 
     let _contact = resend
         .contacts
-        .create("fa2d33ed-9f00-4b51-ad6c-a6e858c7f1bf", contact)
+        .create(contact)
         .await
         .map_err(|e| e.to_string())?; // Convert error to string
 
@@ -93,7 +93,7 @@ async fn edit_contact(email: &str, status: bool) -> Result<(), String> {
     let changes = ContactChanges::new().with_unsubscribed(status);
     let _contact = resend
         .contacts
-        .update_by_email(email, "fa2d33ed-9f00-4b51-ad6c-a6e858c7f1bf", changes)
+        .update(email, changes)
         .await
         .map_err(|e| e.to_string())?; // Convert error to string
 
@@ -107,7 +107,7 @@ async fn del_contact(email: &str) -> Result<bool, String> {
     let resend = Resend::default();
     let deleted = resend
         .contacts
-        .delete_by_email("fa2d33ed-9f00-4b51-ad6c-a6e858c7f1bf", email)
+        .delete(email)
         .await
         .map_err(|e| e.to_string())?; // Convert error to string
 
@@ -120,16 +120,16 @@ async fn create_broadcast() -> Result<String, String> {
 
     let resend = Resend::default();
 
-    let audience_id = "fa2d33ed-9f00-4b51-ad6c-a6e858c7f1bf";
+    let segment_id = "fa2d33ed-9f00-4b51-ad6c-a6e858c7f1bf";
     let from = "CodeWithAli unfold@codewithali.com";
     let subject = "Welcome to CWA TakeOver Test";
-    let html = "Hi {{{FIRST_NAME|there}}}, Welcome to CWA TakeOver. You can unsubscribe here: {{{RESEND_UNSUBSCRIBE_URL}}}";
+    let html = "Hi {{{contact.first_name|there}}}, Welcome to CWA TakeOver. You can unsubscribe here: {{{RESEND_UNSUBSCRIBE_URL}}}";
 
-    let opts = CreateBroadcastOptions::new(audience_id, from, subject).with_html(html);
+    let opts = CreateBroadcastOptions::new(segment_id, from, subject).with_html(html);
 
     let broadcast = resend
         .broadcasts
-        .create(opts)
+        .create(opts.clone())
         .await
         .map_err(|e| e.to_string())?; // Convert error to string
 
@@ -197,7 +197,7 @@ async fn send_invoice(
 
     let email = CreateEmailBaseOptions::new(from, to, subject)
         .with_html(html)
-        .with_attachment(Attachment::from_content(invoice).with_filename(filename));
+        .with_attachment(CreateAttachment::from_content(invoice).with_filename(filename));
 
     let _email = resend.emails.send(email).await.map_err(|e| e.to_string())?;
 
@@ -214,7 +214,7 @@ fn quit_app(app: tauri::AppHandle) {
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
-        .plugin(tauri_plugin_shell::init())   //register the plugin in the builder chain ( basically allows axon to work with the terminal and add commands )
+        .plugin(tauri_plugin_shell::init()) //register the plugin in the builder chain ( basically allows axon to work with the terminal and add commands )
         .plugin(tauri_plugin_window_state::Builder::new().build())
         .plugin(tauri_plugin_updater::Builder::new().build())
         // Autostart — launches app on system boot.
