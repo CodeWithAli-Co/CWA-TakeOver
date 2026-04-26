@@ -20,10 +20,12 @@
 import { useEffect, useMemo, useState } from "react";
 import {
   ClipboardCheck, Search, Loader2, CheckCircle2, Circle, Building2,
-  User, Clock, X, Filter, AlertTriangle,
+  User, Clock, Filter, AlertTriangle, Sparkles, RotateCcw,
 } from "lucide-react";
 import supabase from "@/MyComponents/supabase";
 import { ActiveUser } from "@/stores/query";
+import { ProvisionOnboarding } from "./ProvisionOnboarding";
+import { resetAllWelcomeFlags } from "./onboardingDebug";
 
 // ── Types ──────────────────────────────────────────────────────
 
@@ -87,6 +89,7 @@ export function OnboardingDashboard() {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [filterStatus, setFilterStatus] = useState<OnboardingStatus | "all">("active");
   const [searchQuery, setSearchQuery] = useState("");
+  const [showProvision, setShowProvision] = useState(false);
 
   // Fetch instances (RLS handles the employee vs admin filtering).
   useEffect(() => {
@@ -178,11 +181,44 @@ export function OnboardingDashboard() {
           </div>
           <p className="mt-0.5 text-[11.5px] text-muted-foreground">
             {isAdmin
-              ? "All active and completed onboarding flows. Convert an accepted offer to start one."
+              ? "All active and completed onboarding flows. Convert an accepted offer to start one, or provision retroactively."
               : "Your onboarding tasks. Check off items as you complete them."}
           </p>
         </div>
+        {isAdmin && (
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => {
+                const cleared = resetAllWelcomeFlags();
+                alert(
+                  cleared > 0
+                    ? `Cleared ${cleared} welcome flag${cleared === 1 ? "" : "s"} on this device. Sign in as the test user to retest the welcome modal.`
+                    : "No welcome flags were set on this device.",
+                );
+              }}
+              className="inline-flex items-center gap-1.5 rounded-sm border border-border bg-background px-2.5 py-1.5 text-[11px] font-medium text-muted-foreground hover:text-foreground hover:bg-muted/60"
+              title="Clear all cwa-welcomed-* localStorage flags so the welcome modal fires again on next sign-in (this device only)"
+            >
+              <RotateCcw className="h-3 w-3" />
+              Reset welcome (this device)
+            </button>
+            <button
+              type="button"
+              onClick={() => setShowProvision(true)}
+              className="inline-flex items-center gap-1.5 rounded-sm bg-primary px-2.5 py-1.5 text-[11px] font-semibold text-primary-foreground hover:bg-primary/90"
+              title="Manually create an onboarding instance for any user without one"
+            >
+              <Sparkles className="h-3 w-3" />
+              Provision onboarding
+            </button>
+          </div>
+        )}
       </header>
+
+      {showProvision && (
+        <ProvisionOnboarding onClose={() => setShowProvision(false)} />
+      )}
 
       {loadError && (
         <div className="mx-6 mt-4 flex items-start gap-2 rounded-md border border-amber-500/30 bg-amber-500/10 px-3 py-2">

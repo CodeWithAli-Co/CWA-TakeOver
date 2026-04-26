@@ -30,8 +30,10 @@ import {
 import { useNavigate } from "@tanstack/react-router";
 import supabase from "@/MyComponents/supabase";
 import { ActiveUser } from "@/stores/query";
+import { whyWelcomeGated } from "./onboardingDebug";
 
 const RECENT_USER_WINDOW_MS = 14 * 24 * 60 * 60 * 1000; // 14 days
+const DEBUG_WELCOME = import.meta.env.DEV;
 
 export function WelcomeModal() {
   const { data: activeUser } = ActiveUser();
@@ -43,8 +45,28 @@ export function WelcomeModal() {
   useEffect(() => {
     if (!me?.supa_id) return;
     const key = `cwa-welcomed-${me.supa_id}`;
+
+    // Dev-only diagnostic: log every gate decision so it's obvious
+    // why the modal didn't fire. Open the console after sign-in to
+    // see a structured report flagged with [welcome-modal].
+    if (DEBUG_WELCOME) {
+      whyWelcomeGated({ supaId: me.supa_id, createdAt: me.created_at })
+        // eslint-disable-next-line no-console
+        .then((report) => console.info("[welcome-modal] gate report:", report))
+        .catch(() => {});
+    }
+
     try {
-      if (window.localStorage.getItem(key) === "1") return;
+      if (window.localStorage.getItem(key) === "1") {
+        if (DEBUG_WELCOME) {
+          // eslint-disable-next-line no-console
+          console.info(
+            "[welcome-modal] suppressed - cwa-welcomed-<supaId> is '1'. " +
+              "Click 'Reset welcome (this device)' on the Onboarding page to retest.",
+          );
+        }
+        return;
+      }
     } catch { /* noop */ }
 
     let cancelled = false;
