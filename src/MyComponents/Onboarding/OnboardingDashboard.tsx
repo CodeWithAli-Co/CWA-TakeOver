@@ -274,35 +274,35 @@ export function OnboardingDashboard() {
       ) : (
       <div className="flex flex-1 min-h-0">
         {/* Left pane — instance list */}
-        <aside className="flex w-[320px] flex-col border-r border-border/50 bg-card/30">
-          <div className="border-b border-border/40 p-3 space-y-2">
+        <aside className="flex w-[380px] shrink-0 flex-col border-r border-border/40 bg-card/30">
+          {/* Search + filter strip — taller, denser, inbox-style. */}
+          <div className="border-b border-border/40 px-4 py-3.5 space-y-2.5">
             <div className="relative">
-              <Search className="absolute left-2 top-1/2 h-3 w-3 -translate-y-1/2 text-muted-foreground" />
+              <Search className="absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground/70" />
               <input
                 type="text"
                 placeholder="Search by name…"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full rounded-md border border-border bg-background pl-7 pr-2 py-1.5 text-[11.5px] placeholder:text-muted-foreground/60 focus:outline-none focus:border-primary/50 focus:ring-2 focus:ring-primary/20"
+                className="w-full rounded-md border border-border bg-background pl-9 pr-3 py-2 text-[12px] placeholder:text-muted-foreground/60 focus:outline-none focus:border-primary/50 focus:ring-2 focus:ring-primary/20 transition-colors"
               />
             </div>
-            <div className="flex items-center gap-1 text-[10.5px]">
-              <Filter className="h-3 w-3 text-muted-foreground" />
+            <div className="flex items-center gap-1">
+              <Filter className="h-3 w-3 text-muted-foreground/70 mr-0.5" />
               {(["active", "completed", "all"] as const).map((s) => (
                 <button
                   key={s}
                   type="button"
                   onClick={() => setFilterStatus(s)}
-                  className={[
-                    "rounded-md px-2 py-0.5 font-medium capitalize transition-colors",
-                    filterStatus === s
-                      ? "bg-primary text-primary-foreground"
-                      : "text-muted-foreground hover:bg-muted",
-                  ].join(" ")}
+                  data-active={filterStatus === s}
+                  className="rounded-md px-2.5 py-1 text-[10.5px] font-semibold capitalize transition-colors text-muted-foreground hover:text-foreground data-[active=true]:bg-primary data-[active=true]:text-primary-foreground"
                 >
                   {s}
                 </button>
               ))}
+              <span className="ml-auto text-[10px] tabular-nums text-muted-foreground/70">
+                {filteredInstances.length} {filteredInstances.length === 1 ? "result" : "results"}
+              </span>
             </div>
           </div>
 
@@ -313,19 +313,24 @@ export function OnboardingDashboard() {
                 Loading…
               </div>
             ) : filteredInstances.length === 0 ? (
-              <div className="p-6 text-center">
-                <ClipboardCheck className="mx-auto h-8 w-8 text-muted-foreground/40" />
-                <p className="mt-2 text-[11.5px] text-muted-foreground">
-                  {searchQuery ? "No matches." : "No onboarding in progress."}
+              <div className="px-5 py-10 text-center">
+                <div className="relative mx-auto inline-flex h-14 w-14 items-center justify-center rounded-2xl bg-primary/10 text-primary mb-3">
+                  <ClipboardCheck className="h-6 w-6" />
+                  <span className="absolute -top-0.5 -right-0.5 h-2.5 w-2.5 rounded-full bg-emerald-400 ring-2 ring-card" />
+                </div>
+                <h3 className="text-[13.5px] font-bold text-foreground">
+                  {searchQuery ? "No matches" : "Inbox clear"}
+                </h3>
+                <p className="mt-1.5 text-[11.5px] text-muted-foreground leading-relaxed max-w-[260px] mx-auto">
+                  {searchQuery
+                    ? "Nothing matches your search. Try a different name or clear the filter."
+                    : isAdmin
+                      ? "No onboarding in progress. Convert an accepted offer or click Provision onboarding to start one."
+                      : "You have no active onboarding tasks. Nice work."}
                 </p>
-                {isAdmin && !searchQuery && (
-                  <p className="mt-1 text-[10.5px] text-muted-foreground/70">
-                    Onboarding starts when you convert an accepted offer to an employee.
-                  </p>
-                )}
               </div>
             ) : (
-              <ul className="p-1.5 space-y-1">
+              <ul className="p-2 space-y-1">
                 {filteredInstances.map((i) => {
                   const active = i.id === selectedId;
                   const isMine = !!mySupaId && i.employee_user_id === mySupaId;
@@ -334,12 +339,8 @@ export function OnboardingDashboard() {
                       <button
                         type="button"
                         onClick={() => setSelectedId(i.id)}
-                        className={[
-                          "w-full rounded-md border px-2.5 py-2 text-left transition-colors",
-                          active
-                            ? "border-primary/50 bg-primary/10"
-                            : "border-transparent hover:border-border hover:bg-muted/50",
-                        ].join(" ")}
+                        data-active={active}
+                        className="group w-full rounded-lg border border-border/50 bg-card/40 px-3 py-2.5 text-left transition-all hover:bg-card hover:border-border data-[active=true]:border-primary/50 data-[active=true]:bg-primary/[0.06] data-[active=true]:shadow-sm"
                       >
                         <div className="flex items-center justify-between gap-2">
                           <p className="text-[12px] font-semibold text-foreground truncate">
@@ -391,14 +392,11 @@ export function OnboardingDashboard() {
               }}
             />
           ) : (
-            <div className="flex h-full items-center justify-center text-center">
-              <div>
-                <ClipboardCheck className="mx-auto h-10 w-10 text-muted-foreground/40" />
-                <p className="mt-3 text-[12px] text-muted-foreground">
-                  Select an onboarding to view tasks.
-                </p>
-              </div>
-            </div>
+            <EmptyMain
+              hasResults={filteredInstances.length > 0}
+              isAdmin={isAdmin}
+              onProvision={() => setShowProvision(true)}
+            />
           )}
         </main>
       </div>
@@ -692,6 +690,111 @@ function StatusPill({
   );
 }
 
+
+// ── Right-pane empty state — full-bleed, ghost-preview style ─────
+
+function EmptyMain({
+  hasResults, isAdmin, onProvision,
+}: {
+  hasResults: boolean;
+  isAdmin: boolean;
+  onProvision: () => void;
+}) {
+  const ghostTasks = [
+    { label: "Sign NDA + IP assignment", owner: "employee" },
+    { label: "Provision laptop / equipment", owner: "employer" },
+    { label: "Add to payroll system", owner: "employer" },
+    { label: "Read company handbook", owner: "employee" },
+    { label: "Set up tooling access (email, chat, repos)", owner: "employee" },
+    { label: "Schedule first 1:1 with hiring manager", owner: "employer" },
+    { label: "Send team introductions", owner: "employee" },
+  ] as const;
+
+  return (
+    <div className="flex h-full flex-col">
+      {/* Hero strip — title + CTA, full width */}
+      <div className="border-b border-border/40 px-8 py-7 bg-gradient-to-b from-primary/[0.04] to-transparent">
+        <div className="flex items-start justify-between gap-6 max-w-[1100px] mx-auto">
+          <div className="flex items-start gap-4 min-w-0">
+            <div className="relative inline-flex h-14 w-14 items-center justify-center rounded-2xl bg-primary/12 text-primary shrink-0">
+              <ClipboardCheck className="h-7 w-7" />
+              <span className="absolute -top-0.5 -right-0.5 h-3 w-3 rounded-full bg-emerald-400 ring-[3px] ring-background" />
+            </div>
+            <div className="min-w-0">
+              <h2 className="text-[20px] font-bold text-foreground tracking-tight">
+                {hasResults ? "Pick an onboarding" : "Inbox zero"}
+              </h2>
+              <p className="mt-1 text-[12.5px] text-muted-foreground leading-relaxed max-w-[640px]">
+                {hasResults
+                  ? "Select a hire from the left to see their checklist, owner badges, and progress. Owner-gated checkboxes make sure each task lands with the right person."
+                  : "No active onboarding flows right now. Auto-provision runs on every sign-in, and you can manually spawn one for any user via the button above."}
+              </p>
+            </div>
+          </div>
+          {isAdmin && !hasResults && (
+            <button
+              type="button"
+              onClick={onProvision}
+              className="inline-flex items-center gap-1.5 rounded-md bg-primary px-3.5 py-2 text-[12px] font-semibold text-primary-foreground hover:bg-primary/90 transition-colors shadow-sm shrink-0"
+            >
+              <Sparkles className="h-3.5 w-3.5" />
+              Provision onboarding
+            </button>
+          )}
+        </div>
+      </div>
+
+      {/* Ghost preview — what a populated checklist would look like */}
+      <div className="flex-1 min-h-0 overflow-y-auto px-8 py-7">
+        <div className="max-w-[1100px] mx-auto">
+          <div className="flex items-center gap-2 mb-3">
+            <div className="h-px flex-1 bg-border/40" />
+            <span className="text-[10px] uppercase tracking-[0.14em] text-muted-foreground/70 font-semibold">
+              Preview · what a checklist looks like
+            </span>
+            <div className="h-px flex-1 bg-border/40" />
+          </div>
+
+          <ul className="space-y-1.5 opacity-50 pointer-events-none select-none">
+            {ghostTasks.map((t, i) => (
+              <li
+                key={i}
+                className="flex items-center gap-3 rounded-lg border border-border/50 bg-card/30 px-4 py-3"
+              >
+                <span
+                  aria-hidden
+                  className="h-4 w-4 rounded-md border border-border/60 bg-background shrink-0"
+                />
+                <span className="text-[10px] tabular-nums text-muted-foreground/60 font-mono w-6 shrink-0">
+                  {String(i + 1).padStart(2, "0")}
+                </span>
+                <span className="flex-1 min-w-0 text-[12.5px] font-medium text-foreground/80 truncate">
+                  {t.label}
+                </span>
+                <span
+                  className={[
+                    "shrink-0 rounded-md px-2 py-0.5 text-[10px] uppercase tracking-wider font-semibold border",
+                    t.owner === "employee"
+                      ? "bg-primary/10 text-primary border-primary/30"
+                      : "bg-muted text-muted-foreground border-border",
+                  ].join(" ")}
+                >
+                  {t.owner}
+                </span>
+              </li>
+            ))}
+          </ul>
+
+          <p className="mt-4 text-center text-[11px] text-muted-foreground/60">
+            {hasResults
+              ? "Click a hire on the left to load their real checklist."
+              : "When a hire signs in, their personalized checklist replaces this preview."}
+          </p>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 // ── Inbox-style header helpers ──────────────────────────
 
