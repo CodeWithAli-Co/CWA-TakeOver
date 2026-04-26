@@ -82,6 +82,11 @@ ANTI-LOOP RULES — VIOLATING THESE STRANDS THE OPERATOR:
 - "Could you import X here" / "use it in Y" → ONE modify_file on Y.
   The brief says "add an import for X from <path> and render <X />
   in the right spot." That's the entire task. No more lookups.
+- The user message includes a "Recent file activity" block listing
+  paths from your PREVIOUS turn. ALWAYS scan it before calling
+  find_file. If the path you need is already there, USE IT
+  IMMEDIATELY — do not re-discover it. Re-finding paths that were
+  already surfaced is the #1 cause of stranded runs.
 - If the operator's previous turn already had you find a file and
   you didn't end up editing it, that file is STILL in scope — don't
   re-find it just because a new turn started. Reuse the path.
@@ -163,6 +168,79 @@ function projectPreamble(project: CodegenProject | null): string {
   return parts.join("\n");
 }
 
+/** Pull a compact summary of recent file activity from the Mind Map
+ *  graph store and surface it to Claude as "stuff that JUST happened."
+ *
+ *  Why this matters: every runAgent call gets a fresh `messages` array,
+ *  so without this preamble the agent has no memory of which file it
+ *  just generated, where the home page lives, etc. The result is
+ *  redundant find_file calls on every follow-up turn and "ran out of
+ *  reasoning steps" stalls.
+ *
+ *  Strategy: walk the most recent 2-3 sessions (current run is empty
+ *  at this point), collect file events, dedupe by path keeping the
+ *  latest op, sort chronologically, cap at 12 lines to keep the
+ *  prompt lean. Write/modify get top billing because those are the
+ *  paths the operator most likely wants to reuse. */
+function buildRecentContext(): string {
+  let state;
+  try {
+    state = axonGraph.getState();
+  } catch {
+    return "";
+  }
+  if (!state || !state.sessions || state.sessions.length === 0) return "";
+
+  // Skip the session that's about to be created — look at the prior 2-3.
+  // The current session is opened by startSession AFTER buildRecentContext
+  // is called, so all existing sessions are valid history.
+  const recent = state.sessions.slice(-3);
+  if (recent.length === 0) return "";
+
+  type FileMemo = { path: string; op: string; when: number };
+  const byPath = new Map<string, FileMemo>();
+  for (const s of recent) {
+    for (const n of s.nodes) {
+      if (n.kind === "file" && n.filePath && n.fileOp) {
+        const prev = byPath.get(n.filePath);
+        if (!prev || prev.when < n.createdAt) {
+          byPath.set(n.filePath, {
+            path: n.filePath,
+            op: n.fileOp,
+            when: n.createdAt,
+          });
+        }
+      }
+    }
+  }
+  if (byPath.size === 0) return "";
+
+  const entries = Array.from(byPath.values()).sort((a, b) => a.when - b.when);
+  const tail = entries.slice(-12);
+
+  // Group by op so the agent can scan quickly.
+  const byOp: Record<string, string[]> = {};
+  for (const e of tail) {
+    (byOp[e.op] ||= []).push(e.path);
+  }
+
+  const lines: string[] = [];
+  // Surface writes / modifies first — these are the highest-signal entries.
+  for (const op of ["write", "modify", "find", "read", "delete"]) {
+    if (byOp[op]) {
+      lines.push(`  ${op}:`);
+      for (const p of byOp[op]) lines.push(`    - ${p}`);
+    }
+  }
+  if (lines.length === 0) return "";
+
+  return [
+    "Recent file activity (from your previous turn — REUSE these paths,",
+    "do NOT call find_file on anything that's already listed below):",
+    ...lines,
+  ].join("\n");
+}
+
 export async function runAgent(opts: AgentRunOpts): Promise<AgentRunResult> {
   const { goal, ctx, project, maxIters = AGENT_MAX_ITER, onProgress, onAction, narrate = true } = opts;
   if (!ANTHROPIC_API_KEY) {
@@ -182,10 +260,12 @@ export async function runAgent(opts: AgentRunOpts): Promise<AgentRunResult> {
       ]
     : tools;
 
+  const recentContext = buildRecentContext();
+  const contextBlock = recentContext ? `\n\n${recentContext}` : "";
   const messages: AnthropicMessage[] = [
     {
       role: "user",
-      content: `${projectPreamble(project)}\n\nOperator's goal:\n"""${goal}"""\n\nMake it happen. Use tools. Stop when it's done with a short spoken summary.`,
+      content: `${projectPreamble(project)}${contextBlock}\n\nOperator's goal:\n"""${goal}"""\n\nMake it happen. Use tools. Stop when it's done with a short spoken summary.`,
     },
   ];
 
