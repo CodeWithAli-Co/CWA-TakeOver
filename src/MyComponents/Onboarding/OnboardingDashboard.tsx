@@ -25,6 +25,7 @@ import {
 import supabase from "@/MyComponents/supabase";
 import { ActiveUser } from "@/stores/query";
 import { ProvisionOnboarding } from "./ProvisionOnboarding";
+import { TemplateManager } from "./TemplateManager";
 import { resetAllWelcomeFlags } from "./onboardingDebug";
 
 // ── Types ──────────────────────────────────────────────────────
@@ -90,6 +91,7 @@ export function OnboardingDashboard() {
   const [filterStatus, setFilterStatus] = useState<OnboardingStatus | "all">("active");
   const [searchQuery, setSearchQuery] = useState("");
   const [showProvision, setShowProvision] = useState(false);
+  const [activeTab, setActiveTab] = useState<"instances" | "templates">("instances");
 
   // Fetch instances (RLS handles the employee vs admin filtering).
   useEffect(() => {
@@ -216,6 +218,27 @@ export function OnboardingDashboard() {
         )}
       </header>
 
+      {isAdmin && (
+        <nav className="flex items-center gap-1 border-b border-border/40 px-6 py-1.5 text-[11.5px]">
+          <button
+            type="button"
+            onClick={() => setActiveTab("instances")}
+            data-active={activeTab === "instances"}
+            className="rounded-sm px-2.5 py-1 font-medium text-muted-foreground hover:text-foreground data-[active=true]:bg-muted/60 data-[active=true]:text-foreground"
+          >
+            Instances
+          </button>
+          <button
+            type="button"
+            onClick={() => setActiveTab("templates")}
+            data-active={activeTab === "templates"}
+            className="rounded-sm px-2.5 py-1 font-medium text-muted-foreground hover:text-foreground data-[active=true]:bg-muted/60 data-[active=true]:text-foreground"
+          >
+            Templates
+          </button>
+        </nav>
+      )}
+
       {showProvision && (
         <ProvisionOnboarding onClose={() => setShowProvision(false)} />
       )}
@@ -233,6 +256,9 @@ export function OnboardingDashboard() {
         </div>
       )}
 
+      {activeTab === "templates" && isAdmin ? (
+        <TemplateManager />
+      ) : (
       <div className="flex flex-1 min-h-0">
         {/* Left pane — instance list */}
         <aside className="flex w-[320px] flex-col border-r border-border/50 bg-card/30">
@@ -363,6 +389,7 @@ export function OnboardingDashboard() {
           )}
         </main>
       </div>
+      )}
     </div>
   );
 }
