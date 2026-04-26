@@ -3,12 +3,9 @@
 // ───────────────────────────────────────────────────────────────────
 
 import { useEffect, useRef, useState } from "react";
-import { useLocation } from "@tanstack/react-router";
 import { useAxon } from "../AxonProvider";
-import { useCompanyFilter } from "@/stores/store";
 import { ANTHROPIC_API_KEY } from "../config";
 import { AxonSettingsPane } from "./AxonSettings";
-import { quicksFor } from "./quickCommandsMap";
 import { listAudit, type AuditEntry } from "../engine/auditLog";
 import { MindMap } from "./MindMap";
 
@@ -53,8 +50,6 @@ export function CommandPanel() {
     settings,
     updateSettings,
   } = useAxon();
-  const { activeCompany } = useCompanyFilter();
-  const loc = useLocation();
 
   const [tab, setTab] = useState<Tab>("conversation");
   const [draft, setDraft] = useState("");
@@ -86,8 +81,6 @@ export function CommandPanel() {
     setDraft("");
     submitCommand(t, "text");
   };
-
-  const quicks = quicksFor(loc.pathname, activeCompany);
 
   return (
     <>
@@ -303,21 +296,6 @@ export function CommandPanel() {
 
         {tab === "conversation" && (
           <>
-            <div className="axon-quickrow">
-              <div className="axon-quickrow-label">
-                Quick commands · {loc.pathname}
-              </div>
-              {quicks.map((q) => (
-                <button
-                  key={q}
-                  className="axon-quickchip"
-                  onClick={() => submitCommand(q, "text")}
-                >
-                  {q}
-                </button>
-              ))}
-            </div>
-
             <div className="axon-composer">
               <button
                 className="axon-btn axon-btn-icon"
