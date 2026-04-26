@@ -99,21 +99,36 @@ export function CommandPanel() {
     )}
     <aside className="axon-panel" data-open={panelOpen} aria-hidden={!panelOpen}>
       <header className="axon-panel-header">
-        <div className="axon-panel-title">
-          <span className="axon-status-dot" data-state={status} />
-          <strong>AXON</strong>
-          <span style={{ color: "var(--axon-muted)", fontWeight: 500 }}>
-            {STATUS_LABEL[status] ?? status}
-          </span>
+        {/* Row 1 — identity (title + status), voice chip, close button */}
+        <div>
+          <div className="axon-panel-title">
+            <span className="axon-status-dot" data-state={status} />
+            <strong>AXON</strong>
+            <span style={{ color: "var(--axon-muted)", fontWeight: 500 }}>
+              {STATUS_LABEL[status] ?? status}
+            </span>
+          </div>
+          <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+            <span className="axon-voicepill" data-state={voiceState}>
+              <span
+                className="axon-status-dot"
+                data-state={voiceState === "armed" ? "listening" : "idle"}
+              />
+              {VOICE_LABEL[voiceState] ?? voiceState}
+            </span>
+            <button
+              className="axon-btn axon-btn--close"
+              onClick={closePanel}
+              aria-label="Close"
+              title="Close panel"
+            >
+              ×
+            </button>
+          </div>
         </div>
-        <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-          <span className="axon-voicepill" data-state={voiceState}>
-            <span
-              className="axon-status-dot"
-              data-state={voiceState === "armed" ? "listening" : "idle"}
-            />
-            {VOICE_LABEL[voiceState] ?? voiceState}
-          </span>
+
+        {/* Row 2 — toggle pills + transient actions */}
+        <div>
           {/* Call-mode toggle — click flips the flag locally. Voice-wise
               the operator can also say "start a call" / "hang up". */}
           <button
@@ -121,15 +136,7 @@ export function CommandPanel() {
             onClick={() => setCallMode(!callMode)}
             title={callMode ? "Exit call mode" : "Enter call mode"}
             data-active={callMode}
-            style={
-              callMode
-                ? {
-                    background: "rgba(239,68,68,0.15)",
-                    borderColor: "rgba(239,68,68,0.5)",
-                    color: "#fca5a5",
-                  }
-                : undefined
-            }
+            style={callMode ? { color: "rgb(248, 113, 113)" } : undefined}
           >
             {callMode ? "📞 On Call" : "📞 Call"}
           </button>
@@ -148,17 +155,9 @@ export function CommandPanel() {
                 : "Enable simulation mode (dry-run all mutations)"
             }
             data-active={simulationMode}
-            style={
-              simulationMode
-                ? {
-                    background: "rgba(252, 211, 77, 0.15)",
-                    borderColor: "rgba(252, 211, 77, 0.55)",
-                    color: "#fde68a",
-                  }
-                : undefined
-            }
+            style={simulationMode ? { color: "rgb(252, 211, 77)" } : undefined}
           >
-            {simulationMode ? "🟡 SIM" : "SIM"}
+            SIM
           </button>
           {/* Continuous-vision toggle. When ON, Axon takes a screenshot
               every ~30s and posts a 1-sentence read of the screen as
@@ -176,15 +175,11 @@ export function CommandPanel() {
             data-active={settings.continuousVision}
             style={
               settings.continuousVision
-                ? {
-                    background: "rgba(56, 189, 248, 0.15)",
-                    borderColor: "rgba(56, 189, 248, 0.55)",
-                    color: "#bae6fd",
-                  }
+                ? { color: "rgb(56, 189, 248)" }
                 : undefined
             }
           >
-            {settings.continuousVision ? "👁 SEEING" : "👁 EYES"}
+            👁 {settings.continuousVision ? "Seeing" : "Eyes"}
           </button>
           {/* FS watcher — when ON, Axon notices when you edit files
               outside the agent (saving in VS Code, pulling a branch).
@@ -201,17 +196,9 @@ export function CommandPanel() {
                 : "Enable filesystem watcher (active project)"
             }
             data-active={settings.fsWatcher}
-            style={
-              settings.fsWatcher
-                ? {
-                    background: "rgba(134, 239, 172, 0.15)",
-                    borderColor: "rgba(134, 239, 172, 0.55)",
-                    color: "#bbf7d0",
-                  }
-                : undefined
-            }
+            style={settings.fsWatcher ? { color: "rgb(134, 239, 172)" } : undefined}
           >
-            {settings.fsWatcher ? "📝 FS" : "📝 FS"}
+            📝 FS
           </button>
           {/* Diary — when ON, every session ends with a markdown
               reflection written to docs/diary/YYYY-MM-DD/. Foundation
@@ -226,26 +213,20 @@ export function CommandPanel() {
                 : "Enable session diary (markdown reflections)"
             }
             data-active={settings.diary}
-            style={
-              settings.diary
-                ? {
-                    background: "rgba(165, 180, 252, 0.15)",
-                    borderColor: "rgba(165, 180, 252, 0.55)",
-                    color: "#c7d2fe",
-                  }
-                : undefined
-            }
+            style={settings.diary ? { color: "rgb(165, 180, 252)" } : undefined}
           >
-            📔 LOG
+            📔 Log
           </button>
+
+          {/* Spacer pushes Stop / Clear to the end of the row so
+              transient actions live separately from persistent toggles. */}
+          <div style={{ flex: 1 }} />
+
           <button className="axon-btn" onClick={interrupt} title="Stop speaking">
             Stop
           </button>
           <button className="axon-btn" onClick={clearConversation} title="Clear session">
             Clear
-          </button>
-          <button className="axon-btn" onClick={closePanel} aria-label="Close">
-            ×
           </button>
         </div>
       </header>

@@ -305,31 +305,58 @@ export function AxonProvider({ children }: { children: React.ReactNode }) {
     return () => stopDiary();
   }, [settings.diary, settings.enabled, activeProjectPath]);
 
-  // CEO auto-enable for continuous vision. We default the setting OFF
-  // for everyone (employees don't need to burn tokens watching a Tasks
-  // page). The CEO is different — he's running the business, vision is
-  // worth the cost. Auto-enable fires ONCE per user (per-supa-id
-  // localStorage flag). If the CEO turns it off afterward, his choice
-  // sticks across reloads — we don't fight him.
+  // CEO auto-enable for continuous vision + FS watcher. Default OFF
+  // for everyone else (employees don't need to burn tokens watching a
+  // Tasks page, and watcher events can be noisy on heavy refactors).
+  // The CEO is different — he's running the business, both signals
+  // are worth the cost. Auto-enable fires ONCE per setting per user
+  // (per-supa-id localStorage flag). If the CEO turns either off
+  // afterward, his choice sticks across reloads — we don't fight him.
   useEffect(() => {
     const supaId = user?.supa_id;
     const role = user?.role;
     if (!supaId || !role) return;
     if (role !== "CEO") return;
-    const flagKey = `cwa-axon-vision-auto-on-v1-${supaId}`;
-    let alreadyAutoEnabled = false;
-    try {
-      alreadyAutoEnabled = window.localStorage.getItem(flagKey) === "1";
-    } catch {
-      /* private mode etc — bail */
-      return;
+
+    type AutoFlag = {
+      key: string;
+      patch: () => Partial<AxonSettings>;
+      already: (s: AxonSettings) => boolean;
+    };
+    const flags: AutoFlag[] = [
+      {
+        key: `cwa-axon-vision-auto-on-v1-${supaId}`,
+        patch: () => ({ continuousVision: true }),
+        already: (s) => s.continuousVision,
+      },
+      {
+        key: `cwa-axon-fswatcher-auto-on-v1-${supaId}`,
+        patch: () => ({ fsWatcher: true }),
+        already: (s) => s.fsWatcher,
+      },
+    ];
+    const toApply: AutoFlag[] = [];
+    for (const f of flags) {
+      let alreadyAutoEnabled = false;
+      try {
+        alreadyAutoEnabled = window.localStorage.getItem(f.key) === "1";
+      } catch {
+        // Private mode etc — bail on this flag.
+        continue;
+      }
+      if (alreadyAutoEnabled) continue;
+      // Stamp first so a re-render of this effect can't double-enable.
+      try { window.localStorage.setItem(f.key, "1"); } catch { /* ignore */ }
+      toApply.push(f);
     }
-    if (alreadyAutoEnabled) return;
-    // Stamp first so a re-render of this effect can't double-enable.
-    try { window.localStorage.setItem(flagKey, "1"); } catch { /* ignore */ }
-    setSettings((prev) =>
-      prev.continuousVision ? prev : { ...prev, continuousVision: true },
-    );
+    if (toApply.length === 0) return;
+    setSettings((prev) => {
+      let next = prev;
+      for (const f of toApply) {
+        if (!f.already(next)) next = { ...next, ...f.patch() };
+      }
+      return next === prev ? prev : next;
+    });
   }, [user?.supa_id, user?.role]);
 
   const callModeRef = useRef(false);

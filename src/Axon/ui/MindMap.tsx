@@ -218,8 +218,17 @@ function nodeBoxDims(
   const fontSize = nodeFontPx(n);
   ctx.font = `500 ${fontSize}px ui-monospace, "JetBrains Mono", "Fira Code", Menlo, Consolas, monospace`;
   const textW = ctx.measureText(nodeBoxLabel(n)).width;
-  const padX = n.kind === "root" || n.kind === "summary" ? 14 : 11;
-  const padY = n.kind === "thought" ? 4 : n.kind === "root" ? 8 : 6;
+  // More breathing room: bumped horizontal padding ~50% across the
+  // board so labels don't kiss the box edge, and vertical padding so
+  // the boxes feel like buttons instead of license plates.
+  const padX =
+    n.kind === "root" || n.kind === "summary"
+      ? 20
+      : n.kind === "thought"
+        ? 14
+        : 16;
+  const padY =
+    n.kind === "thought" ? 7 : n.kind === "root" ? 11 : 9;
   return {
     w: Math.ceil(textW + padX * 2),
     h: Math.ceil(fontSize + padY * 2),
@@ -604,7 +613,11 @@ export function MindMap({ fullScreen = false }: { fullScreen?: boolean }) {
         n.boxH = boxH;
         const x = n.x - boxW / 2;
         const y = n.y - boxH / 2;
-        const radius = 2; // sharp, terminal-window corners
+        // Slight curve — boxes are bigger now so the old hard 2px
+        // corners felt brutal. 4px keeps the terminal-tag vibe but
+        // softens the silhouette enough that a wall of nodes reads
+        // as cards instead of crammed labels.
+        const radius = 4;
 
         ctx.globalAlpha = intro;
 
