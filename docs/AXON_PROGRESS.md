@@ -605,3 +605,171 @@ Commit: _pending_ (sprint 7)
 ### Shipped
 
 Commit: _pending_ (sprint 8)
+
+### ✅ T8.10 — Multi-agent ensemble (week 4)
+
+- `engine/ensemble.ts` (new) — sequential three-agent pipeline:
+    1. **Architect** — given the goal, returns a JSON plan
+       (approach, steps, files expected, risks). No tools, just a
+       thinking pass. Plan becomes a `plan` node in the Mind Map.
+    2. **Engineer** — runs the existing `runAgent` loop with the
+       plan injected as context. Full tool access. Executes.
+    3. **Critic** — given the Engineer's final summary + the list
+       of files touched, returns a JSON verdict
+       `{ verdict: "ship" | "revise" | "abort", issues, summary }`.
+       Verdict becomes a `critique` node.
+   On `revise`, loops back to the Engineer with the critique
+   appended. Hard cap of 2 revision rounds.
+- `engine/graphStore.ts` — new `critique` node kind + `addCritique`
+  helper. Verdict drives the label ("✓ SHIP" / "↺ REVISE" /
+  "✕ ABORT") and the node state.
+- `actions/ensemble.ts` (new) — `accomplish_with_ensemble({ goal,
+  narrate?, maxRevisions? })` voice action. Description nudges
+  Claude to use it whenever the operator says "ensemble", "with
+  the team", "plan first", "have the critic review", or for goals
+  that warrant double-checking.
+- `actions/index.ts` — registers the new action.
+- `AxonProvider.tsx` — `_bindEnsembleAccessors` reads the active
+  project from settings.
+- `ui/MindMap.tsx` — `critique` nodes render in amber with a
+  "CRITIC" label prefix. Visually distinct from regular Engineer
+  output so the operator can scan a session and see where the
+  reviewer weighed in.
+
+Notes:
+- For v1 the Critic reviews from summary + file list rather than
+  running its own read-only tools — keeps the loop fast and
+  deterministic. Live tool access for the Critic is a future step.
+- If the Architect's JSON fails to parse, the ensemble falls back
+  to a regular agent run rather than refusing the task.
+
+### ✅ T8.11 — Anthropic 429 backoff + retry
+
+The ensemble pipeline (Architect + Engineer loop + Critic) routinely
+spikes past the default 30k input-tokens-per-minute Anthropic ceiling
+on long goals. Crashing the run with a raw 429 stranded the operator
+mid-build.
+
+- `engine/anthropicFetch.ts` (new) — wrapped `fetch` for the
+  Anthropic Messages API. Catches 429s, reads `retry-after` (or
+  falls back to exponential 5s/10s/20s), waits, and retries up to
+  three times. Throws the last 429 only if every retry fails. An
+  `onWait(waitMs, attempt)` callback lets the caller narrate
+  "Rate-limited. Waiting Xs." so the operator hears a status update
+  instead of silence.
+- `engine/agent.ts` — uses `anthropicFetch` for the autonomous
+  loop's main API call. The `onWait` hook fires `ctx.speak(...)`
+  during the wait so the Orb keeps talking.
+- `engine/ensemble.ts` — uses `anthropicFetch` for both Architect
+  and Critic calls. Phase tag ("Architect: rate-limited..." /
+  "Critic: rate-limited...") so the operator can hear which agent
+  is paused.
+- Brain.ts (streaming) is handled separately at its own surface
+  (different request shape, already has a catch path).
+
+### ✅ T8.12 — Three-color + animation system for ensemble roles
+
+Visual identity for the three ensemble agents so the operator can
+read the phase at a glance on the Mind Map canvas:
+
+- **Architect** — indigo (`rgb(129, 140, 248)`). Slow, deliberate
+  breathing pulse (~1.6s cycle) plus an animated dashed top edge
+  that scrolls left→right like blueprint paper.
+- **Engineer** — sky (`rgb(56, 189, 248)`). Quick scan-tick pulse
+  while running plus a bright bottom-edge scanner bar that sweeps
+  L→R like a live cursor. Settles to nothing when idle.
+- **Critic** — verdict-tinted: green (ship), amber (revise), or
+  rose (abort). Bright flash burst on appear (600ms) then a faint
+  steady glow. Pop-in verdict stamp on the right edge: ✓ / ↺ / ✕,
+  scaled with a 220ms animation.
+
+Detection is implicit: an ensemble session is identified by its
+prompt prefix `[ensemble]` (set in `runEnsemble`), so no schema
+changes were needed — the renderer infers role from `kind` plus
+session prompt.
+
+- `ui/MindMap.tsx` — `ensembleRole()`, `roleColor()`,
+  `criticVerdictColor()` helpers. Per-role glow signature in the
+  draw loop and per-role decoration pass (architect dashes,
+  engineer scanner, critic stamp). Tooltip header now reads
+  "ARCHITECT" / "ENGINEER" / "CRITIC" inside an ensemble session.
+- `axon.css` — three role chips in the header (`ARCH` / `ENG` /
+  `CRIT`) that only appear during an ensemble session, each
+  pulsing in its own color and rhythm. Architect at 2.4s, Engineer
+  at 1.2s, Critic at 3s — cadence mirrors the canvas animations.
+
+### ✅ T8.13 — Orb visual modes for ensemble agents
+
+The Mind Map showed which agent was active, but the Orb was still
+defaulting to its standard idle/thinking/coding palette. Operators
+glancing at the Orb couldn't tell which ensemble phase was running.
+
+- `engine/ensemblePhase.ts` (new) — module-level signal + pub-sub for
+  the active ensemble agent. Same pattern as `simulationFlag.ts`.
+  Engine code calls `setEnsemblePhase(...)` as it transitions; UI
+  surfaces subscribe.
+- `engine/ensemble.ts` — sets the phase to "architect" → "engineer" →
+  "critic" at each transition, and back to null on every exit path.
+- `AxonProvider.tsx` — subscribes to the signal, mirrors it into
+  React state, exposes `ensemblePhase` on the context value.
+- `types.ts` — `ensemblePhase` added to `AxonContextValue`.
+- `ui/Orb.tsx` — three new color modes (indigo / sky / amber) plus
+  three role-specific in-sphere overlays:
+    - **Architect** — blueprint grid + slowly-rotating drafting
+      compass arc + outer quarter-segment tick ring (slow, deliberate).
+    - **Engineer** — top-to-bottom scan line + falling code-stream
+      sparkles + blinking corner cursor + rapid progress arc.
+    - **Critic** — heartbeat ring + balance-scales arcs that gently
+      tilt + judgment crosshair at center.
+  Wave speed and intensity pulse rate are role-specific too —
+  Architect breathes (~0.9Hz), Engineer ticks (~5.5Hz), Critic
+  pulses (~2Hz). Ensemble phase wins over the generic
+  thinking/coding states.
+- The status badge under the Orb now reads "Architect…" /
+  "Engineer…" / "Critic…" with role-tinted background, border, and
+  pulse duration matching the Orb's cadence.
+
+### ✅ T8.14 — Mind Map breathing room
+
+Operator screenshot showed nodes overlapping each other and the
+GOAL center after 8+ siblings spawned. Force-directed layout was
+too tight.
+
+- `ui/MindMap.tsx` `LAYOUT_PARAMS`:
+    - `attraction` 0.04 → 0.025 (weaker spring pull).
+    - `repulsion` 1800 → 4200 (~2.3× harder push between every pair).
+    - `minDistance` 64 → 110 (visual gap floor).
+- New anti-overlap shove using actual rendered box dimensions plus
+  a 16px gutter — when two boxes touch, an extra outward impulse
+  separates them so labels never sit on top of each other.
+- Soft bounds use per-node half-extents so labeled boxes can't
+  collide with the canvas edge or the header bar.
+
+### ✅ T8.15 — Live coder panel (typewriter playback)
+
+Diff overlay only popped after the file was finalized, often for a
+split second between turns. Operators wanted to SEE Axon coding,
+not just inspect the result.
+
+- `ui/DiffOverlay.tsx`:
+    - Detects in-flight coding tools (`generate_file`, `modify_file`,
+      `scaffold_feature`, `add_page`) by watching for `state ==
+      "running"` on tool nodes — pops the panel immediately,
+      before any file content is even ready.
+    - New `LiveCoderBody` sub-component — once the file's `after`
+      content lands, plays a typewriter animation revealing lines
+      1 → N at ~22ms each (capped to a 6s budget so a 1000-line
+      file finishes quickly). Gutter-numbered lines flash blue as
+      they appear, with a blinking cursor on the active line.
+    - Auto-scrolls to the latest revealed line.
+    - When the typewriter finishes, falls through to the existing
+      unified diff view (so the operator can scroll and review).
+    - Auto-hide bumped 7s → 14s — long enough to actually read.
+- `axon.css`:
+    - Width bumped from 460px to `min(720px, calc(100vw - 48px))`
+      so 80–120 char lines don't wrap. Min height 240px.
+    - New `.axon-live-coder*` class set — sky-blue status bar with
+      pulsing dot, mono stream with 44px line-number gutter, line
+      reveal animation (`axonLiveLineIn`), blinking cursor
+      (`axonLiveCursorBlink`).
+

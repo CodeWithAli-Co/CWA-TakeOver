@@ -16,6 +16,10 @@ import { useLocation, useNavigate } from "@tanstack/react-router";
 import { ActiveUser } from "@/stores/query";
 import { useCompanyFilter, type CompanyFilter } from "@/stores/store";
 import { setSimulationModeFlag } from "./engine/simulationFlag";
+import {
+  subscribeEnsemblePhase,
+  type EnsemblePhase,
+} from "./engine/ensemblePhase";
 
 import type {
   ActionContext,
@@ -49,6 +53,7 @@ import { _bindVoiceAccessors } from "./actions/voice";
 import { _bindCodegenAccessors } from "./actions/code";
 import { _bindProjectAccessors } from "./actions/projects";
 import { _bindAgentAccessors } from "./actions/agent";
+import { _bindEnsembleAccessors } from "./actions/ensemble";
 import { runTurn } from "./engine/brain";
 import { handleDirectDisrespect } from "./engine/loyaltyMonitor";
 import {
@@ -208,6 +213,15 @@ export function AxonProvider({ children }: { children: React.ReactNode }) {
   const setSimulationMode = useCallback((on: boolean) => {
     setSimulationModeState(on);
     setSimulationModeFlag(on);
+  }, []);
+
+  // Ensemble phase — set by the engine as it cycles through Architect →
+  // Engineer → Critic. We mirror the module-level signal into React
+  // state so the Orb (and any other reactive surface) can render
+  // role-specific colors and animations live.
+  const [ensemblePhase, setEnsemblePhaseState] = useState<EnsemblePhase>(null);
+  useEffect(() => {
+    return subscribeEnsemblePhase((p) => setEnsemblePhaseState(p));
   }, []);
   const callModeRef = useRef(false);
   const setCallMode = useCallback((on: boolean) => {
@@ -1002,6 +1016,10 @@ export function AxonProvider({ children }: { children: React.ReactNode }) {
       (patch) => updateSettings(patch),
     );
     _bindAgentAccessors(() => settingsRef.current);
+    _bindEnsembleAccessors(() => {
+      const s = settingsRef.current;
+      return s.projects.find((p) => p.id === s.activeProjectId) ?? null;
+    });
   }, [updateSettings]);
 
   const startListening = useCallback(() => voiceInRef.current?.pushToTalk(), []);
@@ -1054,6 +1072,7 @@ export function AxonProvider({ children }: { children: React.ReactNode }) {
       setCallMode,
       simulationMode,
       setSimulationMode,
+      ensemblePhase,
     }),
     [
       status,
@@ -1079,6 +1098,7 @@ export function AxonProvider({ children }: { children: React.ReactNode }) {
       setCallMode,
       simulationMode,
       setSimulationMode,
+      ensemblePhase,
     ]
   );
 

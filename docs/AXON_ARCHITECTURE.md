@@ -129,6 +129,22 @@ real time and inspect every file edit.
   keep open; window.__axonOpenDiff lets MindMap clicks open a
   specific node's diff.
 
+### Ensemble layer (Architect / Engineer / Critic)
+
+For non-trivial multi-file goals, Axon can run a three-agent
+pipeline instead of the single-agent loop:
+
+- `engine/ensemble.ts` — `runEnsemble({ goal, ctx, project })`.
+  Sequential calls:
+    1. ARCHITECT — JSON plan, no tools.
+    2. ENGINEER — `runAgent` with plan injected.
+    3. CRITIC — JSON verdict (ship / revise / abort).
+  On revise, loops back to the Engineer with the critique appended;
+  capped at 2 revision rounds.
+- `actions/ensemble.ts` — `accomplish_with_ensemble` voice action.
+- Mind Map renders the Architect's plan as a `plan` node and the
+  Critic's verdict as a `critique` node (amber, "CRITIC" prefix).
+
 ## 3. How a command flows (end-to-end)
 
 

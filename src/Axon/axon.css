@@ -1027,6 +1027,55 @@
   color: rgb(248, 113, 113);
 }
 
+/* Ensemble role legend — three tiny chips that show up only when an
+   ensemble session is running. Each chip glows in its role color so
+   the operator can map nodes on the canvas to the agent that made them. */
+.axon-mindmap-ensemble-legend {
+  display: inline-flex !important;
+  align-items: center;
+  gap: 4px;
+  padding: 0 8px 0 0 !important;
+  margin-right: 4px;
+  border-right: 1px solid rgba(255, 255, 255, 0.08);
+}
+.axon-mindmap-ensemble-legend::before {
+  display: none !important;
+}
+.axon-mindmap-role-chip {
+  font-family: var(--axon-mono);
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  padding: 2px 5px;
+  border-radius: 2px;
+  color: var(--role-color);
+  background: color-mix(in srgb, var(--role-color) 12%, transparent);
+  border: 1px solid color-mix(in srgb, var(--role-color) 45%, transparent);
+  text-shadow: 0 0 6px color-mix(in srgb, var(--role-color) 60%, transparent);
+  animation: axonRoleChipPulse 2.4s ease-in-out infinite;
+}
+.axon-mindmap-role-chip:nth-child(1) {
+  animation-delay: 0s;
+}
+.axon-mindmap-role-chip:nth-child(2) {
+  animation-delay: 0.4s;
+  animation-duration: 1.2s; /* engineer ticks faster */
+}
+.axon-mindmap-role-chip:nth-child(3) {
+  animation-delay: 0.8s;
+  animation-duration: 3s; /* critic exhales slowly */
+}
+@keyframes axonRoleChipPulse {
+  0%, 100% {
+    box-shadow: 0 0 0 0 color-mix(in srgb, var(--role-color) 0%, transparent);
+    transform: translateY(0);
+  }
+  50% {
+    box-shadow: 0 0 8px 0 color-mix(in srgb, var(--role-color) 35%, transparent);
+    transform: translateY(-0.5px);
+  }
+}
+
 .axon-mindmap-canvas {
   position: relative;
   z-index: 1;
@@ -1286,9 +1335,12 @@
   position: fixed;
   top: 24px;
   right: 24px;
-  width: 460px;
+  /* Wider — operators want enough room to read 80–120 char lines
+     without horizontal scroll. */
+  width: min(720px, calc(100vw - 48px));
   max-width: calc(100vw - 48px);
-  max-height: 70vh;
+  max-height: min(82vh, 920px);
+  min-height: 240px;
   z-index: 9998; /* under the orb (9999), above everything else */
   display: flex;
   flex-direction: column;
@@ -1448,11 +1500,102 @@
   overflow-x: auto;
   padding: 4px 0;
   font-family: var(--axon-mono);
-  font-size: 11.5px;
+  font-size: 12px;
   line-height: 1.55;
   color: rgba(255, 255, 255, 0.92);
   scrollbar-width: thin;
   scrollbar-color: rgba(255, 255, 255, 0.18) transparent;
+}
+
+/* ── Live coder mode — pops the moment Axon starts a write/modify
+   and shows a fast typewriter playback as code "appears". ───────── */
+.axon-live-coder {
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  background:
+    linear-gradient(180deg, rgba(0, 0, 0, 0.35), rgba(0, 0, 0, 0.55));
+}
+.axon-live-coder-status {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 14px;
+  font-family: var(--axon-mono);
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  color: rgba(220, 240, 255, 0.85);
+  background: rgba(56, 189, 248, 0.08);
+  border-bottom: 1px solid rgba(56, 189, 248, 0.18);
+  text-transform: uppercase;
+}
+.axon-live-coder-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: rgb(56, 189, 248);
+  box-shadow: 0 0 8px rgba(56, 189, 248, 0.85);
+  animation: axonLiveDotPulse 0.85s ease-in-out infinite;
+}
+@keyframes axonLiveDotPulse {
+  0%, 100% { transform: scale(1); opacity: 1; }
+  50%      { transform: scale(0.7); opacity: 0.55; }
+}
+.axon-live-coder-stream {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: auto;
+  padding: 10px 0 14px;
+  font-family: var(--axon-mono);
+  font-size: 12px;
+  line-height: 1.55;
+  color: rgba(225, 240, 255, 0.95);
+  scrollbar-width: thin;
+  scrollbar-color: rgba(56, 189, 248, 0.35) transparent;
+}
+.axon-live-coder-stream::-webkit-scrollbar { width: 8px; height: 8px; }
+.axon-live-coder-stream::-webkit-scrollbar-thumb {
+  background: rgba(56, 189, 248, 0.35);
+  border-radius: 4px;
+}
+.axon-live-coder-line {
+  display: grid;
+  grid-template-columns: 44px 1fr;
+  align-items: baseline;
+  padding: 0 12px 0 0;
+  white-space: pre;
+  animation: axonLiveLineIn 120ms ease-out both;
+}
+@keyframes axonLiveLineIn {
+  from { opacity: 0; transform: translateY(2px); background: rgba(56, 189, 248, 0.10); }
+  to   { opacity: 1; transform: translateY(0);   background: transparent; }
+}
+.axon-live-coder-ln {
+  text-align: right;
+  padding-right: 12px;
+  color: rgba(120, 160, 255, 0.45);
+  font-variant-numeric: tabular-nums;
+  user-select: none;
+}
+.axon-live-coder-text {
+  color: rgba(230, 245, 255, 0.95);
+}
+.axon-live-coder-cursor {
+  display: inline-block;
+  width: 7px;
+  height: 1.05em;
+  margin-left: 1px;
+  background: rgb(56, 189, 248);
+  vertical-align: -2px;
+  animation: axonLiveCursorBlink 0.55s steps(1) infinite;
+  box-shadow: 0 0 6px rgba(56, 189, 248, 0.65);
+}
+@keyframes axonLiveCursorBlink {
+  0%, 50%   { opacity: 1; }
+  50.01%, 100% { opacity: 0; }
 }
 .axon-diff-body::-webkit-scrollbar {
   width: 8px;

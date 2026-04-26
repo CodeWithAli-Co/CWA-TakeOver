@@ -473,3 +473,22 @@ auto-pops so you can correct it in one click — the picker also
 extends Tauri's runtime scope to the chosen folder, so subsequent
 `generate_file` calls work without "forbidden path" errors.
 
+### Ensemble mode — Architect / Engineer / Critic
+
+For non-trivial work, ask Axon to use the ensemble:
+
+- "Use the ensemble to build a billing page"
+- "Plan first, then build the auth flow"
+- "Have the critic review when you're done"
+
+Three Claude calls run in sequence:
+1. **Architect** outputs a JSON plan (approach, steps, files expected).
+   You see it as a `plan` node in the Mind Map before any code is written.
+2. **Engineer** executes the plan via the regular agent loop.
+3. **Critic** reviews and returns a verdict — `ship`, `revise`, or `abort`.
+   On `revise`, the Engineer runs again with the critique. Up to 2 revisions.
+
+Best for multi-file features, refactors, anything you'd want a
+second pair of eyes on. Single-step changes are still better
+served by the regular `accomplish_goal` action.
+

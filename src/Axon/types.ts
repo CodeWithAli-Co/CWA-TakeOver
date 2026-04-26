@@ -356,4 +356,9 @@ export interface AxonContextValue {
    *  real run. Toggled by the operator via a Command Panel button. */
   simulationMode: boolean;
   setSimulationMode: (on: boolean) => void;
+
+  /** Live ensemble phase, set by the engine while runEnsemble is
+   *  active. Drives the Orb's role-specific visual mode (Architect /
+   *  Engineer / Critic). null when no ensemble is running. */
+  ensemblePhase: "architect" | "engineer" | "critic" | null;
 }

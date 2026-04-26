@@ -33,6 +33,7 @@ import {
 import { buildToolDefinitions } from "../actions/registry";
 import { executeAction } from "./executor";
 import { axonGraph } from "./graphStore";
+import { anthropicFetch } from "./anthropicFetch";
 import { getSimulationMode } from "./simulationFlag";
 
 // Real coding tasks (multi-file features, refactors, scaffolds, plus
@@ -296,7 +297,7 @@ export async function runAgent(opts: AgentRunOpts): Promise<AgentRunResult> {
       messages,
     };
 
-    const res = await fetch(ANTHROPIC_API_URL, {
+    const res = await anthropicFetch(ANTHROPIC_API_URL, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -305,6 +306,15 @@ export async function runAgent(opts: AgentRunOpts): Promise<AgentRunResult> {
         "anthropic-dangerous-direct-browser-access": "true",
       },
       body: JSON.stringify(body),
+      onWait: (waitMs, attempt) => {
+        const secs = Math.round(waitMs / 1000);
+        const msg = `Rate-limited. Waiting ${secs}s before retry ${attempt}.`;
+        // eslint-disable-next-line no-console
+        console.warn(`[AXON agent] ${msg}`);
+        if (narrate) {
+          try { ctx.speak(msg); } catch { /* ignore */ }
+        }
+      },
     });
 
     if (!res.ok) {

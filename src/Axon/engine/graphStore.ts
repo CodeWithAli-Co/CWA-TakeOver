@@ -36,7 +36,8 @@ export type GraphNodeKind =
   | "file"
   | "thought"
   | "error"
-  | "summary";
+  | "summary"
+  | "critique";
 
 export type FileOp = "find" | "search" | "read" | "list" | "write" | "modify" | "delete";
 
@@ -306,7 +307,36 @@ export const axonGraph = {
     return node;
   },
 
-  /** Append a thought beat — Claude's inter-turn text content. */
+  /** Append a critic verdict — Critic agent's review of Engineer\'s work. */
+  addCritique(text: string, verdict: "ship" | "revise" | "abort"): GraphNode | null {
+    const s = getCurrentSession();
+    if (!s) return null;
+    const node: GraphNode = {
+      id: nodeId("critique"),
+      kind: "critique",
+      label:
+        verdict === "ship" ? "✓ SHIP"
+        : verdict === "revise" ? "↺ REVISE"
+        : "✕ ABORT",
+      detail: text,
+      createdAt: Date.now(),
+      state: verdict === "abort" ? "error" : "done",
+    };
+    const parent = s.activeNodeId ?? s.nodes[0]?.id;
+    s.nodes.push(node);
+    if (parent) {
+      s.edges.push({
+        id: edgeId(parent, node.id),
+        from: parent,
+        to: node.id,
+        createdAt: Date.now(),
+      });
+    }
+    emit();
+    return node;
+  },
+
+  /** Append a thought beat — Claude\'s inter-turn text content. */
   addThought(text: string): GraphNode | null {
     const s = getCurrentSession();
     if (!s) return null;

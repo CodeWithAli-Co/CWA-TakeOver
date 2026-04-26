@@ -68,6 +68,7 @@ const KIND_COLOR: Record<GraphNodeKind, string> = {
   thought: "rgb(212, 212, 216)", // zinc-300
   error: "rgb(248, 113, 113)", // rose-400
   summary: "rgb(134, 239, 172)", // emerald-300
+  critique: "rgb(252, 211, 77)", // amber-300 — Critic verdict node
 };
 
 const FILE_OP_COLOR: Record<FileOp, string> = {
@@ -83,6 +84,75 @@ const FILE_OP_COLOR: Record<FileOp, string> = {
 function nodeColor(n: GraphNode): string {
   if (n.kind === "file" && n.fileOp) return FILE_OP_COLOR[n.fileOp];
   return KIND_COLOR[n.kind];
+}
+
+// ── Ensemble-role visual identity ───────────────────────────────────
+//
+// When an ensemble session is running, its nodes belong to one of
+// three "roles": Architect (planning), Engineer (executing), Critic
+// (judging). Each role gets a distinct color + animation so the
+// operator can read the phase at a glance.
+//
+// Role detection rules (no graphStore schema change needed):
+//   • Session is ensemble  ↔  prompt starts with "[ensemble]"
+//   • Architect            ↔  kind === "plan"
+//   • Critic               ↔  kind === "critique"  (color tinted by verdict)
+//   • Engineer             ↔  any other non-root/non-summary node IN an
+//                              ensemble session (tools, files, thoughts)
+//
+// In a non-ensemble session, every node falls back to its standard
+// kind color — the role overrides only kick in inside an ensemble.
+
+type EnsembleRole = "architect" | "engineer" | "critic" | null;
+
+const ROLE_COLOR = {
+  // Architect — cool indigo, blueprint feel.
+  architect: "rgb(129, 140, 248)", // indigo-400
+  // Engineer — bright sky, active, "live cursor" feel.
+  engineer: "rgb(56, 189, 248)", // sky-400
+  // Critic — neutral default; verdict-specific overrides below.
+  critic: "rgb(251, 191, 36)", // amber-400
+} as const;
+
+const CRITIC_VERDICT_COLOR = {
+  ship: "rgb(74, 222, 128)", // green-400 — go.
+  revise: "rgb(251, 191, 36)", // amber-400 — needs work.
+  abort: "rgb(248, 113, 113)", // rose-400 — stop.
+} as const;
+
+function isEnsembleSession(s: GraphSession | null | undefined): boolean {
+  return !!s && typeof s.prompt === "string" && s.prompt.startsWith("[ensemble]");
+}
+
+function ensembleRole(n: GraphNode, s: GraphSession | null | undefined): EnsembleRole {
+  if (!isEnsembleSession(s)) return null;
+  if (n.kind === "plan") return "architect";
+  if (n.kind === "critique") return "critic";
+  if (n.kind === "root" || n.kind === "summary") return null;
+  return "engineer";
+}
+
+/** Read the critic's verdict from a critique node's label. The label
+ *  is set by addCritique to one of "✓ SHIP", "↺ REVISE", "✕ ABORT". */
+function criticVerdictColor(n: GraphNode): string {
+  const lbl = (n.label || "").toUpperCase();
+  if (lbl.includes("SHIP")) return CRITIC_VERDICT_COLOR.ship;
+  if (lbl.includes("REVISE")) return CRITIC_VERDICT_COLOR.revise;
+  if (lbl.includes("ABORT")) return CRITIC_VERDICT_COLOR.abort;
+  return ROLE_COLOR.critic;
+}
+
+function roleColor(n: GraphNode, role: EnsembleRole): string | null {
+  if (!role) return null;
+  if (role === "architect") return ROLE_COLOR.architect;
+  if (role === "critic") return criticVerdictColor(n);
+  // engineer — only override for non-default kinds; let file-op tints
+  // (write/modify/etc) keep their meaning, but harmonize tools/thoughts.
+  if (role === "engineer") {
+    if (n.kind === "thought" || n.kind === "tool") return ROLE_COLOR.engineer;
+    return null;
+  }
+  return null;
 }
 
 function nodeRadius(n: GraphNode): number {
@@ -104,6 +174,8 @@ function nodeRadius(n: GraphNode): number {
       return 14;
     case "error":
       return 22;
+    case "critique":
+      return 22;
   }
 }
 
@@ -124,6 +196,7 @@ function nodeBoxLabel(n: GraphNode): string {
   if (n.kind === "plan") return `PLAN  ${trunc(n.label.toUpperCase(), 18)}`;
   if (n.kind === "thought") return trunc(n.label, 24);
   if (n.kind === "error") return `ERR  ${trunc(n.label.toUpperCase(), 18)}`;
+  if (n.kind === "critique") return `CRITIC  ${trunc(n.label, 18)}`;
   return n.label.toUpperCase();
 }
 
@@ -191,10 +264,18 @@ interface LayoutNode extends GraphNode {
 }
 
 const LAYOUT_PARAMS = {
-  attraction: 0.04,
-  repulsion: 1800,
-  minDistance: 64,
-  damping: 0.78,
+  // Bumped from 0.04 → 0.025: weaker spring pull lets edges run longer
+  // before snapping the leaf node back, so groups breathe instead of
+  // pancaking into the parent.
+  attraction: 0.025,
+  // Bumped from 1800 → 4200: ~2.3× harder push between every pair so
+  // labeled boxes (READ / TOOL / FIND / etc.) stop overlapping when
+  // the goal spawns 8+ siblings off the root.
+  repulsion: 4200,
+  // Bumped from 64 → 110: minimum visual gap between nodes; pairs
+  // closer than this get extra outward kick.
+  minDistance: 110,
+  damping: 0.82,
   iterPerFrame: 4,
 };
 
@@ -233,6 +314,27 @@ function relayout(layoutMap: Map<string, LayoutNode>, edges: GraphEdge[], width:
           b.vx += fx;
           b.vy += fy;
         }
+
+        // Anti-overlap shove — when two box outlines actually touch
+        // (using last-rendered boxW/boxH plus a 16px gutter), apply a
+        // hard separation impulse on top of the normal repulsion so
+        // labels never sit on top of each other.
+        const halfA = ((a.boxW ?? 80) + (a.boxH ?? 22)) / 4;
+        const halfB = ((b.boxW ?? 80) + (b.boxH ?? 22)) / 4;
+        const minGap = halfA + halfB + 16;
+        if (dist < minGap) {
+          const overlap = (minGap - dist) * 0.5;
+          const ux = dx / (dist || 1);
+          const uy = dy / (dist || 1);
+          if (a.kind !== "root") {
+            a.vx -= ux * overlap;
+            a.vy -= uy * overlap;
+          }
+          if (b.kind !== "root") {
+            b.vx += ux * overlap;
+            b.vy += uy * overlap;
+          }
+        }
       }
     }
     // Attraction along edges.
@@ -261,10 +363,14 @@ function relayout(layoutMap: Map<string, LayoutNode>, edges: GraphEdge[], width:
       // Soft cling toward center to keep the graph in-frame.
       n.x += (cx - n.x) * 0.0015;
       n.y += (cy - n.y) * 0.0015;
-      // Soft bounds.
-      const margin = 32;
-      n.x = Math.max(margin, Math.min(width - margin, n.x));
-      n.y = Math.max(margin, Math.min(height - margin, n.y));
+      // Soft bounds — wider margin so labeled boxes don't collide
+      // with the canvas edge or the header.
+      const halfW = (n.boxW ?? 80) / 2;
+      const halfH = (n.boxH ?? 24) / 2;
+      const marginX = halfW + 24;
+      const marginY = halfH + 24;
+      n.x = Math.max(marginX, Math.min(width - marginX, n.x));
+      n.y = Math.max(marginY, Math.min(height - marginY, n.y));
     }
   }
 }
@@ -479,7 +585,9 @@ export function MindMap({ fullScreen = false }: { fullScreen?: boolean }) {
         const age = now - n.bornAt;
         const intro = age < 220 ? Math.min(1, age / 220) : 1;
 
-        const color = nodeColor(n);
+        const role = ensembleRole(n, session);
+        const roleOverride = roleColor(n, role);
+        const color = roleOverride ?? nodeColor(n);
         const isActive = session?.activeNodeId === n.id;
         const isHover = hoverRef.current.id === n.id;
         const isPinned = pinnedId === n.id;
@@ -496,17 +604,52 @@ export function MindMap({ fullScreen = false }: { fullScreen?: boolean }) {
 
         ctx.globalAlpha = intro;
 
+        // ── Per-role glow signature ─────────────────────────────────
+        // Architect: slow, deliberate breathing pulse (~1.6s) — the
+        //   "drafting" cadence. Always glows, even when state==done,
+        //   for the lifetime of the session, because the plan stays
+        //   relevant the whole run.
+        // Engineer: fast, bright pulse (~0.5s) when active/running —
+        //   reads as "live cursor".
+        // Critic:   flash burst — bright glow for 600ms after birth
+        //   then settles to a faint tint.
+        // Default:  the existing pulse on running/active.
+        let glowPulse = 0; // 0 = no glow, 1 = full glow
+        let glowBlur = 0;
+        if (role === "architect") {
+          // Constant slow shimmer. Range 0.30–0.55 → soft, never aggressive.
+          glowPulse = 0.42 + 0.13 * Math.sin(now / 800);
+          glowBlur = 12;
+        } else if (role === "engineer" && (n.state === "running" || isActive)) {
+          // Quick "scan-tick" pulse when actively executing.
+          glowPulse = 0.55 + 0.30 * Math.sin(now / 250);
+          glowBlur = 16;
+        } else if (role === "critic") {
+          if (age < 600) {
+            // Verdict flash — bright burst on appear.
+            const t = age / 600;
+            glowPulse = 0.95 * (1 - t * t);
+            glowBlur = 22 - 14 * t;
+          } else {
+            // Settled: faint constant glow that says "verdict is here".
+            glowPulse = 0.32;
+            glowBlur = 8;
+          }
+        } else if (n.state === "running" || isActive) {
+          glowPulse = 0.45 + 0.25 * Math.sin(now / 360);
+          glowBlur = 14;
+        }
+
         // Drop shadow / brand glow when active or running.
-        if (n.state === "running" || isActive) {
-          const pulse = 0.45 + 0.25 * Math.sin(now / 360);
+        if (glowPulse > 0) {
           ctx.save();
           ctx.shadowColor = (isError
             ? "rgb(248, 113, 113)"
             : color
           )
             .replace("rgb", "rgba")
-            .replace(")", `, ${pulse})`);
-          ctx.shadowBlur = 14;
+            .replace(")", `, ${glowPulse})`);
+          ctx.shadowBlur = glowBlur;
           ctx.fillStyle = "rgba(10, 11, 14, 0.96)";
           drawRoundRect(ctx, x, y, boxW, boxH, radius);
           ctx.fill();
@@ -549,6 +692,72 @@ export function MindMap({ fullScreen = false }: { fullScreen?: boolean }) {
         // Left edge accent bar (1.5px) — gives the box a tag look.
         ctx.fillStyle = isError ? "rgb(248, 113, 113)" : color;
         ctx.fillRect(x, y + 1, 1.5, boxH - 2);
+
+        // ── Per-role decorations ────────────────────────────────────
+        // Architect — animated blueprint dashes along the TOP edge.
+        // The dash phase shifts over time so it reads as "drafting".
+        if (role === "architect") {
+          ctx.save();
+          const phase = (now / 80) % 8;
+          ctx.setLineDash([3, 3]);
+          ctx.lineDashOffset = -phase;
+          ctx.strokeStyle = color
+            .replace("rgb", "rgba")
+            .replace(")", ", 0.85)");
+          ctx.lineWidth = 1;
+          ctx.beginPath();
+          ctx.moveTo(x + 1, y);
+          ctx.lineTo(x + boxW - 1, y);
+          ctx.stroke();
+          ctx.setLineDash([]);
+          ctx.lineDashOffset = 0;
+          ctx.restore();
+        }
+
+        // Engineer — animated scanner bar along the BOTTOM edge while
+        // the node is active or running. Sweeps L→R like a cursor.
+        if (role === "engineer" && (n.state === "running" || isActive)) {
+          ctx.save();
+          // Travel: a short bright segment that moves from left to right
+          // and wraps. Period ~900ms.
+          const t = ((now / 900) % 1);
+          const segW = Math.max(8, boxW * 0.28);
+          const segX = x + (boxW - segW) * t;
+          const grad = ctx.createLinearGradient(segX, 0, segX + segW, 0);
+          grad.addColorStop(0, color.replace("rgb", "rgba").replace(")", ", 0)"));
+          grad.addColorStop(0.5, color.replace("rgb", "rgba").replace(")", ", 0.95)"));
+          grad.addColorStop(1, color.replace("rgb", "rgba").replace(")", ", 0)"));
+          ctx.fillStyle = grad;
+          ctx.fillRect(segX, y + boxH - 1.5, segW, 1.5);
+          ctx.restore();
+        }
+
+        // Critic — verdict stamp on the right edge: ✓ for ship,
+        // ↺ for revise, ✕ for abort. Stamps in with a 220ms pop.
+        if (role === "critic") {
+          const lbl = (n.label || "").toUpperCase();
+          const stamp = lbl.includes("SHIP")
+            ? "✓"
+            : lbl.includes("REVISE")
+              ? "↺"
+              : lbl.includes("ABORT")
+                ? "✕"
+                : "•";
+          // Pop-in scale: 0 → 1 over the first 220ms.
+          const popT = Math.min(1, age / 220);
+          const popScale = 0.6 + 0.4 * popT;
+          const stampX = x + boxW - 9;
+          const stampY = y + boxH / 2;
+          ctx.save();
+          ctx.translate(stampX, stampY);
+          ctx.scale(popScale, popScale);
+          ctx.fillStyle = color;
+          ctx.font = `700 11px ui-monospace, "JetBrains Mono", Menlo, Consolas, monospace`;
+          ctx.textAlign = "center";
+          ctx.textBaseline = "middle";
+          ctx.fillText(stamp, 0, 0);
+          ctx.restore();
+        }
 
         // Label — monospace, centered inside.
         const label = nodeBoxLabel(n);
@@ -682,6 +891,34 @@ export function MindMap({ fullScreen = false }: { fullScreen?: boolean }) {
           </span>
         </div>
         <div className="axon-mindmap-stats">
+          {isEnsembleSession(session) && (
+            <span
+              className="axon-mindmap-ensemble-legend"
+              title="Ensemble session — three-agent pipeline"
+            >
+              <span
+                className="axon-mindmap-role-chip"
+                style={{ ["--role-color" as never]: ROLE_COLOR.architect }}
+                title="Architect — planning"
+              >
+                ARCH
+              </span>
+              <span
+                className="axon-mindmap-role-chip"
+                style={{ ["--role-color" as never]: ROLE_COLOR.engineer }}
+                title="Engineer — building"
+              >
+                ENG
+              </span>
+              <span
+                className="axon-mindmap-role-chip"
+                style={{ ["--role-color" as never]: ROLE_COLOR.critic }}
+                title="Critic — judging"
+              >
+                CRIT
+              </span>
+            </span>
+          )}
           <span title="Total nodes (root + plans + tools + files + thoughts)">
             <em>{stats.nodes}</em> nodes
           </span>
@@ -724,9 +961,21 @@ export function MindMap({ fullScreen = false }: { fullScreen?: boolean }) {
           <div className="axon-mindmap-tt-head">
             <span
               className="axon-mindmap-tt-dot"
-              style={{ background: nodeColor(focusNode) }}
+              style={{
+                background:
+                  roleColor(focusNode, ensembleRole(focusNode, session)) ??
+                  nodeColor(focusNode),
+              }}
             />
-            <strong>{kindLabel(focusNode.kind, focusNode.fileOp)}</strong>
+            <strong>
+              {(() => {
+                const r = ensembleRole(focusNode, session);
+                if (r === "architect") return "ARCHITECT";
+                if (r === "engineer") return "ENGINEER";
+                if (r === "critic") return "CRITIC";
+                return kindLabel(focusNode.kind, focusNode.fileOp);
+              })()}
+            </strong>
             {focusNode.durationMs !== undefined && (
               <span className="axon-mindmap-tt-dur">{formatDuration(focusNode.durationMs)}</span>
             )}

@@ -8,6 +8,11 @@ import {
   CalendarDays,
   RefreshCw,
   ShieldCheck,
+  Zap,
+  Star,
+  TrendingUp,
+  DollarSign,
+  ReceiptText,
 } from "lucide-react";
 
 // ── Types ────────────────────────────────────────────────────────────────────
@@ -28,9 +33,16 @@ interface Invoice {
 const currentPlan = {
   name: "Pro",
   price: 49,
-  billingCycle: "monthly" as const,
+  billingCycle: "Monthly",
   renewalDate: "August 1, 2025",
-  features: ["Unlimited workspaces", "Priority support", "Advanced analytics", "SSO integration"],
+  features: [
+    "Unlimited workspaces",
+    "Priority support",
+    "Advanced analytics",
+    "SSO integration",
+    "Custom domains",
+    "API access",
+  ],
 };
 
 const paymentMethod = {
@@ -110,12 +122,14 @@ function StatusBadge({ status }: { status: InvoiceStatus }) {
     paid: {
       label: "Paid",
       icon: <CheckCircle2 className="h-3.5 w-3.5" />,
-      className: "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400",
+      className:
+        "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400",
     },
     pending: {
       label: "Pending",
       icon: <Clock className="h-3.5 w-3.5" />,
-      className: "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400",
+      className:
+        "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400",
     },
     failed: {
       label: "Failed",
@@ -152,43 +166,118 @@ function SectionCard({
   );
 }
 
+function SectionHeader({
+  icon,
+  title,
+  trailing,
+}: {
+  icon: React.ReactNode;
+  title: string;
+  trailing?: React.ReactNode;
+}) {
+  return (
+    <div className="px-6 py-4 border-b border-border flex items-center justify-between gap-2">
+      <div className="flex items-center gap-2">
+        <span className="text-primary">{icon}</span>
+        <h2 className="font-semibold text-sm">{title}</h2>
+      </div>
+      {trailing}
+    </div>
+  );
+}
+
 // ── Page component ───────────────────────────────────────────────────────────
 
 function BillingRoute() {
   return (
     <div className="p-6 max-w-5xl mx-auto space-y-8">
-      {/* Page header */}
+      {/* ── Page header ── */}
       <div>
-        <h1 className="text-2xl font-semibold tracking-tight">Billing</h1>
+        <h1 className="text-2xl font-semibold tracking-tight text-foreground">
+          Billing
+        </h1>
         <p className="text-muted-foreground mt-1 text-sm">
           Manage your subscription, payment method, and download invoices.
         </p>
       </div>
 
-      {/* ── Current plan ── */}
-      <SectionCard>
-        <div className="px-6 py-4 border-b border-border flex items-center gap-2">
-          <ShieldCheck className="h-4 w-4 text-primary" />
-          <h2 className="font-semibold text-sm">Current Plan</h2>
+      {/* ── Stat cards ── */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        {/* Current Monthly Spend */}
+        <div className="bg-card border border-border rounded-2xl p-5 flex flex-col gap-3">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+              Current Monthly Spend
+            </span>
+            <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-muted">
+              <DollarSign className="h-4 w-4 text-primary" />
+            </span>
+          </div>
+          <p className="text-3xl font-bold text-foreground">$49.00</p>
+          <p className="text-xs text-muted-foreground">Pro Plan · Billed monthly</p>
         </div>
+
+        {/* Invoices This Year */}
+        <div className="bg-card border border-border rounded-2xl p-5 flex flex-col gap-3">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+              Invoices This Year
+            </span>
+            <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-muted">
+              <ReceiptText className="h-4 w-4 text-primary" />
+            </span>
+          </div>
+          <p className="text-3xl font-bold text-foreground">7</p>
+          <p className="text-xs text-muted-foreground">6 paid · 1 failed</p>
+        </div>
+
+        {/* Next Payment Date */}
+        <div className="bg-card border border-border rounded-2xl p-5 flex flex-col gap-3">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+              Next Payment Date
+            </span>
+            <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-muted">
+              <CalendarDays className="h-4 w-4 text-primary" />
+            </span>
+          </div>
+          <p className="text-3xl font-bold text-foreground">Aug 1</p>
+          <p className="text-xs text-muted-foreground">2025 · Auto-renews</p>
+        </div>
+      </div>
+
+      {/* ── Current Plan ── */}
+      <SectionCard>
+        <SectionHeader
+          icon={<ShieldCheck className="h-4 w-4" />}
+          title="Current Plan"
+        />
 
         <div className="p-6 flex flex-col sm:flex-row sm:items-start sm:justify-between gap-6">
           {/* Plan info */}
-          <div className="space-y-1">
-            <div className="flex items-baseline gap-2">
-              <span className="text-3xl font-bold">{currentPlan.name}</span>
-              <span className="rounded-full bg-primary/10 text-primary text-xs font-medium px-2.5 py-0.5">
+          <div className="space-y-2">
+            <div className="flex items-center gap-2.5">
+              <span className="text-3xl font-bold text-foreground">
+                {currentPlan.name}
+              </span>
+              <span className="inline-flex rounded-full bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400 px-2.5 py-0.5 text-xs font-medium">
                 Active
               </span>
             </div>
+
             <p className="text-muted-foreground text-sm">
-              <span className="text-foreground font-medium text-xl">
+              <span className="text-foreground font-semibold text-2xl">
                 ${currentPlan.price}
               </span>
               &nbsp;/ month
             </p>
 
-            <div className="flex items-center gap-1.5 text-sm text-muted-foreground pt-1">
+            <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
+              <TrendingUp className="h-4 w-4" />
+              <span>Billing cycle: {currentPlan.billingCycle}</span>
+            </div>
+
+            <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
               <CalendarDays className="h-4 w-4" />
               <span>Renews on {currentPlan.renewalDate}</span>
             </div>
@@ -197,7 +286,10 @@ function BillingRoute() {
           {/* Features list */}
           <ul className="space-y-2">
             {currentPlan.features.map((f) => (
-              <li key={f} className="flex items-center gap-2 text-sm text-muted-foreground">
+              <li
+                key={f}
+                className="flex items-center gap-2 text-sm text-muted-foreground"
+              >
                 <CheckCircle2 className="h-4 w-4 text-emerald-500 shrink-0" />
                 {f}
               </li>
@@ -205,38 +297,42 @@ function BillingRoute() {
           </ul>
 
           {/* Actions */}
-          <div className="flex flex-col gap-2 min-w-[140px]">
+          <div className="flex flex-col gap-2 min-w-[148px]">
             <button className="inline-flex items-center justify-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 transition-colors">
+              <Zap className="h-3.5 w-3.5" />
               Upgrade Plan
             </button>
             <button className="inline-flex items-center justify-center gap-2 rounded-lg border border-border px-4 py-2 text-sm font-medium text-foreground hover:bg-accent transition-colors">
-              Cancel Plan
+              Manage Plan
             </button>
           </div>
         </div>
       </SectionCard>
 
-      {/* ── Payment method ── */}
+      {/* ── Payment Method ── */}
       <SectionCard>
-        <div className="px-6 py-4 border-b border-border flex items-center gap-2">
-          <CreditCard className="h-4 w-4 text-primary" />
-          <h2 className="font-semibold text-sm">Payment Method</h2>
-        </div>
+        <SectionHeader
+          icon={<CreditCard className="h-4 w-4" />}
+          title="Payment Method"
+        />
 
-        <div className="p-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-6">
-          {/* Card visual */}
-          <div className="relative w-72 h-40 rounded-2xl bg-gradient-to-br from-slate-700 to-slate-900 shadow-lg p-5 flex flex-col justify-between text-white select-none overflow-hidden">
+        <div className="p-6 flex flex-col sm:flex-row sm:items-center gap-8">
+          {/* Credit card widget */}
+          <div className="relative w-72 h-40 rounded-2xl bg-gradient-to-br from-slate-700 to-slate-900 shadow-lg p-5 flex flex-col justify-between text-white select-none overflow-hidden shrink-0">
             {/* Decorative circles */}
-            <span className="absolute -top-6 -right-6 h-32 w-32 rounded-full bg-white/5" />
-            <span className="absolute -bottom-8 -left-8 h-40 w-40 rounded-full bg-white/5" />
+            <span className="absolute -top-6 -right-6 h-32 w-32 rounded-full bg-white/5 pointer-events-none" />
+            <span className="absolute top-4 right-10 h-20 w-20 rounded-full bg-white/5 pointer-events-none" />
+            <span className="absolute -bottom-8 -left-8 h-40 w-40 rounded-full bg-white/5 pointer-events-none" />
 
+            {/* Top row */}
             <div className="flex items-center justify-between relative z-10">
-              <span className="text-xs font-semibold tracking-widest uppercase opacity-70">
+              <span className="text-xs font-bold tracking-widest uppercase opacity-80">
                 {paymentMethod.brand}
               </span>
-              <CreditCard className="h-6 w-6 opacity-70" />
+              <CreditCard className="h-6 w-6 opacity-60" />
             </div>
 
+            {/* Card number & holder */}
             <div className="relative z-10 space-y-1">
               <p className="text-base tracking-[0.25em] font-mono">
                 •••• •••• •••• {paymentMethod.last4}
@@ -253,17 +349,20 @@ function BillingRoute() {
           {/* Card meta & actions */}
           <div className="space-y-4">
             <div className="space-y-1 text-sm">
-              <p className="font-medium">{paymentMethod.brand} ending in {paymentMethod.last4}</p>
+              <p className="font-semibold text-foreground">
+                {paymentMethod.brand} ending in {paymentMethod.last4}
+              </p>
               <p className="text-muted-foreground">
                 Expires {paymentMethod.expMonth}/{paymentMethod.expYear}
               </p>
+              <p className="text-muted-foreground">{paymentMethod.cardholderName}</p>
             </div>
             <div className="flex flex-wrap gap-2">
-              <button className="inline-flex items-center gap-2 rounded-lg border border-border px-3 py-1.5 text-sm font-medium hover:bg-accent transition-colors">
+              <button className="inline-flex items-center gap-2 rounded-lg border border-border bg-card px-3 py-1.5 text-sm font-medium text-foreground hover:bg-accent transition-colors">
                 <RefreshCw className="h-3.5 w-3.5" />
                 Replace Card
               </button>
-              <button className="inline-flex items-center gap-2 rounded-lg border border-border px-3 py-1.5 text-sm font-medium text-destructive hover:bg-destructive/10 transition-colors">
+              <button className="inline-flex items-center gap-2 rounded-lg border border-border bg-card px-3 py-1.5 text-sm font-medium text-destructive hover:bg-destructive/10 transition-colors">
                 Remove
               </button>
             </div>
@@ -271,19 +370,24 @@ function BillingRoute() {
         </div>
       </SectionCard>
 
-      {/* ── Invoice history ── */}
+      {/* ── Invoice History ── */}
       <SectionCard>
-        <div className="px-6 py-4 border-b border-border flex items-center justify-between">
-          <h2 className="font-semibold text-sm">Billing History</h2>
-          <span className="text-xs text-muted-foreground">{invoices.length} invoices</span>
-        </div>
+        <SectionHeader
+          icon={<ReceiptText className="h-4 w-4" />}
+          title="Invoice History"
+          trailing={
+            <span className="text-xs text-muted-foreground">
+              {invoices.length} invoices
+            </span>
+          }
+        />
 
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-border bg-muted/40">
                 <th className="px-6 py-3 text-left font-medium text-muted-foreground whitespace-nowrap">
-                  Invoice
+                  Invoice ID
                 </th>
                 <th className="px-6 py-3 text-left font-medium text-muted-foreground whitespace-nowrap">
                   Date
@@ -314,8 +418,10 @@ function BillingRoute() {
                   <td className="px-6 py-4 whitespace-nowrap text-muted-foreground">
                     {invoice.date}
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap">{invoice.description}</td>
-                  <td className="px-6 py-4 text-right font-medium tabular-nums whitespace-nowrap">
+                  <td className="px-6 py-4 whitespace-nowrap text-foreground">
+                    {invoice.description}
+                  </td>
+                  <td className="px-6 py-4 text-right font-medium tabular-nums whitespace-nowrap text-foreground">
                     ${invoice.amount.toFixed(2)}
                   </td>
                   <td className="px-6 py-4 text-center">
@@ -325,7 +431,7 @@ function BillingRoute() {
                     <a
                       href={invoice.downloadUrl}
                       aria-label={`Download ${invoice.id}`}
-                      className="inline-flex items-center gap-1.5 rounded-md px-2.5 py-1 text-xs font-medium border border-border hover:bg-accent transition-colors"
+                      className="inline-flex items-center gap-1.5 rounded-md px-2.5 py-1 text-xs font-medium border border-border bg-card hover:bg-accent transition-colors text-foreground"
                     >
                       <Download className="h-3.5 w-3.5" />
                       PDF
@@ -337,12 +443,51 @@ function BillingRoute() {
           </table>
         </div>
 
-        {/* Footer */}
+        {/* Table footer */}
         <div className="px-6 py-3 border-t border-border bg-muted/20 flex items-center justify-between text-xs text-muted-foreground">
           <span>Showing all {invoices.length} invoices</span>
           <span>All amounts in USD</span>
         </div>
       </SectionCard>
+
+      {/* ── Upgrade / Manage Plan CTA Banner ── */}
+      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-indigo-600 via-violet-600 to-purple-700 text-white p-8">
+        {/* Decorative blobs */}
+        <span className="pointer-events-none absolute -top-10 -right-10 h-48 w-48 rounded-full bg-white/5" />
+        <span className="pointer-events-none absolute -bottom-12 -left-12 h-56 w-56 rounded-full bg-white/5" />
+        <span className="pointer-events-none absolute top-6 right-32 h-24 w-24 rounded-full bg-white/5" />
+
+        <div className="relative z-10 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-6">
+          {/* Copy */}
+          <div className="space-y-2">
+            <div className="flex items-center gap-2">
+              <Star className="h-5 w-5 text-yellow-300" />
+              <span className="text-xs font-semibold uppercase tracking-widest text-white/70">
+                CWA Pro
+              </span>
+            </div>
+            <h3 className="text-2xl font-bold leading-tight">
+              Scale with CWA Pro
+            </h3>
+            <p className="text-sm text-white/75 max-w-md">
+              Unlock unlimited team seats, advanced analytics dashboards, priority
+              SLA support, and enterprise-grade SSO — everything you need to grow
+              without limits.
+            </p>
+          </div>
+
+          {/* Buttons */}
+          <div className="flex flex-col sm:flex-row gap-3 shrink-0">
+            <button className="inline-flex items-center justify-center gap-2 rounded-lg bg-white px-5 py-2.5 text-sm font-semibold text-indigo-700 hover:bg-white/90 transition-colors shadow-md">
+              <Zap className="h-4 w-4" />
+              Upgrade to Business
+            </button>
+            <button className="inline-flex items-center justify-center gap-2 rounded-lg border border-white/30 bg-white/10 px-5 py-2.5 text-sm font-semibold text-white hover:bg-white/20 transition-colors backdrop-blur-sm">
+              Talk to Sales
+            </button>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }

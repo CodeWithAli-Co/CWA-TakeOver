@@ -35,6 +35,7 @@ export function Orb() {
     audioLevel,
     liveTranscript,
     settings,
+    ensemblePhase,
   } = useAxon();
 
   const orbRef = useRef<HTMLDivElement | null>(null);
@@ -42,8 +43,8 @@ export function Orb() {
   const dragRef = useRef<{ dragging: boolean; sx: number; sy: number; ox: number; oy: number; moved: boolean } | null>(null);
 
   // Keep latest reactive values in refs so canvas loop doesn't restart.
-  const stateRef = useRef({ status, voiceState, audioLevel });
-  stateRef.current = { status, voiceState, audioLevel };
+  const stateRef = useRef({ status, voiceState, audioLevel, ensemblePhase });
+  stateRef.current = { status, voiceState, audioLevel, ensemblePhase };
 
   // ── draggable ─────────────────────────────────────────────────
   useEffect(() => {
@@ -127,37 +128,74 @@ export function Orb() {
 
     const draw = (now: number) => {
       const t = (now - start) / 1000; // seconds
-      const { status: s, voiceState: vs, audioLevel: lvl } = stateRef.current;
+      const {
+        status: s,
+        voiceState: vs,
+        audioLevel: lvl,
+        ensemblePhase: phase,
+      } = stateRef.current;
 
       ctx.clearRect(0, 0, W, H);
 
       // ─ Hue shift per state ─
       const isError = s === "error";
       const isDormant = vs === "dormant";
-      const isCoding = s === "coding";
-      const isThinking = !isCoding && (s === "processing" || s === "executing");
+      // Ensemble phase takes priority over the regular thinking/coding
+      // states — when the engine is running an ensemble, the operator
+      // wants to see WHICH agent is talking, not the generic state.
+      const isArchitect = phase === "architect";
+      const isEngineer = phase === "engineer";
+      const isCritic = phase === "critic";
+      const isEnsemble = isArchitect || isEngineer || isCritic;
+      const isCoding = !isEnsemble && s === "coding";
+      const isThinking =
+        !isEnsemble && !isCoding && (s === "processing" || s === "executing");
       // Subtle pulse on intensity while thinking/coding — helps the operator
       // see the orb is actively working, not stuck.
       const thinkingPulse = isThinking ? 0.85 + Math.sin(t * 3.2) * 0.18 : 0;
       const codingPulse = isCoding ? 0.95 + Math.sin(t * 4.0) * 0.1 : 0;
+      // Ensemble pulses — each role has its own cadence:
+      //   Architect — slow breathing (0.9Hz) — drafting, deliberate
+      //   Engineer  — quick scan-tick  (5.5Hz) — active cursor
+      //   Critic    — strong heartbeat (2Hz)   — judgmental, decisive
+      const architectPulse = isArchitect ? 0.78 + Math.sin(t * 0.9) * 0.22 : 0;
+      const engineerPulse  = isEngineer  ? 0.95 + Math.sin(t * 5.5) * 0.13 : 0;
+      const criticPulse    = isCritic    ? 0.9  + Math.sin(t * 2.0) * 0.30 : 0;
       const intensity =
         isDormant ? 0.2 :
         s === "listening" ? 1.0 + lvl * 0.4 :
         s === "speaking" ? 0.9 + Math.sin(t * 6) * 0.12 :
+        isArchitect ? architectPulse :
+        isEngineer ? engineerPulse :
+        isCritic ? criticPulse :
         isCoding ? codingPulse :
         isThinking ? thinkingPulse :
         0.6;
 
       // Color per state.
-      //   default = red (listening / idle)
-      //   thinking = cyan-violet
-      //   coding = emerald-green (creation, growth)
-      //   error = orange
+      //   default     = red (listening / idle)
+      //   thinking    = cyan-violet
+      //   coding      = emerald-green (creation, growth)
+      //   error       = orange
+      //   architect   = indigo (planning, blueprint)
+      //   engineer    = sky (executing, live cursor)
+      //   critic      = amber (judgment) — final color decided by
+      //                 verdict in the future; for live phase, amber
+      //                 reads as "deliberating".
       let accentR = R;
       let accentG = G;
       let accentB = B;
       if (isError) {
         accentR = 255; accentG = 90; accentB = 60;
+      } else if (isArchitect) {
+        // Indigo-400 — matches Mind Map plan node + ARCH chip.
+        accentR = 129; accentG = 140; accentB = 248;
+      } else if (isEngineer) {
+        // Sky-400 — matches Mind Map engineer scanner + ENG chip.
+        accentR = 56; accentG = 189; accentB = 248;
+      } else if (isCritic) {
+        // Amber-400 — matches Mind Map critic chip during deliberation.
+        accentR = 251; accentG = 191; accentB = 36;
       } else if (isCoding) {
         // Emerald — saturated green with a hint of teal. Distinct from
         // both the default red and the thinking cyan-violet.
@@ -193,6 +231,9 @@ export function Orb() {
         isDormant ? 0.1 :
         s === "listening" ? 0.8 + lvl * 1.4 :
         s === "speaking" ? 1.0 :
+        isArchitect ? 0.7 :  // slow, deliberate — drafting
+        isEngineer ? 2.4 :   // fast, jittery — building
+        isCritic ? 1.3 :     // measured — reviewing
         isCoding ? 2.0 :
         isThinking ? 1.6 :
         0.35;
@@ -412,6 +453,162 @@ export function Orb() {
       }
 
       // ═══════════════════════════════════════════════════════════
+      // ARCHITECT — blueprint grid + drafting compass arc.
+      // Slow, deliberate. Crosshairs animate as if measuring.
+      // ═══════════════════════════════════════════════════════════
+      if (isArchitect) {
+        // Inside-the-sphere blueprint grid — faint dotted crosshair.
+        ctx.save();
+        ctx.beginPath();
+        ctx.arc(cx, cy, radius, 0, Math.PI * 2);
+        ctx.clip();
+        ctx.strokeStyle = `rgba(${accentR}, ${accentG}, ${accentB}, 0.18)`;
+        ctx.lineWidth = 0.8 * dpr;
+        ctx.setLineDash([2 * dpr, 3 * dpr]);
+        const gridStep = radius * 0.42;
+        for (let i = -2; i <= 2; i++) {
+          ctx.beginPath();
+          ctx.moveTo(cx - radius, cy + i * gridStep);
+          ctx.lineTo(cx + radius, cy + i * gridStep);
+          ctx.stroke();
+          ctx.beginPath();
+          ctx.moveTo(cx + i * gridStep, cy - radius);
+          ctx.lineTo(cx + i * gridStep, cy + radius);
+          ctx.stroke();
+        }
+        ctx.setLineDash([]);
+        ctx.restore();
+
+        // Drafting compass — slowly rotating arc with two endpoints.
+        const compAngle = t * 0.45;
+        const compR = radius * 0.78;
+        ctx.save();
+        ctx.translate(cx, cy);
+        ctx.rotate(compAngle);
+        ctx.beginPath();
+        ctx.arc(0, 0, compR, -Math.PI * 0.18, Math.PI * 0.18);
+        ctx.strokeStyle = `rgba(${accentR}, ${accentG}, ${accentB}, 0.85)`;
+        ctx.lineWidth = 1.6 * dpr;
+        ctx.stroke();
+        // tick marks at each end
+        ctx.fillStyle = `rgba(${accentR}, ${accentG}, ${accentB}, 0.95)`;
+        const endA1 = -Math.PI * 0.18;
+        const endA2 = Math.PI * 0.18;
+        ctx.beginPath();
+        ctx.arc(Math.cos(endA1) * compR, Math.sin(endA1) * compR, 1.6 * dpr, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.beginPath();
+        ctx.arc(Math.cos(endA2) * compR, Math.sin(endA2) * compR, 1.6 * dpr, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+
+        // Outer "ARCH" tick ring — quarter-segment marker that drifts.
+        const ringR = radius + 4 * dpr;
+        const tickAngle = t * 0.6;
+        ctx.beginPath();
+        ctx.arc(cx, cy, ringR, tickAngle, tickAngle + Math.PI * 0.5);
+        ctx.strokeStyle = `rgba(${accentR}, ${accentG}, ${accentB}, 0.7)`;
+        ctx.lineWidth = 1.4 * dpr;
+        ctx.stroke();
+      }
+
+      // ═══════════════════════════════════════════════════════════
+      // ENGINEER — high-frequency scan-line sweep + cursor blink.
+      // Reads as "live coding cursor". Fast, twitchy, productive.
+      // ═══════════════════════════════════════════════════════════
+      if (isEngineer) {
+        ctx.save();
+        ctx.beginPath();
+        ctx.arc(cx, cy, radius, 0, Math.PI * 2);
+        ctx.clip();
+
+        // Scan line — sweeps top-to-bottom, period ~0.7s.
+        const scanT = (t / 0.7) % 1;
+        const scanY = cy - radius + scanT * radius * 2;
+        const scanGrad = ctx.createLinearGradient(0, scanY - 8 * dpr, 0, scanY + 8 * dpr);
+        scanGrad.addColorStop(0, `rgba(${accentR}, ${accentG}, ${accentB}, 0)`);
+        scanGrad.addColorStop(0.5, `rgba(${accentR}, ${accentG}, ${accentB}, 0.85)`);
+        scanGrad.addColorStop(1, `rgba(${accentR}, ${accentG}, ${accentB}, 0)`);
+        ctx.fillStyle = scanGrad;
+        ctx.fillRect(cx - radius, scanY - 8 * dpr, radius * 2, 16 * dpr);
+
+        // Falling code-stream sparkles — short bright pixels on a few
+        // columns, like a tiny matrix rain.
+        const colCount = 5;
+        for (let i = 0; i < colCount; i++) {
+          const seed = (i * 73 + 17) % 100;
+          const xOff = ((seed / 100) * 2 - 1) * radius * 0.7;
+          const phase = ((t * 0.9 + i * 0.21) % 1);
+          const y = cy - radius + phase * radius * 2;
+          const fade = 1 - Math.abs(0.5 - phase) * 1.6;
+          if (fade <= 0) continue;
+          ctx.fillStyle = `rgba(${accentR}, ${accentG}, ${accentB}, ${0.85 * fade})`;
+          ctx.fillRect(cx + xOff, y, 1.2 * dpr, 5 * dpr);
+        }
+        ctx.restore();
+
+        // Blinking cursor — lower-right of the sphere, blinks every 500ms.
+        const blink = (Math.sin(t * Math.PI * 4) > 0) ? 1 : 0;
+        if (blink) {
+          ctx.fillStyle = `rgba(${accentR}, ${accentG}, ${accentB}, 0.95)`;
+          ctx.fillRect(cx + radius * 0.4, cy + radius * 0.42, 5 * dpr, 1.5 * dpr);
+        }
+
+        // Outer progress arc — rapid filling segments.
+        const segs = 36;
+        const ringR = radius + 4 * dpr;
+        const fillCount = Math.floor((t * 1.2) % 1 * segs);
+        for (let i = 0; i < segs; i++) {
+          const a0 = (i / segs) * Math.PI * 2 - Math.PI / 2;
+          const a1 = ((i + 0.85) / segs) * Math.PI * 2 - Math.PI / 2;
+          ctx.beginPath();
+          ctx.arc(cx, cy, ringR, a0, a1);
+          ctx.strokeStyle = i <= fillCount
+            ? `rgba(${accentR}, ${accentG}, ${accentB}, 0.92)`
+            : `rgba(${accentR}, ${accentG}, ${accentB}, 0.16)`;
+          ctx.lineWidth = 1.4 * dpr;
+          ctx.stroke();
+        }
+      }
+
+      // ═══════════════════════════════════════════════════════════
+      // CRITIC — heartbeat ring + judgment scales.
+      // Slow, deliberate, decisive. Two opposing arcs that converge
+      // and split — like balance scales weighing the work.
+      // ═══════════════════════════════════════════════════════════
+      if (isCritic) {
+        // Heartbeat — two pulses then a pause (like an EKG).
+        const beatPhase = (t * 1.2) % 1;
+        const beatR = beatPhase < 0.5
+          ? radius * (0.55 + beatPhase * 1.3)
+          : radius * (0.55 + (1 - beatPhase) * 1.0);
+        const beatAlpha = (1 - beatPhase) * 0.55;
+        ctx.beginPath();
+        ctx.arc(cx, cy, beatR, 0, Math.PI * 2);
+        ctx.strokeStyle = `rgba(${accentR}, ${accentG}, ${accentB}, ${beatAlpha})`;
+        ctx.lineWidth = 1.6 * dpr;
+        ctx.stroke();
+
+        // Two opposing arcs — left and right of the sphere — slowly
+        // tilt up and down like balance scales.
+        const tilt = Math.sin(t * 0.9) * 0.18;
+        const armR = radius + 7 * dpr;
+        ctx.strokeStyle = `rgba(${accentR}, ${accentG}, ${accentB}, 0.85)`;
+        ctx.lineWidth = 1.6 * dpr;
+        ctx.beginPath();
+        ctx.arc(cx, cy, armR, Math.PI - 0.4 + tilt, Math.PI + 0.4 + tilt);
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.arc(cx, cy, armR, -0.4 - tilt, 0.4 - tilt);
+        ctx.stroke();
+
+        // Center crosshair — judgment focal point.
+        ctx.fillStyle = `rgba(${accentR}, ${accentG}, ${accentB}, 0.9)`;
+        ctx.fillRect(cx - 0.6 * dpr, cy - 6 * dpr, 1.2 * dpr, 12 * dpr);
+        ctx.fillRect(cx - 6 * dpr, cy - 0.6 * dpr, 12 * dpr, 1.2 * dpr);
+      }
+
+      // ═══════════════════════════════════════════════════════════
       // DUST — orbiting sparks around the sphere
       // ═══════════════════════════════════════════════════════════
       if (!isDormant) {
@@ -480,64 +677,82 @@ export function Orb() {
         </div>
       )}
 
-      {(status === "processing" || status === "executing" || status === "coding") && (
-        <div
-          className={
-            status === "coding" ? "axon-coding-badge" : "axon-thinking-badge"
-          }
-          style={{
-            left: orbPosition.x + ORB_SIZE / 2 - 38,
-            top: orbPosition.y + ORB_SIZE + 14,
-            position: "fixed",
-            pointerEvents: "none",
-            padding: "4px 10px",
-            borderRadius: 999,
-            fontSize: 10.5,
-            letterSpacing: "0.18em",
-            textTransform: "uppercase",
-            background:
-              status === "coding"
-                ? "rgba(64, 220, 150, 0.18)"
-                : "rgba(120, 160, 255, 0.18)",
-            border:
-              status === "coding"
-                ? "1px solid rgba(64, 220, 150, 0.5)"
-                : "1px solid rgba(120, 160, 255, 0.45)",
-            color:
-              status === "coding"
-                ? "rgba(190, 250, 220, 0.95)"
-                : "rgba(200, 220, 255, 0.95)",
-            backdropFilter: "blur(10px)",
-            zIndex: 9999,
-            animation:
-              status === "coding"
-                ? "axon-coding-pulse 1.1s ease-in-out infinite"
-                : "axon-thinking-pulse 1.4s ease-in-out infinite",
-            display: "flex",
-            alignItems: "center",
-            gap: 6,
-          }}
-        >
-          {status === "coding" && (
-            <span
-              aria-hidden="true"
-              style={{
-                fontFamily: "ui-monospace, 'JetBrains Mono', monospace",
-                fontSize: 11,
-                opacity: 0.95,
-                letterSpacing: 0,
-              }}
-            >
-              {"</>"}
-            </span>
-          )}
-          {status === "coding"
-            ? "Coding…"
-            : status === "executing"
-              ? "Working…"
-              : "Thinking…"}
-        </div>
-      )}
+      {(ensemblePhase || status === "processing" || status === "executing" || status === "coding") && (() => {
+        // Ensemble phase always wins — the operator wants to know which
+        // agent is talking, not the generic state.
+        const role = ensemblePhase;
+        const roleColor =
+          role === "architect" ? { rgb: "129, 140, 248", text: "rgb(199, 207, 255)" } :
+          role === "engineer"  ? { rgb: "56, 189, 248",  text: "rgb(186, 230, 253)" } :
+          role === "critic"    ? { rgb: "251, 191, 36",  text: "rgb(254, 240, 138)" } :
+          status === "coding"
+            ? { rgb: "64, 220, 150",  text: "rgba(190, 250, 220, 0.95)" }
+            : { rgb: "120, 160, 255", text: "rgba(200, 220, 255, 0.95)" };
+        const label =
+          role === "architect" ? "Architect…" :
+          role === "engineer"  ? "Engineer…" :
+          role === "critic"    ? "Critic…" :
+          status === "coding" ? "Coding…" :
+          status === "executing" ? "Working…" :
+          "Thinking…";
+        const glyph =
+          role === "architect" ? "▱" :
+          role === "engineer"  ? "</>" :
+          role === "critic"    ? "✓" :
+          status === "coding"  ? "</>" :
+          null;
+        const animDur =
+          role === "architect" ? "1.6s" :
+          role === "engineer"  ? "0.7s" :
+          role === "critic"    ? "1.2s" :
+          status === "coding" ? "1.1s" : "1.4s";
+        return (
+          <div
+            className={
+              role
+                ? `axon-role-badge axon-role-${role}`
+                : status === "coding"
+                  ? "axon-coding-badge"
+                  : "axon-thinking-badge"
+            }
+            style={{
+              left: orbPosition.x + ORB_SIZE / 2 - 44,
+              top: orbPosition.y + ORB_SIZE + 14,
+              position: "fixed",
+              pointerEvents: "none",
+              padding: "4px 10px",
+              borderRadius: 999,
+              fontSize: 10.5,
+              letterSpacing: "0.18em",
+              textTransform: "uppercase",
+              background: `rgba(${roleColor.rgb}, 0.18)`,
+              border: `1px solid rgba(${roleColor.rgb}, 0.5)`,
+              color: roleColor.text,
+              backdropFilter: "blur(10px)",
+              zIndex: 9999,
+              animation: `axon-thinking-pulse ${animDur} ease-in-out infinite`,
+              display: "flex",
+              alignItems: "center",
+              gap: 6,
+            }}
+          >
+            {glyph && (
+              <span
+                aria-hidden="true"
+                style={{
+                  fontFamily: "ui-monospace, 'JetBrains Mono', monospace",
+                  fontSize: 11,
+                  opacity: 0.95,
+                  letterSpacing: 0,
+                }}
+              >
+                {glyph}
+              </span>
+            )}
+            {label}
+          </div>
+        );
+      })()}
     </>
   );
 }

@@ -32,7 +32,17 @@ import { axonGraph, type GraphNode } from "../engine/graphStore";
 import { compactDiff, diffLines } from "../engine/diffUtil";
 
 // Fade-out delay after a fresh event lands. Pinned panels ignore this.
-const AUTO_HIDE_MS = 7000;
+// Bumped from 7s → 14s so the operator can actually read what was typed.
+const AUTO_HIDE_MS = 14000;
+
+// Tool names that mean "Axon is writing code" — drives the live-coder
+// panel to pop the moment the agent decides to write/modify a file.
+const CODING_TOOL_NAMES = new Set([
+  "generate_file",
+  "modify_file",
+  "scaffold_feature",
+  "add_page",
+]);
 
 function isFileWriteNode(n: GraphNode): boolean {
   return n.kind === "file" && (n.fileOp === "write" || n.fileOp === "modify");
@@ -43,6 +53,35 @@ function findLatestWrite(nodes: GraphNode[]): GraphNode | null {
     if (isFileWriteNode(nodes[i])) return nodes[i];
   }
   return null;
+}
+
+/** Find an in-flight coding tool node (state === "running" + a coding
+ *  tool name). Used to pop the panel BEFORE any file write completes. */
+function findRunningCodingTool(nodes: GraphNode[]): GraphNode | null {
+  for (let i = nodes.length - 1; i >= 0; i--) {
+    const n = nodes[i];
+    if (
+      n.kind === "tool" &&
+      n.state === "running" &&
+      typeof n.toolName === "string" &&
+      CODING_TOOL_NAMES.has(n.toolName)
+    ) {
+      return n;
+    }
+  }
+  return null;
+}
+
+/** Best-guess target file path from a coding tool's input meta. The
+ *  agent passes path / filePath / target depending on the action. */
+function extractTargetPath(n: GraphNode): string {
+  const meta = (n.meta ?? {}) as Record<string, unknown>;
+  const candidates = ["path", "filePath", "target", "file", "destination"];
+  for (const k of candidates) {
+    const v = meta[k];
+    if (typeof v === "string" && v.length > 0) return v;
+  }
+  return "";
 }
 
 export function DiffOverlay() {
@@ -91,6 +130,67 @@ export function DiffOverlay() {
 
   const latest = useMemo(() => findLatestWrite(allNodes), [allNodes]);
 
+  // Live coder — tracks an in-flight coding tool call so the panel
+  // pops the moment Axon decides to write a file, not after it
+  // finishes. We keep a ref to the running tool node id and the
+  // typewriter playback state.
+  const liveTool = useMemo(() => findRunningCodingTool(allNodes), [allNodes]);
+  const [liveToolId, setLiveToolId] = useState<string | null>(null);
+  const [liveTargetPath, setLiveTargetPath] = useState<string>("");
+  // Pop the moment a coding tool enters running.
+  useEffect(() => {
+    if (!liveTool) return;
+    if (liveTool.id === liveToolId) return;
+    setLiveToolId(liveTool.id);
+    setLiveTargetPath(extractTargetPath(liveTool));
+    setVisible(true);
+    setPinned(false);
+    setPinnedId(null);
+    if (hideTimer.current) {
+      window.clearTimeout(hideTimer.current);
+      hideTimer.current = null;
+    }
+  }, [liveTool?.id, liveToolId]);
+
+  // Once the coding tool ends and a fresh file write/modify lands,
+  // mark the live session over so the diff view can take over. We
+  // do this by clearing liveToolId when the running state flips.
+  useEffect(() => {
+    if (!liveToolId) return;
+    const node = allNodes.find((n) => n.id === liveToolId);
+    if (!node || node.state !== "running") {
+      setLiveToolId(null);
+    }
+  }, [allNodes, liveToolId]);
+
+  // Typewriter playback over the latest write's `after` content.
+  // Triggered when the file node arrives with content; reveals lines
+  // 1 → N at ~25ms each (capped so a 1000-line file finishes in
+  // ~6s — fast enough to feel "live coding", slow enough to read).
+  const [typedLineCount, setTypedLineCount] = useState(0);
+  const [typeTargetId, setTypeTargetId] = useState<string | null>(null);
+  useEffect(() => {
+    if (!latest || latest.id === typeTargetId) return;
+    const text = latest.after ?? "";
+    if (!text) return;
+    setTypeTargetId(latest.id);
+    setTypedLineCount(0);
+    const totalLines = text.split("\n").length;
+    // Total animation budget — 5s for files up to ~250 lines, longer
+    // files speed up so the playback never drags past 6s.
+    const budgetMs = Math.min(6000, Math.max(1500, totalLines * 22));
+    const stepMs = Math.max(8, budgetMs / Math.max(1, totalLines));
+    let i = 0;
+    const handle = window.setInterval(() => {
+      i += 1;
+      setTypedLineCount(i);
+      if (i >= totalLines) {
+        window.clearInterval(handle);
+      }
+    }, stepMs);
+    return () => window.clearInterval(handle);
+  }, [latest?.id, typeTargetId]);
+
   useEffect(() => {
     if (pinnedId) return; // pinned mode — don't auto-track
     if (!latest) return;
@@ -133,14 +233,51 @@ export function DiffOverlay() {
     return compactDiff(raw, { context: 3 });
   }, [showing?.id, showing?.before, showing?.after]);
 
-  if (!showing || !diff) return null;
+  // Decide which mode the panel is in:
+  //   • liveTool active        → show "Axon is coding…" status + cursor
+  //   • typewriter still going → show typewriter view of `after`
+  //   • file diff ready        → existing diff view
+  const isLive = !!liveTool;
+  const totalLines = useMemo(
+    () => (latest?.after ? latest.after.split("\n").length : 0),
+    [latest?.after],
+  );
+  const isTyping = !!latest && typedLineCount < totalLines;
 
-  const pathLabel = showing.filePath ?? showing.label;
-  const opLabel =
-    showing.fileOp === "modify" ? "MODIFIED" : showing.fileOp === "write" ? "CREATED" : (showing.fileOp ?? "TOUCHED").toUpperCase();
-  const opTone =
-    showing.fileOp === "modify" ? "amber" : showing.fileOp === "write" ? "teal" : "neutral";
-  const durLabel = showing.durationMs !== undefined ? formatDuration(showing.durationMs) : null;
+  // Bail only when there's nothing to show AT ALL — neither a live
+  // session nor a completed diff. The previous early return was too
+  // aggressive: it hid the panel during the tool's running window.
+  if (!isLive && !isTyping && (!showing || !diff)) return null;
+
+  // Header derives from whichever mode we're in.
+  const targetForHeader = isLive
+    ? { path: liveTargetPath || "(file)", op: "WRITING" as const, tone: "live" as const, dur: null as string | null }
+    : showing
+      ? {
+          path: showing.filePath ?? showing.label,
+          op:
+            showing.fileOp === "modify"
+              ? "MODIFIED"
+              : showing.fileOp === "write"
+                ? "CREATED"
+                : (showing.fileOp ?? "TOUCHED").toUpperCase(),
+          tone:
+            showing.fileOp === "modify"
+              ? ("amber" as const)
+              : showing.fileOp === "write"
+                ? ("teal" as const)
+                : ("neutral" as const),
+          dur:
+            showing.durationMs !== undefined
+              ? formatDuration(showing.durationMs)
+              : null,
+        }
+      : { path: "", op: "TOUCHED", tone: "neutral" as const, dur: null };
+
+  const pathLabel = targetForHeader.path;
+  const opLabel = targetForHeader.op;
+  const opTone = targetForHeader.tone;
+  const durLabel = targetForHeader.dur;
 
   return (
     <aside
@@ -151,7 +288,20 @@ export function DiffOverlay() {
     >
       <header className="axon-diff-head">
         <div className="axon-diff-head-row">
-          <span className={`axon-diff-op axon-diff-op--${opTone}`}>{opLabel}</span>
+          <span
+            className={`axon-diff-op axon-diff-op--${opTone === "live" ? "live" : opTone}`}
+            style={
+              opTone === "live"
+                ? {
+                    color: "rgb(56, 189, 248)",
+                    background: "rgba(56, 189, 248, 0.10)",
+                    borderColor: "rgba(56, 189, 248, 0.55)",
+                  }
+                : undefined
+            }
+          >
+            {opLabel}
+          </span>
           <span className="axon-diff-path" title={pathLabel}>
             {pathLabel}
           </span>
@@ -173,7 +323,7 @@ export function DiffOverlay() {
                   }, AUTO_HIDE_MS);
                 } else {
                   setPinned(true);
-                  setPinnedId(showing.id);
+                  if (showing) setPinnedId(showing.id);
                 }
               }}
               title={pinned ? "Unpin (auto-hide)" : "Pin (stay open)"}
@@ -199,24 +349,36 @@ export function DiffOverlay() {
             </button>
           </span>
         </div>
-        <div className="axon-diff-meta">
-          <span className="axon-diff-stat axon-diff-stat--add">+{diff.summary.added}</span>
-          <span className="axon-diff-stat axon-diff-stat--del">−{diff.summary.removed}</span>
-          <span className="axon-diff-stat axon-diff-stat--eq">{diff.summary.unchanged} unchanged</span>
-          {durLabel && <span className="axon-diff-stat axon-diff-stat--dur">{durLabel}</span>}
-          {showing.diffTruncated && (
-            <span className="axon-diff-stat axon-diff-stat--trunc" title="File too large — diff is partial">
-              truncated
-            </span>
-          )}
-        </div>
+        {!isLive && diff && (
+          <div className="axon-diff-meta">
+            <span className="axon-diff-stat axon-diff-stat--add">+{diff.summary.added}</span>
+            <span className="axon-diff-stat axon-diff-stat--del">−{diff.summary.removed}</span>
+            <span className="axon-diff-stat axon-diff-stat--eq">{diff.summary.unchanged} unchanged</span>
+            {durLabel && <span className="axon-diff-stat axon-diff-stat--dur">{durLabel}</span>}
+            {showing?.diffTruncated && (
+              <span className="axon-diff-stat axon-diff-stat--trunc" title="File too large — diff is partial">
+                truncated
+              </span>
+            )}
+          </div>
+        )}
       </header>
 
-      <div className="axon-diff-body">
-        {diff.lines.length === 0 ? (
-          <div className="axon-diff-empty">No textual change.</div>
-        ) : (
-          <ol className="axon-diff-lines">
+      {(isLive || isTyping) && (
+        <LiveCoderBody
+          isLive={isLive}
+          path={pathLabel}
+          fullText={latest?.after ?? ""}
+          revealedLines={typedLineCount}
+        />
+      )}
+
+      {!isLive && !isTyping && diff && (
+        <div className="axon-diff-body">
+          {diff.lines.length === 0 ? (
+            <div className="axon-diff-empty">No textual change.</div>
+          ) : (
+            <ol className="axon-diff-lines">
             {diff.lines.map((ln, idx) => {
               if (ln.kind === "skip") {
                 return (
@@ -246,10 +408,78 @@ export function DiffOverlay() {
                 </li>
               );
             })}
-          </ol>
+            </ol>
+          )}
+        </div>
+      )}
+    </aside>
+  );
+}
+
+// ── Live coder body — typewriter playback over `after` content. ────
+function LiveCoderBody({
+  isLive,
+  path,
+  fullText,
+  revealedLines,
+}: {
+  isLive: boolean;
+  path: string;
+  fullText: string;
+  revealedLines: number;
+}) {
+  const allLines = useMemo(() => fullText.split("\n"), [fullText]);
+  const visibleLines = useMemo(
+    () => allLines.slice(0, Math.max(0, revealedLines)),
+    [allLines, revealedLines],
+  );
+  const totalLines = allLines.length;
+  const progress = totalLines > 0 ? Math.min(1, revealedLines / totalLines) : 0;
+
+  // Auto-scroll the stream to the bottom as new lines reveal.
+  const streamRef = useRef<HTMLDivElement | null>(null);
+  useEffect(() => {
+    const el = streamRef.current;
+    if (!el) return;
+    el.scrollTop = el.scrollHeight;
+  }, [revealedLines]);
+
+  return (
+    <div className="axon-live-coder">
+      <div className="axon-live-coder-status">
+        <span className="axon-live-coder-dot" />
+        {isLive ? (
+          <span>Axon is coding{path ? ` — ${path}` : "…"}</span>
+        ) : (
+          <span>
+            Streaming {revealedLines} / {totalLines} lines · {Math.round(progress * 100)}%
+          </span>
         )}
       </div>
-    </aside>
+      <div ref={streamRef} className="axon-live-coder-stream">
+        {visibleLines.length === 0 && isLive && (
+          <div className="axon-live-coder-line">
+            <span className="axon-live-coder-ln">·</span>
+            <span className="axon-live-coder-text">
+              Composing the file
+              <span className="axon-live-coder-cursor" />
+            </span>
+          </div>
+        )}
+        {visibleLines.map((line, i) => {
+          const isLast = i === visibleLines.length - 1 && revealedLines < totalLines;
+          return (
+            <div key={i} className="axon-live-coder-line">
+              <span className="axon-live-coder-ln">{i + 1}</span>
+              <span className="axon-live-coder-text">
+                {line || " "}
+                {isLast && <span className="axon-live-coder-cursor" />}
+              </span>
+            </div>
+          );
+        })}
+      </div>
+    </div>
   );
 }
 
