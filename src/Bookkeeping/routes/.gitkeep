@@ -1,0 +1,3 @@
+Reserved for future sub-routes (e.g. nested under /bookkeeping/<entity>/...).
+The top-level route lives at src/routes/bookkeeping.lazy.tsx so TanStack
+Router's file-based discovery picks it up.

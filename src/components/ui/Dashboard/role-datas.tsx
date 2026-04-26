@@ -29,6 +29,7 @@ import {
   Package,
   ClipboardCheck,
   Inbox,
+  BookCopy,
   type LucideIcon,
 } from "lucide-react";
 
@@ -872,6 +873,12 @@ export const cooData = {
       icon: DollarSign,
       isActive: false,
     },
+    {
+      title: "Bookkeeping",
+      url: "/bookkeeping",
+      icon: BookCopy,
+      isActive: false,
+    },
 
     // ── Simplicity-only items ──
     {
@@ -1133,6 +1140,12 @@ export const ceoData = {
       icon: DollarSign,
       isActive: false,
     },
+    {
+      title: "Bookkeeping",
+      url: "/bookkeeping",
+      icon: BookCopy,
+      isActive: false,
+    },
 
     // ── Simplicity-only items ──
     {
@@ -1278,6 +1291,12 @@ export const cfoData = {
       title: "Finance Dashboard",
       url: "/financialDashboard",
       icon: DollarSign,
+      isActive: false,
+    },
+    {
+      title: "Bookkeeping",
+      url: "/bookkeeping",
+      icon: BookCopy,
       isActive: false,
     },
     {
