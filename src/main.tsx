@@ -20,8 +20,10 @@ const memoryHistory = createMemoryHistory({
   initialEntries: ['/']
 })
 
-// Create a new router instance
-const router = createRouter({ routeTree, history: memoryHistory });
+// Create a new router instance. Exported so non-React callers (e.g. the
+// OS-notification onAction handler in __root.tsx) can navigate to /chat
+// when a user clicks a message notification.
+export const router = createRouter({ routeTree, history: memoryHistory });
 
 // Register the router instance for type safety
 declare module "@tanstack/react-router" {

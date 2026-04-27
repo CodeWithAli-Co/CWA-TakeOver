@@ -211,6 +211,18 @@ fn quit_app(app: tauri::AppHandle) {
     app.exit(0);
 }
 
+// Brings the main window to the foreground. Invoked from the OS-notification
+// click handler so a toast click reveals the app even when it's hidden to tray
+// or minimized.
+#[tauri::command]
+fn focus_window(app: tauri::AppHandle) {
+    if let Some(window) = app.get_webview_window("main") {
+        let _ = window.show();
+        let _ = window.unminimize();
+        let _ = window.set_focus();
+    }
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
@@ -324,6 +336,7 @@ pub fn run() {
             del_contact,
             send_invoice,
             quit_app,
+            focus_window,
             // GitHub webhook commands
             github_webhooks::get_github_webhooks,
             github_webhooks::handle_github_webhook,

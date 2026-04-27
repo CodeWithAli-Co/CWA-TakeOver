@@ -3,7 +3,10 @@ import { relaunch } from "@tauri-apps/plugin-process";
 import {
   isPermissionGranted,
   requestPermission,
+  registerActionTypes,
+  onAction,
 } from "@tauri-apps/plugin-notification";
+import { invoke } from "@tauri-apps/api/core";
 import { create, exists, BaseDirectory } from "@tauri-apps/plugin-fs";
 import {
   createRootRoute,
@@ -317,7 +320,12 @@ export const Route = createRootRoute({
         }
       };
 
-      const fireNotify = (title: string, body: string) => {
+      // Setting `actionTypeId: "cwa-message"` is what makes a body-click on
+      // the toast fire the onAction listener registered in the effect below;
+      // without it, OS toasts are dismissable but not clickable. The `extra`
+      // payload carries the destination group so the click handler can jump
+      // straight to the right channel.
+      const fireNotify = (title: string, body: string, group?: string) => {
         if (!isNotifEnabled()) {
           console.log("[notify] skipped (user disabled notifications)");
           return;
@@ -330,6 +338,8 @@ export const Route = createRootRoute({
             // "default" plays the OS default notification chime on platforms
             // that support it (Windows / macOS). Harmless where unsupported.
             ...(isSoundEnabled() ? { sound: "default" } : {}),
+            actionTypeId: "cwa-message",
+            ...(group ? { extra: { group } } : {}),
           });
         } catch (err) {
           console.error("[notify] sendNotification failed:", err);
@@ -405,21 +415,25 @@ export const Route = createRootRoute({
                 fireNotify(
                   `${sentBy} mentioned you in ${groupName}`,
                   body || "[attachment]",
+                  groupName,
                 );
               } else if (hereCall) {
                 fireNotify(
                   `${sentBy} called @here in ${groupName}`,
                   body || "[attachment]",
+                  groupName,
                 );
               } else if (keywordHit) {
                 fireNotify(
                   `"${keywordHit}" mentioned in ${groupName}`,
                   `${sentBy}: ${body || "[attachment]"}`,
+                  groupName,
                 );
               } else if (!muted && !mentionsOnly) {
                 fireNotify(
                   `New message in ${groupName}`,
                   `${sentBy}: ${body || "[attachment]"}`,
+                  groupName,
                 );
               }
             }
@@ -466,21 +480,25 @@ export const Route = createRootRoute({
                 fireNotify(
                   `${sentBy} mentioned you in General`,
                   body || "[attachment]",
+                  "General",
                 );
               } else if (hereCall) {
                 fireNotify(
                   `${sentBy} called @here in General`,
                   body || "[attachment]",
+                  "General",
                 );
               } else if (keywordHit) {
                 fireNotify(
                   `"${keywordHit}" mentioned in General`,
                   `${sentBy}: ${body || "[attachment]"}`,
+                  "General",
                 );
               } else if (!muted && !mentionsOnly) {
                 fireNotify(
                   "New message in General",
                   `${sentBy}: ${body || "[attachment]"}`,
+                  "General",
                 );
               }
             }
@@ -501,24 +519,87 @@ export const Route = createRootRoute({
       // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [GroupName, currentUsername, currentSupaId, currentRole]);
 
-    // Check if can send notifications
+    // Check if can send notifications + wire up the click-to-focus handler.
+    // Registering the "cwa-message" action type once at boot is what enables
+    // body-clicks on chat toasts to fire the onAction listener — without it,
+    // toasts dismiss but never reach our app. The listener focuses the
+    // window, switches the chat store to the source group, and routes to
+    // /chat so the user lands directly in the conversation that pinged them.
     useEffect(() => {
-      async function CheckNotifPerm() {
-        // Do you have permission to send a notification?
-        let permissionGranted = await isPermissionGranted();
+      // onAction() resolves to a PluginListener — has .unregister(), not a
+      // callable. Stored as `any` so the cleanup path works regardless of
+      // exact plugin version.
+      let listener: any = null;
+      let cancelled = false;
 
-        // If not we need to request it
+      async function setupNotifications() {
+        let permissionGranted = await isPermissionGranted();
         if (!permissionGranted) {
           const permission = await requestPermission();
           permissionGranted = permission === "granted";
         }
+        if (!permissionGranted) {
+          console.log("[notify] permission denied — toasts disabled by OS");
+          return;
+        }
+        console.log("[notify] permission granted");
 
-        // Once permission has been granted we can send the notification
-        if (permissionGranted) {
-          console.log("Notification Permission is Granted!");
+        try {
+          await registerActionTypes([
+            {
+              id: "cwa-message",
+              actions: [
+                { id: "open", title: "Open", foreground: true },
+              ],
+            },
+          ]);
+        } catch (err) {
+          console.warn("[notify] registerActionTypes failed:", err);
+        }
+
+        try {
+          const handle: any = await onAction(async (n: any) => {
+            try {
+              await invoke("focus_window");
+            } catch (err) {
+              console.warn("[notify] focus_window failed:", err);
+            }
+            const grp = n?.extra?.group;
+            if (typeof grp === "string" && grp.length > 0) {
+              try {
+                useAppStore.getState().setGroupName(grp);
+              } catch (err) {
+                console.warn("[notify] setGroupName failed:", err);
+              }
+              try {
+                const { router } = await import("@/main");
+                await router.navigate({ to: "/chat" });
+              } catch (err) {
+                console.warn("[notify] router navigate failed:", err);
+              }
+            }
+          });
+          if (cancelled) {
+            try {
+              if (typeof handle === "function") handle();
+              else if (typeof handle?.unregister === "function") handle.unregister();
+            } catch { /* noop */ }
+          } else {
+            listener = handle;
+          }
+        } catch (err) {
+          console.warn("[notify] onAction listener failed:", err);
         }
       }
-      CheckNotifPerm();
+      setupNotifications();
+
+      return () => {
+        cancelled = true;
+        try {
+          if (typeof listener === "function") listener();
+          else if (typeof listener?.unregister === "function") listener.unregister();
+        } catch { /* noop */ }
+      };
     }, []);
 
     // Check if invoiceStats file exists or not
