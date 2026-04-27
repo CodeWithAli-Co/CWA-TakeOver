@@ -344,3 +344,92 @@ pub fn run() {
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }
+
+// ─── Tests ──────────────────────────────────────────────────────────
+//
+// Crypto round-trip + invariants. The encrypt/decrypt pair is the
+// only thing standing between the raw secret material the app
+// stores and the user's data — a regression here doesn't just
+// corrupt a feature, it permanently destroys data (no decryption =
+// no recovery).
+//
+// We assert four properties:
+//   1. Round-trip stability — decrypt(encrypt(x, k), k) == x.
+//   2. Nonce uniqueness — encrypting the same plaintext twice
+//      produces different ciphertexts (else AES-GCM is broken).
+//   3. Empty plaintext round-trips (degenerate but possible input).
+//   4. Unicode plaintext round-trips byte-perfectly.
+#[cfg(test)]
+mod tests {
+    use super::{decrypt, encrypt};
+
+    // 32 bytes — AES-256 requires a 256-bit key.
+    const TEST_KEY: &str = "01234567890123456789012345678901";
+
+    #[test]
+    fn round_trip_basic_ascii() {
+        let plaintext = "hello world".to_string();
+        let ciphertext = encrypt(TEST_KEY.to_string(), plaintext.clone());
+        let decrypted = decrypt(TEST_KEY.to_string(), ciphertext);
+        assert_eq!(decrypted, plaintext);
+    }
+
+    #[test]
+    fn round_trip_empty_plaintext() {
+        let plaintext = String::new();
+        let ciphertext = encrypt(TEST_KEY.to_string(), plaintext.clone());
+        // Even empty input must produce non-empty output (nonce + tag).
+        assert!(!ciphertext.is_empty());
+        let decrypted = decrypt(TEST_KEY.to_string(), ciphertext);
+        assert_eq!(decrypted, plaintext);
+    }
+
+    #[test]
+    fn round_trip_unicode() {
+        // Byte-level fidelity for multi-byte UTF-8 sequences.
+        let plaintext = "日本語 émoji 🚀 password!".to_string();
+        let ciphertext = encrypt(TEST_KEY.to_string(), plaintext.clone());
+        let decrypted = decrypt(TEST_KEY.to_string(), ciphertext);
+        assert_eq!(decrypted, plaintext);
+    }
+
+    #[test]
+    fn nonce_is_random_per_encryption() {
+        // AES-GCM requires unique nonces per (key, plaintext) pair.
+        // Encrypting the same plaintext twice MUST yield different
+        // ciphertexts — otherwise the implementation is reusing
+        // nonces and AES-GCM's confidentiality guarantees collapse.
+        let plaintext = "same input twice".to_string();
+        let c1 = encrypt(TEST_KEY.to_string(), plaintext.clone());
+        let c2 = encrypt(TEST_KEY.to_string(), plaintext);
+        assert_ne!(
+            c1, c2,
+            "nonce reuse detected — same plaintext produced same ciphertext",
+        );
+    }
+
+    #[test]
+    fn ciphertext_starts_with_a_12_byte_nonce() {
+        // The Rust impl prepends a 12-byte AES-GCM nonce to the
+        // ciphertext. The hex-encoded blob's first 24 chars are
+        // therefore the nonce. We check length sanity here so a
+        // future refactor that drops the prepend (or uses a
+        // different nonce size) trips the test before it ships.
+        let ciphertext = encrypt(TEST_KEY.to_string(), "x".to_string());
+        // 12 nonce bytes + ≥1 ciphertext byte + 16 GCM tag bytes
+        // → ≥ 29 bytes → ≥ 58 hex chars.
+        assert!(ciphertext.len() >= 58, "ciphertext shorter than expected");
+        // First 24 hex chars decode cleanly as the nonce.
+        assert!(hex::decode(&ciphertext[..24]).is_ok());
+    }
+
+    #[test]
+    fn round_trip_long_plaintext() {
+        // Stress: a large body should round-trip without loss. Catches
+        // chunking bugs or off-by-one tag-length issues.
+        let plaintext = "abc".repeat(10_000);
+        let ciphertext = encrypt(TEST_KEY.to_string(), plaintext.clone());
+        let decrypted = decrypt(TEST_KEY.to_string(), ciphertext);
+        assert_eq!(decrypted, plaintext);
+    }
+}

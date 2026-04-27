@@ -20,6 +20,10 @@ import { useAppStore } from "../stores/store";
 import { useChatStore } from "@/stores/chatStore";
 import { useQueryClient } from "@tanstack/react-query";
 import { detectCeoSlander, respondToSlander } from "@/Axon/engine/loyaltyMonitor";
+import {
+  isMentioned as isMentionedPure,
+  isHereCall as isHereCallPure,
+} from "@/lib/chatNotify";
 
 import { SidebarProvider } from "@/components/ui/shadcnComponents/sidebar";
 import { AppSidebar } from "@/components/app-sidebar";
@@ -346,16 +350,14 @@ export const Route = createRootRoute({
         }
       };
 
-      // Detect @username mentions in the message text.
-      const isMentioned = (text: string): boolean => {
-        if (!currentUsername || !text) return false;
-        const re = new RegExp(`(^|\\s)@${currentUsername}(?![A-Za-z0-9_.-])`, "i");
-        return re.test(text);
-      };
+      // Detect @username mentions in the message text. Delegates to
+      // the pure helper in @/lib/chatNotify so the matching rules are
+      // identical to what the unit tests cover.
+      const isMentioned = (text: string): boolean =>
+        isMentionedPure(text, currentUsername);
 
-      // Detect /here — fire to anyone currently online per presence state.
-      const isHereCall = (text: string): boolean =>
-        /(^|\s)@here(?![A-Za-z0-9_.-])/i.test(text || "");
+      // Detect @here — fire to anyone currently online per presence state.
+      const isHereCall = (text: string): boolean => isHereCallPure(text);
       const isUserOnline = (): boolean => {
         if (!currentUsername) return false;
         const status = useChatStore.getState().presenceStatus(currentUsername);

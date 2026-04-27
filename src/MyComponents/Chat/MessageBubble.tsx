@@ -200,44 +200,23 @@ function extractReplyMarker(
   };
 }
 
-/** Reactions marker — stored at the top of the message body when the
- *  `reactions` DB column doesn't exist. Format:
- *  `{rx:<emoji>=<user1>,<user2>;<emoji>=<user>}` on its own line.
- *  Encoded values are comma-separated usernames per emoji. */
-export const REACTIONS_MARKER_RE = /^\{rx:([^}]*)\}\s*\n?/;
+// Reactions marker codec lives in `reactionMarkers.ts` so it can be
+// unit-tested without React. Imported here so this file can use the
+// helpers (display-time parsing in the bubble), and re-exported so
+// existing import paths (`ChatLayout`, etc) keep working.
+import {
+  REACTIONS_MARKER_RE,
+  parseReactionsMarker,
+  stripReactionsMarker,
+  encodeReactionsMarker,
+} from "./reactionMarkers";
 
-export function parseReactionsMarker(text: string): Record<string, string[]> {
-  const match = text.match(REACTIONS_MARKER_RE);
-  if (!match) return {};
-  const body = match[1] ?? "";
-  const out: Record<string, string[]> = {};
-  for (const chunk of body.split(";")) {
-    const piece = chunk.trim();
-    if (!piece) continue;
-    const eq = piece.indexOf("=");
-    if (eq < 0) continue;
-    const emoji = piece.slice(0, eq).trim();
-    const users = piece.slice(eq + 1).split(",").map((u) => u.trim()).filter(Boolean);
-    if (emoji) out[emoji] = users;
-  }
-  return out;
-}
-
-export function stripReactionsMarker(text: string): string {
-  return text.replace(REACTIONS_MARKER_RE, "").trimStart();
-}
-
-export function encodeReactionsMarker(
-  reactions: Record<string, string[]>,
-): string {
-  const parts: string[] = [];
-  for (const [emoji, users] of Object.entries(reactions)) {
-    if (!users || users.length === 0) continue;
-    parts.push(`${emoji}=${users.join(",")}`);
-  }
-  if (parts.length === 0) return "";
-  return `{rx:${parts.join(";")}}\n`;
-}
+export {
+  REACTIONS_MARKER_RE,
+  parseReactionsMarker,
+  stripReactionsMarker,
+  encodeReactionsMarker,
+};
 
 export const MessageBubble: React.FC<Props> = ({
   msg, prevMsg, currentUsername,

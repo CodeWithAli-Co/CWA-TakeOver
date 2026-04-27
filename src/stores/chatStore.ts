@@ -13,6 +13,7 @@
 
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
+import { matchesKeyword as matchesKeywordPure } from "@/lib/chatNotify";
 
 export type ThreadStyle = "sidepanel" | "inline";
 
@@ -294,16 +295,12 @@ export const useChatStore = create<ChatStoreState>()(
         set((state) => ({
           keywordAlerts: state.keywordAlerts.filter((w) => w !== word.toLowerCase()),
         })),
-      matchesKeyword: (text) => {
-        const hay = (text || "").toLowerCase();
-        if (!hay) return null;
-        for (const w of get().keywordAlerts) {
-          // Word-boundary-ish match — avoid matching "foo" inside "bufoon".
-          const re = new RegExp(`(^|[^a-z0-9])${w.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}($|[^a-z0-9])`, "i");
-          if (re.test(hay)) return w;
-        }
-        return null;
-      },
+      // Delegates to the pure helper in @/lib/chatNotify so the
+      // matching logic can be unit-tested without bringing up the
+      // Zustand persist middleware. Behavior is identical — same
+      // word-boundary semantics, same case-insensitive comparison,
+      // same regex-escape of user-supplied keywords.
+      matchesKeyword: (text) => matchesKeywordPure(text, get().keywordAlerts),
     }),
     {
       name: "cwa-chat-store",
