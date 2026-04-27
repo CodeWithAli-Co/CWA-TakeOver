@@ -329,6 +329,46 @@ export const Route = createRootRoute({
       // without it, OS toasts are dismissable but not clickable. The `extra`
       // payload carries the destination group so the click handler can jump
       // straight to the right channel.
+      // ── Notification text helpers ─────────────────────────────
+      // The composer embeds reply / reaction / forward / poll markers
+      // and image URLs in the raw message body so they survive even
+      // when the matching DB columns are missing. Those leak into
+      // toasts as gibberish like "{reply:42|alice}" or raw S3 URLs.
+      // Strip them before showing.
+      const cleanNotificationBody = (raw: string, maxLen = 110): string => {
+        let t = raw || "";
+        // Forward marker: {fwd:from:group}\n
+        t = t.replace(/^\{fwd:[^}]+\}\s*\n?/, "");
+        // Reactions marker: {reactions:...}\n
+        t = t.replace(/^\{reactions:[^}]*\}\s*\n?/, "");
+        // Reply marker: {reply:42|sender}\n
+        t = t.replace(/^\{reply:\d+\|[^}]+\}\s*\n?/, "");
+        // Poll marker: {poll:...}
+        t = t.replace(/\{poll:[\s\S]*?\}/, "[poll]");
+        // Image / file URLs — strip standalone S3 / supabase storage URLs.
+        t = t.replace(/https?:\/\/\S+/g, "[attachment]");
+        // Collapse whitespace.
+        t = t.replace(/\s+/g, " ").trim();
+        if (!t) return "[attachment]";
+        if (t.length > maxLen) return t.slice(0, maxLen - 1) + "…";
+        return t;
+      };
+
+      // Convert "dm::alice::blazehp" → "alice" (the OTHER participant).
+      // Falls back to the raw group name if the format doesn't match.
+      const humanizeGroupName = (groupName: string): string => {
+        if (!groupName) return "";
+        const m = groupName.match(/^dm::(.+)$/);
+        if (!m) return groupName; // channel name passes through
+        const parts = m[1].split("::").filter(Boolean);
+        const other = parts.find((p) => p !== currentUsername);
+        return other ?? parts[0] ?? groupName;
+      };
+
+      // True if the group is a DM (1:1 conversation).
+      const isDm = (groupName: string): boolean =>
+        groupName.startsWith("dm::");
+
       const fireNotify = (title: string, body: string, group?: string) => {
         if (!isNotifEnabled()) {
           console.log("[notify] skipped (user disabled notifications)");
@@ -413,30 +453,46 @@ export const Route = createRootRoute({
               mentioned || hereCall || !!keywordHit ||
               (!muted && !mentionsOnly && (!viewing || !focused));
             if (shouldToast) {
+              // Friendly group label — DMs collapse to the other
+              // participant's name; channel names pass through.
+              const niceGroup = humanizeGroupName(groupName);
+              const dm = isDm(groupName);
+              const cleanBody = cleanNotificationBody(body);
               if (mentioned) {
                 fireNotify(
-                  `${sentBy} mentioned you in ${groupName}`,
-                  body || "[attachment]",
+                  dm
+                    ? `${sentBy} mentioned you`
+                    : `${sentBy} mentioned you in #${niceGroup}`,
+                  cleanBody,
                   groupName,
                 );
               } else if (hereCall) {
                 fireNotify(
-                  `${sentBy} called @here in ${groupName}`,
-                  body || "[attachment]",
+                  `${sentBy} called @here in #${niceGroup}`,
+                  cleanBody,
                   groupName,
                 );
               } else if (keywordHit) {
                 fireNotify(
-                  `"${keywordHit}" mentioned in ${groupName}`,
-                  `${sentBy}: ${body || "[attachment]"}`,
+                  dm
+                    ? `"${keywordHit}" mentioned by ${sentBy}`
+                    : `"${keywordHit}" mentioned in #${niceGroup}`,
+                  `${sentBy}: ${cleanBody}`,
                   groupName,
                 );
               } else if (!muted && !mentionsOnly) {
-                fireNotify(
-                  `New message in ${groupName}`,
-                  `${sentBy}: ${body || "[attachment]"}`,
-                  groupName,
-                );
+                // For DMs, the title IS the sender's name — no "New
+                // message in" prefix needed, since DM = 1:1. For
+                // channels, keep the channel context.
+                if (dm) {
+                  fireNotify(sentBy, cleanBody, groupName);
+                } else {
+                  fireNotify(
+                    `${sentBy} in #${niceGroup}`,
+                    cleanBody,
+                    groupName,
+                  );
+                }
               }
             }
           },
@@ -478,28 +534,29 @@ export const Route = createRootRoute({
               mentioned || hereCall || !!keywordHit ||
               (!muted && !mentionsOnly && (!viewing || !focused));
             if (shouldToast) {
+              const cleanBody = cleanNotificationBody(body);
               if (mentioned) {
                 fireNotify(
-                  `${sentBy} mentioned you in General`,
-                  body || "[attachment]",
+                  `${sentBy} mentioned you in #general`,
+                  cleanBody,
                   "General",
                 );
               } else if (hereCall) {
                 fireNotify(
-                  `${sentBy} called @here in General`,
-                  body || "[attachment]",
+                  `${sentBy} called @here in #general`,
+                  cleanBody,
                   "General",
                 );
               } else if (keywordHit) {
                 fireNotify(
-                  `"${keywordHit}" mentioned in General`,
-                  `${sentBy}: ${body || "[attachment]"}`,
+                  `"${keywordHit}" mentioned in #general`,
+                  `${sentBy}: ${cleanBody}`,
                   "General",
                 );
               } else if (!muted && !mentionsOnly) {
                 fireNotify(
-                  "New message in General",
-                  `${sentBy}: ${body || "[attachment]"}`,
+                  `${sentBy} in #general`,
+                  cleanBody,
                   "General",
                 );
               }
