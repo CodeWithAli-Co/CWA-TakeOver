@@ -595,6 +595,43 @@ export const Route = createRootRoute({
       }
       setupNotifications();
 
+      // Devtools helper — Vite doesn't expose bare specifiers at
+      // runtime, so the operator can't `await import(...)` from the
+      // console. Expose two helpers on window so we can diagnose
+      // OS-notification issues by typing `cwaNotifyDiag()` /
+      // `cwaNotifyTest()`. Removed in production builds via the
+      // import.meta.env.DEV gate so we don't leak debug to shipping.
+      if (import.meta.env.DEV) {
+        (window as any).cwaNotifyDiag = async () => {
+          const granted = await isPermissionGranted();
+          // eslint-disable-next-line no-console
+          console.log("[notify-diag] permission granted?", granted);
+          if (!granted) {
+            // eslint-disable-next-line no-console
+            console.log("[notify-diag] requesting…");
+            const res = await requestPermission();
+            // eslint-disable-next-line no-console
+            console.log("[notify-diag] requestPermission →", res);
+          }
+          return { granted };
+        };
+        (window as any).cwaNotifyTest = (
+          title = "CWA Test",
+          body = "If you see this in the Action Center, OS notifications work.",
+        ) => {
+          try {
+            sendNotification({ title, body, sound: "default" });
+            // eslint-disable-next-line no-console
+            console.log(
+              "[notify-diag] sendNotification dispatched. Check the Action Center if no toast appears.",
+            );
+          } catch (err) {
+            // eslint-disable-next-line no-console
+            console.error("[notify-diag] sendNotification threw:", err);
+          }
+        };
+      }
+
       return () => {
         cancelled = true;
         try {

@@ -248,6 +248,28 @@ pub fn run() {
         .plugin(tauri_plugin_sql::Builder::new().build())
         .plugin(tauri_plugin_opener::init())
         .setup(|app| {
+            // ── Windows: register the AppUserModelID at runtime ──
+            // Without this, OS toasts dispatched from a `tauri dev`
+            // binary silently disappear because Windows doesn't
+            // recognize the dev exe path as a notification source.
+            // Calling SetCurrentProcessExplicitAppUserModelID claims
+            // the AUMID (matching tauri.conf.json `identifier`)
+            // for the running process so toasts surface even in
+            // dev mode, AND the installed production exe still
+            // works as before.
+            #[cfg(windows)]
+            {
+                use windows::core::PCWSTR;
+                use windows::Win32::UI::Shell::SetCurrentProcessExplicitAppUserModelID;
+                // Must match `bundle.identifier` in tauri.conf.json.
+                let aumid: Vec<u16> = "com.cwa-takeover.app\0"
+                    .encode_utf16()
+                    .collect();
+                unsafe {
+                    let _ = SetCurrentProcessExplicitAppUserModelID(PCWSTR(aumid.as_ptr()));
+                }
+            }
+
             // Register GitHub webhook commands and initialize state
             github_webhooks::register_github_webhook_commands(app)?;
 
