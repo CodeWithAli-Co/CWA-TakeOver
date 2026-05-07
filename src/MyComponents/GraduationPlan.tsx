@@ -848,7 +848,7 @@ function CourseRow({
         setDragging(true);
       }}
       onDragEnd={() => setDragging(false)}
-      className={`group relative grid grid-cols-[18px_120px_minmax(0,1fr)_60px_minmax(200px,auto)_minmax(160px,auto)_36px] items-center gap-x-4 px-2 py-3.5 border-b border-border/40 last:border-b-0 transition-colors cursor-pointer ${
+      className={`group relative grid grid-cols-[18px_120px_minmax(0,1fr)_60px_minmax(200px,auto)_minmax(160px,auto)_36px] items-center gap-x-4 px-2 py-3.5 border-b border-border/40 last:border-b-0 transition-colors cursor-grab active:cursor-grabbing ${
         dragging
           ? "opacity-40"
           : isSelected

@@ -8,11 +8,13 @@
  * with three lenses.
  */
 
-import { motion } from "framer-motion";
+import { useState } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import {
   AlertTriangle,
   Building2,
   CheckCircle2,
+  ChevronDown,
   Clock,
   GraduationCap,
   Info,
@@ -23,7 +25,11 @@ import {
 
 import {
   BufferRemediation,
-  RISK_TERM_PLAN,
+  DEFAULT_RISK_PACE,
+  RISK_PACES,
+  RISK_PLANS,
+  RiskPace,
+  RiskPaceMeta,
   ScenarioCourse,
   ScenarioPlan,
   ScenarioTerm,
@@ -33,10 +39,150 @@ import {
 import { Course } from "./GraduationPlan.queries";
 
 // ═══════════════════════════════════════════════════════════════════
-// RISK TERM VIEW
+// RISK TERM VIEW — pace-selectable
 // ═══════════════════════════════════════════════════════════════════
 export function RiskTermView() {
-  return <ScenarioPlanView plan={RISK_TERM_PLAN} />;
+  const [pace, setPace] = useState<RiskPace>(DEFAULT_RISK_PACE);
+  const plan = RISK_PLANS[pace];
+  const paceMeta = RISK_PACES.find((p) => p.id === pace)!;
+
+  return (
+    <div>
+      <div className="px-10 pt-6 pb-2">
+        <PaceSelector active={pace} onChange={setPace} />
+      </div>
+      <AnimatePresence mode="wait">
+        <motion.div
+          key={pace}
+          initial={{ opacity: 0, y: 6 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: -4 }}
+          transition={{ duration: 0.25 }}
+        >
+          <ScenarioPlanView plan={plan} paceMeta={paceMeta} />
+        </motion.div>
+      </AnimatePresence>
+    </div>
+  );
+}
+
+// ─── Pace selector — custom dropdown over the three plans ─────────
+function PaceSelector({
+  active,
+  onChange,
+}: {
+  active: RiskPace;
+  onChange: (p: RiskPace) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const activeMeta = RISK_PACES.find((p) => p.id === active)!;
+
+  const intensityCls: Record<RiskPaceMeta["intensity"], string> = {
+    Heavy:   "bg-amber-500/[0.14] text-amber-200 border-amber-400/40",
+    Extreme: "bg-red-500/[0.14] text-red-200 border-red-400/40",
+  };
+
+  return (
+    <div className="relative inline-block">
+      <div className="text-[10.5px] uppercase tracking-[0.2em] text-muted-foreground font-semibold mb-2">
+        Lock-in Pace
+      </div>
+      <button
+        onClick={() => setOpen((o) => !o)}
+        className="flex items-center gap-3 px-4 py-3 bg-card border border-border rounded-sm hover:border-primary/40 transition-colors min-w-[420px] text-left"
+      >
+        <span
+          className={`inline-flex items-center px-2 py-0.5 rounded-sm border text-[10.5px] font-bold tracking-wide whitespace-nowrap ${intensityCls[activeMeta.intensity]}`}
+        >
+          {activeMeta.intensity}
+        </span>
+        <div className="min-w-0 flex-1">
+          <div className="flex items-center gap-2">
+            <span className="text-[14px] font-bold text-foreground tracking-tight">
+              {activeMeta.label}
+            </span>
+            <span className="text-[11.5px] text-muted-foreground">·</span>
+            <span className="text-[12.5px] font-semibold text-foreground/85">
+              {activeMeta.target}
+            </span>
+            {activeMeta.trimmed > 0 && (
+              <span className="text-[10.5px] uppercase tracking-[0.12em] text-emerald-200 font-bold ml-1">
+                −{activeMeta.trimmed} sem
+              </span>
+            )}
+          </div>
+          <div className="text-[11px] text-muted-foreground mt-0.5 truncate">
+            {activeMeta.tagline}
+          </div>
+        </div>
+        <ChevronDown
+          className={`h-4 w-4 text-muted-foreground transition-transform ${open ? "rotate-180" : ""}`}
+        />
+      </button>
+
+      <AnimatePresence>
+        {open && (
+          <>
+            {/* Click-out backdrop */}
+            <div
+              className="fixed inset-0 z-30"
+              onClick={() => setOpen(false)}
+              aria-hidden
+            />
+            <motion.div
+              initial={{ opacity: 0, y: -4 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -4 }}
+              transition={{ duration: 0.15 }}
+              className="absolute left-0 top-full mt-1.5 z-40 w-full bg-card border border-border rounded-sm shadow-2xl overflow-hidden"
+            >
+              {RISK_PACES.map((p) => {
+                const isActive = p.id === active;
+                return (
+                  <button
+                    key={p.id}
+                    onClick={() => {
+                      onChange(p.id);
+                      setOpen(false);
+                    }}
+                    className={`w-full text-left px-4 py-3 flex items-center gap-3 hover:bg-muted/40 transition-colors border-b border-border/40 last:border-b-0 ${
+                      isActive ? "bg-primary/[0.06]" : ""
+                    }`}
+                  >
+                    <span
+                      className={`inline-flex items-center px-2 py-0.5 rounded-sm border text-[10.5px] font-bold tracking-wide whitespace-nowrap ${intensityCls[p.intensity]}`}
+                    >
+                      {p.intensity}
+                    </span>
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-2">
+                        <span className="text-[13px] font-bold text-foreground tracking-tight">
+                          {p.label}
+                        </span>
+                        <span className="text-[11px] text-muted-foreground">·</span>
+                        <span className="text-[12px] font-semibold text-foreground/85">
+                          {p.target}
+                        </span>
+                        {p.trimmed > 0 && (
+                          <span className="text-[10px] uppercase tracking-[0.12em] text-emerald-200 font-bold">
+                            −{p.trimmed} semester
+                          </span>
+                        )}
+                      </div>
+                      <div className="text-[11px] text-muted-foreground mt-0.5">
+                        {p.tagline}
+                      </div>
+                    </div>
+                    {isActive && <CheckCircle2 className="h-3.5 w-3.5 text-primary shrink-0" />}
+                  </button>
+                );
+              })}
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
+    </div>
+  );
 }
 
 // ═══════════════════════════════════════════════════════════════════
@@ -289,7 +435,11 @@ function RemediationCard({
 // ═══════════════════════════════════════════════════════════════════
 // Shared scenario-plan renderer (used by Risk Term)
 // ═══════════════════════════════════════════════════════════════════
-function ScenarioPlanView({ plan }: { plan: ScenarioPlan }) {
+function ScenarioPlanView({ plan, paceMeta }: { plan: ScenarioPlan; paceMeta?: RiskPaceMeta }) {
+  const intensityLabel = paceMeta?.intensity ?? "Aggressive";
+  const intensityCls =
+    intensityLabel === "Heavy" ? "text-amber-200" : "text-red-200";
+
   return (
     <div className="px-10 pb-12">
       {/* Header + precondition + highlights */}
@@ -303,8 +453,8 @@ function ScenarioPlanView({ plan }: { plan: ScenarioPlan }) {
           <h2 className="text-[24px] font-bold text-foreground tracking-tight">
             {plan.title}
           </h2>
-          <span className="inline-flex items-center gap-1.5 text-[11px] uppercase tracking-[0.18em] text-amber-200 font-bold">
-            <Zap className="h-3.5 w-3.5" /> Aggressive scenario
+          <span className={`inline-flex items-center gap-1.5 text-[11px] uppercase tracking-[0.18em] ${intensityCls} font-bold`}>
+            <Zap className="h-3.5 w-3.5" /> {intensityLabel} pace
           </span>
         </div>
         <p className="text-[13.5px] text-muted-foreground leading-relaxed max-w-3xl">

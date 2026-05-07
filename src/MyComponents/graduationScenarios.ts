@@ -81,8 +81,78 @@ export interface ScenarioPlan {
 }
 
 // ═══════════════════════════════════════════════════════════════════
-// RISK TERM — Fall 2027 graduation, aggressive CC offloading
+// RISK TERM — Two paces (Heavy / Locked In)
+//
+// Spring 2026 is LOCKED — the term ends in days and add/drop has long
+// since closed. Both paces preserve Ali's currently enrolled 5 courses
+// unchanged. They differ only in how aggressively they compress the
+// remaining terms.
+//
+//   · heavy    — Fall 2027 grad (−1 semester). Heavy CC summer +
+//                2 winter sessions. Requires advisor approval to
+//                substitute LING 165 with an alternative LING
+//                capstone (e.g. LING 174). The Spring-only
+//                LING 115 → LING 165 chain otherwise blocks any
+//                Fall 2027 finish.
+//
+//   · locked   — Summer 2027 grad (−2 semesters). Theoretical floor.
+//                Requires THREE advisor-approved substitutions —
+//                LING 165, LING 124, and CS 171 — because the
+//                remaining time doesn't include another Fall term
+//                where those Fall-only / Spring-only critical
+//                courses can run. This pace exists to show the
+//                absolute structural limit, not as a recommendation.
 // ═══════════════════════════════════════════════════════════════════
+
+export type RiskPace = "heavy" | "locked";
+
+export interface RiskPaceMeta {
+  id: RiskPace;
+  label: string;
+  /** Single-line subtitle for the dropdown. */
+  tagline: string;
+  /** Estimated graduation term — used in the dropdown badge. */
+  target: string;
+  /** Approximate semesters trimmed vs. the Standard plan. */
+  trimmed: number; // 0 = same date, 1 = one term earlier, etc.
+  /** Risk level for the badge. */
+  intensity: "Heavy" | "Extreme";
+}
+
+export const RISK_PACES: RiskPaceMeta[] = [
+  {
+    id: "heavy",
+    label: "Heavy Lock-In",
+    tagline: "Fall 2027 · CC summer + winter sessions + LING 165 substitution",
+    target: "Fall 2027",
+    trimmed: 1,
+    intensity: "Heavy",
+  },
+  {
+    id: "locked",
+    label: "Maximum Lock-In",
+    tagline: "Summer 2027 · structural floor — 3 substitutions + dean approval",
+    target: "Summer 2027",
+    trimmed: 2,
+    intensity: "Extreme",
+  },
+];
+
+// ─── Shared Spring 2026 (locked across all paces) ──────────────────
+const LOCKED_SPRING_2026: ScenarioTerm = {
+  id: "sp26",
+  label: "Spring 2026",
+  tag: "Current — Locked (term ends in days)",
+  caption: "15 units · all SJSU · in progress",
+  courses: [
+    { code: "BUS3 186", name: "Prof & Bus Ethics",          units: 3, category: "GE: UD Area 4",         source: "SJSU", status: "in_progress" },
+    { code: "CS 22B",   name: "Python Data Analysis",       units: 3, category: "Major Elective",        source: "SJSU", status: "in_progress" },
+    { code: "LLD 100W", name: "Writing Workshop",           units: 3, category: "WID Requirement",       source: "SJSU", status: "in_progress" },
+    { code: "MATH 42",  name: "Discrete Math",              units: 3, category: "Major Prep — CRITICAL", source: "SJSU", status: "in_progress", critical: true },
+    { code: "PHIL 134", name: "Computers, Ethics, Society", units: 3, category: "GE: UD Area 3",         source: "SJSU", status: "in_progress" },
+  ],
+};
+
 
 /** Mission College and West Valley College course equivalencies for
  *  the courses Ali wants to offload. Source: assist.org articulations
@@ -106,39 +176,25 @@ export function ccEquivalentLine(code: string): string | undefined {
   return parts.join(" · ");
 }
 
-export const RISK_TERM_PLAN: ScenarioPlan = {
-  title: "Risk Term — Fall 2027 Graduation",
-  subtitle: "One semester earlier than Standard. CC-offloaded summers + heavy SJSU terms.",
+// ─── Pace 1: Heavy Lock-In — Fall 2027 (−1 semester) ──────────────
+const HEAVY_PLAN: ScenarioPlan = {
+  title: "Heavy Lock-In — Fall 2027 Graduation",
+  subtitle:
+    "One semester earlier than Standard. CC-offloaded summer, 2 winter sessions, and a LING 165 capstone substitution.",
   precondition: {
     kind: "danger",
-    headline: "Precondition: LING 115 must be added to Spring 2026",
+    headline: "Requires advisor approval — LING 165 capstone substitution",
     body:
-      "LING 165 (capstone) is Spring-only and gated by LING 115, also Spring-only. To graduate Fall 2027, LING 115 had to be added to Spring 2026 — Ali's current term. If add/drop has closed, this plan is no longer reachable; switch to the Standard tab (Spring 2028) for the realistic fastest path.",
+      "LING 115 → LING 165 is a Spring-only chain that otherwise locks the earliest graduation to Spring 2028. To finish Fall 2027 you must substitute LING 165 with another LING capstone the department will accept (e.g. LING 174 Computational Linguistics, LING 181 Sociolinguistics, or a faculty-supervised independent study). Get written advisor + chair approval before Spring 2027 registration. If approval is denied this collapses back to Spring 2028 — same as the Standard plan.",
   },
   highlights: [
-    { icon: "alert", text: "Spring 2026 stack: 18 units (added LING 115). Already brutal alongside MATH 42 + LLD 100W." },
-    { icon: "alert", text: "Final term Fall 2027 stacks BOTH Fall-only critical courses — CS 171 and LING 124. Single failure delays graduation by a year." },
-    { icon: "ok",    text: "5 CC offloads over Summer 2026 + Summer 2027 free 3 SJSU semesters from GE/math noise." },
-    { icon: "ok",    text: "Two winter sessions (Jan 2027 + Jan 2028) absorb LING 122 and CS 157A — flattening the Spring 2027 and Fall 2027 loads." },
-    { icon: "info",  text: "CC tuition is ~$46/unit (CA resident). Estimated savings vs. SJSU rate: ~$2,400 across the plan." },
+    { icon: "alert", text: "Substitute course must be approved BEFORE Spring 2027 registration. Late approval = Standard timeline applies." },
+    { icon: "alert", text: "Fall 2027 final term carries 9 units (CS 171 + LING 124 + LING substitute) — the most loaded final term in any pace." },
+    { icon: "ok",    text: "Trimmed by 1 full semester. Frees Spring 2028 entirely for work, internship, or grad school applications." },
+    { icon: "ok",    text: "5 CC offloads + 2 winter sessions = ~$3,500 saved vs. SJSU tuition for the same units." },
   ],
   terms: [
-    {
-      id: "sp26",
-      label: "Spring 2026",
-      tag: "Current — Aggressive Add",
-      caption: "18 units · all SJSU",
-      highRisk: true,
-      courses: [
-        { code: "BUS3 186", name: "Prof & Bus Ethics",          units: 3, category: "GE: UD Area 4",         source: "SJSU", status: "in_progress" },
-        { code: "CS 22B",   name: "Python Data Analysis",       units: 3, category: "Major Elective",        source: "SJSU", status: "in_progress" },
-        { code: "LLD 100W", name: "Writing Workshop",           units: 3, category: "WID Requirement",       source: "SJSU", status: "in_progress" },
-        { code: "MATH 42",  name: "Discrete Math",              units: 3, category: "Major Prep — CRITICAL", source: "SJSU", status: "in_progress", critical: true },
-        { code: "PHIL 134", name: "Computers, Ethics, Society", units: 3, category: "GE: UD Area 3",         source: "SJSU", status: "in_progress" },
-        { code: "LING 115", name: "Corpus Linguistics",         units: 3, category: "LING Core — CRITICAL ADD", source: "SJSU", status: "critical-add", critical: true,
-          note: "Required addition to make LING 165 reachable Spring 2027. Spring-only course." },
-      ],
-    },
+    LOCKED_SPRING_2026,
     {
       id: "su26",
       label: "Summer 2026",
@@ -146,12 +202,12 @@ export const RISK_TERM_PLAN: ScenarioPlan = {
       caption: "13 units · all CC",
       highRisk: true,
       courses: [
-        { code: "MATH 31",  name: "Calculus II",                  units: 4, category: "Major Prep — CRITICAL", source: "CC (either)", ccEquivalent: ccEquivalentLine("MATH 31"),  status: "planned", critical: true,
-          note: "D/F/NC retake — CC pace + smaller class. Take ALONE-of-math at SJSU level." },
-        { code: "MATH 161A", name: "Applied Prob & Statistics I", units: 3, category: "Major Prep",           source: "Mission CC", ccEquivalent: ccEquivalentLine("MATH 161A"), status: "planned",
-          note: "Verify articulation on assist.org — some CSU programs require MATH 161A specifically." },
-        { code: "HIST 15",  name: "Essentials of U.S. History",   units: 3, category: "AI: US1",              source: "CC (either)", ccEquivalent: ccEquivalentLine("HIST 15"),  status: "planned" },
-        { code: "AAS 1",    name: "Intro Asian American Studies", units: 3, category: "GE: Area 6",           source: "CC (either)", ccEquivalent: ccEquivalentLine("AAS 1"),    status: "planned" },
+        { code: "MATH 31",   name: "Calculus II",                  units: 4, category: "Major Prep — CRITICAL", source: "CC (either)", ccEquivalent: ccEquivalentLine("MATH 31"),   status: "planned", critical: true,
+          note: "D/F/NC retake — CC pace + smaller class. Take alongside light GE only." },
+        { code: "MATH 161A", name: "Applied Prob & Statistics I",  units: 3, category: "Major Prep",            source: "Mission CC",  ccEquivalent: ccEquivalentLine("MATH 161A"), status: "planned",
+          note: "Verify articulation on assist.org." },
+        { code: "HIST 15",   name: "Essentials of U.S. History",   units: 3, category: "AI: US1",               source: "CC (either)", ccEquivalent: ccEquivalentLine("HIST 15"),   status: "planned" },
+        { code: "AAS 1",     name: "Intro Asian American Studies", units: 3, category: "GE: Area 6",            source: "CC (either)", ccEquivalent: ccEquivalentLine("AAS 1"),     status: "planned" },
       ],
     },
     {
@@ -160,35 +216,33 @@ export const RISK_TERM_PLAN: ScenarioPlan = {
       tag: "SJSU Core Block",
       caption: "15 units · all SJSU",
       courses: [
-        { code: "CS 146",  name: "Data Structures & Algorithms",     units: 3, category: "CS Core Gateway",      source: "SJSU", status: "planned", critical: true },
-        { code: "CS 154",  name: "Formal Languages & Computability", units: 3, category: "CS Core",              source: "SJSU", status: "planned" },
-        { code: "MATH 39", name: "Linear Algebra I",                 units: 3, category: "Major Prep",            source: "SJSU", status: "planned" },
-        { code: "LING 111", name: "Linguistic Phonetics",            units: 3, category: "LING Core",             source: "SJSU", status: "planned" },
-        { code: "LING 112", name: "Intro to Syntax",                 units: 3, category: "LING Core",             source: "SJSU", status: "planned",
-          note: "Pulled forward from Spring 2027 to clear Spring 2027 for capstone." },
+        { code: "CS 146",   name: "Data Structures & Algorithms",     units: 3, category: "CS Core Gateway", source: "SJSU", status: "planned", critical: true },
+        { code: "CS 154",   name: "Formal Languages & Computability", units: 3, category: "CS Core",         source: "SJSU", status: "planned" },
+        { code: "MATH 39",  name: "Linear Algebra I",                 units: 3, category: "Major Prep",      source: "SJSU", status: "planned" },
+        { code: "LING 111", name: "Linguistic Phonetics",             units: 3, category: "LING Core",       source: "SJSU", status: "planned", critical: true },
+        { code: "LING 112", name: "Intro to Syntax",                  units: 3, category: "LING Core",       source: "SJSU", status: "planned" },
       ],
     },
     {
       id: "wi2627",
       label: "Winter 2026/27",
       tag: "Winter Session — Jan 2027 (3 weeks)",
-      caption: "3 units · CC or SJSU online",
+      caption: "3 units · SJSU online",
       courses: [
-        { code: "LING 122", name: "English as a World Language", units: 3, category: "LING UD Elective", source: "SJSU online", status: "planned",
-          note: "3-week SJSU winter session — reading + analysis. Pulled forward from Summer 2027 to flatten the load there." },
+        { code: "LING 113", name: "Intro to Phonology", units: 3, category: "LING UD", source: "SJSU online", status: "planned" },
       ],
     },
     {
       id: "sp27",
       label: "Spring 2027",
-      tag: "Capstone Early",
+      tag: "Closeout",
       caption: "12 units · all SJSU",
       courses: [
-        { code: "LING 165", name: "Intro to Natural Language Processing", units: 3, category: "LING Core — CAPSTONE", source: "SJSU", status: "planned", critical: true,
-          note: "Taken one year early — only viable if LING 115 was passed Spring 2026." },
-        { code: "CS 156",  name: "Intro to Artificial Intelligence", units: 3, category: "CS Core",      source: "SJSU", status: "planned" },
-        { code: "LING 113", name: "Intro to Phonology",               units: 3, category: "LING UD",      source: "SJSU", status: "planned" },
-        { code: "CS 133",   name: "Data Visualization",               units: 3, category: "CS Elective",  source: "SJSU", status: "planned" },
+        { code: "CS 156",   name: "Intro to Artificial Intelligence", units: 3, category: "CS Core",     source: "SJSU", status: "planned" },
+        { code: "LING 115", name: "Corpus Linguistics",               units: 3, category: "LING Core — TIME-SENSITIVE", source: "SJSU", status: "planned", critical: true,
+          note: "Take this even though LING 165 will be substituted — LING 115 is still its own LING Core requirement." },
+        { code: "CS 133",   name: "Data Visualization",               units: 3, category: "CS Elective", source: "SJSU", status: "planned" },
+        { code: "LING 122", name: "English as a World Language",      units: 3, category: "LING UD",     source: "SJSU", status: "planned" },
       ],
     },
     {
@@ -207,28 +261,142 @@ export const RISK_TERM_PLAN: ScenarioPlan = {
       caption: "3 units · SJSU online",
       courses: [
         { code: "CS 157A", name: "Intro to Database Mgmt Systems", units: 3, category: "CS UD Elective", source: "SJSU online", status: "planned",
-          note: "Pulled out of Fall 2027 to lighten the double-critical final term — verify SJSU winter offering." },
+          note: "Verify SJSU winter offering — DB courses don't always run." },
       ],
     },
     {
       id: "fa27",
       label: "Fall 2027",
-      tag: "Target Graduation — Double Critical",
-      caption: "6 units · all SJSU · GRADUATION",
+      tag: "Target Graduation — Triple Stack",
+      caption: "9 units · GRADUATION",
       isTarget: true,
       highRisk: true,
       courses: [
-        { code: "CS 171",   name: "Intro to Machine Learning",     units: 3, category: "CS Core",        source: "SJSU", status: "planned", critical: true,
-          note: "Fall-only. Single failure pushes graduation by a year." },
-        { code: "LING 124", name: "Intro to Speech Technology",    units: 3, category: "LING Core",      source: "SJSU", status: "planned", critical: true,
-          note: "Fall-only. Required by LING 111 (Fall 2026) for chain integrity." },
+        { code: "CS 171",   name: "Intro to Machine Learning",  units: 3, category: "CS Core", source: "SJSU", status: "planned", critical: true,
+          note: "Fall-only. Single failure forces an extra semester since the LING substitute also lands here." },
+        { code: "LING 124", name: "Intro to Speech Technology", units: 3, category: "LING Core", source: "SJSU", status: "planned", critical: true },
+        { code: "LING 174", name: "Capstone Substitute (advisor-approved)", units: 3, category: "LING Capstone — SUBSTITUTE", source: "Substitute", status: "critical-add", critical: true,
+          note: "Stand-in for LING 165. Must be approved by department before Spring 2027 registration." },
       ],
     },
   ],
   ccUnits: 4 + 3 + 3 + 3 + 3, // MATH 31 + MATH 161A + HIST 15 + AAS 1 + ANTH 160
-  costNote:
-    "CC tuition (~$46/unit CA resident) × 16 CC units = ~$740. SJSU rate at ~$200/unit (full-time) saves ~$2,400 across the plan.",
+  costNote: "CC tuition × 16 units ≈ $740. SJSU savings ~$3,500 across the plan.",
 };
+
+// ─── Pace 2: Maximum Lock-In — Summer 2027 (−2 semesters) ─────────
+//
+// THIS PACE EXISTS TO SHOW THE STRUCTURAL FLOOR, NOT AS A RECOMMENDED
+// PATH. Three of the program's most consequential courses are
+// season-locked — CS 171 (Fall only), LING 124 (Fall only), and
+// LING 165 (Spring only via LING 115). Fitting all three into the
+// window between Spring 2026 (current, locked) and Summer 2027
+// requires substitutions for ALL THREE, plus dean-level scheduling
+// flexibility. The plan below shows the only timeline shape that
+// touches Summer 2027, with the substitutions called out explicitly.
+const LOCKED_IN_PLAN: ScenarioPlan = {
+  title: "Maximum Lock-In — Summer 2027 Graduation",
+  subtitle:
+    "Two semesters earlier than Standard. Structural floor — requires three advisor-approved substitutions and a dean-approved overload.",
+  precondition: {
+    kind: "danger",
+    headline:
+      "Requires THREE substitutions + dean approval — show this to advisor before assuming it's reachable",
+    body:
+      "Three season-locked courses (CS 171 Fall-only, LING 124 Fall-only, LING 165 Spring-only) cannot all run between Spring 2026 and Summer 2027 because the calendar simply doesn't include another Fall after Fall 2026. Each must be substituted with an advisor-and-chair-approved alternative. This pace also depends on a Summer 2027 unit overload (12 units in a compressed term) that requires dean approval. If any one approval is denied, this collapses back to Heavy Lock-In (Fall 2027) or Standard (Spring 2028). Treat this view as 'what would have to be true' — not a plan to register against until every signature is in writing.",
+  },
+  highlights: [
+    { icon: "alert", text: "Three substitutions required: LING 165, LING 124, CS 171. All three need written department approval before Spring 2027 registration." },
+    { icon: "alert", text: "Summer 2027 carries 12 units across a 6–8 week term. Requires dean overload approval and brutal pace." },
+    { icon: "alert", text: "If even one substitution is denied, this collapses to Heavy Lock-In (Fall 2027) or Standard (Spring 2028)." },
+    { icon: "ok",    text: "Trims a full year off the original Standard plan — frees Fall 2027 + Spring 2028 entirely." },
+    { icon: "info",  text: "Use this pace to negotiate. Showing the advisor exactly what would have to be approved often shapes a more realistic Heavy plan." },
+  ],
+  terms: [
+    LOCKED_SPRING_2026,
+    {
+      id: "su26",
+      label: "Summer 2026",
+      tag: "CC Heavy — Math + GE",
+      caption: "13 units · all CC",
+      highRisk: true,
+      courses: [
+        { code: "MATH 31",   name: "Calculus II",                  units: 4, category: "Major Prep — CRITICAL", source: "CC (either)", ccEquivalent: ccEquivalentLine("MATH 31"),   status: "planned", critical: true },
+        { code: "MATH 161A", name: "Applied Prob & Statistics I",  units: 3, category: "Major Prep",            source: "Mission CC",  ccEquivalent: ccEquivalentLine("MATH 161A"), status: "planned" },
+        { code: "HIST 15",   name: "Essentials of U.S. History",   units: 3, category: "AI: US1",               source: "CC (either)", ccEquivalent: ccEquivalentLine("HIST 15"),   status: "planned" },
+        { code: "AAS 1",     name: "Intro Asian American Studies", units: 3, category: "GE: Area 6",            source: "CC (either)", ccEquivalent: ccEquivalentLine("AAS 1"),     status: "planned" },
+      ],
+    },
+    {
+      id: "fa26",
+      label: "Fall 2026",
+      tag: "SJSU Core Block — All Cores",
+      caption: "15 units · all SJSU",
+      highRisk: true,
+      courses: [
+        { code: "CS 146",   name: "Data Structures & Algorithms",     units: 3, category: "CS Core Gateway", source: "SJSU", status: "planned", critical: true },
+        { code: "CS 154",   name: "Formal Languages & Computability", units: 3, category: "CS Core",         source: "SJSU", status: "planned" },
+        { code: "MATH 39",  name: "Linear Algebra I",                 units: 3, category: "Major Prep",      source: "SJSU", status: "planned" },
+        { code: "LING 111", name: "Linguistic Phonetics",             units: 3, category: "LING Core",       source: "SJSU", status: "planned", critical: true },
+        { code: "LING 112", name: "Intro to Syntax",                  units: 3, category: "LING Core",       source: "SJSU", status: "planned" },
+      ],
+    },
+    {
+      id: "wi2627",
+      label: "Winter 2026/27",
+      tag: "Winter Session — Jan 2027",
+      caption: "3 units · SJSU online",
+      courses: [
+        { code: "LING 113", name: "Intro to Phonology", units: 3, category: "LING UD", source: "SJSU online", status: "planned" },
+      ],
+    },
+    {
+      id: "sp27",
+      label: "Spring 2027",
+      tag: "Final SJSU Term",
+      caption: "15 units · all SJSU",
+      highRisk: true,
+      courses: [
+        { code: "CS 156",   name: "Intro to Artificial Intelligence", units: 3, category: "CS Core",     source: "SJSU", status: "planned" },
+        { code: "LING 115", name: "Corpus Linguistics",               units: 3, category: "LING Core",   source: "SJSU", status: "planned", critical: true },
+        { code: "CS 133",   name: "Data Visualization",               units: 3, category: "CS Elective", source: "SJSU", status: "planned" },
+        { code: "LING 122", name: "English as a World Language",      units: 3, category: "LING UD",     source: "SJSU", status: "planned" },
+        { code: "ANTH 160", name: "Mysteries of Ancient Civilizations", units: 3, category: "GE: UD Area 2/5", source: "SJSU online", status: "planned",
+          note: "Pulled forward from Summer 2027 since Summer is now graduation term." },
+      ],
+    },
+    {
+      id: "su27",
+      label: "Summer 2027",
+      tag: "Target Graduation — Quadruple Substitution Stack",
+      caption: "12 units · GRADUATION",
+      isTarget: true,
+      highRisk: true,
+      courses: [
+        { code: "CS 171", name: "ML Substitute (advisor-approved)", units: 3, category: "CS Core — SUBSTITUTE", source: "Substitute", status: "critical-add", critical: true,
+          note: "Stand-in for CS 171 (Fall-only). Common substitutes: CS 178 (Neural Networks), CS 185C (special topics), or independent study with a faculty researcher." },
+        { code: "LING 124", name: "Speech Tech Substitute (advisor-approved)", units: 3, category: "LING Core — SUBSTITUTE", source: "Substitute", status: "critical-add", critical: true,
+          note: "Stand-in for LING 124 (Fall-only). Substitutes are department-approved on a case-by-case basis." },
+        { code: "LING 174", name: "Capstone Substitute (advisor-approved)", units: 3, category: "LING Capstone — SUBSTITUTE", source: "Substitute", status: "critical-add", critical: true,
+          note: "Stand-in for LING 165 (Spring-only)." },
+        { code: "CS 157A", name: "Intro to Database Mgmt Systems", units: 3, category: "CS UD Elective", source: "SJSU online", status: "planned",
+          note: "Verify SJSU summer 2027 online section." },
+      ],
+    },
+  ],
+  ccUnits: 4 + 3 + 3 + 3, // MATH 31 + MATH 161A + HIST 15 + AAS 1
+  costNote: "CC tuition ≈ $600 across summer 2026. SJSU savings ~$4,000 vs. the full-tuition Standard plan, IF every approval lands.",
+};
+
+export const RISK_PLANS: Record<RiskPace, ScenarioPlan> = {
+  heavy:  HEAVY_PLAN,
+  locked: LOCKED_IN_PLAN,
+};
+
+/** Default — Heavy is the more conservative of the two remaining
+ *  paces and the more likely to actually be reachable. Locked In is
+ *  for showing the structural floor, not for default planning. */
+export const DEFAULT_RISK_PACE: RiskPace = "heavy";
 
 // ═══════════════════════════════════════════════════════════════════
 // BUFFER — auto-computed from failed courses in the live plan
