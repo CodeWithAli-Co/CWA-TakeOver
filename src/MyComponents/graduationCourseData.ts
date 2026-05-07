@@ -11,6 +11,15 @@
  * Adding a new course: just append a CourseIntel object with its
  * code as the key. Cross-references (prereq chains, unlocks) are
  * resolved by code lookup, so partial graphs are fine.
+ *
+ * IMPORTANT semantics:
+ *   - prereqsRequired   = HARD registration prerequisites only.
+ *   - recommendedPrep   = Helpful background, NOT registration-blocking.
+ *   - unlocks           = Courses this one actually helps gate.
+ *   - recommendedPrepFor = Courses this one helps prepare for, but
+ *                         that have a different formal prerequisite.
+ *   - Unlock.remainingPrereqs = Other prereqs still needed after
+ *                               passing the focused course.
  */
 
 // ─── Types ──────────────────────────────────────────────────────────
@@ -62,6 +71,18 @@ export interface Unlock {
   category: string;
   /** Visual flags drive red highlighting on the unlock card. */
   flags?: ("once-per-year" | "critical-path")[];
+  /** Other prereqs still required after passing the focused course. */
+  remainingPrereqs?: string[];
+  /** Free-text caveat shown beneath the card. */
+  note?: string;
+}
+
+/** A course that benefits from this one but doesn't formally require it. */
+export interface RecommendedPrepFor {
+  code: string;
+  name: string;
+  /** One-line explanation of the help relationship. */
+  reason: string;
 }
 
 /** Each prereq chain renders as a left-to-right horizontal lane.
@@ -95,11 +116,16 @@ export interface CourseIntel {
   /** Codes that must be cleared (status passed/transfer) before
    *  registration. Used by the Registration Intelligence section. */
   prereqsRequired: string[];
+  /** Helpful but NOT registration-blocking background courses. */
+  recommendedPrep?: string[];
   /** Optional non-course standing/GPA conditions. */
   standingRequirement?: string;
 
   // ── 3 · Unlocks ──
+  /** Courses this one is a HARD prerequisite for. */
   unlocks: Unlock[];
+  /** Courses this one helps prepare for but doesn't formally gate. */
+  recommendedPrepFor?: RecommendedPrepFor[];
 
   // ── 4 · Swap strategy ──
   /** True if missing/failing this delays graduation by ≥1 semester. */
@@ -133,13 +159,20 @@ export interface CourseIntel {
 // These don't appear in the user's plan as "passed" rows — they sit
 // on the transcript already. Treated as satisfied when looking up
 // prereq status.
+//
+// NOTE: The student's MyProgress shows ENGL 2 satisfying GE Area 1B
+// (NOT ENGL 1B). We expose both ENGL 2 (the actual transcript line)
+// and a synthetic "GE 1B" code so prereq chains that just need
+// "Area 1B complete" can resolve cleanly without each course
+// hard-coding ENGL 2.
 export const TRANSFERRED_OR_PRIOR: Record<string, string> = {
   "MATH 30":  "Calculus I (Transfer — B)",
   "CS 46A":   "Intro to Programming (Transfer)",
   "CS 46B":   "Intro to Data Structures (Transfer)",
   "CS 22A":   "Computational Thinking (Transfer)",
   "LING 101": "Introduction to Linguistics (Transfer — B+)",
-  "ENGL 1B":  "Argument & Analysis (Transfer)",
+  "ENGL 2":   "Critical Thinking and Writing (Transfer — satisfies GE Area 1B)",
+  "GE 1B":    "GE Area 1B satisfied via ENGL 2 transfer",
 };
 
 // ─── Critical path codes ────────────────────────────────────────────
@@ -172,8 +205,8 @@ export const COURSE_INTEL: Record<string, CourseIntel> = {
     offered: "Spring & Fall",
     minGrade: { value: "C-", severity: "standard" },
     shortPurpose: "Satisfies UD Area 4 — required for graduation.",
-    prereqChains: [{ codes: ["ENGL 1B", "BUS3 186"] }],
-    prereqsRequired: ["ENGL 1B"],
+    prereqChains: [{ codes: ["GE 1B", "BUS3 186"] }],
+    prereqsRequired: ["GE 1B"],
     standingRequirement: "Junior standing",
     unlocks: [],
     criticalPath: false,
@@ -199,19 +232,32 @@ export const COURSE_INTEL: Record<string, CourseIntel> = {
     department: cs,
     offered: "Spring & Fall",
     minGrade: { value: "C-", severity: "standard" },
-    shortPurpose: "Programming-friendly elective; doubles as warm-up for CS 133 / 171.",
+    shortPurpose: "Programming-friendly elective. Useful background for later data/ML courses but not a formal prereq.",
     prereqChains: [{ codes: ["CS 22A", "CS 22B"] }],
     prereqsRequired: ["CS 22A"],
-    unlocks: [
-      { code: "CS 131", name: "Intro to Computer Graphics", category: "CS Elective" },
-      { code: "CS 133", name: "Data Visualization", category: "CS Elective" },
-      { code: "CS 171", name: "Intro to Machine Learning", category: "CS Core", flags: ["once-per-year", "critical-path"] },
+    // ─── Strategic intelligence corrections ─────────────────────
+    // CS 22B does NOT formally unlock CS 171 or CS 133 for an
+    // undergraduate; both require CS 146. CS 22B is helpful prep
+    // only. We surface that relationship without misrepresenting
+    // it as a registration unlock.
+    unlocks: [],
+    recommendedPrepFor: [
+      {
+        code: "CS 133",
+        name: "Data Visualization",
+        reason: "Python/data-analysis background helps, but undergraduate registration requires CS 146.",
+      },
+      {
+        code: "CS 171",
+        name: "Intro to Machine Learning",
+        reason: "Python/data-analysis background helps, but the formal prerequisite is CS 146.",
+      },
     ],
     criticalPath: false,
     riskLevel: "LOW",
     delaysGraduation: "No delay — major elective slot is flexible.",
     blockedDownstream: [],
-    safeSwap: "Any CS-prefix elective (CS 131, CS 133 itself, CS 149, CS 152) — same elective bucket.",
+    safeSwap: "Any CS-prefix elective (CS 133 itself, CS 149, CS 152) — same elective bucket.",
     workload: "Medium",
     leansOn: ["Programming"],
     strengthAlignment: "Strong",
@@ -230,8 +276,8 @@ export const COURSE_INTEL: Record<string, CourseIntel> = {
     offered: "Spring & Fall",
     minGrade: { value: "C", severity: "wid", note: "C- is NOT accepted for WID credit." },
     shortPurpose: "WID is a hard graduation requirement. Pass once, never revisit.",
-    prereqChains: [{ codes: ["ENGL 1B", "LLD 100W"] }],
-    prereqsRequired: ["ENGL 1B"],
+    prereqChains: [{ codes: ["GE 1B", "LLD 100W"] }],
+    prereqsRequired: ["GE 1B"],
     standingRequirement: "Junior standing + Core GE complete",
     unlocks: [],
     criticalPath: false,
@@ -297,9 +343,13 @@ export const COURSE_INTEL: Record<string, CourseIntel> = {
     unlocks: [],
     criticalPath: false,
     riskLevel: "LOW",
-    delaysGraduation: "No delay — UD Area 3 has many substitutes.",
+    delaysGraduation: "No delay if re-slotted, but PHIL 134 is still owed as a BSCSL major-prep requirement.",
     blockedDownstream: [],
-    safeSwap: "Any UD Area 3 GE (HUM 1B, RELS 99, COMM 100W variants) — but PHIL 134 is the only one that double-counts as major prep, so swapping costs an extra slot.",
+    // PHIL 134 double-counts as UD Area 3 AND a major-prep requirement.
+    // Substituting another UD Area 3 course closes the GE slot but
+    // leaves the major-prep requirement open, so it isn't a real swap.
+    safeSwap:
+      "Not recommended. Another UD Area 3 GE will close the GE slot, but you still need PHIL 134 later for the BSCSL major-prep requirement.",
     workload: "Low-Medium",
     leansOn: ["Writing", "Discussion"],
     strengthAlignment: "Strong",
@@ -318,17 +368,23 @@ export const COURSE_INTEL: Record<string, CourseIntel> = {
     department: math,
     offered: "Spring, Summer & Fall",
     minGrade: { value: "C-", severity: "strict", note: "D/F/NC retake — must clear this attempt." },
-    shortPurpose: "Gate for MATH 161A. Without it, CS 171 (Fall 2027) is blocked.",
+    shortPurpose: "Gate for MATH 161A. Without it, MATH 161A (and graduation requirements) stall.",
     prereqChains: [{ codes: ["MATH 30", "MATH 31"] }],
     prereqsRequired: ["MATH 30"],
     unlocks: [
       { code: "MATH 161A", name: "Applied Probability & Statistics I", category: "Major Prep" },
-      { code: "MATH 39",   name: "Linear Algebra I (helpful)", category: "Major Prep" },
+    ],
+    recommendedPrepFor: [
+      {
+        code: "MATH 39",
+        name: "Linear Algebra I",
+        reason: "MATH 31 is helpful background; MATH 39's formal prereq is MATH 30.",
+      },
     ],
     criticalPath: true,
     riskLevel: "CRITICAL",
-    delaysGraduation: "Failing delays MATH 161A → CS 171 by 1+ semester.",
-    blockedDownstream: ["MATH 161A", "CS 171"],
+    delaysGraduation: "Failing delays MATH 161A and the graduation requirement chain by 1+ semester.",
+    blockedDownstream: ["MATH 161A"],
     safeSwap: null,
     workload: "Heavy",
     leansOn: ["Math"],
@@ -347,7 +403,8 @@ export const COURSE_INTEL: Record<string, CourseIntel> = {
     division: "Lower Division",
     geDesignation: "GE: Area 6 — Ethnic Studies (C- minimum required by CSU policy)",
     department: ge,
-    offered: "Spring & Fall (verify summer)",
+    // Audit listed AAS 1 under all terms; keep summer warning.
+    offered: "Spring, Summer & Fall",
     minGrade: { value: "C-", severity: "standard" },
     shortPurpose: "Satisfies the CSU Ethnic Studies requirement.",
     prereqChains: [],
@@ -365,7 +422,7 @@ export const COURSE_INTEL: Record<string, CourseIntel> = {
     doNotPairWith: [],
     pairingNote: "Light enough to pair with a heavy summer math.",
     extraRegFlags: [
-      { kind: "warn", text: "Verify Summer 2026 offering — typically Spring/Fall only." },
+      { kind: "warn", text: "Verify Summer 2026 section availability before relying on it." },
     ],
   },
 
@@ -386,21 +443,31 @@ export const COURSE_INTEL: Record<string, CourseIntel> = {
     ],
     prereqsRequired: ["CS 46B", "MATH 42", "MATH 30"],
     unlocks: [
-      { code: "CS 156",  name: "Intro to Artificial Intelligence", category: "CS Core" },
-      { code: "CS 171",  name: "Intro to Machine Learning", category: "CS Core", flags: ["once-per-year", "critical-path"] },
-      { code: "CS 151",  name: "Object-Oriented Design", category: "CS Elective" },
-      { code: "CS 149",  name: "Operating Systems", category: "CS Elective" },
-      { code: "CS 153",  name: "Compiler Design", category: "CS Elective" },
-      { code: "CS 155",  name: "Information Security", category: "CS Elective" },
-      { code: "CS 157A", name: "Database Management Systems", category: "CS UD Elective" },
-      { code: "CS 157B", name: "Advanced Database Systems", category: "CS Elective" },
+      { code: "CS 156",  name: "Intro to Artificial Intelligence",   category: "CS Core" },
+      { code: "CS 171",  name: "Intro to Machine Learning",          category: "CS Core", flags: ["once-per-year", "critical-path"] },
+      { code: "CS 133",  name: "Data Visualization",                  category: "CS Elective" },
+      { code: "CS 157A", name: "Database Management Systems",         category: "CS UD Elective" },
+      { code: "CS 151",  name: "Object-Oriented Design",              category: "CS Elective" },
+      { code: "CS 155",  name: "Design and Analysis of Algorithms",   category: "CS Elective" },
+      // CS 149 also requires CS 47 / CMPE 102 (assembly/architecture).
+      // CS 146 is necessary but not sufficient — surface that.
+      {
+        code: "CS 149",
+        name: "Operating Systems",
+        category: "CS Elective",
+        remainingPrereqs: ["CS 47 or CMPE 102"],
+        note: "CS 146 alone is not enough — you'll also need CS 47 or CMPE 102 (assembly / computer architecture).",
+      },
     ],
     criticalPath: true,
     riskLevel: "CRITICAL",
     delaysGraduation: "Failing delays every CS UD course. Earliest graduation slips to Fall 2028.",
     blockedDownstream: ["CS 156", "CS 171", "CS 157A", "CS 133"],
     safeSwap: null,
-    workload: "Brutal",
+    // High stakes but aligned with Ali's programming strength.
+    // Heavy, not Brutal — keep CRITICAL risk level so the planning UI
+    // still flags the consequence of failure.
+    workload: "Heavy",
     leansOn: ["Programming", "Theory"],
     strengthAlignment: "Strong",
     pairsWell: ["LING 111", "HIST 15"],
@@ -436,9 +503,11 @@ export const COURSE_INTEL: Record<string, CourseIntel> = {
     workload: "Heavy",
     leansOn: ["Theory", "Math"],
     strengthAlignment: "Moderate",
-    pairsWell: ["LING 111", "HIST 15", "MATH 39"],
-    doNotPairWith: ["CS 146", "MATH 31", "LLD 100W"],
-    pairingNote: "Pairing with CS 146 in the same term is the classic SJSU GPA killer. Already separated correctly.",
+    // Resolve the prior contradiction with MATH 39: do NOT pair them.
+    pairsWell: ["LING 111", "HIST 15"],
+    doNotPairWith: ["CS 146", "MATH 39", "MATH 31", "LLD 100W"],
+    pairingNote:
+      "Avoid pairing with CS 146 unless the term is capped at 12–15 units and there is no other heavy math/theory course.",
   },
 
   "MATH 39": {
@@ -453,9 +522,18 @@ export const COURSE_INTEL: Record<string, CourseIntel> = {
     shortPurpose: "Linear algebra foundation — useful for ML and graphics electives.",
     prereqChains: [{ codes: ["MATH 30", "MATH 39"] }],
     prereqsRequired: ["MATH 30"],
-    unlocks: [
-      { code: "MATH 161A", name: "Applied Probability & Statistics I (helps but not required)", category: "Major Prep" },
-      { code: "CS 171",    name: "Intro to Machine Learning (conceptual prep)", category: "CS Core", flags: ["critical-path"] },
+    unlocks: [],
+    recommendedPrepFor: [
+      {
+        code: "CS 171",
+        name: "Intro to Machine Learning",
+        reason: "Linear algebra fluency helps ML, but CS 171's formal prereq is CS 146.",
+      },
+      {
+        code: "MATH 161A",
+        name: "Applied Probability & Statistics I",
+        reason: "Linear algebra is supportive background; MATH 161A's formal prereq is MATH 31.",
+      },
     ],
     criticalPath: false,
     riskLevel: "MEDIUM",
@@ -479,7 +557,7 @@ export const COURSE_INTEL: Record<string, CourseIntel> = {
     department: ling,
     offered: "Spring & Fall",
     minGrade: { value: "C-", severity: "strict", note: "Hard prereq for LING 124 (Fall only)." },
-    shortPurpose: "Foundation phonetics. The reason LING 124 can land Fall 2027.",
+    shortPurpose: "Foundation phonetics. Required prereq for LING 124 (Speech Tech, Fall only).",
     prereqChains: [{ codes: ["LING 101", "LING 111"] }],
     prereqsRequired: ["LING 101"],
     unlocks: [
@@ -487,7 +565,10 @@ export const COURSE_INTEL: Record<string, CourseIntel> = {
     ],
     criticalPath: true,
     riskLevel: "HIGH",
-    delaysGraduation: "Missing Fall 2026 slips LING 124 to Fall 2028 → graduation Spring 2029.",
+    // Corrected: Fall 2026 is preferred but not the only window —
+    // LING 111 is offered Spring & Fall.
+    delaysGraduation:
+      "Missing Fall 2026 does not automatically delay graduation if taken Spring 2027. Missing both Fall 2026 AND Spring 2027 blocks LING 124 in Fall 2027.",
     blockedDownstream: ["LING 124"],
     safeSwap: null,
     workload: "Medium",
@@ -497,7 +578,7 @@ export const COURSE_INTEL: Record<string, CourseIntel> = {
     doNotPairWith: [],
     pairingNote: "Comfortable companion to CS 146 — different cognitive modes.",
     advisorNote:
-      "Must take Fall 2026. Any later delays LING 124 to Fall 2028 and pushes graduation to Spring 2029.",
+      "Take by Spring 2027 at the latest. Missing both Fall 2026 and Spring 2027 blocks LING 124 in Fall 2027.",
   },
 
   "HIST 15": {
@@ -505,19 +586,24 @@ export const COURSE_INTEL: Record<string, CourseIntel> = {
     fullName: "Essentials of U.S. History",
     units: 3,
     division: "Lower Division",
-    geDesignation: "American Institutions — US1 (graduation requirement)",
+    geDesignation: "American Institutions — US1 (American History — graduation requirement)",
     department: "History / GE",
     offered: "Spring & Fall",
     minGrade: { value: "C-", severity: "standard" },
-    shortPurpose: "Closes the AI: US1 graduation requirement.",
+    shortPurpose: "Closes the AI: US1 (American History) graduation requirement.",
     prereqChains: [],
     prereqsRequired: [],
     unlocks: [],
     criticalPath: false,
     riskLevel: "LOW",
-    delaysGraduation: "No delay — AMS 10 / POLS 1 also satisfy AI: US1.",
+    delaysGraduation:
+      "No delay if re-slotted. The student is missing US1 specifically; US2 and US3 are already satisfied.",
     blockedDownstream: [],
-    safeSwap: "Move to Summer 2027. Alternative: AMS 10 (American Studies — same US1 credit).",
+    // Critical correction: POLS 1 satisfies US2/US3, NOT US1. Do not
+    // suggest it as a substitute. The valid US1 alternatives are
+    // history-prefixed.
+    safeSwap:
+      "Move to Summer 2027. Alternatives that also satisfy US1: AMS 10, HIST 20A, HIST 20B, HIST 170, HIST 170S, HIST 188.",
     workload: "Medium",
     leansOn: ["Memorization", "Writing"],
     strengthAlignment: "Moderate",
@@ -536,11 +622,16 @@ export const COURSE_INTEL: Record<string, CourseIntel> = {
     department: cs,
     offered: "Variable — check advisor",
     minGrade: { value: "C-", severity: "standard" },
-    shortPurpose: "Conceptual prep for CS 171. Programming-heavy with logic foundations.",
+    shortPurpose: "Programming + logic foundations — useful conceptual prep for CS 171.",
     prereqChains: [{ codes: ["CS 146", "CS 156"] }],
     prereqsRequired: ["CS 146"],
-    unlocks: [
-      { code: "CS 171", name: "Intro to Machine Learning (helpful)", category: "CS Core", flags: ["once-per-year", "critical-path"] },
+    unlocks: [],
+    recommendedPrepFor: [
+      {
+        code: "CS 171",
+        name: "Intro to Machine Learning",
+        reason: "Conceptually helpful but not a formal prerequisite — CS 171 only requires CS 146.",
+      },
     ],
     criticalPath: false,
     riskLevel: "MEDIUM",
@@ -551,8 +642,9 @@ export const COURSE_INTEL: Record<string, CourseIntel> = {
     leansOn: ["Programming", "Theory"],
     strengthAlignment: "Strong",
     pairsWell: ["LING 112", "LING 122"],
-    doNotPairWith: ["CS 154", "MATH 161A", "LLD 100W"],
-    pairingNote: "Pairing CS 156 with MATH 161A doubles probability concepts at peak depth — already separated.",
+    doNotPairWith: ["CS 154", "LLD 100W"],
+    pairingNote:
+      "Can be paired with MATH 161A only if the rest of the term is linguistics/writing-heavy, not another hard CS/math course.",
     extraRegFlags: [
       { kind: "warn", text: "Listed as variable offering — confirm Spring 2027 availability before locking the schedule." },
     ],
@@ -568,25 +660,36 @@ export const COURSE_INTEL: Record<string, CourseIntel> = {
     geDesignation: "Major Preparation",
     department: math,
     offered: "Spring, Summer & Fall",
-    minGrade: { value: "C-", severity: "strict", note: "Hard prereq for CS 171 (Fall only)." },
-    shortPurpose: "Statistical foundation for CS 171. Must clear before Fall 2027.",
+    minGrade: { value: "C-", severity: "standard", note: "Required for graduation." },
+    shortPurpose: "Statistical foundation. Required for graduation; supportive background for CS 171.",
     prereqChains: [{ codes: ["MATH 30", "MATH 31", "MATH 161A"] }],
     prereqsRequired: ["MATH 31"],
     unlocks: [
-      { code: "CS 171",   name: "Intro to Machine Learning", category: "CS Core", flags: ["once-per-year", "critical-path"] },
       { code: "MATH 161B", name: "Applied Statistics II (optional)", category: "Math Elective" },
+    ],
+    recommendedPrepFor: [
+      {
+        code: "CS 171",
+        name: "Intro to Machine Learning",
+        reason: "Statistics fluency helps significantly, but CS 171's formal prereq is CS 146 — MATH 161A is not a registration block.",
+      },
     ],
     criticalPath: false,
     riskLevel: "HIGH",
-    delaysGraduation: "Failing delays CS 171 (Fall 2027) → graduation slips to Spring 2029.",
-    blockedDownstream: ["CS 171"],
+    // Corrected: MATH 161A is required for the major, but it is not a
+    // formal CS 171 registration prerequisite. Failing delays the
+    // graduation requirement, not specifically CS 171 registration.
+    delaysGraduation:
+      "Failing delays the major's graduation requirement and pushes statistics fluency back, but does not formally block CS 171 registration.",
+    blockedDownstream: [],
     safeSwap: "Re-slot to Summer 2027 if needed — but stacking with summer LING courses is risky.",
     workload: "Heavy",
     leansOn: ["Math"],
     strengthAlignment: "Weak",
     pairsWell: ["LING 112", "LING 122"],
-    doNotPairWith: ["CS 156", "MATH 39", "MATH 31"],
-    pairingNote: "Don't take alongside CS 156 — same probability concepts hit twice.",
+    doNotPairWith: ["MATH 39", "MATH 31"],
+    pairingNote:
+      "Can sit alongside CS 156 only if the rest of the term is linguistics/writing — never alongside another hard math or CS theory.",
   },
 
   "LING 112": {
@@ -658,8 +761,9 @@ export const COURSE_INTEL: Record<string, CourseIntel> = {
     offered: "Spring only",
     minGrade: { value: "C-", severity: "standard" },
     shortPurpose: "LING UD elective. Builds on LING 111's phonetics.",
-    prereqChains: [{ codes: ["LING 101", "LING 113"] }, { codes: ["LING 111", "LING 113"], label: "Recommended" }],
+    prereqChains: [{ codes: ["LING 101", "LING 113"] }],
     prereqsRequired: ["LING 101"],
+    recommendedPrep: ["LING 111"],
     unlocks: [],
     criticalPath: false,
     riskLevel: "LOW",
@@ -685,8 +789,8 @@ export const COURSE_INTEL: Record<string, CourseIntel> = {
     offered: "Spring, Summer & Fall",
     minGrade: { value: "C-", severity: "standard" },
     shortPurpose: "Closes the UD Area 2/5 graduation requirement.",
-    prereqChains: [{ codes: ["ENGL 1B", "ANTH 160"] }],
-    prereqsRequired: ["ENGL 1B"],
+    prereqChains: [{ codes: ["GE 1B", "ANTH 160"] }],
+    prereqsRequired: ["GE 1B"],
     standingRequirement: "Junior standing",
     unlocks: [],
     criticalPath: false,
@@ -741,11 +845,13 @@ export const COURSE_INTEL: Record<string, CourseIntel> = {
     offered: "Fall only",
     minGrade: { value: "C-", severity: "strict", note: "Fall only — single annual offering." },
     shortPurpose: "Capstone CS technical anchor. The resume course.",
+    // Only the CS 146 chain is a HARD prereq chain. The math chain
+    // is recommended preparation, not a registration block.
     prereqChains: [
-      { codes: ["CS 146", "CS 171"], label: "Algorithms chain" },
-      { codes: ["MATH 31", "MATH 161A", "CS 171"], label: "Math chain" },
+      { codes: ["CS 146", "CS 171"], label: "Algorithms chain (required)" },
     ],
-    prereqsRequired: ["CS 146", "MATH 161A"],
+    prereqsRequired: ["CS 146"],
+    recommendedPrep: ["MATH 161A", "MATH 39"],
     unlocks: [],
     criticalPath: true,
     riskLevel: "CRITICAL",
@@ -756,7 +862,7 @@ export const COURSE_INTEL: Record<string, CourseIntel> = {
     leansOn: ["Programming", "Math"],
     strengthAlignment: "Strong",
     pairsWell: ["LING 124", "CS 157A"],
-    doNotPairWith: ["CS 154", "MATH 161A"],
+    doNotPairWith: ["CS 154"],
     pairingNote: "Already correctly slotted with LING 124 + CS 157A. Don't add a second math.",
     advisorNote:
       "Fall only. If missed in Fall 2027, next opportunity is Fall 2028, which pushes graduation to Spring 2029.",
@@ -780,7 +886,10 @@ export const COURSE_INTEL: Record<string, CourseIntel> = {
     unlocks: [],
     criticalPath: true,
     riskLevel: "CRITICAL",
-    delaysGraduation: "Missing Fall 2027 = Fall 2028 next offering = graduation Spring 2029.",
+    // Corrected: missing Fall 2027 means waiting for Fall 2028, which
+    // pushes graduation to Fall 2028 (one semester), NOT Spring 2029.
+    delaysGraduation:
+      "Missing Fall 2027 likely pushes graduation to Fall 2028 because the next offering is Fall 2028.",
     blockedDownstream: [],
     safeSwap: null,
     workload: "Medium-Heavy",
@@ -790,7 +899,7 @@ export const COURSE_INTEL: Record<string, CourseIntel> = {
     doNotPairWith: [],
     pairingNote: "Pairs naturally with CS 171 — same toolchain (Python, signal processing).",
     advisorNote:
-      "Fall only. Requires LING 111. This is why LING 111 must be taken in Fall 2026 — any later and LING 124 slots into Fall 2028.",
+      "Fall only. Requires LING 111. This is why LING 111 must be cleared by Spring 2027 — any later and LING 124 slots into Fall 2028.",
   },
 
   "CS 157A": {
@@ -865,6 +974,7 @@ export const COURSE_INTEL: Record<string, CourseIntel> = {
     shortPurpose: "Visualization techniques. Pairs naturally with NLP capstone.",
     prereqChains: [{ codes: ["CS 146", "CS 133"] }],
     prereqsRequired: ["CS 146"],
+    recommendedPrep: ["CS 22B"],
     unlocks: [],
     criticalPath: false,
     riskLevel: "LOW",

@@ -48,6 +48,7 @@ import {
   CRITICAL_PATH_CODES,
   CourseIntel,
   PrereqChain,
+  RecommendedPrepFor,
   RegFlag,
   RiskLevel,
   StrengthAlignment,
@@ -445,7 +446,9 @@ function PrereqChainBlock({
   intel: CourseIntel;
   planByCode: Map<string, Course>;
 }) {
-  if (intel.prereqChains.length === 0) {
+  const hasFormal = intel.prereqChains.length > 0;
+  const hasRecommended = (intel.recommendedPrep?.length ?? 0) > 0;
+  if (!hasFormal && !hasRecommended) {
     return (
       <p className="text-[12.5px] text-muted-foreground italic">
         No course prerequisites for this entry.
@@ -453,15 +456,54 @@ function PrereqChainBlock({
     );
   }
   return (
-    <div className="space-y-3.5">
-      {intel.prereqChains.map((chain, i) => (
-        <ChainRow
-          key={i}
-          chain={chain}
-          focusedCode={intel.code}
+    <div className="space-y-4">
+      {hasFormal && (
+        <div className="space-y-3.5">
+          {intel.prereqChains.map((chain, i) => (
+            <ChainRow
+              key={i}
+              chain={chain}
+              focusedCode={intel.code}
+              planByCode={planByCode}
+            />
+          ))}
+        </div>
+      )}
+      {hasRecommended && (
+        <RecommendedPrepRow
+          codes={intel.recommendedPrep!}
           planByCode={planByCode}
         />
-      ))}
+      )}
+    </div>
+  );
+}
+
+/** Helpful-but-not-required prep. Visually distinct from hard chains:
+ *  dotted top border, subtle "Recommended preparation" label, and
+ *  chips render without the directional arrow flow. */
+function RecommendedPrepRow({
+  codes,
+  planByCode,
+}: {
+  codes: string[];
+  planByCode: Map<string, Course>;
+}) {
+  return (
+    <div className="pt-3 border-t border-dashed border-border">
+      <div className="text-[10.5px] uppercase tracking-[0.16em] text-muted-foreground font-semibold mb-2 inline-flex items-center gap-1.5">
+        <Sparkles className="h-3 w-3 text-amber-300" />
+        Recommended preparation
+        <span className="text-muted-foreground/60 normal-case tracking-normal text-[10.5px] font-normal ml-1">
+          (helpful, not required to register)
+        </span>
+      </div>
+      <div className="flex items-center gap-1.5 flex-wrap">
+        {codes.map((c) => {
+          const status = resolvePrereqStatus(c, planByCode, false);
+          return <ChainNode key={c} code={c} status={status} isFocused={false} />;
+        })}
+      </div>
     </div>
   );
 }
@@ -589,7 +631,10 @@ function ChainNode({
 // 3. Unlocks (Downstream Impact)
 // ═══════════════════════════════════════════════════════════════════
 function UnlocksBlock({ intel }: { intel: CourseIntel }) {
-  if (intel.unlocks.length === 0) {
+  const hasUnlocks = intel.unlocks.length > 0;
+  const hasPrep = (intel.recommendedPrepFor?.length ?? 0) > 0;
+
+  if (!hasUnlocks && !hasPrep) {
     return (
       <p className="text-[12.5px] text-muted-foreground leading-relaxed">
         Nothing else in the major chain depends on this course directly. It still
@@ -598,17 +643,36 @@ function UnlocksBlock({ intel }: { intel: CourseIntel }) {
       </p>
     );
   }
+
   return (
-    <div>
-      <p className="text-[12.5px] text-muted-foreground mb-3 leading-relaxed">
-        Passing <code className="text-foreground/85 font-semibold">{intel.code}</code>{" "}
-        unlocks:
-      </p>
-      <ul className="space-y-2">
-        {intel.unlocks.map((u) => (
-          <UnlockCard key={u.code} unlock={u} />
-        ))}
-      </ul>
+    <div className="space-y-5">
+      {hasUnlocks && (
+        <div>
+          <p className="text-[12.5px] text-muted-foreground mb-3 leading-relaxed">
+            Passing <code className="text-foreground/85 font-semibold">{intel.code}</code>{" "}
+            unlocks:
+          </p>
+          <ul className="space-y-2">
+            {intel.unlocks.map((u) => (
+              <UnlockCard key={u.code} unlock={u} />
+            ))}
+          </ul>
+        </div>
+      )}
+
+      {hasPrep && (
+        <div className="pt-1 border-t border-dashed border-border">
+          <p className="text-[12.5px] text-muted-foreground mb-3 mt-3 leading-relaxed inline-flex items-center gap-1.5">
+            <Sparkles className="h-3 w-3 text-amber-300" />
+            Helpful preparation for these courses (not a registration unlock):
+          </p>
+          <ul className="space-y-2">
+            {intel.recommendedPrepFor!.map((p) => (
+              <PrepForCard key={p.code} item={p} />
+            ))}
+          </ul>
+        </div>
+      )}
     </div>
   );
 }
@@ -616,11 +680,16 @@ function UnlocksBlock({ intel }: { intel: CourseIntel }) {
 function UnlockCard({ unlock }: { unlock: Unlock }) {
   const isCritical = unlock.flags?.includes("critical-path");
   const isOnceYearly = unlock.flags?.includes("once-per-year");
-  const accentBorder = isCritical
-    ? "border-l-red-500"
-    : isOnceYearly
-      ? "border-l-amber-400"
-      : "border-l-border";
+  const hasRemaining = (unlock.remainingPrereqs?.length ?? 0) > 0;
+  // If this card has remaining prereqs, soften the visual: it's a
+  // partial unlock, not a clean one. Use amber accent regardless.
+  const accentBorder = hasRemaining
+    ? "border-l-amber-400"
+    : isCritical
+      ? "border-l-red-500"
+      : isOnceYearly
+        ? "border-l-amber-400"
+        : "border-l-border";
 
   return (
     <li
@@ -640,7 +709,12 @@ function UnlockCard({ unlock }: { unlock: Unlock }) {
             {unlock.category}
           </div>
         </div>
-        <div className="flex items-center gap-1 shrink-0">
+        <div className="flex items-center gap-1 shrink-0 flex-wrap justify-end">
+          {hasRemaining && (
+            <Pill className="bg-amber-500/[0.14] text-amber-200 border-amber-400/40">
+              Partial unlock
+            </Pill>
+          )}
           {isOnceYearly && (
             <Pill className="bg-amber-500/[0.14] text-amber-200 border-amber-400/40">
               <Clock className="h-2.5 w-2.5 mr-1" />
@@ -654,6 +728,54 @@ function UnlockCard({ unlock }: { unlock: Unlock }) {
             </Pill>
           )}
         </div>
+      </div>
+
+      {/* Remaining-prereqs row + free-text note: only render when present */}
+      {hasRemaining && (
+        <div className="mt-2 text-[11.5px] text-amber-200/90 leading-relaxed">
+          <span className="text-muted-foreground">Still needs: </span>
+          {unlock.remainingPrereqs!.map((c, i) => (
+            <span key={c}>
+              <code className="text-foreground/90 font-semibold">{c}</code>
+              {i < unlock.remainingPrereqs!.length - 1 && (
+                <span className="text-muted-foreground">, </span>
+              )}
+            </span>
+          ))}
+        </div>
+      )}
+      {unlock.note && (
+        <p className="mt-1.5 text-[11.5px] text-muted-foreground italic leading-relaxed">
+          {unlock.note}
+        </p>
+      )}
+    </li>
+  );
+}
+
+/** Card for a course this one only HELPS prepare for (no formal
+ *  unlock relationship). Visually softer than UnlockCard — no left
+ *  border accent, dashed look, "Helpful prep" pill. */
+function PrepForCard({ item }: { item: RecommendedPrepFor }) {
+  return (
+    <li className="pl-3 pr-3 py-2.5 bg-card/30 border border-dashed border-border/70 rounded-sm hover:bg-card/60 transition-colors">
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <div className="flex items-center gap-2 flex-wrap">
+            <code className="text-[12.5px] font-mono font-semibold text-foreground/85">
+              {item.code}
+            </code>
+            <span className="text-[12.5px] text-foreground/70 truncate">
+              {item.name}
+            </span>
+          </div>
+          <p className="mt-1 text-[11.5px] text-muted-foreground italic leading-relaxed">
+            {item.reason}
+          </p>
+        </div>
+        <Pill className="bg-amber-500/[0.10] text-amber-200 border-amber-400/30 shrink-0">
+          Helpful prep
+        </Pill>
       </div>
     </li>
   );
