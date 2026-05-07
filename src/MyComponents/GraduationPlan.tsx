@@ -34,6 +34,8 @@ import {
   X,
   Check,
   ChevronDown,
+  Zap,
+  ShieldCheck,
 } from "lucide-react";
 
 import {
@@ -56,6 +58,7 @@ import {
 import supabase from "./supabase";
 import { useQueryClient } from "@tanstack/react-query";
 import CourseDrawer from "./CourseDrawer";
+import { RiskTermView, BufferView } from "./ScenarioViews";
 
 // ─── Danger pairs (UI-only, not DB-backed) ──────────────────────────
 const DANGER_PAIRS: { pair: string; why: string }[] = [
@@ -136,8 +139,14 @@ function ErrorState({ message }: { message: string }) {
 // ═══════════════════════════════════════════════════════════════════
 // Main view
 // ═══════════════════════════════════════════════════════════════════
+type ScenarioTab = "standard" | "risk" | "buffer";
+
 function PlanView({ data }: { data: PlanData }) {
   const { meta, terms, courses } = data;
+
+  // Tab state — three views on the same plan. Standard is the live
+  // editable timeline; risk and buffer are read-only what-if views.
+  const [activeTab, setActiveTab] = useState<ScenarioTab>("standard");
 
   // Drawer state — single source of truth for which course's
   // intelligence panel is currently open. We track the row id (so the
@@ -317,6 +326,122 @@ function PlanView({ data }: { data: PlanData }) {
         <GpaBanner sjsuGpa={meta.sjsu_gpa} />
       </motion.section>
 
+      {/* ── TAB STRIP — controls the timeline section below ───────────── */}
+      <ScenarioTabs active={activeTab} onChange={setActiveTab} />
+
+      {/* Branch: Standard tab gets the live timeline + danger pairs.
+          Risk and Buffer tabs render their own read-only views. */}
+      {activeTab !== "standard" ? (
+        <>
+          {activeTab === "risk" && <RiskTermView />}
+          {activeTab === "buffer" && <BufferView courses={courses} />}
+        </>
+      ) : (
+        <StandardTimelineSection
+          terms={terms}
+          coursesByTerm={coursesByTerm}
+          currentTermId={currentTermId}
+          selectedRowId={selectedRowId}
+          onSelectRow={setSelectedRowId}
+        />
+      )}
+
+      {/* Strategic intelligence drawer — opens when a course row is clicked. */}
+      <CourseDrawer
+        code={selectedRow?.code ?? null}
+        planCourses={courses}
+        selectedRow={selectedRow}
+        onClose={() => setSelectedRowId(null)}
+      />
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// Tab strip — three views on the same plan
+// ═══════════════════════════════════════════════════════════════════
+function ScenarioTabs({
+  active,
+  onChange,
+}: {
+  active: ScenarioTab;
+  onChange: (t: ScenarioTab) => void;
+}) {
+  const tabs: { id: ScenarioTab; label: string; sub: string; icon: React.ReactNode }[] = [
+    {
+      id: "standard",
+      label: "Standard",
+      sub: "Live editable plan · Spring 2028",
+      icon: <GraduationCap className="h-3.5 w-3.5" />,
+    },
+    {
+      id: "risk",
+      label: "Risk Term",
+      sub: "Aggressive · Fall 2027 + CC + Winter",
+      icon: <Zap className="h-3.5 w-3.5" />,
+    },
+    {
+      id: "buffer",
+      label: "Buffer",
+      sub: "Recovery from failures · auto-computed",
+      icon: <ShieldCheck className="h-3.5 w-3.5" />,
+    },
+  ];
+  return (
+    <div className="px-10 mb-2">
+      <div className="border-b border-border flex items-stretch gap-0">
+        {tabs.map((t) => {
+          const isActive = t.id === active;
+          return (
+            <button
+              key={t.id}
+              onClick={() => onChange(t.id)}
+              className={`relative px-6 py-3.5 text-left transition-colors group ${
+                isActive ? "text-foreground" : "text-muted-foreground hover:text-foreground/85"
+              }`}
+            >
+              <div className="flex items-center gap-2 mb-0.5">
+                <span className={isActive ? "text-primary" : "text-muted-foreground/70"}>
+                  {t.icon}
+                </span>
+                <span className="text-[13px] font-bold tracking-tight">{t.label}</span>
+              </div>
+              <div className="text-[10.5px] uppercase tracking-[0.16em] text-muted-foreground/80 font-medium">
+                {t.sub}
+              </div>
+              {isActive && (
+                <motion.div
+                  layoutId="scenario-tab-underline"
+                  className="absolute left-0 right-0 -bottom-px h-[2px] bg-primary"
+                  transition={{ type: "spring", damping: 28, stiffness: 320 }}
+                />
+              )}
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// Standard timeline — extracted so the tab branch stays clean
+// ═══════════════════════════════════════════════════════════════════
+function StandardTimelineSection({
+  terms,
+  coursesByTerm,
+  currentTermId,
+  selectedRowId,
+  onSelectRow,
+}: {
+  terms: Term[];
+  coursesByTerm: Map<string, Course[]>;
+  currentTermId: string | null;
+  selectedRowId: number | null;
+  onSelectRow: (id: number) => void;
+}) {
+  return (
+    <>
       {/* 5 · SEMESTER TIMELINE ============================================ */}
       <motion.section
         initial={{ opacity: 0, y: 6 }}
@@ -343,7 +468,7 @@ function PlanView({ data }: { data: PlanData }) {
               isCurrent={term.id === currentTermId}
               isTarget={term.is_target}
               selectedRowId={selectedRowId}
-              onSelectRow={setSelectedRowId}
+              onSelectRow={onSelectRow}
             />
           ))}
         </div>
@@ -391,15 +516,7 @@ function PlanView({ data }: { data: PlanData }) {
           ))}
         </div>
       </motion.section>
-
-      {/* Strategic intelligence drawer — opens when a course row is clicked. */}
-      <CourseDrawer
-        code={selectedRow?.code ?? null}
-        planCourses={courses}
-        selectedRow={selectedRow}
-        onClose={() => setSelectedRowId(null)}
-      />
-    </div>
+    </>
   );
 }
 
