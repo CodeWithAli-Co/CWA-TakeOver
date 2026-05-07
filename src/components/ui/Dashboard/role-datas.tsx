@@ -782,6 +782,13 @@ export const cooData = {
       company: "codeWithAli" as const,
     },
     {
+      title: "Graduation Plan",
+      url: "/graduationPlan",
+      isActive: false,
+      icon: GraduationCap,
+      company: "codeWithAli" as const,
+    },
+    {
       title: "Admin Permissions",
       url: "/details",
       icon: SquareTerminal,
@@ -1037,6 +1044,13 @@ export const ceoData = {
       url: "/personal",
       isActive: false,
       icon: User,
+      company: "codeWithAli" as const,
+    },
+    {
+      title: "Graduation Plan",
+      url: "/graduationPlan",
+      isActive: false,
+      icon: GraduationCap,
       company: "codeWithAli" as const,
     },
     {
