@@ -200,26 +200,26 @@ const remainingOnlyUnits = REMAINING_UNITS - inProgressUnits; // 82 - 15 = 67
 function categoryStyle(cat: Category): string {
   // Indigo for CS, violet for LING, amber for Math/Prep, slate for GE/WID/AI, zinc for elective.
   if (cat.startsWith("CS"))
-    return "bg-indigo-500/[0.08] text-indigo-300 border-indigo-500/20";
+    return "bg-indigo-500/[0.14] text-indigo-200 border-indigo-400/40";
   if (cat.startsWith("LING"))
-    return "bg-violet-500/[0.08] text-violet-300 border-violet-500/20";
+    return "bg-violet-500/[0.14] text-violet-200 border-violet-400/40";
   if (cat.startsWith("Major Prep"))
-    return "bg-amber-500/[0.08] text-amber-300 border-amber-500/20";
+    return "bg-amber-500/[0.14] text-amber-200 border-amber-400/40";
   if (cat === "Major Elective")
-    return "bg-zinc-500/[0.08] text-zinc-300 border-zinc-500/20";
+    return "bg-zinc-500/[0.14] text-zinc-200 border-zinc-400/40";
   // GE / WID / AI
-  return "bg-slate-500/[0.08] text-slate-300 border-slate-500/20";
+  return "bg-slate-500/[0.14] text-slate-200 border-slate-400/40";
 }
 
 function statusChip(status: CourseStatus): { label: string; cls: string } {
   switch (status) {
     case "completed":
-      return { label: "Completed", cls: "bg-emerald-500/[0.08] text-emerald-300 border-emerald-500/20" };
+      return { label: "Completed", cls: "bg-emerald-500/[0.14] text-emerald-200 border-emerald-400/40" };
     case "in_progress":
-      return { label: "In Progress", cls: "bg-amber-500/[0.08] text-amber-300 border-amber-500/20" };
+      return { label: "In Progress", cls: "bg-amber-500/[0.14] text-amber-200 border-amber-400/40" };
     case "planned":
     default:
-      return { label: "Planned", cls: "bg-slate-500/[0.08] text-slate-400 border-slate-500/15" };
+      return { label: "Planned", cls: "bg-slate-500/[0.12] text-slate-300 border-slate-400/30" };
   }
 }
 
@@ -228,18 +228,18 @@ function statusChip(status: CourseStatus): { label: string; cls: string } {
 /** Solid red dot with a slow ping — used to flag critical-path courses. */
 function CriticalPulse() {
   return (
-    <span className="relative inline-flex h-1.5 w-1.5 shrink-0" title="Critical path">
-      <span className="absolute inline-flex h-full w-full rounded-full bg-red-500 opacity-75 animate-ping" />
-      <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-red-500" />
+    <span className="relative inline-flex h-2 w-2 shrink-0" title="Critical path">
+      <span className="absolute inline-flex h-full w-full rounded-full bg-red-500 opacity-80 animate-ping" />
+      <span className="relative inline-flex h-2 w-2 rounded-full bg-red-500 ring-2 ring-red-500/20" />
     </span>
   );
 }
 
-/** Tiny outlined badge — same language as the rest of the app's badges. */
+/** Outlined badge — sized for legibility on dense rows. */
 function Pill({ children, className = "" }: { children: React.ReactNode; className?: string }) {
   return (
     <span
-      className={`inline-flex items-center px-2 py-0.5 rounded-sm border text-[10px] font-medium tracking-wide ${className}`}
+      className={`inline-flex items-center px-2.5 py-1 rounded-sm border text-[11px] font-semibold tracking-wide whitespace-nowrap ${className}`}
     >
       {children}
     </span>
@@ -270,48 +270,48 @@ export default function GraduationPlan() {
         <div className="flex items-start justify-between gap-8">
           <div className="min-w-0">
             {/* Eyebrow */}
-            <div className="flex items-center gap-2 mb-3">
-              <div className="p-1.5 rounded-sm bg-primary/[0.08] border border-primary/15">
-                <GraduationCap className="h-3.5 w-3.5 text-primary" />
+            <div className="flex items-center gap-2.5 mb-4">
+              <div className="p-2 rounded-sm bg-primary/[0.12] border border-primary/30">
+                <GraduationCap className="h-4 w-4 text-primary" />
               </div>
-              <span className="text-[10px] uppercase tracking-[0.2em] text-muted-foreground">
+              <span className="text-[11px] uppercase tracking-[0.2em] text-foreground/70 font-semibold">
                 Executive · Personal Education Plan
               </span>
             </div>
 
-            <h1 className="text-[34px] leading-[1.1] font-bold tracking-tight text-foreground">
-              BS Computer Science <span className="text-muted-foreground/60">&amp;</span> Linguistics
+            <h1 className="text-[38px] leading-[1.05] font-bold tracking-tight text-foreground">
+              BS Computer Science <span className="text-muted-foreground/70">&amp;</span> Linguistics
             </h1>
 
-            <div className="mt-2 flex items-center gap-3 text-[13px] text-muted-foreground">
-              <span>SJSU</span>
-              <span className="text-muted-foreground/30">·</span>
+            <div className="mt-3 flex items-center gap-3 text-[14px] text-muted-foreground">
+              <span className="text-foreground/75 font-medium">SJSU</span>
+              <span className="text-muted-foreground/40">·</span>
               <span className="inline-flex items-center gap-1.5">
-                <Target className="h-3.5 w-3.5" />
-                Target Graduation: <span className="text-foreground/85 font-medium">Spring 2028</span>
+                <Target className="h-4 w-4" />
+                Target Graduation: <span className="text-foreground font-semibold ml-1">Spring 2028</span>
               </span>
-              <span className="text-muted-foreground/30">·</span>
-              <span>Student: <span className="text-foreground/85">Ali Alibrahimi</span></span>
+              <span className="text-muted-foreground/40">·</span>
+              <span>Student: <span className="text-foreground font-medium">Ali Alibrahimi</span></span>
             </div>
           </div>
 
           {/* Status badge */}
           <div className="shrink-0">
             <div
-              className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-sm border text-[11px] font-medium tracking-wide ${
+              className={`inline-flex items-center gap-2.5 px-4 py-2 rounded-sm border text-[12px] font-semibold tracking-wide ${
                 onTrack
-                  ? "bg-emerald-500/[0.08] text-emerald-300 border-emerald-500/20"
-                  : "bg-amber-500/[0.08] text-amber-300 border-amber-500/20"
+                  ? "bg-emerald-500/[0.14] text-emerald-200 border-emerald-400/40"
+                  : "bg-amber-500/[0.14] text-amber-200 border-amber-400/40"
               }`}
             >
-              <span className="relative inline-flex h-1.5 w-1.5">
+              <span className="relative inline-flex h-2 w-2">
                 <span
                   className={`absolute inline-flex h-full w-full rounded-full ${
                     onTrack ? "bg-emerald-400" : "bg-amber-400"
-                  } opacity-75 animate-ping`}
+                  } opacity-80 animate-ping`}
                 />
                 <span
-                  className={`relative inline-flex h-1.5 w-1.5 rounded-full ${
+                  className={`relative inline-flex h-2 w-2 rounded-full ${
                     onTrack ? "bg-emerald-400" : "bg-amber-400"
                   }`}
                 />
@@ -322,24 +322,24 @@ export default function GraduationPlan() {
         </div>
 
         {/* GPA strip — typographic, no card */}
-        <div className="mt-6 flex items-center gap-10 border-t border-border pt-5">
+        <div className="mt-7 flex items-center gap-12 border-t border-border pt-6">
           <div>
-            <div className="text-[10px] uppercase tracking-[0.18em] text-muted-foreground">SJSU GPA</div>
-            <div className="mt-1 flex items-baseline gap-2">
-              <span className="text-[28px] font-bold text-red-400 tabular-nums tracking-tight">1.390</span>
-              <AlertTriangle className="h-4 w-4 text-red-400/80" />
-              <span className="text-[11px] text-red-400/70">below 2.0 minimum</span>
+            <div className="text-[11px] uppercase tracking-[0.18em] text-muted-foreground font-medium">SJSU GPA</div>
+            <div className="mt-1.5 flex items-baseline gap-2.5">
+              <span className="text-[34px] font-bold text-red-400 tabular-nums tracking-tight leading-none">1.390</span>
+              <AlertTriangle className="h-4 w-4 text-red-400" />
+              <span className="text-[12px] text-red-300/90 font-medium">below 2.0 minimum</span>
             </div>
           </div>
-          <div className="h-10 w-px bg-border" />
+          <div className="h-12 w-px bg-border" />
           <div>
-            <div className="text-[10px] uppercase tracking-[0.18em] text-muted-foreground">Overall GPA</div>
-            <div className="mt-1 text-[28px] font-bold text-foreground tabular-nums tracking-tight">2.457</div>
+            <div className="text-[11px] uppercase tracking-[0.18em] text-muted-foreground font-medium">Overall GPA</div>
+            <div className="mt-1.5 text-[34px] font-bold text-foreground tabular-nums tracking-tight leading-none">2.457</div>
           </div>
-          <div className="h-10 w-px bg-border" />
+          <div className="h-12 w-px bg-border" />
           <div>
-            <div className="text-[10px] uppercase tracking-[0.18em] text-muted-foreground">Program</div>
-            <div className="mt-1 text-[15px] text-foreground/85">Dual Major · CS + Linguistics</div>
+            <div className="text-[11px] uppercase tracking-[0.18em] text-muted-foreground font-medium">Program</div>
+            <div className="mt-1.5 text-[16px] text-foreground/90 font-medium">Dual Major · CS + Linguistics</div>
           </div>
         </div>
       </motion.section>
@@ -389,24 +389,26 @@ export default function GraduationPlan() {
         transition={{ duration: 0.4, delay: 0.08, ease: "easeOut" }}
         className="px-10 pb-8"
       >
-        <div className="flex items-baseline justify-between mb-2">
-          <h3 className="text-[10px] uppercase tracking-[0.2em] text-muted-foreground">
+        <div className="flex items-baseline justify-between mb-3">
+          <h3 className="text-[11px] uppercase tracking-[0.2em] text-foreground/80 font-semibold">
             Unit Progress
           </h3>
-          <span className="text-[11px] text-muted-foreground tabular-nums">
-            <span className="text-foreground/85 font-medium">{COMPLETED_UNITS}</span> / {REQUIRED_UNITS} units
+          <span className="text-[13px] text-muted-foreground tabular-nums">
+            <span className="text-foreground font-semibold">{COMPLETED_UNITS}</span>
+            <span className="text-muted-foreground/60"> / </span>
+            <span className="text-foreground/85">{REQUIRED_UNITS}</span> units completed
           </span>
         </div>
 
-        <div className="flex h-7 w-full overflow-hidden rounded-sm border border-border bg-card">
+        <div className="flex h-10 w-full overflow-hidden rounded-sm border border-border bg-card">
           <motion.div
             initial={{ width: 0 }}
             animate={{ width: `${completedPct}%` }}
             transition={{ duration: 0.7, delay: 0.15, ease: "easeOut" }}
-            className="h-full bg-emerald-500/30 border-r border-emerald-500/40 flex items-center justify-center"
+            className="h-full bg-emerald-500/40 border-r border-emerald-400/60 flex items-center justify-center"
             title={`Completed: ${COMPLETED_UNITS} units`}
           >
-            <span className="text-[10px] font-medium text-emerald-200 tabular-nums">
+            <span className="text-[13px] font-bold text-emerald-100 tabular-nums">
               {COMPLETED_UNITS}
             </span>
           </motion.div>
@@ -414,10 +416,10 @@ export default function GraduationPlan() {
             initial={{ width: 0 }}
             animate={{ width: `${inProgressPct}%` }}
             transition={{ duration: 0.6, delay: 0.35, ease: "easeOut" }}
-            className="h-full bg-amber-500/30 border-r border-amber-500/40 flex items-center justify-center"
+            className="h-full bg-amber-500/40 border-r border-amber-400/60 flex items-center justify-center"
             title={`In Progress: ${inProgressUnits} units`}
           >
-            <span className="text-[10px] font-medium text-amber-200 tabular-nums">
+            <span className="text-[13px] font-bold text-amber-100 tabular-nums">
               {inProgressUnits}
             </span>
           </motion.div>
@@ -425,19 +427,19 @@ export default function GraduationPlan() {
             initial={{ width: 0 }}
             animate={{ width: `${remainingPct}%` }}
             transition={{ duration: 0.7, delay: 0.5, ease: "easeOut" }}
-            className="h-full bg-zinc-800/60 flex items-center justify-center"
+            className="h-full bg-zinc-800/80 flex items-center justify-center"
             title={`Remaining: ${remainingOnlyUnits} units`}
           >
-            <span className="text-[10px] font-medium text-zinc-400 tabular-nums">
+            <span className="text-[13px] font-bold text-zinc-300 tabular-nums">
               {remainingOnlyUnits}
             </span>
           </motion.div>
         </div>
 
-        <div className="mt-2 flex items-center gap-4 text-[10px] text-muted-foreground">
-          <LegendDot color="bg-emerald-500" label="Completed" />
-          <LegendDot color="bg-amber-500" label="In Progress" />
-          <LegendDot color="bg-zinc-700" label="Remaining" />
+        <div className="mt-3 flex items-center gap-5 text-[11px] text-muted-foreground">
+          <LegendDot color="bg-emerald-400" label="Completed" />
+          <LegendDot color="bg-amber-400" label="In Progress" />
+          <LegendDot color="bg-zinc-600" label="Remaining" />
         </div>
       </motion.section>
 
@@ -450,22 +452,24 @@ export default function GraduationPlan() {
         transition={{ duration: 0.4, delay: 0.1, ease: "easeOut" }}
         className="px-10 pb-8"
       >
-        <div className="border-l-2 border-red-500 bg-red-500/[0.04] py-4 pl-5 pr-6">
-          <div className="flex items-start gap-3">
-            <ShieldAlert className="h-4 w-4 text-red-400 mt-0.5 shrink-0" />
+        <div className="border-l-[3px] border-red-500 bg-red-500/[0.07] py-5 pl-6 pr-6">
+          <div className="flex items-start gap-3.5">
+            <div className="p-1.5 rounded-sm bg-red-500/20 border border-red-400/40 shrink-0 mt-0.5">
+              <ShieldAlert className="h-4 w-4 text-red-300" />
+            </div>
             <div className="min-w-0">
               <div className="flex items-baseline gap-3">
-                <h4 className="text-[13px] font-semibold text-foreground">GPA Repair Window</h4>
-                <span className="text-[10px] uppercase tracking-[0.15em] text-red-400/80">
+                <h4 className="text-[15px] font-bold text-foreground tracking-tight">GPA Repair Window</h4>
+                <span className="text-[10px] uppercase tracking-[0.18em] text-red-300 font-bold px-1.5 py-0.5 rounded-sm bg-red-500/15 border border-red-400/40">
                   Critical
                 </span>
               </div>
-              <p className="mt-1 text-[12.5px] leading-relaxed text-muted-foreground max-w-3xl">
+              <p className="mt-2 text-[14px] leading-relaxed text-foreground/80 max-w-3xl">
                 SJSU GPA is{" "}
-                <span className="text-red-400 font-medium tabular-nums">1.390</span> — minimum{" "}
-                <span className="text-foreground/85 tabular-nums">2.0</span> required to graduate.
+                <span className="text-red-300 font-bold tabular-nums">1.390</span> — minimum{" "}
+                <span className="text-foreground font-semibold tabular-nums">2.0</span> required to graduate.
                 Every grade from here forward is weighted heavily.{" "}
-                <span className="text-foreground/85">No room for D's or W's.</span>
+                <span className="text-foreground font-semibold">No room for D's or W's.</span>
               </p>
             </div>
           </div>
@@ -481,11 +485,11 @@ export default function GraduationPlan() {
         transition={{ duration: 0.4, delay: 0.12, ease: "easeOut" }}
         className="px-10 pb-10"
       >
-        <div className="flex items-baseline justify-between mb-4">
-          <h2 className="text-[15px] font-semibold text-foreground tracking-tight">
+        <div className="flex items-baseline justify-between mb-5">
+          <h2 className="text-[18px] font-bold text-foreground tracking-tight">
             Term Timeline
           </h2>
-          <span className="text-[10px] uppercase tracking-[0.18em] text-muted-foreground">
+          <span className="text-[11px] uppercase tracking-[0.18em] text-muted-foreground font-semibold">
             Spring 2026 → Spring 2028
           </span>
         </div>
@@ -506,37 +510,37 @@ export default function GraduationPlan() {
         transition={{ duration: 0.4, delay: 0.15, ease: "easeOut" }}
         className="px-10 pb-16"
       >
-        <div className="flex items-center gap-2 mb-4">
-          <Flame className="h-4 w-4 text-red-400" />
-          <h2 className="text-[15px] font-semibold text-foreground tracking-tight">
+        <div className="flex items-center gap-2.5 mb-5">
+          <Flame className="h-5 w-5 text-red-400" />
+          <h2 className="text-[18px] font-bold text-foreground tracking-tight">
             High-Risk Course Combinations
           </h2>
-          <span className="text-[10px] uppercase tracking-[0.15em] text-muted-foreground ml-2">
+          <span className="text-[11px] uppercase tracking-[0.15em] text-muted-foreground font-semibold ml-2">
             Avoid pairing in same term
           </span>
         </div>
 
         <div className="border-t border-border">
-          <div className="grid grid-cols-[minmax(0,1fr)_minmax(0,2fr)] gap-x-8 px-1 py-3 border-b border-border">
-            <span className="text-[10px] uppercase tracking-[0.15em] text-muted-foreground">
+          <div className="grid grid-cols-[minmax(0,1fr)_minmax(0,2fr)] gap-x-8 px-2 py-3 border-b border-border">
+            <span className="text-[11px] uppercase tracking-[0.18em] text-foreground/70 font-semibold">
               Avoid Pairing
             </span>
-            <span className="text-[10px] uppercase tracking-[0.15em] text-muted-foreground">
+            <span className="text-[11px] uppercase tracking-[0.18em] text-foreground/70 font-semibold">
               Why
             </span>
           </div>
           {DANGER_PAIRS.map((p, i) => (
             <div
               key={i}
-              className="grid grid-cols-[minmax(0,1fr)_minmax(0,2fr)] gap-x-8 px-1 py-3.5 border-b border-border/50 last:border-b-0 hover:bg-muted/20 transition-colors"
+              className="grid grid-cols-[minmax(0,1fr)_minmax(0,2fr)] gap-x-8 px-2 py-4 border-b border-border/60 last:border-b-0 hover:bg-muted/30 transition-colors"
             >
-              <div className="flex items-center gap-2 min-w-0">
-                <AlertTriangle className="h-3 w-3 text-red-400/70 shrink-0" />
-                <code className="text-[12.5px] font-medium text-foreground/90 truncate">
+              <div className="flex items-center gap-2.5 min-w-0">
+                <AlertTriangle className="h-3.5 w-3.5 text-red-400 shrink-0" />
+                <code className="text-[13.5px] font-semibold text-foreground truncate">
                   {p.pair}
                 </code>
               </div>
-              <p className="text-[12.5px] leading-relaxed text-muted-foreground">{p.why}</p>
+              <p className="text-[13.5px] leading-relaxed text-foreground/75">{p.why}</p>
             </div>
           ))}
         </div>
@@ -562,20 +566,20 @@ function Stat({
     accent === "red"
       ? "text-red-400"
       : accent === "amber"
-        ? "text-amber-300"
+        ? "text-amber-200"
         : accent === "emerald"
-          ? "text-emerald-300"
+          ? "text-emerald-200"
           : "text-foreground";
   return (
-    <div className="px-6 py-5">
-      <div className="text-[10px] uppercase tracking-[0.18em] text-muted-foreground">
+    <div className="px-7 py-6">
+      <div className="text-[11px] uppercase tracking-[0.18em] text-muted-foreground font-medium">
         {label}
       </div>
-      <div className={`mt-1.5 text-[26px] font-bold tabular-nums tracking-tight ${accentCls}`}>
+      <div className={`mt-2 text-[30px] font-bold tabular-nums tracking-tight leading-none ${accentCls}`}>
         {value}
       </div>
       {sub && (
-        <div className="mt-1 text-[11px] text-muted-foreground/80 truncate">{sub}</div>
+        <div className="mt-2 text-[12px] text-muted-foreground truncate">{sub}</div>
       )}
     </div>
   );
@@ -583,9 +587,9 @@ function Stat({
 
 function LegendDot({ color, label }: { color: string; label: string }) {
   return (
-    <span className="inline-flex items-center gap-1.5">
-      <span className={`h-1.5 w-1.5 rounded-full ${color}`} />
-      <span>{label}</span>
+    <span className="inline-flex items-center gap-2">
+      <span className={`h-2 w-2 rounded-full ${color}`} />
+      <span className="font-medium">{label}</span>
     </span>
   );
 }
@@ -617,49 +621,50 @@ function TermRow({ term, index }: { term: Term; index: number }) {
       className="grid grid-cols-[200px_1fr] gap-x-8 py-6 border-b border-border last:border-b-0"
     >
       {/* Left rail — term label */}
-      <div className="relative pl-4">
-        <div className={`absolute left-0 top-1 bottom-1 w-[2px] ${accentBar}`} />
-        <div className="text-[18px] font-bold text-foreground tracking-tight leading-tight">
+      <div className="relative pl-5">
+        <div className={`absolute left-0 top-0 bottom-0 w-[3px] rounded-full ${accentBar}`} />
+        <div className="text-[20px] font-bold text-foreground tracking-tight leading-tight">
           {term.label}
         </div>
         {term.tag && (
           <div
-            className={`mt-1.5 text-[10px] uppercase tracking-[0.15em] ${
+            className={`mt-2 text-[11px] uppercase tracking-[0.15em] font-semibold ${
               term.isCurrent
-                ? "text-amber-300"
+                ? "text-amber-200"
                 : term.isTarget
-                  ? "text-emerald-300"
+                  ? "text-emerald-200"
                   : "text-muted-foreground"
             }`}
           >
             {term.tag}
           </div>
         )}
-        <div className="mt-3 flex items-center gap-1.5 text-[11px] text-muted-foreground tabular-nums">
-          <span className="text-foreground/70 font-medium">{totalUnits}</span> units
+        <div className="mt-3 flex items-center gap-2 text-[12.5px] text-muted-foreground tabular-nums">
+          <span className="text-foreground font-semibold">{totalUnits}</span>
+          <span>units</span>
           <span className="text-muted-foreground/40">·</span>
-          <span>{term.courses.length} courses</span>
+          <span><span className="text-foreground/85 font-medium">{term.courses.length}</span> courses</span>
         </div>
         {term.isCurrent && (
-          <div className="mt-2 inline-flex items-center gap-1 text-[10px] text-amber-300/90">
-            <Clock className="h-3 w-3" /> active term
+          <div className="mt-2.5 inline-flex items-center gap-1.5 text-[11px] text-amber-200 font-medium">
+            <Clock className="h-3.5 w-3.5" /> active term
           </div>
         )}
         {term.isTarget && (
-          <div className="mt-2 inline-flex items-center gap-1 text-[10px] text-emerald-300/90">
-            <CheckCircle2 className="h-3 w-3" /> graduation
+          <div className="mt-2.5 inline-flex items-center gap-1.5 text-[11px] text-emerald-200 font-medium">
+            <CheckCircle2 className="h-3.5 w-3.5" /> graduation
           </div>
         )}
       </div>
 
       {/* Right column — course rows */}
       <div className="min-w-0">
-        <div className="grid grid-cols-[110px_minmax(0,1fr)_60px_minmax(180px,auto)_minmax(120px,auto)] items-center gap-x-4 px-1 pb-2 border-b border-border/60">
-          <span className="text-[9px] uppercase tracking-[0.18em] text-muted-foreground/70">Code</span>
-          <span className="text-[9px] uppercase tracking-[0.18em] text-muted-foreground/70">Course</span>
-          <span className="text-[9px] uppercase tracking-[0.18em] text-muted-foreground/70 text-right">Units</span>
-          <span className="text-[9px] uppercase tracking-[0.18em] text-muted-foreground/70">Category</span>
-          <span className="text-[9px] uppercase tracking-[0.18em] text-muted-foreground/70 text-right">Status</span>
+        <div className="grid grid-cols-[120px_minmax(0,1fr)_60px_minmax(200px,auto)_minmax(140px,auto)] items-center gap-x-5 px-2 pb-2.5 border-b border-border">
+          <span className="text-[10px] uppercase tracking-[0.2em] text-muted-foreground font-semibold">Code</span>
+          <span className="text-[10px] uppercase tracking-[0.2em] text-muted-foreground font-semibold">Course</span>
+          <span className="text-[10px] uppercase tracking-[0.2em] text-muted-foreground font-semibold text-right">Units</span>
+          <span className="text-[10px] uppercase tracking-[0.2em] text-muted-foreground font-semibold">Category</span>
+          <span className="text-[10px] uppercase tracking-[0.2em] text-muted-foreground font-semibold text-right">Status</span>
         </div>
 
         {term.courses.map((c) => {
@@ -667,20 +672,20 @@ function TermRow({ term, index }: { term: Term; index: number }) {
           return (
             <div
               key={c.code}
-              className="grid grid-cols-[110px_minmax(0,1fr)_60px_minmax(180px,auto)_minmax(120px,auto)] items-center gap-x-4 px-1 py-3 border-b border-border/30 last:border-b-0 hover:bg-muted/20 transition-colors"
+              className="grid grid-cols-[120px_minmax(0,1fr)_60px_minmax(200px,auto)_minmax(140px,auto)] items-center gap-x-5 px-2 py-3.5 border-b border-border/40 last:border-b-0 hover:bg-muted/30 transition-colors"
             >
-              <div className="flex items-center gap-2 min-w-0">
+              <div className="flex items-center gap-2.5 min-w-0">
                 {c.critical && <CriticalPulse />}
-                <code className="text-[12.5px] font-mono font-medium text-foreground/90 truncate">
+                <code className="text-[13.5px] font-mono font-semibold text-foreground truncate">
                   {c.code}
                 </code>
               </div>
 
               <div className="min-w-0">
-                <span className="text-[13px] text-foreground/85 truncate block">{c.name}</span>
+                <span className="text-[14px] text-foreground/90 truncate block font-medium">{c.name}</span>
               </div>
 
-              <div className="text-right text-[12.5px] tabular-nums text-foreground/70">
+              <div className="text-right text-[13.5px] tabular-nums text-foreground/85 font-semibold">
                 {c.units}
               </div>
 
@@ -690,8 +695,8 @@ function TermRow({ term, index }: { term: Term; index: number }) {
 
               <div className="flex items-center justify-end gap-2">
                 {c.critical && c.status === "planned" && (
-                  <span className="inline-flex items-center gap-1 text-[10px] text-red-400/90 uppercase tracking-wide">
-                    <TrendingDown className="h-3 w-3" /> critical
+                  <span className="inline-flex items-center gap-1 text-[10.5px] text-red-300 uppercase tracking-wide font-bold">
+                    <TrendingDown className="h-3.5 w-3.5" /> critical
                   </span>
                 )}
                 <Pill className={chip.cls}>{chip.label}</Pill>
