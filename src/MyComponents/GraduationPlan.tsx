@@ -55,6 +55,7 @@ import {
 } from "./GraduationPlan.queries";
 import supabase from "./supabase";
 import { useQueryClient } from "@tanstack/react-query";
+import CourseDrawer from "./CourseDrawer";
 
 // ─── Danger pairs (UI-only, not DB-backed) ──────────────────────────
 const DANGER_PAIRS: { pair: string; why: string }[] = [
@@ -137,6 +138,16 @@ function ErrorState({ message }: { message: string }) {
 // ═══════════════════════════════════════════════════════════════════
 function PlanView({ data }: { data: PlanData }) {
   const { meta, terms, courses } = data;
+
+  // Drawer state — single source of truth for which course's
+  // intelligence panel is currently open. We track the row id (so the
+  // active-row highlight survives a refetch where the array reorders)
+  // and the code (so we can drive the drawer with stable lookup).
+  const [selectedRowId, setSelectedRowId] = useState<number | null>(null);
+  const selectedRow = useMemo(
+    () => courses.find((c) => c.id === selectedRowId) ?? null,
+    [courses, selectedRowId],
+  );
 
   // Auto-detect current term — this replaces the hardcoded `isCurrent`
   // flag and makes the page age correctly with the calendar.
@@ -331,6 +342,8 @@ function PlanView({ data }: { data: PlanData }) {
               index={idx}
               isCurrent={term.id === currentTermId}
               isTarget={term.is_target}
+              selectedRowId={selectedRowId}
+              onSelectRow={setSelectedRowId}
             />
           ))}
         </div>
@@ -378,6 +391,14 @@ function PlanView({ data }: { data: PlanData }) {
           ))}
         </div>
       </motion.section>
+
+      {/* Strategic intelligence drawer — opens when a course row is clicked. */}
+      <CourseDrawer
+        code={selectedRow?.code ?? null}
+        planCourses={courses}
+        selectedRow={selectedRow}
+        onClose={() => setSelectedRowId(null)}
+      />
     </div>
   );
 }
@@ -519,12 +540,16 @@ function TermRow({
   index,
   isCurrent,
   isTarget,
+  selectedRowId,
+  onSelectRow,
 }: {
   term: Term;
   courses: Course[];
   index: number;
   isCurrent: boolean;
   isTarget: boolean;
+  selectedRowId: number | null;
+  onSelectRow: (id: number) => void;
 }) {
   const moveCourse = useMoveCourse();
   const addCourse = useAddCourse();
@@ -611,7 +636,12 @@ function TermRow({
         </div>
 
         {courses.map((c) => (
-          <CourseRow key={c.id} course={c} />
+          <CourseRow
+            key={c.id}
+            course={c}
+            isSelected={c.id === selectedRowId}
+            onSelect={() => onSelectRow(c.id)}
+          />
         ))}
 
         {courses.length === 0 && !adding && (
@@ -646,9 +676,19 @@ function TermRow({
 }
 
 // ═══════════════════════════════════════════════════════════════════
-// Course row — draggable, with status menu + edit + delete
+// Course row — draggable, clickable (opens drawer), with status menu
+// + edit + delete. Interactive children (status pill, edit, delete,
+// drag handle) call stopPropagation so they don't also open the drawer.
 // ═══════════════════════════════════════════════════════════════════
-function CourseRow({ course }: { course: Course }) {
+function CourseRow({
+  course,
+  isSelected,
+  onSelect,
+}: {
+  course: Course;
+  isSelected: boolean;
+  onSelect: () => void;
+}) {
   const updateStatus = useUpdateCourseStatus();
   const editCourse = useEditCourse();
   const deleteCourse = useDeleteCourse();
@@ -672,21 +712,42 @@ function CourseRow({ course }: { course: Course }) {
     );
   }
 
+  // Click handler — only fires drawer-open if the click didn't land on
+  // an interactive child (button, input, code editor, etc.). The
+  // interactive children also call stopPropagation as belt-and-suspenders.
+  const handleRowClick = (e: React.MouseEvent) => {
+    const target = e.target as HTMLElement;
+    if (target.closest("button, input, [data-no-drawer]")) return;
+    onSelect();
+  };
+
   return (
     <div
       draggable
+      onClick={handleRowClick}
       onDragStart={(e) => {
         e.dataTransfer.setData("text/plain", String(course.id));
         e.dataTransfer.effectAllowed = "move";
         setDragging(true);
       }}
       onDragEnd={() => setDragging(false)}
-      className={`group grid grid-cols-[18px_120px_minmax(0,1fr)_60px_minmax(200px,auto)_minmax(160px,auto)_36px] items-center gap-x-4 px-2 py-3.5 border-b border-border/40 last:border-b-0 transition-colors cursor-grab active:cursor-grabbing ${
-        dragging ? "opacity-40" : "hover:bg-muted/30"
+      className={`group relative grid grid-cols-[18px_120px_minmax(0,1fr)_60px_minmax(200px,auto)_minmax(160px,auto)_36px] items-center gap-x-4 px-2 py-3.5 border-b border-border/40 last:border-b-0 transition-colors cursor-pointer ${
+        dragging
+          ? "opacity-40"
+          : isSelected
+            ? "bg-primary/[0.06]"
+            : "hover:bg-muted/30"
       }`}
     >
-      {/* Drag handle */}
-      <div className="text-muted-foreground/40 group-hover:text-muted-foreground transition-colors">
+      {/* Active-row accent strip on the left */}
+      {isSelected && (
+        <span className="absolute left-0 top-0 bottom-0 w-[2px] bg-primary" aria-hidden />
+      )}
+      {/* Drag handle — cursor hint only, dragging fires from the row itself */}
+      <div
+        data-no-drawer
+        className="text-muted-foreground/40 group-hover:text-muted-foreground transition-colors cursor-grab active:cursor-grabbing"
+      >
         <GripVertical className="h-4 w-4" />
       </div>
 
@@ -751,14 +812,18 @@ function CourseRow({ course }: { course: Course }) {
       {/* Row actions (edit / delete) — hover-reveal */}
       <div className="flex items-center justify-end gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
         <button
-          onClick={() => setEditing(true)}
+          onClick={(e) => {
+            e.stopPropagation();
+            setEditing(true);
+          }}
           title="Edit"
           className="p-1 rounded-sm text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
         >
           <Pencil className="h-3.5 w-3.5" />
         </button>
         <button
-          onClick={() => {
+          onClick={(e) => {
+            e.stopPropagation();
             if (confirm(`Delete ${course.code}?`)) {
               deleteCourse.mutate(course.id);
             }
