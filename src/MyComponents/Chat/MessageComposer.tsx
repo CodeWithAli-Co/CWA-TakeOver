@@ -12,7 +12,7 @@
 
 import { useState, useRef, useEffect } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { Send, X, Paperclip, Smile, Sparkles, Loader2, Image as ImgIcon, Reply, Mic, Square, Trash2, Clock, Gift } from "lucide-react";
+import { Send, X, Paperclip, Smile, Sparkles, Loader2, Image as ImgIcon, Reply, Mic, Square, Trash2, Clock, Gift, FolderUp, Folder } from "lucide-react";
 import supabase from "@/MyComponents/supabase";
 import { useChatStore } from "@/stores/chatStore";
 import { getActiveCompanyLabel } from "@/stores/query";
@@ -23,6 +23,12 @@ import {
 } from "@/components/ui/shadcnComponents/popover";
 import { EmojiPicker } from "./EmojiPicker";
 import { useImageUpload, type PendingUpload } from "./useImageUpload";
+import {
+  useFolderUpload,
+  encodeFolderToken,
+  type FolderManifest,
+} from "./useFolderUpload";
+import { isTauriRuntime, pickFolderTauri } from "./pickFolderTauri";
 import { draftChatReply } from "@/Axon/engine/chatDraft";
 import { MentionPicker, detectMentionQuery } from "./MentionPicker";
 import { useVoiceRecorder, formatElapsed } from "./useVoiceRecorder";
@@ -105,12 +111,24 @@ export const MessageComposer: React.FC<Props> = ({
 
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const folderInputRef = useRef<HTMLInputElement>(null);
   const typingChannelRef = useRef<any>(null);
 
   const { replyingTo, setReplyingTo, setTyping } = useChatStore();
   const {
     pending, removePending, clearPending, uploadMany, filesFromClipboard,
   } = useImageUpload(group, currentUsername);
+  const folderUpload = useFolderUpload(group, currentUsername);
+  // Folders we've finished uploading and are queued to embed in the
+  // next message. Cleared after send. Separate from `pending` so the
+  // existing image flow stays untouched.
+  const [readyFolders, setReadyFolders] = useState<FolderManifest[]>([]);
+  // Visible error specifically for the folder picker so silent
+  // failures (empty folder, cancelled dialog, webkitdirectory not
+  // populating relative paths) stop disappearing into the void.
+  const [folderPickerError, setFolderPickerError] = useState<string | null>(
+    null,
+  );
   const voice = useVoiceRecorder();
 
   const handleMicToggle = async () => {
@@ -392,14 +410,107 @@ export const MessageComposer: React.FC<Props> = ({
     if (fileInputRef.current) fileInputRef.current.value = "";
   };
 
-  const onDrop = (e: React.DragEvent) => {
+  /** Handler for the folder-picker input (`webkitdirectory`). The browser
+   *  hands us a flat FileList where each File should carry a populated
+   *  `webkitRelativePath`. In some embedded WebViews (notably Tauri's
+   *  WebView2 on Windows) it doesn't, in which case we fall back to a
+   *  flat folder of just the picked file names. */
+  const onPickFolder = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (folderInputRef.current) folderInputRef.current.value = "";
+    if (!files || files.length === 0) {
+      setFolderPickerError("No files in that folder.");
+      return;
+    }
+    let bundle = folderUpload.gatherFromInput(files);
+    if (!bundle) {
+      // webkitRelativePath was empty — fall back to a flat bundle so
+      // the user gets *something* sent rather than a silent no-op.
+      console.warn(
+        "[folder-picker] webkitRelativePath was empty; falling back to flat bundle.",
+      );
+      const arr = Array.from(files);
+      bundle = {
+        name: "Selected Files",
+        entries: arr.map((file) => ({ relativePath: file.name, file })),
+      };
+    }
+    setFolderPickerError(null);
+    const manifest = await folderUpload.uploadFolder(bundle);
+    if (manifest) setReadyFolders((p) => [...p, manifest]);
+  };
+
+  /** Tauri-native folder picker — opens the OS folder dialog and
+   *  recursively reads the chosen directory. Used when running inside
+   *  the desktop app where `webkitdirectory` isn't reliable. */
+  const handleFolderButtonClick = async () => {
+    setFolderPickerError(null);
+    if (isTauriRuntime()) {
+      try {
+        const bundle = await pickFolderTauri();
+        if (!bundle) return; // user cancelled
+        if (bundle.entries.length === 0) {
+          setFolderPickerError(`"${bundle.name}" is empty.`);
+          return;
+        }
+        const manifest = await folderUpload.uploadFolder(bundle);
+        if (manifest) setReadyFolders((p) => [...p, manifest]);
+      } catch (err) {
+        console.error("[folder-picker:tauri]", err);
+        setFolderPickerError(
+          err instanceof Error ? err.message : "Folder picker failed.",
+        );
+      }
+    } else {
+      folderInputRef.current?.click();
+    }
+  };
+
+  const onDrop = async (e: React.DragEvent) => {
     e.preventDefault();
     setDraggingOver(false);
-    const files: File[] = [];
-    for (let i = 0; i < e.dataTransfer.files.length; i++) {
-      files.push(e.dataTransfer.files[i]!);
+
+    // Detect folder drops first — `webkitGetAsEntry` exposes whether
+    // each item is a directory. We pull folders off into the folder
+    // upload pipeline and only pass remaining loose files through to
+    // the existing image/file upload.
+    const items = e.dataTransfer.items;
+    const folderBundles = items
+      ? await folderUpload.gatherFromDataTransfer(items)
+      : [];
+
+    if (folderBundles.length > 0) {
+      // Kick all folder uploads off in parallel — each tracks its own
+      // pending state internally.
+      const uploadPromises = folderBundles.map((b) =>
+        folderUpload.uploadFolder(b).then((m) => {
+          if (m) setReadyFolders((p) => [...p, m]);
+        }),
+      );
+      // Don't await — we want loose files to start uploading too.
+      Promise.all(uploadPromises);
     }
-    if (files.length > 0) uploadMany(files);
+
+    // Loose files: only those whose entry is NOT a directory. If
+    // `webkitGetAsEntry` is unavailable, fall back to treating
+    // everything as a file.
+    const looseFiles: File[] = [];
+    if (items && typeof items[0]?.webkitGetAsEntry === "function") {
+      for (let i = 0; i < items.length; i++) {
+        const it = items[i]!;
+        if (it.kind !== "file") continue;
+        const entry = it.webkitGetAsEntry();
+        if (entry && entry.isFile) {
+          const f = it.getAsFile();
+          if (f) looseFiles.push(f);
+        }
+      }
+    } else {
+      for (let i = 0; i < e.dataTransfer.files.length; i++) {
+        looseFiles.push(e.dataTransfer.files[i]!);
+      }
+    }
+    if (looseFiles.length > 0) uploadMany(looseFiles);
   };
 
   // ── send ──────────────────────────────────────────────────────────────
@@ -430,12 +541,22 @@ export const MessageComposer: React.FC<Props> = ({
     const textContent = expanded.trim();
     const hasText = !!textContent;
     const hasPending = pending.some((p) => !p.publicUrl);
-    if (hasPending) return; // wait for uploads
+    if (hasPending) return; // wait for image/file uploads
+    // Folders track their own pending state inside `useFolderUpload`;
+    // any folder that hasn't finished uploading is still in
+    // `pendingFolders` and hasn't been added to `readyFolders` yet.
+    if (folderUpload.pendingFolders.some((f) => !f.error)) return;
     const imageUrls = pending
       .map((p) => p.publicUrl)
       .filter((u): u is string => !!u);
 
-    if (!hasText && imageUrls.length === 0) return;
+    if (
+      !hasText &&
+      imageUrls.length === 0 &&
+      readyFolders.length === 0
+    ) {
+      return;
+    }
 
     // Always embed attachments inside the message body so they survive any
     // DB column the user's schema happens to be missing:
@@ -449,6 +570,11 @@ export const MessageComposer: React.FC<Props> = ({
     }
     if (textContent) parts.push(textContent);
     parts.push(...imageUrls);
+    // Each ready folder becomes one base64 token in the body.
+    // MessageBubble decodes them into the FolderAttachmentCard.
+    for (const manifest of readyFolders) {
+      parts.push(encodeFolderToken(manifest));
+    }
     const finalMessage = parts.join("\n");
 
     const basePayload: Record<string, unknown> = {
@@ -542,6 +668,8 @@ export const MessageComposer: React.FC<Props> = ({
     writeDraft(group, "");
     setReplyingTo(null);
     clearPending();
+    setReadyFolders([]);
+    folderUpload.clearPendingFolders();
     if (typingChannelRef.current) {
       typingChannelRef.current.track({ typing: false, expiresAt: 0 });
     }
@@ -676,6 +804,99 @@ export const MessageComposer: React.FC<Props> = ({
         </div>
       )}
 
+      {/* Folder picker error — surfaces silent failures (cancelled
+          dialog, empty folder, webkitdirectory not populating
+          relative paths). Auto-dismissable. */}
+      {folderPickerError && (
+        <div className="flex items-center gap-2 border-b border-destructive/30 bg-destructive/10 px-5 py-1.5 text-[11px] text-destructive">
+          <Folder className="h-3 w-3" />
+          <span className="flex-1">{folderPickerError}</span>
+          <button
+            type="button"
+            onClick={() => setFolderPickerError(null)}
+            className="rounded-sm p-0.5 hover:bg-destructive/15"
+            aria-label="Dismiss"
+          >
+            <X className="h-3 w-3" />
+          </button>
+        </div>
+      )}
+
+      {/* Folder strip — in-flight folder uploads + finalized folders
+          waiting to be sent. Each row collapses the folder to one chip
+          so a 50-file dump doesn't fill the composer. */}
+      {(folderUpload.pendingFolders.length > 0 ||
+        readyFolders.length > 0) && (
+        <div className="flex flex-wrap gap-2 border-b border-border px-5 py-2">
+          {folderUpload.pendingFolders.map((f) => (
+            <div
+              key={f.id}
+              className="flex items-center gap-2 rounded-md border border-border bg-muted/40 px-2.5 py-1.5 text-[11.5px]"
+            >
+              <Folder className="h-[14px] w-[14px] shrink-0 text-primary" />
+              <div className="min-w-0 leading-tight">
+                <div
+                  className="truncate font-medium text-foreground max-w-[200px]"
+                  title={f.name}
+                >
+                  {f.name}
+                </div>
+                <div className="font-mono text-[9.5px] uppercase tracking-widest text-muted-foreground">
+                  {f.error
+                    ? "error"
+                    : `${f.uploadedFiles}/${f.totalFiles} files`}
+                </div>
+              </div>
+              {f.error ? (
+                <button
+                  type="button"
+                  onClick={() => folderUpload.removePendingFolder(f.id)}
+                  className="rounded-sm p-0.5 text-destructive hover:bg-destructive/15"
+                  title={f.error}
+                  aria-label="Dismiss"
+                >
+                  <X className="h-3 w-3" />
+                </button>
+              ) : (
+                <Loader2 className="h-3 w-3 animate-spin text-muted-foreground shrink-0" />
+              )}
+            </div>
+          ))}
+          {readyFolders.map((m, i) => (
+            <div
+              key={`ready-${i}`}
+              className="flex items-center gap-2 rounded-md border border-primary/40 bg-primary/10 px-2.5 py-1.5 text-[11.5px]"
+            >
+              <Folder className="h-[14px] w-[14px] shrink-0 text-primary" />
+              <div className="min-w-0 leading-tight">
+                <div
+                  className="truncate font-medium text-foreground max-w-[200px]"
+                  title={m.name}
+                >
+                  {m.name}
+                </div>
+                <div className="font-mono text-[9.5px] uppercase tracking-widest text-muted-foreground">
+                  {m.count} files · ready
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() =>
+                  setReadyFolders((p) =>
+                    p.filter((_, idx) => idx !== i),
+                  )
+                }
+                className="rounded-sm p-0.5 text-muted-foreground hover:bg-muted/60 hover:text-foreground"
+                aria-label="Remove folder"
+                title="Remove from this message"
+              >
+                <X className="h-3 w-3" />
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+
       {/* Axon error banner */}
       {axonError && (
         <div className="border-b border-destructive/30 bg-destructive/10 px-5 py-1.5 text-[11px] text-destructive">
@@ -687,7 +908,7 @@ export const MessageComposer: React.FC<Props> = ({
         {draggingOver && (
           <div className="pointer-events-none absolute inset-3 flex items-center justify-center rounded-md border-2 border-dashed border-primary/40 bg-primary/5 text-[11.5px] font-medium text-primary">
             <ImgIcon className="mr-2 h-4 w-4" />
-            Drop images to attach
+            Drop files or a folder to attach
           </div>
         )}
 
@@ -703,6 +924,14 @@ export const MessageComposer: React.FC<Props> = ({
             title="Attach file"
           >
             <Paperclip className="h-[17px] w-[17px]" />
+          </button>
+          <button
+            type="button"
+            onClick={handleFolderButtonClick}
+            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-muted-foreground/60 hover:bg-muted/60 hover:text-foreground transition-colors"
+            title={`Send folder (max ${folderUpload.MAX_FILES_PER_FOLDER} files)`}
+          >
+            <FolderUp className="h-[17px] w-[17px]" />
           </button>
           {/* Mic / voice message */}
           {voice.recording ? (
@@ -741,6 +970,27 @@ export const MessageComposer: React.FC<Props> = ({
             type="file"
             multiple
             onChange={onPickFiles}
+            className="hidden"
+          />
+          {/* Folder picker — `webkitdirectory` makes the OS dialog
+              switch to "Select Folder" mode and pre-populates
+              `webkitRelativePath` on every File. Cast required because
+              React's input typings don't include the vendor attr. */}
+          {/* React's input typings don't include the non-standard
+              `webkitdirectory` / `directory` attrs even though every
+              Chromium-based engine (including Tauri's WebView2)
+              supports them. We reach past JSX to set them. */}
+          <input
+            ref={(el) => {
+              folderInputRef.current = el;
+              if (el) {
+                el.setAttribute("webkitdirectory", "");
+                el.setAttribute("directory", "");
+              }
+            }}
+            type="file"
+            multiple
+            onChange={onPickFolder}
             className="hidden"
           />
 

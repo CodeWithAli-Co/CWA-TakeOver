@@ -37,6 +37,12 @@ import { MessageText } from "./MessageText";
 import { PresenceDot } from "./PresenceDot";
 import { VoicePlayer } from "./VoicePlayer";
 import { PollMessage, parsePollMarker, stripPollMarker } from "./PollMessage";
+import { FolderAttachmentCard } from "./FolderAttachmentCard";
+import {
+  decodeFolderToken,
+  FOLDER_TOKEN_RE,
+  type FolderManifest,
+} from "./useFolderUpload";
 import { MessageInterface } from "@/stores/query";
 import { formatDistanceToNow, isValid, format } from "date-fns";
 
@@ -321,6 +327,7 @@ export const MessageBubble: React.FC<Props> = ({
   let images: string[] = msg.image_urls ?? [];
   let files: { url: string; name: string }[] = [];
   let audios: string[] = [];
+  let folders: FolderManifest[] = [];
   let parsedReplyId: number | null = null;
   let parsedReplySender: string | null = null;
   let parsedReactions: Record<string, string[]> = {};
@@ -343,6 +350,24 @@ export const MessageBubble: React.FC<Props> = ({
     parsedReplyId = r.replyId;
     parsedReplySender = r.replySender;
   }
+  // Folder bundles are parsed FIRST so the image/file URL extractors
+  // below don't pick up the folder's internal URLs as standalone
+  // attachments. Each `[folder:<base64>]` token decodes to one
+  // FolderManifest rendered as a FolderAttachmentCard.
+  if (displayText) {
+    const tokens = displayText.match(FOLDER_TOKEN_RE) ?? [];
+    if (tokens.length > 0) {
+      for (const t of tokens) {
+        const m = decodeFolderToken(t);
+        if (m) folders.push(m);
+      }
+      displayText = displayText
+        .replace(FOLDER_TOKEN_RE, "")
+        .replace(/\n{3,}/g, "\n\n")
+        .trim();
+    }
+  }
+
   // Always strip image URLs from displayText — even when image_urls
   // column is populated — so the raw link never shows up next to the
   // rendered image. If image_urls is empty we also promote the extracted
@@ -591,6 +616,17 @@ export const MessageBubble: React.FC<Props> = ({
           <div className="mt-2 flex flex-col gap-1.5">
             {audios.map((url) => (
               <VoicePlayer key={url} src={url} />
+            ))}
+          </div>
+        )}
+
+        {/* Folder bundles — each renders as a card with a browse
+            overlay listing every file inside. Decoded from
+            `[folder:<base64>]` tokens earlier in the body parsing. */}
+        {folders.length > 0 && (
+          <div className="mt-2 flex flex-col gap-1.5">
+            {folders.map((m, i) => (
+              <FolderAttachmentCard key={`folder-${i}-${m.name}`} manifest={m} />
             ))}
           </div>
         )}
