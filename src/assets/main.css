@@ -420,3 +420,134 @@ ul { list-style-type: disc; margin-left: var(--page-marginL); }
     opacity: 0.95;
   }
 }
+
+
+/* ════════════════════════════════════════════════════════════════════
+   TAKEOVER EDITORIAL DESIGN SYSTEM
+   Direct port from takeover-B2B/app/globals.css — gives CWA-Manager
+   access to the marketing site's typography, surface hierarchy, and
+   editorial primitives (tracker labels, brand rails, mono blocks,
+   §NN section heads) without disrupting the existing shadcn tokens.
+   ════════════════════════════════════════════════════════════════════ */
+
+:root,
+[data-company="codeWithAli"],
+[data-company="simplicityFunds"] {
+  /* Editorial surfaces — RGB space, layered hierarchy.
+   * These coexist with the shadcn HSL tokens above; use --ed-* in
+   * editorial components to avoid colliding with shadcn-styled ones. */
+  --ed-bg: 8 8 10;
+  --ed-surface: 20 20 24;
+  --ed-surface-2: 28 28 32;
+  --ed-fg: 245 245 250;
+  --ed-fg-2: 178 178 184;
+  --ed-fg-muted: 110 110 116;
+  --ed-border: 52 52 58;
+  --ed-border-strong: 78 78 86;
+  --ed-brand: 239 68 68;
+  --ed-brand-strong: 220 38 38;
+  --ed-brand-subtle: 35 12 12;
+  --ed-brand-glow: 248 113 113;
+
+  /* Typography custom properties — set by index.html font links */
+  --ed-font-display: "Inter", system-ui, -apple-system, sans-serif;
+  --ed-font-mono: "JetBrains Mono", ui-monospace, "SF Mono", monospace;
+}
+
+/* Surface utility classes — editorial scope */
+.ed-surface     { background-color: rgb(var(--ed-surface)); }
+.ed-surface-2   { background-color: rgb(var(--ed-surface-2)); }
+.text-ed-fg     { color: rgb(var(--ed-fg)); }
+.text-ed-fg-2   { color: rgb(var(--ed-fg-2)); }
+.text-ed-fg-muted { color: rgb(var(--ed-fg-muted)); }
+.text-ed-brand  { color: rgb(var(--ed-brand)); }
+.bg-ed-brand    { background-color: rgb(var(--ed-brand)); }
+.border-ed      { border-color: rgb(var(--ed-border)); }
+.border-ed-strong { border-color: rgb(var(--ed-border-strong)); }
+
+/* Tracker — small uppercase letterspaced labels */
+.ed-tracker {
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  font-weight: 700;
+  font-size: 11px;
+  line-height: 1;
+  font-family: var(--ed-font-display);
+}
+.ed-tracker-sm {
+  text-transform: uppercase;
+  letter-spacing: 0.16em;
+  font-weight: 600;
+  font-size: 10px;
+  line-height: 1;
+  font-family: var(--ed-font-display);
+}
+
+/* Display font — Inter with tight tracking for headlines */
+.ed-display {
+  font-family: var(--ed-font-display);
+  letter-spacing: -0.02em;
+  font-weight: 800;
+}
+
+/* Dot prefix — the AXON-vocab glow dot used before tracker labels */
+.ed-dot::before {
+  content: "";
+  display: inline-block;
+  width: 5px;
+  height: 5px;
+  border-radius: 9999px;
+  background: currentColor;
+  margin-right: 8px;
+  vertical-align: middle;
+  box-shadow: 0 0 8px currentColor;
+}
+
+/* Mono — JetBrains Mono for timestamps, IDs, status codes */
+.ed-mono {
+  font-family: var(--ed-font-mono);
+  font-size: 12px;
+  font-feature-settings: "ss01", "calt", "liga";
+}
+
+/* Brand-rail card — left-edge accent strip for highlight cards */
+.ed-brand-rail {
+  position: relative;
+}
+.ed-brand-rail::before {
+  content: "";
+  position: absolute;
+  left: -1px;
+  top: 16px;
+  bottom: 16px;
+  width: 3px;
+  border-radius: 0 4px 4px 0;
+  background: rgb(var(--ed-brand));
+}
+
+/* Hairline divider — gradient fade-out section break */
+.ed-hairline {
+  height: 1px;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgb(var(--ed-border-strong)),
+    transparent
+  );
+}
+
+/* Editorial glass surface */
+.ed-glass {
+  background: rgba(20, 20, 24, 0.72);
+  backdrop-filter: blur(20px) saturate(1.4);
+  -webkit-backdrop-filter: blur(20px) saturate(1.4);
+  border: 1px solid rgba(var(--ed-brand), 0.18);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
+}
+
+
+/* AXON-style heartbeat pulse for live status dots in the editorial UI. */
+@keyframes axonPulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.55; }
+}

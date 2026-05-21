@@ -34,7 +34,7 @@ export function AxonRoot() {
         <ConfirmDialog />
         {/* Live diff — auto-pops in the corner when Axon writes/modifies
             a file. Mounted at root level (not inside CommandPanel) so
-            it's visible even when the panel is closed. */}
+            it is visible even when the panel is closed. */}
         <DiffOverlay />
       </AxonProvider>
     </div>
