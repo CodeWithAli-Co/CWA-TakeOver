@@ -16,8 +16,8 @@ import React, { useEffect, useMemo, useState } from "react";
 import { ScrollArea } from "@/components/ui/shadcnComponents/scroll-area";
 import { motion, AnimatePresence } from "framer-motion";
 import {
-  Activity, Calendar, CheckCircle, ClipboardList, Clock,
-  AlertCircle, ChevronRight, ChevronDown, LayoutGrid, X, Flag, Search,
+  Calendar, CheckCircle, ClipboardList, Clock,
+  ChevronRight, LayoutGrid, X, Flag, Search,
   Briefcase, Sparkles, Layers, Users,
 } from "lucide-react";
 import { ActiveUser, AllTodos, Employees, Todos, TodosInterface } from "@/stores/query";
@@ -222,7 +222,6 @@ const TaskSettings: React.FC = () => {
 
   const [statusFilter, setStatusFilter] = useState<"all" | TaskStatus>("all");
   const [priorityFilter, setPriorityFilter] = useState<"all" | TaskPriority>("all");
-  const [assigneeFilter, setAssigneeFilter] = useState<string | "all">("all");
   const [searchQuery, setSearchQuery] = useState("");
   const [view, setView] = useState<"inbox" | "kanban">("inbox");
 
@@ -263,17 +262,14 @@ const TaskSettings: React.FC = () => {
         task?.description?.toLowerCase().includes(searchQuery.toLowerCase());
       const matchesStatus = statusFilter === "all" || task?.status === statusFilter;
       const matchesPriority = priorityFilter === "all" || task?.priority === priorityFilter;
-      const matchesAssignee =
-        assigneeFilter === "all" ||
-        assigneeNames(task?.assignee).includes(assigneeFilter);
-      return matchesSearch && matchesStatus && matchesPriority && matchesAssignee;
+      return matchesSearch && matchesStatus && matchesPriority;
     });
-  }, [todosList, searchQuery, statusFilter, priorityFilter, assigneeFilter]);
+  }, [todosList, searchQuery, statusFilter, priorityFilter]);
 
   return (
-    <div className="min-h-screen bg-background overflow-y-auto">
+    <div className="h-screen flex flex-col bg-background overflow-hidden">
       {/* ═══════ EDITORIAL HEADER ═══════ */}
-      <div className="px-8 pt-7 pb-3">
+      <div className="px-8 pt-7 pb-4 border-b border-border bg-card/40">
         <Tracker tone="muted" size="sm" className="mb-2">
           <TrackerDot color="rgb(239,68,68)" />
           TASKS - {allCount} TOTAL - {completionPct.toFixed(0)}% DONE
@@ -351,148 +347,25 @@ const TaskSettings: React.FC = () => {
         </div>
       </div>
 
-      {/* ═══════ STATS STRIP - editorial ═══════ */}
-      <div className="px-8 pt-4">
-        <div className="bg-card border border-border rounded-lg overflow-hidden">
-          <div className="grid grid-cols-1 md:grid-cols-[1.6fr_repeat(4,1fr)]">
-            {/* Completion (focal) */}
-            <div className="px-5 py-4 border-b md:border-b-0 md:border-r border-border">
-              <div className="flex items-center justify-between mb-2.5">
-                <Tracker tone="muted" size="sm">COMPLETION</Tracker>
-                <Mono size="md" tone="brand" className="font-black">
-                  {completionPct.toFixed(0)}%
-                </Mono>
-              </div>
-              <div className="h-1.5 w-full bg-secondary rounded-full overflow-hidden">
-                <motion.div
-                  initial={{ width: 0 }}
-                  animate={{ width: `${completionPct}%` }}
-                  transition={{ duration: 0.6, ease: "easeOut" }}
-                  className="h-full bg-primary rounded-full"
-                  style={{ boxShadow: "0 0 12px rgba(239,68,68,0.4)" }}
-                />
-              </div>
-              <p className="text-[11px] text-muted-foreground mt-2">
-                {doneCount} of {allCount} tasks done
-              </p>
-            </div>
-
-            <StatCell icon={AlertCircle} label="To Do"  value={todoCount}       color="amber" />
-            <StatCell icon={Clock}       label="Active" value={inProgressCount} color="sky"   />
-            <StatCell icon={CheckCircle} label="Done"   value={doneCount}       color="emerald" />
-            <StatCell icon={Activity}    label="Total"  value={allCount}        color="brand" />
-          </div>
-        </div>
-      </div>
-
-      {/* ═══════ FILTER BAR ═══════ */}
-      <div className="px-8 pt-4">
-        <div className="flex items-center gap-2 flex-wrap">
-          <div className="inline-flex items-center bg-card border border-border rounded-md p-0.5">
-            {(["all", "to-do", "in-progress", "done"] as const).map((s) => {
-              const counts: Record<string, number> = { all: allCount, "to-do": todoCount, "in-progress": inProgressCount, done: doneCount };
-              const labels: Record<string, string> = { all: "All", "to-do": "To Do", "in-progress": "Active", done: "Done" };
-              const isActive = statusFilter === s;
-              return (
-                <button
-                  key={s}
-                  onClick={() => setStatusFilter(s)}
-                  data-active={isActive}
-                  className="px-2.5 py-1 rounded text-[11px] font-bold transition-all text-muted-foreground hover:text-foreground data-[active=true]:bg-primary/10 data-[active=true]:text-primary"
-                >
-                  {labels[s]} <span className="opacity-60">({counts[s]})</span>
-                </button>
-              );
-            })}
-          </div>
-
-          <div className="inline-flex items-center bg-card border border-border rounded-md p-0.5">
-            {(["all", "high", "medium", "low"] as const).map((p) => {
-              const isActive = priorityFilter === p;
-              const pAccent = p === "all" ? null : PRIORITY_META[p].accent;
-              return (
-                <button
-                  key={p}
-                  onClick={() => setPriorityFilter(p)}
-                  data-active={isActive}
-                  className="px-2.5 py-1 rounded text-[11px] font-bold uppercase tracking-wider transition-all text-muted-foreground hover:text-foreground"
-                  style={
-                    isActive && pAccent
-                      ? { background: `${pAccent}1a`, color: pAccent }
-                      : isActive
-                      ? { background: "rgba(239,68,68,0.12)", color: "rgb(239,68,68)" }
-                      : undefined
-                  }
-                >
-                  {p === "all" ? "Any" : p}
-                </button>
-              );
-            })}
-          </div>
-
-          {/* Assignee filter - only when scope=everyone */}
-          {effectiveScope === "everyone" && (
-            <div className="relative">
-              <select
-                value={assigneeFilter}
-                onChange={(e) => setAssigneeFilter(e.target.value)}
-                className="appearance-none pl-7 pr-8 py-1.5 bg-card border border-border rounded-md text-[11px] font-bold uppercase tracking-wider text-muted-foreground hover:text-foreground focus:outline-none focus:border-border-strong cursor-pointer"
-                title="Filter by assignee"
-              >
-                <option value="all">Everyone</option>
-                {(AllEmployees || []).map((emp: any) => (
-                  <option key={emp.supa_id ?? emp.id} value={emp.username}>
-                    {emp.username}
-                  </option>
-                ))}
-              </select>
-              <Users className="absolute left-2 top-1/2 -translate-y-1/2 w-3 h-3 text-muted-foreground pointer-events-none" />
-              <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 w-3 h-3 text-muted-foreground pointer-events-none" />
-            </div>
-          )}
-          <div className="relative flex-1 max-w-xs">
-            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3 h-3 text-muted-foreground" />
-            <input
-              type="text"
-              placeholder="Search tasks..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-7 pr-7 py-1.5 bg-card border border-border rounded-md text-[12px] text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-border-strong"
-            />
-            {searchQuery && (
-              <button
-                onClick={() => setSearchQuery("")}
-                className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-                aria-label="Clear search"
-              >
-                <X className="h-3 w-3" />
-              </button>
-            )}
-          </div>
-        </div>
-      </div>
-
-      {/* ═══════ TASK DISPLAY ═══════ */}
-      <div className="px-8 py-5 pb-10">
-        {filtered.length === 0 ? (
-          <div className="bg-card border border-border rounded-lg py-16 text-center">
-            <ClipboardList className="h-10 w-10 text-muted-foreground/30 mx-auto mb-3" />
-            <Tracker tone="muted" size="sm" className="mb-2">
-              {allCount === 0 ? "NO TASKS YET" : "NO MATCHES"}
-            </Tracker>
-            <p className="text-[13px] text-foreground/70 font-semibold mb-1">
-              {allCount === 0 ? "Nothing on the list." : "Filters cleared the board."}
-            </p>
-            <p className="text-[11.5px] text-muted-foreground">
-              {allCount === 0
-                ? "Create one to get started, or wait for AXON to surface something."
-                : "Try a different filter combination or clear the search."}
-            </p>
-          </div>
-        ) : view === "inbox" ? (
-          <InboxView tasks={filtered} onStatusChange={handleStatusChange} showAssignee={effectiveScope === "everyone"} />
+      {/* ═══════ TASK DISPLAY (flush against the unified header) ═══════ */}
+      <div className="flex-1 min-h-0 flex flex-col">
+        {view === "inbox" ? (
+          <InboxView
+            tasks={filtered}
+            onStatusChange={handleStatusChange}
+            showAssignee={effectiveScope === "everyone"}
+            stats={{ allCount, todoCount, inProgressCount, doneCount, completionPct }}
+            filters={{
+              status: statusFilter,
+              setStatus: setStatusFilter,
+              priority: priorityFilter,
+              setPriority: setPriorityFilter,
+              search: searchQuery,
+              setSearch: setSearchQuery,
+            }}
+          />
         ) : (
-          <div className="grid grid-cols-3 gap-4">
+          <div className="grid grid-cols-3 gap-4 mx-8 mt-6 pb-10">
             {(["to-do", "in-progress", "done"] as TaskStatus[]).map((status) => {
               const colTasks = filtered.filter((t) => t.status === status);
               const m = STATUS_META[status];
@@ -533,40 +406,6 @@ const TaskSettings: React.FC = () => {
     </div>
   );
 };
-
-// ═══════════════════════════════════════════════════════════════
-// StatCell - editorial mini stat tile
-// ═══════════════════════════════════════════════════════════════
-function StatCell({
-  icon: Icon, label, value, color,
-}: {
-  icon: typeof Activity;
-  label: string;
-  value: number;
-  color: "amber" | "sky" | "emerald" | "brand";
-}) {
-  const colorMap: Record<string, { dot: string; text: string }> = {
-    amber:   { dot: "rgb(251,191,36)", text: "text-amber-400"   },
-    sky:     { dot: "rgb(56,189,248)", text: "text-sky-400"     },
-    emerald: { dot: "rgb(52,211,153)", text: "text-emerald-400" },
-    brand:   { dot: "rgb(239,68,68)",  text: "text-primary"     },
-  };
-  const c = colorMap[color]!;
-  return (
-    <div className="px-5 py-4 border-r last:border-r-0 border-border">
-      <div className="flex items-center gap-1.5 mb-1.5">
-        <Icon className={["h-3 w-3", c.text].join(" ")} />
-        <Tracker tone="muted" size="sm">{label.toUpperCase()}</Tracker>
-      </div>
-      <Mono size="md" className={[c.text, "font-black"].join(" ")}>
-        {value}
-      </Mono>
-    </div>
-  );
-}
-
-
-
 export default TaskSettings;
 
 // ════════════════════════════════════════════════════════════════
@@ -623,11 +462,30 @@ function scoreTask(t: TodosInterface): ScoredTask {
   return { task: t, score, rationale, daysLeft: days };
 }
 
+// Shared types for InboxView + FleetCockpit
+interface InboxStats {
+  allCount: number;
+  todoCount: number;
+  inProgressCount: number;
+  doneCount: number;
+  completionPct: number;
+}
+interface InboxFilters {
+  status: "all" | TaskStatus;
+  setStatus: (s: "all" | TaskStatus) => void;
+  priority: "all" | TaskPriority;
+  setPriority: (p: "all" | TaskPriority) => void;
+  search: string;
+  setSearch: (s: string) => void;
+}
+
 const InboxView: React.FC<{
   tasks: TodosInterface[];
   onStatusChange: (id: number, status: TaskStatus) => void;
   showAssignee: boolean;
-}> = ({ tasks, onStatusChange, showAssignee }) => {
+  stats: InboxStats;
+  filters: InboxFilters;
+}> = ({ tasks, onStatusChange, showAssignee, stats, filters }) => {
   // Score every task, sort open ones by AXON score, keep dones at the bottom
   const scored = useMemo(() => tasks.map(scoreTask), [tasks]);
   const openSorted = useMemo(
@@ -656,7 +514,7 @@ const InboxView: React.FC<{
   const selected = scored.find((s) => s.task.todo_id === selectedId) ?? null;
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-[300px_1fr_320px] gap-0 rounded-xl border border-border bg-card overflow-hidden min-h-[calc(100vh-340px)]">
+    <div className="grid grid-cols-1 lg:grid-cols-[300px_1fr_320px] gap-0 bg-card overflow-hidden flex-1 min-h-0">
       {/* ─────────── LEFT PANE: list + AXON focus pinned ─────────── */}
       <aside
         className="border-r border-border flex flex-col min-h-0"
@@ -747,10 +605,16 @@ const InboxView: React.FC<{
           <div className="h-full flex items-center justify-center px-8 py-16 text-center">
             <div className="max-w-sm">
               <ClipboardList className="h-10 w-10 mx-auto text-muted-foreground/30 mb-3" />
-              <Tracker tone="muted" size="sm" className="mb-2">SELECT A TASK</Tracker>
-              <p className="text-[13px] text-foreground/80 font-semibold mb-1">Pick a task to inspect.</p>
+              <Tracker tone="muted" size="sm" className="mb-2">
+                {tasks.length === 0 ? "FILTERS CLEARED THE BOARD" : "SELECT A TASK"}
+              </Tracker>
+              <p className="text-[13px] text-foreground/80 font-semibold mb-1">
+                {tasks.length === 0 ? "No tasks match these filters." : "Pick a task to inspect."}
+              </p>
               <p className="text-[11.5px] text-muted-foreground leading-relaxed">
-                AXON Focus pins the most urgent items to the top. Click any task on the left to load full context.
+                {tasks.length === 0
+                  ? "Adjust the FILTER · STATUS or FILTER · PRIORITY pills on the right to widen the search."
+                  : "AXON Focus pins the most urgent items to the top. Click any task on the left to load full context."}
               </p>
             </div>
           </div>
@@ -766,13 +630,17 @@ const InboxView: React.FC<{
           backdropFilter: "blur(8px)",
         }}
       >
+        {/* Fleet cockpit - always visible, holds completion + counts + filters */}
+        <FleetCockpit stats={stats} filters={filters} />
+
+        {/* AXON task context - only when a task is selected */}
         {selected ? (
           <TaskActivityRail scored={selected} allTasks={tasks} onStatusChange={onStatusChange} />
         ) : (
-          <div className="text-center px-3 py-12">
+          <div className="text-center px-3 py-8">
             <Sparkles className="h-5 w-5 mx-auto text-muted-foreground mb-3" />
             <p className="text-[11.5px] text-muted-foreground leading-relaxed">
-              AXON's activity stream appears once you select a task.
+              Select a task on the left to load AXON's read.
             </p>
           </div>
         )}
@@ -819,16 +687,43 @@ const InboxListItem: React.FC<{
             : undefined
       }
     >
-      <div className="flex items-start gap-2">
-        {/* Status dot */}
-        <span
-          className="w-1.5 h-1.5 rounded-full shrink-0 mt-1.5"
-          style={{ background: sMeta.dot, boxShadow: status === "in-progress" ? `0 0 6px ${sMeta.dot}` : undefined }}
-        />
+      <div className="flex items-start gap-2.5">
+        {/* When scope=Everyone, show colored avatar prominently as the row's identity anchor.
+            When scope=Mine, just a slim status dot. */}
+        {showAssignee && names.length > 0 ? (
+          <div className="relative shrink-0 mt-0.5">
+            <div
+              className="w-7 h-7 rounded-md flex items-center justify-center text-[10px] font-black text-white"
+              style={{
+                background: `linear-gradient(135deg, ${avatarAccent(names[0]!)}, ${avatarAccent(names[0]!)}cc)`,
+                boxShadow: "inset 0 1px 0 rgba(255,255,255,0.15)",
+              }}
+              title={names.join(", ")}
+            >
+              {initialsFor(names[0]!)}
+            </div>
+            {/* Tiny status dot anchored bottom-right of the avatar */}
+            <span
+              className="absolute -bottom-0.5 -right-0.5 w-2 h-2 rounded-full ring-1 ring-card"
+              style={{ background: sMeta.dot, boxShadow: status === "in-progress" ? `0 0 5px ${sMeta.dot}` : undefined }}
+            />
+          </div>
+        ) : (
+          <span
+            className="w-1.5 h-1.5 rounded-full shrink-0 mt-1.5"
+            style={{ background: sMeta.dot, boxShadow: status === "in-progress" ? `0 0 6px ${sMeta.dot}` : undefined }}
+          />
+        )}
         <div className="min-w-0 flex-1">
           <p className={["text-[12px] font-semibold leading-tight truncate", status === "done" ? "line-through opacity-60" : ""].join(" ")}>
             {task.title}
           </p>
+          {/* When in Everyone scope, the assignee name takes precedence on its own line */}
+          {showAssignee && names.length > 0 && (
+            <p className="text-[10.5px] font-bold text-foreground/80 truncate mt-0.5 leading-tight" style={{ color: avatarAccent(names[0]!) }}>
+              {names[0]}{names.length > 1 ? ` · +${names.length - 1}` : ""}
+            </p>
+          )}
           <div className="flex items-center gap-2 mt-1 text-[10px]">
             {pMeta && (
               <span style={{ color: pMeta.accent }} className="font-bold uppercase tracking-wider">
@@ -839,11 +734,6 @@ const InboxListItem: React.FC<{
               <Mono size="xs" tone={daysLeft <= 1 ? "brand" : "muted"}>
                 {daysLeft === 0 ? "today" : `${daysLeft}d`}
               </Mono>
-            )}
-            {showAssignee && names.length > 0 && (
-              <span className="text-muted-foreground truncate">
-                {names[0]}{names.length > 1 ? ` +${names.length - 1}` : ""}
-              </span>
             )}
           </div>
         </div>
@@ -1182,3 +1072,148 @@ const TaskActivityRail: React.FC<{
     </>
   );
 };
+
+
+// ════════════════════════════════════════════════════════════════
+// FleetCockpit - right-pane top block: completion + counts + filters
+// Always rendered (task-independent). Replaces the old top header band.
+// ════════════════════════════════════════════════════════════════
+const FleetCockpit: React.FC<{
+  stats: InboxStats;
+  filters: InboxFilters;
+}> = ({ stats, filters }) => {
+  const { allCount, todoCount, inProgressCount, doneCount, completionPct } = stats;
+
+  return (
+    <section className="space-y-4">
+      {/* Completion */}
+      <div>
+        <div className="flex items-center justify-between mb-2">
+          <Tracker tone="muted" size="sm">
+            <TrackerDot color="rgb(239,68,68)" />
+            FLEET COMPLETION
+          </Tracker>
+          <Mono size="md" tone="brand" className="font-black">
+            {completionPct.toFixed(0)}%
+          </Mono>
+        </div>
+        <div className="h-1.5 w-full bg-secondary rounded-full overflow-hidden">
+          <motion.div
+            initial={{ width: 0 }}
+            animate={{ width: `${completionPct}%` }}
+            transition={{ duration: 0.6, ease: "easeOut" }}
+            className="h-full bg-primary rounded-full"
+            style={{ boxShadow: "0 0 10px rgba(239,68,68,0.4)" }}
+          />
+        </div>
+        <Mono size="xs" tone="muted" className="mt-1.5 inline-block">
+          {doneCount} of {allCount} closed
+        </Mono>
+      </div>
+
+      {/* Status counts as compact grid */}
+      <div className="grid grid-cols-3 gap-1.5">
+        <CockpitStat label="To Do"  value={todoCount}       color="amber" />
+        <CockpitStat label="Active" value={inProgressCount} color="sky" />
+        <CockpitStat label="Done"   value={doneCount}       color="emerald" />
+      </div>
+
+      {/* Filter: status */}
+      <div>
+        <Tracker tone="muted" size="sm" className="mb-2">FILTER · STATUS</Tracker>
+        <div className="inline-flex w-full items-center bg-card border border-border rounded-md p-0.5">
+          {(["all", "to-do", "in-progress", "done"] as const).map((s) => {
+            const counts: Record<string, number> = { all: allCount, "to-do": todoCount, "in-progress": inProgressCount, done: doneCount };
+            const labels: Record<string, string> = { all: "All", "to-do": "To Do", "in-progress": "Active", done: "Done" };
+            const isActive = filters.status === s;
+            return (
+              <button
+                key={s}
+                type="button"
+                onClick={() => filters.setStatus(s)}
+                data-active={isActive}
+                className="flex-1 px-1.5 py-1 rounded text-[10px] font-bold transition-all text-muted-foreground hover:text-foreground data-[active=true]:bg-primary/10 data-[active=true]:text-primary"
+              >
+                {labels[s]} <span className="opacity-60">({counts[s]})</span>
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Filter: priority */}
+      <div>
+        <Tracker tone="muted" size="sm" className="mb-2">FILTER · PRIORITY</Tracker>
+        <div className="inline-flex w-full items-center bg-card border border-border rounded-md p-0.5">
+          {(["all", "high", "medium", "low"] as const).map((p) => {
+            const isActive = filters.priority === p;
+            const pAccent = p === "all" ? null : PRIORITY_META[p].accent;
+            return (
+              <button
+                key={p}
+                type="button"
+                onClick={() => filters.setPriority(p)}
+                data-active={isActive}
+                className="flex-1 px-1.5 py-1 rounded text-[10px] font-bold uppercase tracking-wider transition-all text-muted-foreground hover:text-foreground"
+                style={
+                  isActive && pAccent
+                    ? { background: `${pAccent}1a`, color: pAccent }
+                    : isActive
+                    ? { background: "rgba(239,68,68,0.12)", color: "rgb(239,68,68)" }
+                    : undefined
+                }
+              >
+                {p === "all" ? "Any" : p}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Filter: search */}
+      <div>
+        <Tracker tone="muted" size="sm" className="mb-2">SEARCH</Tracker>
+        <div className="relative">
+          <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3 h-3 text-muted-foreground" />
+          <input
+            type="text"
+            placeholder="Search tasks..."
+            value={filters.search}
+            onChange={(e) => filters.setSearch(e.target.value)}
+            className="w-full pl-7 pr-7 py-1.5 bg-card border border-border rounded-md text-[12px] text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-border-strong"
+          />
+          {filters.search && (
+            <button
+              onClick={() => filters.setSearch("")}
+              className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+              aria-label="Clear search"
+            >
+              <X className="h-3 w-3" />
+            </button>
+          )}
+        </div>
+      </div>
+
+      <div className="ed-hairline" />
+    </section>
+  );
+};
+
+// Small inline stat tile used inside FleetCockpit
+function CockpitStat({ label, value, color }: { label: string; value: number; color: "amber" | "sky" | "emerald" }) {
+  const map = {
+    amber:   { text: "text-amber-400",   dot: "rgb(251,191,36)" },
+    sky:     { text: "text-sky-400",     dot: "rgb(56,189,248)" },
+    emerald: { text: "text-emerald-400", dot: "rgb(52,211,153)" },
+  } as const;
+  const m = map[color];
+  return (
+    <div className="rounded-md border border-border bg-card px-2 py-1.5">
+      <div className="flex items-center gap-1 mb-0.5">
+        <span className="w-1 h-1 rounded-full inline-block" style={{ background: m.dot }} />
+        <Tracker tone="muted" size="sm" className={`text-[8.5px] ${m.text}`}>{label.toUpperCase()}</Tracker>
+      </div>
+      <Mono size="md" className={`${m.text} font-black`}>{value}</Mono>
+    </div>
+  );
+}

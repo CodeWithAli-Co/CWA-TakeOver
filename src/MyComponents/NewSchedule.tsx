@@ -45,7 +45,9 @@ import {
 } from "@/components/ui/shadcnComponents/dropdown-menu";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/shadcnComponents/label";
-import { Employees } from "@/stores/query";
+import { Employees, ActiveUser } from "@/stores/query";
+import supabase from "@/MyComponents/supabase";
+import { useCompanyFilter } from "@/stores/store";
 import { Tracker, TrackerDot } from "@/components/editorial/Tracker";
 import { Mono } from "@/components/editorial/Mono";
 
@@ -101,6 +103,22 @@ function accentForSupaId(id: string): string {
   return palette[h % palette.length]!;
 }
 
+
+// Map a Supabase row from schedule_events to the in-memory ScheduleEvent shape
+function rowToEvent(row: any): ScheduleEvent {
+  return {
+    id: String(row.id),
+    employeeSupaId: row.employee_supa_id ?? "",
+    employeeName: row.employee_name ?? "",
+    title: row.title ?? "",
+    startTime: row.start_time ?? "09:00",
+    endTime: row.end_time ?? "17:00",
+    date: row.date ?? new Date().toISOString().split("T")[0]!,
+    type: (row.type ?? "shift") as EventType,
+    notes: row.notes ?? "",
+  };
+}
+
 const EVENT_TYPE_META: Record<EventType, { label: string; accent: string }> = {
   shift:   { label: "SHIFT",   accent: "rgb(239,68,68)" },
   meeting: { label: "MEETING", accent: "rgb(14,165,233)" },
@@ -127,6 +145,54 @@ function EmployeeScheduleContent() {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedEmployee, setSelectedEmployee] = useState<string | null>(null);
   const [events, setEvents] = useState<ScheduleEvent[]>([]);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const { data: meUser } = ActiveUser();
+  const mySupaId = (meUser?.[0] as any)?.supa_id ?? null;
+  const { activeCompany } = useCompanyFilter();
+  const companyLabel = activeCompany === "simplicityFunds" ? "simplicity" : "CodeWithAli";
+
+  // Hydrate events from Supabase on mount + when company changes
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      let q = supabase.from("schedule_events").select("*");
+      if (activeCompany !== "all") q = q.eq("company", companyLabel);
+      const { data, error } = await q.order("date", { ascending: true });
+      if (cancelled) return;
+      if (error) {
+        setLoadError(error.message);
+        setEvents([]);
+        return;
+      }
+      setLoadError(null);
+      setEvents((data ?? []).map(rowToEvent));
+    })();
+    return () => { cancelled = true; };
+  }, [activeCompany, companyLabel]);
+
+  // Realtime subscription - keeps every open client in sync
+  useEffect(() => {
+    const channel = supabase
+      .channel("schedule_events_realtime")
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "schedule_events" },
+        (payload) => {
+          if (payload.eventType === "INSERT") {
+            const row = rowToEvent(payload.new as any);
+            setEvents((arr) => (arr.some((e) => e.id === row.id) ? arr : [...arr, row]));
+          } else if (payload.eventType === "UPDATE") {
+            const row = rowToEvent(payload.new as any);
+            setEvents((arr) => arr.map((e) => (e.id === row.id ? row : e)));
+          } else if (payload.eventType === "DELETE") {
+            const oldId = (payload.old as any)?.id;
+            if (oldId) setEvents((arr) => arr.filter((e) => e.id !== oldId));
+          }
+        },
+      )
+      .subscribe();
+    return () => { channel.unsubscribe(); };
+  }, []);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [isAddEventOpen, setIsAddEventOpen] = useState(false);
@@ -201,12 +267,27 @@ function EmployeeScheduleContent() {
   const goToday  = () => setCurrentDate(new Date());
   const openAdd  = (d?: Date) => { setSelectedDate(d ?? null); setEditingEvent(null); setIsAddEventOpen(true); };
   const openEdit = (e: ScheduleEvent) => { setEditingEvent(e); setIsAddEventOpen(true); };
-  const remove   = (id: string) => setEvents(events.filter((e) => e.id !== id));
+  const remove = async (id: string) => {
+    // Optimistic
+    setEvents((arr) => arr.filter((e) => e.id !== id));
+    const { error } = await supabase.from("schedule_events").delete().eq("id", id);
+    if (error) {
+      setLoadError(`Delete failed: ${error.message}`);
+    }
+  };
 
   const selectedEmployeeObj = selectedEmployee ? employees.find((e) => e.supa_id === selectedEmployee) : null;
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
+      {loadError && (
+        <div className="mx-6 mt-3 rounded-md border border-amber-500/40 bg-amber-500/5 px-3 py-2 text-[12px] text-amber-200">
+          <strong className="font-bold mr-1">Schedule offline:</strong>
+          {loadError.toLowerCase().includes("does not exist") || loadError.toLowerCase().includes("relation")
+            ? "Run migrations/schedule_events.sql in your Supabase SQL editor to enable saving."
+            : loadError}
+        </div>
+      )}
       <header className="border-b border-border px-6 lg:px-8 py-5 bg-card/30 backdrop-blur-sm sticky top-0 z-30">
         <Tracker tone="muted" size="sm" className="mb-2">
           <TrackerDot color="rgb(239,68,68)" />
@@ -286,12 +367,53 @@ function EmployeeScheduleContent() {
         event={editingEvent}
         employees={employees}
         selectedDate={selectedDate}
-        onSave={(newEvent) => {
+        onSave={async (newEvent) => {
+          const payload = {
+            employee_supa_id: newEvent.employeeSupaId,
+            employee_name: newEvent.employeeName,
+            title: newEvent.title,
+            start_time: newEvent.startTime,
+            end_time: newEvent.endTime,
+            date: newEvent.date,
+            type: newEvent.type,
+            notes: newEvent.notes ?? null,
+            company: companyLabel,
+            created_by_supa_id: mySupaId,
+          };
+
           if (editingEvent) {
-            setEvents(events.map((e) => (e.id === editingEvent.id ? newEvent : e)));
+            // Update existing row
+            const { data, error } = await supabase
+              .from("schedule_events")
+              .update(payload)
+              .eq("id", editingEvent.id)
+              .select()
+              .maybeSingle();
+            if (error) {
+              setLoadError(`Save failed: ${error.message}`);
+              return;
+            }
+            if (data) {
+              const row = rowToEvent(data);
+              setEvents((arr) => arr.map((e) => (e.id === editingEvent.id ? row : e)));
+            }
           } else {
-            setEvents([...events, newEvent]);
+            // Insert new row
+            const { data, error } = await supabase
+              .from("schedule_events")
+              .insert(payload)
+              .select()
+              .maybeSingle();
+            if (error) {
+              setLoadError(`Save failed: ${error.message}`);
+              return;
+            }
+            if (data) {
+              const row = rowToEvent(data);
+              setEvents((arr) => (arr.some((e) => e.id === row.id) ? arr : [...arr, row]));
+            }
           }
+
           setIsAddEventOpen(false);
           setEditingEvent(null);
           setSelectedDate(null);
