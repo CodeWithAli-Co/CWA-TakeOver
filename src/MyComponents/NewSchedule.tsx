@@ -160,7 +160,13 @@ function EmployeeScheduleContent() {
       const { data, error } = await q.order("date", { ascending: true });
       if (cancelled) return;
       if (error) {
-        setLoadError(error.message);
+        // PostgREST returns code 42P01 ("undefined_table") for missing tables.
+        // Compose a message that our banner can recognize cleanly.
+        const code = (error as any).code;
+        const msg = code === "42P01"
+          ? `Table does not exist (code 42P01): ${error.message}`
+          : error.message;
+        setLoadError(msg);
         setEvents([]);
         return;
       }
@@ -283,9 +289,18 @@ function EmployeeScheduleContent() {
       {loadError && (
         <div className="mx-6 mt-3 rounded-md border border-amber-500/40 bg-amber-500/5 px-3 py-2 text-[12px] text-amber-200">
           <strong className="font-bold mr-1">Schedule offline:</strong>
-          {loadError.toLowerCase().includes("does not exist") || loadError.toLowerCase().includes("relation")
-            ? "Run migrations/schedule_events.sql in your Supabase SQL editor to enable saving."
-            : loadError}
+          {(() => {
+            const m = loadError.toLowerCase();
+            const isMissingTable =
+              m.includes("does not exist") ||
+              m.includes("relation") ||
+              m.includes("could not find the table") ||
+              m.includes("schema cache") ||
+              m.includes("404");
+            return isMissingTable
+              ? "The schedule_events table isn't set up yet. Run migrations/schedule_events.sql in your Supabase SQL editor to enable saving."
+              : loadError;
+          })()}
         </div>
       )}
       <header className="border-b border-border px-6 lg:px-8 py-5 bg-card/30 backdrop-blur-sm sticky top-0 z-30">
