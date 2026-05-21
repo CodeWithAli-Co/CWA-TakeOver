@@ -2,6 +2,35 @@
 @tailwind components;
 @tailwind utilities;
 
+
+/* ════════════════════════════════════════════════════════════════════
+   GLOBAL ATMOSPHERIC BACKGROUND
+   Subtle warm radial wash at the top of every page so the body never
+   reads as flat pure-black. Cards then sit on a surface that *feels*
+   like a room, not a void. Direct port of the takeover-B2B treatment.
+   ════════════════════════════════════════════════════════════════════ */
+
+html, body {
+  background-color: hsl(var(--background));
+}
+
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  background:
+    radial-gradient(ellipse 80% 50% at 50% 0%, rgba(239, 68, 68, 0.035), transparent 60%),
+    radial-gradient(ellipse 60% 80% at 100% 100%, rgba(239, 68, 68, 0.025), transparent 55%);
+}
+
+/* Ensure all root-level app content stacks above the atmospheric layer. */
+#root {
+  position: relative;
+  z-index: 1;
+}
+
 * {
   margin: 0;
   padding: 0;
@@ -30,32 +59,34 @@ html, body {
 @layer base {
   :root,
   [data-company="codeWithAli"] {
-    /* Surfaces — two shades off pure black. Just enough zinc tint to
-     * avoid an OLED-black feel while still reading as "dark mode". */
-    --background: 240 5% 2%;
+    /* Surfaces — warm dark zinc, matching the takeover-B2B mockup feel.
+     * Body sits a couple notches off pure black so it reads as a
+     * surface rather than a void; cards lift cleanly above it without
+     * needing aggressive shadows. */
+    --background: 240 8% 6%;        /* warm zinc body ~ rgb(14,14,18) */
     --foreground: 0 0% 97%;
-    --card: 240 5% 5%;
+    --card: 240 9% 11%;             /* clearly elevated ~ rgb(25,25,32) */
     --card-foreground: 0 0% 97%;
-    --popover: 240 5% 5%;
+    --popover: 240 9% 12%;
     --popover-foreground: 0 0% 97%;
 
     /* Brand */
     --primary: 0 72% 51%;          /* Red-600 */
     --primary-foreground: 0 0% 100%;
-    --secondary: 240 5% 9%;
+    --secondary: 240 8% 14%;        /* mid-elevation ~ rgb(32,32,40) */
     --secondary-foreground: 0 0% 96%;
 
     /* Utility */
-    --muted: 240 5% 10%;
-    --muted-foreground: 240 4% 52%;
-    --accent: 240 5% 10%;
+    --muted: 240 8% 14%;
+    --muted-foreground: 240 4% 60%;
+    --accent: 240 8% 14%;
     --accent-foreground: 0 0% 96%;
     --destructive: 0 84% 60%;
     --destructive-foreground: 0 0% 100%;
 
-    /* Borders & Inputs */
-    --border: 240 5% 13%;
-    --input: 240 5% 11%;
+    /* Borders & Inputs — strong enough to anchor cards on the new lifted body */
+    --border: 240 8% 20%;           /* ~ rgb(46,46,57) — reads clean */
+    --input: 240 8% 12%;
     --ring: 0 72% 51%;
 
     /* Charts */
@@ -65,15 +96,15 @@ html, body {
     --chart-4: 25 80% 55%;         /* Orange */
     --chart-5: 0 50% 40%;
 
-    /* Sidebar — noticeably darker than --background for depth, with
-     *  brighter text so icons / channel names pop. */
-    --sidebar-background: 240 6% 1.5%;
+    /* Sidebar — darker than body for nav contrast, but lifted enough
+     * to keep icons + labels readable on the new warmer palette. */
+    --sidebar-background: 240 10% 4%;    /* ~ rgb(9,9,12) */
     --sidebar-foreground: 0 0% 100%;
     --sidebar-primary: 0 72% 51%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 240 5% 7%;
+    --sidebar-accent: 240 8% 11%;        /* hovered nav item */
     --sidebar-accent-foreground: 0 0% 100%;
-    --sidebar-border: 240 5% 9%;
+    --sidebar-border: 240 8% 14%;
     --sidebar-ring: 0 72% 51%;
 
     /* Company-specific tokens */
@@ -435,10 +466,12 @@ ul { list-style-type: disc; margin-left: var(--page-marginL); }
 [data-company="simplicityFunds"] {
   /* Editorial surfaces — RGB space, layered hierarchy.
    * These coexist with the shadcn HSL tokens above; use --ed-* in
-   * editorial components to avoid colliding with shadcn-styled ones. */
-  --ed-bg: 8 8 10;
-  --ed-surface: 20 20 24;
-  --ed-surface-2: 28 28 32;
+   * editorial components to avoid colliding with shadcn-styled ones.
+   * Values harmonize with the lifted shadcn dark palette above so
+   * editorial routes feel of-a-piece with the rest of the app. */
+  --ed-bg: 14 14 18;
+  --ed-surface: 26 26 32;
+  --ed-surface-2: 36 36 44;
   --ed-fg: 245 245 250;
   --ed-fg-2: 178 178 184;
   --ed-fg-muted: 110 110 116;
@@ -550,4 +583,72 @@ ul { list-style-type: disc; margin-left: var(--page-marginL); }
 @keyframes axonPulse {
   0%, 100% { opacity: 1; }
   50% { opacity: 0.55; }
+}
+
+
+/* ════════════════════════════════════════════════════════════════════
+   GLOBAL CARD ELEVATION + INTERACTION POLISH
+   These rules layer over the existing card system so every screen
+   (home dashboard, onboarding, settings, etc.) gets the same depth
+   cues the takeover-B2B mockup uses. No component changes required.
+   ════════════════════════════════════════════════════════════════════ */
+
+@layer components {
+  /* Universal card elevation — the takeover-B2B "raised on a surface" feel.
+   * Subtle: 1px inner top highlight = the card catches a touch of overhead
+   * light; subtle outer drop shadow = the card floats a hair off the body. */
+  .bg-card {
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.04),
+      0 1px 0 rgba(0, 0, 0, 0.4),
+      0 4px 16px -8px rgba(0, 0, 0, 0.35);
+  }
+
+  /* Editorial surfaces get the same treatment so /onboarding feels
+   * of-a-piece with the rest of the app. */
+  .ed-surface {
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.04),
+      0 1px 0 rgba(0, 0, 0, 0.4),
+      0 4px 16px -8px rgba(0, 0, 0, 0.35);
+  }
+
+  .ed-surface-2 {
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.05),
+      0 2px 0 rgba(0, 0, 0, 0.4),
+      0 6px 20px -8px rgba(0, 0, 0, 0.4);
+  }
+
+  /* Progress / brand bars get a soft red glow so the "live" rails on
+   * Active Projects, the onboarding progress meter, etc., feel like
+   * something is actually flowing rather than a static red line. */
+  .bg-primary {
+    box-shadow: 0 0 12px -2px rgba(239, 68, 68, 0.4);
+  }
+
+  .bg-ed-brand {
+    box-shadow: 0 0 12px -2px rgba(239, 68, 68, 0.45);
+  }
+}
+
+/* Interactive cards lift on hover — subtle 1px translate + stronger shadow,
+ * so clickable surfaces give the operator tactile feedback. */
+.bg-card.cursor-pointer:hover,
+.bg-card[role="button"]:hover,
+.bg-card.hover\:border-primary:hover,
+button.bg-card:hover {
+  transform: translateY(-1px);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.06),
+    0 1px 0 rgba(0, 0, 0, 0.5),
+    0 12px 32px -10px rgba(0, 0, 0, 0.55);
+  transition: transform 0.18s ease, box-shadow 0.18s ease;
+}
+
+/* Tracker labels — bump the uppercase muted text by a notch so it reads
+ * cleanly on the new lifted palette without losing its "label" quality. */
+.text-muted-foreground.uppercase,
+.font-mono.uppercase {
+  letter-spacing: 0.08em;
 }

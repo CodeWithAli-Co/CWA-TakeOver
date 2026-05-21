@@ -1,7 +1,23 @@
-import React, { useState, useEffect } from "react";
+/**
+ * NewSchedule.tsx - Schedule calendar, redesigned.
+ *
+ * Two-pane layout (editorial language):
+ *
+ *   +--- EDITORIAL HEADER (tracker breadcrumb + month nav + new event) ---+
+ *   | EMPLOYEE SIDEBAR (real Supabase) | CALENDAR SURFACE (month grid)    |
+ *   |  - status dots                   |  - weekday tracker row           |
+ *   |  - filter by click               |  - day cells with mono dates     |
+ *   |  - shift count per person        |  - today: brand-rail glow        |
+ *   |                                  |  - event chips with initials     |
+ *   +----------------------------------+----------------------------------+
+ *
+ * Real employees come from Employees() Supabase hook (app_users table).
+ * Events are still client-side (TODO: wire to events table next pass).
+ */
+
+import React, { useState, useEffect, useMemo, Suspense } from "react";
 import {
   Calendar,
-  Clock,
   Users,
   Plus,
   ChevronLeft,
@@ -11,12 +27,8 @@ import {
   MoreHorizontal,
   Edit,
   Trash2,
-  X,
-  Zap,
-  TrendingUp,
-  Activity,
+  Loader2,
 } from "lucide-react";
-import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/shadcnComponents/input";
 import {
   Dialog,
@@ -25,7 +37,6 @@ import {
   DialogTitle,
   DialogFooter,
 } from "@/components/ui/dialog";
-
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -33,498 +44,238 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/shadcnComponents/dropdown-menu";
 import { Textarea } from "@/components/ui/textarea";
-import { Label } from "@/components/ui/shadcnComponents/Label";
-import supabase from "./supabase";
+import { Label } from "@/components/ui/shadcnComponents/label";
+import { Employees } from "@/stores/query";
+import { Tracker, TrackerDot } from "@/components/editorial/Tracker";
+import { Mono } from "@/components/editorial/Mono";
 
-// Types
+// Types -------------------------------------------------------------
+
 interface Employee {
-  id: number;
-  name: string;
-  avatar: string;
+  supa_id: string;
+  id?: number;
+  username: string;
   role: string;
-  status: "active" | "break" | "offline";
+  avatar_url?: string | null;
+  status?: "active" | "break" | "offline";
 }
+
+type EventType = "shift" | "meeting" | "break" | "off";
 
 interface ScheduleEvent {
   id: string;
-  employeeId: number;
+  employeeSupaId: string;
   employeeName: string;
   title: string;
   startTime: string;
   endTime: string;
   date: string;
-  type: "shift" | "meeting" | "break" | "off";
+  type: EventType;
   notes?: string;
 }
 
-// Sample employees
-const EMPLOYEES: Employee[] = [
-  { id: 1, name: "Alex Morgan", avatar: "AM", role: "Lead", status: "active" },
-  { id: 2, name: "Jordan Lee", avatar: "JL", role: "Server", status: "active" },
-  { id: 3, name: "Casey Kim", avatar: "CK", role: "Chef", status: "break" },
-  { id: 4, name: "Riley Chen", avatar: "RC", role: "Server", status: "active" },
-  { id: 5, name: "Sam Park", avatar: "SP", role: "Bar", status: "offline" },
-];
+// Helpers -----------------------------------------------------------
 
-const EVENT_COLORS = {
-  shift: "bg-red-950/50 border-red-900/50 hover:bg-red-900/40",
-  meeting: "bg-zinc-800 border-zinc-700 hover:bg-zinc-700",
-  break: "bg-zinc-900 border-zinc-800 hover:bg-zinc-800",
-  off: "bg-background border-zinc-900 hover:bg-zinc-950",
+const WEEK_DAYS = ["SUN", "MON", "TUE", "WED", "THU", "FRI", "SAT"];
+
+function initialsFor(name: string): string {
+  if (!name) return "??";
+  const parts = name.trim().split(/\s+/);
+  if (parts.length === 1) return parts[0]!.slice(0, 2).toUpperCase();
+  return (parts[0]![0]! + parts[parts.length - 1]![0]!).toUpperCase();
+}
+
+function accentForSupaId(id: string): string {
+  const palette = [
+    "rgb(239,68,68)",
+    "rgb(245,158,11)",
+    "rgb(16,185,129)",
+    "rgb(14,165,233)",
+    "rgb(168,85,247)",
+    "rgb(236,72,153)",
+    "rgb(34,211,238)",
+    "rgb(251,191,36)",
+  ];
+  let h = 0;
+  for (let i = 0; i < id.length; i++) h = (h * 31 + id.charCodeAt(i)) >>> 0;
+  return palette[h % palette.length]!;
+}
+
+const EVENT_TYPE_META: Record<EventType, { label: string; accent: string }> = {
+  shift:   { label: "SHIFT",   accent: "rgb(239,68,68)" },
+  meeting: { label: "MEETING", accent: "rgb(14,165,233)" },
+  break:   { label: "BREAK",   accent: "rgb(251,191,36)" },
+  off:     { label: "OFF",     accent: "rgb(110,110,116)" },
 };
 
-const EmployeeSchedule: React.FC = () => {
+// Content wrapper (Suspense-guarded fetch) --------------------------
+
+function EmployeeScheduleContent() {
+  const { data: rawEmployees } = Employees();
+  const employees: Employee[] = useMemo(() => {
+    if (!rawEmployees) return [];
+    return (rawEmployees as any[]).map((u) => ({
+      supa_id: String(u.supa_id ?? u.id ?? ""),
+      id: u.id,
+      username: u.username ?? "Unnamed",
+      role: u.role ?? "Member",
+      avatar_url: u.avatar_url ?? null,
+      status: "active" as const,
+    })).filter((e) => e.supa_id);
+  }, [rawEmployees]);
+
   const [currentDate, setCurrentDate] = useState(new Date());
-  const [view, setView] = useState<"month" | "week">("month");
-  const [selectedEmployee, setSelectedEmployee] = useState<number | null>(null);
+  const [selectedEmployee, setSelectedEmployee] = useState<string | null>(null);
   const [events, setEvents] = useState<ScheduleEvent[]>([]);
-  const [isAddEventOpen, setIsAddEventOpen] = useState(false);
-  const [editingEvent, setEditingEvent] = useState<ScheduleEvent | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
+  const [isAddEventOpen, setIsAddEventOpen] = useState(false);
+  const [editingEvent, setEditingEvent] = useState<ScheduleEvent | null>(null);
 
-  // Load events
-  useEffect(() => {
-    loadEvents();
-  }, []);
-
-  const loadEvents = async () => {
-    try {
-      const { data, error } = await supabase
-        .schema("schedule")
-        .from("event")
-        .select("*");
-
-      if (error) {
-        console.error("Error loading events:", error);
-        return;
-      }
-
-      const transformedEvents: ScheduleEvent[] = (data || []).map((event: any) => ({
-        id: event.id || `event-${Date.now()}`,
-        employeeId: event.employee_id || 0,
-        employeeName: event.employee_name || "Unknown",
-        title: event.title || "Shift",
-        startTime: event.start_time || "09:00",
-        endTime: event.end_time || "17:00",
-        date: event.date || new Date().toISOString().split("T")[0],
-        type: event.type || "shift",
-        notes: event.notes || "",
-      }));
-
-      setEvents(transformedEvents);
-    } catch (error) {
-      console.error("Error loading events:", error);
-    }
-  };
-
-  // Generate calendar
-  const generateCalendarDays = () => {
+  const days = useMemo(() => {
     const year = currentDate.getFullYear();
     const month = currentDate.getMonth();
     const firstDay = new Date(year, month, 1);
-    const lastDay = new Date(year, month + 1, 0);
-    const daysInMonth = lastDay.getDate();
-    const startingDayOfWeek = firstDay.getDay();
+    const startDate = new Date(firstDay);
+    startDate.setDate(startDate.getDate() - firstDay.getDay());
 
-    const days: any[] = [];
+    const cells: DayCell[] = [];
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
-    // Previous month days
-    const prevMonthLastDay = new Date(year, month, 0).getDate();
-    for (let i = startingDayOfWeek - 1; i >= 0; i--) {
-      const date = new Date(year, month - 1, prevMonthLastDay - i);
-      days.push({
-        date,
-        dayNumber: prevMonthLastDay - i,
-        isCurrentMonth: false,
-        isToday: false,
-        events: [],
-      });
-    }
+    for (let i = 0; i < 42; i++) {
+      const date = new Date(startDate);
+      date.setDate(startDate.getDate() + i);
+      const iso = date.toISOString().split("T")[0]!;
+      const cellEvents = events.filter((e) => {
+        if (e.date !== iso) return false;
+        if (selectedEmployee && e.employeeSupaId !== selectedEmployee) return false;
+        if (searchQuery) {
+          const hay = `${e.employeeName} ${e.title}`.toLowerCase();
+          if (!hay.includes(searchQuery.toLowerCase())) return false;
+        }
+        return true;
+      }).sort((a, b) => a.startTime.localeCompare(b.startTime));
 
-    // Current month days
-    for (let day = 1; day <= daysInMonth; day++) {
-      const date = new Date(year, month, day);
-      const dateString = date.toISOString().split("T")[0];
-      const dayEvents = events.filter(
-        (e) =>
-          e.date === dateString &&
-          (selectedEmployee === null || e.employeeId === selectedEmployee)
-      );
-
-      days.push({
+      cells.push({
         date,
-        dayNumber: day,
-        isCurrentMonth: true,
+        iso,
+        dayNumber: date.getDate(),
+        isCurrentMonth: date.getMonth() === month,
         isToday: date.getTime() === today.getTime(),
-        events: dayEvents,
+        isPast: date.getTime() < today.getTime(),
+        isWeekend: date.getDay() === 0 || date.getDay() === 6,
+        events: cellEvents,
       });
     }
+    return cells;
+  }, [currentDate, events, selectedEmployee, searchQuery]);
 
-    // Next month days
-    const remainingDays = 42 - days.length;
-    for (let day = 1; day <= remainingDays; day++) {
-      const date = new Date(year, month + 1, day);
-      days.push({
-        date,
-        dayNumber: day,
-        isCurrentMonth: false,
-        isToday: false,
-        events: [],
-      });
-    }
+  const filteredEmployees = useMemo(() => {
+    if (!searchQuery) return employees;
+    const needle = searchQuery.toLowerCase();
+    return employees.filter(
+      (e) => e.username.toLowerCase().includes(needle) || e.role.toLowerCase().includes(needle),
+    );
+  }, [employees, searchQuery]);
 
-    return days;
-  };
-
-  const days = generateCalendarDays();
-  const weekDays = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
-
-  const goToPreviousMonth = () => {
-    setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() - 1));
-  };
-
-  const goToNextMonth = () => {
-    setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() + 1));
-  };
-
-  const goToToday = () => {
-    setCurrentDate(new Date());
-  };
+  const eventsByEmployee = useMemo(() => {
+    const monthStart = new Date(currentDate.getFullYear(), currentDate.getMonth(), 1);
+    const monthEnd = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0);
+    const map = new Map<string, number>();
+    events.forEach((e) => {
+      const d = new Date(e.date);
+      if (d >= monthStart && d <= monthEnd) {
+        map.set(e.employeeSupaId, (map.get(e.employeeSupaId) ?? 0) + 1);
+      }
+    });
+    return map;
+  }, [events, currentDate]);
 
   const monthName = currentDate.toLocaleString("default", { month: "long", year: "numeric" });
+  const monthShort = currentDate.toLocaleString("default", { month: "short" });
+  const totalEventsThisMonth = days.filter((d) => d.isCurrentMonth).reduce((n, d) => n + d.events.length, 0);
 
-  const handleAddEvent = (date?: Date) => {
-    setSelectedDate(date || null);
-    setEditingEvent(null);
-    setIsAddEventOpen(true);
-  };
+  const goPrev   = () => setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() - 1));
+  const goNext   = () => setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() + 1));
+  const goToday  = () => setCurrentDate(new Date());
+  const openAdd  = (d?: Date) => { setSelectedDate(d ?? null); setEditingEvent(null); setIsAddEventOpen(true); };
+  const openEdit = (e: ScheduleEvent) => { setEditingEvent(e); setIsAddEventOpen(true); };
+  const remove   = (id: string) => setEvents(events.filter((e) => e.id !== id));
 
-  const handleEditEvent = (event: ScheduleEvent) => {
-    setEditingEvent(event);
-    setIsAddEventOpen(true);
-  };
-
-  const handleDeleteEvent = (eventId: string) => {
-    setEvents(events.filter((e) => e.id !== eventId));
-  };
-
-  // Stats calculations
-  const totalEvents = events.length;
-  const thisWeekEvents = events.filter((e) => {
-    const eventDate = new Date(e.date);
-    const today = new Date();
-    const weekStart = new Date(today.setDate(today.getDate() - today.getDay()));
-    const weekEnd = new Date(today.setDate(today.getDate() - today.getDay() + 6));
-    return eventDate >= weekStart && eventDate <= weekEnd;
-  }).length;
-  const activeEmployees = EMPLOYEES.filter(e => e.status === "active").length;
-  const totalMeetings = events.filter(e => e.type === "meeting").length;
+  const selectedEmployeeObj = selectedEmployee ? employees.find((e) => e.supa_id === selectedEmployee) : null;
 
   return (
-    <div className="min-h-screen bg-background">
-      {/* Header */}
-      <header className="border-b border-zinc-900 bg-zinc-950/50 backdrop-blur-xl sticky top-0 z-40">
-        <div className="max-w-[1600px] mx-auto px-6 py-4">
-          <div className="flex items-center justify-between">
-            {/* Logo */}
-            <div className="flex items-center gap-4">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 bg-gradient-to-br from-red-950 to-red-900 rounded-lg flex items-center justify-center">
-                  <Calendar className="w-5 h-5 text-primary" />
-                </div>
-                <div>
-                  <h1 className="text-lg font-bold text-zinc-100">Schedule</h1>
-                  <p className="text-xs text-zinc-500">Team management</p>
-                </div>
-              </div>
+    <div className="min-h-screen bg-background flex flex-col">
+      <header className="border-b border-border px-6 lg:px-8 py-5 bg-card/30 backdrop-blur-sm sticky top-0 z-30">
+        <Tracker tone="muted" size="sm" className="mb-2">
+          <TrackerDot color="rgb(239,68,68)" />
+          SCHEDULE - {employees.length} {employees.length === 1 ? "EMPLOYEE" : "EMPLOYEES"} - {totalEventsThisMonth} EVENT{totalEventsThisMonth === 1 ? "" : "S"} THIS MONTH
+        </Tracker>
+
+        <div className="flex items-end justify-between gap-6 flex-wrap">
+          <div className="min-w-0 flex items-baseline gap-4 flex-wrap">
+            <h1
+              className="font-black text-foreground leading-none"
+              style={{
+                fontFamily: 'var(--ed-font-display, Inter), system-ui, sans-serif',
+                fontSize: "clamp(26px, 2.6vw, 34px)",
+                letterSpacing: "-0.02em",
+              }}
+            >
+              {monthName}
+            </h1>
+            {selectedEmployeeObj && (
+              <span className="inline-flex items-center gap-2 rounded-md border border-border bg-card px-2.5 py-1 text-[11px] font-semibold text-muted-foreground">
+                <span className="w-1.5 h-1.5 rounded-full" style={{ background: accentForSupaId(selectedEmployeeObj.supa_id) }} />
+                Filtering: {selectedEmployeeObj.username}
+                <button onClick={() => setSelectedEmployee(null)} className="ml-1 text-muted-foreground hover:text-foreground">x</button>
+              </span>
+            )}
+          </div>
+
+          <div className="flex items-center gap-2">
+            <div className="inline-flex items-center rounded-md border border-border bg-card">
+              <button type="button" onClick={goPrev} aria-label="Previous month"
+                className="h-8 w-8 inline-flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-secondary rounded-l-md transition-colors">
+                <ChevronLeft className="w-4 h-4" />
+              </button>
+              <button type="button" onClick={goToday}
+                className="px-3 h-8 text-[11px] font-bold uppercase tracking-wider text-muted-foreground hover:text-foreground transition-colors border-x border-border">
+                Today
+              </button>
+              <button type="button" onClick={goNext} aria-label="Next month"
+                className="h-8 w-8 inline-flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-secondary rounded-r-md transition-colors">
+                <ChevronRight className="w-4 h-4" />
+              </button>
             </div>
 
-            {/* Right Actions */}
-            <div className="flex items-center gap-3">
-              <Button
-                onClick={() => handleAddEvent()}
-                className="bg-red-950/50 hover:bg-red-900/60 text-red-300 border border-red-900/50 gap-2 font-medium"
-              >
-                <Plus className="w-4 h-4" />
-                New Event
-              </Button>
-              <div className="w-9 h-9 bg-gradient-to-br from-zinc-800 to-zinc-900 rounded-lg flex items-center justify-center border border-zinc-800">
-                <span className="text-zinc-300 font-bold text-sm">AD</span>
-              </div>
-            </div>
+            <button type="button" onClick={() => openAdd()}
+              className="inline-flex items-center gap-1.5 rounded-md bg-primary text-primary-foreground px-3.5 h-8 text-[11.5px] font-bold uppercase tracking-wider hover:opacity-90 transition-opacity"
+              style={{ boxShadow: "0 4px 12px -2px rgba(239,68,68,0.45)" }}>
+              <Plus className="w-3 h-3" />
+              New event
+            </button>
           </div>
         </div>
       </header>
 
-      {/* Main Container */}
-      <div className="max-w-[1600px] mx-auto px-6 py-6">
-        {/* Stats Row */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-          <div className="bg-zinc-950 border border-zinc-900 rounded-xl p-5 hover:border-zinc-800 transition-colors">
-            <div className="flex items-start justify-between mb-3">
-              <div className="p-2.5 bg-red-950/30 border border-red-900/30 rounded-lg">
-                <Zap className="w-5 h-5 text-primary" />
-              </div>
-              <span className="text-xs font-medium text-zinc-500 uppercase tracking-wider">Total</span>
-            </div>
-            <div className="space-y-1">
-              <div className="text-3xl font-bold text-zinc-100">{totalEvents}</div>
-              <div className="text-sm text-zinc-500">Scheduled events</div>
-            </div>
-          </div>
+      <div className="flex-1 grid grid-cols-1 lg:grid-cols-[280px_1fr] min-h-0">
+        <EmployeeSidebar
+          employees={filteredEmployees}
+          selectedSupaId={selectedEmployee}
+          onSelect={(id) => setSelectedEmployee(selectedEmployee === id ? null : id)}
+          search={searchQuery}
+          onSearch={setSearchQuery}
+          eventsByEmployee={eventsByEmployee}
+          monthShort={monthShort}
+        />
 
-          <div className="bg-zinc-950 border border-zinc-900 rounded-xl p-5 hover:border-zinc-800 transition-colors">
-            <div className="flex items-start justify-between mb-3">
-              <div className="p-2.5 bg-zinc-900 border border-zinc-800 rounded-lg">
-                <TrendingUp className="w-5 h-5 text-zinc-400" />
-              </div>
-              <span className="text-xs font-medium text-zinc-500 uppercase tracking-wider">Week</span>
-            </div>
-            <div className="space-y-1">
-              <div className="text-3xl font-bold text-zinc-100">{thisWeekEvents}</div>
-              <div className="text-sm text-zinc-500">Events this week</div>
-            </div>
-          </div>
-
-          <div className="bg-zinc-950 border border-zinc-900 rounded-xl p-5 hover:border-zinc-800 transition-colors">
-            <div className="flex items-start justify-between mb-3">
-              <div className="p-2.5 bg-zinc-900 border border-zinc-800 rounded-lg">
-                <Activity className="w-5 h-5 text-zinc-400" />
-              </div>
-              <span className="text-xs font-medium text-zinc-500 uppercase tracking-wider">Active</span>
-            </div>
-            <div className="space-y-1">
-              <div className="text-3xl font-bold text-zinc-100">{activeEmployees}</div>
-              <div className="text-sm text-zinc-500">Team members online</div>
-            </div>
-          </div>
-
-          <div className="bg-zinc-950 border border-zinc-900 rounded-xl p-5 hover:border-zinc-800 transition-colors">
-            <div className="flex items-start justify-between mb-3">
-              <div className="p-2.5 bg-zinc-900 border border-zinc-800 rounded-lg">
-                <Users className="w-5 h-5 text-zinc-400" />
-              </div>
-              <span className="text-xs font-medium text-zinc-500 uppercase tracking-wider">Meetings</span>
-            </div>
-            <div className="space-y-1">
-              <div className="text-3xl font-bold text-zinc-100">{totalMeetings}</div>
-              <div className="text-sm text-zinc-500">Scheduled meetings</div>
-            </div>
-          </div>
-        </div>
-
-        {/* Controls */}
-        <div className="bg-zinc-950 border border-zinc-900 rounded-xl p-4 mb-6">
-          <div className="flex flex-wrap items-center justify-between gap-4">
-            {/* Date Navigation */}
-            <div className="flex items-center gap-3">
-              <Button
-                onClick={goToPreviousMonth}
-                variant="ghost"
-                size="icon"
-                className="h-9 w-9 bg-zinc-900 hover:bg-zinc-800 text-zinc-400 border border-zinc-800"
-              >
-                <ChevronLeft className="w-4 h-4" />
-              </Button>
-              <div className="px-4 py-2 bg-zinc-900 border border-zinc-800 rounded-lg">
-                <h2 className="text-sm font-bold text-zinc-100 min-w-[180px] text-center">
-                  {monthName}
-                </h2>
-              </div>
-              <Button
-                onClick={goToNextMonth}
-                variant="ghost"
-                size="icon"
-                className="h-9 w-9 bg-zinc-900 hover:bg-zinc-800 text-zinc-400 border border-zinc-800"
-              >
-                <ChevronRight className="w-4 h-4" />
-              </Button>
-              <Button
-                onClick={goToToday}
-                variant="ghost"
-                className="bg-zinc-900 hover:bg-zinc-800 text-zinc-400 border border-zinc-800 text-xs font-medium px-3"
-              >
-                Today
-              </Button>
-            </div>
-
-            {/* Filters */}
-            <div className="flex items-center gap-3">
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-zinc-500" />
-                <Input
-                  placeholder="Search..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="pl-9 w-56 bg-zinc-900 border-zinc-800 text-zinc-300 placeholder:text-zinc-600 focus:border-zinc-700"
-                />
-              </div>
-
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" className="bg-zinc-900 hover:bg-zinc-800 text-zinc-400 border border-zinc-800 gap-2">
-                    <Filter className="w-4 h-4" />
-                    {selectedEmployee
-                      ? EMPLOYEES.find((e) => e.id === selectedEmployee)?.name
-                      : "All Staff"}
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="w-56 bg-zinc-950 border-zinc-800">
-                  <DropdownMenuItem 
-                    onClick={() => setSelectedEmployee(null)}
-                    className="text-zinc-300 focus:bg-zinc-900 focus:text-zinc-100"
-                  >
-                    All Staff
-                  </DropdownMenuItem>
-                  {EMPLOYEES.map((employee) => (
-                    <DropdownMenuItem
-                      key={employee.id}
-                      onClick={() => setSelectedEmployee(employee.id)}
-                      className="text-zinc-300 focus:bg-zinc-900 focus:text-zinc-100"
-                    >
-                      <div className="flex items-center gap-3 w-full">
-                        <div className="w-6 h-6 bg-zinc-800 border border-zinc-700 rounded-md flex items-center justify-center">
-                          <span className="text-zinc-400 text-xs font-bold">
-                            {employee.avatar}
-                          </span>
-                        </div>
-                        <div className="flex-1">
-                          <div className="text-sm">{employee.name}</div>
-                          <div className="text-xs text-zinc-500">{employee.role}</div>
-                        </div>
-                        <div className={`w-2 h-2 rounded-full ${
-                          employee.status === "active" ? "bg-green-500" :
-                          employee.status === "break" ? "bg-yellow-500" :
-                          "bg-zinc-600"
-                        }`} />
-                      </div>
-                    </DropdownMenuItem>
-                  ))}
-                </DropdownMenuContent>
-              </DropdownMenu>
-            </div>
-          </div>
-        </div>
-
-        {/* Calendar */}
-        <div className="bg-zinc-950 border border-zinc-900 rounded-xl overflow-hidden">
-          {/* Week Header */}
-          <div className="grid grid-cols-7 border-b border-zinc-900">
-            {weekDays.map((day) => (
-              <div
-                key={day}
-                className="p-4 text-center text-xs font-bold text-zinc-500 uppercase tracking-wider bg-background"
-              >
-                {day}
-              </div>
-            ))}
-          </div>
-
-          {/* Days Grid */}
-          <div className="grid grid-cols-7">
-            {days.map((day, index) => (
-              <div
-                key={index}
-                className={`min-h-[140px] border-r border-b border-zinc-900 p-3 ${
-                  !day.isCurrentMonth ? "bg-zinc-950/50" : "bg-background"
-                } ${
-                  day.isToday
-                    ? "bg-red-950/10 border-red-900/30"
-                    : "hover:bg-zinc-950/50"
-                } transition-colors cursor-pointer group relative`}
-                onClick={() => handleAddEvent(day.date)}
-              >
-                <div className="flex items-center justify-between mb-3">
-                  <span
-                    className={`text-sm font-bold ${
-                      day.isToday
-                        ? "bg-red-900/50 text-red-300 w-7 h-7 rounded-md flex items-center justify-center border border-red-900/50"
-                        : day.isCurrentMonth
-                        ? "text-zinc-300"
-                        : "text-zinc-700"
-                    }`}
-                  >
-                    {day.dayNumber}
-                  </span>
-                  {day.isCurrentMonth && (
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity bg-zinc-900 hover:bg-zinc-800 border border-zinc-800"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleAddEvent(day.date);
-                      }}
-                    >
-                      <Plus className="w-3 h-3 text-zinc-400" />
-                    </Button>
-                  )}
-                </div>
-
-                {/* Events */}
-                <div className="space-y-1.5">
-                  {day.events.slice(0, 3).map((event: ScheduleEvent) => (
-                    <div
-                      key={event.id}
-                      className={`${EVENT_COLORS[event.type]} rounded-md px-2.5 py-1.5 text-xs font-medium flex items-center justify-between group/event cursor-pointer transition-all border`}
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleEditEvent(event);
-                      }}
-                    >
-                      <div className="flex-1 truncate">
-                        <div className="text-zinc-300 font-semibold truncate">
-                          {event.employeeName}
-                        </div>
-                        <div className="text-zinc-500 text-[10px] mt-0.5">
-                          {event.startTime} - {event.endTime}
-                        </div>
-                      </div>
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-5 w-5 opacity-0 group-hover/event:opacity-100 hover:bg-zinc-800/50 border-0"
-                          >
-                            <MoreHorizontal className="w-3 h-3 text-zinc-400" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end" className="bg-zinc-950 border-zinc-800">
-                          <DropdownMenuItem 
-                            onClick={() => handleEditEvent(event)}
-                            className="text-zinc-300 focus:bg-zinc-900 focus:text-zinc-100"
-                          >
-                            <Edit className="w-4 h-4 mr-2" />
-                            Edit
-                          </DropdownMenuItem>
-                          <DropdownMenuItem
-                            onClick={() => handleDeleteEvent(event.id)}
-                            className="text-primary focus:bg-red-950/50 focus:text-red-300"
-                          >
-                            <Trash2 className="w-4 h-4 mr-2" />
-                            Delete
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    </div>
-                  ))}
-                  {day.events.length > 3 && (
-                    <div className="text-[10px] text-zinc-600 pl-2 pt-1">
-                      +{day.events.length - 3} more
-                    </div>
-                  )}
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
+        <main className="overflow-auto">
+          <CalendarSurface days={days} onAdd={openAdd} onEdit={openEdit} onRemove={remove} />
+        </main>
       </div>
 
-      {/* Modal */}
       <EventModal
         isOpen={isAddEventOpen}
         onClose={() => {
@@ -533,7 +284,7 @@ const EmployeeSchedule: React.FC = () => {
           setSelectedDate(null);
         }}
         event={editingEvent}
-        employees={EMPLOYEES}
+        employees={employees}
         selectedDate={selectedDate}
         onSave={(newEvent) => {
           if (editingEvent) {
@@ -548,9 +299,272 @@ const EmployeeSchedule: React.FC = () => {
       />
     </div>
   );
-};
+}
 
-// Event Modal
+// Employee sidebar ---------------------------------------------------
+
+function EmployeeSidebar({
+  employees, selectedSupaId, onSelect, search, onSearch, eventsByEmployee, monthShort,
+}: {
+  employees: Employee[];
+  selectedSupaId: string | null;
+  onSelect: (id: string) => void;
+  search: string;
+  onSearch: (s: string) => void;
+  eventsByEmployee: Map<string, number>;
+  monthShort: string;
+}) {
+  return (
+    <aside className="border-r border-border flex flex-col min-h-0" style={{ background: "rgba(0,0,0,0.25)" }}>
+      <div className="px-4 pt-5 pb-3 border-b border-border space-y-3">
+        <Tracker tone="muted" size="sm">
+          <TrackerDot />
+          TEAM - {employees.length}
+        </Tracker>
+        <div className="relative">
+          <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3 h-3 text-muted-foreground" />
+          <Input
+            placeholder="Search name or role..."
+            value={search}
+            onChange={(e) => onSearch(e.target.value)}
+            className="pl-7 h-8 text-[12px] bg-card border-border text-foreground placeholder:text-muted-foreground focus:border-border-strong"
+          />
+        </div>
+      </div>
+
+      <div className="flex-1 min-h-0 overflow-y-auto p-2 space-y-0.5">
+        {employees.length === 0 ? (
+          <div className="px-3 py-6 text-center">
+            <Users className="w-5 h-5 mx-auto text-muted-foreground mb-2" />
+            <p className="text-[11px] text-muted-foreground">
+              {search ? "No matches." : "No employees yet."}
+            </p>
+          </div>
+        ) : (
+          employees.map((e) => {
+            const isActive = selectedSupaId === e.supa_id;
+            const count = eventsByEmployee.get(e.supa_id) ?? 0;
+            const accent = accentForSupaId(e.supa_id);
+            return (
+              <button
+                key={e.supa_id}
+                type="button"
+                onClick={() => onSelect(e.supa_id)}
+                data-active={isActive}
+                className={[
+                  "group w-full flex items-center gap-3 px-2.5 py-2 rounded-md transition-all text-left",
+                  isActive
+                    ? "bg-primary/10 text-primary"
+                    : "text-foreground/85 hover:bg-card hover:text-foreground",
+                ].join(" ")}
+              >
+                <div
+                  className="relative w-7 h-7 rounded-md flex items-center justify-center shrink-0 text-[10px] font-black text-white"
+                  style={{
+                    background: `linear-gradient(135deg, ${accent}, ${accent}cc)`,
+                    boxShadow: isActive ? `0 0 0 1px ${accent}` : `inset 0 1px 0 rgba(255,255,255,0.15)`,
+                  }}
+                >
+                  {initialsFor(e.username)}
+                </div>
+
+                <div className="min-w-0 flex-1">
+                  <p className="text-[12px] font-semibold truncate leading-tight">{e.username}</p>
+                  <p className="text-[10.5px] text-muted-foreground truncate mt-0.5">{e.role}</p>
+                </div>
+
+                {count > 0 && (
+                  <Mono size="xs" tone={isActive ? "brand" : "muted"} className="shrink-0">
+                    {count}
+                  </Mono>
+                )}
+              </button>
+            );
+          })
+        )}
+      </div>
+
+      <div className="border-t border-border px-4 py-3">
+        <p className="text-[10px] text-muted-foreground/80 leading-snug">
+          <Filter className="inline w-2.5 h-2.5 mr-1 -mt-0.5" />
+          Click a teammate to filter the calendar to their {monthShort} events.
+        </p>
+      </div>
+    </aside>
+  );
+}
+
+// Calendar surface --------------------------------------------------
+
+interface DayCell {
+  date: Date;
+  iso: string;
+  dayNumber: number;
+  isCurrentMonth: boolean;
+  isToday: boolean;
+  isPast: boolean;
+  isWeekend: boolean;
+  events: ScheduleEvent[];
+}
+
+function CalendarSurface({
+  days, onAdd, onEdit, onRemove,
+}: {
+  days: DayCell[];
+  onAdd: (d: Date) => void;
+  onEdit: (e: ScheduleEvent) => void;
+  onRemove: (id: string) => void;
+}) {
+  return (
+    <div className="p-4 lg:p-6 h-full flex flex-col">
+      <div className="rounded-xl border border-border bg-card overflow-hidden flex-1 flex flex-col min-h-0">
+        <div className="grid grid-cols-7 border-b border-border bg-secondary/30">
+          {WEEK_DAYS.map((d) => (
+            <div key={d} className="px-3 py-2.5 text-[10px] font-bold tracking-[0.14em] text-muted-foreground">
+              {d}
+            </div>
+          ))}
+        </div>
+
+        <div className="grid grid-cols-7 grid-rows-6 flex-1 min-h-0">
+          {days.map((d, i) => (
+            <DayCellView key={i} day={d} onAdd={onAdd} onEdit={onEdit} onRemove={onRemove} />
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// Day cell ----------------------------------------------------------
+
+function DayCellView({
+  day, onAdd, onEdit, onRemove,
+}: {
+  day: DayCell;
+  onAdd: (d: Date) => void;
+  onEdit: (e: ScheduleEvent) => void;
+  onRemove: (id: string) => void;
+}) {
+  const visible = day.events.slice(0, 3);
+  const overflow = day.events.length - visible.length;
+
+  return (
+    <div
+      onClick={() => onAdd(day.date)}
+      className={[
+        "group relative min-h-[110px] border-r border-b border-border last:border-r-0 px-2 pt-2 pb-1.5 cursor-pointer transition-colors",
+        day.isCurrentMonth ? "" : "bg-card/40",
+        day.isToday ? "" : "hover:bg-secondary/30",
+        day.isWeekend && day.isCurrentMonth ? "bg-card/50" : "",
+      ].join(" ")}
+      style={
+        day.isToday
+          ? {
+              background: "radial-gradient(circle at 0% 0%, rgba(239,68,68,0.08) 0%, transparent 60%), hsl(var(--card))",
+              boxShadow: "inset 3px 0 0 rgb(239,68,68)",
+            }
+          : undefined
+      }
+    >
+      <div className="flex items-center justify-between mb-1.5">
+        <Mono
+          size={day.isToday ? "md" : "sm"}
+          tone={day.isToday ? "brand" : !day.isCurrentMonth ? "muted" : day.isPast ? "muted" : "fg"}
+          className={day.isToday ? "font-black" : "font-bold"}
+        >
+          {String(day.dayNumber).padStart(2, "0")}
+        </Mono>
+        {day.isCurrentMonth && (
+          <button
+            type="button"
+            onClick={(e) => { e.stopPropagation(); onAdd(day.date); }}
+            aria-label="Add event"
+            className="opacity-0 group-hover:opacity-100 h-5 w-5 inline-flex items-center justify-center rounded text-muted-foreground hover:text-foreground hover:bg-secondary transition-all"
+          >
+            <Plus className="w-3 h-3" />
+          </button>
+        )}
+      </div>
+
+      <div className="space-y-1">
+        {visible.map((e) => (
+          <EventChip key={e.id} event={e} onEdit={() => onEdit(e)} onRemove={() => onRemove(e.id)} />
+        ))}
+        {overflow > 0 && (
+          <Mono size="xs" tone="muted" className="block pl-1 pt-0.5">
+            +{overflow} more
+          </Mono>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// Event chip --------------------------------------------------------
+
+function EventChip({
+  event, onEdit, onRemove,
+}: {
+  event: ScheduleEvent;
+  onEdit: () => void;
+  onRemove: () => void;
+}) {
+  const meta = EVENT_TYPE_META[event.type];
+  const accent = meta.accent;
+  return (
+    <div
+      onClick={(e) => { e.stopPropagation(); onEdit(); }}
+      className="group/event rounded px-1.5 py-1 cursor-pointer transition-all flex items-center gap-1.5 text-[10.5px]"
+      style={{
+        background: `${accent}14`,
+        borderLeft: `2px solid ${accent}`,
+      }}
+    >
+      <span
+        className="w-3.5 h-3.5 rounded shrink-0 inline-flex items-center justify-center text-[8px] font-black text-white"
+        style={{ background: accent }}
+      >
+        {initialsFor(event.employeeName)[0]}
+      </span>
+      <div className="min-w-0 flex-1">
+        <p className="font-semibold text-foreground truncate leading-tight" style={{ fontSize: "10.5px" }}>
+          {event.employeeName}
+        </p>
+        <p className="text-muted-foreground truncate leading-tight" style={{ fontSize: "9.5px" }}>
+          {event.startTime}-{event.endTime}
+        </p>
+      </div>
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
+          <button
+            type="button"
+            className="opacity-0 group-hover/event:opacity-100 h-4 w-4 inline-flex items-center justify-center text-muted-foreground hover:text-foreground transition-opacity"
+            aria-label="Event actions"
+          >
+            <MoreHorizontal className="w-2.5 h-2.5" />
+          </button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end" className="bg-card border-border">
+          <DropdownMenuItem onClick={onEdit} className="text-foreground/85 focus:bg-secondary focus:text-foreground">
+            <Edit className="w-3 h-3 mr-2" />
+            Edit
+          </DropdownMenuItem>
+          <DropdownMenuItem
+            onClick={(e) => { e.stopPropagation(); onRemove(); }}
+            className="text-primary focus:bg-primary/10 focus:text-primary"
+          >
+            <Trash2 className="w-3 h-3 mr-2" />
+            Delete
+          </DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
+    </div>
+  );
+}
+
+// Event modal -------------------------------------------------------
+
 interface EventModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -561,27 +575,24 @@ interface EventModalProps {
 }
 
 const EventModal: React.FC<EventModalProps> = ({
-  isOpen,
-  onClose,
-  event,
-  employees,
-  selectedDate,
-  onSave,
+  isOpen, onClose, event, employees, selectedDate, onSave,
 }) => {
+  const firstEmployee = employees[0]?.supa_id ?? "";
   const [formData, setFormData] = useState({
-    employeeId: event?.employeeId || employees[0].id,
+    employeeSupaId: event?.employeeSupaId || firstEmployee,
     title: event?.title || "",
-    date: event?.date || (selectedDate ? selectedDate.toISOString().split("T")[0] : new Date().toISOString().split("T")[0]),
+    date: event?.date ||
+      (selectedDate ? selectedDate.toISOString().split("T")[0]! : new Date().toISOString().split("T")[0]!),
     startTime: event?.startTime || "09:00",
     endTime: event?.endTime || "17:00",
-    type: event?.type || "shift" as const,
+    type: (event?.type as EventType) || "shift",
     notes: event?.notes || "",
   });
 
   useEffect(() => {
     if (event) {
       setFormData({
-        employeeId: event.employeeId,
+        employeeSupaId: event.employeeSupaId,
         title: event.title,
         date: event.date,
         startTime: event.startTime,
@@ -590,19 +601,20 @@ const EventModal: React.FC<EventModalProps> = ({
         notes: event.notes || "",
       });
     } else if (selectedDate) {
-      setFormData(prev => ({
+      setFormData((prev) => ({
         ...prev,
-        date: selectedDate.toISOString().split("T")[0],
+        date: selectedDate.toISOString().split("T")[0]!,
+        employeeSupaId: prev.employeeSupaId || firstEmployee,
       }));
     }
-  }, [event, selectedDate]);
+  }, [event, selectedDate, firstEmployee]);
 
   const handleSubmit = () => {
-    const selectedEmployee = employees.find((e) => e.id === formData.employeeId);
+    const selectedEmp = employees.find((e) => e.supa_id === formData.employeeSupaId);
     const newEvent: ScheduleEvent = {
       id: event?.id || `event-${Date.now()}`,
-      employeeId: formData.employeeId,
-      employeeName: selectedEmployee?.name || "",
+      employeeSupaId: formData.employeeSupaId,
+      employeeName: selectedEmp?.username || "",
       title: formData.title,
       startTime: formData.startTime,
       endTime: formData.endTime,
@@ -613,121 +625,234 @@ const EventModal: React.FC<EventModalProps> = ({
     onSave(newEvent);
   };
 
+  const typeMeta = EVENT_TYPE_META[formData.type];
+  const selectedEmpObj = employees.find((e) => e.supa_id === formData.employeeSupaId);
+  const empAccent = selectedEmpObj ? accentForSupaId(selectedEmpObj.supa_id) : "rgb(110,110,116)";
+  const niceDate = formData.date
+    ? new Date(formData.date + "T00:00:00").toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" }).toUpperCase()
+    : "";
+
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-lg">
-        <DialogHeader>
-          <DialogTitle>
-            {event ? "Edit Event" : "New Event"}
-          </DialogTitle>
-        </DialogHeader>
+      <DialogContent
+        className="max-w-xl border-border-strong overflow-hidden p-0"
+        style={{
+          background:
+            "radial-gradient(ellipse 80% 50% at 50% 0%, rgba(239,68,68,0.06), transparent 60%), hsl(var(--card))",
+        }}
+      >
+        {/* Brand-rail top edge */}
+        <div
+          aria-hidden
+          className="absolute inset-x-0 top-0 h-[2px]"
+          style={{
+            background: `linear-gradient(90deg, transparent, ${typeMeta.accent}, transparent)`,
+            boxShadow: `0 0 12px ${typeMeta.accent}`,
+          }}
+        />
 
-        <div className="space-y-5 py-4">
-          {/* Employee */}
-          <div>
-            <Label className="text-zinc-400 text-sm font-medium mb-2 block">Employee</Label>
-            <select
-              value={formData.employeeId}
-              onChange={(e) => setFormData({ ...formData, employeeId: Number(e.target.value) })}
-              className="w-full px-4 py-2.5 bg-zinc-900 border border-zinc-800 text-zinc-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-900/50 focus:border-red-900/50"
+        <div className="px-7 pt-7 pb-3">
+          <DialogHeader className="space-y-3">
+            <Tracker tone="muted" size="sm">
+              <TrackerDot color={typeMeta.accent} />
+              {event ? "EDIT EVENT" : "NEW EVENT"} - {typeMeta.label}{niceDate ? ` - ${niceDate}` : ""}
+            </Tracker>
+            <DialogTitle
+              className="font-black text-foreground leading-none"
+              style={{
+                fontFamily: 'var(--ed-font-display, Inter), system-ui, sans-serif',
+                fontSize: "clamp(22px, 2.2vw, 28px)",
+                letterSpacing: "-0.02em",
+              }}
             >
-              {employees.map((emp) => (
-                <option key={emp.id} value={emp.id}>
-                  {emp.name} - {emp.role}
-                </option>
-              ))}
-            </select>
+              {event ? "Edit event." : "New event."}
+            </DialogTitle>
+            <p className="text-[12.5px] text-muted-foreground leading-relaxed">
+              Pick the person, the time, and the type. AXON nudges the right
+              owner when the event is within 24 hours.
+            </p>
+          </DialogHeader>
+        </div>
+
+        <div className="px-7 pb-6 space-y-5">
+          {/* WHO -- avatar preview + native select underneath */}
+          <div>
+            <Label className="text-muted-foreground text-[10.5px] font-bold uppercase tracking-[0.12em] mb-2 block">
+              Who
+            </Label>
+            <div className="relative">
+              <div
+                className="absolute left-2.5 top-1/2 -translate-y-1/2 w-7 h-7 rounded-md flex items-center justify-center text-[10px] font-black text-white shrink-0 pointer-events-none"
+                style={{
+                  background: `linear-gradient(135deg, ${empAccent}, ${empAccent}cc)`,
+                  boxShadow: "inset 0 1px 0 rgba(255,255,255,0.15)",
+                }}
+              >
+                {selectedEmpObj ? initialsFor(selectedEmpObj.username) : "?"}
+              </div>
+              <select
+                value={formData.employeeSupaId}
+                onChange={(e) => setFormData({ ...formData, employeeSupaId: e.target.value })}
+                className="w-full pl-12 pr-3 py-2.5 bg-secondary/40 border border-border-strong text-foreground rounded-md text-[14px] font-semibold focus:outline-none focus:border-primary/60 focus:ring-2 focus:ring-primary/20 transition-all appearance-none cursor-pointer"
+              >
+                {employees.length === 0 && <option value="">(no employees)</option>}
+                {employees.map((emp) => (
+                  <option key={emp.supa_id} value={emp.supa_id}>{emp.username} - {emp.role}</option>
+                ))}
+              </select>
+              <ChevronRight className="absolute right-3 top-1/2 -translate-y-1/2 rotate-90 w-4 h-4 text-muted-foreground pointer-events-none" />
+            </div>
           </div>
 
-          {/* Type */}
+          {/* TYPE -- color-coded pill row, not a native select */}
           <div>
-            <Label className="text-zinc-400 text-sm font-medium mb-2 block">Event Type</Label>
-            <select
-              value={formData.type}
-              onChange={(e) => setFormData({ ...formData, type: e.target.value as any })}
-              className="w-full px-4 py-2.5 bg-zinc-900 border border-zinc-800 text-zinc-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-900/50 focus:border-red-900/50"
-            >
-              <option value="shift">Shift</option>
-              <option value="meeting">Meeting</option>
-              <option value="break">Break</option>
-              <option value="off">Off Day</option>
-            </select>
+            <Label className="text-muted-foreground text-[10.5px] font-bold uppercase tracking-[0.12em] mb-2 block">
+              Type
+            </Label>
+            <div className="grid grid-cols-4 gap-2">
+              {(Object.keys(EVENT_TYPE_META) as EventType[]).map((t) => {
+                const m = EVENT_TYPE_META[t];
+                const isActive = formData.type === t;
+                return (
+                  <button
+                    key={t}
+                    type="button"
+                    onClick={() => setFormData({ ...formData, type: t })}
+                    data-active={isActive}
+                    className={[
+                      "relative rounded-md border px-2 py-2 text-[11px] font-bold uppercase tracking-[0.1em] transition-all",
+                      isActive
+                        ? "text-foreground"
+                        : "border-border text-muted-foreground hover:text-foreground hover:border-border-strong",
+                    ].join(" ")}
+                    style={
+                      isActive
+                        ? {
+                            background: `${m.accent}18`,
+                            borderColor: `${m.accent}66`,
+                            boxShadow: `inset 0 1px 0 rgba(255,255,255,0.05), 0 0 0 1px ${m.accent}33, 0 6px 16px -8px ${m.accent}66`,
+                          }
+                        : undefined
+                    }
+                  >
+                    <span
+                      className="inline-block w-1.5 h-1.5 rounded-full mr-1.5 align-middle"
+                      style={{
+                        background: m.accent,
+                        boxShadow: isActive ? `0 0 6px ${m.accent}` : undefined,
+                      }}
+                    />
+                    {m.label}
+                  </button>
+                );
+              })}
+            </div>
           </div>
 
-          {/* Title */}
+          {/* TITLE */}
           <div>
-            <Label className="text-zinc-400 text-sm font-medium mb-2 block">Title</Label>
+            <Label className="text-muted-foreground text-[10.5px] font-bold uppercase tracking-[0.12em] mb-2 block">
+              Title
+            </Label>
             <Input
               value={formData.title}
               onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-              placeholder="e.g., Morning Shift"
-              className="bg-zinc-900 border-zinc-800 text-zinc-300 placeholder:text-zinc-600 focus:border-red-900/50 focus:ring-red-900/50"
+              placeholder="e.g., Morning shift"
+              className="bg-secondary/40 border-border-strong text-foreground placeholder:text-muted-foreground/60 h-10 text-[14px] font-medium focus:border-primary/60 focus:ring-2 focus:ring-primary/20"
             />
           </div>
 
-          {/* Date */}
-          <div>
-            <Label className="text-zinc-400 text-sm font-medium mb-2 block">Date</Label>
-            <Input
-              type="date"
-              value={formData.date}
-              onChange={(e) => setFormData({ ...formData, date: e.target.value })}
-              className="bg-zinc-900 border-zinc-800 text-zinc-300 focus:border-red-900/50 focus:ring-red-900/50"
-            />
-          </div>
-
-          {/* Time */}
-          <div className="grid grid-cols-2 gap-4">
+          {/* DATE + START + END */}
+          <div className="grid grid-cols-3 gap-3">
             <div>
-              <Label className="text-zinc-400 text-sm font-medium mb-2 block">Start</Label>
+              <Label className="text-muted-foreground text-[10.5px] font-bold uppercase tracking-[0.12em] mb-2 block">
+                Date
+              </Label>
+              <Input
+                type="date"
+                value={formData.date}
+                onChange={(e) => setFormData({ ...formData, date: e.target.value })}
+                className="bg-secondary/40 border-border-strong text-foreground h-10 text-[13px] font-semibold focus:border-primary/60 focus:ring-2 focus:ring-primary/20"
+              />
+            </div>
+            <div>
+              <Label className="text-muted-foreground text-[10.5px] font-bold uppercase tracking-[0.12em] mb-2 block">
+                Start
+              </Label>
               <Input
                 type="time"
                 value={formData.startTime}
                 onChange={(e) => setFormData({ ...formData, startTime: e.target.value })}
-                className="bg-zinc-900 border-zinc-800 text-zinc-300 focus:border-red-900/50 focus:ring-red-900/50"
+                className="bg-secondary/40 border-border-strong text-foreground h-10 text-[13px] font-semibold focus:border-primary/60 focus:ring-2 focus:ring-primary/20"
               />
             </div>
             <div>
-              <Label className="text-zinc-400 text-sm font-medium mb-2 block">End</Label>
+              <Label className="text-muted-foreground text-[10.5px] font-bold uppercase tracking-[0.12em] mb-2 block">
+                End
+              </Label>
               <Input
                 type="time"
                 value={formData.endTime}
                 onChange={(e) => setFormData({ ...formData, endTime: e.target.value })}
-                className="bg-zinc-900 border-zinc-800 text-zinc-300 focus:border-red-900/50 focus:ring-red-900/50"
+                className="bg-secondary/40 border-border-strong text-foreground h-10 text-[13px] font-semibold focus:border-primary/60 focus:ring-2 focus:ring-primary/20"
               />
             </div>
           </div>
 
-          {/* Notes */}
+          {/* NOTES */}
           <div>
-            <Label className="text-zinc-400 text-sm font-medium mb-2 block">Notes (Optional)</Label>
+            <Label className="text-muted-foreground text-[10.5px] font-bold uppercase tracking-[0.12em] mb-2 block">
+              Notes <span className="text-muted-foreground/60 font-medium normal-case ml-1">(optional)</span>
+            </Label>
             <Textarea
               value={formData.notes}
               onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
-              placeholder="Add notes..."
-              className="bg-zinc-900 border-zinc-800 text-zinc-300 placeholder:text-zinc-600 min-h-[100px] focus:border-red-900/50 focus:ring-red-900/50"
+              placeholder="Anything to flag for this event..."
+              className="bg-secondary/40 border-border-strong text-foreground placeholder:text-muted-foreground/60 min-h-[80px] text-[13px] focus:border-primary/60 focus:ring-2 focus:ring-primary/20"
             />
           </div>
         </div>
 
-        <DialogFooter className="gap-3">
-          <Button 
-            variant="ghost" 
+        <DialogFooter className="border-t border-border px-7 py-4 bg-secondary/20 gap-2">
+          <button
+            type="button"
             onClick={onClose}
-            className="bg-zinc-900 hover:bg-zinc-800 text-zinc-400 border border-zinc-800"
+            className="inline-flex items-center justify-center rounded-md border border-border-strong px-4 h-9 text-[11.5px] font-bold uppercase tracking-wider text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors"
           >
             Cancel
-          </Button>
-          <Button
+          </button>
+          <button
+            type="button"
             onClick={handleSubmit}
-            className="bg-red-950/50 hover:bg-red-900/60 text-red-300 border border-red-900/50"
+            disabled={!formData.employeeSupaId}
+            className="inline-flex items-center gap-1.5 rounded-md bg-primary text-primary-foreground px-4 h-9 text-[11.5px] font-bold uppercase tracking-wider hover:opacity-90 transition-opacity disabled:opacity-40 disabled:cursor-not-allowed"
+            style={{ boxShadow: "0 4px 12px -2px rgba(239,68,68,0.5)" }}
           >
-            {event ? "Update" : "Create"} Event
-          </Button>
+            {event ? "Update event" : "Create event"}
+            <ChevronRight className="w-3 h-3" strokeWidth={3} />
+          </button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
   );
 };
 
+// Public export (Suspense-wrapped) ---------------------------------
+
+const EmployeeSchedule: React.FC = () => {
+  return (
+    <Suspense
+      fallback={
+        <div className="min-h-screen bg-background flex items-center justify-center gap-3 text-muted-foreground">
+          <Loader2 className="w-4 h-4 animate-spin text-primary" />
+          <Mono size="sm" uppercase>loading schedule...</Mono>
+        </div>
+      }
+    >
+      <EmployeeScheduleContent />
+    </Suspense>
+  );
+};
+
 export default EmployeeSchedule;
+export { Calendar };
