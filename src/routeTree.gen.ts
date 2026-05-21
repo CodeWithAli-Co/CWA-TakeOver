@@ -48,6 +48,7 @@ const BotLazyRouteImport = createFileRoute('/bot')()
 const BookkeepingLazyRouteImport = createFileRoute('/bookkeeping')()
 const BioLazyRouteImport = createFileRoute('/bio')()
 const BillingLazyRouteImport = createFileRoute('/billing')()
+const AxonSwarmLazyRouteImport = createFileRoute('/axonSwarm')()
 const ArabicLazyRouteImport = createFileRoute('/arabic')()
 const AnalyticsLazyRouteImport = createFileRoute('/analytics')()
 const IndexLazyRouteImport = createFileRoute('/')()
@@ -232,6 +233,11 @@ const BillingLazyRoute = BillingLazyRouteImport.update({
   path: '/billing',
   getParentRoute: () => rootRouteImport,
 } as any).lazy(() => import('./routes/billing.lazy').then((d) => d.Route))
+const AxonSwarmLazyRoute = AxonSwarmLazyRouteImport.update({
+  id: '/axonSwarm',
+  path: '/axonSwarm',
+  getParentRoute: () => rootRouteImport,
+} as any).lazy(() => import('./routes/axonSwarm.lazy').then((d) => d.Route))
 const ArabicLazyRoute = ArabicLazyRouteImport.update({
   id: '/arabic',
   path: '/arabic',
@@ -264,6 +270,7 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexLazyRoute
   '/analytics': typeof AnalyticsLazyRoute
   '/arabic': typeof ArabicLazyRoute
+  '/axonSwarm': typeof AxonSwarmLazyRoute
   '/billing': typeof BillingLazyRoute
   '/bio': typeof BioLazyRoute
   '/bookkeeping': typeof BookkeepingLazyRoute
@@ -305,6 +312,7 @@ export interface FileRoutesByTo {
   '/': typeof IndexLazyRoute
   '/analytics': typeof AnalyticsLazyRoute
   '/arabic': typeof ArabicLazyRoute
+  '/axonSwarm': typeof AxonSwarmLazyRoute
   '/billing': typeof BillingLazyRoute
   '/bio': typeof BioLazyRoute
   '/bookkeeping': typeof BookkeepingLazyRoute
@@ -347,6 +355,7 @@ export interface FileRoutesById {
   '/': typeof IndexLazyRoute
   '/analytics': typeof AnalyticsLazyRoute
   '/arabic': typeof ArabicLazyRoute
+  '/axonSwarm': typeof AxonSwarmLazyRoute
   '/billing': typeof BillingLazyRoute
   '/bio': typeof BioLazyRoute
   '/bookkeeping': typeof BookkeepingLazyRoute
@@ -390,6 +399,7 @@ export interface FileRouteTypes {
     | '/'
     | '/analytics'
     | '/arabic'
+    | '/axonSwarm'
     | '/billing'
     | '/bio'
     | '/bookkeeping'
@@ -431,6 +441,7 @@ export interface FileRouteTypes {
     | '/'
     | '/analytics'
     | '/arabic'
+    | '/axonSwarm'
     | '/billing'
     | '/bio'
     | '/bookkeeping'
@@ -472,6 +483,7 @@ export interface FileRouteTypes {
     | '/'
     | '/analytics'
     | '/arabic'
+    | '/axonSwarm'
     | '/billing'
     | '/bio'
     | '/bookkeeping'
@@ -514,6 +526,7 @@ export interface RootRouteChildren {
   IndexLazyRoute: typeof IndexLazyRoute
   AnalyticsLazyRoute: typeof AnalyticsLazyRoute
   ArabicLazyRoute: typeof ArabicLazyRoute
+  AxonSwarmLazyRoute: typeof AxonSwarmLazyRoute
   BillingLazyRoute: typeof BillingLazyRoute
   BioLazyRoute: typeof BioLazyRoute
   BookkeepingLazyRoute: typeof BookkeepingLazyRoute
@@ -792,6 +805,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof BillingLazyRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/axonSwarm': {
+      id: '/axonSwarm'
+      path: '/axonSwarm'
+      fullPath: '/axonSwarm'
+      preLoaderRoute: typeof AxonSwarmLazyRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/arabic': {
       id: '/arabic'
       path: '/arabic'
@@ -834,6 +854,7 @@ const rootRouteChildren: RootRouteChildren = {
   IndexLazyRoute: IndexLazyRoute,
   AnalyticsLazyRoute: AnalyticsLazyRoute,
   ArabicLazyRoute: ArabicLazyRoute,
+  AxonSwarmLazyRoute: AxonSwarmLazyRoute,
   BillingLazyRoute: BillingLazyRoute,
   BioLazyRoute: BioLazyRoute,
   BookkeepingLazyRoute: BookkeepingLazyRoute,

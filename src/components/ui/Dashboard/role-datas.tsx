@@ -30,6 +30,7 @@ import {
   ClipboardCheck,
   Inbox,
   BookCopy,
+  Network,
   type LucideIcon,
 } from "lucide-react";
 
@@ -298,6 +299,16 @@ export const adminData = {
       url: "/",
       isActive: false,
       icon: Home,
+    },
+    {
+      // Mixture-of-Operators control room. Shows every Axon's live
+      // status, capabilities, signal sources, and inter-agent
+      // bridges. Admin-only — surfaced here for the founder & ops
+      // leads who need visibility into the agent swarm.
+      title: "Axon Swarm",
+      url: "/axonSwarm",
+      isActive: false,
+      icon: Network,
     },
     {
       title: "Analytics",
@@ -738,6 +749,14 @@ export const cooData = {
       icon: Home,
     },
     {
+      // Mixture-of-Operators control room. Surfaced for leadership
+      // roles so they have visibility into the agent swarm.
+      title: "Axon Swarm",
+      url: "/axonSwarm",
+      isActive: false,
+      icon: Network,
+    },
+    {
       title: "Roadmap",
       url: "/roadmap",
       isActive: false,
@@ -1003,6 +1022,14 @@ export const ceoData = {
       icon: Home,
     },
     {
+      // Mixture-of-Operators control room. Surfaced for leadership
+      // roles so they have visibility into the agent swarm.
+      title: "Axon Swarm",
+      url: "/axonSwarm",
+      isActive: false,
+      icon: Network,
+    },
+    {
       title: "Roadmap",
       url: "/roadmap",
       isActive: false,
@@ -1264,6 +1291,14 @@ export const cfoData = {
       url: "/",
       isActive: false,
       icon: Home,
+    },
+    {
+      // Mixture-of-Operators control room. Surfaced for leadership
+      // roles so they have visibility into the agent swarm.
+      title: "Axon Swarm",
+      url: "/axonSwarm",
+      isActive: false,
+      icon: Network,
     },
     {
       title: "Roadmap",
