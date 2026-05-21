@@ -282,6 +282,58 @@ export const Todos = (user: string) => {
   })
 }
 
+// ────────────────────────────────────────────────────────────────
+// AllTodos - same shape as Todos but unfiltered by assignee.
+// Used by CEO/COO/CFO when they flip the scope toggle to "Everyone".
+// ────────────────────────────────────────────────────────────────
+const fetchAllTodos = async (company: string) => {
+  const companyLabel = company === "simplicityFunds" ? "simplicity" : "CodeWithAli";
+
+  let baseQuery = supabase.from('cwa_todos').select('*').order('priorityOrder', { ascending: false });
+  let countBase = supabase.from('cwa_todos').select('todo_id', { count: 'exact', head: true });
+
+  if (company !== "all") {
+    baseQuery = baseQuery.eq("company", companyLabel);
+    countBase = countBase.eq("company", companyLabel);
+  }
+
+  const { data } = await baseQuery;
+  const { count: allCount } = await countBase;
+
+  // Compute status counts client-side from the result since we already
+  // have every row in memory. Avoids 3 extra round-trips per refresh.
+  const list = (data ?? []) as TodosInterface[];
+  const todoCount = list.filter((t) => t.status === "to-do").length;
+  const inProgressCount = list.filter((t) => t.status === "in-progress").length;
+  const doneCount = list.filter((t) => t.status === "done").length;
+
+  return list.map((task: TodosInterface) => ({
+    todo_id: task.todo_id,
+    created_at: task.created_at,
+    title: task.title,
+    description: task.description || '',
+    label: task.label || '',
+    status: task.status,
+    allCount: allCount || list.length,
+    todoCount,
+    inProgressCount,
+    doneCount,
+    priority: task.priority,
+    priorityOrder: task.priorityOrder,
+    assignee: task.assignee,
+    deadline: task.deadline || '',
+    company: task.company || 'CodeWithAli',
+  }));
+};
+
+export const AllTodos = () => {
+  const { activeCompany } = useCompanyFilter();
+  return useSuspenseQuery({
+    queryKey: ['allTodos', activeCompany],
+    queryFn: () => fetchAllTodos(activeCompany)
+  });
+};
+
 
 // Meetings Query — scoped by company
 interface MeetingInterface {
