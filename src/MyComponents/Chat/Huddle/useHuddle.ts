@@ -697,6 +697,25 @@ export function useHuddle({ group, username, joined, muted, camera, quality = "s
     let channel: ReturnType<typeof supabase.channel> | null = null;
 
     const setup = async () => {
+      // ── Pre-flight: WebView media-device support ──────────────────────
+      // navigator.mediaDevices is undefined when:
+      //   · macOSPrivateApi isn't enabled in tauri.conf.json (WKWebView
+      //     strips the API on macOS by default)
+      //   · the entitlements / Info.plist usage strings are missing
+      //   · the page isn't served from a secure context
+      //
+      // The raw WebKit error ("undefined is not an object…") is opaque
+      // to end users, so we catch it here and surface a fix path.
+      if (
+        !navigator.mediaDevices ||
+        typeof navigator.mediaDevices.getUserMedia !== "function"
+      ) {
+        setError(
+          "This app build doesn't have media access. Update or reinstall the latest version of TakeOver and try again.",
+        );
+        return;
+      }
+
       // 1. Get audio. Required. Use Discord/Meet-grade constraints:
       // echo cancellation + noise suppression + AGC for clean voice,
       // mono (channelCount: 1) for consistent volumes across peers,

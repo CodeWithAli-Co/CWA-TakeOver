@@ -10,6 +10,7 @@
     "frontendDist": "../dist"
   },
   "app": {
+    "macOSPrivateApi": true,
     "windows": [
       {
         "title": "TakeOver",
@@ -35,7 +36,10 @@
     "createUpdaterArtifacts": true,
     "icon": [
       "icons/codewithali_icon_circle_128x128.ico"
-    ]
+    ],
+    "macOS": {
+      "entitlements": "./entitlements.plist"
+    }
   },
   "plugins": {
     "updater": {

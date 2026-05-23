@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <!--
+        Hardened-runtime entitlements for the macOS app bundle.
+
+        Without these, macOS refuses to even ask the user for permission to
+        use the microphone or camera — getUserMedia() returns NotAllowedError
+        before the system dialog ever appears.
+
+        Pair these with the matching NSMicrophoneUsageDescription /
+        NSCameraUsageDescription strings in Info.plist (the prompt copy)
+        and macOSPrivateApi: true in tauri.conf.json (so WKWebView actually
+        exposes navigator.mediaDevices to the renderer).
+    -->
+    <key>com.apple.security.device.audio-input</key>
+    <true/>
+    <key>com.apple.security.device.camera</key>
+    <true/>
+
+    <!--
+        Screen-share support. The Huddle's getDisplayMedia() call needs
+        the screen-capture entitlement on macOS 11+ for system-level
+        permission to be grantable.
+    -->
+    <key>com.apple.security.screen-capture</key>
+    <true/>
+
+    <!--
+        Network client + server. Required for WebRTC ICE candidates and
+        Supabase Realtime channels used by the Huddle signaling layer.
+        These are usually default-true on macOS but declaring explicitly
+        keeps hardened-runtime predictable.
+    -->
+    <key>com.apple.security.network.client</key>
+    <true/>
+    <key>com.apple.security.network.server</key>
+    <true/>
+</dict>
+</plist>

@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <!--
+        macOS permission-prompt strings. Tauri merges this file into the
+        bundle's final Info.plist at build time. These strings are what
+        the user sees in the system dialog the first time they try to
+        join a huddle.
+
+        Required because macOS refuses to show the dialog at all if the
+        usage description is missing — getUserMedia() then fails with
+        NotAllowedError or (with macOSPrivateApi off) returns undefined.
+    -->
+    <key>NSMicrophoneUsageDescription</key>
+    <string>TakeOver needs microphone access so you can talk in voice huddles with your team.</string>
+
+    <key>NSCameraUsageDescription</key>
+    <string>TakeOver needs camera access so you can use video in huddles with your team.</string>
+
+    <!--
+        Screen-recording usage string. Required for the Huddle's
+        "Share screen" button (getDisplayMedia) to be grantable on
+        macOS 11+. Without this string the screen-share button silently
+        does nothing the first time.
+    -->
+    <key>NSScreenCaptureUsageDescription</key>
+    <string>TakeOver needs screen recording access so you can share your screen during huddles.</string>
+</dict>
+</plist>

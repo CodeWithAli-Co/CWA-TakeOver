@@ -1015,6 +1015,7 @@ export const ceoData = {
     },
   ],
   navMain: [
+    // ── Standalones up top — the rest is grouped under collapsibles. ──
     {
       title: "Home",
       url: "/",
@@ -1030,162 +1031,100 @@ export const ceoData = {
       icon: Network,
     },
     {
-      title: "Roadmap",
-      url: "/roadmap",
-      isActive: false,
-      icon: Map,
-    },
-    {
-      title: "Analytics",
-      url: "/analytics",
-      isActive: false,
-      icon: BarChart3,
-    },
-    {
-      title: "Offer Letters",
-      url: "/offers",
-      isActive: false,
-      icon: FileText,
-    },
-    {
-      title: "Onboarding",
-      url: "/onboarding",
-      isActive: false,
-      icon: ClipboardCheck,
-    },
-    {
-      title: "Reports",
-      url: "/reports",
-      isActive: false,
-      icon: Inbox,
-    },
-    {
-      title: "Components",
-      url: "/components",
-      isActive: false,
-      icon: Package,
-    },
-    // ── CWA-only items ──
-    {
-      title: "Personal Life",
-      url: "/personal",
-      isActive: false,
-      icon: User,
-      company: "codeWithAli" as const,
-    },
-    {
-      title: "Graduation Plan",
-      url: "/graduationPlan",
-      isActive: false,
-      icon: GraduationCap,
-      company: "codeWithAli" as const,
-    },
-    {
-      title: "Contract",
-      url: "/contractGenerator",
-      icon: File,
-      company: "codeWithAli" as const,
-    },
-    {
-      title: "Admin Permissions",
-      url: "/details",
-      icon: SquareTerminal,
-      isActive: true,
-      company: "codeWithAli" as const,
-      items: [
-        {
-          title: "Account Management",
-          url: "/details",
-        },
-        {
-          title: "Mod logs",
-          url: "/mod_logs",
-        },
-        {
-          title: "Bio",
-          url: "/bio"
-        },
-        {
-          title: "Cold Email Generator",
-          url: "/coldEmail"
-        },
-      ],
-    },
-    {
-      title: "Invoicer",
-      url: "/invoicer",
-      icon: File,
-      isActive: false,
-      company: "codeWithAli" as const,
-    },
-    {
       title: "Chat",
       url: "/chat",
       isActive: false,
       icon: MessageCircle,
       company: "codeWithAli" as const,
     },
+
+    // ── Hiring & people ──
     {
-      title: "Task",
-      url: "/task",
+      title: "Hiring",
+      url: "/offers",
+      icon: ClipboardCheck,
       isActive: false,
-      icon: ClipboardList,
       company: "codeWithAli" as const,
-    },
-    {
-      title: "Weekly Quotas",
-      url: "/quota",
-      isActive: false,
-      icon: Target,
-      company: "codeWithAli" as const,
-    },
-    {
-      title: "Schedule",
-      url: "/schedule",
-      isActive: false,
-      icon: CalendarDays,
-      company: "codeWithAli" as const,
-    },
-    {
-      title: "Time Tracking",
-      url: "/timetracking",
-      isActive: false,
-      icon: Clock,
-      company: "codeWithAli" as const,
-    },
-    {
-      title: "Training Plan",
-      url: "/trainingplan",
-      isActive: false,
-      icon: GraduationCap,
-      company: "codeWithAli" as const,
-    },
-    {
-      title: "Arabic Learning",
-      url: "/arabic",
-      isActive: false,
-      icon: Languages,
-      company: "codeWithAli" as const,
+      items: [
+        { title: "Offer Letters",  url: "/offers" },
+        { title: "Onboarding",     url: "/onboarding" },
+        { title: "Users",          url: "/employee" },
+        { title: "Training Plan",  url: "/trainingplan" },
+        { title: "Contract",       url: "/contractGenerator" },
+      ],
     },
 
-    // ── Shared items (visible in both modes) ──
+    // ── Finance ──
     {
-      title: "Users",
-      url: "/employee",
-      icon: Users,
-      isActive: false,
-    },
-    {
-      title: "Finance Dashboard",
+      title: "Finance",
       url: "/financialDashboard",
       icon: DollarSign,
       isActive: false,
+      company: "codeWithAli" as const,
+      items: [
+        { title: "Dashboard",  url: "/financialDashboard" },
+        { title: "Invoicer",   url: "/invoicer" },
+        { title: "Bookkeeping", url: "/bookkeeping" },
+      ],
     },
+
+    // ── Day-to-day operations ──
     {
-      title: "Bookkeeping",
-      url: "/bookkeeping",
-      icon: BookCopy,
+      title: "Operations",
+      url: "/task",
+      icon: ClipboardList,
       isActive: false,
+      company: "codeWithAli" as const,
+      items: [
+        { title: "Tasks",         url: "/task" },
+        { title: "Weekly Quotas", url: "/quota" },
+        { title: "Schedule",      url: "/schedule" },
+        { title: "Time Tracking", url: "/timetracking" },
+      ],
+    },
+
+    // ── Insights, planning, building blocks ──
+    {
+      title: "Insights",
+      url: "/analytics",
+      icon: BarChart3,
+      isActive: false,
+      company: "codeWithAli" as const,
+      items: [
+        { title: "Analytics",  url: "/analytics" },
+        { title: "Reports",    url: "/reports" },
+        { title: "Roadmap",    url: "/roadmap" },
+        { title: "Components", url: "/components" },
+      ],
+    },
+
+    // ── Ali's personal space (private to CEO) ──
+    {
+      title: "Personal",
+      url: "/personal",
+      icon: User,
+      isActive: false,
+      company: "codeWithAli" as const,
+      items: [
+        { title: "Personal Life",    url: "/personal" },
+        { title: "Graduation Plan",  url: "/graduationPlan" },
+        { title: "Arabic Learning",  url: "/arabic" },
+        { title: "Bio",              url: "/bio" },
+        { title: "Cold Email",       url: "/coldEmail" },
+      ],
+    },
+
+    // ── Admin / privileged controls ──
+    {
+      title: "Admin",
+      url: "/details",
+      icon: SquareTerminal,
+      isActive: false,
+      company: "codeWithAli" as const,
+      items: [
+        { title: "Account Management", url: "/details" },
+        { title: "Mod Logs",           url: "/mod_logs" },
+      ],
     },
 
     // ── Simplicity-only items ──
