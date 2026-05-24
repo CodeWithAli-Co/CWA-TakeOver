@@ -29,6 +29,7 @@ import { registerCodeActions } from "./code";
 import { registerProjectActions } from "./projects";
 import { registerAgentActions } from "./agent";
 import { registerEnsembleActions } from "./ensemble";
+import { registerRecruitingActions } from "./recruiting";
 
 let registered = false;
 
@@ -64,4 +65,5 @@ export function registerAllActions() {
   registerProjectActions();
   registerAgentActions();
   registerEnsembleActions();
+  registerRecruitingActions();
 }

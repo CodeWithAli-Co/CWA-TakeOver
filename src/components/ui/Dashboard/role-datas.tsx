@@ -301,6 +301,12 @@ export const adminData = {
       icon: BarChart3,
     },
     {
+      title: "Candidates",
+      url: "/hiring",
+      isActive: false,
+      icon: Inbox,
+    },
+    {
       title: "Offer Letters",
       url: "/offers",
       isActive: false,
@@ -672,6 +678,12 @@ export const cooData = {
       icon: BarChart3,
     },
     {
+      title: "Candidates",
+      url: "/hiring",
+      isActive: false,
+      icon: Inbox,
+    },
+    {
       title: "Offer Letters",
       url: "/offers",
       isActive: false,
@@ -930,11 +942,12 @@ export const ceoData = {
     // ── Hiring & people ──
     {
       title: "Hiring",
-      url: "/offers",
+      url: "/hiring",
       icon: ClipboardCheck,
       isActive: false,
       company: "codeWithAli" as const,
       items: [
+        { title: "Candidates",     url: "/hiring" },
         { title: "Offer Letters",  url: "/offers" },
         { title: "Onboarding",     url: "/onboarding" },
         { title: "Users",          url: "/employee" },
@@ -1116,6 +1129,12 @@ export const cfoData = {
       url: "/analytics",
       isActive: false,
       icon: BarChart3,
+    },
+    {
+      title: "Candidates",
+      url: "/hiring",
+      isActive: false,
+      icon: Inbox,
     },
     {
       title: "Offer Letters",
