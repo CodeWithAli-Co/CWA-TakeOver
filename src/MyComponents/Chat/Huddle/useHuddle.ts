@@ -204,6 +204,25 @@ export function useHuddle({ group, username, joined, muted, camera, quality = "s
   // into the screen stream vs camera stream.
   const remoteScreenTrackIdsRef = useRef<Map<string, Set<string>>>(new Map());
 
+  // ── Reliability timers ──────────────────────────────────────────
+  // Both maps are keyed by peer username. Tracking the actual
+  // setTimeout IDs (not booleans) so we can cancel + replace cleanly.
+  //
+  //   pendingLeaveTimersRef — when presence reports a peer has "left",
+  //     we don't tear the PC down immediately. WebSocket + presence
+  //     can blip for sub-second reasons (mobile network switch, tab
+  //     focus loss, brief packet loss) and instantly closing the PC
+  //     means a fresh handshake on every blip → audio/video flicker
+  //     or full disconnect. Instead we schedule a 4s teardown and
+  //     cancel it if the peer reappears on the next sync.
+  //
+  //   iceDisconnectTimersRef — when ICE transitions to "disconnected"
+  //     we wait 3s before forcing a restartIce(). Many real-world
+  //     blips recover on their own within that window; restarting
+  //     prematurely just churns the connection.
+  const pendingLeaveTimersRef = useRef<Map<string, number>>(new Map());
+  const iceDisconnectTimersRef = useRef<Map<string, number>>(new Map());
+
   // Latest local input state — broadcasts read these instead of stale closures.
   const stateRef = useRef({ muted, camera, sharing });
   stateRef.current = { muted, camera, sharing };
@@ -346,19 +365,55 @@ export function useHuddle({ group, username, joined, muted, camera, quality = "s
       updatePeersState();
     };
 
-    // Only tear down on `failed`. `disconnected` is a transient blip
-    // during renegotiation (camera toggle, screen share, etc.).
+    // ICE state lifecycle:
+    //   · "disconnected" — common transient blip (network hiccup, brief
+    //     packet loss). Most of these self-recover within 1-2 seconds.
+    //     We arm a 3s timer; if we're STILL disconnected when it fires,
+    //     proactively restartIce() to probe fresh candidates. If we
+    //     recover before then, the next state-change cancels the timer.
+    //   · "failed" — ICE has given up. Immediately restartIce so we
+    //     don't wait the full disconnect timer.
+    //   · anything else — clear any pending disconnect timer.
     pc.oniceconnectionstatechange = () => {
-      if (pc.iceConnectionState === "failed") {
-        console.warn(`[huddle] peer ${peerId} ICE failed, closing`);
+      const state = pc.iceConnectionState;
+      if (state === "disconnected") {
+        // Don't double-schedule. Only arm if no timer is already pending.
+        if (!iceDisconnectTimersRef.current.has(peerId)) {
+          const timerId = window.setTimeout(() => {
+            iceDisconnectTimersRef.current.delete(peerId);
+            // Still disconnected after the grace window? Force a fresh
+            // ICE gather. Skip if the PC has already moved on (closed,
+            // back to connected, etc.).
+            if (pc.iceConnectionState === "disconnected") {
+              console.warn(`[huddle] peer ${peerId} ICE stuck disconnected, restarting`);
+              try { pc.restartIce(); } catch { /* noop */ }
+            }
+          }, 3000);
+          iceDisconnectTimersRef.current.set(peerId, timerId);
+        }
+      } else if (state === "failed") {
+        const existing = iceDisconnectTimersRef.current.get(peerId);
+        if (existing) {
+          clearTimeout(existing);
+          iceDisconnectTimersRef.current.delete(peerId);
+        }
+        console.warn(`[huddle] peer ${peerId} ICE failed, restarting`);
         try { pc.restartIce(); } catch { /* noop */ }
+      } else {
+        // connected / completed / new / checking — cancel any pending
+        // restart, since the connection is on its way back.
+        const existing = iceDisconnectTimersRef.current.get(peerId);
+        if (existing) {
+          clearTimeout(existing);
+          iceDisconnectTimersRef.current.delete(peerId);
+        }
       }
     };
     pc.onconnectionstatechange = () => {
       if (pc.connectionState === "failed" || pc.connectionState === "closed") {
         console.warn(`[huddle] peer ${peerId} connection ${pc.connectionState}`);
         // Only fully tear down if the peer actually left presence.
-        // Presence-leave handler does the cleanup.
+        // Presence-leave handler does the cleanup (with debounce).
       }
     };
 
@@ -930,22 +985,59 @@ export function useHuddle({ group, username, joined, muted, camera, quality = "s
           // Ensure a PC for every other participant. The PC's
           // onnegotiationneeded will fire (because we attach tracks
           // inside ensurePeer) and produce the initial offer.
+          //
+          // If a peer is currently in the "about to be torn down"
+          // grace window (we saw a leave event but haven't pulled
+          // the trigger yet), the fact that they're back in presence
+          // cancels the teardown. This is the main reason huddles
+          // appeared to "drop" peers during brief network blips.
           for (const key of Object.keys(state)) {
             if (key === username) continue;
+            const pending = pendingLeaveTimersRef.current.get(key);
+            if (pending) {
+              clearTimeout(pending);
+              pendingLeaveTimersRef.current.delete(key);
+              console.log(`[huddle] peer ${key} reappeared, canceling teardown`);
+            }
             const polite = username < key;
             ensurePeer(key, polite);
           }
         })
         .on("presence", { event: "leave" }, ({ key }) => {
           if (typeof key !== "string") return;
-          const pc = connectionsRef.current.get(key);
-          if (pc) pc.close();
-          connectionsRef.current.delete(key);
-          remoteStreamsRef.current.delete(key);
-          remoteScreenStreamsRef.current.delete(key);
-          remoteStatesRef.current.delete(key);
-          screenSenderMapRef.current.delete(key);
-          updatePeersState();
+          // DEBOUNCED TEARDOWN. Presence "leave" fires for a bunch of
+          // reasons that aren't "the user actually left":
+          //   · tab focus loss on Chromium (websocket throttling)
+          //   · mobile network switching (wifi → cellular)
+          //   · brief packet loss on the realtime channel
+          //   · the user navigating between routes within the app
+          // Closing the RTCPeerConnection on every one of these means
+          // a full handshake the moment they come back — costly, slow,
+          // and visible as "lost the call" to the operator.
+          //
+          // Schedule the teardown 4s in the future. If presence sync
+          // sees them again before then, we cancel and keep the PC
+          // alive — restartIce() handles any ICE drift during the gap.
+          const existing = pendingLeaveTimersRef.current.get(key);
+          if (existing) clearTimeout(existing);
+          const timerId = window.setTimeout(() => {
+            pendingLeaveTimersRef.current.delete(key);
+            const pc = connectionsRef.current.get(key);
+            if (pc) pc.close();
+            connectionsRef.current.delete(key);
+            remoteStreamsRef.current.delete(key);
+            remoteScreenStreamsRef.current.delete(key);
+            remoteStatesRef.current.delete(key);
+            screenSenderMapRef.current.delete(key);
+            const t = iceDisconnectTimersRef.current.get(key);
+            if (t) {
+              clearTimeout(t);
+              iceDisconnectTimersRef.current.delete(key);
+            }
+            console.log(`[huddle] peer ${key} stayed gone, tearing down`);
+            updatePeersState();
+          }, 4000);
+          pendingLeaveTimersRef.current.set(key, timerId);
         })
         .subscribe((status) => {
           if (status === "SUBSCRIBED" && channel) {
@@ -970,8 +1062,32 @@ export function useHuddle({ group, username, joined, muted, camera, quality = "s
 
     void setup();
 
+    // Tab visibility: when the user comes back to the huddle tab after
+    // it being hidden, browsers may have throttled the WebRTC stack
+    // (timers slowed, AudioContext suspended, ICE liveness checks
+    // skipped). Proactively poke every peer connection — restart ICE
+    // on anything that isn't connected, so audio/video resume the
+    // moment the user looks at the tab again.
+    const onVisibility = () => {
+      if (document.visibilityState !== "visible") return;
+      for (const [peerId, pc] of connectionsRef.current.entries()) {
+        const s = pc.iceConnectionState;
+        if (s === "disconnected" || s === "failed" || s === "checking") {
+          console.log(`[huddle] tab visible — restarting ICE for ${peerId} (was ${s})`);
+          try { pc.restartIce(); } catch { /* noop */ }
+        }
+      }
+    };
+    document.addEventListener("visibilitychange", onVisibility);
+
     return () => {
       cancelled = true;
+      document.removeEventListener("visibilitychange", onVisibility);
+      // Clear all reliability timers so they can't fire after teardown.
+      for (const t of pendingLeaveTimersRef.current.values()) clearTimeout(t);
+      pendingLeaveTimersRef.current.clear();
+      for (const t of iceDisconnectTimersRef.current.values()) clearTimeout(t);
+      iceDisconnectTimersRef.current.clear();
       if (channel) channel.unsubscribe();
       channelRef.current = null;
       for (const pc of connectionsRef.current.values()) pc.close();
