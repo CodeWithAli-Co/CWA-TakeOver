@@ -24,6 +24,8 @@ import {
   QUALITY_PRESETS,
   type HuddleQuality,
 } from "@/stores/huddleStore";
+import supabase from "@/MyComponents/supabase";
+import { Employees } from "@/stores/query";
 
 // ── Active-speaker hook ─────────────────────────────────────────────
 // Maintains one analyser per peer and returns the currently-loudest
@@ -119,6 +121,30 @@ export function HuddleBar({
   const [qualityMenuOpen, setQualityMenuOpen] = useState(false);
   const quality = useHuddleStore((s) => s.quality);
   const setQuality = useHuddleStore((s) => s.setQuality);
+
+  // username → public avatar URL for every employee. Used by PeerTile
+  // to render real avatar images when a peer's camera is off, so the
+  // huddle stops showing "AL" initials for someone with an avatar
+  // uploaded. app_users uses the `avatar` column; Supabase getPublicUrl
+  // builds the correct bucket URL (string concatenation misses some
+  // bucket-prefix rules and breaks silently).
+  const { data: employees } = Employees();
+  const avatarByUser = useMemo(() => {
+    const map = new Map<string, string>();
+    for (const u of (employees ?? []) as Array<{ username?: string; avatar?: string }>) {
+      const name = u?.username;
+      const file = u?.avatar;
+      if (!name || !file) continue;
+      const { data } = supabase.storage.from("avatars").getPublicUrl(file);
+      if (data?.publicUrl) map.set(name, data.publicUrl);
+    }
+    return map;
+  }, [employees]);
+  const avatarFor = (name: string): string | null => {
+    // Strip the "(you)" suffix the local tile adds before lookup.
+    const clean = name.replace(/\s+\(you\)$/i, "");
+    return avatarByUser.get(clean) ?? null;
+  };
   // Third display state — minimized to a small status pill at the
   // bottom-right. Ignores drag offset + can't be dragged off-screen.
   // Persisted so it survives route changes + reloads.
@@ -495,6 +521,7 @@ export function HuddleBar({
                 >
                   <PeerTile
                     name={`${username} (you)`}
+                    avatarUrl={avatarFor(username)}
                     stream={localStream}
                     isLocal
                     muted={muted}
@@ -506,6 +533,7 @@ export function HuddleBar({
                     <PeerTile
                       key={p.id}
                       name={p.id}
+                      avatarUrl={avatarFor(p.id)}
                       stream={p.stream}
                       muted={p.muted}
                       cameraOn={p.camera}
@@ -546,6 +574,7 @@ export function HuddleBar({
                 <div className="flex items-center gap-2 overflow-x-auto pb-1">
                   <PeerTile
                     name={`${username} (you)`}
+                    avatarUrl={avatarFor(username)}
                     stream={localStream}
                     isLocal
                     muted={muted}
@@ -557,6 +586,7 @@ export function HuddleBar({
                     <PeerTile
                       key={p.id}
                       name={p.id}
+                      avatarUrl={avatarFor(p.id)}
                       stream={p.stream}
                       muted={p.muted}
                       cameraOn={p.camera}
@@ -581,6 +611,7 @@ export function HuddleBar({
             >
               <PeerTile
                 name={`${username} (you)`}
+                avatarUrl={avatarFor(username)}
                 stream={localStream}
                 isLocal
                 muted={muted}
@@ -592,6 +623,7 @@ export function HuddleBar({
                 <PeerTile
                   key={p.id}
                   name={p.id}
+                  avatarUrl={avatarFor(p.id)}
                   stream={p.stream}
                   muted={p.muted}
                   cameraOn={p.camera}
@@ -694,7 +726,7 @@ function ControlButton({
 // ── Tiles --------------------------------------------------------------
 
 function PeerTile({
-  name, stream, isLocal, muted, cameraOn, sharing, size = "lg", isActiveSpeaker,
+  name, stream, isLocal, muted, cameraOn, sharing, size = "lg", isActiveSpeaker, avatarUrl,
 }: {
   name: string;
   stream: MediaStream | null;
@@ -704,6 +736,9 @@ function PeerTile({
   sharing?: boolean;
   size?: "sm" | "lg";
   isActiveSpeaker?: boolean;
+  /** Public URL of the peer's avatar image. When set + camera is off,
+   *  the tile shows the avatar instead of the initials placeholder. */
+  avatarUrl?: string | null;
 }) {
   const audioRef = useRef<HTMLAudioElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -821,13 +856,11 @@ function PeerTile({
           />
         ) : (
           <div className="flex h-full w-full items-center justify-center">
-            <div
-              className={`flex items-center justify-center rounded-full bg-gradient-to-br from-primary/30 to-primary/10 font-semibold text-primary-foreground/90 ${
-                sm ? "h-9 w-9 text-[13px]" : "h-16 w-16 text-2xl"
-              }`}
-            >
-              {initial}
-            </div>
+            <PeerAvatar
+              src={avatarUrl ?? null}
+              fallback={initial}
+              sizeClass={sm ? "h-9 w-9 text-[13px]" : "h-16 w-16 text-2xl"}
+            />
           </div>
         )}
 
@@ -921,6 +954,51 @@ function ScreenShareTile({ name, stream }: { name: string; stream: MediaStream }
         <Monitor className="h-3 w-3" />
         {name} · sharing screen
       </div>
+    </div>
+  );
+}
+
+// ── PeerAvatar ───────────────────────────────────────────────────
+// Renders the peer's profile picture when `src` is provided, falling
+// back to a gradient circle with their initials. Used inside PeerTile
+// when the camera is off — replaces the old initials-only placeholder
+// so people with avatars show their actual face on the call tile.
+//
+// Why a separate component (vs. inline conditional):
+//   · We need useState to track image load failure (broken URL, 404,
+//     CORS hiccup) and gracefully swap to initials WITHOUT requiring
+//     the parent to know whether the URL eventually resolved.
+//   · Mirrors the FaceChip pattern used in ChatSidebar so behavior is
+//     consistent across the two surfaces (sidebar face-pile + huddle
+//     gallery tiles).
+//
+// `sizeClass` is passed in so PeerTile can use the small variant in
+// the bottom-row stacked layout vs. the large variant in the gallery
+// grid — keeps sizing concerns at the call site.
+
+function PeerAvatar({
+  src,
+  fallback,
+  sizeClass,
+}: {
+  src: string | null;
+  fallback: string;
+  sizeClass: string;
+}) {
+  const [failed, setFailed] = useState(false);
+  const showImg = !!src && !failed;
+  return showImg ? (
+    <img
+      src={src!}
+      alt={fallback}
+      onError={() => setFailed(true)}
+      className={`${sizeClass} rounded-full object-cover ring-1 ring-white/10`}
+    />
+  ) : (
+    <div
+      className={`${sizeClass} flex items-center justify-center rounded-full bg-gradient-to-br from-primary/40 to-primary/20 font-semibold text-foreground ring-1 ring-white/10`}
+    >
+      {fallback}
     </div>
   );
 }

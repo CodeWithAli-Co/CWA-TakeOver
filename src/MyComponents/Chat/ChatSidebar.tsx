@@ -5,12 +5,22 @@
  * "+ New conversation" button at top opens AddDMGroup dialog.
  */
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { motion } from "framer-motion";
 import {
   Plus, Search, Hash, MessageSquare, HashIcon,
   Folder, FolderPlus, ChevronDown, ChevronRight, Star, MoreVertical, Webhook, Trash2,
+  Phone,
 } from "lucide-react";
+import { useLiveHuddlesStore } from "@/stores/liveHuddlesStore";
+import { useHuddleStore } from "@/stores/huddleStore";
+
+// Module-scope stable empty array so the live-huddle selector returns
+// the same reference on every render when a channel has no
+// participants. Returning a fresh `[]` from a Zustand selector causes
+// an infinite render loop because Object.is([], []) is false → store
+// thinks the value changed → re-render → selector runs again → loop.
+const NO_PARTICIPANTS: string[] = [];
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -24,6 +34,7 @@ import {
 import { useAppStore } from "@/stores/store";
 import { useChatStore } from "@/stores/chatStore";
 import { ActiveUser } from "@/stores/query";
+import supabase from "@/MyComponents/supabase";
 import { UnreadBadge } from "./UnreadBadge";
 import { AddDMGroup } from "@/MyComponents/subForms/addDMGroup";
 import { CategoryDialog } from "./CategoryDialog";
@@ -58,6 +69,28 @@ export const ChatSidebar: React.FC<Props> = ({ groups, employees, onCreateChanne
   const [searchQuery, setSearchQuery] = useState("");
   const [categoryDialogOpen, setCategoryDialogOpen] = useState(false);
   const [dmPickerOpen, setDmPickerOpen] = useState(false);
+
+  // username → public avatar URL. Built once per employees-change and
+  // passed down to GroupButton so the live-call face-pile renders the
+  // real image instead of initials. Memoized to keep the identity
+  // stable across renders (otherwise GroupButton would re-render
+  // every parent tick).
+  //
+  // IMPORTANT: app_users uses the `avatar` column (NOT `userAvatar` —
+  // that's a denormalized snapshot on chat message rows). And the URL
+  // must be generated via Supabase's getPublicUrl, not string concat:
+  // hand-rolled URLs miss bucket prefixes and break silently.
+  const avatarByUser = useMemo(() => {
+    const map = new Map<string, string>();
+    for (const u of employees ?? []) {
+      const name = u?.username;
+      const file = u?.avatar ?? u?.userAvatar; // tolerate either field
+      if (!name || !file) continue;
+      const { data } = supabase.storage.from("avatars").getPublicUrl(file);
+      if (data?.publicUrl) map.set(name, data.publicUrl);
+    }
+    return map;
+  }, [employees]);
 
   // Current user's own username — needed to render 1-on-1 DM labels as
   // the OTHER person's name (not the canonical dm::alice::bob form) and
@@ -207,6 +240,7 @@ export const ChatSidebar: React.FC<Props> = ({ groups, employees, onCreateChanne
                 categories={channelCategories}
                 onMoveTo={(catId) => moveChannelToCategory(group.name, catId)}
                 currentUsername={currentUsername}
+                avatarByUser={avatarByUser}
                 canDelete={canDelete && group.type !== "general"}
                 onDelete={
                   onDeleteChannel
@@ -263,6 +297,7 @@ export const ChatSidebar: React.FC<Props> = ({ groups, employees, onCreateChanne
                       categories={channelCategories}
                       onMoveTo={(catId) => moveChannelToCategory(group.name, catId)}
                 currentUsername={currentUsername}
+                avatarByUser={avatarByUser}
                       currentCategoryId={cat.id}
                       canDelete={canDelete && group.type !== "general"}
                       onDelete={
@@ -356,7 +391,7 @@ export function groupAvatarInitials(name: string): string {
 
 function GroupButton({
   group, isActive, unread, onSelect, categories, onMoveTo, currentCategoryId,
-  canDelete, onDelete, currentUsername,
+  canDelete, onDelete, currentUsername, avatarByUser,
 }: {
   group: Group;
   isActive: boolean;
@@ -368,12 +403,24 @@ function GroupButton({
   canDelete?: boolean;
   onDelete?: () => void;
   currentUsername: string;
+  avatarByUser: Map<string, string>;
 }) {
   const isGeneral = group.type === "general";
   // For canonical 1-on-1 DMs (dm::alice::bob) show the OTHER person's name.
   const pretty = prettyDMLabel(group.name, currentUsername);
   const displayName = pretty ?? group.name;
   const isOneOnOne = pretty != null;
+
+  // Who's in a live huddle on THIS channel right now (excluding me —
+  // I already know I'm in if I am). Pulls from the global lobby
+  // presence subscribed to by HuddleHost. NO_PARTICIPANTS is a stable
+  // module-scope ref — see comment near the import.
+  const inCall = useLiveHuddlesStore((s) => s.byChannel.get(group.name) ?? NO_PARTICIPANTS);
+  const inCallOthers = inCall.filter((u) => u !== currentUsername);
+  const meInThisCall = inCall.includes(currentUsername);
+  const myCurrentHuddle = useHuddleStore((s) => s.group);
+  const startHuddle = useHuddleStore((s) => s.startHuddle);
+
   return (
     <div className="group/row relative">
       <motion.button
@@ -415,6 +462,63 @@ function GroupButton({
                   ? "Direct message"
                   : `${group.subscribers?.length || 0} members`}
             </p>
+            {/* Live in-call indicator. Shows when at least one person is
+                huddled on this channel right now. Click "Join" to drop
+                into the call without having to open it first. */}
+            {inCall.length > 0 && (
+              <div className="mt-1 flex items-center gap-1.5">
+                <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/15 border border-emerald-500/30 px-1.5 py-0.5 text-[9.5px] font-semibold text-emerald-400">
+                  <span className="relative flex h-1.5 w-1.5">
+                    <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75" />
+                    <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-emerald-400" />
+                  </span>
+                  <Phone className="h-2.5 w-2.5" />
+                  {inCall.length} in call
+                </span>
+                {/* Face-pile of up to 3 avatars. Real images when
+                    available; falls back to initials chip if the
+                    avatar URL is missing or fails to load. */}
+                <div className="flex -space-x-1">
+                  {inCall.slice(0, 3).map((u) => {
+                    const isMe = u === currentUsername;
+                    const src = avatarByUser.get(u) ?? null;
+                    return (
+                      <FaceChip
+                        key={u}
+                        username={u}
+                        src={src}
+                        isMe={isMe}
+                      />
+                    );
+                  })}
+                  {inCall.length > 3 && (
+                    <span className="inline-flex h-4 items-center px-1 text-[9px] text-muted-foreground">
+                      +{inCall.length - 3}
+                    </span>
+                  )}
+                </div>
+                {/* Quick join — only if I'm not already in this call AND
+                    I'm not in a different call. */}
+                {!meInThisCall && !myCurrentHuddle && inCallOthers.length > 0 && (
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onSelect(group.name);
+                      startHuddle(group.name);
+                    }}
+                    className="ml-auto rounded bg-emerald-500/20 px-1.5 py-0.5 text-[9px] font-bold tracking-wider text-emerald-400 hover:bg-emerald-500/30"
+                  >
+                    JOIN
+                  </button>
+                )}
+                {meInThisCall && (
+                  <span className="ml-auto text-[9px] tracking-wider text-emerald-400/70">
+                    YOU&apos;RE IN
+                  </span>
+                )}
+              </div>
+            )}
           </div>
         </div>
       </motion.button>
@@ -477,5 +581,45 @@ function GroupButton({
         </DropdownMenuContent>
       </DropdownMenu>
     </div>
+  );
+}
+
+/** Single chip in the live-call face-pile. Renders the user's avatar
+ *  image when available, falls back to initials when the URL is
+ *  missing or the image fails to load (404, network error, etc.).
+ *  The "me" variant gets a red ring so the operator can spot
+ *  themselves at a glance. */
+function FaceChip({
+  username,
+  src,
+  isMe,
+}: {
+  username: string;
+  src: string | null;
+  isMe: boolean;
+}) {
+  const [failed, setFailed] = useState(false);
+  const showImage = src && !failed;
+  const initials = username.slice(0, 2).toUpperCase();
+  const ringStyle = isMe ? { borderColor: "rgb(239,68,68)" } : undefined;
+  const titleText = username + (isMe ? " (you)" : "");
+
+  return showImage ? (
+    <img
+      src={src!}
+      alt={username}
+      title={titleText}
+      onError={() => setFailed(true)}
+      className="h-4 w-4 rounded-full border border-border object-cover bg-muted"
+      style={ringStyle}
+    />
+  ) : (
+    <span
+      title={titleText}
+      className="inline-flex h-4 w-4 items-center justify-center rounded-full border border-border bg-muted text-[8px] font-bold text-foreground/80"
+      style={ringStyle}
+    >
+      {initials}
+    </span>
   );
 }
