@@ -1,30 +1,23 @@
 /**
- * /onboarding — Hiring onboarding dashboard.
+ * /onboarding — full-screen onboarding workspace.
  *
- * Single source of truth: OnboardingPipelinePanel reads the
- * candidates table (status in offer / hired) and surfaces every
- * post-offer hire with their real Axon score + 30/60/90 plan +
- * meetings. Buttons hit the Axon onboarding actions.
+ * Wrapper is intentionally minimal: full height, no padding. The
+ * OnboardingPipelinePanel manages its own internal layout (sidebar +
+ * detail) so it can claim the whole viewport without padding fighting
+ * its own internal column widths.
  *
- * The legacy OnboardingDashboard (1353 lines, tied to the older
- * onboarding_instances + offer_letters tables) is intentionally
- * NOT mounted here anymore. It contained hardcoded placeholder
- * timeline labels ("Scored X 94/100", "Sent welcome packet")
- * that pre-dated real Axon scoring, plus carried over duplicate
- * test instances from development. The component still lives in
- * src/MyComponents/Onboarding/OnboardingDashboard.tsx — mount it
- * at /onboarding/legacy or any other route if you need it back.
+ * Legacy OnboardingDashboard (src/MyComponents/Onboarding/) is NOT
+ * mounted here — it pulled from onboarding_instances with hardcoded
+ * placeholder timelines. The new pipeline reads real candidates +
+ * Axon assessments + meetings.
  */
 
 import { createLazyFileRoute } from "@tanstack/react-router";
 import { OnboardingPipelinePanel } from "@/MyComponents/Hiring/OnboardingPipelinePanel";
 
 function OnboardingRoute() {
-  // Don't force min-h-full on the wrapper — when the pipeline is empty,
-  // that just creates a huge void below the card. App background is
-  // already black, so the page bleeds naturally to fit content.
   return (
-    <div className="p-6 bg-black">
+    <div className="h-full bg-zinc-950">
       <OnboardingPipelinePanel />
     </div>
   );

@@ -455,6 +455,45 @@ export const scheduleOnboardingSessionAction: AxonAction<
 
     const cand = c as { id: string; full_name: string; email: string; role_slug: string };
 
+    // ── DEDUPE GUARD ──────────────────────────────────────────
+    // A kickoff / interview / check-in is a "one of these at a
+    // time" thing per candidate. Refuse to create a second one
+    // silently — too easy to accidentally double-click and end
+    // up with 3 identical entries cluttering the timeline.
+    // Training meetings ARE allowed to stack (multiple sessions).
+    if (kind !== "training" && kind !== "other") {
+      const { data: existing } = await supabase
+        .from("candidate_meetings")
+        .select("id, scheduled_at, calendly_event_url")
+        .eq("candidate_id", candidate_id)
+        .eq("kind", kind)
+        .eq("status", "scheduled")
+        .order("scheduled_at", { ascending: true })
+        .limit(1);
+      const dup = (existing ?? [])[0] as
+        | { id: string; scheduled_at: string; calendly_event_url: string | null }
+        | undefined;
+      if (dup) {
+        const summary =
+          `${cand.full_name} already has a scheduled ${kind.replace(/_/g, " ")} ` +
+          `(${new Date(dup.scheduled_at).toLocaleString()}). ` +
+          `Cancel that one first if you want to reschedule.`;
+        ctx.logActivity({
+          actionName: "schedule_onboarding_session",
+          params: { candidate_id, kind, dedupe: true },
+          summary,
+        });
+        return {
+          summary,
+          data: {
+            meeting_id: dup.id,
+            scheduled_at: dup.scheduled_at,
+            calendly_url: dup.calendly_event_url ?? "",
+          },
+        };
+      }
+    }
+
     let scheduledAt: Date;
     if (when) {
       const parsed = new Date(when);

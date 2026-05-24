@@ -1,29 +1,38 @@
 /**
  * OnboardingPipelinePanel.tsx
  *
- * The bridge between the /hiring candidate pipeline and the
- * /onboarding page. Shows every candidate in offer + hired status
- * (i.e. people whose hiring decision has been made), with:
+ * Editorial three-column workspace for hires that came through the
+ * /apply pipeline. Reads candidates + candidate_meetings, no fake
+ * data anywhere — every block is real or shows an honest empty hint.
  *
- *   - Axon's earlier verdict + fit score
- *   - 30/60/90 plan (Axon-generated; button to generate if missing)
- *   - Welcome-message status (button to send if not sent)
- *   - Upcoming meetings (kickoff, check-ins, training) from
- *     candidate_meetings
- *   - "Schedule kickoff" button → opens Calendly + writes meeting row
- *   - "Onboard fully" composite button → plan + welcome + kickoff in
- *     one click (same as voice command "Hey Axon, onboard Sarah")
+ *   ┌─────────────┬──────────────────────────────┬─────────────┐
+ *   │ SIDEBAR     │  CENTER HERO                 │ RIGHT RAIL  │
+ *   │             │                              │             │
+ *   │ ALL HIRES   │  big avatar + score badge    │ action      │
+ *   │ search      │  name + role + status pill   │ buttons     │
+ *   │ chips       │  pill row (compact)          │             │
+ *   │             │                              │ AXON        │
+ *   │ list        │  AXON · STATUS VERDICT       │ TIMELINE    │
+ *   │             │  WHY THIS ROLE quote         │ (deduped)   │
+ *   │             │  30/60/90 (tight rows)       │             │
+ *   │             │  MEETINGS                    │ AXON        │
+ *   │             │                              │ SUGGESTS    │
+ *   └─────────────┴──────────────────────────────┴─────────────┘
  *
- * Mounts at the top of /onboarding above the existing
- * OnboardingDashboard so the two flows coexist.
+ * Color system: zinc shades with red brand accent. Page = zinc-950,
+ * sidebar/rail = zinc-900/60, cards = zinc-900 with zinc-800 borders.
+ * Gives layered depth without the "floating in void" feel of pure
+ * black + 4% white borders.
  */
 
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
-  Sparkles, Calendar, Mail, Loader2, ChevronDown, ChevronRight,
-  CheckCircle2, AlertCircle, Briefcase, Clock, Rocket, ArrowRight,
-  ExternalLink, Target, User as UserIcon, Inbox,
+  Sparkles, Calendar, Mail, Loader2,
+  CheckCircle2, AlertCircle, Clock, Rocket, Search,
+  ExternalLink, Target, User as UserIcon, Inbox, X,
+  Github, Globe, Linkedin, MapPin, Phone, ChevronDown,
+  ChevronRight, FileText,
 } from "lucide-react";
 import {
   useOnboardingCandidates,
@@ -42,263 +51,423 @@ import {
   TIER_COLORS, avatarGradient, initialsFromName, timeAgo,
 } from "./recruitingQueries";
 
+type StatusFilter = "all" | "hired" | "offer";
+
+const STATUS_FILTERS: Array<{ value: StatusFilter; label: string }> = [
+  { value: "hired",  label: "ACTIVE" },
+  { value: "offer",  label: "AWAITING" },
+  { value: "all",    label: "ALL" },
+];
+
+/** Word-boundary truncation. Slices to the last space before `max`
+ *  so we never split mid-word like "enteri…". */
+function truncateAtWord(text: string, max: number): string {
+  if (!text || text.length <= max) return text;
+  const slice = text.slice(0, max);
+  const lastSpace = slice.lastIndexOf(" ");
+  if (lastSpace <= max * 0.5) return slice.trim() + "…"; // no good break point
+  return slice.slice(0, lastSpace).trim() + "…";
+}
+
+/* ════════════════════════════════════════════════════════════════════
+   MAIN PANEL
+   ════════════════════════════════════════════════════════════════════ */
+
 export function OnboardingPipelinePanel() {
   const { data: candidates, isLoading } = useOnboardingCandidates();
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [search, setSearch] = useState("");
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
+
+  const list = candidates ?? [];
+
+  const filtered = useMemo(() => {
+    let result = list;
+    if (statusFilter !== "all") {
+      result = result.filter((c) => c.status === statusFilter);
+    }
+    if (search.trim()) {
+      const q = search.toLowerCase();
+      result = result.filter((c) =>
+        (c.full_name || "").toLowerCase().includes(q) ||
+        (c.role_slug || "").toLowerCase().includes(q) ||
+        (c.current_company || "").toLowerCase().includes(q),
+      );
+    }
+    return result;
+  }, [list, statusFilter, search]);
+
+  useEffect(() => {
+    if (filtered.length === 0) return;
+    const stillThere = filtered.some((c) => c.id === selectedId);
+    if (!stillThere) setSelectedId(filtered[0].id);
+  }, [filtered, selectedId]);
+
+  const selected = useMemo(
+    () => list.find((c) => c.id === selectedId) ?? null,
+    [list, selectedId],
+  );
 
   if (isLoading) {
     return (
-      <div className="rounded-sm border border-white/[0.04] bg-[#0a0a0a] p-8 flex items-center justify-center text-white/40 text-sm">
-        <Loader2 size={14} className="animate-spin mr-2" /> Loading onboarding pipeline…
+      <div className="h-full flex items-center justify-center bg-zinc-900/40 text-zinc-500 text-sm">
+        <Loader2 size={16} className="animate-spin mr-2" /> Loading onboarding pipeline…
       </div>
     );
   }
 
-  const list = candidates ?? [];
   if (list.length === 0) {
-    return (
-      <div className="rounded-sm border border-white/[0.04] bg-[#0a0a0a] px-5 py-4 flex items-center gap-4">
-        <div className="w-8 h-8 rounded-sm bg-white/[0.04] border border-white/[0.06] flex items-center justify-center flex-shrink-0">
-          <Inbox size={14} className="text-white/40" />
-        </div>
-        <div className="flex-1 min-w-0">
-          <div className="flex items-baseline gap-2 mb-0.5">
-            <span className="text-[10px] tracking-[0.12em] text-white/30 uppercase">
-              <span className="inline-block w-1 h-1 rounded-full bg-red-500 mr-1.5 align-middle" />
-              ONBOARDING PIPELINE
-            </span>
-            <span className="text-[12px] text-white/60">— no one yet</span>
-          </div>
-          <p className="text-[11.5px] text-white/45 leading-snug">
-            Move a candidate to <span className="text-white/70">offer</span> or <span className="text-white/70">hired</span> in <a href="/hiring" className="text-red-400 hover:underline">/hiring</a> and they'll appear here.
-          </p>
-        </div>
-      </div>
-    );
+    return <FullEmptyState />;
   }
 
   return (
-    <div className="rounded-sm border border-white/[0.04] bg-[#0a0a0a]">
-      <header className="px-5 py-3.5 border-b border-white/[0.04] flex items-center justify-between">
-        <div>
-          <div className="text-[10px] tracking-[0.12em] text-white/30 uppercase">
-            <span className="inline-block w-1 h-1 rounded-full bg-red-500 mr-1.5 align-middle" />
-            ONBOARDING PIPELINE
-          </div>
-          <h2 className="text-[15px] font-bold text-white tracking-tight mt-0.5">
-            {list.length} {list.length === 1 ? "hire" : "hires"} in flight
-            <span className="text-white/30 font-normal ml-2">
-              · {list.filter((c) => c.status === "hired").length} active · {list.filter((c) => c.status === "offer").length} pending acceptance
-            </span>
-          </h2>
-        </div>
-        <div className="text-[10.5px] text-white/40">
-          Powered by AXON · onboarding actions
-        </div>
-      </header>
-      <ul className="divide-y divide-white/[0.04]">
-        {list.map((c) => (
-          <CandidateOnboardingRow key={c.id} candidate={c} />
-        ))}
-      </ul>
+    <div className="h-full flex bg-zinc-900/40 text-zinc-100">
+      <Sidebar
+        list={list}
+        filtered={filtered}
+        selectedId={selectedId}
+        setSelectedId={setSelectedId}
+        search={search}
+        setSearch={setSearch}
+        statusFilter={statusFilter}
+        setStatusFilter={setStatusFilter}
+      />
+      <main className="flex-1 flex overflow-hidden">
+        {selected ? (
+          <DetailView key={selected.id} candidate={selected} />
+        ) : (
+          <PickOneHint />
+        )}
+      </main>
     </div>
   );
 }
 
-/* ════════════════════ Row ════════════════════ */
+/* ════════════════════════════════════════════════════════════════════
+   SIDEBAR
+   ════════════════════════════════════════════════════════════════════ */
 
-function CandidateOnboardingRow({ candidate: c }: { candidate: OnboardingCandidate }) {
-  const [expanded, setExpanded] = useState(false);
-  const [from, to] = avatarGradient(c.id);
-  const initials = initialsFromName(c.full_name);
-  const tier = c.verdict_tier ? TIER_COLORS[c.verdict_tier] : null;
-  const planExists = !!c.onboarding_plan;
-  const welcomeSent = !!c.welcome_sent_at;
-
-  const meetingsQ = useCandidateMeetings(expanded ? c.id : null);
-  const upcomingMeeting = (meetingsQ.data ?? []).find((m) => m.status === "scheduled" && new Date(m.scheduled_at) > new Date());
+function Sidebar({
+  list, filtered, selectedId, setSelectedId,
+  search, setSearch, statusFilter, setStatusFilter,
+}: {
+  list: OnboardingCandidate[];
+  filtered: OnboardingCandidate[];
+  selectedId: string | null;
+  setSelectedId: (id: string) => void;
+  search: string;
+  setSearch: (s: string) => void;
+  statusFilter: StatusFilter;
+  setStatusFilter: (s: StatusFilter) => void;
+}) {
+  const counts = {
+    all:    list.length,
+    hired:  list.filter((c) => c.status === "hired").length,
+    offer:  list.filter((c) => c.status === "offer").length,
+  };
 
   return (
-    <li className="px-5 py-4">
-      {/* Header strip — always visible */}
+    <aside className="w-[280px] flex-shrink-0 border-r border-zinc-700/70 flex flex-col bg-zinc-900/40">
+      {/* Sub-nav: §01 Instances / §02 Templates */}
+      <div className="flex items-center gap-5 px-5 pt-4 pb-3 border-b border-zinc-700/70">
+        <span className="text-[12px] tracking-tight">
+          <span className="font-mono text-[10px] text-zinc-500 mr-1.5">§01</span>
+          <span className="font-bold text-zinc-100 border-b-2 border-red-500 pb-1">Instances</span>
+        </span>
+        <span className="text-[12px] tracking-tight text-zinc-600">
+          <span className="font-mono text-[10px] text-zinc-700 mr-1.5">§02</span>
+          Templates
+        </span>
+      </div>
+
+      <div className="px-5 pt-4 pb-2 text-[10px] tracking-[0.12em] text-zinc-500 uppercase">
+        <span className="inline-block w-1 h-1 rounded-full bg-red-500 mr-1.5 align-middle" />
+        ALL HIRES · {list.length}
+      </div>
+
+      <div className="px-5 pb-2">
+        <div className="flex items-center gap-2 px-3 py-2 rounded-md bg-zinc-900 border border-zinc-700/70 focus-within:border-red-500/50">
+          <Search size={11} className="text-zinc-500" />
+          <input
+            type="text"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Search…"
+            className="flex-1 bg-transparent text-[11.5px] outline-none placeholder:text-zinc-600 text-zinc-100"
+          />
+          {search && (
+            <button type="button" onClick={() => setSearch("")} className="text-zinc-500 hover:text-zinc-200">
+              <X size={11} />
+            </button>
+          )}
+        </div>
+      </div>
+
+      <div className="px-5 pb-3 flex items-center gap-3 text-[10px] tracking-[0.12em] uppercase">
+        {STATUS_FILTERS.map((s) => {
+          const count = counts[s.value];
+          const active = statusFilter === s.value;
+          return (
+            <button
+              key={s.value}
+              type="button"
+              onClick={() => setStatusFilter(s.value)}
+              className={
+                "transition-colors " +
+                (active
+                  ? "text-red-400 border-b border-red-400 pb-0.5"
+                  : "text-zinc-500 hover:text-zinc-300")
+              }
+              title={`${count} hire${count === 1 ? "" : "s"}`}
+            >
+              {s.label}
+            </button>
+          );
+        })}
+      </div>
+
+      <div className="flex-1 overflow-y-auto px-2">
+        {filtered.length === 0 ? (
+          <div className="px-3 py-8 text-center text-[11.5px] text-zinc-500 leading-snug">
+            No matches.
+          </div>
+        ) : (
+          <ul className="space-y-0.5">
+            {filtered.map((c) => (
+              <SidebarRow
+                key={c.id}
+                candidate={c}
+                selected={c.id === selectedId}
+                onClick={() => setSelectedId(c.id)}
+              />
+            ))}
+          </ul>
+        )}
+      </div>
+    </aside>
+  );
+}
+
+function SidebarRow({
+  candidate: c,
+  selected,
+  onClick,
+}: {
+  candidate: OnboardingCandidate;
+  selected: boolean;
+  onClick: () => void;
+}) {
+  const statusLabel =
+    c.welcome_sent_at && c.onboarding_plan
+      ? "active"
+      : c.status === "hired"
+      ? "active"
+      : "awaiting";
+
+  return (
+    <li>
       <button
         type="button"
-        onClick={() => setExpanded((e) => !e)}
-        className="w-full flex items-center gap-4 text-left"
+        onClick={onClick}
+        className={
+          "w-full text-left px-3 py-2 rounded-md flex items-start gap-2.5 transition-colors group " +
+          (selected
+            ? "bg-red-500/[0.08] ring-1 ring-red-500/40"
+            : "hover:bg-zinc-800/60")
+        }
       >
-        <div className={"w-11 h-11 rounded-full bg-gradient-to-br " + from + " " + to + " flex items-center justify-center text-white text-[12px] font-bold flex-shrink-0"}>
-          {initials}
-        </div>
-
+        <span
+          className={
+            "w-1 h-1 rounded-full mt-2 flex-shrink-0 " +
+            (selected ? "bg-red-400" : "bg-zinc-600")
+          }
+        />
         <div className="flex-1 min-w-0">
-          <div className="flex items-baseline gap-2 mb-0.5">
-            <span className="text-[14px] font-semibold text-white truncate">{c.full_name}</span>
-            <StatusPill status={c.status} />
-            {c.fit_score != null && tier && (
-              <span className={"text-[9px] font-bold tracking-wider px-1.5 py-0.5 rounded uppercase " + tier.bg + " " + tier.text + " " + tier.border + " border"}>
-                {c.verdict_tier} · {c.fit_score}
-              </span>
-            )}
+          <div className={"text-[12.5px] font-semibold truncate " + (selected ? "text-red-400" : "text-zinc-200 group-hover:text-zinc-50")}>
+            {c.full_name}
           </div>
-          <div className="text-[11.5px] text-white/50 truncate">
-            {c.role_slug.replace(/-/g, " ")} · {c.current_title ? `was ${c.current_title}` : "—"}{c.current_company ? ` @ ${c.current_company}` : ""}
+          <div className="text-[10.5px] text-zinc-500 truncate mt-0.5">
+            {c.role_slug.replace(/-/g, " ")}
           </div>
         </div>
-
-        {/* Quick-status dots */}
-        <div className="hidden md:flex items-center gap-2 text-[11px] text-white/40 flex-shrink-0">
-          <Pip label="Plan"    on={planExists} />
-          <Pip label="Welcome" on={welcomeSent} />
-          <Pip label="Meeting" on={!!upcomingMeeting} />
-        </div>
-
-        {expanded ? <ChevronDown size={16} className="text-white/40" /> : <ChevronRight size={16} className="text-white/40" />}
+        <span className="text-[10px] tracking-wider text-zinc-500 mt-0.5">· {statusLabel}</span>
       </button>
-
-      {/* Expanded body */}
-      <AnimatePresence initial={false}>
-        {expanded && (
-          <motion.div
-            initial={{ opacity: 0, height: 0 }}
-            animate={{ opacity: 1, height: "auto" }}
-            exit={{ opacity: 0, height: 0 }}
-            transition={{ duration: 0.22, ease: [0.32, 0.72, 0, 1] }}
-            className="overflow-hidden"
-          >
-            <div className="pt-4 pl-[60px] space-y-4">
-              <ActionStrip candidate={c} />
-              {c.verdict_summary && tier && <VerdictBlock c={c} tier={tier} />}
-              <PlanBlock candidate={c} />
-              <MeetingsBlock candidateId={c.id} meetings={meetingsQ.data ?? []} loading={meetingsQ.isLoading} />
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
     </li>
   );
 }
 
-/* ════════════════════ Action strip ════════════════════ */
+/* ════════════════════════════════════════════════════════════════════
+   DETAIL VIEW (center + right rail)
+   ════════════════════════════════════════════════════════════════════ */
 
-function ActionStrip({ candidate: c }: { candidate: OnboardingCandidate }) {
+function DetailView({ candidate: c }: { candidate: OnboardingCandidate }) {
+  return (
+    <>
+      <CenterHero candidate={c} />
+      <RightRail candidate={c} />
+    </>
+  );
+}
+
+/* ════════════════════════════════════════════════════════════════════
+   CENTER HERO
+   ════════════════════════════════════════════════════════════════════ */
+
+function CenterHero({ candidate: c }: { candidate: OnboardingCandidate }) {
+  const [from, to] = avatarGradient(c.id);
+  const initials = initialsFromName(c.full_name);
+  const tier = c.verdict_tier ? TIER_COLORS[c.verdict_tier] : null;
+
   const planM = useGenerateOnboardingPlan();
   const welcomeM = useSendWelcomeMessage();
   const scheduleM = useScheduleOnboardingSession();
   const fullM = useStartFullOnboarding();
 
-  const planExists = !!c.onboarding_plan;
-  const welcomeSent = !!c.welcome_sent_at;
-
-  // Watch for the safety-gate response from send_welcome_message.
-  // When Axon refuses the first call (concerning verdict), data carries
-  // needs_confirmation + concerns so we can show a private inline
-  // review before posting publicly.
   const welcomeData = welcomeM.data?.data as
     | { needs_confirmation?: boolean; concerns?: string[]; verdict_tier?: string; fit_score?: number; message_id?: number }
     | undefined;
   const welcomeNeedsConfirm = welcomeData?.needs_confirmation === true;
 
   return (
-    <div className="flex flex-wrap gap-2">
-      {!planExists ? (
-        <ActionButton
-          icon={planM.isPending ? <Loader2 size={11} className="animate-spin" /> : <Sparkles size={11} />}
-          label="Generate 30/60/90"
-          variant="primary"
-          disabled={planM.isPending}
-          onClick={() => planM.mutate({ candidateId: c.id })}
-        />
-      ) : (
-        <ActionButton
-          icon={planM.isPending ? <Loader2 size={11} className="animate-spin" /> : <Sparkles size={11} />}
-          label="Regenerate plan"
-          variant="ghost"
-          disabled={planM.isPending}
-          onClick={() => planM.mutate({ candidateId: c.id, force: true })}
-        />
+    <section className="flex-1 overflow-y-auto px-8 lg:px-12 py-6">
+      {/* Breadcrumb — identity only, no truncated role slugs */}
+      <div className="text-[10px] tracking-[0.12em] text-zinc-500 uppercase mb-5">
+        <span className="inline-block w-1 h-1 rounded-full bg-red-500 mr-1.5 align-middle" />
+        ONBOARDING · {c.status === "hired" ? "ACTIVE" : "AWAITING"} · {c.full_name.toUpperCase()}
+      </div>
+
+      <div className="grid lg:grid-cols-[auto_1fr] gap-7 items-start">
+        {/* Avatar with floating score badge */}
+        <div className="relative">
+          <div className={"w-[88px] h-[88px] rounded-full bg-gradient-to-br " + from + " " + to + " flex items-center justify-center text-white text-[24px] font-bold shadow-xl shadow-black/40 ring-1 ring-zinc-800"}>
+            {initials}
+          </div>
+          {c.fit_score != null && (
+            <div className="absolute -bottom-1 -right-1 w-9 h-9 rounded-full bg-red-500 text-white text-[12px] font-black flex items-center justify-center border-[3px] border-zinc-950">
+              {c.fit_score}
+            </div>
+          )}
+        </div>
+
+        {/* Identity block */}
+        <div className="min-w-0">
+          <div className="flex items-center gap-2 mb-2">
+            <StatusBadge status={c.status} />
+            {c.fit_score != null && tier && (
+              <span className={"text-[10px] font-bold tracking-wider px-2 py-0.5 rounded uppercase " + tier.bg + " " + tier.text + " " + tier.border + " border"}>
+                {c.verdict_tier} · {c.fit_score}
+              </span>
+            )}
+          </div>
+          <h1 className="font-display text-[40px] font-black tracking-tight text-zinc-50 leading-[1.02] mb-1">
+            {c.full_name}
+          </h1>
+          <div className="text-[13px] text-zinc-400 mb-3">
+            {c.role_slug.replace(/-/g, " ")}
+            {c.current_title && (
+              <span className="text-zinc-500"> · was {c.current_title}{c.current_company ? ` @ ${c.current_company}` : ""}</span>
+            )}
+          </div>
+
+          {/* Compact pill row — only 2 pills now (timeline carries the rest) */}
+          <div className="flex flex-wrap items-center gap-1.5 text-[10.5px]">
+            <MetaPill icon={<Clock size={9} />} text={`applied ${timeAgo(c.created_at)}`} />
+            <MetaPill icon={<FileText size={9} />} text={`#${c.id.slice(0, 8)}`} mono />
+          </div>
+
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-1 mt-3 text-[11px] text-zinc-500">
+            <a className="inline-flex items-center gap-1 hover:text-red-400" href={`mailto:${c.email}`}>
+              <Mail size={11} />{c.email}
+            </a>
+            {c.phone && <span className="inline-flex items-center gap-1"><Phone size={11} />{c.phone}</span>}
+            {c.location && <span className="inline-flex items-center gap-1"><MapPin size={11} />{c.location}</span>}
+            {c.linkedin_url && <a className="inline-flex items-center gap-1 hover:text-red-400" href={c.linkedin_url} target="_blank" rel="noreferrer"><Linkedin size={11} />LinkedIn</a>}
+            {c.github_url && <a className="inline-flex items-center gap-1 hover:text-red-400" href={c.github_url} target="_blank" rel="noreferrer"><Github size={11} />GitHub</a>}
+            {c.portfolio_url && <a className="inline-flex items-center gap-1 hover:text-red-400" href={c.portfolio_url} target="_blank" rel="noreferrer"><Globe size={11} />Site</a>}
+          </div>
+        </div>
+      </div>
+
+      <div className="mt-7 max-w-[920px]">
+        <AxonVerdictCard candidate={c} />
+      </div>
+
+      {c.why_role && (
+        <div className="mt-6 max-w-[920px]">
+          <div className="text-[10px] tracking-[0.12em] text-zinc-500 uppercase mb-2">
+            <span className="inline-block w-1 h-1 rounded-full bg-red-500 mr-1.5 align-middle" />
+            FIRST IMPRESSION · WHY THIS ROLE · {timeAgo(c.created_at).toUpperCase()}
+          </div>
+          <div className="rounded-md border border-zinc-700/70 border-l-2 border-l-red-500 bg-zinc-900/40 px-5 py-4">
+            <p className="text-[13.5px] text-zinc-100 italic leading-relaxed">&ldquo;{c.why_role}&rdquo;</p>
+            <div className="mt-2.5 text-[10px] tracking-[0.12em] text-zinc-500 uppercase">
+              — {c.full_name.split(" ")[0].toUpperCase()} · FROM THEIR APPLICATION
+            </div>
+          </div>
+          {c.why_takeover && (
+            <p className="mt-2.5 text-[11.5px] text-zinc-400 leading-relaxed">
+              <span className="text-zinc-500 font-semibold uppercase tracking-wider text-[9.5px]">On Takeover:</span> {c.why_takeover}
+            </p>
+          )}
+        </div>
       )}
 
-      {!welcomeSent ? (
-        welcomeNeedsConfirm ? (
-          <ActionButton
-            icon={welcomeM.isPending ? <Loader2 size={11} className="animate-spin" /> : <AlertCircle size={11} />}
-            label="Send anyway"
-            variant="brand"
-            disabled={welcomeM.isPending}
-            onClick={() => welcomeM.mutate({ candidateId: c.id, confirm: true })}
-          />
-        ) : (
-          <ActionButton
-            icon={welcomeM.isPending ? <Loader2 size={11} className="animate-spin" /> : <Mail size={11} />}
-            label="Send welcome"
-            variant="primary"
-            disabled={welcomeM.isPending}
-            onClick={() => welcomeM.mutate({ candidateId: c.id })}
-          />
-        )
-      ) : (
-        <ActionButton
-          icon={<CheckCircle2 size={11} />}
-          label="Welcome sent"
-          variant="done"
-          disabled
-        />
-      )}
+      <div className="mt-7 max-w-[920px]">
+        <div className="text-[10px] tracking-[0.12em] text-zinc-500 uppercase mb-3 flex items-center justify-between">
+          <span>
+            <span className="font-mono text-zinc-600 mr-2">§02</span>
+            30 / 60 / 90 PLAN
+          </span>
+          {c.onboarding_plan && (
+            <button
+              type="button"
+              onClick={() => planM.mutate({ candidateId: c.id, force: true })}
+              disabled={planM.isPending}
+              className="text-[10px] tracking-wider text-zinc-500 hover:text-zinc-200 inline-flex items-center gap-1 disabled:opacity-50"
+            >
+              {planM.isPending ? <Loader2 size={10} className="animate-spin" /> : <Sparkles size={10} />}
+              REGENERATE
+            </button>
+          )}
+        </div>
+        <PlanSection candidate={c} planM={planM} />
+      </div>
 
-      <ActionButton
-        icon={scheduleM.isPending ? <Loader2 size={11} className="animate-spin" /> : <Calendar size={11} />}
-        label="Schedule kickoff"
-        variant="sky"
-        disabled={scheduleM.isPending}
-        onClick={() =>
-          scheduleM.mutate({
-            candidateId: c.id,
-            kind: "onboarding_kickoff",
-            duration_min: 45,
-          })
-        }
-      />
-
-      {!planExists && !welcomeSent && (
-        <ActionButton
-          icon={fullM.isPending ? <Loader2 size={11} className="animate-spin" /> : <Rocket size={11} />}
-          label="Onboard fully (one shot)"
-          variant="brand"
-          disabled={fullM.isPending}
-          onClick={() => fullM.mutate({ candidateId: c.id })}
-        />
-      )}
+      <div className="mt-7 max-w-[920px]">
+        <div className="text-[10px] tracking-[0.12em] text-zinc-500 uppercase mb-3">
+          <span className="font-mono text-zinc-600 mr-2">§03</span>
+          MEETINGS
+        </div>
+        <MeetingsBlock candidateId={c.id} />
+      </div>
 
       {(planM.error || welcomeM.error || scheduleM.error || fullM.error) && (
-        <div className="basis-full flex items-center gap-2 text-[11px] text-red-400 mt-1">
+        <div className="mt-5 flex items-center gap-2 text-[11px] text-red-400 max-w-[920px]">
           <AlertCircle size={11} />
           {String((planM.error || welcomeM.error || scheduleM.error || fullM.error) ?? "")}
         </div>
       )}
 
-      {/* Safety-gate review block — appears when Axon refused the
-          first send_welcome_message call due to a concerning verdict.
-          Shows like a private DM from Axon so the operator can make
-          an informed choice before publicly broadcasting the hire. */}
-      {welcomeNeedsConfirm && !welcomeSent && (
-        <div className="basis-full mt-2 rounded-sm border border-amber-500/30 bg-amber-500/[0.04] p-3">
-          <div className="flex items-start gap-2.5">
-            <div className="w-6 h-6 rounded-full bg-gradient-to-br from-red-500 to-red-700 flex items-center justify-center flex-shrink-0">
-              <Sparkles size={11} className="text-white" />
+      {welcomeNeedsConfirm && !c.welcome_sent_at && (
+        <div className="mt-5 max-w-[920px] rounded-md border border-amber-500/40 bg-amber-500/[0.06] p-4">
+          <div className="flex items-start gap-3">
+            <div className="w-7 h-7 rounded-full bg-gradient-to-br from-red-500 to-red-700 flex items-center justify-center flex-shrink-0">
+              <Sparkles size={12} className="text-white" />
             </div>
             <div className="flex-1 min-w-0">
-              <div className="flex items-center gap-2 mb-1">
-                <span className="text-[11px] font-semibold text-amber-300">AXON · private heads-up</span>
+              <div className="flex items-center gap-2 mb-1.5">
+                <span className="text-[11px] font-semibold text-amber-300">AXON · PRIVATE HEADS-UP</span>
                 {welcomeData?.verdict_tier && (
                   <span className="text-[9px] font-bold tracking-wider px-1.5 py-0.5 rounded-full uppercase bg-amber-500/15 text-amber-400 border border-amber-500/30">
                     {welcomeData.verdict_tier} · {welcomeData.fit_score ?? "?"}
                   </span>
                 )}
               </div>
-              <p className="text-[12.5px] text-amber-200/90 leading-relaxed mb-2">
+              <p className="text-[12.5px] text-amber-100/90 leading-relaxed mb-2">
                 I rated this candidate weakly — broadcasting a public welcome to #General might be premature. Concerns I flagged:
               </p>
               {welcomeData?.concerns && welcomeData.concerns.length > 0 ? (
-                <ul className="space-y-1 text-[11.5px] text-amber-200/80 leading-snug mb-2">
+                <ul className="space-y-1 text-[11.5px] text-amber-100/80 leading-snug mb-3">
                   {welcomeData.concerns.map((c, i) => (
                     <li key={i} className="flex items-start gap-1.5">
                       <span className="text-amber-400 mt-0.5">·</span>
@@ -306,109 +475,187 @@ function ActionStrip({ candidate: c }: { candidate: OnboardingCandidate }) {
                     </li>
                   ))}
                 </ul>
-              ) : (
-                <p className="text-[11px] text-amber-200/60 italic mb-2">
-                  (No structured concerns recorded — see the candidate's full assessment in /hiring.)
-                </p>
-              )}
-              <p className="text-[11px] text-amber-200/60 leading-snug">
-                If you've decided to go ahead anyway, click <span className="text-amber-300 font-semibold">Send anyway</span> above and I'll post it.
-              </p>
+              ) : null}
+              <button
+                type="button"
+                onClick={() => welcomeM.mutate({ candidateId: c.id, confirm: true })}
+                disabled={welcomeM.isPending}
+                className="text-[11px] font-semibold px-3 py-1.5 rounded-md bg-red-500/20 border border-red-500/40 text-red-300 hover:bg-red-500/25 inline-flex items-center gap-1.5"
+              >
+                {welcomeM.isPending ? <Loader2 size={11} className="animate-spin" /> : <AlertCircle size={11} />}
+                Send anyway
+              </button>
             </div>
           </div>
         </div>
       )}
-    </div>
+    </section>
   );
 }
 
-function ActionButton({
-  icon, label, onClick, disabled, variant = "ghost",
-}: {
-  icon: React.ReactNode;
-  label: string;
-  onClick?: () => void;
-  disabled?: boolean;
-  variant?: "primary" | "ghost" | "done" | "sky" | "brand";
-}) {
-  const cls =
-    variant === "primary" ? "bg-white/[0.04] border-white/[0.06] text-white/80 hover:border-red-500/30 hover:bg-red-500/[0.06]" :
-    variant === "brand"   ? "bg-red-500/10 border-red-500/30 text-red-400 hover:bg-red-500/15" :
-    variant === "sky"     ? "bg-sky-500/10 border-sky-500/30 text-sky-400 hover:bg-sky-500/15" :
-    variant === "done"    ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-400 cursor-default" :
-                            "bg-white/[0.02] border-white/[0.06] text-white/60 hover:bg-white/[0.04]";
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      disabled={disabled}
-      className={
-        "text-[11.5px] font-semibold px-3 py-1.5 rounded-sm border inline-flex items-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed transition-colors " + cls
-      }
-    >
-      {icon}
-      {label}
-    </button>
-  );
-}
+/* ════════════════════════════════════════════════════════════════════
+   AXON · STATUS VERDICT
+   ════════════════════════════════════════════════════════════════════ */
 
-/* ════════════════════ Verdict block ════════════════════ */
+function AxonVerdictCard({ candidate: c }: { candidate: OnboardingCandidate }) {
+  const [expanded, setExpanded] = useState(false);
+  const tier = c.verdict_tier ? TIER_COLORS[c.verdict_tier] : null;
 
-function VerdictBlock({
-  c, tier,
-}: {
-  c: OnboardingCandidate;
-  tier: { bg: string; text: string; border: string };
-}) {
-  return (
-    <div className={"rounded-sm border p-3 " + tier.border + " " + tier.bg}>
-      <div className="flex items-start gap-2.5">
-        <Sparkles size={13} className={tier.text + " flex-shrink-0 mt-0.5"} />
-        <div className="flex-1">
-          <div className="text-[10px] tracking-wider text-white/40 mb-0.5">AXON · earlier verdict</div>
-          <p className="text-[12.5px] text-white/80 leading-relaxed">{c.verdict_summary}</p>
-          {c.axon_assessment?.recommended_next_step && (
-            <div className="mt-1.5 text-[11px] text-white/55">
-              <span className="text-white/40">Next step:</span> {c.axon_assessment.recommended_next_step}
-            </div>
-          )}
-        </div>
-      </div>
-    </div>
-  );
-}
-
-/* ════════════════════ Plan block ════════════════════ */
-
-function PlanBlock({ candidate: c }: { candidate: OnboardingCandidate }) {
-  const plan = c.onboarding_plan;
-  if (!plan) {
+  if (!c.verdict_summary || !tier) {
     return (
-      <div className="rounded-sm border border-dashed border-white/[0.08] bg-white/[0.015] p-3 text-[11.5px] text-white/40">
-        <Target size={11} className="inline mr-1.5 align-middle" />
-        No 30/60/90 plan yet. Click <span className="text-red-400 font-semibold">Generate 30/60/90</span> above and Axon will build one tailored to {c.full_name.split(" ")[0]}'s background.
+      <div className="rounded-md border border-zinc-700/70 border-l-2 border-l-zinc-700 bg-zinc-900/60 px-5 py-4 text-[12px] text-zinc-500 italic">
+        No Axon verdict on file yet. Rate this candidate in /hiring.
       </div>
     );
   }
 
   return (
-    <section>
-      <div className="text-[10px] tracking-[0.12em] text-white/30 mb-2 uppercase">
-        <span className="inline-block w-1 h-1 rounded-full bg-red-500 mr-1.5 align-middle" />
-        30 / 60 / 90 PLAN
+    <div className="rounded-md border border-zinc-700/70 border-l-2 border-l-red-500 bg-zinc-900/40 overflow-hidden">
+      <div className="flex items-start gap-3 px-5 py-4">
+        <div className="w-8 h-8 rounded-md bg-gradient-to-br from-red-500 to-red-700 flex items-center justify-center flex-shrink-0">
+          <Sparkles size={13} className="text-white" />
+        </div>
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2 mb-1">
+            <span className="text-[11px] font-semibold tracking-[0.12em] text-red-400 uppercase">AXON · STATUS VERDICT</span>
+            <span className={"text-[9px] font-bold tracking-wider px-1.5 py-0.5 rounded uppercase " + tier.bg + " " + tier.text}>
+              {c.verdict_tier}
+            </span>
+          </div>
+          <p className="text-[13.5px] text-zinc-100 leading-relaxed">{c.verdict_summary}</p>
+          <button
+            type="button"
+            onClick={() => setExpanded((e) => !e)}
+            className="mt-3 text-[11px] font-semibold text-red-400 hover:underline inline-flex items-center gap-1"
+          >
+            {expanded ? "Hide full reasoning" : "See full reasoning"}
+            <ChevronRight size={11} className={"transition-transform " + (expanded ? "rotate-90" : "")} />
+          </button>
+        </div>
       </div>
+
+      <AnimatePresence initial={false}>
+        {expanded && (
+          <motion.div
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: "auto" }}
+            exit={{ opacity: 0, height: 0 }}
+            transition={{ duration: 0.2 }}
+            className="overflow-hidden"
+          >
+            <div className="px-5 pb-5 pt-1 border-t border-zinc-700/70 space-y-3">
+              {c.axon_assessment?.scores && c.axon_assessment.scores.length > 0 && (
+                <div className="grid sm:grid-cols-2 gap-2">
+                  {c.axon_assessment.scores.map((s) => (
+                    <div key={s.label} className="rounded-md border border-zinc-700/70 bg-zinc-900/40/60 p-2.5">
+                      <div className="flex items-center justify-between mb-1">
+                        <span className="text-[11px] font-semibold text-zinc-100">{s.label}</span>
+                        <span className="text-[12px] font-bold tabular-nums text-red-400">{s.score}</span>
+                      </div>
+                      <div className="h-0.5 rounded-full bg-zinc-800 overflow-hidden mb-1">
+                        <div
+                          className="h-full bg-gradient-to-r from-red-500 to-red-400"
+                          style={{ width: `${Math.max(0, Math.min(100, s.score))}%` }}
+                        />
+                      </div>
+                      <div className="text-[10.5px] text-zinc-400 leading-snug">{s.note}</div>
+                    </div>
+                  ))}
+                </div>
+              )}
+              {c.axon_assessment?.recommended_next_step && (
+                <div className="text-[11.5px] text-zinc-300">
+                  <span className="text-zinc-500 uppercase tracking-wider text-[9.5px] font-semibold">Recommended next:</span>{" "}
+                  {c.axon_assessment.recommended_next_step}
+                </div>
+              )}
+              {c.axon_assessment && (c.axon_assessment.strengths?.length > 0 || c.axon_assessment.concerns?.length > 0) && (
+                <div className="grid sm:grid-cols-2 gap-2">
+                  {c.axon_assessment.strengths?.length > 0 && (
+                    <BulletList label="STRENGTHS" items={c.axon_assessment.strengths} accent="emerald" />
+                  )}
+                  {c.axon_assessment.concerns?.length > 0 && (
+                    <BulletList label="CONCERNS" items={c.axon_assessment.concerns} accent="amber" />
+                  )}
+                </div>
+              )}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+}
+
+function BulletList({
+  label, items, accent,
+}: {
+  label: string;
+  items: string[];
+  accent: "emerald" | "amber";
+}) {
+  const cls = accent === "emerald"
+    ? "border-emerald-500/30 bg-emerald-500/[0.05] text-emerald-300"
+    : "border-amber-500/30 bg-amber-500/[0.05] text-amber-300";
+  return (
+    <div className={"rounded-md border p-2.5 " + cls}>
+      <div className="text-[9.5px] tracking-[0.12em] uppercase mb-1.5 opacity-80">{label}</div>
+      <ul className="space-y-1 text-[11px] leading-snug">
+        {items.map((s, i) => (
+          <li key={i} className="flex items-start gap-1.5">
+            <span className="opacity-60 mt-0.5">·</span>
+            <span>{s}</span>
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
+/* ════════════════════════════════════════════════════════════════════
+   30 / 60 / 90 PLAN — tightened rows
+   ════════════════════════════════════════════════════════════════════ */
+
+function PlanSection({
+  candidate: c,
+  planM,
+}: {
+  candidate: OnboardingCandidate;
+  planM: ReturnType<typeof useGenerateOnboardingPlan>;
+}) {
+  const plan = c.onboarding_plan;
+
+  if (!plan) {
+    return (
+      <div className="rounded-md border border-dashed border-zinc-700/70 bg-zinc-900/40 px-5 py-6 text-center">
+        <p className="text-[12.5px] text-zinc-400 leading-relaxed mb-3">
+          No plan yet. Axon will draft a 30/60/90 tailored to {c.full_name.split(" ")[0]}'s resume + the role's ideal profile.
+        </p>
+        <button
+          type="button"
+          onClick={() => planM.mutate({ candidateId: c.id })}
+          disabled={planM.isPending}
+          className="text-[11.5px] font-semibold px-3 py-1.5 rounded-md bg-red-500/15 border border-red-500/40 text-red-400 hover:bg-red-500/20 inline-flex items-center gap-1.5 disabled:opacity-50"
+        >
+          {planM.isPending ? <Loader2 size={11} className="animate-spin" /> : <Sparkles size={11} />}
+          Generate 30/60/90
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-3">
       {plan.summary && (
-        <p className="text-[12px] text-white/65 leading-relaxed mb-3 italic">{plan.summary}</p>
+        <p className="text-[12.5px] text-zinc-400 leading-relaxed italic">{plan.summary}</p>
       )}
-      <div className="grid md:grid-cols-3 gap-3">
-        <PlanColumn label="FIRST 30 DAYS" items={plan.first_30_days} hue="text-emerald-400 border-emerald-500/20" />
-        <PlanColumn label="FIRST 60 DAYS" items={plan.first_60_days} hue="text-sky-400 border-sky-500/20" />
-        <PlanColumn label="FIRST 90 DAYS" items={plan.first_90_days} hue="text-violet-400 border-violet-500/20" />
-      </div>
+      <PlanPhase label="FIRST 30 DAYS" items={plan.first_30_days} accent="emerald" />
+      <PlanPhase label="FIRST 60 DAYS" items={plan.first_60_days} accent="sky" />
+      <PlanPhase label="FIRST 90 DAYS" items={plan.first_90_days} accent="violet" />
       {plan.key_metrics?.length > 0 && (
-        <div className="mt-3 rounded-sm border border-white/[0.06] bg-white/[0.02] p-3">
-          <div className="text-[9.5px] tracking-[0.12em] text-white/40 uppercase mb-1.5">SUCCESS METRICS</div>
-          <ul className="text-[11.5px] text-white/70 space-y-1">
+        <div className="mt-2 rounded-md border border-zinc-700/70 bg-zinc-900/40 px-4 py-3">
+          <div className="text-[9.5px] tracking-[0.12em] text-zinc-500 uppercase mb-1.5">SUCCESS METRICS</div>
+          <ul className="text-[11.5px] text-zinc-300 space-y-1">
             {plan.key_metrics.map((m, i) => (
               <li key={i} className="flex items-start gap-1.5">
                 <CheckCircle2 size={10} className="text-red-400 mt-1 flex-shrink-0" />
@@ -418,90 +665,117 @@ function PlanBlock({ candidate: c }: { candidate: OnboardingCandidate }) {
           </ul>
         </div>
       )}
-    </section>
+    </div>
   );
 }
 
-function PlanColumn({
-  label, items, hue,
+function PlanPhase({
+  label,
+  items,
+  accent,
 }: {
   label: string;
   items: Array<{ title: string; owner: string; due_offset_days: number; detail: string }>;
-  hue: string;
+  accent: "emerald" | "sky" | "violet";
 }) {
+  const headerColor =
+    accent === "emerald" ? "text-emerald-400" :
+    accent === "sky"     ? "text-sky-400" :
+                           "text-violet-400";
+
   return (
-    <div className={"rounded-sm border bg-white/[0.015] p-3 " + hue}>
-      <div className="text-[9.5px] tracking-[0.12em] uppercase mb-2 font-bold">{label}</div>
-      <ul className="space-y-2">
+    <div className={"rounded-md border border-zinc-700/70 bg-zinc-900/40 overflow-hidden"}>
+      <div className={"px-4 py-2 border-b border-zinc-700/70 text-[10px] tracking-[0.12em] uppercase font-bold flex items-center justify-between " + headerColor}>
+        <span>{label}</span>
+        <span className="text-zinc-500 normal-case font-normal tracking-normal">· {items.length}</span>
+      </div>
+      <ul className="list-none">
         {items.map((it, i) => (
-          <li key={i} className="text-[11px] leading-snug">
-            <div className="flex items-baseline justify-between gap-2 mb-0.5">
-              <span className="text-white font-semibold">{it.title}</span>
-              <span className="text-[9.5px] text-white/40 font-mono whitespace-nowrap">+{it.due_offset_days}d</span>
-            </div>
-            <div className="text-white/55">{it.detail}</div>
-            <div className="mt-0.5 text-[9.5px] text-white/35 inline-flex items-center gap-1">
-              <UserIcon size={9} /> {it.owner.replace("_", " ")}
-            </div>
-          </li>
+          <PlanItem key={i} item={it} />
         ))}
       </ul>
     </div>
   );
 }
 
-/* ════════════════════ Meetings block ════════════════════ */
-
-function MeetingsBlock({
-  candidateId,
-  meetings,
-  loading,
+function PlanItem({
+  item,
 }: {
-  candidateId: string;
-  meetings: CandidateMeeting[];
-  loading: boolean;
+  item: { title: string; owner: string; due_offset_days: number; detail: string };
 }) {
-  if (loading) {
-    return <div className="text-[11px] text-white/40">Loading meetings…</div>;
+  const [open, setOpen] = useState(false);
+  return (
+    <li className="border-t border-zinc-700/70 first:border-t-0 list-none">
+      <button
+        type="button"
+        onClick={() => setOpen((o) => !o)}
+        className="w-full text-left px-4 py-2 flex items-center gap-3 hover:bg-zinc-900/60 transition-colors"
+      >
+        <span className="font-mono text-[10.5px] text-zinc-500 tabular-nums w-9 text-right flex-shrink-0">+{item.due_offset_days}d</span>
+        <span className="text-[12.5px] text-zinc-100 truncate">{item.title}</span>
+        <span className="text-[9px] tracking-wider text-zinc-500 uppercase bg-zinc-800/60 px-1.5 py-0.5 rounded">{item.owner.replace("_", " ")}</span>
+        <span className="flex-1" />
+        <ChevronDown size={11} className={"text-zinc-500 transition-transform " + (open ? "rotate-180" : "")} />
+      </button>
+      <AnimatePresence initial={false}>
+        {open && (
+          <motion.div
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: "auto" }}
+            exit={{ opacity: 0, height: 0 }}
+            transition={{ duration: 0.18 }}
+            className="overflow-hidden"
+          >
+            <div className="px-4 pb-3 pl-[52px] text-[11.5px] text-zinc-400 leading-relaxed">
+              {item.detail}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </li>
+  );
+}
+
+/* ════════════════════════════════════════════════════════════════════
+   MEETINGS
+   ════════════════════════════════════════════════════════════════════ */
+
+function MeetingsBlock({ candidateId }: { candidateId: string }) {
+  const meetingsQ = useCandidateMeetings(candidateId);
+  const meetings = meetingsQ.data ?? [];
+
+  if (meetingsQ.isLoading) {
+    return <div className="text-[11px] text-zinc-500">Loading…</div>;
   }
   if (meetings.length === 0) {
     return (
-      <div className="rounded-sm border border-dashed border-white/[0.08] bg-white/[0.015] p-3 text-[11.5px] text-white/40">
-        <Calendar size={11} className="inline mr-1.5 align-middle" />
-        No meetings scheduled yet. The candidate appears on the schedule page the moment any meeting is created.
+      <div className="rounded-md border border-dashed border-zinc-700/70 bg-zinc-900/40 px-4 py-4 text-[11.5px] text-zinc-500 leading-relaxed">
+        No meetings scheduled yet. Use <span className="text-red-400">Schedule kickoff</span> in the right rail.
       </div>
     );
   }
-
   return (
-    <section>
-      <div className="text-[10px] tracking-[0.12em] text-white/30 mb-2 uppercase">
-        <span className="inline-block w-1 h-1 rounded-full bg-red-500 mr-1.5 align-middle" />
-        MEETINGS · {meetings.length}
-      </div>
-      <ul className="space-y-1.5">
-        {meetings.map((m) => (
-          <MeetingRow key={m.id} m={m} />
-        ))}
-      </ul>
-    </section>
+    <ul className="space-y-1.5">
+      {meetings.map((m) => (
+        <MeetingRow key={m.id} m={m} />
+      ))}
+    </ul>
   );
 }
 
 function MeetingRow({ m }: { m: CandidateMeeting }) {
   const color = KIND_COLORS[m.kind];
   return (
-    <li className={"rounded-sm border px-3 py-2.5 bg-white/[0.015] flex items-center gap-3 " + color}>
+    <li className={"rounded-md border border-zinc-700/70 bg-zinc-900/40 px-3.5 py-2.5 flex items-center gap-3 " + color}>
       <Clock size={12} className="flex-shrink-0 opacity-70" />
       <div className="flex-1 min-w-0">
         <div className="flex items-baseline gap-2 mb-0.5">
-          <span className="text-[11px] font-bold uppercase tracking-wider">{KIND_LABELS[m.kind]}</span>
-          <span className="text-[10.5px] text-white/40">·</span>
-          <span className="text-[11.5px] text-white/85 truncate">{m.title}</span>
+          <span className="text-[10.5px] font-bold uppercase tracking-wider">{KIND_LABELS[m.kind]}</span>
+          <span className="text-[10.5px] opacity-40">·</span>
+          <span className="text-[12px] text-zinc-100 truncate">{m.title}</span>
         </div>
-        <div className="text-[10.5px] text-white/50">
+        <div className="text-[10.5px] text-zinc-400">
           {formatMeetingTime(m.scheduled_at)} · {m.duration_min}m
-          {m.attendees?.length > 0 && ` · ${m.attendees.length} attendee${m.attendees.length === 1 ? "" : "s"}`}
         </div>
       </div>
       {m.calendly_event_url && (
@@ -510,7 +784,6 @@ function MeetingRow({ m }: { m: CandidateMeeting }) {
           target="_blank"
           rel="noreferrer"
           className="text-[10.5px] font-semibold inline-flex items-center gap-1 opacity-80 hover:opacity-100 flex-shrink-0"
-          onClick={(e) => e.stopPropagation()}
         >
           Open <ExternalLink size={10} />
         </a>
@@ -519,21 +792,344 @@ function MeetingRow({ m }: { m: CandidateMeeting }) {
   );
 }
 
-/* ════════════════════ Small atoms ════════════════════ */
+/* ════════════════════════════════════════════════════════════════════
+   RIGHT RAIL
+   ════════════════════════════════════════════════════════════════════ */
 
-function StatusPill({ status }: { status: string }) {
-  const cls =
-    status === "hired" ? "bg-emerald-500/15 text-emerald-400" :
-    status === "offer" ? "bg-violet-500/15 text-violet-400" :
-                         "bg-white/[0.06] text-white/60";
-  return <span className={"text-[9.5px] font-bold tracking-wider px-1.5 py-0.5 rounded-full uppercase " + cls}>{status}</span>;
+interface TimelineEvent {
+  when: string;
+  title: string;
+  subtitle?: string;
 }
 
-function Pip({ label, on }: { label: string; on: boolean }) {
+function RightRail({ candidate: c }: { candidate: OnboardingCandidate }) {
+  const meetingsQ = useCandidateMeetings(c.id);
+  const meetings = meetingsQ.data ?? [];
+  const events = buildTimeline(c, meetings);
+
   return (
-    <span className={"inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[9.5px] uppercase tracking-wider " + (on ? "text-emerald-400" : "text-white/30")}>
-      <span className={"w-1.5 h-1.5 rounded-full " + (on ? "bg-emerald-400" : "bg-white/15")} />
-      {label}
+    <aside className="w-[320px] flex-shrink-0 border-l border-zinc-700/70 bg-zinc-900/40 overflow-y-auto">
+      <div className="px-5 pt-5 pb-3 space-y-2">
+        <ActionButtons candidate={c} />
+      </div>
+
+      <div className="px-5 py-4 border-t border-zinc-700/70">
+        <div className="text-[10px] tracking-[0.12em] text-zinc-500 uppercase mb-3">
+          <span className="inline-block w-1 h-1 rounded-full bg-red-500 mr-1.5 align-middle" />
+          AXON&apos;S TIMELINE WITH {c.full_name.split(" ")[0].toUpperCase()}
+        </div>
+        {events.length === 0 ? (
+          <div className="text-[11.5px] text-zinc-500 italic">No activity yet.</div>
+        ) : (
+          <ul className="space-y-3">
+            {events.map((ev, i) => (
+              <TimelineRow key={i} event={ev} />
+            ))}
+          </ul>
+        )}
+      </div>
+
+      <div className="px-5 py-4 border-t border-zinc-700/70">
+        <div className="text-[10px] tracking-[0.12em] text-zinc-500 uppercase mb-3">
+          <span className="inline-block w-1 h-1 rounded-full bg-red-500 mr-1.5 align-middle" />
+          AXON SUGGESTS
+        </div>
+        <Suggestions candidate={c} meetings={meetings} />
+      </div>
+    </aside>
+  );
+}
+
+function TimelineRow({ event }: { event: TimelineEvent }) {
+  return (
+    <li className="flex gap-2.5">
+      <div className="w-5 h-5 rounded-md bg-gradient-to-br from-red-500 to-red-700 flex items-center justify-center flex-shrink-0 mt-0.5">
+        <Sparkles size={9} className="text-white" />
+      </div>
+      <div className="flex-1 min-w-0">
+        <div className="text-[11px] font-semibold text-red-400">
+          AXON <span className="text-zinc-500 font-normal">· {timeAgo(event.when)}</span>
+        </div>
+        <div className="text-[12px] text-zinc-100 leading-snug">{event.title}</div>
+        {event.subtitle && (
+          <div className="text-[10.5px] text-zinc-500 leading-snug">{event.subtitle}</div>
+        )}
+      </div>
+    </li>
+  );
+}
+
+/** Builds the timeline. Meetings of the same `kind` are collapsed
+ *  to the most recent one so a triple-clicked "Schedule kickoff"
+ *  doesn't pollute the feed with three identical entries. */
+function buildTimeline(c: OnboardingCandidate, meetings: CandidateMeeting[]): TimelineEvent[] {
+  const events: TimelineEvent[] = [];
+
+  if (c.welcome_sent_at) {
+    events.push({
+      when: c.welcome_sent_at,
+      title: "Posted welcome message",
+      subtitle: "broadcast in #General",
+    });
+  }
+  if (c.onboarding_plan_at) {
+    events.push({
+      when: c.onboarding_plan_at,
+      title: "Generated 30/60/90 plan",
+      subtitle: c.onboarding_plan?.summary
+        ? truncateAtWord(c.onboarding_plan.summary, 90)
+        : "tailored to role",
+    });
+  }
+
+  // Dedupe meetings by kind — show only the most recently created
+  // meeting per kind. Keeps "Schedule kickoff" idempotent in the feed.
+  const byKind = new Map<string, CandidateMeeting>();
+  for (const m of meetings) {
+    const existing = byKind.get(m.kind);
+    const mTs = new Date(m.created_at ?? m.scheduled_at).getTime();
+    const eTs = existing ? new Date(existing.created_at ?? existing.scheduled_at).getTime() : -Infinity;
+    if (!existing || mTs > eTs) byKind.set(m.kind, m);
+  }
+  for (const m of byKind.values()) {
+    events.push({
+      when: m.created_at ?? m.scheduled_at,
+      title: `Scheduled ${KIND_LABELS[m.kind].toLowerCase()}`,
+      subtitle: `${formatMeetingTime(m.scheduled_at)} · ${m.duration_min}m`,
+    });
+  }
+
+  if (c.assessed_at && c.fit_score != null) {
+    events.push({
+      when: c.assessed_at,
+      title: `Scored ${c.full_name.split(" ")[0]} ${c.fit_score}/100`,
+      subtitle: c.verdict_tier ? `verdict ${c.verdict_tier}` : undefined,
+    });
+  }
+  events.push({
+    when: c.created_at,
+    title: "Application received",
+    subtitle: c.role_slug.replace(/-/g, " "),
+  });
+
+  events.sort((a, b) => new Date(b.when).getTime() - new Date(a.when).getTime());
+  return events;
+}
+
+function Suggestions({
+  candidate: c,
+  meetings,
+}: {
+  candidate: OnboardingCandidate;
+  meetings: CandidateMeeting[];
+}) {
+  const planM = useGenerateOnboardingPlan();
+  const welcomeM = useSendWelcomeMessage();
+  const scheduleM = useScheduleOnboardingSession();
+  const fullM = useStartFullOnboarding();
+
+  const planExists = !!c.onboarding_plan;
+  const welcomeSent = !!c.welcome_sent_at;
+  const hasKickoff = meetings.some((m) => m.kind === "onboarding_kickoff" && m.status === "scheduled");
+  const hasCheckIn = meetings.some((m) => m.kind === "check_in" && m.status === "scheduled");
+
+  const items: Array<{
+    icon: React.ReactNode;
+    text: string;
+    cta: string;
+    onClick: () => void;
+    pending: boolean;
+  }> = [];
+
+  if (!planExists) {
+    items.push({
+      icon: <Sparkles size={11} />,
+      text: `Draft a 30/60/90 plan for ${c.full_name.split(" ")[0]}`,
+      cta: planM.isPending ? "…" : "DRAFT",
+      onClick: () => planM.mutate({ candidateId: c.id }),
+      pending: planM.isPending,
+    });
+  }
+  if (!welcomeSent) {
+    items.push({
+      icon: <Mail size={11} />,
+      text: "Send welcome message to #General",
+      cta: welcomeM.isPending ? "…" : "SEND",
+      onClick: () => welcomeM.mutate({ candidateId: c.id }),
+      pending: welcomeM.isPending,
+    });
+  }
+  if (!hasKickoff) {
+    items.push({
+      icon: <Calendar size={11} />,
+      text: "Schedule day-one welcome session",
+      cta: scheduleM.isPending ? "…" : "BOOK",
+      onClick: () => scheduleM.mutate({ candidateId: c.id, kind: "onboarding_kickoff", duration_min: 45 }),
+      pending: scheduleM.isPending,
+    });
+  }
+  if (planExists && welcomeSent && hasKickoff && !hasCheckIn) {
+    items.push({
+      icon: <Calendar size={11} />,
+      text: "Book 30-day check-in",
+      cta: scheduleM.isPending ? "…" : "BOOK",
+      onClick: () => {
+        const when = new Date();
+        when.setDate(when.getDate() + 30);
+        when.setHours(14, 0, 0, 0);
+        scheduleM.mutate({ candidateId: c.id, kind: "check_in", duration_min: 30, when: when.toISOString() });
+      },
+      pending: scheduleM.isPending,
+    });
+  }
+  if (!planExists && !welcomeSent) {
+    items.push({
+      icon: <Rocket size={11} />,
+      text: "Onboard fully in one shot",
+      cta: fullM.isPending ? "…" : "RUN",
+      onClick: () => fullM.mutate({ candidateId: c.id }),
+      pending: fullM.isPending,
+    });
+  }
+
+  if (items.length === 0) {
+    return (
+      <div className="text-[11.5px] text-zinc-500 italic">All caught up — Axon has no pending suggestions.</div>
+    );
+  }
+
+  return (
+    <ul className="space-y-2">
+      {items.map((it, i) => (
+        <li key={i} className="rounded-md border border-zinc-700/70 bg-zinc-900/60 px-3 py-2.5 flex items-center gap-3">
+          <span className="text-red-400">{it.icon}</span>
+          <span className="flex-1 text-[11.5px] text-zinc-300 leading-snug">{it.text}</span>
+          <button
+            type="button"
+            disabled={it.pending}
+            onClick={it.onClick}
+            className="text-[10px] font-bold tracking-wider px-2.5 py-1 rounded bg-red-500 text-white hover:bg-red-600 disabled:opacity-50 inline-flex items-center gap-1"
+          >
+            {it.pending && <Loader2 size={9} className="animate-spin" />}
+            {it.cta}
+          </button>
+        </li>
+      ))}
+    </ul>
+  );
+}
+
+/* ════════════════════════════════════════════════════════════════════
+   Action buttons (top of right rail)
+   ════════════════════════════════════════════════════════════════════ */
+
+function ActionButtons({ candidate: c }: { candidate: OnboardingCandidate }) {
+  const scheduleM = useScheduleOnboardingSession();
+  const welcomeM = useSendWelcomeMessage();
+  const meetingsQ = useCandidateMeetings(c.id);
+  const hasKickoff = (meetingsQ.data ?? []).some(
+    (m) => m.kind === "onboarding_kickoff" && m.status === "scheduled",
+  );
+
+  return (
+    <div className="space-y-2">
+      <button
+        type="button"
+        disabled={scheduleM.isPending || hasKickoff}
+        onClick={() =>
+          scheduleM.mutate({ candidateId: c.id, kind: "onboarding_kickoff", duration_min: 45 })
+        }
+        className={
+          "w-full text-[11.5px] font-semibold px-3 py-2 rounded-md inline-flex items-center justify-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed " +
+          (hasKickoff
+            ? "bg-emerald-500/10 border border-emerald-500/30 text-emerald-400"
+            : "bg-red-500 text-white hover:bg-red-600")
+        }
+      >
+        {scheduleM.isPending ? <Loader2 size={11} className="animate-spin" /> : hasKickoff ? <CheckCircle2 size={11} /> : <Calendar size={11} />}
+        {hasKickoff ? "Kickoff scheduled" : "Schedule kickoff"}
+      </button>
+      {!c.welcome_sent_at && (
+        <button
+          type="button"
+          disabled={welcomeM.isPending}
+          onClick={() => welcomeM.mutate({ candidateId: c.id })}
+          className="w-full text-[11.5px] font-semibold px-3 py-2 rounded-md bg-zinc-800 border border-zinc-700 text-zinc-100 hover:bg-zinc-700 inline-flex items-center justify-center gap-1.5 disabled:opacity-50"
+        >
+          {welcomeM.isPending ? <Loader2 size={11} className="animate-spin" /> : <Mail size={11} />}
+          Send welcome
+        </button>
+      )}
+      {c.welcome_sent_at && (
+        <div className="w-full text-[11px] text-emerald-400 inline-flex items-center justify-center gap-1.5 px-3 py-2">
+          <CheckCircle2 size={11} /> Welcome sent {timeAgo(c.welcome_sent_at)}
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ════════════════════════════════════════════════════════════════════
+   ATOMS + EMPTY STATES
+   ════════════════════════════════════════════════════════════════════ */
+
+function StatusBadge({ status }: { status: string }) {
+  const cls =
+    status === "hired" ? "bg-emerald-500/15 text-emerald-300 border border-emerald-500/30" :
+    status === "offer" ? "bg-violet-500/15 text-violet-300 border border-violet-500/30" :
+                         "bg-zinc-800 text-zinc-300 border border-zinc-700";
+  return (
+    <span className={"text-[10px] font-bold tracking-[0.12em] px-2 py-0.5 rounded uppercase " + cls}>
+      <span className="inline-block w-1 h-1 rounded-full bg-current opacity-60 mr-1.5 align-middle" />
+      {status === "hired" ? "ACTIVE" : status === "offer" ? "AWAITING" : status.toUpperCase()}
     </span>
+  );
+}
+
+function MetaPill({
+  icon, text, mono,
+}: {
+  icon: React.ReactNode;
+  text: string;
+  mono?: boolean;
+}) {
+  return (
+    <span className={"inline-flex items-center gap-1 px-2 py-0.5 rounded border border-zinc-700/70 bg-zinc-900/60 text-zinc-400 " + (mono ? "font-mono" : "")}>
+      <span className="text-zinc-500">{icon}</span>
+      {text}
+    </span>
+  );
+}
+
+function FullEmptyState() {
+  return (
+    <div className="h-full flex items-center justify-center bg-zinc-900/40">
+      <div className="max-w-md w-full px-8 py-10 text-center rounded-md border border-zinc-700/70 bg-zinc-900">
+        <div className="w-12 h-12 mx-auto rounded-full bg-zinc-800 border border-zinc-700 flex items-center justify-center mb-4">
+          <Inbox size={18} className="text-zinc-500" />
+        </div>
+        <div className="text-[10px] tracking-[0.12em] text-zinc-500 mb-2 uppercase">
+          <span className="inline-block w-1 h-1 rounded-full bg-red-500 mr-1.5 align-middle" />
+          ONBOARDING PIPELINE
+        </div>
+        <h3 className="text-[15px] font-semibold text-zinc-100 mb-2">
+          No one in onboarding yet.
+        </h3>
+        <p className="text-[12.5px] text-zinc-400 leading-relaxed">
+          Move a candidate to <span className="text-zinc-200">offer</span> or <span className="text-zinc-200">hired</span> in <a href="/hiring" className="text-red-400 hover:underline">/hiring</a> and they'll show up here.
+        </p>
+      </div>
+    </div>
+  );
+}
+
+function PickOneHint() {
+  return (
+    <div className="h-full flex items-center justify-center text-[12.5px] text-zinc-500 flex-1">
+      <div className="flex items-center gap-2">
+        <Target size={14} />
+        Pick a candidate on the left to open their workspace.
+      </div>
+    </div>
   );
 }
