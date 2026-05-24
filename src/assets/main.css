@@ -59,34 +59,41 @@ html, body {
 @layer base {
   :root,
   [data-company="codeWithAli"] {
-    /* Surfaces — warm dark zinc, matching the takeover-B2B mockup feel.
-     * Body sits a couple notches off pure black so it reads as a
-     * surface rather than a void; cards lift cleanly above it without
-     * needing aggressive shadows. */
-    --background: 240 8% 6%;        /* warm zinc body ~ rgb(14,14,18) */
-    --foreground: 0 0% 97%;
-    --card: 240 9% 11%;             /* clearly elevated ~ rgb(25,25,32) */
-    --card-foreground: 0 0% 97%;
-    --popover: 240 9% 12%;
-    --popover-foreground: 0 0% 97%;
+    /* Surfaces — true zinc tones, NOT pure black.
+     *
+     * Calibrated against Tailwind's zinc scale so surfaces match the
+     * "Discord-with-mood-lighting" feel the user asked for:
+     *   background ≈ zinc-900    (10% lightness, clearly visible)
+     *   card       ≈ zinc-800/700 mix (14%, lifts off the body)
+     *   muted      ≈ zinc-700ish  (17%, used as button/hover surfaces)
+     *   border     ≈ zinc-600     (26%, actually visible at low contrast)
+     *
+     * Earlier values had body at 6% (basically void) and text-dim at
+     * 28% lightness which faded any non-active text into nothing. */
+    --background: 240 6% 10%;       /* zinc-900-ish body */
+    --foreground: 0 0% 98%;
+    --card: 240 5% 14%;             /* clearly elevated card surface */
+    --card-foreground: 0 0% 98%;
+    --popover: 240 5% 15%;
+    --popover-foreground: 0 0% 98%;
 
     /* Brand */
     --primary: 0 72% 51%;          /* Red-600 */
     --primary-foreground: 0 0% 100%;
-    --secondary: 240 8% 14%;        /* mid-elevation ~ rgb(32,32,40) */
-    --secondary-foreground: 0 0% 96%;
+    --secondary: 240 5% 17%;        /* mid-elevation, button-grade surface */
+    --secondary-foreground: 0 0% 97%;
 
     /* Utility */
-    --muted: 240 8% 14%;
-    --muted-foreground: 240 4% 60%;
-    --accent: 240 8% 14%;
-    --accent-foreground: 0 0% 96%;
+    --muted: 240 5% 17%;
+    --muted-foreground: 240 4% 70%; /* was 60% — readable, not whispered */
+    --accent: 240 5% 17%;
+    --accent-foreground: 0 0% 97%;
     --destructive: 0 84% 60%;
     --destructive-foreground: 0 0% 100%;
 
-    /* Borders & Inputs — strong enough to anchor cards on the new lifted body */
-    --border: 240 8% 20%;           /* ~ rgb(46,46,57) — reads clean */
-    --input: 240 8% 12%;
+    /* Borders & Inputs — strong enough to actually anchor cards */
+    --border: 240 5% 26%;           /* zinc-600-ish, visible at a glance */
+    --input: 240 5% 16%;
     --ring: 0 72% 51%;
 
     /* Charts */
@@ -96,26 +103,26 @@ html, body {
     --chart-4: 25 80% 55%;         /* Orange */
     --chart-5: 0 50% 40%;
 
-    /* Sidebar — darker than body for nav contrast, but lifted enough
-     * to keep icons + labels readable on the new warmer palette. */
-    --sidebar-background: 240 10% 4%;    /* ~ rgb(9,9,12) */
+    /* Sidebar — slightly darker than the body for spatial separation,
+     * but no longer dropping to near-black. */
+    --sidebar-background: 240 6% 7%;
     --sidebar-foreground: 0 0% 100%;
     --sidebar-primary: 0 72% 51%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 240 8% 11%;        /* hovered nav item */
+    --sidebar-accent: 240 5% 14%;        /* hovered nav item */
     --sidebar-accent-foreground: 0 0% 100%;
-    --sidebar-border: 240 8% 14%;
+    --sidebar-border: 240 5% 18%;
     --sidebar-ring: 0 72% 51%;
 
     /* Company-specific tokens */
     --brand-accent: 0 72% 51%;     /* Red */
     --brand-accent-rgb: 220, 38, 38;
     --brand-glow: 0 72% 51%;
-    --surface-hover: 240 5% 9%;
-    --surface-active: 240 5% 11%;
-    --text-dim: 240 4% 28%;
-    --text-muted: 240 4% 42%;
-    --border-subtle: 240 5% 9%;
+    --surface-hover: 240 5% 14%;
+    --surface-active: 240 5% 16%;
+    --text-dim: 240 4% 50%;         /* was 28% — actually readable now */
+    --text-muted: 240 4% 64%;       /* was 42% */
+    --border-subtle: 240 5% 14%;
   }
 
   /* ── Simplicity Theme ── */

@@ -485,7 +485,7 @@ export const MessageBubble: React.FC<Props> = ({
             <span className={`text-[13px] font-semibold ${isOwn ? "text-primary" : "text-foreground"}`}>
               {msg.sent_by}
             </span>
-            <span className="text-[10px] text-muted-foreground/50" title={formatExactTime(msg.created_at)}>
+            <span className="text-[10px] text-muted-foreground/80" title={formatExactTime(msg.created_at)}>
               {formatRelative(msg.created_at)}
             </span>
             {isPinned && (

@@ -1166,7 +1166,7 @@ export const MessageComposer: React.FC<Props> = ({
           </button>
         </div>
 
-        <p className="text-[10px] text-muted-foreground/40 mt-1.5 px-1">
+        <p className="text-[10px] text-muted-foreground/75 mt-1.5 px-1">
           Press <kbd className="px-1 py-0.5 bg-muted/50 rounded text-muted-foreground/70 text-[9px] border border-border">Enter</kbd> to send ·
           <kbd className="mx-1 px-1 py-0.5 bg-muted/50 rounded text-muted-foreground/70 text-[9px] border border-border">Shift+Enter</kbd> newline ·
           <kbd className="mx-1 px-1 py-0.5 bg-muted/50 rounded text-muted-foreground/70 text-[9px] border border-border">/axon</kbd> draft with AI ·

@@ -142,7 +142,7 @@ export const ChatSidebar: React.FC<Props> = ({ groups, employees, onCreateChanne
             <div className="p-1.5 rounded-sm bg-primary/[0.08]">
               <MessageSquare className="h-3.5 w-3.5 text-primary" />
             </div>
-            <span className="text-[11px] text-muted-foreground/40 uppercase tracking-[0.15em] font-medium">
+            <span className="text-[11px] text-muted-foreground/80 uppercase tracking-[0.15em] font-medium">
               Messages
             </span>
           </div>
@@ -195,13 +195,13 @@ export const ChatSidebar: React.FC<Props> = ({ groups, employees, onCreateChanne
         </div>
 
         <div className="relative">
-          <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3 w-3 text-muted-foreground/40" />
+          <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3 w-3 text-muted-foreground/70" />
           <input
             type="text"
             placeholder="Search conversations..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full pl-7 pr-2 py-1.5 bg-muted/30 border border-border rounded-sm text-[12px] text-foreground/60 placeholder:text-muted-foreground/40 focus:outline-none focus:border-border"
+            className="w-full pl-7 pr-2 py-1.5 bg-muted/30 border border-border rounded-sm text-[12px] text-foreground placeholder:text-muted-foreground/70 focus:outline-none focus:border-border"
           />
         </div>
       </div>
@@ -209,7 +209,7 @@ export const ChatSidebar: React.FC<Props> = ({ groups, employees, onCreateChanne
       {/* Group list */}
       <div className="flex-1 overflow-y-auto py-2 px-2">
         {filtered.length === 0 ? (
-          <p className="text-center text-[12px] text-muted-foreground/40 py-8">No conversations</p>
+          <p className="text-center text-[12px] text-muted-foreground/70 py-8">No conversations</p>
         ) : (
           <>
             {/* Threads virtual row — Slack-style global threads inbox */}
@@ -219,7 +219,7 @@ export const ChatSidebar: React.FC<Props> = ({ groups, employees, onCreateChanne
               className={`flex w-full items-center gap-2 rounded-sm px-3 py-1.5 mb-0.5 text-[12px] transition-all ${
                 GroupName === "__threads__"
                   ? "bg-primary/[0.08] border border-primary/15 text-foreground"
-                  : "border border-transparent text-white/55 hover:bg-muted/30 hover:text-foreground/80"
+                  : "border border-transparent text-foreground/75 hover:bg-muted/30 hover:text-foreground"
               }`}
             >
               <MessageSquare className="h-3.5 w-3.5 text-sky-400" />
@@ -234,7 +234,7 @@ export const ChatSidebar: React.FC<Props> = ({ groups, employees, onCreateChanne
                 className={`flex w-full items-center gap-2 rounded-sm px-3 py-1.5 mb-0.5 text-[12px] transition-all ${
                   GroupName === "__starred__"
                     ? "bg-primary/[0.08] border border-primary/15 text-foreground"
-                    : "border border-transparent text-white/55 hover:bg-muted/30 hover:text-foreground/80"
+                    : "border border-transparent text-foreground/75 hover:bg-muted/30 hover:text-foreground"
                 }`}
               >
                 <Star className="h-3.5 w-3.5 text-amber-400" />
@@ -374,7 +374,7 @@ export const ChatSidebar: React.FC<Props> = ({ groups, employees, onCreateChanne
 
       {/* Footer */}
       <div className="px-4 py-2 border-t border-border">
-        <p className="text-[10px] text-muted-foreground/40">
+        <p className="text-[10px] text-muted-foreground/70">
           {filtered.length} of {groups.length} conversations
         </p>
       </div>
@@ -538,13 +538,13 @@ function GroupButton({
           <div className="flex-1 min-w-0">
             <div className="flex items-center justify-between gap-2">
               <span className={`text-[12px] font-medium truncate ${
-                isActive ? "text-foreground" : unread > 0 ? "text-foreground/80" : "text-white/55"
+                isActive ? "text-foreground" : unread > 0 ? "text-foreground" : "text-foreground/80"
               }`}>
                 {displayName}
               </span>
               <UnreadBadge count={unread} />
             </div>
-            <p className="text-[10px] text-muted-foreground/50 truncate mt-0.5">
+            <p className="text-[10px] text-muted-foreground/75 truncate mt-0.5">
               {isGeneral
                 ? "Company-wide"
                 : isOneOnOne
