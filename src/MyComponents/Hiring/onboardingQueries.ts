@@ -169,17 +169,53 @@ export function useGenerateOnboardingPlan() {
 export function useSendWelcomeMessage() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async ({ candidateId, channel }: { candidateId: string; channel?: string }) => {
+    mutationFn: async ({
+      candidateId,
+      channel,
+      confirm,
+    }: {
+      candidateId: string;
+      channel?: string;
+      confirm?: boolean;
+    }) => {
       const out = await sendWelcomeMessageAction.handler(
-        { candidate_id: candidateId, channel },
+        { candidate_id: candidateId, channel, confirm },
         headlessCtx(),
       );
-      if (!out.summary.toLowerCase().startsWith("posted") && !out.data?.message_id) {
-        throw new Error(out.summary);
+      const data = out.data as
+        | {
+            message_id?: number;
+            needs_confirmation?: boolean;
+            concerns?: string[];
+            verdict_tier?: string;
+            fit_score?: number;
+          }
+        | undefined;
+
+      // Safety gate: action refused on a concerning verdict. Return
+      // normally so the UI can show the concerns + offer "Send anyway".
+      if (data?.needs_confirmation) {
+        return out;
       }
-      return out;
+
+      // Real success: a message_id came back OR the summary confirms it.
+      if (data?.message_id || out.summary.toLowerCase().startsWith("posted")) {
+        return out;
+      }
+
+      // Anything else is a real error.
+      throw new Error(out.summary);
     },
-    onSuccess: () => invalidateAll(qc),
+    onSuccess: (out, vars) => {
+      const data = out.data as { message_id?: number } | undefined;
+      // Only invalidate when something actually changed in the DB.
+      if (data?.message_id) {
+        invalidateAll(qc);
+      } else {
+        // Refetch candidate so UI sees the latest verdict / concerns.
+        qc.invalidateQueries({ queryKey: ["candidates", "one", vars.candidateId] });
+      }
+    },
   });
 }
 

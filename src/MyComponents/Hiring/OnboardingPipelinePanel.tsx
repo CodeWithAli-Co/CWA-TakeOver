@@ -188,6 +188,15 @@ function ActionStrip({ candidate: c }: { candidate: OnboardingCandidate }) {
   const planExists = !!c.onboarding_plan;
   const welcomeSent = !!c.welcome_sent_at;
 
+  // Watch for the safety-gate response from send_welcome_message.
+  // When Axon refuses the first call (concerning verdict), data carries
+  // needs_confirmation + concerns so we can show a private inline
+  // review before posting publicly.
+  const welcomeData = welcomeM.data?.data as
+    | { needs_confirmation?: boolean; concerns?: string[]; verdict_tier?: string; fit_score?: number; message_id?: number }
+    | undefined;
+  const welcomeNeedsConfirm = welcomeData?.needs_confirmation === true;
+
   return (
     <div className="flex flex-wrap gap-2">
       {!planExists ? (
@@ -209,13 +218,23 @@ function ActionStrip({ candidate: c }: { candidate: OnboardingCandidate }) {
       )}
 
       {!welcomeSent ? (
-        <ActionButton
-          icon={welcomeM.isPending ? <Loader2 size={11} className="animate-spin" /> : <Mail size={11} />}
-          label="Send welcome"
-          variant="primary"
-          disabled={welcomeM.isPending}
-          onClick={() => welcomeM.mutate({ candidateId: c.id })}
-        />
+        welcomeNeedsConfirm ? (
+          <ActionButton
+            icon={welcomeM.isPending ? <Loader2 size={11} className="animate-spin" /> : <AlertCircle size={11} />}
+            label="Send anyway"
+            variant="brand"
+            disabled={welcomeM.isPending}
+            onClick={() => welcomeM.mutate({ candidateId: c.id, confirm: true })}
+          />
+        ) : (
+          <ActionButton
+            icon={welcomeM.isPending ? <Loader2 size={11} className="animate-spin" /> : <Mail size={11} />}
+            label="Send welcome"
+            variant="primary"
+            disabled={welcomeM.isPending}
+            onClick={() => welcomeM.mutate({ candidateId: c.id })}
+          />
+        )
       ) : (
         <ActionButton
           icon={<CheckCircle2 size={11} />}
@@ -253,6 +272,50 @@ function ActionStrip({ candidate: c }: { candidate: OnboardingCandidate }) {
         <div className="basis-full flex items-center gap-2 text-[11px] text-red-400 mt-1">
           <AlertCircle size={11} />
           {String((planM.error || welcomeM.error || scheduleM.error || fullM.error) ?? "")}
+        </div>
+      )}
+
+      {/* Safety-gate review block — appears when Axon refused the
+          first send_welcome_message call due to a concerning verdict.
+          Shows like a private DM from Axon so the operator can make
+          an informed choice before publicly broadcasting the hire. */}
+      {welcomeNeedsConfirm && !welcomeSent && (
+        <div className="basis-full mt-2 rounded-sm border border-amber-500/30 bg-amber-500/[0.04] p-3">
+          <div className="flex items-start gap-2.5">
+            <div className="w-6 h-6 rounded-full bg-gradient-to-br from-red-500 to-red-700 flex items-center justify-center flex-shrink-0">
+              <Sparkles size={11} className="text-white" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-2 mb-1">
+                <span className="text-[11px] font-semibold text-amber-300">AXON · private heads-up</span>
+                {welcomeData?.verdict_tier && (
+                  <span className="text-[9px] font-bold tracking-wider px-1.5 py-0.5 rounded-full uppercase bg-amber-500/15 text-amber-400 border border-amber-500/30">
+                    {welcomeData.verdict_tier} · {welcomeData.fit_score ?? "?"}
+                  </span>
+                )}
+              </div>
+              <p className="text-[12.5px] text-amber-200/90 leading-relaxed mb-2">
+                I rated this candidate weakly — broadcasting a public welcome to #General might be premature. Concerns I flagged:
+              </p>
+              {welcomeData?.concerns && welcomeData.concerns.length > 0 ? (
+                <ul className="space-y-1 text-[11.5px] text-amber-200/80 leading-snug mb-2">
+                  {welcomeData.concerns.map((c, i) => (
+                    <li key={i} className="flex items-start gap-1.5">
+                      <span className="text-amber-400 mt-0.5">·</span>
+                      <span>{c}</span>
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <p className="text-[11px] text-amber-200/60 italic mb-2">
+                  (No structured concerns recorded — see the candidate's full assessment in /hiring.)
+                </p>
+              )}
+              <p className="text-[11px] text-amber-200/60 leading-snug">
+                If you've decided to go ahead anyway, click <span className="text-amber-300 font-semibold">Send anyway</span> above and I'll post it.
+              </p>
+            </div>
+          </div>
         </div>
       )}
     </div>

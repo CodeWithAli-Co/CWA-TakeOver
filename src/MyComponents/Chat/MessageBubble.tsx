@@ -19,7 +19,7 @@ import { useState } from "react";
 import { motion } from "framer-motion";
 import {
   Smile, Reply, MoreVertical, CheckCheck, Pin, PinOff, MessagesSquare,
-  Pencil, Trash2, Copy, Check, Forward, Star, X,
+  Pencil, Trash2, Copy, Check, Forward, Star, X, Sparkles,
 } from "lucide-react";
 import { useChatStore } from "@/stores/chatStore";
 import {
@@ -68,6 +68,35 @@ interface Props {
   /** Open the forward dialog with this message as source. */
   onForward?: (msg: MessageInterface) => void;
   allMessages: MessageInterface[];
+}
+
+/** Recognise messages posted by AXON (the in-app agent) so we can
+ *  swap the standard avatar for a branded orb. Case-insensitive +
+ *  also accepts "axon" / "Axon" in case future writers vary. */
+function isAxonSender(sender: string | null | undefined): boolean {
+  if (!sender) return false;
+  return sender.trim().toLowerCase() === "axon";
+}
+
+/** Static orb avatar — radial red gradient with a sparkle glyph + a
+ *  soft red glow shadow. Visually matches the canvas Orb used in the
+ *  command panel without paying the canvas cost per message. */
+function AxonOrbAvatar() {
+  return (
+    <div
+      className="h-9 w-9 rounded-sm border border-red-500/40 flex items-center justify-center relative overflow-hidden"
+      style={{
+        background:
+          "radial-gradient(circle at 30% 30%, rgb(254, 202, 202) 0%, rgb(239, 68, 68) 35%, rgb(127, 29, 29) 100%)",
+        boxShadow:
+          "0 0 14px rgba(239, 68, 68, 0.45), inset 0 0 6px rgba(255, 255, 255, 0.15)",
+      }}
+      aria-label="AXON"
+      title="AXON"
+    >
+      <Sparkles size={14} className="text-white drop-shadow-[0_0_2px_rgba(255,255,255,0.6)]" />
+    </div>
+  );
 }
 
 const formatRelative = (dateString: string) => {
@@ -424,17 +453,23 @@ export const MessageBubble: React.FC<Props> = ({
       <div className="w-9 shrink-0 flex items-start justify-center pt-0.5">
         {!isGrouped ? (
           <div className="relative">
-            <Avatar className="h-9 w-9 rounded-sm border border-border">
-              <AvatarImage
-                src={`https://tqaytmvihogvhhvwgbwm.supabase.co/storage/v1/object/public/avatars//${msg.userAvatar}`}
-              />
-              <AvatarFallback className="bg-muted/50 text-muted-foreground/70 text-[10px] rounded-sm font-medium">
-                {msg.sent_by?.slice(0, 2)?.toUpperCase()}
-              </AvatarFallback>
-            </Avatar>
-            <div className="absolute -right-0.5 -bottom-0.5">
-              <PresenceDot username={msg.sent_by} />
-            </div>
+            {isAxonSender(msg.sent_by) ? (
+              <AxonOrbAvatar />
+            ) : (
+              <Avatar className="h-9 w-9 rounded-sm border border-border">
+                <AvatarImage
+                  src={`https://tqaytmvihogvhhvwgbwm.supabase.co/storage/v1/object/public/avatars//${msg.userAvatar}`}
+                />
+                <AvatarFallback className="bg-muted/50 text-muted-foreground/70 text-[10px] rounded-sm font-medium">
+                  {msg.sent_by?.slice(0, 2)?.toUpperCase()}
+                </AvatarFallback>
+              </Avatar>
+            )}
+            {!isAxonSender(msg.sent_by) && (
+              <div className="absolute -right-0.5 -bottom-0.5">
+                <PresenceDot username={msg.sent_by} />
+              </div>
+            )}
           </div>
         ) : (
           <span className="text-[9px] text-muted-foreground/40 opacity-0 group-hover:opacity-100 transition-opacity pt-1 font-medium tabular-nums">

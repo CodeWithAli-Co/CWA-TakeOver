@@ -250,22 +250,28 @@ export const generateOnboardingPlanAction: AxonAction<
 // ── 2. send_welcome_message ────────────────────────────────────────
 
 export const sendWelcomeMessageAction: AxonAction<
-  { candidate_id: string; channel?: string },
-  { message_id: number }
+  { candidate_id: string; channel?: string; confirm?: boolean },
+  { message_id?: number; needs_confirmation?: boolean; concerns?: string[]; verdict_tier?: string; fit_score?: number }
 > = {
   name: "send_welcome_message",
   description:
-    "Post a warm welcome message to the team chat announcing a new hire. Axon drafts the message from the candidate's resume + assessment. Default channel: 'General'.",
+    "Post a warm welcome message to the team chat announcing a new hire. Axon drafts the message from the candidate's resume + assessment. SAFETY GATE: if Axon's verdict was OK / WEAK / MISMATCH, this action refuses the first call and returns the concerns so the operator can review. Pass confirm=true on the second call to post anyway. Default channel: 'General'.",
   input_schema: {
     type: "object",
     properties: {
       candidate_id: { type: "string" },
       channel: { type: "string", description: "Chat channel name. Default 'General'." },
+      confirm: {
+        type: "boolean",
+        description:
+          "Bypass the low-verdict safety gate. Set this only after the operator has reviewed Axon's concerns and explicitly decided to send anyway.",
+      },
     },
     required: ["candidate_id"],
   },
   mutating: true,
-  handler: async ({ candidate_id, channel = "General" }, ctx) => {
+  requiresConfirmation: false,
+  handler: async ({ candidate_id, channel = "General", confirm }, ctx) => {
     const { data: c, error } = await supabase
       .from("candidates")
       .select("*")
@@ -274,9 +280,45 @@ export const sendWelcomeMessageAction: AxonAction<
     if (error) return { summary: `Lookup failed: ${error.message}` };
     if (!c) return { summary: `No candidate with id ${candidate_id}.` };
 
-    const cand = c as CandidateLite;
+    const cand = c as CandidateLite & {
+      verdict_tier?: string | null;
+      verdict_summary?: string | null;
+      fit_score?: number | null;
+      axon_assessment?: { concerns?: string[] } | null;
+    };
     if (cand.welcome_sent_at) {
       return { summary: `Welcome message already sent for ${cand.full_name}.` };
+    }
+
+    // ── SAFETY GATE ────────────────────────────────────────
+    // Don't broadcast a celebratory welcome to the whole team for a
+    // hire Axon flagged as concerning. Force the operator to look
+    // at the concerns and confirm before going public.
+    const concerningTiers = new Set(["OK", "WEAK", "MISMATCH"]);
+    const tier = cand.verdict_tier ?? null;
+    const isConcerning = tier !== null && concerningTiers.has(tier);
+    if (isConcerning && !confirm) {
+      const score = cand.fit_score ?? null;
+      const concerns = cand.axon_assessment?.concerns ?? [];
+      const summary =
+        `Hold up — I rated ${cand.full_name} ${score ?? "?"}/100 (${tier}). ` +
+        `Broadcasting a public welcome to #General feels off given the concerns I flagged. ` +
+        `Review the concerns below; click "Send anyway" if you want me to post it regardless.`;
+      ctx.logActivity({
+        actionName: "send_welcome_message",
+        params: { candidate_id, channel, confirm: false },
+        summary,
+      });
+      return {
+        summary,
+        silent: true,
+        data: {
+          needs_confirmation: true,
+          concerns,
+          verdict_tier: tier,
+          fit_score: score ?? undefined,
+        },
+      };
     }
 
     let message: string;
@@ -322,11 +364,13 @@ export const sendWelcomeMessageAction: AxonAction<
     const fullMsg = `📢 Welcome aboard — ${cand.full_name}\n\n${message}`;
 
     // cwa_chat IS the General channel — no group/channel column to set.
+    // sent_by is always "AXON" for welcome messages — the content is
+    // drafted by Axon, even though the operator clicked the button.
     // (DMs live in cwa_dm_chat with a dm_group column. If you want this
     //  posted as a DM thread instead, switch tables + use dm_group.)
     const insertPayload: Record<string, unknown> = {
       message: fullMsg,
-      sent_by: ctx.operator?.username ?? "AXON",
+      sent_by: "AXON",
     };
 
     const { data: inserted, error: insertErr } = await supabase
