@@ -4,7 +4,7 @@ import {
   ChevronsUpDown,
   CreditCard,
   LogOut,
-  Sparkles,
+  Settings,
 } from "lucide-react";
 import {
   Avatar,
@@ -130,8 +130,8 @@ export function NavUser({ }: NavUserProps) {
                 onClick={() => goTo("/settings")}
                 className="text-foreground/90 hover:text-foreground hover:bg-muted/60 focus:bg-muted/60 cursor-pointer rounded-sm text-[12px] font-medium"
               >
-                <Sparkles className="h-3.5 w-3.5 mr-2 text-muted-foreground" />
-                Profile Settings
+                <Settings className="h-3.5 w-3.5 mr-2 text-muted-foreground" />
+                Settings
               </DropdownMenuItem>
             </DropdownMenuGroup>
             <DropdownMenuSeparator className="bg-border" />

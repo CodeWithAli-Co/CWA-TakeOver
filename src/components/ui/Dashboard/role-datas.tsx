@@ -1,6 +1,5 @@
 import {
   Frame,
-  Settings2,
   SquareTerminal,
   MessageCircle,
   Home,
@@ -86,11 +85,7 @@ export const internData = {
       icon: Target,
     },
 
-    {
-      title: "Settings",
-      url: "/settings",
-      icon: Settings2,
-    },
+    // Settings moved to the profile dropdown (see nav-user.tsx).
   ],
 };
 
@@ -127,11 +122,7 @@ export const memberData = {
       icon: Target,
     },
  
-    {
-      title: "Settings",
-      url: "/settings",
-      icon: Settings2,
-    },
+    // Settings moved to the profile dropdown (see nav-user.tsx).
   ],
 };
 
@@ -190,11 +181,7 @@ export const accountManagerData = {
       isActive: false,
       icon: CalendarDays,
     },
-    {
-      title: "Settings",
-      url: "/settings",
-      icon: Settings2,
-    },
+    // Settings moved to the profile dropdown (see nav-user.tsx).
   ],
 };
 
@@ -261,11 +248,7 @@ export const marketingData = {
       icon: CalendarDays,
     },
  
-    {
-      title: "Settings",
-      url: "/settings",
-      icon: Settings2,
-    },
+    // Settings moved to the profile dropdown (see nav-user.tsx).
   ],
 };
 
@@ -403,34 +386,7 @@ export const adminData = {
     // },
 
  
-    {
-      title: "Settings",
-      url: "/settings",
-      icon: Settings2,
-      items: [
-        {
-          // // In your sidebar navigation <Link to="/settings">Settings</Link>
-          title: "General",
-          url: "/settings",
-        },
-        {
-          title: "Team",
-          // url: "/settings?tab=teams",
-        },
-        {
-          title: "Tasks",
-          // url: "/settings?tab=tasks",
-        },
-        {
-          title: "Company",
-          // url: "/settings?tab=company",
-        },
-        {
-          title: "Notification",
-          // url: "/settings?tab=notification",
-        },
-      ],
-    },
+    // Settings moved to the profile dropdown (see nav-user.tsx).
   ],
   projects: [
     {
@@ -539,34 +495,7 @@ export const projectManagerData = {
     //   icon: Cat,
     // },
 
-    {
-      title: "Settings",
-      url: "/settings",
-      icon: Settings2,
-      items: [
-        {
-          // // In your sidebar navigation <Link to="/settings">Settings</Link>
-          title: "General",
-          url: "/settings",
-        },
-        {
-          title: "Team",
-          // url: "/settings?tab=teams",
-        },
-        {
-          title: "Tasks",
-          // url: "/settings?tab=tasks",
-        },
-        {
-          title: "Company",
-          // url: "/settings?tab=company",
-        },
-        {
-          title: "Notification",
-          // url: "/settings?tab=notification",
-        },
-      ],
-    },
+    // Settings moved to the profile dropdown (see nav-user.tsx).
   ],
   projects: [
     {
@@ -679,34 +608,7 @@ export const securityEngineerData = {
     // },
 
 
-    {
-      title: "Settings",
-      url: "/settings",
-      icon: Settings2,
-      items: [
-        {
-          // // In your sidebar navigation <Link to="/settings">Settings</Link>
-          title: "General",
-          url: "/settings",
-        },
-        {
-          title: "Team",
-          // url: "/settings?tab=teams",
-        },
-        {
-          title: "Tasks",
-          // url: "/settings?tab=tasks",
-        },
-        {
-          title: "Company",
-          // url: "/settings?tab=company",
-        },
-        {
-          title: "Notification",
-          // url: "/settings?tab=notification",
-        },
-      ],
-    },
+    // Settings moved to the profile dropdown (see nav-user.tsx).
   ],
   projects: [
     {
@@ -954,30 +856,7 @@ export const cooData = {
       company: "simplicityFunds" as const,
     },
 
-    // ── Settings (shared) ──
-    {
-      title: "Settings",
-      url: "/settings",
-      icon: Settings2,
-      items: [
-        {
-          title: "General",
-          url: "/settings",
-        },
-        {
-          title: "Team",
-        },
-        {
-          title: "Tasks",
-        },
-        {
-          title: "Company",
-        },
-        {
-          title: "Notification",
-        },
-      ],
-    },
+    // Settings moved to the profile dropdown (see nav-user.tsx).
   ],
   projects: [
     {
@@ -1175,30 +1054,7 @@ export const ceoData = {
       company: "simplicityFunds" as const,
     },
 
-    // ── Settings (shared) ──
-    {
-      title: "Settings",
-      url: "/settings",
-      icon: Settings2,
-      items: [
-        {
-          title: "General",
-          url: "/settings",
-        },
-        {
-          title: "Team",
-        },
-        {
-          title: "Tasks",
-        },
-        {
-          title: "Company",
-        },
-        {
-          title: "Notification",
-        },
-      ],
-    },
+    // Settings moved to the profile dropdown (see nav-user.tsx).
   ],
   projects: [
     {
@@ -1314,15 +1170,7 @@ export const cfoData = {
       icon: Users,
       isActive: false,
     },
-    {
-      title: "Settings",
-      url: "/settings",
-      icon: Settings2,
-      items: [
-        { title: "General", url: "/settings" },
-        { title: "Notification" },
-      ],
-    },
+    // Settings moved to the profile dropdown (see nav-user.tsx).
   ],
   projects: [] as ProjectItem[],
 };
