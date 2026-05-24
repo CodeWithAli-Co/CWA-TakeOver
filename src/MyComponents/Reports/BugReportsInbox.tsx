@@ -1,29 +1,36 @@
 /**
- * BugReportsInbox.tsx — Triage inbox for the bug_reports table.
+ * BugReportsInbox.tsx — Jira-style triage view for bug reports.
  *
- * Tab-mate of ReportsInbox under /reports. List + detail layout:
- *   · Left list pane shows reports with severity dot + area pill
- *     + reporter; clickable to load detail.
- *   · Right detail pane shows full description, repro steps,
- *     screenshot, page URL, browser info, console + network logs,
- *     plus triage controls (status, resolution notes).
+ * Layout: full-width sortable table → click a row → editorial
+ * detail panel slides in from the right. Stays out of the way
+ * for triage-at-scale, gives full context on a single click.
  *
- * Status workflow: open → in_progress → resolved | wontfix
- *
- * Visual language matches ReportsInbox so flipping between the
- * two tabs feels like the same app, not two apps.
+ * Features beyond a plain list:
+ *   · Sortable columns (created_at default, severity, status,
+ *     reporter, area)
+ *   · Bulk actions — checkbox column + an action bar that
+ *     appears once 1+ rows are selected, lets admins move many
+ *     bugs to a status in one shot.
+ *   · Density toggle — comfortable vs compact row height.
+ *   · Filter dropdowns for status, severity, area in the
+ *     toolbar (chip-style, coloured when narrowed).
+ *   · Slide-over detail panel reuses all the editorial sections
+ *     from the previous detail pane (diagnostics, screenshot,
+ *     repro, triage controls).
  */
 
 import { useEffect, useMemo, useState } from "react";
 import {
-  Bug, Search, Loader2, AlertCircle, RefreshCw, Check, X,
+  Bug, Loader2, AlertCircle, Check,
   Clock, Image as ImageIcon, ChevronDown, Globe, Wifi, Terminal,
-  Save,
+  Save, ArrowUp, ArrowDown,
 } from "lucide-react";
-import { Virtuoso } from "react-virtuoso";
-import React from "react";
 import supabase from "@/MyComponents/supabase";
 import { ActiveUser } from "@/stores/query";
+import { SlideOver } from "./shared/SlideOver";
+import { InboxToolbar, type Density } from "./shared/InboxToolbar";
+
+// ── Types ───────────────────────────────────────────────────────
 
 type Severity = "low" | "medium" | "high" | "critical";
 type Status = "open" | "in_progress" | "resolved" | "wontfix";
@@ -70,24 +77,32 @@ interface NetworkEntry {
   error?: string;
 }
 
+// Visual encoding — single coloured rail/dot per severity, no
+// fight with the rest of the table chrome.
 const SEVERITY_META: Record<
   Severity,
-  { label: string; dot: string; chip: string; rail: string }
+  { label: string; rail: string; dot: string; eyebrow: string }
 > = {
-  low:      { label: "Low",      dot: "bg-zinc-400",     chip: "border-zinc-500/40 bg-zinc-500/10 text-zinc-300",      rail: "#71717a" },
-  medium:   { label: "Medium",   dot: "bg-blue-400",     chip: "border-blue-500/40 bg-blue-500/10 text-blue-300",      rail: "#3b82f6" },
-  high:     { label: "High",     dot: "bg-orange-400",   chip: "border-orange-500/40 bg-orange-500/10 text-orange-300", rail: "#f97316" },
-  critical: { label: "Critical", dot: "bg-red-500",      chip: "border-red-500/50 bg-red-500/10 text-red-300",         rail: "#ef4444" },
+  low:      { label: "Low",      rail: "#71717a", dot: "bg-zinc-400",  eyebrow: "text-zinc-400" },
+  medium:   { label: "Medium",   rail: "#60a5fa", dot: "bg-blue-400",  eyebrow: "text-blue-400" },
+  high:     { label: "High",     rail: "#f59e0b", dot: "bg-amber-400", eyebrow: "text-amber-400" },
+  critical: { label: "Critical", rail: "#ef4444", dot: "bg-red-500",   eyebrow: "text-red-400" },
 };
 
-const STATUS_META: Record<
-  Status,
-  { label: string; chip: string }
-> = {
-  open:        { label: "Open",         chip: "border-blue-500/40 bg-blue-500/10 text-blue-300" },
-  in_progress: { label: "In progress",  chip: "border-amber-500/40 bg-amber-500/10 text-amber-300" },
-  resolved:    { label: "Resolved",     chip: "border-emerald-500/40 bg-emerald-500/10 text-emerald-300" },
-  wontfix:     { label: "Won't fix",    chip: "border-zinc-500/40 bg-zinc-500/10 text-zinc-300" },
+// Sort rank for severity → so DESC means critical first, ASC
+// means low first.
+const SEVERITY_RANK: Record<Severity, number> = {
+  low: 0, medium: 1, high: 2, critical: 3,
+};
+
+const STATUS_LABEL: Record<Status, string> = {
+  open: "Open", in_progress: "Working", resolved: "Resolved", wontfix: "Won't fix",
+};
+const STATUS_COLOR: Record<Status, string> = {
+  open: "text-primary",
+  in_progress: "text-amber-400",
+  resolved: "text-emerald-400",
+  wontfix: "text-zinc-500",
 };
 
 const AREA_LABEL: Record<Area, string> = {
@@ -98,16 +113,46 @@ const AREA_LABEL: Record<Area, string> = {
 
 const ADMIN_ROLES = new Set(["CEO", "COO", "CFO", "Admin", "admin"]);
 
-export function BugReportsInbox() {
+// ── Sort state ──────────────────────────────────────────────────
+
+type SortKey = "created" | "severity" | "status" | "reporter" | "area" | "title";
+type SortDir = "asc" | "desc";
+
+interface SortState {
+  key: SortKey;
+  dir: SortDir;
+}
+
+interface Props {
+  refreshToken?: number;
+}
+
+// ── Main component ──────────────────────────────────────────────
+
+export function BugReportsInbox({ refreshToken }: Props = {}) {
   const [reports, setReports] = useState<BugReport[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [selectedId, setSelectedId] = useState<string | null>(null);
 
   const [statusFilter, setStatusFilter] = useState<Status | "all">("open");
   const [severityFilter, setSeverityFilter] = useState<Severity | "all">("all");
+  const [areaFilter, setAreaFilter] = useState<Area | "all">("all");
   const [search, setSearch] = useState("");
+
+  const [sort, setSort] = useState<SortState>({ key: "created", dir: "desc" });
+  const [density, setDensity] = useState<Density>(() => {
+    try {
+      const v = localStorage.getItem("cwa-bug-density");
+      return v === "compact" ? "compact" : "comfortable";
+    } catch { return "comfortable"; }
+  });
+  useEffect(() => {
+    try { localStorage.setItem("cwa-bug-density", density); } catch { /* noop */ }
+  }, [density]);
+
+  const [openId, setOpenId] = useState<string | null>(null);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
 
   const { data: me } = ActiveUser();
   const username = (me?.[0] as any)?.username ?? "";
@@ -138,9 +183,6 @@ export function BugReportsInbox() {
     }
 
     const rows = (data ?? []) as BugReport[];
-    // Non-admins only see their own. The RLS policy permits all
-    // reads (we keep it simple SQL-side), but the UI gates it so
-    // the inbox isn't a leaky surface for non-leadership users.
     const visible = isAdmin
       ? rows
       : rows.filter((r) => r.reporter_username === username);
@@ -148,299 +190,526 @@ export function BugReportsInbox() {
     setReports(visible);
     setLoading(false);
     setRefreshing(false);
-
-    if (!selectedId && visible.length > 0) {
-      setSelectedId(visible[0]!.id);
-    }
   };
 
   useEffect(() => {
     reload();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [username, isAdmin]);
+  }, [username, isAdmin, refreshToken]);
 
-  const filtered = useMemo(() => {
+  // Filtered + sorted view.
+  const visible = useMemo(() => {
     const q = search.trim().toLowerCase();
-    return reports.filter((r) => {
+    const filtered = reports.filter((r) => {
       if (statusFilter !== "all" && r.status !== statusFilter) return false;
       if (severityFilter !== "all" && r.severity !== severityFilter) return false;
+      if (areaFilter !== "all" && r.area !== areaFilter) return false;
       if (q) {
         const hay = `${r.title} ${r.description} ${r.reporter_username}`.toLowerCase();
         if (!hay.includes(q)) return false;
       }
       return true;
     });
-  }, [reports, statusFilter, severityFilter, search]);
 
-  const selected = reports.find((r) => r.id === selectedId) ?? null;
+    const sign = sort.dir === "asc" ? 1 : -1;
+    return [...filtered].sort((a, b) => {
+      switch (sort.key) {
+        case "severity":
+          return (SEVERITY_RANK[a.severity] - SEVERITY_RANK[b.severity]) * sign;
+        case "status":
+          return a.status.localeCompare(b.status) * sign;
+        case "reporter":
+          return a.reporter_username.localeCompare(b.reporter_username) * sign;
+        case "area":
+          return a.area.localeCompare(b.area) * sign;
+        case "title":
+          return a.title.localeCompare(b.title) * sign;
+        case "created":
+        default:
+          return (Date.parse(a.created_at) - Date.parse(b.created_at)) * sign;
+      }
+    });
+  }, [reports, statusFilter, severityFilter, areaFilter, search, sort]);
 
-  // Counts for the segmented status tabs.
-  const statusCounts = useMemo(() => {
-    const out: Record<Status, number> = { open: 0, in_progress: 0, resolved: 0, wontfix: 0 };
-    for (const r of reports) out[r.status] = (out[r.status] ?? 0) + 1;
-    return out;
-  }, [reports]);
+  const opened = reports.find((r) => r.id === openId) ?? null;
+
+  const hasAnyFilter =
+    statusFilter !== "open" ||
+    severityFilter !== "all" ||
+    areaFilter !== "all" ||
+    search.trim() !== "";
+
+  const clearFilters = () => {
+    setStatusFilter("open");
+    setSeverityFilter("all");
+    setAreaFilter("all");
+    setSearch("");
+  };
+
+  // Sort toggling — clicking the same key flips dir, clicking a
+  // new key starts at desc (most useful default for dates +
+  // severity).
+  const toggleSort = (key: SortKey) => {
+    setSort((prev) =>
+      prev.key === key
+        ? { key, dir: prev.dir === "asc" ? "desc" : "asc" }
+        : { key, dir: "desc" }
+    );
+  };
+
+  // Selection helpers.
+  const allSelected =
+    visible.length > 0 && visible.every((r) => selectedIds.has(r.id));
+  const someSelected = selectedIds.size > 0 && !allSelected;
+
+  const toggleAll = () => {
+    if (allSelected) {
+      setSelectedIds(new Set());
+    } else {
+      setSelectedIds(new Set(visible.map((r) => r.id)));
+    }
+  };
+  const toggleOne = (id: string) => {
+    setSelectedIds((cur) => {
+      const next = new Set(cur);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const bulkSetStatus = async (next: Status) => {
+    if (!isAdmin || selectedIds.size === 0) return;
+    const ids = [...selectedIds];
+    const patch = {
+      status: next,
+      triaged_by: username || null,
+      triaged_at: new Date().toISOString(),
+    };
+    const { error: err } = await supabase
+      .from("bug_reports")
+      .update(patch)
+      .in("id", ids);
+    if (err) {
+      setError(err.message);
+      return;
+    }
+    setSelectedIds(new Set());
+    reload();
+  };
 
   return (
-    <div className="flex flex-1 min-h-0">
-      {/* List pane */}
-      <aside className="flex w-[480px] shrink-0 flex-col border-r border-border/60 bg-card/15">
-        <div className="space-y-3 border-b border-border/40 px-5 py-4 bg-card/30 backdrop-blur-sm">
-          <div className="relative">
-            <Search className="absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
-            <input
-              type="text"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search title, description, or reporter…"
-              className="w-full rounded-lg border border-border/70 bg-background/60 pl-8 pr-8 py-2 text-[12px] placeholder:text-muted-foreground/60 outline-none focus:border-primary/50 focus:ring-2 focus:ring-primary/20 transition-colors"
-            />
-            {search && (
-              <button
-                type="button"
-                onClick={() => setSearch("")}
-                className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-              >
-                <X className="h-3 w-3" />
-              </button>
-            )}
-          </div>
+    <div className="flex flex-1 min-h-0 flex-col bg-background">
+      <InboxToolbar
+        search={search}
+        onSearchChange={setSearch}
+        searchPlaceholder="Search title, description, or reporter…"
+        countLabel={`${visible.length} ${visible.length === 1 ? "bug" : "bugs"}`}
+        onClearFilters={hasAnyFilter ? clearFilters : undefined}
+        density={density}
+        onDensityChange={setDensity}
+        filters={[
+          {
+            label: "Status",
+            value: statusFilter,
+            onChange: (v) => setStatusFilter(v as Status | "all"),
+            options: [
+              { value: "open",        label: "Open" },
+              { value: "in_progress", label: "Working" },
+              { value: "resolved",    label: "Resolved" },
+              { value: "wontfix",     label: "Won't fix" },
+              { value: "all",         label: "All statuses" },
+            ],
+          },
+          {
+            label: "Severity",
+            value: severityFilter,
+            onChange: (v) => setSeverityFilter(v as Severity | "all"),
+            options: [
+              { value: "all",      label: "All severities" },
+              { value: "critical", label: "Critical" },
+              { value: "high",     label: "High" },
+              { value: "medium",   label: "Medium" },
+              { value: "low",      label: "Low" },
+            ],
+          },
+          {
+            label: "Area",
+            value: areaFilter,
+            onChange: (v) => setAreaFilter(v as Area | "all"),
+            options: [
+              { value: "all",        label: "All areas" },
+              ...((Object.keys(AREA_LABEL) as Area[]).map((a) => ({
+                value: a,
+                label: AREA_LABEL[a],
+              }))),
+            ],
+          },
+        ]}
+      />
 
-          {/* Status segmented control */}
-          <div className="flex rounded-lg border border-border/60 bg-background/40 p-0.5">
-            {([
-              ["open",        "Open",        statusCounts.open],
-              ["in_progress", "Working",     statusCounts.in_progress],
-              ["resolved",    "Resolved",    null],
-              ["all",         "All",         null],
-            ] as const).map(([v, label, badge]) => {
-              const active = statusFilter === v;
-              return (
-                <button
-                  key={v}
-                  type="button"
-                  onClick={() => setStatusFilter(v as any)}
-                  className={[
-                    "flex-1 inline-flex items-center justify-center gap-1.5 rounded-md px-2 py-1.5 text-[11px] font-semibold transition-all",
-                    active
-                      ? "bg-primary text-primary-foreground shadow-sm"
-                      : "text-muted-foreground hover:text-foreground hover:bg-muted/40",
-                  ].join(" ")}
-                >
-                  {label}
-                  {badge != null && badge > 0 && (
-                    <span
-                      className={[
-                        "inline-flex items-center justify-center rounded-full px-1.5 text-[9px] font-bold min-w-[16px]",
-                        active
-                          ? "bg-primary-foreground/20 text-primary-foreground"
-                          : "bg-primary text-primary-foreground",
-                      ].join(" ")}
-                    >
-                      {badge}
-                    </span>
-                  )}
-                </button>
-              );
-            })}
-          </div>
+      {/* Bulk action bar — slides in when any rows are selected */}
+      {isAdmin && selectedIds.size > 0 && (
+        <BulkActionBar
+          count={selectedIds.size}
+          onClear={() => setSelectedIds(new Set())}
+          onSetStatus={bulkSetStatus}
+        />
+      )}
 
-          {/* Severity filter + refresh */}
-          <div className="flex items-center justify-between gap-2">
-            <select
-              value={severityFilter}
-              onChange={(e) => setSeverityFilter(e.target.value as any)}
-              className="appearance-none rounded-md border border-border/70 bg-background/40 pl-2 pr-6 py-1 text-[10.5px] font-semibold text-foreground/90 outline-none cursor-pointer hover:bg-muted/40"
-            >
-              <option value="all">All severities</option>
-              <option value="critical">Critical only</option>
-              <option value="high">High only</option>
-              <option value="medium">Medium only</option>
-              <option value="low">Low only</option>
-            </select>
-            <button
-              type="button"
-              onClick={reload}
-              disabled={refreshing}
-              className="inline-flex h-7 w-7 items-center justify-center rounded-md border border-border/60 bg-card/40 text-muted-foreground hover:text-foreground hover:bg-muted/60 transition-colors disabled:opacity-50"
-            >
-              <RefreshCw className={`h-3 w-3 ${refreshing ? "animate-spin" : ""}`} />
-            </button>
-          </div>
+      {error && (
+        <div className="shrink-0 border-b border-amber-500/20 bg-amber-500/10 px-5 py-2 flex items-start gap-2">
+          <AlertCircle className="h-3.5 w-3.5 mt-0.5 text-amber-400 shrink-0" />
+          <p className="text-[11.5px] text-amber-200">{error}</p>
         </div>
+      )}
 
-        {error && (
-          <div className="border-b border-amber-500/20 bg-amber-500/10 px-5 py-2 text-[11.5px] text-amber-200 flex items-start gap-2">
-            <AlertCircle className="h-3.5 w-3.5 mt-0.5 shrink-0" />
-            {error}
+      {/* Table */}
+      <div className="flex-1 min-h-0 overflow-auto">
+        {loading && reports.length === 0 ? (
+          <div className="flex items-center gap-2 p-6 text-[12px] text-muted-foreground">
+            <Loader2 className="h-3.5 w-3.5 animate-spin" />
+            Loading bug reports…
           </div>
-        )}
-
-        <div className="flex-1 min-h-0">
-          {loading ? (
-            <div className="flex items-center gap-2 p-4 text-[11.5px] text-muted-foreground">
-              <Loader2 className="h-3.5 w-3.5 animate-spin" />
-              Loading bug reports…
-            </div>
-          ) : filtered.length === 0 ? (
-            <div className="flex h-full items-center justify-center p-8 text-center">
-              <div>
-                <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-xl border border-emerald-500/30 bg-emerald-500/10">
-                  <Check className="h-6 w-6 text-emerald-300" />
-                </div>
-                <p className="mt-4 text-[13px] font-semibold text-foreground">
-                  No bugs in this view
-                </p>
-                <p className="mt-1 text-[11px] text-muted-foreground leading-relaxed max-w-[260px]">
-                  {statusFilter === "open"
-                    ? "Either the team is shipping clean, or no one has reported anything yet."
-                    : "Try a different filter to see other reports."}
-                </p>
-              </div>
-            </div>
-          ) : (
-            <Virtuoso
-              className="h-full"
-              style={{ height: "100%" }}
-              data={filtered}
-              computeItemKey={(_, r) => r.id}
-              components={{
-                List: React.forwardRef(function VList(props, ref) {
-                  return <div {...props} ref={ref} className="p-2 space-y-1" />;
-                }),
-              }}
-              itemContent={(_index, r) => (
+        ) : visible.length === 0 ? (
+          <EmptyState
+            kind={statusFilter === "open" && !hasAnyFilter ? "zero" : "no-match"}
+            onClear={hasAnyFilter ? clearFilters : undefined}
+          />
+        ) : (
+          <table className="w-full text-[12px] border-collapse">
+            <thead className="sticky top-0 z-10 bg-card/80 backdrop-blur border-b border-border">
+              <tr className="text-left">
+                {isAdmin && (
+                  <th className="w-10 px-3 py-2">
+                    <input
+                      type="checkbox"
+                      checked={allSelected}
+                      ref={(el) => { if (el) el.indeterminate = someSelected; }}
+                      onChange={toggleAll}
+                      className="h-3.5 w-3.5 cursor-pointer accent-primary"
+                      aria-label="Select all"
+                    />
+                  </th>
+                )}
+                <Th width="w-10" />
+                <Th width="w-24" label="ID" sortKey="created" sort={sort} onClick={toggleSort} />
+                <Th label="Title" sortKey="title" sort={sort} onClick={toggleSort} />
+                <Th width="w-32" label="Reporter" sortKey="reporter" sort={sort} onClick={toggleSort} />
+                <Th width="w-24" label="Area" sortKey="area" sort={sort} onClick={toggleSort} />
+                <Th width="w-24" label="Severity" sortKey="severity" sort={sort} onClick={toggleSort} />
+                <Th width="w-24" label="Status" sortKey="status" sort={sort} onClick={toggleSort} />
+                <Th width="w-28" label="Created" sortKey="created" sort={sort} onClick={toggleSort} />
+              </tr>
+            </thead>
+            <tbody>
+              {visible.map((r) => (
                 <BugRow
+                  key={r.id}
                   report={r}
-                  active={r.id === selectedId}
-                  onClick={() => setSelectedId(r.id)}
+                  density={density}
+                  selected={selectedIds.has(r.id)}
+                  showCheckbox={isAdmin}
+                  active={r.id === openId}
+                  onToggleSelect={() => toggleOne(r.id)}
+                  onOpen={() => setOpenId(r.id)}
                 />
-              )}
-            />
-          )}
-        </div>
-      </aside>
+              ))}
+            </tbody>
+          </table>
+        )}
+      </div>
 
-      {/* Detail pane */}
-      <main className="flex flex-1 min-h-0 flex-col bg-background">
-        {selected ? (
-          <BugDetail
-            key={selected.id}
-            report={selected}
+      {refreshing && (
+        <div className="shrink-0 border-t border-border px-5 py-1.5 text-[10.5px] text-muted-foreground flex items-center gap-1.5">
+          <Loader2 className="h-3 w-3 animate-spin" />
+          Refreshing…
+        </div>
+      )}
+
+      {/* Slide-over detail */}
+      <SlideOver
+        open={!!opened}
+        onClose={() => setOpenId(null)}
+        title={
+          opened && (
+            <div>
+              <p className={`flex items-center gap-1.5 font-mono text-[9.5px] uppercase tracking-[0.22em] ${SEVERITY_META[opened.severity].eyebrow}`}>
+                <Bug className="h-3 w-3" />
+                {SEVERITY_META[opened.severity].label}
+                <span className="opacity-50">·</span>
+                <span className="text-muted-foreground/80">{AREA_LABEL[opened.area]}</span>
+                <span className="opacity-50">·</span>
+                <span className={`uppercase font-bold tracking-wider ${STATUS_COLOR[opened.status]}`}>
+                  {STATUS_LABEL[opened.status]}
+                </span>
+              </p>
+              <p className="mt-1 text-[14px] font-semibold tracking-tight text-foreground leading-tight truncate">
+                {opened.title}
+              </p>
+            </div>
+          )
+        }
+      >
+        {opened && (
+          <BugDetailBody
+            report={opened}
             isAdmin={isAdmin}
             currentUsername={username}
             onReload={reload}
+            onClose={() => setOpenId(null)}
           />
-        ) : (
-          <div className="flex h-full items-center justify-center text-center p-10">
-            <div className="max-w-[320px]">
-              <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl border border-border/60 bg-muted/40">
-                <Bug className="h-7 w-7 text-muted-foreground/60" />
-              </div>
-              <p className="mt-4 text-[14px] font-semibold text-foreground">
-                Pick a report to triage
-              </p>
-              <p className="mt-1.5 text-[12px] text-muted-foreground leading-relaxed">
-                {isAdmin
-                  ? "Everything users have reported sits in the left pane. Open one to see logs + screenshots + repro steps."
-                  : "You're only seeing reports you submitted. Engineering sees the full inbox."}
-              </p>
-            </div>
-          </div>
         )}
-      </main>
+      </SlideOver>
     </div>
   );
 }
 
-// ── List row ─────────────────────────────────────────────────────
+// ── Table header cell ───────────────────────────────────────────
 
-function BugRow({
-  report, active, onClick,
+function Th({
+  label, width, sortKey, sort, onClick,
 }: {
-  report: BugReport;
-  active: boolean;
-  onClick: () => void;
+  label?: string;
+  width?: string;
+  sortKey?: SortKey;
+  sort?: SortState;
+  onClick?: (k: SortKey) => void;
 }) {
-  const sev = SEVERITY_META[report.severity];
+  if (!label) return <th className={`${width ?? ""} px-2 py-2`} />;
+  const sortable = !!sortKey && !!onClick;
+  const isActive = sort?.key === sortKey;
   return (
-    <button
-      type="button"
-      onClick={onClick}
-      className={[
-        "group relative w-full overflow-hidden rounded-xl border px-3 py-3 text-left transition-all",
-        active
-          ? "border-primary/50 bg-primary/[0.07] shadow-[inset_0_0_0_1px] shadow-primary/30"
-          : "border-transparent hover:border-border/60 hover:bg-muted/40 hover:translate-x-0.5",
-      ].join(" ")}
-    >
-      {/* Severity rail */}
-      <span
-        aria-hidden="true"
-        className="absolute left-0 top-2 bottom-2 w-[3px] rounded-r-full"
-        style={{ background: sev.rail, opacity: active ? 1 : 0.45 }}
-      />
-      <div className="flex items-start gap-2.5 pl-1.5">
-        <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-muted/60 text-muted-foreground">
-          <Bug className="h-4 w-4" />
-        </div>
-        <div className="min-w-0 flex-1">
-          <div className="flex items-start justify-between gap-2">
-            <p
-              className={[
-                "text-[12.5px] truncate",
-                report.status === "open"
-                  ? "font-bold text-foreground"
-                  : "font-medium text-foreground/90",
-              ].join(" ")}
-            >
-              {report.title}
-            </p>
-            <span
-              className={`mt-1 h-2 w-2 shrink-0 rounded-full ${sev.dot}`}
-              title={sev.label}
-            />
-          </div>
-          <p className="mt-0.5 text-[10.5px] text-muted-foreground truncate">
-            {report.reporter_username}
-            {report.reporter_role && (
-              <span className="opacity-70"> · {report.reporter_role}</span>
-            )}
-          </p>
-          <div className="mt-1 flex items-center gap-2 text-[9.5px] text-muted-foreground/80">
-            <span>{new Date(report.created_at).toLocaleDateString()}</span>
-            <span className="opacity-40">·</span>
-            <span>{AREA_LABEL[report.area]}</span>
-            <span className="opacity-40">·</span>
-            <span
-              className={`inline-flex items-center rounded-full px-1.5 py-0.5 text-[9px] font-semibold border ${STATUS_META[report.status].chip}`}
-            >
-              {STATUS_META[report.status].label}
-            </span>
-          </div>
-        </div>
-      </div>
-    </button>
+    <th className={`${width ?? ""} px-2 py-2 font-mono text-[9.5px] uppercase tracking-[0.18em] text-muted-foreground/80`}>
+      {sortable ? (
+        <button
+          type="button"
+          onClick={() => onClick!(sortKey!)}
+          className={[
+            "inline-flex items-center gap-1 transition-colors",
+            isActive ? "text-foreground" : "hover:text-foreground",
+          ].join(" ")}
+        >
+          {label}
+          {isActive && (sort!.dir === "asc"
+            ? <ArrowUp className="h-2.5 w-2.5" />
+            : <ArrowDown className="h-2.5 w-2.5" />)}
+        </button>
+      ) : (
+        label
+      )}
+    </th>
   );
 }
 
-// ── Detail pane ──────────────────────────────────────────────────
+// ── Row ─────────────────────────────────────────────────────────
 
-function BugDetail({
-  report, isAdmin, currentUsername, onReload,
+function BugRow({
+  report, density, selected, showCheckbox, active, onToggleSelect, onOpen,
+}: {
+  report: BugReport;
+  density: Density;
+  selected: boolean;
+  showCheckbox: boolean;
+  active: boolean;
+  onToggleSelect: () => void;
+  onOpen: () => void;
+}) {
+  const sev = SEVERITY_META[report.severity];
+  const py = density === "compact" ? "py-1.5" : "py-2.5";
+  return (
+    <tr
+      onClick={onOpen}
+      className={[
+        "border-b border-border/40 cursor-pointer transition-colors",
+        active
+          ? "bg-muted/60"
+          : selected
+            ? "bg-primary/[0.06] hover:bg-primary/[0.10]"
+            : "hover:bg-muted/30",
+      ].join(" ")}
+    >
+      {showCheckbox && (
+        <td
+          className={`px-3 ${py}`}
+          onClick={(e) => { e.stopPropagation(); }}
+        >
+          <input
+            type="checkbox"
+            checked={selected}
+            onChange={onToggleSelect}
+            className="h-3.5 w-3.5 cursor-pointer accent-primary"
+            aria-label={`Select ${report.title}`}
+          />
+        </td>
+      )}
+
+      {/* Severity rail cell — narrow strip + bug icon */}
+      <td className={`relative px-2 ${py}`}>
+        <span
+          aria-hidden="true"
+          className="absolute left-0 top-1.5 bottom-1.5 w-[2px] rounded-r-full"
+          style={{ background: sev.rail }}
+        />
+        <Bug className="h-3.5 w-3.5 text-muted-foreground/80" />
+      </td>
+
+      {/* ID — short hash of UUID, monospace, like Jira's NUC-206 */}
+      <td className={`px-2 ${py} font-mono text-[10.5px] text-muted-foreground tabular-nums`}>
+        BUG-{report.id.slice(0, 6).toUpperCase()}
+      </td>
+
+      {/* Title */}
+      <td className={`px-2 ${py} min-w-0`}>
+        <span className="text-[12.5px] font-medium text-foreground tracking-tight truncate block max-w-[640px]">
+          {report.title}
+        </span>
+      </td>
+
+      {/* Reporter */}
+      <td className={`px-2 ${py} text-foreground/90`}>
+        <div className="truncate">
+          {report.reporter_username}
+          {report.reporter_role && (
+            <span className="text-muted-foreground/70 text-[10.5px]"> · {report.reporter_role}</span>
+          )}
+        </div>
+      </td>
+
+      {/* Area */}
+      <td className={`px-2 ${py} text-foreground/80`}>{AREA_LABEL[report.area]}</td>
+
+      {/* Severity */}
+      <td className={`px-2 ${py}`}>
+        <span className="inline-flex items-center gap-1.5">
+          <span className={`h-1.5 w-1.5 rounded-full ${sev.dot}`} />
+          <span className="text-foreground/80">{sev.label}</span>
+        </span>
+      </td>
+
+      {/* Status */}
+      <td className={`px-2 ${py}`}>
+        <span className={`uppercase font-semibold text-[10.5px] tracking-wider ${STATUS_COLOR[report.status]}`}>
+          {STATUS_LABEL[report.status]}
+        </span>
+      </td>
+
+      {/* Created */}
+      <td className={`px-2 ${py} font-mono text-[10.5px] text-muted-foreground/80 tabular-nums`}>
+        {new Date(report.created_at).toLocaleDateString(undefined, { month: "short", day: "numeric" })}
+      </td>
+    </tr>
+  );
+}
+
+// ── Empty state ─────────────────────────────────────────────────
+
+function EmptyState({
+  kind, onClear,
+}: {
+  kind: "zero" | "no-match";
+  onClear?: () => void;
+}) {
+  if (kind === "zero") {
+    return (
+      <div className="flex h-full items-center justify-center p-12 text-center">
+        <div>
+          <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-md border border-emerald-500/30 bg-emerald-500/10">
+            <Check className="h-6 w-6 text-emerald-300" />
+          </div>
+          <p className="mt-4 text-[13px] font-semibold text-foreground tracking-tight">
+            No open bugs
+          </p>
+          <p className="mt-1.5 text-[11.5px] text-muted-foreground leading-relaxed max-w-[280px] mx-auto">
+            Either nothing has been reported or the team has shipped through the open queue.
+          </p>
+        </div>
+      </div>
+    );
+  }
+  return (
+    <div className="flex h-full items-center justify-center p-12 text-center">
+      <div>
+        <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-md border border-border bg-zinc-950">
+          <Bug className="h-6 w-6 text-muted-foreground/60" />
+        </div>
+        <p className="mt-4 text-[13px] font-semibold text-foreground">No matches</p>
+        <p className="mt-1 text-[11px] text-muted-foreground leading-relaxed">
+          Adjust the filters to widen the search.
+        </p>
+        {onClear && (
+          <button
+            type="button"
+            onClick={onClear}
+            className="mt-4 inline-flex items-center gap-1 rounded-md border border-border bg-zinc-950 px-3 py-1.5 text-[11px] font-semibold text-foreground hover:bg-muted/60 transition-colors"
+          >
+            Clear filters
+          </button>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ── Bulk action bar ─────────────────────────────────────────────
+
+function BulkActionBar({
+  count, onClear, onSetStatus,
+}: {
+  count: number;
+  onClear: () => void;
+  onSetStatus: (s: Status) => void;
+}) {
+  return (
+    <div className="shrink-0 border-b border-border bg-primary/10 px-5 py-2 flex items-center gap-3">
+      <p className="text-[11.5px] font-semibold text-foreground">
+        {count} selected
+      </p>
+      <button
+        type="button"
+        onClick={onClear}
+        className="text-[10.5px] font-semibold text-primary hover:text-primary/80"
+      >
+        Clear
+      </button>
+      <div className="ml-auto flex items-center gap-2">
+        <span className="font-mono text-[9.5px] uppercase tracking-widest text-muted-foreground">
+          Move to
+        </span>
+        {(Object.keys(STATUS_LABEL) as Status[]).map((s) => (
+          <button
+            key={s}
+            type="button"
+            onClick={() => onSetStatus(s)}
+            className={[
+              "rounded-md border border-border bg-background px-2.5 py-1 text-[11px] font-semibold transition-colors hover:bg-muted/60",
+              STATUS_COLOR[s],
+            ].join(" ")}
+          >
+            {STATUS_LABEL[s]}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// ── Detail body (slide-over content) ────────────────────────────
+
+function BugDetailBody({
+  report, isAdmin, currentUsername, onReload, onClose,
 }: {
   report: BugReport;
   isAdmin: boolean;
   currentUsername: string;
   onReload: () => void;
+  onClose: () => void;
 }) {
   const [status, setStatus] = useState<Status>(report.status);
   const [resolutionNotes, setResolutionNotes] = useState(report.resolution_notes ?? "");
   const [logsTab, setLogsTab] = useState<"console" | "network" | "browser">("console");
   const [saving, setSaving] = useState(false);
   const [err, setErr] = useState<string | null>(null);
-
-  const sev = SEVERITY_META[report.severity];
 
   const saveTriage = async () => {
     if (!isAdmin) return;
@@ -459,6 +728,7 @@ function BugDetail({
     setSaving(false);
     if (error) { setErr(error.message); return; }
     onReload();
+    onClose();
   };
 
   const dirty =
@@ -466,177 +736,142 @@ function BugDetail({
     resolutionNotes !== (report.resolution_notes ?? "");
 
   return (
-    <div className="flex h-full flex-col">
-      <div
-        className="w-full shrink-0"
-        style={{ height: "3px", background: `linear-gradient(90deg, ${sev.rail}, ${sev.rail}33)` }}
-      />
+    <div className="px-6 py-6 space-y-6">
+      {/* Meta line */}
+      <p className="text-[11.5px] text-muted-foreground flex flex-wrap items-center gap-x-2 gap-y-0.5">
+        <span className="font-mono uppercase tracking-wider text-muted-foreground/80">
+          BUG-{report.id.slice(0, 6).toUpperCase()}
+        </span>
+        <span className="opacity-50">·</span>
+        <span>Reported by <span className="font-medium text-foreground/90">{report.reporter_username}</span></span>
+        {report.reporter_role && (<><span className="opacity-50">·</span><span>{report.reporter_role}</span></>)}
+        {report.reporter_email && (<><span className="opacity-50">·</span><span>{report.reporter_email}</span></>)}
+        <span className="opacity-50">·</span>
+        <span className="inline-flex items-center gap-1">
+          <Clock className="h-3 w-3 opacity-60" />
+          {new Date(report.created_at).toLocaleString(undefined, { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })}
+        </span>
+      </p>
 
-      <div className="flex-1 min-h-0 overflow-y-auto">
-        <div className="max-w-[820px] mx-auto w-full px-7 py-7 space-y-6">
-          {/* Header: title + chips */}
-          <div>
-            <div className="flex flex-wrap items-center gap-2 text-[10.5px] mb-2">
-              <span className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 font-bold ${sev.chip}`}>
-                <span className={`h-1.5 w-1.5 rounded-full ${sev.dot}`} />
-                {sev.label}
-              </span>
-              <span className={`inline-flex rounded-full border px-2 py-0.5 font-bold ${STATUS_META[report.status].chip}`}>
-                {STATUS_META[report.status].label}
-              </span>
-              <span className="rounded-full border border-border/60 bg-card/40 px-2 py-0.5 text-muted-foreground/90">
-                {AREA_LABEL[report.area]}
-              </span>
-              <span className="text-muted-foreground/70 ml-auto inline-flex items-center gap-1">
-                <Clock className="h-3 w-3" />
-                {new Date(report.created_at).toLocaleString(undefined, {
-                  month: "short", day: "numeric", hour: "numeric", minute: "2-digit",
-                })}
-              </span>
-            </div>
-            <h1 className="text-[1.55rem] font-black tracking-tight text-foreground leading-[1.15]">
-              {report.title}
-            </h1>
-            <p className="mt-1.5 text-[11.5px] text-muted-foreground">
-              Reported by <span className="font-medium text-foreground/90">{report.reporter_username}</span>
-              {report.reporter_role && <span> · {report.reporter_role}</span>}
-              {report.reporter_email && <span> · {report.reporter_email}</span>}
-            </p>
+      <Section title="What happened">
+        <p className="text-[13px] text-foreground/90 leading-relaxed whitespace-pre-wrap [overflow-wrap:anywhere]">
+          {report.description}
+        </p>
+      </Section>
+
+      {report.repro_steps && (
+        <Section title="Steps to reproduce">
+          <p className="text-[13px] text-foreground/90 leading-relaxed whitespace-pre-wrap [overflow-wrap:anywhere]">
+            {report.repro_steps}
+          </p>
+        </Section>
+      )}
+
+      {report.screenshot_url && (
+        <Section title="Screenshot" icon={ImageIcon}>
+          <a
+            href={report.screenshot_url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="block rounded-md border border-border overflow-hidden bg-black/30 hover:border-foreground/30 transition-colors"
+          >
+            <img
+              src={report.screenshot_url}
+              alt="Reporter screenshot"
+              className="w-full max-h-[420px] object-contain"
+            />
+          </a>
+        </Section>
+      )}
+
+      {report.page_url && (
+        <Section title="Page" icon={Globe}>
+          <code className="block rounded-md border border-border bg-zinc-950 px-3 py-2 text-[11.5px] text-foreground/85 break-all">
+            {report.page_url}
+          </code>
+        </Section>
+      )}
+
+      <Section title="Diagnostics" icon={Terminal}>
+        <div className="rounded-md border border-border bg-zinc-950 overflow-hidden">
+          <div className="flex border-b border-border">
+            <DiagTab active={logsTab === "console"} onClick={() => setLogsTab("console")} icon={Terminal}>
+              Console ({report.console_logs?.length ?? 0})
+            </DiagTab>
+            <DiagTab active={logsTab === "network"} onClick={() => setLogsTab("network")} icon={Wifi}>
+              Network ({report.network_logs?.length ?? 0})
+            </DiagTab>
+            <DiagTab active={logsTab === "browser"} onClick={() => setLogsTab("browser")} icon={Globe}>
+              Browser
+            </DiagTab>
           </div>
-
-          {/* Description */}
-          <Section title="What happened">
-            <p className="text-[13px] text-foreground/90 leading-relaxed whitespace-pre-wrap [overflow-wrap:anywhere]">
-              {report.description}
-            </p>
-          </Section>
-
-          {/* Repro */}
-          {report.repro_steps && (
-            <Section title="Steps to reproduce">
-              <p className="text-[13px] text-foreground/90 leading-relaxed whitespace-pre-wrap [overflow-wrap:anywhere]">
-                {report.repro_steps}
-              </p>
-            </Section>
-          )}
-
-          {/* Screenshot */}
-          {report.screenshot_url && (
-            <Section title="Screenshot" icon={ImageIcon}>
-              <a
-                href={report.screenshot_url}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="block rounded-lg border border-border/60 overflow-hidden bg-black/30"
-              >
-                <img
-                  src={report.screenshot_url}
-                  alt="Reporter screenshot"
-                  className="w-full max-h-[480px] object-contain"
-                />
-              </a>
-            </Section>
-          )}
-
-          {/* Page URL */}
-          {report.page_url && (
-            <Section title="Page" icon={Globe}>
-              <code className="block rounded-md border border-border/60 bg-zinc-950/50 px-3 py-2 text-[11.5px] text-foreground/85 break-all">
-                {report.page_url}
-              </code>
-            </Section>
-          )}
-
-          {/* Diagnostics — tabbed console / network / browser */}
-          <Section title="Diagnostics" icon={Terminal}>
-            <div className="rounded-xl border border-border/60 bg-zinc-950/50 overflow-hidden">
-              <div className="flex border-b border-border/60 bg-card/40">
-                <DiagTab active={logsTab === "console"} onClick={() => setLogsTab("console")} icon={Terminal}>
-                  Console ({report.console_logs?.length ?? 0})
-                </DiagTab>
-                <DiagTab active={logsTab === "network"} onClick={() => setLogsTab("network")} icon={Wifi}>
-                  Network ({report.network_logs?.length ?? 0})
-                </DiagTab>
-                <DiagTab active={logsTab === "browser"} onClick={() => setLogsTab("browser")} icon={Globe}>
-                  Browser
-                </DiagTab>
-              </div>
-              <div className="max-h-[360px] overflow-y-auto p-3 text-[11px] font-mono leading-relaxed">
-                {logsTab === "console" && <ConsoleLogs entries={report.console_logs ?? []} />}
-                {logsTab === "network" && <NetworkLogs entries={report.network_logs ?? []} />}
-                {logsTab === "browser" && <BrowserInfo info={report.browser_info ?? {}} />}
-              </div>
-            </div>
-          </Section>
-
-          {/* Spacer for sticky bar */}
-          <div className="h-4" />
+          <div className="max-h-[320px] overflow-y-auto p-3 text-[11px] font-mono leading-relaxed">
+            {logsTab === "console" && <ConsoleLogs entries={report.console_logs ?? []} />}
+            {logsTab === "network" && <NetworkLogs entries={report.network_logs ?? []} />}
+            {logsTab === "browser" && <BrowserInfo info={report.browser_info ?? {}} />}
+          </div>
         </div>
-      </div>
+      </Section>
 
-      {/* Triage bar (admins only) */}
+      {report.triaged_by && (
+        <p className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground/70">
+          Last triaged by {report.triaged_by}
+          {report.triaged_at && (
+            <> · {new Date(report.triaged_at).toLocaleString(undefined, { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })}</>
+          )}
+        </p>
+      )}
+
       {isAdmin && (
-        <div className="shrink-0 border-t border-border/60 bg-card/80 backdrop-blur px-6 py-3">
-          <div className="max-w-[820px] mx-auto flex flex-col gap-3">
-            <div className="flex items-center gap-3">
-              <span className="font-mono text-[9.5px] uppercase tracking-widest text-muted-foreground shrink-0">
-                Status
-              </span>
+        <>
+          <Section title="Resolution notes">
+            <textarea
+              value={resolutionNotes}
+              onChange={(e) => setResolutionNotes(e.target.value)}
+              rows={4}
+              placeholder="What was the fix, what was the workaround…"
+              className="w-full resize-y rounded-md border border-border bg-zinc-950 px-3 py-2.5 text-[12.5px] text-foreground placeholder:text-muted-foreground/60 outline-none focus:border-foreground/30 transition-colors leading-relaxed"
+            />
+            {err && (
+              <p className="mt-2 rounded-md border border-red-500/30 bg-red-500/10 px-3 py-1.5 text-[11.5px] text-red-300">
+                {err}
+              </p>
+            )}
+          </Section>
+
+          <div className="sticky bottom-0 -mx-6 px-6 pt-3 pb-1 bg-background border-t border-border flex items-center justify-end gap-3">
+            <div className="flex items-center gap-2">
+              <span className="font-mono text-[9.5px] uppercase tracking-widest text-muted-foreground">Status</span>
               <div className="relative">
                 <select
                   value={status}
                   onChange={(e) => setStatus(e.target.value as Status)}
-                  className="appearance-none rounded-md border border-border/70 bg-background/60 pl-3 pr-7 py-1.5 text-[12px] font-semibold text-foreground/90 outline-none cursor-pointer hover:bg-muted/40"
+                  className="appearance-none rounded-md border border-border bg-background pl-3 pr-7 py-1.5 text-[12px] font-semibold text-foreground/90 outline-none cursor-pointer hover:bg-muted/40 focus:border-foreground/30"
                 >
-                  {(Object.keys(STATUS_META) as Status[]).map((s) => (
-                    <option key={s} value={s}>{STATUS_META[s].label}</option>
+                  {(Object.keys(STATUS_LABEL) as Status[]).map((s) => (
+                    <option key={s} value={s}>{STATUS_LABEL[s]}</option>
                   ))}
                 </select>
                 <ChevronDown className="pointer-events-none absolute right-1.5 top-1/2 h-3 w-3 -translate-y-1/2 text-muted-foreground" />
               </div>
-              {report.triaged_by && (
-                <span className="text-[10.5px] text-muted-foreground">
-                  Last triaged by <span className="text-foreground/80">{report.triaged_by}</span>
-                  {report.triaged_at && (
-                    <> · {new Date(report.triaged_at).toLocaleString(undefined, { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })}</>
-                  )}
-                </span>
-              )}
             </div>
-
-            <textarea
-              value={resolutionNotes}
-              onChange={(e) => setResolutionNotes(e.target.value)}
-              placeholder="Resolution notes (what was the fix, what was the workaround)…"
-              rows={3}
-              className="w-full resize-y rounded-md border border-border/70 bg-background/60 px-3 py-2 text-[12px] text-foreground placeholder:text-muted-foreground/60 outline-none focus:border-primary/40"
-            />
-
-            {err && (
-              <p className="rounded-md border border-red-500/30 bg-red-500/10 px-3 py-1.5 text-[11.5px] text-red-300">
-                {err}
-              </p>
-            )}
-
-            <div className="flex items-center justify-end gap-2">
-              <button
-                type="button"
-                onClick={saveTriage}
-                disabled={!dirty || saving}
-                className="inline-flex items-center gap-1.5 rounded-md bg-primary px-4 py-1.5 text-[12px] font-semibold text-primary-foreground disabled:opacity-50"
-              >
-                {saving ? <Loader2 className="h-3 w-3 animate-spin" /> : <Save className="h-3 w-3" />}
-                Save triage
-              </button>
-            </div>
+            <button
+              type="button"
+              onClick={saveTriage}
+              disabled={!dirty || saving}
+              className="inline-flex items-center gap-1.5 rounded-md bg-primary px-4 py-1.5 text-[12px] font-semibold text-primary-foreground disabled:opacity-50"
+            >
+              {saving ? <Loader2 className="h-3 w-3 animate-spin" /> : <Save className="h-3 w-3" />}
+              Save triage
+            </button>
           </div>
-        </div>
+        </>
       )}
     </div>
   );
 }
 
-// ── helpers ─────────────────────────────────────────────────────
+// ── Subcomponents (sections, log views) ─────────────────────────
 
 function Section({
   title, icon: Icon, children,
@@ -647,7 +882,7 @@ function Section({
 }) {
   return (
     <div>
-      <p className="mb-2 flex items-center gap-1.5 font-mono text-[10.5px] uppercase tracking-widest text-muted-foreground">
+      <p className="mb-2 flex items-center gap-1.5 font-mono text-[10.5px] uppercase tracking-[0.22em] text-muted-foreground">
         {Icon && <Icon className="h-3 w-3" />}
         {title}
       </p>
@@ -669,14 +904,19 @@ function DiagTab({
       type="button"
       onClick={onClick}
       className={[
-        "flex items-center gap-1.5 px-3 py-1.5 text-[11px] font-semibold border-b-2 transition-colors",
-        active
-          ? "border-primary text-foreground"
-          : "border-transparent text-muted-foreground hover:text-foreground",
+        "relative flex items-center gap-1.5 px-3 py-1.5 text-[11px] font-semibold transition-colors",
+        active ? "text-foreground" : "text-muted-foreground hover:text-foreground",
       ].join(" ")}
     >
       <Icon className="h-3 w-3" />
       {children}
+      <span
+        aria-hidden="true"
+        className={[
+          "absolute left-2 right-2 -bottom-px h-[2px] rounded-full transition-all",
+          active ? "bg-primary opacity-100" : "bg-transparent opacity-0",
+        ].join(" ")}
+      />
     </button>
   );
 }
