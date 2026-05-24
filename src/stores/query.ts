@@ -234,6 +234,10 @@ export interface TodosInterface {
   assignee: string[]
   deadline: string
   company?: string
+  /** Username of the operator who created / assigned this task.
+   *  Populated by the UI + AXON actions on insert. May be null for
+   *  legacy rows created before the tasks_assigned_by migration. */
+  assigned_by?: string | null
 }
 const fetchTodos = async (user: string, company: string) => {
   const companyLabel = company === "simplicityFunds" ? "simplicity" : "CodeWithAli";

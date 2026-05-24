@@ -25,7 +25,7 @@ import {
 } from "@/MyComponents/Reusables/multiselectField";
 import supabase from "@/MyComponents/supabase";
 import { useMultiSelectStore } from "@/stores/store";
-import { getActiveCompanyLabel } from "@/stores/query";
+import { getActiveCompanyLabel, ActiveUser } from "@/stores/query";
 import { useForm } from "@tanstack/react-form";
 import { message } from "@tauri-apps/plugin-dialog";
 import { sendNotification } from "@tauri-apps/plugin-notification";
@@ -40,6 +40,11 @@ interface Users {
 export const AddTodo = (props: Users) => {
   const [open, setOpen] = useState(false);
   const { optionsValue } = useMultiSelectStore();
+  // Current operator — stamped on the row as `assigned_by` so the
+  // assignee (and admins) can see who delegated the task.
+  const { data: currentUser } = ActiveUser();
+  const assignerUsername: string | null =
+    (currentUser?.[0] as { username?: string } | undefined)?.username ?? null;
   const dynamicOptions: Option[] = props.Users.map((user: any) => ({
     value: user.username,
     label: user.username,
@@ -87,6 +92,7 @@ export const AddTodo = (props: Users) => {
           assignee: newOption,
           deadline: value.deadline,
           company: getActiveCompanyLabel(),
+          assigned_by: assignerUsername,
         });
 
         if (error) {

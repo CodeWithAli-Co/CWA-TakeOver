@@ -177,6 +177,22 @@ const KanbanCard: React.FC<{
         </p>
       )}
 
+      {/* "Assigned by X" — shows who delegated the task to whoever
+          is looking. Only renders when the row has assigned_by set
+          (legacy tasks without it stay clean). */}
+      {task.assigned_by && (
+        <div className="pl-2 mb-1.5 text-[10px] text-muted-foreground/80 inline-flex items-center gap-1">
+          <span className="opacity-50 uppercase tracking-wider text-[9px]">Assigned by</span>
+          <span
+            className="inline-flex items-center justify-center w-3.5 h-3.5 rounded-full text-[8px] font-bold text-white"
+            style={{ background: avatarAccent(task.assigned_by) }}
+          >
+            {initialsFor(task.assigned_by)}
+          </span>
+          <span className="font-medium text-foreground/70">{task.assigned_by}</span>
+        </div>
+      )}
+
       <div className="pl-2 flex items-center justify-between gap-2">
         <div className="flex items-center gap-2.5 text-[10px]">
           {due && (

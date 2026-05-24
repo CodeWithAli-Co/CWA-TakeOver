@@ -31,6 +31,7 @@ import { registerAgentActions } from "./agent";
 import { registerEnsembleActions } from "./ensemble";
 import { registerRecruitingActions } from "./recruiting";
 import { registerOnboardingActions } from "./onboarding";
+import { registerSleepActions } from "./sleep";
 
 let registered = false;
 
@@ -68,4 +69,5 @@ export function registerAllActions() {
   registerEnsembleActions();
   registerRecruitingActions();
   registerOnboardingActions();
+  registerSleepActions();
 }

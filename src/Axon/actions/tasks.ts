@@ -184,6 +184,10 @@ export const createTaskAction: AxonAction<
       assignee: assigneeArr,
       deadline: parsedDeadline,
       company: input.company ?? companyLabel(ctx.activeCompany),
+      // Stamp the operator who invoked Axon as the assigner so the
+      // task UI shows "Assigned by <name>" even when the row was
+      // created via voice.
+      assigned_by: ctx.operator?.username ?? null,
     };
 
     const when = row.deadline ? ` due ${new Date(row.deadline).toLocaleDateString()}` : "";

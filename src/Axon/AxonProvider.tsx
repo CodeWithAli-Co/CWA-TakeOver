@@ -65,6 +65,7 @@ import { _bindCodegenAccessors } from "./actions/code";
 import { _bindProjectAccessors } from "./actions/projects";
 import { _bindAgentAccessors } from "./actions/agent";
 import { _bindEnsembleAccessors } from "./actions/ensemble";
+import { _bindSleepAccessors } from "./actions/sleep";
 import { runTurn } from "./engine/brain";
 import { handleDirectDisrespect } from "./engine/loyaltyMonitor";
 import {
@@ -1156,6 +1157,10 @@ export function AxonProvider({ children }: { children: React.ReactNode }) {
       const s = settingsRef.current;
       return s.projects.find((p) => p.id === s.activeProjectId) ?? null;
     });
+    _bindSleepAccessors(
+      () => ({ forceSleep: settingsRef.current.forceSleep }),
+      (partial) => updateSettings(partial),
+    );
   }, [updateSettings]);
 
   const startListening = useCallback(() => voiceInRef.current?.pushToTalk(), []);
