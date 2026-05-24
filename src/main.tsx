@@ -14,6 +14,14 @@ if (typeof globalThis.Buffer === "undefined") {
   (globalThis as any).Buffer = Buffer;
 }
 
+// ── Diagnostic capture ─────────────────────────────────────────
+// Wraps console + fetch + XHR so the in-app bug reporter can
+// attach the last ~50 console lines and ~20 network requests when
+// the user files a report. Idempotent and never throws — safe to
+// install at the very top of boot.
+import { installDiagnostics } from "./diagnostics/captureBuffer";
+installDiagnostics();
+
 // Need this in order for app to see routes during production mode
 // Read more: https://tanstack.com/router/latest/docs/framework/react/guide/history-types
 const memoryHistory = createMemoryHistory({

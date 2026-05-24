@@ -6,12 +6,12 @@
 
 import { createLazyFileRoute } from "@tanstack/react-router";
 import UserView, { Role } from "@/MyComponents/Reusables/userView";
-import { ReportsInbox } from "@/MyComponents/Reports/ReportsInbox";
+import { ReportsHub } from "@/MyComponents/Reports/ReportsHub";
 
 function ReportsRoute() {
   return (
     <UserView userRole={[Role.CEO, Role.COO, Role.CFO, Role.Admin]}>
-      <ReportsInbox />
+      <ReportsHub />
     </UserView>
   );
 }

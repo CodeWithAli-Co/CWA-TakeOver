@@ -1,11 +1,14 @@
+import { useState } from "react";
 import {
   BadgeCheck,
   Bell,
+  Bug,
   ChevronsUpDown,
   CreditCard,
   LogOut,
   Settings,
 } from "lucide-react";
+import { BugReportDialog } from "@/MyComponents/BugReport/BugReportDialog";
 import {
   Avatar,
   AvatarFallback,
@@ -45,6 +48,9 @@ export function NavUser({ }: NavUserProps) {
   const { data: activeuser } = ActiveUser();
   const { previewRole } = useRolePreview();
   const navigate = useNavigate();
+  // Bug-report modal lives in this component so it can be opened
+  // from any route — nav-user is mounted in the persistent sidebar.
+  const [bugOpen, setBugOpen] = useState(false);
 
   // Helper — pushes to a route. Keeping it defined here so the
   // onClick handlers below are terse + consistent. All use Tanstack
@@ -161,6 +167,25 @@ export function NavUser({ }: NavUserProps) {
               </DropdownMenuItem>
             </DropdownMenuGroup>
             <DropdownMenuSeparator className="bg-border" />
+            <DropdownMenuGroup>
+              {/* Report a bug — visible to every role. Diagnostics
+                  (console + network + browser info + page URL) are
+                  auto-attached on submit by BugReportDialog. */}
+              <DropdownMenuItem
+                onSelect={(e) => {
+                  // onSelect closes the menu by default; let it close
+                  // naturally and open the dialog on the next tick so
+                  // focus management doesn't fight us.
+                  e.preventDefault();
+                  setBugOpen(true);
+                }}
+                className="text-foreground/90 hover:text-foreground hover:bg-muted/60 focus:bg-muted/60 cursor-pointer rounded-sm text-[12px] font-medium"
+              >
+                <Bug className="h-3.5 w-3.5 mr-2 text-muted-foreground" />
+                Report a bug
+              </DropdownMenuItem>
+            </DropdownMenuGroup>
+            <DropdownMenuSeparator className="bg-border" />
             <DropdownMenuItem
               onClick={handleLogout}
               className="text-red-400 hover:text-red-300 focus:text-red-300 hover:bg-red-500/10 focus:bg-red-500/10 cursor-pointer rounded-sm text-[12px] font-medium"
@@ -171,6 +196,7 @@ export function NavUser({ }: NavUserProps) {
           </DropdownMenuContent>
         </DropdownMenu>
       </SidebarMenuItem>
+      <BugReportDialog open={bugOpen} onOpenChange={setBugOpen} />
     </SidebarMenu>
   );
 }
