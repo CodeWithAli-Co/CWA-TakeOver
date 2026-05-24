@@ -938,6 +938,17 @@ export const ceoData = {
       icon: MessageCircle,
       company: "codeWithAli" as const,
     },
+    {
+      // Top-level Candidates entry (NOT company-scoped so it's always
+      // visible regardless of activeCompany toggle). The nested
+      // Candidates inside the Hiring group below disappears when
+      // activeCompany === 'simplicityFunds' because the group itself
+      // is company:'codeWithAli'-scoped.
+      title: "Candidates",
+      url: "/hiring",
+      isActive: false,
+      icon: Inbox,
+    },
 
     // ── Hiring & people ──
     {
@@ -1204,25 +1215,52 @@ export const cfoData = {
   projects: [] as ProjectItem[],
 };
 
-/* ─── Helper: filter nav items by active company ─── */
+// ── Helpers ─────────────────────────────────────────────────────────
+// Imported by app-sidebar.tsx. Keep their signatures in sync with the
+// ProjectItem / NavItem shapes above.
+
+type CompanyScope = "codeWithAli" | "simplicityFunds" | "all";
+
+/**
+ * Filter a navMain array by the current active company.
+ *
+ * Rules:
+ *   • activeCompany === "all"            → include everything
+ *   • entry has no `company` field       → include (company-agnostic)
+ *   • entry.company === activeCompany    → include
+ *   • otherwise                          → exclude
+ *
+ * Nested `items` arrays (collapsible group children) are filtered
+ * with the same rules so company-scoped sub-items disappear when
+ * the active company is the other brand.
+ */
 export function filterNavByCompany(
-  items: NavItem[],
-  activeCompany: "all" | "codeWithAli" | "simplicityFunds"
+  items: NavItem[] | undefined,
+  activeCompany: CompanyScope,
 ): NavItem[] {
-  if (activeCompany === "all") return items;
-  return items.filter((item) => {
-    if (!item.company) return true; // shared — always show
-    return item.company === activeCompany;
-  });
+  if (!items) return [];
+  const passes = (c: NavItem["company"]) =>
+    activeCompany === "all" || !c || c === activeCompany;
+  return items
+    .filter((it) => passes(it.company))
+    .map((it) => {
+      if (!it.items) return it;
+      return {
+        ...it,
+        items: it.items.filter((sub) =>
+          activeCompany === "all" || !sub.company || sub.company === activeCompany,
+        ),
+      };
+    });
 }
 
+/** Same logic as filterNavByCompany but for the ProjectItem shape. */
 export function filterProjectsByCompany(
-  projects: ProjectItem[],
-  activeCompany: "all" | "codeWithAli" | "simplicityFunds"
+  items: ProjectItem[] | undefined,
+  activeCompany: CompanyScope,
 ): ProjectItem[] {
-  if (activeCompany === "all") return projects;
-  return projects.filter((p) => {
-    if (!p.company) return true;
-    return p.company === activeCompany;
-  });
+  if (!items) return [];
+  return items.filter(
+    (it) => activeCompany === "all" || !it.company || it.company === activeCompany,
+  );
 }
