@@ -3,18 +3,21 @@ import { useForm } from "@tanstack/react-form";
 import { useState, useEffect } from "react";
 import { format } from "date-fns";
 import { motion } from "framer-motion";
-import { Clock, Building2, Tag, X, Loader2, Sparkles } from "lucide-react";
+import { Clock, Building2, Tag, X, Loader2, Sparkles, Briefcase } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { message } from "@tauri-apps/plugin-dialog";
 import {
   TIME_CATEGORIES,
-  COMPANIES,
   type TimeCategory,
   type TimeEntryFormData,
   calculateDurationMinutes,
   formatDuration,
 } from "@/stores/timeTrackingTypes";
-import { useCreateTimeEntry } from "@/stores/timeTrackingQueries";
+import {
+  useCreateTimeEntry,
+  useCompanies,
+  useProjects,
+} from "@/stores/timeTrackingQueries";
 
 interface TimeEntryFormProps {
   onSuccess?: () => void;
@@ -24,6 +27,19 @@ interface TimeEntryFormProps {
 
 export const TimeEntryForm = ({ onSuccess, defaultDate, compact = false }: TimeEntryFormProps) => {
   const createMutation = useCreateTimeEntry();
+
+  // Live company + project data — replaces the old hardcoded COMPANIES
+  // constant which sent string slugs like "codeWithAli" into a UUID-typed
+  // foreign-key column, causing every insert to fail at the DB layer.
+  // Now company_id is always a real UUID from time_companies.id.
+  const { data: companies } = useCompanies();
+
+  // ── Selected company drives the project list. We track it in local
+  // state alongside the form so useProjects can refetch on change. ──
+  const initialCompanyId = companies[0]?.id ?? "";
+  const [selectedCompanyId, setSelectedCompanyId] = useState<string>(initialCompanyId);
+  const { data: projects } = useProjects(selectedCompanyId || undefined);
+
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [tagInput, setTagInput] = useState("");
   const [calculatedDuration, setCalculatedDuration] = useState<number>(0);
@@ -42,7 +58,7 @@ export const TimeEntryForm = ({ onSuccess, defaultDate, compact = false }: TimeE
 
   const form = useForm({
     defaultValues: {
-      company_id: COMPANIES[0].id,
+      company_id: initialCompanyId,
       project_id: "",
       date: today,
       start_time: startTime,
@@ -148,8 +164,11 @@ export const TimeEntryForm = ({ onSuccess, defaultDate, compact = false }: TimeE
         }}
         className="space-y-4"
       >
-        {/* Row 1: Company, Date, Category */}
-        <div className={cn("grid gap-4", compact ? "grid-cols-2" : "grid-cols-3")}>
+        {/* Row 1: Company + Project — both backed by live Supabase data.
+            When Company changes we clear Project (because the project list
+            re-fetches with the new company filter). Project is optional —
+            entries can be logged against just a company. */}
+        <div className="grid gap-4 grid-cols-2">
           <form.Field
             name="company_id"
             children={(field) => (
@@ -161,9 +180,19 @@ export const TimeEntryForm = ({ onSuccess, defaultDate, compact = false }: TimeE
                 <select
                   className={selectStyles}
                   value={field.state.value}
-                  onChange={(e) => field.handleChange(e.target.value)}
+                  onChange={(e) => {
+                    const next = e.target.value;
+                    field.handleChange(next);
+                    setSelectedCompanyId(next);
+                    // Clear project on company change — project list will
+                    // refetch and the old selection no longer applies.
+                    form.setFieldValue("project_id", "");
+                  }}
                 >
-                  {COMPANIES.map((company) => (
+                  {companies.length === 0 && (
+                    <option value="">No companies yet</option>
+                  )}
+                  {companies.map((company) => (
                     <option key={company.id} value={company.id}>
                       {company.name}
                     </option>
@@ -173,6 +202,36 @@ export const TimeEntryForm = ({ onSuccess, defaultDate, compact = false }: TimeE
             )}
           />
 
+          <form.Field
+            name="project_id"
+            children={(field) => (
+              <div>
+                <label className={labelStyles}>
+                  <Briefcase className="inline h-3 w-3 mr-1" />
+                  Project <span className="text-muted-foreground/50 normal-case font-normal">(optional)</span>
+                </label>
+                <select
+                  className={selectStyles}
+                  value={field.state.value ?? ""}
+                  onChange={(e) => field.handleChange(e.target.value || "")}
+                  disabled={projects.length === 0}
+                >
+                  <option value="">
+                    {projects.length === 0 ? "No projects yet" : "— None —"}
+                  </option>
+                  {projects.map((project) => (
+                    <option key={project.id} value={project.id}>
+                      {project.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
+          />
+        </div>
+
+        {/* Row 1b: Date + Category */}
+        <div className={cn("grid gap-4", compact ? "grid-cols-1" : "grid-cols-2")}>
           <form.Field
             name="date"
             children={(field) => (
