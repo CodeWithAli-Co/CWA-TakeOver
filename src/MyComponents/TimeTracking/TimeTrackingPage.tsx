@@ -1,14 +1,11 @@
 // TimeTrackingPage - Modern bento-grid dashboard for time tracking
 import { useState, Suspense } from "react";
-import { format, startOfMonth, endOfMonth } from "date-fns";
+import { format } from "date-fns";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Clock,
   Plus,
-  ChevronLeft,
-  ChevronRight,
   Loader2,
-  Zap,
   BarChart2,
   FileText,
   Timer,
@@ -25,17 +22,15 @@ import {
 
 import { TimeEntryForm } from "./TimeEntryForm";
 import { TimeEntryList } from "./TimeEntryList";
-import { TimeStatsCards, QuickStatsBar } from "./TimeStats";
+import { TimeStatsCards, QuickStatsBar, type StatPeriod } from "./TimeStats";
 import {
-  WeeklyBarChart,
   CompanyPieChart,
-  CategoryBarChart,
-  CalendarHeatmap,
+  AreaTrendChart,
 } from "./TimeChart";
 import { TimeReportGenerator, ExportButtons } from "./ReportGenerator";
 
 import { type TimeEntryWithRelations } from "@/stores/timeTrackingTypes";
-import { useWeeklyStats, useTimeEntriesByDateRange } from "@/stores/timeTrackingQueries";
+import { useWeeklyStats } from "@/stores/timeTrackingQueries";
 
 // Loading component
 const LoadingState = ({ className }: { className?: string }) => (
@@ -92,9 +87,11 @@ type ViewTab = "overview" | "entries" | "reports";
 
 export const TimeTrackingPage = () => {
   const [activeTab, setActiveTab] = useState<ViewTab>("overview");
-  const [selectedMonth, setSelectedMonth] = useState(new Date());
   const [showAddEntry, setShowAddEntry] = useState(false);
   const [editingEntry, setEditingEntry] = useState<TimeEntryWithRelations | null>(null);
+  // Hoisted period state — drives both the stats card toggle AND the
+  // area trend chart so they always agree on the active range.
+  const [statsPeriod, setStatsPeriod] = useState<StatPeriod>("week");
 
   return (
     <div className="min-h-screen p-6 lg:p-8">
@@ -178,68 +175,33 @@ export const TimeTrackingPage = () => {
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -10 }}
-            className="space-y-6"
+            className="space-y-4"
           >
-            {/* Stats Cards */}
-            <Suspense fallback={<LoadingState className="h-32" />}>
-              <TimeStatsCards />
+            {/* Compact stats row — period-toggled */}
+            <Suspense fallback={<LoadingState className="h-20" />}>
+              <TimeStatsCards period={statsPeriod} onPeriodChange={setStatsPeriod} />
             </Suspense>
 
-            {/* Bento Grid */}
+            {/* Two-column grid: area trend (main) + company distribution (sidebar) */}
             <div className="grid grid-cols-12 gap-4">
-              {/* Weekly Chart - Large */}
-              <BentoCard className="col-span-12 lg:col-span-8 p-6">
-                <SectionHeader icon={BarChart2} title="This Week" />
+              {/* ── Area trend chart — driven by the same period toggle ── */}
+              <BentoCard className="col-span-12 lg:col-span-8 p-5">
+                <SectionHeader icon={TrendingUp} title="Hours Trend" />
                 <Suspense fallback={<LoadingState className="h-64" />}>
-                  <WeeklyBarChart />
+                  <AreaTrendChart period={statsPeriod} />
                 </Suspense>
               </BentoCard>
 
-              {/* Company Distribution */}
-              <BentoCard className="col-span-12 lg:col-span-4 p-6">
-                <SectionHeader icon={TrendingUp} title="By Company" />
+              {/* ── Company distribution donut ── */}
+              <BentoCard className="col-span-12 lg:col-span-4 p-5">
+                <SectionHeader icon={BarChart2} title="By Company" />
                 <Suspense fallback={<LoadingState className="h-64" />}>
                   <WeeklyStatsCharts type="company" />
                 </Suspense>
               </BentoCard>
 
-              {/* Calendar Heatmap */}
-              <BentoCard className="col-span-12 lg:col-span-6 p-6">
-                <SectionHeader
-                  icon={CalendarDays}
-                  title={format(selectedMonth, "MMMM yyyy")}
-                  action={
-                    <div className="flex items-center gap-1">
-                      <button
-                        onClick={() => setSelectedMonth(new Date(selectedMonth.setMonth(selectedMonth.getMonth() - 1)))}
-                        className="p-1 rounded-lg hover:bg-white/10 text-muted-foreground/80 hover:text-foreground transition-colors"
-                      >
-                        <ChevronLeft className="h-4 w-4" />
-                      </button>
-                      <button
-                        onClick={() => setSelectedMonth(new Date(selectedMonth.setMonth(selectedMonth.getMonth() + 1)))}
-                        className="p-1 rounded-lg hover:bg-white/10 text-muted-foreground/80 hover:text-foreground transition-colors"
-                      >
-                        <ChevronRight className="h-4 w-4" />
-                      </button>
-                    </div>
-                  }
-                />
-                <Suspense fallback={<LoadingState className="h-48" />}>
-                  <MonthlyHeatmapWrapper month={selectedMonth} />
-                </Suspense>
-              </BentoCard>
-
-              {/* Category Breakdown */}
-              <BentoCard className="col-span-12 lg:col-span-6 p-6">
-                <SectionHeader icon={Zap} title="By Category" />
-                <Suspense fallback={<LoadingState className="h-48" />}>
-                  <WeeklyStatsCharts type="category" />
-                </Suspense>
-              </BentoCard>
-
-              {/* Recent Entries */}
-              <BentoCard className="col-span-12 p-6">
+              {/* ── Recent entries ── */}
+              <BentoCard className="col-span-12 p-5">
                 <SectionHeader
                   icon={Clock}
                   title="Recent Entries"
@@ -349,8 +311,11 @@ export const TimeTrackingPage = () => {
   );
 };
 
-// Helper component for weekly stats charts
-const WeeklyStatsCharts = ({ type }: { type: "company" | "category" }) => {
+// Helper — fetches the active week's stats once and renders the
+// company breakdown donut. (CategoryBarChart and CalendarHeatmap
+// were both removed from this layout because their data overlapped
+// with the new AreaTrendChart + the company donut.)
+const WeeklyStatsCharts = ({ type }: { type: "company" }) => {
   const { data: stats } = useWeeklyStats(0);
 
   if (type === "company") {
@@ -362,30 +327,7 @@ const WeeklyStatsCharts = ({ type }: { type: "company" | "category" }) => {
       </div>
     );
   }
-
-  return stats.by_category.length > 0 ? (
-    <CategoryBarChart data={stats.by_category} />
-  ) : (
-    <div className="h-48 flex items-center justify-center text-muted-foreground text-sm">
-      No data this week
-    </div>
-  );
-};
-
-// Helper component for monthly heatmap
-const MonthlyHeatmapWrapper = ({ month }: { month: Date }) => {
-  const monthStart = format(startOfMonth(month), "yyyy-MM-dd");
-  const monthEnd = format(endOfMonth(month), "yyyy-MM-dd");
-  const { data: entries } = useTimeEntriesByDateRange(monthStart, monthEnd);
-
-  const dailyData: Record<string, number> = {};
-  entries.forEach((entry) => {
-    dailyData[entry.date] = (dailyData[entry.date] || 0) + entry.duration_minutes / 60;
-  });
-
-  const heatmapData = Object.entries(dailyData).map(([date, hours]) => ({ date, hours }));
-
-  return <CalendarHeatmap data={heatmapData} month={month} />;
+  return null;
 };
 
 export default TimeTrackingPage;

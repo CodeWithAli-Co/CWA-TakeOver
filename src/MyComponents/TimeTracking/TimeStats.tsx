@@ -1,5 +1,18 @@
-// TimeStats - Modern statistics cards for time tracking
-import { motion } from "framer-motion";
+// TimeStats - Modern statistics cards for time tracking.
+//
+// History: originally rendered 8 stat cards (Today / Week / Month /
+// Year / Current Streak / Best Streak / Billable Rate / Avg-per-Day).
+// Felt overbearing. Now collapsed to 3:
+//   1. Period card — single card with a Today/Week/Month/Year toggle
+//      that swaps the hours total in place. One card, four pieces of
+//      info, far less visual noise.
+//   2. Billable rate.
+//   3. Avg per day.
+//
+// Streak moved entirely to the top-right pill (QuickStatsBar). Both
+// streak cards were redundant with the pill and added no signal.
+import { useState } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import {
   Clock,
   Flame,
@@ -8,169 +21,197 @@ import {
   Calendar,
   Target,
   Zap,
-  Award,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { formatHours, type TimeStats as TimeStatsType } from "@/stores/timeTrackingTypes";
+import { formatHours } from "@/stores/timeTrackingTypes";
 import { useTimeStats } from "@/stores/timeTrackingQueries";
 
-// Modern stat card with gradient border
-interface StatCardProps {
-  title: string;
-  value: string | number;
-  subtitle?: string;
-  icon: React.ReactNode;
-  gradient: string;
-  delay?: number;
+// Period toggle — single card replaces the old 4-card Today/Week/Month/Year row.
+export type StatPeriod = "today" | "week" | "month" | "year";
+
+const PERIOD_OPTIONS: { id: StatPeriod; letter: string; title: string }[] = [
+  { id: "today", letter: "T", title: "Today" },
+  { id: "week",  letter: "W", title: "This Week" },
+  { id: "month", letter: "M", title: "This Month" },
+  { id: "year",  letter: "Y", title: "This Year" },
+];
+
+const PERIOD_META: Record<
+  StatPeriod,
+  { icon: React.ReactNode; gradient: string; title: string }
+> = {
+  today: {
+    icon: <Clock className="h-3.5 w-3.5 text-white" />,
+    gradient: "bg-gradient-to-br from-red-500/20 to-orange-500/20",
+    title: "Today",
+  },
+  week: {
+    icon: <Calendar className="h-3.5 w-3.5 text-white" />,
+    gradient: "bg-gradient-to-br from-blue-500/20 to-cyan-500/20",
+    title: "This Week",
+  },
+  month: {
+    icon: <Target className="h-3.5 w-3.5 text-white" />,
+    gradient: "bg-gradient-to-br from-purple-500/20 to-pink-500/20",
+    title: "This Month",
+  },
+  year: {
+    icon: <TrendingUp className="h-3.5 w-3.5 text-white" />,
+    gradient: "bg-gradient-to-br from-emerald-500/20 to-teal-500/20",
+    title: "This Year",
+  },
+};
+
+interface TimeStatsCardsProps {
+  /** Optional controlled period — when provided, the toggle is driven
+   *  by the parent so other components (e.g. the area chart) can stay
+   *  in sync with the headline number. */
+  period?: StatPeriod;
+  onPeriodChange?: (p: StatPeriod) => void;
 }
 
-const StatCard = ({ title, value, subtitle, icon, gradient, delay = 0 }: StatCardProps) => (
-  <motion.div
-    initial={{ opacity: 0, y: 20 }}
-    animate={{ opacity: 1, y: 0 }}
-    transition={{ delay, duration: 0.4, ease: "easeOut" }}
-    className="group relative"
-  >
-    {/* Gradient border effect */}
-    <div className={cn("absolute -inset-[1px] rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-500", gradient)} />
+export const TimeStatsCards = ({ period: controlledPeriod, onPeriodChange }: TimeStatsCardsProps = {}) => {
+  const { data: stats } = useTimeStats();
+  const [uncontrolledPeriod, setUncontrolledPeriod] = useState<StatPeriod>("today");
 
-    <div className="relative bg-muted/30 backdrop-blur-sm border border-border rounded-2xl p-5 h-full hover:bg-muted/50 transition-all duration-300">
-      <div className="flex items-start justify-between mb-3">
-        <div className={cn("p-2 rounded-xl", gradient.replace("bg-gradient-to-r", "bg-gradient-to-br").replace("via-", "to-"))}>
-          {icon}
+  const period = controlledPeriod ?? uncontrolledPeriod;
+  const setPeriod = (p: StatPeriod) => {
+    if (onPeriodChange) onPeriodChange(p);
+    else setUncontrolledPeriod(p);
+  };
+
+  const periodValue =
+    period === "today" ? stats.total_hours_today    :
+    period === "week"  ? stats.total_hours_this_week :
+    period === "month" ? stats.total_hours_this_month :
+                         stats.total_hours_this_year;
+
+  const periodSubtitle =
+    period === "today" ? "Logged today" :
+    period === "week"  ? "Week-to-date" :
+    period === "month" ? `${formatHours(stats.billable_hours_this_month)} billable` :
+                         "Year-to-date";
+
+  const periodMeta = PERIOD_META[period];
+
+  return (
+    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+      {/* ── 1. Period card with compact T/W/M/Y toggle ── */}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.4, ease: "easeOut" }}
+        className="relative overflow-hidden bg-muted/30 backdrop-blur-sm border border-border rounded-xl p-3.5"
+      >
+        <div className={cn("absolute inset-0 opacity-15", periodMeta.gradient)} />
+
+        <div className="relative flex items-center justify-between gap-3">
+          {/* Left side: icon + value + subtitle stacked */}
+          <div className="flex items-center gap-3 min-w-0">
+            <div className={cn("p-1.5 rounded-md shrink-0", periodMeta.gradient)}>
+              {periodMeta.icon}
+            </div>
+            <AnimatePresence mode="wait">
+              <motion.div
+                key={period}
+                initial={{ opacity: 0, x: 3 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: -3 }}
+                transition={{ duration: 0.12 }}
+                className="min-w-0"
+              >
+                <p className="text-[20px] font-bold text-foreground tracking-tight tabular-nums leading-none">
+                  {formatHours(periodValue)}
+                </p>
+                <p className="text-[10.5px] text-muted-foreground mt-1 truncate">
+                  {periodMeta.title} · {periodSubtitle}
+                </p>
+              </motion.div>
+            </AnimatePresence>
+          </div>
+
+          {/* Right side: tiny T/W/M/Y pill */}
+          <div className="flex items-center gap-0.5 bg-black/20 rounded-md p-0.5 border border-border shrink-0">
+            {PERIOD_OPTIONS.map((opt) => {
+              const isActive = opt.id === period;
+              return (
+                <button
+                  key={opt.id}
+                  onClick={() => setPeriod(opt.id)}
+                  title={opt.title}
+                  className={cn(
+                    "w-6 h-6 text-[10.5px] font-bold rounded-sm transition-colors tabular-nums",
+                    isActive
+                      ? "bg-white/10 text-foreground"
+                      : "text-muted-foreground/60 hover:text-foreground/80"
+                  )}
+                >
+                  {opt.letter}
+                </button>
+              );
+            })}
+          </div>
         </div>
-        {subtitle && (
-          <span className="text-[10px] uppercase tracking-wider text-muted-foreground font-medium">
-            {subtitle}
-          </span>
-        )}
-      </div>
+      </motion.div>
 
-      <div className="space-y-1">
-        <p className="text-2xl font-bold text-foreground tracking-tight">{value}</p>
-        <p className="text-xs text-muted-foreground/70">{title}</p>
-      </div>
+      {/* ── 2. Billable rate (this month) ── */}
+      <CompactStatCard
+        title="Billable Rate"
+        value={
+          stats.total_hours_this_month > 0
+            ? `${Math.round((stats.billable_hours_this_month / stats.total_hours_this_month) * 100)}%`
+            : "—"
+        }
+        subtitle="this month"
+        icon={<DollarSign className="h-3.5 w-3.5 text-white" />}
+        gradient="bg-gradient-to-br from-emerald-500/20 to-green-500/20"
+        delay={0.05}
+      />
+
+      {/* ── 3. Average hours per day ── */}
+      <CompactStatCard
+        title="Avg / Day"
+        value={formatHours(stats.average_hours_per_day)}
+        subtitle={`best: ${stats.most_productive_day.slice(0, 3).toLowerCase()}`}
+        icon={<Zap className="h-3.5 w-3.5 text-white" />}
+        gradient="bg-gradient-to-br from-indigo-500/20 to-violet-500/20"
+        delay={0.1}
+      />
     </div>
-  </motion.div>
-);
+  );
+};
 
-// Large featured stat card
-interface FeaturedStatProps {
+// ── Compact horizontal stat card (icon + value + label inline, no big stack) ──
+interface CompactStatCardProps {
   title: string;
   value: string;
   subtitle: string;
   icon: React.ReactNode;
   gradient: string;
-  metric?: { label: string; value: string; positive?: boolean };
+  delay?: number;
 }
 
-const FeaturedStat = ({ title, value, subtitle, icon, gradient, metric }: FeaturedStatProps) => (
+const CompactStatCard = ({ title, value, subtitle, icon, gradient, delay = 0 }: CompactStatCardProps) => (
   <motion.div
-    initial={{ opacity: 0, scale: 0.95 }}
-    animate={{ opacity: 1, scale: 1 }}
-    transition={{ duration: 0.5 }}
-    className="relative overflow-hidden"
+    initial={{ opacity: 0, y: 20 }}
+    animate={{ opacity: 1, y: 0 }}
+    transition={{ delay, duration: 0.4, ease: "easeOut" }}
+    className="relative overflow-hidden bg-muted/30 backdrop-blur-sm border border-border rounded-xl p-3.5 hover:bg-muted/50 transition-colors"
   >
-    {/* Background gradient */}
-    <div className={cn("absolute inset-0 opacity-20", gradient)} />
-
-    <div className="relative bg-muted/30 backdrop-blur-sm border border-border rounded-2xl p-6">
-      <div className="flex items-center justify-between mb-4">
-        <div className={cn("p-3 rounded-xl", gradient.replace("bg-gradient-to-r", "bg-gradient-to-br"))}>
-          {icon}
-        </div>
-        {metric && (
-          <div className={cn(
-            "flex items-center gap-1 text-xs font-medium px-2 py-1 rounded-full",
-            metric.positive ? "bg-emerald-500/10 text-emerald-400" : "bg-white/5 text-muted-foreground/80"
-          )}>
-            <TrendingUp className={cn("h-3 w-3", !metric.positive && "rotate-180")} />
-            {metric.value}
-          </div>
-        )}
-      </div>
-
-      <div>
-        <p className="text-4xl font-bold text-foreground tracking-tight mb-1">{value}</p>
-        <p className="text-sm text-muted-foreground/80">{title}</p>
-        <p className="text-xs text-muted-foreground mt-2">{subtitle}</p>
+    <div className={cn("absolute inset-0 opacity-15", gradient)} />
+    <div className="relative flex items-center gap-3">
+      <div className={cn("p-1.5 rounded-md shrink-0", gradient)}>{icon}</div>
+      <div className="min-w-0 flex-1">
+        <p className="text-[20px] font-bold text-foreground tracking-tight tabular-nums leading-none">
+          {value}
+        </p>
+        <p className="text-[10.5px] text-muted-foreground mt-1 truncate">
+          {title} · {subtitle}
+        </p>
       </div>
     </div>
   </motion.div>
 );
-
-export const TimeStatsCards = () => {
-  const { data: stats } = useTimeStats();
-
-  const statCards = [
-    {
-      title: "Today",
-      value: formatHours(stats.total_hours_today),
-      subtitle: "HOURS",
-      icon: <Clock className="h-4 w-4 text-white" />,
-      gradient: "bg-gradient-to-r from-red-500/20 to-orange-500/20",
-    },
-    {
-      title: "This Week",
-      value: formatHours(stats.total_hours_this_week),
-      subtitle: "TOTAL",
-      icon: <Calendar className="h-4 w-4 text-white" />,
-      gradient: "bg-gradient-to-r from-blue-500/20 to-cyan-500/20",
-    },
-    {
-      title: "This Month",
-      value: formatHours(stats.total_hours_this_month),
-      subtitle: `${formatHours(stats.billable_hours_this_month)} billable`,
-      icon: <Target className="h-4 w-4 text-white" />,
-      gradient: "bg-gradient-to-r from-purple-500/20 to-pink-500/20",
-    },
-    {
-      title: "This Year",
-      value: formatHours(stats.total_hours_this_year),
-      subtitle: "TRACKED",
-      icon: <TrendingUp className="h-4 w-4 text-white" />,
-      gradient: "bg-gradient-to-r from-emerald-500/20 to-teal-500/20",
-    },
-    {
-      title: "Current Streak",
-      value: `${stats.current_streak}d`,
-      subtitle: stats.current_streak > 0 ? "ACTIVE" : "START NOW",
-      icon: <Flame className="h-4 w-4 text-white" />,
-      gradient: "bg-gradient-to-r from-orange-500/20 to-amber-500/20",
-    },
-    {
-      title: "Best Streak",
-      value: `${stats.longest_streak}d`,
-      subtitle: "RECORD",
-      icon: <Award className="h-4 w-4 text-white" />,
-      gradient: "bg-gradient-to-r from-yellow-500/20 to-orange-500/20",
-    },
-    {
-      title: "Billable Rate",
-      value: stats.total_hours_this_month > 0
-        ? `${Math.round((stats.billable_hours_this_month / stats.total_hours_this_month) * 100)}%`
-        : "—",
-      subtitle: "THIS MONTH",
-      icon: <DollarSign className="h-4 w-4 text-white" />,
-      gradient: "bg-gradient-to-r from-emerald-500/20 to-green-500/20",
-    },
-    {
-      title: "Avg/Day",
-      value: formatHours(stats.average_hours_per_day),
-      subtitle: stats.most_productive_day.toUpperCase().slice(0, 3),
-      icon: <Zap className="h-4 w-4 text-white" />,
-      gradient: "bg-gradient-to-r from-indigo-500/20 to-violet-500/20",
-    },
-  ];
-
-  return (
-    <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-3">
-      {statCards.map((stat, index) => (
-        <StatCard key={stat.title} {...stat} delay={index * 0.05} />
-      ))}
-    </div>
-  );
-};
 
 // Quick stats bar for header
 export const QuickStatsBar = () => {

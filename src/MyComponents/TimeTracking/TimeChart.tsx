@@ -452,4 +452,182 @@ export const YearlyTrendChart = ({ data }: YearlyTrendChartProps) => {
   );
 };
 
+// ─── AreaTrendChart ────────────────────────────────────────────────
+// Unified area chart that swaps granularity based on the active
+// period: 7 days for Week, ~30 days for Month, 12 months for Year.
+// For Today, falls back to a small "no chart" state because a single
+// day doesn't have enough points to make a trend meaningful.
+//
+// Driven by the same period state as the stat cards so the headline
+// number and the trend visualization always agree.
+import { useTimeEntriesByDateRange } from "@/stores/timeTrackingQueries";
+import { startOfMonth, startOfYear, eachDayOfInterval, subDays, endOfMonth, endOfYear } from "date-fns";
+
+type AreaPeriod = "today" | "week" | "month" | "year";
+
+interface AreaTrendChartProps {
+  period: AreaPeriod;
+}
+
+export const AreaTrendChart = ({ period }: AreaTrendChartProps) => {
+  // Compute date range + bucket strategy per period.
+  const today = new Date();
+  let startDate: Date;
+  let endDate = today;
+  let bucketBy: "day" | "month";
+
+  if (period === "year") {
+    startDate = startOfYear(today);
+    endDate = endOfYear(today);
+    bucketBy = "month";
+  } else if (period === "month") {
+    startDate = startOfMonth(today);
+    endDate = endOfMonth(today);
+    bucketBy = "day";
+  } else {
+    // Week or today — last 7 days for week, last 1 day for today.
+    startDate = period === "today" ? today : subDays(today, 6);
+    bucketBy = "day";
+  }
+
+  const startStr = format(startDate, "yyyy-MM-dd");
+  const endStr = format(endDate, "yyyy-MM-dd");
+
+  const { data: entries } = useTimeEntriesByDateRange(startStr, endStr);
+
+  // Bucket the data
+  const chartData: { label: string; hours: number; billable: number }[] = [];
+
+  if (bucketBy === "month") {
+    // 12 monthly buckets
+    const monthly: Record<string, { hours: number; billable: number }> = {};
+    for (let m = 0; m < 12; m++) {
+      const key = format(new Date(today.getFullYear(), m, 1), "MMM");
+      monthly[key] = { hours: 0, billable: 0 };
+    }
+    entries.forEach((e) => {
+      const key = format(parseISO(e.date), "MMM");
+      if (!monthly[key]) return;
+      monthly[key].hours += e.duration_minutes / 60;
+      if (e.is_billable) monthly[key].billable += e.duration_minutes / 60;
+    });
+    Object.entries(monthly).forEach(([label, v]) => {
+      chartData.push({ label, hours: v.hours, billable: v.billable });
+    });
+  } else {
+    // Daily buckets
+    const days = eachDayOfInterval({ start: startDate, end: endDate });
+    const daily: Record<string, { hours: number; billable: number }> = {};
+    days.forEach((d) => {
+      daily[format(d, "yyyy-MM-dd")] = { hours: 0, billable: 0 };
+    });
+    entries.forEach((e) => {
+      const key = e.date;
+      if (!daily[key]) return;
+      daily[key].hours += e.duration_minutes / 60;
+      if (e.is_billable) daily[key].billable += e.duration_minutes / 60;
+    });
+    Object.entries(daily).forEach(([dateKey, v]) => {
+      const parsedDate = parseISO(dateKey);
+      // Short labels for week/today, longer for month
+      const labelFormat = period === "month" ? "d" : "EEE";
+      chartData.push({
+        label: format(parsedDate, labelFormat),
+        hours: v.hours,
+        billable: v.billable,
+      });
+    });
+  }
+
+  // For Today specifically — chart is degenerate (1 point). Show a
+  // friendly placeholder instead so the section doesn't look broken.
+  if (period === "today") {
+    const todayHours = entries
+      .filter((e) => e.date === format(today, "yyyy-MM-dd"))
+      .reduce((s, e) => s + e.duration_minutes / 60, 0);
+    return (
+      <div className="h-64 flex flex-col items-center justify-center text-center">
+        <p className="text-[44px] font-bold text-foreground tabular-nums tracking-tight">
+          {formatHours(todayHours)}
+        </p>
+        <p className="text-[13px] text-muted-foreground mt-2">
+          logged so far today
+        </p>
+        <p className="text-[11px] text-muted-foreground/60 mt-1">
+          Switch to W / M / Y for the trend view
+        </p>
+      </div>
+    );
+  }
+
+  const totalHours = chartData.reduce((s, d) => s + d.hours, 0);
+  const periodLabel =
+    period === "week"  ? "this week"  :
+    period === "month" ? "this month" :
+                         "this year";
+
+  return (
+    <div className="space-y-2">
+      <div className="flex items-baseline justify-between">
+        <p className="text-[11px] uppercase tracking-[0.18em] text-muted-foreground font-semibold">
+          Hours Over Time
+        </p>
+        <p className="text-[12.5px] text-muted-foreground tabular-nums">
+          <span className="text-foreground font-semibold">{formatHours(totalHours)}</span> {periodLabel}
+        </p>
+      </div>
+      <div className="h-64">
+        <ResponsiveContainer width="100%" height="100%">
+          <AreaChart data={chartData} margin={{ top: 10, right: 8, left: -16, bottom: 0 }}>
+            <defs>
+              <linearGradient id="trendTotal" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stopColor="#ef4444" stopOpacity={0.55} />
+                <stop offset="100%" stopColor="#ef4444" stopOpacity={0} />
+              </linearGradient>
+              <linearGradient id="trendBillable" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stopColor="#10b981" stopOpacity={0.45} />
+                <stop offset="100%" stopColor="#10b981" stopOpacity={0} />
+              </linearGradient>
+            </defs>
+            <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.04)" />
+            <XAxis
+              dataKey="label"
+              stroke="rgba(255,255,255,0.4)"
+              fontSize={11}
+              tickLine={false}
+              axisLine={false}
+            />
+            <YAxis
+              stroke="rgba(255,255,255,0.4)"
+              fontSize={11}
+              tickLine={false}
+              axisLine={false}
+              tickFormatter={(v) => `${v}h`}
+            />
+            <Tooltip content={<CustomTooltip />} />
+            <Area
+              type="monotone"
+              dataKey="hours"
+              name="Total"
+              stroke="#ef4444"
+              strokeWidth={2}
+              fillOpacity={1}
+              fill="url(#trendTotal)"
+            />
+            <Area
+              type="monotone"
+              dataKey="billable"
+              name="Billable"
+              stroke="#10b981"
+              strokeWidth={2}
+              fillOpacity={1}
+              fill="url(#trendBillable)"
+            />
+          </AreaChart>
+        </ResponsiveContainer>
+      </div>
+    </div>
+  );
+};
+
 export default WeeklyBarChart;

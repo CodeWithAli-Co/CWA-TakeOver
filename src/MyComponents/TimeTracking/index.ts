@@ -1,7 +1,7 @@
 // Time Tracking Module Exports
 export { TimeEntryForm } from "./TimeEntryForm";
 export { TimeEntryList } from "./TimeEntryList";
-export { TimeStatsCards, TimeStatsCompact, LargeStatCard } from "./TimeStats";
+export { TimeStatsCards, TimeStatsCompact } from "./TimeStats";
 export {
   WeeklyBarChart,
   CompanyPieChart,
