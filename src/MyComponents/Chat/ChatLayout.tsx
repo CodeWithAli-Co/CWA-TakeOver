@@ -338,7 +338,7 @@ export const ChatLayout = () => {
               animate={{ opacity: 1, x: 0, filter: "blur(0px)" }}
               exit={{ opacity: 0, x: -14, filter: "blur(4px)" }}
               transition={{ duration: 0.22, ease: [0.16, 1, 0.3, 1] }}
-              className="flex-1 flex flex-col min-h-0"
+              className="flex-1 flex flex-col min-h-0 min-w-0"
             >
               <StarredView
                 currentUsername={username}
@@ -352,7 +352,7 @@ export const ChatLayout = () => {
               animate={{ opacity: 1, x: 0, filter: "blur(0px)" }}
               exit={{ opacity: 0, x: -14, filter: "blur(4px)" }}
               transition={{ duration: 0.22, ease: [0.16, 1, 0.3, 1] }}
-              className="flex-1 flex flex-col min-h-0"
+              className="flex-1 flex flex-col min-h-0 min-w-0"
             >
               <ThreadsView currentUsername={username} />
             </motion.div>
@@ -363,7 +363,7 @@ export const ChatLayout = () => {
               animate={{ opacity: 1, x: 0, filter: "blur(0px)" }}
               exit={{ opacity: 0, x: -14, filter: "blur(4px)" }}
               transition={{ duration: 0.22, ease: [0.16, 1, 0.3, 1] }}
-              className="flex-1 flex flex-col min-h-0"
+              className="flex-1 flex flex-col min-h-0 min-w-0"
             >
               <ChatHeader
                 groupName={GroupName}

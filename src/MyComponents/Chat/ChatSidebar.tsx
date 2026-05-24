@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 import { useLiveHuddlesStore } from "@/stores/liveHuddlesStore";
 import { useHuddleStore } from "@/stores/huddleStore";
+import { PresenceDot } from "./PresenceDot";
 
 // Module-scope stable empty array so the live-huddle selector returns
 // the same reference on every render when a channel has no
@@ -107,6 +108,21 @@ export const ChatSidebar: React.FC<Props> = ({ groups, employees, onCreateChanne
     channelCategories.flatMap((c) => c.items),
   );
   const uncategorized = filtered.filter((g) => !inAnyCategory.has(g.name));
+
+  // ── Discord-style split: Channels vs Direct Messages ──────────────
+  // Channels  = General + any name starting with "#" (created via the
+  //             admin-only CreateChannelDialog — they're company-wide
+  //             topic rooms).
+  // DMs       = everything else: 1-on-1 dm::a::b conversations AND
+  //             multi-person group rooms named without a # prefix
+  //             ("Marketing", "Takeover Codewithali", etc).
+  // Keeps the user's per-channel "categories" feature intact — those
+  // render below both top-level sections so anything in a category is
+  // surfaced there instead of duplicating into the channel/DM split.
+  const isChannelGroup = (g: Group) =>
+    g.type === "general" || g.name.startsWith("#");
+  const channelsTop = uncategorized.filter(isChannelGroup);
+  const dmsTop = uncategorized.filter((g) => !isChannelGroup(g));
 
   const handleSelect = (name: string) => {
     setGroupName(name);
@@ -229,8 +245,40 @@ export const ChatSidebar: React.FC<Props> = ({ groups, employees, onCreateChanne
               </button>
             )}
 
-            {/* Uncategorized first */}
-            {uncategorized.map((group) => (
+            {/* Section: CHANNELS — General + #-prefixed rooms */}
+            {channelsTop.length > 0 && (
+              <SectionHeader icon={Hash} label="Channels" count={channelsTop.length} />
+            )}
+            {channelsTop.map((group) => (
+              <GroupButton
+                key={group.id}
+                group={group}
+                isActive={GroupName === group.name}
+                unread={unreadCounts[group.name] || 0}
+                onSelect={handleSelect}
+                categories={channelCategories}
+                onMoveTo={(catId) => moveChannelToCategory(group.name, catId)}
+                currentUsername={currentUsername}
+                avatarByUser={avatarByUser}
+                canDelete={canDelete && group.type !== "general"}
+                onDelete={
+                  onDeleteChannel
+                    ? () => onDeleteChannel(group)
+                    : undefined
+                }
+              />
+            ))}
+
+            {/* Section: DIRECT MESSAGES — 1-on-1s + group DMs */}
+            {dmsTop.length > 0 && (
+              <SectionHeader
+                icon={MessageSquare}
+                label="Direct Messages"
+                count={dmsTop.length}
+                className={channelsTop.length > 0 ? "mt-4" : ""}
+              />
+            )}
+            {dmsTop.map((group) => (
               <GroupButton
                 key={group.id}
                 group={group}
@@ -349,6 +397,36 @@ export const ChatSidebar: React.FC<Props> = ({ groups, employees, onCreateChanne
   );
 };
 
+// ── Section header — small Discord-style label above a group of rows ──
+// Lives at module scope (not a closure) so the component identity is
+// stable across re-renders and React doesn't remount the header tree.
+
+function SectionHeader({
+  icon: Icon,
+  label,
+  count,
+  className = "",
+}: {
+  icon: React.ComponentType<{ className?: string }>;
+  label: string;
+  count: number;
+  className?: string;
+}) {
+  return (
+    <div
+      className={`flex items-center gap-1.5 px-2 pb-1 pt-1 ${className}`}
+    >
+      <Icon className="h-3 w-3 text-muted-foreground/70" />
+      <span className="font-mono text-[9.5px] uppercase tracking-[0.18em] text-muted-foreground">
+        {label}
+      </span>
+      <span className="font-mono text-[9.5px] text-muted-foreground/60">
+        · {count}
+      </span>
+    </div>
+  );
+}
+
 // ── Visual helpers: deterministic tile avatar from the channel name ────
 // Clean, brand-aligned initials tile. Muted zinc gradient with a tiny
 // warm/cool accent derived from a djb2 hash of the name — just enough
@@ -439,11 +517,22 @@ function GroupButton({
               <Hash className="h-3.5 w-3.5 text-primary" />
             </div>
           ) : (
-            <div
-              className="h-8 w-8 rounded-md border border-border flex items-center justify-center shrink-0 font-semibold text-[11px] shadow-sm"
-              style={groupAvatarStyle(displayName)}
-            >
-              {groupAvatarInitials(displayName)}
+            <div className="relative shrink-0">
+              <div
+                className="h-8 w-8 rounded-md border border-border flex items-center justify-center font-semibold text-[11px] shadow-sm"
+                style={groupAvatarStyle(displayName)}
+              >
+                {groupAvatarInitials(displayName)}
+              </div>
+              {/* Online/offline dot — only meaningful for 1-on-1 DMs
+                  where "displayName" is a real person. For group chats
+                  and channels there's no single person to surface
+                  presence for, so we skip it. */}
+              {isOneOnOne && (
+                <span className="absolute -bottom-0.5 -right-0.5">
+                  <PresenceDot username={displayName} size={10} />
+                </span>
+              )}
             </div>
           )}
           <div className="flex-1 min-w-0">

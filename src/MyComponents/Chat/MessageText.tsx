@@ -66,7 +66,13 @@ export const MessageText = memo(function MessageText({
   if (!text) return null;
   const tokens = tokenize(text);
   return (
-    <div className="text-[13.5px] text-foreground/85 break-words leading-relaxed">
+    // `[overflow-wrap:anywhere]` is the aggressive sibling of `break-words`
+    // — it can break inside long unbroken tokens (URLs, base64 blobs,
+    // SQL strings) instead of pushing the message out of its container.
+    // Without it, a long unspaced string in a message body forces the
+    // bubble wider than the chat column, which is exactly the bug
+    // that made the right edge of long pins/messages get clipped.
+    <div className="text-[13.5px] text-foreground/85 break-words [overflow-wrap:anywhere] leading-relaxed min-w-0 max-w-full">
       {tokens.map((tok, i) =>
         tok.kind === "code" ? (
           <CodeBlockView key={i} lang={tok.lang} body={tok.body} />

@@ -43,7 +43,7 @@ export function PinnedBar({
 
   return (
     <div
-      className="shrink-0 border-b border-border bg-muted/30"
+      className="shrink-0 border-b border-border bg-muted/30 min-w-0 max-w-full overflow-hidden"
       data-pinned-bar={group}
     >
       <button
@@ -77,7 +77,7 @@ export function PinnedBar({
             {pinnedMessages.map((m) => (
               <li
                 key={m.msg_id}
-                className="flex items-start gap-2 border-t border-border/50 px-4 py-2 hover:bg-muted/40"
+                className="flex items-start gap-2 border-t border-border/50 px-4 py-2 hover:bg-muted/40 min-w-0 max-w-full overflow-hidden"
               >
                 <Pin className="mt-0.5 size-3 shrink-0 text-primary/70" />
                 <button

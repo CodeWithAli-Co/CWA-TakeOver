@@ -445,7 +445,7 @@ export const MessageBubble: React.FC<Props> = ({
 
   return (
     <div
-      className={`group relative flex gap-3 px-5 hover:bg-card transition-colors ${
+      className={`group relative flex gap-3 px-5 hover:bg-card transition-colors min-w-0 max-w-full ${
         isGrouped ? "py-0.5" : "pt-3 pb-1 mt-1"
       } ${isPinned ? "bg-primary/[0.03]" : ""}`}
     >
