@@ -321,10 +321,12 @@ export const sendWelcomeMessageAction: AxonAction<
     // Prefix so it reads as an announcement.
     const fullMsg = `📢 Welcome aboard — ${cand.full_name}\n\n${message}`;
 
+    // cwa_chat IS the General channel — no group/channel column to set.
+    // (DMs live in cwa_dm_chat with a dm_group column. If you want this
+    //  posted as a DM thread instead, switch tables + use dm_group.)
     const insertPayload: Record<string, unknown> = {
       message: fullMsg,
       sent_by: ctx.operator?.username ?? "AXON",
-      chat_group: channel,
     };
 
     const { data: inserted, error: insertErr } = await supabase
@@ -334,7 +336,7 @@ export const sendWelcomeMessageAction: AxonAction<
       .maybeSingle();
 
     if (insertErr) {
-      return { summary: `Failed to post welcome to #${channel}: ${insertErr.message}` };
+      return { summary: `Failed to post welcome message: ${insertErr.message}` };
     }
 
     const msgId = (inserted as { msg_id?: number } | null)?.msg_id ?? 0;
@@ -346,7 +348,7 @@ export const sendWelcomeMessageAction: AxonAction<
       })
       .eq("id", candidate_id);
 
-    const summary = `Posted welcome for ${cand.full_name} in #${channel}.`;
+    const summary = `Posted welcome for ${cand.full_name} in General.`;
     ctx.logActivity({
       actionName: "send_welcome_message",
       params: { candidate_id, channel },
