@@ -30,6 +30,7 @@ import {
   Inbox,
   BookCopy,
   Network,
+  Wallet,
   type LucideIcon,
 } from "lucide-react";
 
@@ -908,6 +909,15 @@ export const ceoData = {
       url: "/axonSwarm",
       isActive: false,
       icon: Network,
+    },
+    {
+      // Funding strategy dashboard — multi-business cap table + raise
+      // plan with scenario toggles. Sits next to Axon Swarm because
+      // these two are the most leverage-dense executive surfaces.
+      title: "Funding",
+      url: "/funding",
+      isActive: false,
+      icon: Wallet,
     },
     {
       title: "Chat",
