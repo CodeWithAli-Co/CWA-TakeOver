@@ -880,7 +880,7 @@ export const cooData = {
       title: "Admin Permissions",
       url: "/details",
       icon: SquareTerminal,
-      isActive: true,
+      isActive: false,
       company: "codeWithAli" as const,
       items: [
         {
@@ -941,13 +941,13 @@ export const cooData = {
       company: "codeWithAli" as const,
     },
     // (Time Tracking has been merged into the Timesheet entry above.)
-    {
-      title: "Arabic Learning",
-      url: "/arabic",
-      isActive: false,
-      icon: Languages,
-      company: "codeWithAli" as const,
-    },
+    // {
+    //   title: "Arabic Learning",
+    //   url: "/arabic",
+    //   isActive: false,
+    //   icon: Languages,
+    //   company: "codeWithAli" as const,
+    // },
 
     // ── Shared items ──
     {

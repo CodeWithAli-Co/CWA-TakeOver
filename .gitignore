@@ -31,3 +31,4 @@ release.json
 
 # Ignoring rust-analyzer target folder
 target/**
+.tanstack
