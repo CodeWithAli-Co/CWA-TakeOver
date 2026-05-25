@@ -28,6 +28,7 @@ import {
   Package,
   ClipboardCheck,
   Inbox,
+  Send,
   BookCopy,
   Network,
   Wallet,
@@ -85,6 +86,12 @@ export const internData = {
       isActive: false,
       icon: Target,
     },
+    {
+      title: "Submit Report",
+      url: "/reports/submit",
+      isActive: false,
+      icon: Send,
+    },
 
     // Settings moved to the profile dropdown (see nav-user.tsx).
   ],
@@ -122,7 +129,13 @@ export const memberData = {
       isActive: false,
       icon: Target,
     },
- 
+    {
+      title: "Submit Report",
+      url: "/reports/submit",
+      isActive: false,
+      icon: Send,
+    },
+
     // Settings moved to the profile dropdown (see nav-user.tsx).
   ],
 };
@@ -181,6 +194,12 @@ export const accountManagerData = {
       url: "/schedule",
       isActive: false,
       icon: CalendarDays,
+    },
+    {
+      title: "Submit Report",
+      url: "/reports/submit",
+      isActive: false,
+      icon: Send,
     },
     // Settings moved to the profile dropdown (see nav-user.tsx).
   ],
@@ -248,7 +267,13 @@ export const marketingData = {
       isActive: false,
       icon: CalendarDays,
     },
- 
+    {
+      title: "Submit Report",
+      url: "/reports/submit",
+      isActive: false,
+      icon: Send,
+    },
+
     // Settings moved to the profile dropdown (see nav-user.tsx).
   ],
 };
@@ -317,6 +342,12 @@ export const adminData = {
       url: "/onboarding",
       isActive: false,
       icon: ClipboardCheck,
+    },
+    {
+      title: "Submit Report",
+      url: "/reports/submit",
+      isActive: false,
+      icon: Send,
     },
     {
       title: "Reports",
@@ -495,6 +526,12 @@ export const projectManagerData = {
       isActive: false,
       icon: CalendarDays,
     },
+    {
+      title: "Submit Report",
+      url: "/reports/submit",
+      isActive: false,
+      icon: Send,
+    },
     // {
     //   title: "BioTech",
     //   url: "/bio",
@@ -607,6 +644,12 @@ export const securityEngineerData = {
       isActive: false,
       icon: CalendarDays,
     },
+    {
+      title: "Submit Report",
+      url: "/reports/submit",
+      isActive: false,
+      icon: Send,
+    },
     // {
     //   title: "BioTech",
     //   url: "/bio",
@@ -694,6 +737,12 @@ export const cooData = {
       url: "/onboarding",
       isActive: false,
       icon: ClipboardCheck,
+    },
+    {
+      title: "Submit Report",
+      url: "/reports/submit",
+      isActive: false,
+      icon: Send,
     },
     {
       title: "Reports",
@@ -1004,10 +1053,11 @@ export const ceoData = {
       isActive: false,
       company: "codeWithAli" as const,
       items: [
-        { title: "Analytics",  url: "/analytics" },
-        { title: "Reports",    url: "/reports" },
-        { title: "Roadmap",    url: "/roadmap" },
-        { title: "Components", url: "/components" },
+        { title: "Analytics",     url: "/analytics" },
+        { title: "Submit Report", url: "/reports/submit" },
+        { title: "Reports",       url: "/reports" },
+        { title: "Roadmap",       url: "/roadmap" },
+        { title: "Components",    url: "/components" },
       ],
     },
 
@@ -1158,6 +1208,12 @@ export const cfoData = {
       url: "/onboarding",
       isActive: false,
       icon: ClipboardCheck,
+    },
+    {
+      title: "Submit Report",
+      url: "/reports/submit",
+      isActive: false,
+      icon: Send,
     },
     {
       title: "Reports",

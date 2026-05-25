@@ -15,23 +15,26 @@
  */
 
 import { useEffect, useState } from "react";
-import { Inbox, Bug, RefreshCw } from "lucide-react";
+import { Inbox, Bug, RefreshCw, CalendarDays, Send } from "lucide-react";
+import { useNavigate } from "@tanstack/react-router";
 import { ReportsInbox } from "./ReportsInbox";
 import { BugReportsInbox } from "./BugReportsInbox";
+import { AssignmentsInbox } from "./AssignmentsInbox";
 
-type Tab = "reports" | "bugs";
+type Tab = "reports" | "bugs" | "assignments";
 
 const STORAGE_KEY = "cwa-reports-tab";
 
 function loadTab(): Tab {
   try {
     const v = localStorage.getItem(STORAGE_KEY);
-    if (v === "reports" || v === "bugs") return v;
+    if (v === "reports" || v === "bugs" || v === "assignments") return v;
   } catch { /* noop */ }
   return "reports";
 }
 
 export function ReportsHub() {
+  const navigate = useNavigate();
   const [tab, setTab] = useState<Tab>(loadTab);
   // Bump this counter to ask the active inbox to re-fetch. Each
   // inbox subscribes via prop and runs its reload when the value
@@ -78,11 +81,25 @@ export function ReportsHub() {
               active={tab === "bugs"}
               onClick={() => setTab("bugs")}
             />
+            <Tab
+              label="Assignments"
+              icon={CalendarDays}
+              active={tab === "assignments"}
+              onClick={() => setTab("assignments")}
+            />
           </nav>
 
-          {/* Right edge: refresh. Wraps to the bottom of the row
-              by virtue of items-end. */}
+          {/* Right edge: write-a-report shortcut + refresh. */}
           <div className="ml-auto pb-3 flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => navigate({ to: "/reports/submit" }).catch(() => {})}
+              title="Write a report"
+              className="inline-flex items-center gap-1.5 rounded-md border border-border/70 bg-card/40 px-2.5 h-8 text-[11.5px] font-semibold text-foreground/80 hover:text-foreground hover:bg-muted/60 transition-colors"
+            >
+              <Send className="h-3.5 w-3.5" />
+              Write a report
+            </button>
             <button
               type="button"
               onClick={() => setRefreshToken((n) => n + 1)}
@@ -98,9 +115,9 @@ export function ReportsHub() {
       {/* Active inbox panel. flex-1 + min-h-0 so the inner list/
           detail layout can claim all remaining height. */}
       <div className="flex-1 min-h-0 flex flex-col">
-        {tab === "reports"
-          ? <ReportsInbox refreshToken={refreshToken} />
-          : <BugReportsInbox refreshToken={refreshToken} />}
+        {tab === "reports" && <ReportsInbox refreshToken={refreshToken} />}
+        {tab === "bugs" && <BugReportsInbox refreshToken={refreshToken} />}
+        {tab === "assignments" && <AssignmentsInbox refreshToken={refreshToken} />}
       </div>
     </div>
   );

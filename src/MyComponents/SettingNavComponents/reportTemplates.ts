@@ -278,6 +278,85 @@ export const REPORT_TEMPLATES: Record<ReportTypeKey, ReportTemplate[]> = {
   other:          OTHER_TEMPLATES,
 };
 
+// ── Role-recommended templates ─────────────────────────────────
+// Maps a user role → the templates we surface FIRST on the
+// writer page's "Recommended for you" rail. The full library is
+// still browsable from the picker; this just removes the
+// "what do I even pick?" friction for someone opening the page
+// for the first time.
+
+export interface RoleRecommendation {
+  /** Type key + template id, in display order. */
+  type: ReportTypeKey;
+  templateId: string;
+  /** One-line "why this for you" hint. */
+  reason: string;
+  /** Suggested cadence label, surfaced as a subtitle. */
+  cadence: string;
+}
+
+export const ROLE_RECOMMENDATIONS: Record<string, RoleRecommendation[]> = {
+  CEO: [
+    { type: "status",         templateId: "weekly-checkin", reason: "Frame the week for the team — what shipped, what's next.", cadence: "Weekly" },
+    { type: "feedback",       templateId: "process-feedback", reason: "Quarterly retro on how the company operates.",           cadence: "Quarterly" },
+    { type: "project_update", templateId: "milestone-hit",  reason: "Mark a major win publicly so the team feels it.",          cadence: "Per milestone" },
+  ],
+  COO: [
+    { type: "status",         templateId: "weekly-checkin", reason: "Ops cadence — what's running smoothly, what's blocked.",   cadence: "Weekly" },
+    { type: "project_update", templateId: "progress-check", reason: "Per-initiative pulse on timeline + budget + risks.",       cadence: "Biweekly" },
+    { type: "incident",       templateId: "post-mortem",    reason: "Anything that broke this period and what's preventing recurrence.", cadence: "As needed" },
+  ],
+  CFO: [
+    { type: "status",         templateId: "quick-pulse",    reason: "Quick green/yellow/red on financial health.",              cadence: "Weekly" },
+    { type: "project_update", templateId: "progress-check", reason: "Budget-bearing initiatives — actuals vs. plan.",           cadence: "Monthly" },
+  ],
+  CTO: [
+    { type: "status",         templateId: "end-of-sprint",  reason: "Sprint outcomes for the leadership read-out.",             cadence: "Per sprint" },
+    { type: "incident",       templateId: "post-mortem",    reason: "Engineering post-mortems for production incidents.",       cadence: "As needed" },
+    { type: "project_update", templateId: "milestone-hit",  reason: "Ship announcements — features, releases, infra moves.",   cadence: "Per release" },
+  ],
+  Engineer: [
+    { type: "status",         templateId: "weekly-checkin", reason: "What you worked on, what's next, what's blocking you.",    cadence: "Weekly" },
+    { type: "project_update", templateId: "progress-check", reason: "On a multi-week project? Use this for the timeline view.", cadence: "Biweekly" },
+    { type: "incident",       templateId: "outage",         reason: "Mid-incident updates — fast structured comms while it's live.", cadence: "As needed" },
+  ],
+  Designer: [
+    { type: "status",         templateId: "weekly-checkin", reason: "Design WIP, what shipped, what's queued.",                 cadence: "Weekly" },
+    { type: "feedback",       templateId: "product-feedback", reason: "UX feedback you spotted while shipping.",                cadence: "Ad hoc" },
+  ],
+  Sales: [
+    { type: "status",         templateId: "weekly-checkin", reason: "Pipeline movement — deals advanced, deals stuck.",         cadence: "Weekly" },
+    { type: "feedback",       templateId: "client-feedback", reason: "Voice-of-customer from calls this week.",                 cadence: "Weekly" },
+  ],
+  Marketing: [
+    { type: "status",         templateId: "weekly-checkin", reason: "Campaigns shipped, channels learnt, next experiments.",    cadence: "Weekly" },
+    { type: "feedback",       templateId: "product-feedback", reason: "What's working in messaging, what's not landing.",       cadence: "Monthly" },
+  ],
+  Admin: [
+    { type: "status",         templateId: "weekly-checkin", reason: "Operational summary for the leadership team.",             cadence: "Weekly" },
+    { type: "other",          templateId: "quick-note",     reason: "Quick one-off heads-up without ceremony.",                 cadence: "Ad hoc" },
+  ],
+};
+
+/** Pick the recommendations to surface for a given role. Falls
+ *  back to a sensible default if the role isn't in the map. */
+export function recommendationsForRole(role: string | null | undefined): RoleRecommendation[] {
+  if (!role) return ROLE_RECOMMENDATIONS.Admin;
+  const exact = ROLE_RECOMMENDATIONS[role];
+  if (exact) return exact;
+  // Loose match — "Senior Engineer" → Engineer
+  const lower = role.toLowerCase();
+  if (/(eng|developer|dev$|backend|frontend|fullstack)/i.test(lower)) return ROLE_RECOMMENDATIONS.Engineer;
+  if (/design/i.test(lower)) return ROLE_RECOMMENDATIONS.Designer;
+  if (/sales|ae|sdr|account exec/i.test(lower)) return ROLE_RECOMMENDATIONS.Sales;
+  if (/marketing|growth|brand/i.test(lower)) return ROLE_RECOMMENDATIONS.Marketing;
+  if (/ceo/i.test(lower)) return ROLE_RECOMMENDATIONS.CEO;
+  if (/coo/i.test(lower)) return ROLE_RECOMMENDATIONS.COO;
+  if (/cfo/i.test(lower)) return ROLE_RECOMMENDATIONS.CFO;
+  if (/cto|vp eng/i.test(lower)) return ROLE_RECOMMENDATIONS.CTO;
+  return ROLE_RECOMMENDATIONS.Admin;
+}
+
 // ── Serialization ──────────────────────────────────────────────
 
 /**

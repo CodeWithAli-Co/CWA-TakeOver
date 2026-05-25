@@ -55,6 +55,7 @@ const ArabicLazyRouteImport = createFileRoute('/arabic')()
 const AnalyticsLazyRouteImport = createFileRoute('/analytics')()
 const IndexLazyRouteImport = createFileRoute('/')()
 const ClientIndexLazyRouteImport = createFileRoute('/client/')()
+const ReportsSubmitLazyRouteImport = createFileRoute('/reports/submit')()
 const OfferAcceptTokenLazyRouteImport = createFileRoute(
   '/offer/accept/$token',
 )()
@@ -270,6 +271,13 @@ const ClientIndexLazyRoute = ClientIndexLazyRouteImport.update({
   path: '/client/',
   getParentRoute: () => rootRouteImport,
 } as any).lazy(() => import('./routes/client/index.lazy').then((d) => d.Route))
+const ReportsSubmitLazyRoute = ReportsSubmitLazyRouteImport.update({
+  id: '/submit',
+  path: '/submit',
+  getParentRoute: () => ReportsLazyRoute,
+} as any).lazy(() =>
+  import('./routes/reports.submit.lazy').then((d) => d.Route),
+)
 const OfferAcceptTokenLazyRoute = OfferAcceptTokenLazyRouteImport.update({
   id: '/offer/accept/$token',
   path: '/offer/accept/$token',
@@ -306,7 +314,7 @@ export interface FileRoutesByFullPath {
   '/onboarding': typeof OnboardingLazyRoute
   '/personal': typeof PersonalLazyRoute
   '/quota': typeof QuotaLazyRoute
-  '/reports': typeof ReportsLazyRoute
+  '/reports': typeof ReportsLazyRouteWithChildren
   '/roadmap': typeof RoadmapLazyRoute
   '/s-analytics': typeof SAnalyticsLazyRoute
   '/s-broadcast': typeof SBroadcastLazyRoute
@@ -319,6 +327,7 @@ export interface FileRoutesByFullPath {
   '/task': typeof TaskLazyRoute
   '/timetracking': typeof TimetrackingLazyRoute
   '/trainingplan': typeof TrainingplanLazyRoute
+  '/reports/submit': typeof ReportsSubmitLazyRoute
   '/client/': typeof ClientIndexLazyRoute
   '/offer/accept/$token': typeof OfferAcceptTokenLazyRoute
 }
@@ -350,7 +359,7 @@ export interface FileRoutesByTo {
   '/onboarding': typeof OnboardingLazyRoute
   '/personal': typeof PersonalLazyRoute
   '/quota': typeof QuotaLazyRoute
-  '/reports': typeof ReportsLazyRoute
+  '/reports': typeof ReportsLazyRouteWithChildren
   '/roadmap': typeof RoadmapLazyRoute
   '/s-analytics': typeof SAnalyticsLazyRoute
   '/s-broadcast': typeof SBroadcastLazyRoute
@@ -363,6 +372,7 @@ export interface FileRoutesByTo {
   '/task': typeof TaskLazyRoute
   '/timetracking': typeof TimetrackingLazyRoute
   '/trainingplan': typeof TrainingplanLazyRoute
+  '/reports/submit': typeof ReportsSubmitLazyRoute
   '/client': typeof ClientIndexLazyRoute
   '/offer/accept/$token': typeof OfferAcceptTokenLazyRoute
 }
@@ -395,7 +405,7 @@ export interface FileRoutesById {
   '/onboarding': typeof OnboardingLazyRoute
   '/personal': typeof PersonalLazyRoute
   '/quota': typeof QuotaLazyRoute
-  '/reports': typeof ReportsLazyRoute
+  '/reports': typeof ReportsLazyRouteWithChildren
   '/roadmap': typeof RoadmapLazyRoute
   '/s-analytics': typeof SAnalyticsLazyRoute
   '/s-broadcast': typeof SBroadcastLazyRoute
@@ -408,6 +418,7 @@ export interface FileRoutesById {
   '/task': typeof TaskLazyRoute
   '/timetracking': typeof TimetrackingLazyRoute
   '/trainingplan': typeof TrainingplanLazyRoute
+  '/reports/submit': typeof ReportsSubmitLazyRoute
   '/client/': typeof ClientIndexLazyRoute
   '/offer/accept/$token': typeof OfferAcceptTokenLazyRoute
 }
@@ -454,6 +465,7 @@ export interface FileRouteTypes {
     | '/task'
     | '/timetracking'
     | '/trainingplan'
+    | '/reports/submit'
     | '/client/'
     | '/offer/accept/$token'
   fileRoutesByTo: FileRoutesByTo
@@ -498,6 +510,7 @@ export interface FileRouteTypes {
     | '/task'
     | '/timetracking'
     | '/trainingplan'
+    | '/reports/submit'
     | '/client'
     | '/offer/accept/$token'
   id:
@@ -542,6 +555,7 @@ export interface FileRouteTypes {
     | '/task'
     | '/timetracking'
     | '/trainingplan'
+    | '/reports/submit'
     | '/client/'
     | '/offer/accept/$token'
   fileRoutesById: FileRoutesById
@@ -574,7 +588,7 @@ export interface RootRouteChildren {
   OnboardingLazyRoute: typeof OnboardingLazyRoute
   PersonalLazyRoute: typeof PersonalLazyRoute
   QuotaLazyRoute: typeof QuotaLazyRoute
-  ReportsLazyRoute: typeof ReportsLazyRoute
+  ReportsLazyRoute: typeof ReportsLazyRouteWithChildren
   RoadmapLazyRoute: typeof RoadmapLazyRoute
   SAnalyticsLazyRoute: typeof SAnalyticsLazyRoute
   SBroadcastLazyRoute: typeof SBroadcastLazyRoute
@@ -880,6 +894,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ClientIndexLazyRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/reports/submit': {
+      id: '/reports/submit'
+      path: '/submit'
+      fullPath: '/reports/submit'
+      preLoaderRoute: typeof ReportsSubmitLazyRouteImport
+      parentRoute: typeof ReportsLazyRoute
+    }
     '/offer/accept/$token': {
       id: '/offer/accept/$token'
       path: '/offer/accept/$token'
@@ -889,6 +910,18 @@ declare module '@tanstack/react-router' {
     }
   }
 }
+
+interface ReportsLazyRouteChildren {
+  ReportsSubmitLazyRoute: typeof ReportsSubmitLazyRoute
+}
+
+const ReportsLazyRouteChildren: ReportsLazyRouteChildren = {
+  ReportsSubmitLazyRoute: ReportsSubmitLazyRoute,
+}
+
+const ReportsLazyRouteWithChildren = ReportsLazyRoute._addFileChildren(
+  ReportsLazyRouteChildren,
+)
 
 const rootRouteChildren: RootRouteChildren = {
   IndexLazyRoute: IndexLazyRoute,
@@ -918,7 +951,7 @@ const rootRouteChildren: RootRouteChildren = {
   OnboardingLazyRoute: OnboardingLazyRoute,
   PersonalLazyRoute: PersonalLazyRoute,
   QuotaLazyRoute: QuotaLazyRoute,
-  ReportsLazyRoute: ReportsLazyRoute,
+  ReportsLazyRoute: ReportsLazyRouteWithChildren,
   RoadmapLazyRoute: RoadmapLazyRoute,
   SAnalyticsLazyRoute: SAnalyticsLazyRoute,
   SBroadcastLazyRoute: SBroadcastLazyRoute,
