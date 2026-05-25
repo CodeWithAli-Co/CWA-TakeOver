@@ -19,6 +19,10 @@ import {
 } from "../config";
 import { buildToolDefinitions, listActions } from "../actions/registry";
 import { executeAction } from "./executor";
+import { composePersonalityPrompt } from "../personality/composer";
+import type {
+  PersonalityContext, PersonalityDimensions, PresetKey,
+} from "../personality/types";
 import { captureScreenContext } from "./screenContext";
 import { loadMemory, memoryPreamble, sinceLastSeen } from "./memory";
 import {
@@ -71,6 +75,16 @@ export interface BrainRunOpts {
   /** When set, mutating actions verify the speaker's voice against the
    *  enrolled print before running. Threaded through to executeAction. */
   voicePrintGate?: { vector: number[]; threshold: number };
+
+  /** Personality engine — when provided, composePersonalityPrompt()
+   *  output is appended to the system field as a second cached block
+   *  AFTER the core SYSTEM_PROMPT. Operational rules live in
+   *  SYSTEM_PROMPT and stay unchanged; personality shapes tone. */
+  personalityDimensions?: PersonalityDimensions;
+  personalityContext?: PersonalityContext;
+  /** Optional preset hint so the composer can attach the right
+   *  identity line without doing dimension equality. */
+  personalityPresetKey?: PresetKey;
 }
 
 export interface BrainRunResult {
@@ -240,7 +254,15 @@ export function drainSentences(buf: string): { sentences: string[]; rest: string
 // ── streaming turn ────────────────────────────────────────────
 async function anthropicStreamCall(
   messages: AnthropicMessage[],
-  opts: { isFinal: boolean; onTextDelta?: (chunk: string) => void }
+  opts: {
+    isFinal: boolean;
+    onTextDelta?: (chunk: string) => void;
+    /** Composed personality prompt — appended as a SECOND cached
+     *  system block after SYSTEM_PROMPT. Empty / undefined → only
+     *  the core prompt is sent. Personality changes invalidate the
+     *  cache key for this block only; the core block stays warm. */
+    personalityBlock?: string;
+  }
 ): Promise<StreamTurnResult> {
   const tools = buildToolDefinitions();
   // Prompt caching — discounts input tokens by 90% for cached blocks on
@@ -255,16 +277,33 @@ async function anthropicStreamCall(
         { ...tools[tools.length - 1], cache_control: { type: "ephemeral" } },
       ]
     : tools;
+  // System is structured as 1-or-2 ephemeral cached blocks:
+  //   [0] SYSTEM_PROMPT (immutable operational rules — cache hit
+  //       across every turn in the session).
+  //   [1] personality block (optional, varies if the operator
+  //       changes sliders mid-session — but rarely).
+  // Two separate blocks means changing personality invalidates
+  // only the second cache entry, not the first.
+  const systemBlocks: Array<{
+    type: "text"; text: string; cache_control: { type: "ephemeral" };
+  }> = [
+    {
+      type: "text",
+      text: SYSTEM_PROMPT,
+      cache_control: { type: "ephemeral" },
+    },
+  ];
+  if (opts.personalityBlock && opts.personalityBlock.trim().length > 0) {
+    systemBlocks.push({
+      type: "text",
+      text: opts.personalityBlock,
+      cache_control: { type: "ephemeral" },
+    });
+  }
   const body = {
     model: CLAUDE_MODEL,
     max_tokens: 1024,
-    system: [
-      {
-        type: "text",
-        text: SYSTEM_PROMPT,
-        cache_control: { type: "ephemeral" },
-      },
-    ],
+    system: systemBlocks,
     tools: cachedTools,
     messages,
     stream: true,
@@ -460,6 +499,17 @@ export async function runTurn(
   let finalText = "";
   const MAX_ITER = 4;
 
+  // Personality engine — compose once per turn. Re-used across all
+  // tool-use iterations within the turn so Claude's persona stays
+  // consistent even when chaining actions.
+  const personalityBlock = opts.personalityDimensions
+    ? composePersonalityPrompt(
+        opts.personalityDimensions,
+        opts.personalityContext ?? {},
+        opts.personalityPresetKey,
+      )
+    : "";
+
   // Mind-map: open a session for this conversational turn so the
   // canvas shows the prompt + every tool call branching off it. The
   // executor's startTool/endTool hooks already emit per-action nodes.
@@ -486,6 +536,7 @@ export async function runTurn(
       response = await anthropicStreamCall(messages, {
         isFinal: true, // always stream text deltas; we commit sentences conditionally
         onTextDelta: textDelta,
+        personalityBlock,
       });
     } catch (e) {
       const message = e instanceof Error ? e.message : String(e);

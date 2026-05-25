@@ -70,6 +70,7 @@ import { _bindThemeAccessors } from "./actions/theme";
 import { useThemeMode } from "@/stores/themeModeStore";
 import { runTurn } from "./engine/brain";
 import { handleDirectDisrespect } from "./engine/loyaltyMonitor";
+import { getPersonalityTurnPayload } from "./personality/settings";
 import {
   VoiceInput,
   ensureMicPermission,
@@ -575,6 +576,15 @@ export function AxonProvider({ children }: { children: React.ReactNode }) {
               threshold: settingsRef.current.voicePrintThreshold,
             }
           : undefined;
+      // Personality engine payload — LIVE-reads the
+      // axon:settings:personalityEnabled flag every turn so flips
+      // are picked up without reload. When flag is false, returns
+      // {} and brain.ts emits the 1-block cached system unchanged.
+      const personalityPayload = getPersonalityTurnPayload({
+        userName: op?.username,
+        latestUserMessage: clean,
+      });
+
       let res: Awaited<ReturnType<typeof runTurn>>;
       try {
         res = await runTurn(clean, conversationRef.current, ctx, {
@@ -582,6 +592,7 @@ export function AxonProvider({ children }: { children: React.ReactNode }) {
           summary: summaryRef.current,
           visionMode: settingsRef.current.visionMode,
           voicePrintGate: gate,
+          ...personalityPayload,
           onSentence: (s) => {
             // Skip empty-after-sanitize fragments (pure markdown/bullets).
             const meaningful = s.replace(/[*_`|#~\-•>]/g, "").trim();
