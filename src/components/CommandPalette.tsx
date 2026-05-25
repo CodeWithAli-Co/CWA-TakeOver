@@ -25,6 +25,7 @@ import { useNavigate } from "@tanstack/react-router";
 import {
   MOCK_REPOS, MOCK_PRS, MOCK_ISSUES,
 } from "@/MyComponents/Code/mockData";
+import { useQuickCompose } from "@/MyComponents/Chat/quickComposeStore";
 
 interface CommandItem {
   /** Stable key for selection state. */
@@ -49,6 +50,7 @@ export function CommandPalette() {
   const [activeIdx, setActiveIdx] = useState(0);
   const inputRef = useRef<HTMLInputElement>(null);
   const navigate = useNavigate();
+  const openCompose = useQuickCompose((s) => s.openCompose);
 
   // Global keyboard binding — Cmd+K (mac) / Ctrl+K (everyone else).
   useEffect(() => {
@@ -156,6 +158,31 @@ export function CommandPalette() {
         onChoose: () => {
           dispatchCustom("cwa-open-bug-report", null);
           close();
+        } },
+      // /msg verb — quick-compose entrypoint from the palette.
+      // Matches typing "/msg", "msg", "send message", or "dm".
+      // Reads the current query at click-time so the parser sees
+      // the exact text the operator typed.
+      { id: "ax-msg",     label: "Send a message",       icon: MessageCircle, hint: "Compose",
+        haystack: "msg send message dm chat compose /msg",
+        onChoose: () => {
+          // Parse "/msg #channel body words..." or "/msg #channel" or just "/msg".
+          // Drop the verb (/msg | msg | send) at the front; remaining
+          // tokens are target + body.
+          const stripped = query.replace(/^\s*(\/msg|msg|send|dm)\s*/i, "").trim();
+          let target: string | undefined;
+          let body: string | undefined;
+          if (stripped) {
+            // First whitespace-delimited token is the target (channel
+            // or DM, with or without # / @ prefix). Rest is the body.
+            const match = stripped.match(/^(\S+)(?:\s+(.+))?$/);
+            if (match) {
+              target = match[1];
+              body = match[2]?.trim();
+            }
+          }
+          close();
+          openCompose({ target, body });
         } },
     ];
 

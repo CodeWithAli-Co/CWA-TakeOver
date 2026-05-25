@@ -1310,7 +1310,6 @@ export const cfoData = {
     {
       title: "Onboarding",
       url: "/onboarding",
-      url: "/onboarding",
       isActive: false,
       icon: ClipboardCheck,
     },

@@ -28,6 +28,8 @@ import {
 import { SidebarProvider } from "@/components/ui/shadcnComponents/sidebar";
 import { AppSidebar } from "@/components/app-sidebar";
 import { CommandPalette } from "@/components/CommandPalette";
+import { QuickComposeModal } from "@/MyComponents/Chat/QuickComposeModal";
+import { useQuickCompose } from "@/MyComponents/Chat/quickComposeStore";
 import supabase from "@/MyComponents/supabase";
 import { useEffect, useState, lazy, Suspense } from "react";
 import { getCurrentWindow } from "@tauri-apps/api/window";
@@ -958,6 +960,11 @@ export const Route = createRootRoute({
              *  an action. Replaces the chat-only search that used
              *  to own Cmd+K (chat-search moved to Cmd+Shift+F). */}
             <CommandPalette />
+            {/* Cmd+Shift+M global quick-message composer — fire a
+             *  message to any channel or DM from anywhere in the
+             *  app without navigating to /chat. */}
+            <QuickComposeModal />
+            <QuickComposeShortcut />
             {/* Chat-only message search — now bound to Cmd+Shift+F */}
             <Suspense fallback={null}>
               <GlobalSearch open={searchOpen} onOpenChange={setSearchOpen} />
@@ -1029,3 +1036,29 @@ export const Route = createRootRoute({
     );
   },
 });
+
+
+// ── Cmd+Shift+M quick-compose shortcut ──────────────────────────
+// Listens at the window level for Cmd/Ctrl+Shift+M and toggles the
+// quick-compose modal. Separate from the modal so the modal stays
+// presentation-only and this can live next to other root-level
+// keyboard bindings without dragging state plumbing through props.
+function QuickComposeShortcut() {
+  const openCompose = useQuickCompose((s) => s.openCompose);
+  const closeCompose = useQuickCompose((s) => s.closeCompose);
+  const isOpen = useQuickCompose((s) => s.open);
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      const isMac = navigator.platform.toLowerCase().includes("mac");
+      const mod = isMac ? e.metaKey : e.ctrlKey;
+      if (mod && e.shiftKey && e.key.toLowerCase() === "m") {
+        e.preventDefault();
+        if (isOpen) closeCompose();
+        else openCompose();
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [isOpen, openCompose, closeCompose]);
+  return null;
+}
