@@ -24,6 +24,8 @@ import {
   agentById,
   type PullRequest, type PrComment, type PrReview,
 } from "./mockData";
+import { CodeBlock, type DiffLineState } from "./CodeBlock";
+import { CommitDetail } from "./CommitDetail";
 
 type PrTab = "conversation" | "commits" | "files";
 
@@ -343,12 +345,25 @@ function CommitsTab({ prId: _prId }: { prId: string }) {
   // For the mock — show all commits on the source branch up to head.
   // Real wiring would filter to commits between target..source.
   const commits = MOCK_COMMITS.slice(0, 3);
+  const [openCommitId, setOpenCommitId] = useState<string | null>(null);
+  const openCommit = openCommitId
+    ? commits.find((c) => c.id === openCommitId) ?? null
+    : null;
+
+  if (openCommit) {
+    return <CommitDetail commit={openCommit} onBack={() => setOpenCommitId(null)} />;
+  }
+
   return (
     <div className="max-w-[860px] mx-auto px-6 py-6 space-y-2">
       {commits.map((c) => {
         const agent = agentById(c.authorAgentId);
         return (
-          <div key={c.id} className="rounded-lg border border-border bg-card hover:border-foreground/30 transition-colors p-3 flex items-start gap-3">
+          <div
+            key={c.id}
+            onClick={() => setOpenCommitId(c.id)}
+            className="cursor-pointer rounded-lg border border-border bg-card hover:border-foreground/30 transition-colors p-3 flex items-start gap-3"
+          >
             <GitCommit className="h-4 w-4 mt-0.5 text-muted-foreground shrink-0" />
             <div className="min-w-0 flex-1">
               <p className="text-[13px] font-medium text-foreground tracking-tight">
@@ -374,7 +389,13 @@ function CommitsTab({ prId: _prId }: { prId: string }) {
                 </span>
               </div>
               {c.agentReasoning && (
-                <details className="mt-2 group">
+                <details
+                  className="mt-2 group"
+                  // Stop click propagation so opening the AI reasoning
+                  // disclosure doesn't also navigate into the commit
+                  // detail view (the row wrapper above is now clickable).
+                  onClick={(e) => e.stopPropagation()}
+                >
                   <summary className="cursor-pointer text-[11px] text-primary inline-flex items-center gap-1 list-none">
                     <ChevronRight className="h-3 w-3 transition-transform group-open:rotate-90" />
                     <Sparkles className="h-3 w-3" />
@@ -430,13 +451,24 @@ function FileDiffCard({
   comments: PrComment[];
 }) {
   const [open, setOpen] = useState(true);
-  const lines = (file.content ?? "").split("\n");
-  // Fake diff state: random scattering of additions for the visual.
-  const lineState = (i: number): "add" | "del" | "ctx" => {
-    if (i === 2 || i === 5) return "add";
-    if (i === 4) return "del";
-    return "ctx";
-  };
+  // Synthesize a per-line diff state map for the mock. Real wiring
+  // would derive this from a parsed unified-diff. Keying off
+  // `file.id` makes the choice deterministic per file so the
+  // colours don't reshuffle on every render.
+  const lineCount = (file.content ?? "").split("\n").length;
+  const lineStates = useMemo<Record<number, DiffLineState>>(() => {
+    const states: Record<number, DiffLineState> = {};
+    // Deterministic-ish: hash file id into a few line numbers.
+    const hash = [...file.id].reduce((a, c) => a + c.charCodeAt(0), 0);
+    if (lineCount > 2) states[2 + (hash % 2)] = "add";
+    if (lineCount > 4) states[4] = "del";
+    if (lineCount > 6) states[6] = "add";
+    return states;
+  }, [file.id, lineCount]);
+
+  const addCount = Object.values(lineStates).filter((s) => s === "add").length;
+  const delCount = Object.values(lineStates).filter((s) => s === "del").length;
+
   return (
     <div className="rounded-lg border border-border bg-card overflow-hidden">
       <button
@@ -448,29 +480,19 @@ function FileDiffCard({
         <FileCode className="h-3.5 w-3.5 text-muted-foreground" />
         <span className="font-mono text-[11.5px] text-foreground/90">{file.path}</span>
         <span className="ml-auto inline-flex items-center gap-2 font-mono text-[10px] text-muted-foreground">
-          <span className="text-emerald-400">+{Math.floor(Math.random() * 20) + 5}</span>
-          <span className="text-red-400">−{Math.floor(Math.random() * 8) + 1}</span>
+          <span className="text-emerald-400">+{addCount}</span>
+          <span className="text-red-400">−{delCount}</span>
         </span>
       </button>
       {open && (
         <>
-          <pre className="overflow-x-auto bg-background font-mono text-[12px] leading-[1.55]">
-            {lines.map((ln, i) => {
-              const state = lineState(i);
-              const bg =
-                state === "add" ? "bg-emerald-500/10 border-l-2 border-l-emerald-500/60"
-              : state === "del" ? "bg-red-500/10 border-l-2 border-l-red-500/60"
-              : "border-l-2 border-l-transparent";
-              const marker = state === "add" ? "+" : state === "del" ? "−" : " ";
-              return (
-                <div key={i} className={`flex ${bg}`}>
-                  <span className="select-none w-10 shrink-0 px-2 text-right text-muted-foreground/60 tabular-nums">{i + 1}</span>
-                  <span className="select-none w-4 shrink-0 text-center text-muted-foreground">{marker}</span>
-                  <code className="flex-1 px-2 py-0.5 text-foreground/90">{ln || " "}</code>
-                </div>
-              );
-            })}
-          </pre>
+          <div className="overflow-x-auto bg-background px-2">
+            <CodeBlock
+              code={file.content ?? ""}
+              language={file.language}
+              lineStates={lineStates}
+            />
+          </div>
           {comments.length > 0 && (
             <div className="border-t border-border bg-muted/20 p-3 space-y-3">
               <p className="font-mono text-[9.5px] uppercase tracking-[0.22em] text-muted-foreground">

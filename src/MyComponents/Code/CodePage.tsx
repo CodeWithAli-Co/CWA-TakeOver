@@ -34,6 +34,7 @@ import {
 import { PullRequestDetail } from "./PullRequestDetail";
 import { AgentAutonomyPanel } from "./AgentAutonomyPanel";
 import { IssuesTab, ActionsTab, InsightsTab } from "./RepoTabs";
+import { CodeBlock } from "./CodeBlock";
 
 type RepoTab = "code" | "issues" | "pulls" | "actions" | "insights" | "settings";
 
@@ -554,9 +555,11 @@ function CodeTab({ repo }: { repo: Repo }) {
                   <span>{timeAgo(selected.lastModifiedAt)}</span>
                 </span>
               </div>
-              <pre className="flex-1 min-h-0 overflow-auto bg-background p-5 font-mono text-[12px] leading-[1.55] text-foreground/90">
-                <code>{selected.content ?? "// (binary or external storage)"}</code>
-              </pre>
+              <div className="flex-1 min-h-0 overflow-auto bg-background p-2">
+                {selected.content
+                  ? <CodeBlock code={selected.content} language={selected.language} />
+                  : <p className="p-5 font-mono text-[12px] text-muted-foreground">// (binary or external storage)</p>}
+              </div>
             </div>
             <aside className="w-[280px] shrink-0 border-l border-border bg-card/30 overflow-y-auto p-5 space-y-5">
               <div>
