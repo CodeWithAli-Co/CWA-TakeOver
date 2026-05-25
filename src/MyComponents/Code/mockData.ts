@@ -523,6 +523,200 @@ export const MOCK_BRANCH_PROTECTION: BranchProtection[] = [
     blockForcePush: true, deleteAfterMerge: true },
 ];
 
+// ── Issues + labels ────────────────────────────────────────────
+
+export interface IssueLabel {
+  id: string;
+  repoId: string;
+  name: string;
+  colorHsl: string;
+}
+
+export interface Issue {
+  id: string;
+  repoId: string;
+  number: number;
+  title: string;
+  body: string;
+  status: "open" | "closed";
+  authorUsername: string | null;
+  authorAgentId: string | null;
+  assigneeUsername: string | null;
+  assigneeAgentId: string | null;
+  aiReason: string | null;
+  createdAt: string;
+  updatedAt: string;
+  closedAt: string | null;
+  commentCount: number;
+  labelIds: string[];
+}
+
+export const MOCK_LABELS: IssueLabel[] = [
+  { id: "l1", repoId: "r-cwa-manager", name: "bug",          colorHsl: "0 72% 51%" },
+  { id: "l2", repoId: "r-cwa-manager", name: "enhancement",  colorHsl: "210 90% 55%" },
+  { id: "l3", repoId: "r-cwa-manager", name: "performance",  colorHsl: "30 95% 55%" },
+  { id: "l4", repoId: "r-cwa-manager", name: "good first issue", colorHsl: "150 65% 45%" },
+  { id: "l5", repoId: "r-cwa-manager", name: "needs-design", colorHsl: "280 70% 60%" },
+  { id: "l6", repoId: "r-takeover-web", name: "bug",         colorHsl: "0 72% 51%" },
+  { id: "l7", repoId: "r-takeover-web", name: "copy",        colorHsl: "200 80% 55%" },
+  { id: "l8", repoId: "r-axon-actions", name: "bug",         colorHsl: "0 72% 51%" },
+];
+
+export const MOCK_ISSUES: Issue[] = [
+  {
+    id: "iss1", repoId: "r-cwa-manager", number: 312,
+    title: "Huddle reconnect drops audio sender after restartIce()",
+    body: "Steps:\n1. Join huddle\n2. Kill wifi for 8 seconds\n3. Reconnect\n→ video resumes but audio sender stays muted on the remote side",
+    status: "open",
+    authorUsername: "Ali", authorAgentId: null,
+    assigneeUsername: null, assigneeAgentId: "a-engineer-1",
+    aiReason: null,
+    createdAt: hoursAgo(4), updatedAt: hoursAgo(1), closedAt: null,
+    commentCount: 3, labelIds: ["l1", "l3"],
+  },
+  {
+    id: "iss2", repoId: "r-cwa-manager", number: 311,
+    title: "AI-flagged: dead code path in scheduledStore — never reached",
+    body: "Static analysis spotted a guard clause that's never true given the call sites. Safe to drop the early-return branch + the unused payload field it protects.",
+    status: "open",
+    authorUsername: null, authorAgentId: "a-critic",
+    assigneeUsername: null, assigneeAgentId: null,
+    aiReason: "Reviewed all 7 call sites of scheduledStore.queueSend; none ever pass mode='deferred' which is what triggers the dead branch. Removing it would drop ~40 LoC and one unused interface member.",
+    createdAt: hoursAgo(9), updatedAt: hoursAgo(9), closedAt: null,
+    commentCount: 1, labelIds: ["l2"],
+  },
+  {
+    id: "iss3", repoId: "r-cwa-manager", number: 308,
+    title: "Polish: tighten the editorial header padding on /onboarding",
+    body: "Top padding feels heavy after the recent refactor. Try py-4 instead of py-7.",
+    status: "open",
+    authorUsername: "blazehp", authorAgentId: null,
+    assigneeUsername: null, assigneeAgentId: null,
+    aiReason: null,
+    createdAt: daysAgo(2), updatedAt: daysAgo(2), closedAt: null,
+    commentCount: 0, labelIds: ["l2", "l4", "l5"],
+  },
+  {
+    id: "iss4", repoId: "r-cwa-manager", number: 295,
+    title: "Light theme: chat input bar is too dim on white",
+    body: "Composer footer background still reads dark because the linear-gradient was hardcoded.",
+    status: "closed",
+    authorUsername: "Ali", authorAgentId: null,
+    assigneeUsername: null, assigneeAgentId: "a-architect",
+    aiReason: null,
+    createdAt: daysAgo(3), updatedAt: hoursAgo(8), closedAt: hoursAgo(8),
+    commentCount: 4, labelIds: ["l1"],
+  },
+  {
+    id: "iss5", repoId: "r-takeover-web", number: 47,
+    title: "Hero copy needs tightening — 'AI for company operations' is too vague",
+    body: "Pitch reviewers found the headline too abstract. Try 'Run your company with AI agents' or 'Replace 15 SaaS tools with one'.",
+    status: "open",
+    authorUsername: "Ali", authorAgentId: null,
+    assigneeUsername: null, assigneeAgentId: null,
+    aiReason: null,
+    createdAt: hoursAgo(20), updatedAt: hoursAgo(20), closedAt: null,
+    commentCount: 2, labelIds: ["l7"],
+  },
+  {
+    id: "iss6", repoId: "r-axon-actions", number: 22,
+    title: "AI-flagged: voice trigger phrase collision — 'go dark' matches force_sleep and set_theme",
+    body: "Anyone saying 'go dark' will fire force_sleep, never the theme switch. We resolved this in docs but the action descriptions don't make the contrast strong enough.",
+    status: "open",
+    authorUsername: null, authorAgentId: "a-critic",
+    assigneeUsername: null, assigneeAgentId: "a-architect",
+    aiReason: "Both action descriptions claim adjacent phrases. Recommend updating set_theme's description to list 'go dark' as a positive trigger AND amend force_sleep's description to explicitly exclude visual-appearance phrases.",
+    createdAt: minutesAgo(35), updatedAt: minutesAgo(35), closedAt: null,
+    commentCount: 0, labelIds: ["l8"],
+  },
+];
+
+// ── Agent runs (powers the Actions tab) ────────────────────────
+
+export interface AgentRunStep {
+  label: string;
+  durationMs: number;
+  status: "succeeded" | "failed" | "skipped";
+}
+
+export interface AgentRun {
+  id: string;
+  repoId: string;
+  agentId: string;
+  trigger: "manual" | "scheduled" | "webhook" | "auto";
+  title: string;
+  status: "running" | "succeeded" | "failed" | "canceled";
+  startedAt: string;
+  durationMs: number | null;       // null while running
+  steps: AgentRunStep[];
+  /** Optional reference to a commit / PR the run produced. */
+  outputRef: { kind: "commit" | "pr"; sha?: string; prNumber?: number } | null;
+}
+
+export const MOCK_AGENT_RUNS: AgentRun[] = [
+  {
+    id: "run1", repoId: "r-cwa-manager", agentId: "a-architect", trigger: "manual",
+    title: "Light-theme refactor for Axon panel + orb canvas",
+    status: "succeeded", startedAt: minutesAgo(48), durationMs: 280_000,
+    steps: [
+      { label: "Read axon.css + Orb.tsx",       durationMs: 12_000, status: "succeeded" },
+      { label: "Plan theme-aware var swap",     durationMs: 38_000, status: "succeeded" },
+      { label: "Patch axon.css + Orb canvas",   durationMs: 92_000, status: "succeeded" },
+      { label: "Verify brace balance",          durationMs:  4_000, status: "succeeded" },
+      { label: "Commit + push to feature/axon-light-theme", durationMs: 8_000, status: "succeeded" },
+      { label: "Open PR #247",                  durationMs: 18_000, status: "succeeded" },
+    ],
+    outputRef: { kind: "pr", prNumber: 247 },
+  },
+  {
+    id: "run2", repoId: "r-cwa-manager", agentId: "a-engineer-1", trigger: "auto",
+    title: "Bug-report inbox: schema + UI + dropdown wiring",
+    status: "succeeded", startedAt: hoursAgo(8), durationMs: 1_540_000,
+    steps: [
+      { label: "Read existing /reports route",  durationMs:  6_000, status: "succeeded" },
+      { label: "Draft migration",               durationMs: 42_000, status: "succeeded" },
+      { label: "Build BugReportDialog",         durationMs: 380_000, status: "succeeded" },
+      { label: "Wire to nav-user dropdown",     durationMs: 18_000, status: "succeeded" },
+      { label: "Add inbox tab + rebase",        durationMs: 220_000, status: "succeeded" },
+      { label: "Merge PR #246",                 durationMs: 12_000, status: "succeeded" },
+    ],
+    outputRef: { kind: "pr", prNumber: 246 },
+  },
+  {
+    id: "run3", repoId: "r-cwa-manager", agentId: "a-critic", trigger: "scheduled",
+    title: "Nightly dead-code scan",
+    status: "succeeded", startedAt: hoursAgo(9), durationMs: 96_000,
+    steps: [
+      { label: "Walk src/ AST",                  durationMs: 22_000, status: "succeeded" },
+      { label: "Flag unreachable branches",      durationMs:  6_000, status: "succeeded" },
+      { label: "File issue for each finding",    durationMs:  4_000, status: "succeeded" },
+    ],
+    outputRef: null,
+  },
+  {
+    id: "run4", repoId: "r-cwa-manager", agentId: "a-engineer-1", trigger: "manual",
+    title: "Wire real Supabase data to /code dashboard",
+    status: "running", startedAt: minutesAgo(3), durationMs: null,
+    steps: [
+      { label: "Read mockData shape",            durationMs:  6_000, status: "succeeded" },
+      { label: "Generate Supabase select hooks", durationMs: 22_000, status: "succeeded" },
+      { label: "Replace MOCK_REPOS usage",       durationMs: 14_000, status: "succeeded" },
+      { label: "Replace MOCK_PRS usage",         durationMs:      0, status: "skipped" },
+    ],
+    outputRef: null,
+  },
+  {
+    id: "run5", repoId: "r-cwa-manager", agentId: "a-architect", trigger: "auto",
+    title: "Failed: codegen on Hiring/HiringDashboard",
+    status: "failed", startedAt: hoursAgo(11), durationMs: 18_000,
+    steps: [
+      { label: "Read HiringDashboard.tsx",       durationMs:  3_000, status: "succeeded" },
+      { label: "Apply theme tokenization",       durationMs: 12_000, status: "failed" },
+    ],
+    outputRef: null,
+  },
+];
+
 // ── Convenience lookups ─────────────────────────────────────────
 
 export const agentById = (id: string | null | undefined): AiAgent | null =>
@@ -530,3 +724,6 @@ export const agentById = (id: string | null | undefined): AiAgent | null =>
 
 export const repoById = (id: string | null | undefined): Repo | null =>
   id ? (MOCK_REPOS.find((r) => r.id === id) ?? null) : null;
+
+export const labelById = (id: string): IssueLabel | undefined =>
+  MOCK_LABELS.find((l) => l.id === id);

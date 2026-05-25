@@ -27,6 +27,7 @@ import {
 
 import { SidebarProvider } from "@/components/ui/shadcnComponents/sidebar";
 import { AppSidebar } from "@/components/app-sidebar";
+import { CommandPalette } from "@/components/CommandPalette";
 import supabase from "@/MyComponents/supabase";
 import { useEffect, useState, lazy, Suspense } from "react";
 import { getCurrentWindow } from "@tauri-apps/api/window";
@@ -844,11 +845,14 @@ export const Route = createRootRoute({
       };
     }, [user]);
 
-    // ─── Cmd / Ctrl + K — global message search ─────────────────────
+    // ─── Cmd/Ctrl + Shift + F — chat-only message search ─────────────
+    // Cmd+K is now owned by the global CommandPalette (mounted below).
+    // Chat-search keeps its own modal but on the secondary shortcut so
+    // the two don't fight each other.
     const [searchOpen, setSearchOpen] = useState(false);
     useEffect(() => {
       const onKey = (e: KeyboardEvent) => {
-        if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "k") {
+        if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key.toLowerCase() === "f") {
           e.preventDefault();
           setSearchOpen((v) => !v);
         }
@@ -950,7 +954,11 @@ export const Route = createRootRoute({
             </Suspense>
             {/* Guided tour overlay — only renders when tourStore.active. */}
             <GuidedTourOverlay />
-            {/* Global Cmd+K message search */}
+            {/* Global Cmd+K command palette — jump anywhere or run
+             *  an action. Replaces the chat-only search that used
+             *  to own Cmd+K (chat-search moved to Cmd+Shift+F). */}
+            <CommandPalette />
+            {/* Chat-only message search — now bound to Cmd+Shift+F */}
             <Suspense fallback={null}>
               <GlobalSearch open={searchOpen} onOpenChange={setSearchOpen} />
             </Suspense>

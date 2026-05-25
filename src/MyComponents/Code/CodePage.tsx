@@ -33,6 +33,7 @@ import {
 } from "./mockData";
 import { PullRequestDetail } from "./PullRequestDetail";
 import { AgentAutonomyPanel } from "./AgentAutonomyPanel";
+import { IssuesTab, ActionsTab, InsightsTab } from "./RepoTabs";
 
 type RepoTab = "code" | "issues" | "pulls" | "actions" | "insights" | "settings";
 
@@ -428,14 +429,14 @@ function RepoView({
       {/* Tab body */}
       <div className="flex-1 min-h-0 overflow-hidden">
         {tab === "code" && <CodeTab repo={repo} />}
-        {tab === "issues" && <Placeholder kind="issues" />}
+        {tab === "issues" && <IssuesTab repo={repo} />}
         {tab === "pulls" && (
           activePr
             ? <PullRequestDetail pr={activePr} onBack={onClosePr} />
             : <PullsTab repo={repo} onOpenPr={onOpenPr} />
         )}
-        {tab === "actions" && <Placeholder kind="actions" />}
-        {tab === "insights" && <Placeholder kind="insights" />}
+        {tab === "actions" && <ActionsTab repo={repo} />}
+        {tab === "insights" && <InsightsTab repo={repo} />}
         {tab === "settings" && <AgentAutonomyPanel repo={repo} />}
       </div>
     </div>
