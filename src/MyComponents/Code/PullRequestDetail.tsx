@@ -20,10 +20,11 @@ import {
   Eye,
 } from "lucide-react";
 import {
-  MOCK_PR_COMMENTS, MOCK_PR_REVIEWS, MOCK_COMMITS, MOCK_FILES,
+  MOCK_COMMITS, MOCK_FILES,
   agentById,
   type PullRequest, type PrComment, type PrReview,
 } from "./mockData";
+import { usePrComments, usePrReviews, useCommits } from "./queries";
 import { CodeBlock, type DiffLineState } from "./CodeBlock";
 import { CommitDetail } from "./CommitDetail";
 
@@ -36,8 +37,8 @@ export function PullRequestDetail({
   onBack: () => void;
 }) {
   const [tab, setTab] = useState<PrTab>("conversation");
-  const comments = MOCK_PR_COMMENTS.filter((c) => c.prId === pr.id);
-  const reviews = MOCK_PR_REVIEWS.filter((r) => r.prId === pr.id);
+  const { data: comments = [] } = usePrComments(pr.id);
+  const { data: reviews = [] } = usePrReviews(pr.id);
 
   return (
     <div className="flex h-full min-h-0 flex-col">
@@ -59,7 +60,7 @@ export function PullRequestDetail({
         {tab === "conversation" && (
           <ConversationTab pr={pr} comments={comments} reviews={reviews} />
         )}
-        {tab === "commits" && <CommitsTab prId={pr.id} />}
+        {tab === "commits" && <CommitsTab prId={pr.id} repoId={pr.repoId} />}
         {tab === "files" && <FilesChangedTab pr={pr} comments={comments} />}
       </div>
 
@@ -341,10 +342,12 @@ function ReviewCard({ review }: { review: PrReview }) {
 
 // ── Commits tab ─────────────────────────────────────────────────
 
-function CommitsTab({ prId: _prId }: { prId: string }) {
-  // For the mock — show all commits on the source branch up to head.
-  // Real wiring would filter to commits between target..source.
-  const commits = MOCK_COMMITS.slice(0, 3);
+function CommitsTab({ prId: _prId, repoId }: { prId: string; repoId: string }) {
+  // Show recent commits on this repo (the PR scope filter would
+  // narrow to target..source; we don't have that join yet). Falls
+  // back to the mock slice when no commits are seeded.
+  const { data: repoCommits = [] } = useCommits(repoId);
+  const commits = repoCommits.length > 0 ? repoCommits.slice(0, 3) : MOCK_COMMITS.slice(0, 3);
   const [openCommitId, setOpenCommitId] = useState<string | null>(null);
   const openCommit = openCommitId
     ? commits.find((c) => c.id === openCommitId) ?? null

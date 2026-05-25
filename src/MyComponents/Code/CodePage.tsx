@@ -26,11 +26,14 @@ import {
   CheckCircle2, XCircle, Hash, Plus, Download, Lock, Eye, EyeOff,
 } from "lucide-react";
 import {
-  MOCK_REPOS, MOCK_PRS, MOCK_COMMITS, MOCK_FILES, MOCK_ACTIVITY,
+  MOCK_REPOS, MOCK_PRS,
   agentById,
-  type Repo, type AiAgent, type PullRequest, type CommitRow,
-  type FileRow, type ActivityItem,
+  type Repo, type PullRequest, type ActivityItem,
 } from "./mockData";
+import {
+  useRepos, usePullRequests, useActivity, useFiles,
+} from "./queries";
+import { FileEditor } from "./FileEditor";
 import { PullRequestDetail } from "./PullRequestDetail";
 import { AgentAutonomyPanel } from "./AgentAutonomyPanel";
 import { IssuesTab, ActionsTab, InsightsTab } from "./RepoTabs";
@@ -46,11 +49,18 @@ export function CodePage() {
    * the repo or losing the tab. */
   const [activePrId, setActivePrId] = useState<string | null>(null);
 
+  // Real Supabase reads with graceful mock-data fallback when tables
+  // are unseeded or unreachable (see queries.ts).
+  const { data: repos = MOCK_REPOS } = useRepos();
+  const { data: prsForRepo = [] } = usePullRequests(activeRepoId);
+
   const activeRepo = activeRepoId
-    ? MOCK_REPOS.find((r) => r.id === activeRepoId) ?? null
+    ? repos.find((r) => r.id === activeRepoId) ?? null
     : null;
   const activePr = activePrId
-    ? MOCK_PRS.find((p) => p.id === activePrId) ?? null
+    ? (prsForRepo.find((p) => p.id === activePrId)
+        ?? MOCK_PRS.find((p) => p.id === activePrId)
+        ?? null)
     : null;
 
   return (
@@ -84,14 +94,17 @@ function CodeDashboard({ onPickRepo }: { onPickRepo: (id: string) => void }) {
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<"active" | "archived" | "all">("active");
 
+  const { data: repos = MOCK_REPOS } = useRepos();
+  const { data: activity = [] } = useActivity();
+
   const visible = useMemo(() => {
     const q = search.trim().toLowerCase();
-    return MOCK_REPOS.filter((r) => {
+    return repos.filter((r) => {
       if (statusFilter !== "all" && r.status !== statusFilter) return false;
       if (q && !`${r.name} ${r.owner} ${r.description}`.toLowerCase().includes(q)) return false;
       return true;
     });
-  }, [search, statusFilter]);
+  }, [repos, search, statusFilter]);
 
   return (
     <div className="flex flex-1 min-h-0">
@@ -162,7 +175,7 @@ function CodeDashboard({ onPickRepo }: { onPickRepo: (id: string) => void }) {
           </h2>
         </div>
         <div className="flex-1 min-h-0 overflow-y-auto">
-          {MOCK_ACTIVITY.map((a) => (
+          {activity.map((a) => (
             <ActivityRow key={a.id} item={a} />
           ))}
         </div>
@@ -497,28 +510,44 @@ function RepoTabBtn({
 // ── CODE TAB — file tree + viewer ───────────────────────────────
 
 function CodeTab({ repo }: { repo: Repo }) {
-  const files = MOCK_FILES.filter((f) => f.repoId === repo.id);
-  const [selectedPath, setSelectedPath] = useState<string | null>(files[0]?.path ?? null);
-  const selected = files.find((f) => f.path === selectedPath) ?? null;
+  const { data: files = [] } = useFiles(repo.id, repo.defaultBranch);
+  const [selectedPath, setSelectedPath] = useState<string | null>(null);
+  /** When true, the right pane shows a fresh-buffer editor instead
+   *  of an existing file. Clearing it returns to whatever file was
+   *  previously selected (or the first file). */
+  const [creatingNew, setCreatingNew] = useState(false);
+
+  // First file becomes the default selection once data lands. Tracking
+  // the path (not the row) lets the selection survive re-fetches.
+  const effectivePath = selectedPath ?? files[0]?.path ?? null;
+  const selected = files.find((f) => f.path === effectivePath) ?? null;
 
   return (
     <div className="flex h-full min-h-0">
       {/* File tree */}
-      <aside className="w-[260px] shrink-0 border-r border-border bg-card/30 overflow-y-auto">
+      <aside className="w-[260px] shrink-0 border-r border-border bg-card/30 overflow-y-auto flex flex-col">
         <div className="px-3 py-2 border-b border-border flex items-center gap-1.5">
           <GitBranch className="h-3 w-3 text-muted-foreground" />
           <span className="font-mono text-[10.5px] text-foreground/85">{repo.defaultBranch}</span>
           <span className="ml-auto font-mono text-[9.5px] text-muted-foreground">{files.length} files</span>
         </div>
-        <ul className="py-1">
+        <button
+          type="button"
+          onClick={() => { setCreatingNew(true); setSelectedPath(null); }}
+          className="mx-2 mt-2 mb-1 inline-flex items-center justify-center gap-1.5 rounded-md border border-dashed border-border bg-background hover:bg-muted/40 px-2.5 py-1 text-[10.5px] font-semibold text-muted-foreground hover:text-foreground transition-colors"
+        >
+          <Plus className="h-3 w-3" />
+          New file
+        </button>
+        <ul className="py-1 flex-1 min-h-0 overflow-y-auto">
           {files.map((f) => (
             <li key={f.id}>
               <button
                 type="button"
-                onClick={() => setSelectedPath(f.path)}
+                onClick={() => { setSelectedPath(f.path); setCreatingNew(false); }}
                 className={[
                   "w-full flex items-center gap-1.5 px-3 py-1 text-left text-[11.5px] transition-colors",
-                  selectedPath === f.path
+                  !creatingNew && effectivePath === f.path
                     ? "bg-muted text-foreground"
                     : "text-foreground/80 hover:bg-muted/40 hover:text-foreground",
                 ].join(" ")}
@@ -531,35 +560,39 @@ function CodeTab({ repo }: { repo: Repo }) {
               </button>
             </li>
           ))}
-          {files.length === 0 && (
+          {files.length === 0 && !creatingNew && (
             <li className="px-3 py-4 text-[11px] text-muted-foreground italic">
-              No file snapshots seeded yet. Real branch loads will populate here.
+              No file snapshots seeded yet. Hit "New file" to add one.
             </li>
           )}
         </ul>
       </aside>
 
-      {/* File viewer + AI summary rail */}
+      {/* File editor + AI summary rail */}
       <main className="flex-1 min-w-0 flex">
-        {selected ? (
+        {creatingNew ? (
+          <div className="flex-1 min-w-0 overflow-hidden flex flex-col">
+            <FileEditor
+              file={null}
+              repoId={repo.id}
+              branchName={repo.defaultBranch}
+              newFileDefaults={{ path: "src/new-file.ts", content: "" }}
+              onSaved={(_id, savedPath) => {
+                setCreatingNew(false);
+                setSelectedPath(savedPath);
+              }}
+              onClose={() => setCreatingNew(false)}
+            />
+          </div>
+        ) : selected ? (
           <>
             <div className="flex-1 min-w-0 overflow-hidden flex flex-col">
-              <div className="shrink-0 border-b border-border bg-card/40 px-5 py-2.5 flex items-center gap-2">
-                <FileCode className="h-3.5 w-3.5 text-muted-foreground" />
-                <span className="font-mono text-[11.5px] text-foreground/90">{selected.path}</span>
-                <span className="ml-auto flex items-center gap-2 font-mono text-[10px] text-muted-foreground">
-                  <span>{selected.sizeBytes}b</span>
-                  <span className="opacity-50">·</span>
-                  <span>{selected.language}</span>
-                  <span className="opacity-50">·</span>
-                  <span>{timeAgo(selected.lastModifiedAt)}</span>
-                </span>
-              </div>
-              <div className="flex-1 min-h-0 overflow-auto bg-background p-2">
-                {selected.content
-                  ? <CodeBlock code={selected.content} language={selected.language} />
-                  : <p className="p-5 font-mono text-[12px] text-muted-foreground">// (binary or external storage)</p>}
-              </div>
+              <FileEditor
+                file={selected}
+                repoId={repo.id}
+                branchName={repo.defaultBranch}
+                onSaved={(_id, savedPath) => setSelectedPath(savedPath)}
+              />
             </div>
             <aside className="w-[280px] shrink-0 border-l border-border bg-card/30 overflow-y-auto p-5 space-y-5">
               <div>
@@ -573,13 +606,16 @@ function CodeTab({ repo }: { repo: Repo }) {
                   <p className="text-[11px] text-muted-foreground italic">No summary yet.</p>
                 )}
               </div>
+              <div className="text-[10px] font-mono text-muted-foreground">
+                {selected.sizeBytes}b · {selected.language} · {timeAgo(selected.lastModifiedAt)}
+              </div>
               <DepSection title="Imports" paths={selected.depsOut} />
               <DepSection title="Imported by" paths={selected.depsIn} />
             </aside>
           </>
         ) : (
           <div className="flex flex-1 items-center justify-center text-center p-10">
-            <p className="text-[12px] text-muted-foreground">Pick a file to view its contents.</p>
+            <p className="text-[12px] text-muted-foreground">Pick a file to view its contents, or click "New file" to create one.</p>
           </div>
         )}
       </main>
@@ -609,7 +645,7 @@ function DepSection({ title, paths }: { title: string; paths: string[] }) {
 // ── PULLS TAB ────────────────────────────────────────────────────
 
 function PullsTab({ repo, onOpenPr }: { repo: Repo; onOpenPr: (id: string) => void }) {
-  const prs = MOCK_PRS.filter((p) => p.repoId === repo.id);
+  const { data: prs = [] } = usePullRequests(repo.id);
   const [statusFilter, setStatusFilter] = useState<"open" | "closed" | "all">("open");
 
   const visible = prs.filter((p) => {

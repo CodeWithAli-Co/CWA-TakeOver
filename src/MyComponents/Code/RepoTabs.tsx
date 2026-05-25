@@ -15,22 +15,31 @@ import {
   BarChart3, TrendingUp, Users, Plus,
 } from "lucide-react";
 import {
-  MOCK_ISSUES, MOCK_LABELS, MOCK_AGENT_RUNS, MOCK_COMMITS, MOCK_PRS,
+  MOCK_AGENT_RUNS,
   MOCK_AGENTS, MOCK_FILES,
-  agentById, labelById,
-  type Repo, type Issue, type AgentRun, type AgentRunStep,
+  agentById,
+  type Repo, type Issue, type IssueLabel, type AgentRun, type AgentRunStep,
 } from "./mockData";
+import {
+  useAgents, useIssues, useLabels, useCommits, usePullRequests, useFiles,
+} from "./queries";
 
 // ════════════════════════════════════════════════════════════════
 // ISSUES TAB
 // ════════════════════════════════════════════════════════════════
 
 export function IssuesTab({ repo }: { repo: Repo }) {
-  const all = useMemo(
-    () => MOCK_ISSUES.filter((i) => i.repoId === repo.id),
-    [repo.id],
-  );
-  const labels = MOCK_LABELS.filter((l) => l.repoId === repo.id);
+  const { data: all = [] } = useIssues(repo.id);
+  const { data: labels = [] } = useLabels(repo.id);
+  // labelById is local to this tab so label lookups stay scoped to
+  // the currently-fetched label set (the mockData helper would mix
+  // labels from every repo).
+  const labelLookup = useMemo(() => {
+    const m = new Map<string, IssueLabel>();
+    for (const l of labels) m.set(l.id, l);
+    return m;
+  }, [labels]);
+  const labelById = (id: string) => labelLookup.get(id);
   const [statusFilter, setStatusFilter] = useState<"open" | "closed" | "all">("open");
   const [labelFilter, setLabelFilter] = useState<string>("all");
   const [search, setSearch] = useState("");
@@ -115,7 +124,7 @@ export function IssuesTab({ repo }: { repo: Repo }) {
 
       <ul className="divide-y divide-border">
         {visible.map((issue) => (
-          <IssueRow key={issue.id} issue={issue} />
+          <IssueRow key={issue.id} issue={issue} labels={labels} />
         ))}
         {visible.length === 0 && (
           <li className="px-6 py-12 text-center text-[12px] text-muted-foreground">
@@ -127,9 +136,13 @@ export function IssuesTab({ repo }: { repo: Repo }) {
   );
 }
 
-function IssueRow({ issue }: { issue: Issue }) {
+function IssueRow({ issue, labels }: { issue: Issue; labels: IssueLabel[] }) {
   const author = agentById(issue.authorAgentId);
   const assignee = agentById(issue.assigneeAgentId);
+  // Local lookup — `labelById` from mockData covers every repo's
+  // label vocabulary at once; we want only this repo's labels.
+  const labelById = (id: string): IssueLabel | undefined =>
+    labels.find((l) => l.id === id);
   const StatusIcon = issue.status === "open" ? AlertCircle : CheckCircle2;
   const statusColor = issue.status === "open" ? "text-emerald-400" : "text-violet-400";
   const isAi = !!issue.authorAgentId;
@@ -366,35 +379,33 @@ function RunStepRow({ step }: { step: AgentRunStep }) {
 // ════════════════════════════════════════════════════════════════
 
 export function InsightsTab({ repo }: { repo: Repo }) {
+  const { data: agents = MOCK_AGENTS } = useAgents();
+  const { data: repoCommits = [] } = useCommits(repo.id);
+  const { data: repoPrs = [] } = usePullRequests(repo.id);
+  const { data: repoFiles = [] } = useFiles(repo.id, repo.defaultBranch);
+
   // Commit frequency over the last 30 days, bucketed by day. For
-  // the mock we synthesize a roughly-realistic distribution from
-  // the commits we have.
+  // sparse seeds we top up with a small synthetic tail so the chart
+  // reads at a glance — real wiring removes this filler.
   const commitsByDay = useMemo(() => {
     const buckets = new Array(30).fill(0);
-    const repoCommits = MOCK_COMMITS.filter((c) => c.repoId === repo.id);
     const now = Date.now();
     for (const c of repoCommits) {
       const daysAgo = Math.floor((now - new Date(c.createdAt).getTime()) / (24 * 60 * 60 * 1000));
       if (daysAgo >= 0 && daysAgo < 30) buckets[29 - daysAgo]++;
     }
-    // Pad with synthetic activity so the chart doesn't read empty
-    // — real wiring removes this.
     for (let i = 0; i < 30; i++) {
       if (buckets[i] === 0) buckets[i] = Math.floor(Math.random() * (i > 22 ? 8 : 4));
     }
     return buckets;
-  }, [repo.id]);
+  }, [repoCommits]);
   const maxCommits = Math.max(...commitsByDay, 1);
 
   // Per-agent contribution stats — commits, PRs, lines changed.
   const agentStats = useMemo(() => {
-    return MOCK_AGENTS.map((a) => {
-      const commits = MOCK_COMMITS.filter(
-        (c) => c.repoId === repo.id && c.authorAgentId === a.id,
-      );
-      const prs = MOCK_PRS.filter(
-        (p) => p.repoId === repo.id && p.authorAgentId === a.id,
-      );
+    return agents.map((a) => {
+      const commits = repoCommits.filter((c) => c.authorAgentId === a.id);
+      const prs = repoPrs.filter((p) => p.authorAgentId === a.id);
       const lines = commits.reduce((s, c) => s + c.additions + c.deletions, 0);
       return {
         agent: a,
@@ -403,25 +414,23 @@ export function InsightsTab({ repo }: { repo: Repo }) {
         lines,
       };
     });
-  }, [repo.id]);
+  }, [agents, repoCommits, repoPrs]);
 
   // Files touched per agent — heatmap rows.
   const filesByAgent = useMemo(() => {
-    const files = MOCK_FILES.filter((f) => f.repoId === repo.id);
-    return MOCK_AGENTS.map((a) => ({
+    return agents.map((a) => ({
       agent: a,
-      files: files.filter((f) => f.lastModifiedAgentId === a.id),
+      files: repoFiles.filter((f) => f.lastModifiedAgentId === a.id),
     }));
-  }, [repo.id]);
+  }, [agents, repoFiles]);
 
   const prThroughput = useMemo(() => {
-    const prs = MOCK_PRS.filter((p) => p.repoId === repo.id);
     return {
-      open:   prs.filter((p) => p.status === "open" || p.status === "draft").length,
-      merged: prs.filter((p) => p.status === "merged").length,
-      closed: prs.filter((p) => p.status === "closed").length,
+      open:   repoPrs.filter((p) => p.status === "open" || p.status === "draft").length,
+      merged: repoPrs.filter((p) => p.status === "merged").length,
+      closed: repoPrs.filter((p) => p.status === "closed").length,
     };
-  }, [repo.id]);
+  }, [repoPrs]);
 
   return (
     <div className="h-full overflow-auto">

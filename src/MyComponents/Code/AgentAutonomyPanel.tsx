@@ -14,15 +14,17 @@
  * Supabase wiring is a select on agent_permissions WHERE repo_id.
  */
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   Bot, GitBranch, Shield, Plus, Trash2,
   Check, X, Info, Users,
 } from "lucide-react";
 import {
-  MOCK_AGENTS, MOCK_PERMISSIONS, MOCK_BRANCH_PROTECTION,
+  MOCK_AGENTS,
+  type AiAgent,
   type AgentPermission, type BranchProtection, type Repo,
 } from "./mockData";
+import { useAgents, usePermissions, useBranchProtection } from "./queries";
 
 interface Capability {
   key: keyof Pick<
@@ -55,14 +57,20 @@ const CAPS: Capability[] = [
 ];
 
 export function AgentAutonomyPanel({ repo }: { repo: Repo }) {
-  // Local working copies — mock-mode only; a real save would push
-  // to Supabase + invalidate the cache.
-  const [perms, setPerms] = useState<AgentPermission[]>(() =>
-    MOCK_PERMISSIONS.filter((p) => p.repoId === repo.id),
-  );
-  const [bp, setBp] = useState<BranchProtection[]>(() =>
-    MOCK_BRANCH_PROTECTION.filter((b) => b.repoId === repo.id),
-  );
+  // Live reads with graceful mock-data fallback. Local working
+  // copies mirror the fetched data so toggle UX stays instant —
+  // when mutation wiring lands we'll flush these back via a
+  // useMutation + queryClient.invalidateQueries().
+  const { data: agents = MOCK_AGENTS } = useAgents();
+  const { data: serverPerms = [] } = usePermissions(repo.id);
+  const { data: serverBp = [] } = useBranchProtection(repo.id);
+
+  const [perms, setPerms] = useState<AgentPermission[]>(serverPerms);
+  const [bp, setBp] = useState<BranchProtection[]>(serverBp);
+
+  // Resync local state when the upstream query settles or refetches.
+  useEffect(() => { setPerms(serverPerms); }, [serverPerms]);
+  useEffect(() => { setBp(serverBp); }, [serverBp]);
 
   const togglePerm = (id: string, key: Capability["key"]) => {
     setPerms((cur) =>
@@ -122,7 +130,7 @@ export function AgentAutonomyPanel({ repo }: { repo: Repo }) {
                 </tr>
               </thead>
               <tbody>
-                {MOCK_AGENTS.map((agent) => {
+                {agents.map((agent) => {
                   const rows = grouped.get(agent.id) ?? [];
                   if (rows.length === 0) {
                     return (
@@ -233,7 +241,7 @@ function SectionHeader({
 function AgentChip({
   agent, branchPattern,
 }: {
-  agent: typeof MOCK_AGENTS[number];
+  agent: AiAgent;
   branchPattern: string;
 }) {
   return (
