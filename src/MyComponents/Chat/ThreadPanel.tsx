@@ -22,6 +22,7 @@ import { fetchThreadReplies } from "@/stores/query";
 import { MessageBubble } from "./MessageBubble";
 import { ThreadComposer } from "./ThreadComposer";
 import { useChatStore } from "@/stores/chatStore";
+import { displayLabelForDM, isDMKey } from "./displayName";
 
 interface Props {
   rootMsg: MessageInterface;
@@ -116,7 +117,11 @@ export function ThreadPanel({
                 Thread
               </span>
               <span className="text-[10px] text-muted-foreground">
-                #{group} · {replies.length}{" "}
+                {/* Display label — never the raw "dm::Ali::Mason" key. */}
+                {isDMKey(group)
+                  ? displayLabelForDM(group, currentUsername)
+                  : `#${group}`}{" "}
+                · {replies.length}{" "}
                 {replies.length === 1 ? "reply" : "replies"}
               </span>
             </div>

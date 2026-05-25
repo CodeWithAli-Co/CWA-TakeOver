@@ -40,6 +40,7 @@ import {
 } from "@/components/ui/shadcnComponents/dialog";
 import { AddDMGroup } from "@/MyComponents/subForms/addDMGroup";
 import supabase from "@/MyComponents/supabase";
+import { displayLabelForDM, isDMKey } from "./displayName";
 
 const ADMIN_ROLES = ["CEO", "COO", "CFO", "Admin"];
 
@@ -240,8 +241,13 @@ export const ChatLayout = () => {
    */
   const deleteChannel = async (group: { name: string; id?: string | number; type?: string }) => {
     if (group.type === "general") return;
+    // Confirm prompt uses the display label so users see "Mason" or
+    // "Mason, Sem" instead of the canonical "dm::Ali::Mason" key.
+    const friendlyName = isDMKey(group.name)
+      ? displayLabelForDM(group.name, username)
+      : group.name;
     if (!window.confirm(
-      `Delete "${group.name}" for everyone? All messages in this channel will be permanently removed.`,
+      `Delete "${friendlyName}" for everyone? All messages in this channel will be permanently removed.`,
     )) return;
     // Delete messages first so orphaned rows aren't left behind if the
     // group delete succeeds but the purge below fails.

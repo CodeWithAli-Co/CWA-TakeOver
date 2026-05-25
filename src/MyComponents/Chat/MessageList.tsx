@@ -24,6 +24,7 @@ import { TypingIndicator } from "./TypingIndicator";
 import { MessageInterface } from "@/stores/query";
 import supabase from "@/MyComponents/supabase";
 import { useChatStore, type ThreadStyle } from "@/stores/chatStore";
+import { displayLabelForDM, isDMKey } from "./displayName";
 import { format, isToday, isYesterday } from "date-fns";
 import { ArrowDown } from "lucide-react";
 
@@ -362,7 +363,13 @@ export const MessageList: React.FC<Props> = ({
           </p>
           <p className="text-[12px] text-muted-foreground/60">
             Be the first to start the conversation in{" "}
-            <span className="text-primary">#{group}</span>
+            <span className="text-primary">
+              {/* Storage keys ("dm::Ali::Mason") never leak — display
+                  label routes through the central helper. */}
+              {isDMKey(group)
+                ? displayLabelForDM(group, currentUsername)
+                : `#${group}`}
+            </span>
           </p>
         </div>
       </div>

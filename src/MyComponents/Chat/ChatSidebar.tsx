@@ -39,7 +39,12 @@ import supabase from "@/MyComponents/supabase";
 import { UnreadBadge } from "./UnreadBadge";
 import { AddDMGroup } from "@/MyComponents/subForms/addDMGroup";
 import { CategoryDialog } from "./CategoryDialog";
-import { DMPickerDialog, prettyDMLabel } from "./DMPickerDialog";
+import { DMPickerDialog } from "./DMPickerDialog";
+import {
+  displayLabelForDM,
+  isOneOnOneDM,
+  dmOtherParty,
+} from "./displayName";
 
 interface Group {
   id: string | number;
@@ -484,10 +489,21 @@ function GroupButton({
   avatarByUser: Map<string, string>;
 }) {
   const isGeneral = group.type === "general";
-  // For canonical 1-on-1 DMs (dm::alice::bob) show the OTHER person's name.
-  const pretty = prettyDMLabel(group.name, currentUsername);
-  const displayName = pretty ?? group.name;
-  const isOneOnOne = pretty != null;
+  // Route every render through the central displayName helper. Storage
+  // keys ("dm::Ali::Mason", "dm::Ali::Mason::Sem") never leak to UI:
+  //   1:1            → other person's name
+  //   self-DM        → "Me"
+  //   DM with Axon   → "Axon"
+  //   group ≤4       → comma-separated other names
+  //   group >4       → "Mason, Sem, blazehp +2"  (text fallback;
+  //                    avatar-stack render is a future visual upgrade)
+  //   channels       → unchanged
+  const displayName = displayLabelForDM(group.name, currentUsername);
+  const isOneOnOne = isOneOnOneDM(group.name, currentUsername);
+  // PresenceDot needs the OTHER person's actual username (not "Me",
+  // not the comma-joined group label). Falls back to displayName for
+  // legacy non-DM rows where the helper returns null.
+  const presenceTarget = dmOtherParty(group.name, currentUsername) ?? displayName;
 
   // Who's in a live huddle on THIS channel right now (excluding me —
   // I already know I'm in if I am). Pulls from the global lobby
@@ -530,7 +546,7 @@ function GroupButton({
                   presence for, so we skip it. */}
               {isOneOnOne && (
                 <span className="absolute -bottom-0.5 -right-0.5">
-                  <PresenceDot username={displayName} size={10} />
+                  <PresenceDot username={presenceTarget} size={10} />
                 </span>
               )}
             </div>

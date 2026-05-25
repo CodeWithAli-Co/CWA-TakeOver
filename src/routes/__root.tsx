@@ -30,6 +30,7 @@ import { AppSidebar } from "@/components/app-sidebar";
 import { CommandPalette } from "@/components/CommandPalette";
 import { QuickComposeModal } from "@/MyComponents/Chat/QuickComposeModal";
 import { useQuickCompose } from "@/MyComponents/Chat/quickComposeStore";
+import { displayLabelForDM, isDMKey } from "@/MyComponents/Chat/displayName";
 import supabase from "@/MyComponents/supabase";
 import { useEffect, useState, lazy, Suspense } from "react";
 import { getCurrentWindow } from "@tauri-apps/api/window";
@@ -357,20 +358,17 @@ export const Route = createRootRoute({
         return t;
       };
 
-      // Convert "dm::alice::blazehp" → "alice" (the OTHER participant).
-      // Falls back to the raw group name if the format doesn't match.
+      // Notification labels route through the central displayName helper
+      // so the "dm::Ali::Mason" storage key never reaches the OS toast.
+      // Handles 1:1 / self-DM / Axon / group rules uniformly.
       const humanizeGroupName = (groupName: string): string => {
         if (!groupName) return "";
-        const m = groupName.match(/^dm::(.+)$/);
-        if (!m) return groupName; // channel name passes through
-        const parts = m[1].split("::").filter(Boolean);
-        const other = parts.find((p) => p !== currentUsername);
-        return other ?? parts[0] ?? groupName;
+        return displayLabelForDM(groupName, currentUsername);
       };
 
-      // True if the group is a DM (1:1 conversation).
-      const isDm = (groupName: string): boolean =>
-        groupName.startsWith("dm::");
+      // True if the group is a DM (any participant count). Used to gate
+      // the per-DM notification preference.
+      const isDm = (groupName: string): boolean => isDMKey(groupName);
 
       const fireNotify = (title: string, body: string, group?: string) => {
         if (!isNotifEnabled()) {

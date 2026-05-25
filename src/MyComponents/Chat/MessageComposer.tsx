@@ -39,6 +39,7 @@ import {
   type SlashCommandDef,
 } from "./SlashCommandPicker";
 import { GifPicker } from "./GifPicker";
+import { displayLabelForDM, isDMKey } from "./displayName";
 import {
   addScheduled,
   listScheduledForGroup,
@@ -1009,7 +1010,11 @@ export const MessageComposer: React.FC<Props> = ({
               placeholder={
                 isAxonMode
                   ? "Axon is listening… press Enter to draft"
-                  : `Message #${group} — @ to mention · /axon for AI`
+                  : `Message ${
+                      isDMKey(group)
+                        ? displayLabelForDM(group, currentUsername)
+                        : `#${group}`
+                    } — @ to mention · /axon for AI`
               }
               rows={1}
               className="w-full bg-transparent py-2.5 text-[13.5px] text-foreground/85 placeholder:text-muted-foreground/60 focus:outline-none resize-none max-h-32"

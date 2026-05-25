@@ -26,6 +26,7 @@ import {
   readRecentTargets,
   pushRecentTarget,
 } from "./quickComposeStore";
+import { displayLabelForDM } from "./displayName";
 
 // ── Target types ──────────────────────────────────────────────
 
@@ -60,13 +61,21 @@ export function QuickComposeModal() {
   const { data: dmGroups } = DMGroups(user?.username ?? "");
 
   const targets = useMemo<Target[]>(() => {
-    const dms: Target[] = (dmGroups ?? []).map((g: any) => ({
-      kind: "dm" as const,
-      name: g.group_name ?? g.name ?? String(g.id ?? ""),
-      id: g.group_name ?? g.name ?? String(g.id ?? ""),
-    }));
+    const myName = user?.username ?? "";
+    const dms: Target[] = (dmGroups ?? []).map((g: any) => {
+      const storageKey = g.group_name ?? g.name ?? String(g.id ?? "");
+      return {
+        kind: "dm" as const,
+        // Display label routes through the central helper — never
+        // shows the raw "dm::Ali::Mason" key, handles self/Axon/group.
+        name: displayLabelForDM(storageKey, myName),
+        // ID stays the canonical storage key so insert + recent-list
+        // lookups still resolve correctly.
+        id: storageKey,
+      };
+    });
     return [...STATIC_CHANNELS, ...dms.filter((t) => t.id)];
-  }, [dmGroups]);
+  }, [dmGroups, user?.username]);
 
   const [pickerQuery, setPickerQuery] = useState("");
   const [chosen, setChosen] = useState<Target | null>(null);

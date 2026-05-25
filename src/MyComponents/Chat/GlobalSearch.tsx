@@ -11,6 +11,8 @@ import { AnimatePresence, motion } from "framer-motion";
 import { Hash, MessageSquare, Search, Loader2, ArrowRight } from "lucide-react";
 import supabase from "@/MyComponents/supabase";
 import { useAppStore } from "@/stores/store";
+import { ActiveUser } from "@/stores/query";
+import { displayLabelForDM, isDMKey } from "./displayName";
 
 interface Hit {
   msg_id: number;
@@ -33,6 +35,10 @@ export function GlobalSearch({ open, onOpenChange }: Props) {
   const [active, setActive] = useState(0);
   const inputRef = useRef<HTMLInputElement>(null);
   const { setGroupName } = useAppStore();
+  // Current user is needed so the helper can pick the OTHER party in a
+  // 1:1 DM and render "Me" for self-DMs.
+  const { data: me } = ActiveUser();
+  const currentUsername = me?.[0]?.username || "";
 
   // Reset on close + autofocus on open
   useEffect(() => {
@@ -218,7 +224,13 @@ export function GlobalSearch({ open, onOpenChange }: Props) {
                 </div>
               )}
 
-              {grouped.map(([group, groupHits]) => (
+              {grouped.map(([group, groupHits]) => {
+                // Display label routes through the central helper — keeps
+                // "dm::Ali::Mason" out of the search-results header.
+                const groupLabel = isDMKey(group)
+                  ? displayLabelForDM(group, currentUsername)
+                  : group;
+                return (
                 <div key={group} className="py-1">
                   <div className="flex items-center gap-1.5 px-4 pt-2 pb-1 font-mono text-[10px] uppercase tracking-[0.14em] text-muted-foreground">
                     {group === "General" ? (
@@ -226,7 +238,7 @@ export function GlobalSearch({ open, onOpenChange }: Props) {
                     ) : (
                       <MessageSquare className="h-3 w-3 text-primary" />
                     )}
-                    {group}
+                    {groupLabel}
                     <span className="opacity-60">· {groupHits.length}</span>
                   </div>
                   {groupHits.map((hit) => {
@@ -260,7 +272,8 @@ export function GlobalSearch({ open, onOpenChange }: Props) {
                     );
                   })}
                 </div>
-              ))}
+                );
+              })}
             </div>
 
             <div className="flex items-center justify-between border-t border-border px-4 py-2 font-mono text-[10px] uppercase tracking-widest text-muted-foreground">

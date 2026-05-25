@@ -25,7 +25,7 @@ import { Input } from "@/components/ui/shadcnComponents/input";
 import { useChatStore } from "@/stores/chatStore";
 import { ActiveUser } from "@/stores/query";
 import { groupAvatarInitials, groupAvatarStyle } from "./ChatSidebar";
-import { prettyDMLabel } from "./DMPickerDialog";
+import { displayLabelForDM, isOneOnOneDM } from "./displayName";
 
 interface Props {
   groupName: string;
@@ -52,9 +52,10 @@ export const ChatHeader: React.FC<Props> = ({
   const [searching, setSearching] = useState(false);
   const { data: me } = ActiveUser();
   const currentUsername = me?.[0]?.username || "";
-  const prettyLabel = prettyDMLabel(groupName, currentUsername);
-  const displayName = prettyLabel ?? groupName;
-  const isOneOnOne = prettyLabel != null;
+  // Display layer only — storage keys ("dm::Ali::Mason") never leak.
+  // See displayName.ts for the full rule table.
+  const displayName = displayLabelForDM(groupName, currentUsername);
+  const isOneOnOne = isOneOnOneDM(groupName, currentUsername);
   const inputRef = useRef<HTMLInputElement>(null);
   const { pinCollapsed, togglePinCollapsed } = useChatStore();
   const [muted, setMuted] = useState(false);
@@ -115,7 +116,7 @@ export const ChatHeader: React.FC<Props> = ({
             ref={inputRef}
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder={`Search in #${groupName}…`}
+            placeholder={`Search in ${isOneOnOne ? "" : "#"}${displayName}…`}
             className="h-8 flex-1 border-0 bg-transparent text-[12.5px] focus-visible:ring-0"
             onKeyDown={(e) => {
               if (e.key === "Escape") {

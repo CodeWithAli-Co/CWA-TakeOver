@@ -37,7 +37,17 @@ export function canonicalDMName(a: string, b: string): string {
   return `dm::${x}::${y}`;
 }
 
-/** Pretty label: show the OTHER person's name, not the canonical form. */
+/**
+ * @deprecated Prefer `displayLabelForDM` from `./displayName` for all
+ * new render sites. Kept as a thin shim because the helper signature
+ * (returns `string | null` to signal "not a DM") differs from the new
+ * helper (always returns a string, channels pass through). Existing
+ * callers were migrated in the P0 display-name fix; this remains for
+ * any out-of-tree imports until they're caught up.
+ *
+ * Only matches the canonical 2-person form. Group DMs and self-DMs
+ * fall through as null — for those, use `displayLabelForDM` instead.
+ */
 export function prettyDMLabel(name: string, currentUsername: string): string | null {
   const m = name.match(/^dm::(.+?)::(.+)$/);
   if (!m) return null;

@@ -26,6 +26,7 @@ import {
 } from "@/stores/huddleStore";
 import supabase from "@/MyComponents/supabase";
 import { Employees } from "@/stores/query";
+import { displayLabelForDM, isDMKey } from "../displayName";
 
 // ── Active-speaker hook ─────────────────────────────────────────────
 // Maintains one analyser per peer and returns the currently-loudest
@@ -116,6 +117,14 @@ export function HuddleBar({
   onStartScreenShare, onStopScreenShare,
   onLeave, error,
 }: Props) {
+  // Pretty label for the huddle chip / header. For DMs ("dm::Ali::Mason")
+  // the central helper renders "Mason" / "Me" / "Axon" / comma-joined
+  // group; for channels (no dm:: prefix) we keep the existing "#name"
+  // convention. Critical to gate the "#" prefix on isDMKey — without it,
+  // a 1:1 huddle with Mason renders as "#Mason" instead of just "Mason".
+  const isDmHuddle = isDMKey(group);
+  const groupLabel = displayLabelForDM(group, username);
+  const groupDisplay = isDmHuddle ? groupLabel : `#${groupLabel}`;
   const [expanded, setExpanded] = useState(false);
   const [shareModalOpen, setShareModalOpen] = useState(false);
   const [qualityMenuOpen, setQualityMenuOpen] = useState(false);
@@ -261,7 +270,7 @@ export function HuddleBar({
             </span>
             <Volume2 className="h-3.5 w-3.5 text-primary" />
             <span className="text-[11.5px] font-semibold text-foreground">
-              #{group}
+              {groupDisplay}
             </span>
             <span className="text-[10.5px] text-muted-foreground">
               {peopleCount} {peopleCount === 1 ? "person" : "ppl"}
@@ -339,7 +348,7 @@ export function HuddleBar({
               <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-400" />
             </span>
             <Volume2 className="h-3.5 w-3.5" />
-            Huddle · #{group}
+            Huddle · {groupDisplay}
           </span>
           <span className="text-muted-foreground">
             {peopleCount} {peopleCount === 1 ? "person" : "people"}
@@ -682,7 +691,7 @@ export function HuddleBar({
         open={shareModalOpen}
         onClose={() => setShareModalOpen(false)}
         onConfirm={() => onStartScreenShare()}
-        huddleName={`#${group}`}
+        huddleName={groupDisplay}
         peerCount={peers.length}
       />
     </AnimatePresence>

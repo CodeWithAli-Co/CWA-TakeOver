@@ -19,6 +19,7 @@ import { Phone, X, Volume2 } from "lucide-react";
 import { useNavigate } from "@tanstack/react-router";
 import supabase from "@/MyComponents/supabase";
 import { useAppStore } from "@/stores/store";
+import { displayLabelForDM, isDMKey } from "../displayName";
 
 interface IncomingRing {
   id: string;
@@ -249,7 +250,12 @@ export function HuddleRing({ username, channelNames }: Props) {
                 {ring.starter} started a huddle
               </p>
               <p className="truncate text-[11px] text-muted-foreground">
-                in #{ring.group}
+                {/* Display label — never the raw "dm::Ali::Mason" key.
+                    Channels stay "#name", DMs render as the central
+                    helper decides (other-party / Me / Axon / joined). */}
+                in {isDMKey(ring.group)
+                  ? displayLabelForDM(ring.group, username)
+                  : `#${ring.group}`}
               </p>
             </div>
             <button

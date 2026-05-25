@@ -19,7 +19,7 @@ import supabase from "@/MyComponents/supabase";
 import { useAppStore } from "@/stores/store";
 import { useChatStore } from "@/stores/chatStore";
 import { formatDistanceToNow } from "date-fns";
-import { prettyDMLabel } from "./DMPickerDialog";
+import { displayLabelForDM, isDMKey } from "./displayName";
 
 interface ThreadSummary {
   rootId: number;
@@ -209,9 +209,9 @@ function ThreadCard({
   currentUsername: string;
   onOpen: () => void;
 }) {
-  const pretty = prettyDMLabel(t.group, currentUsername);
-  const channelLabel = pretty ?? t.group;
-  const isDM = pretty != null;
+  // Display layer — never leak the raw "dm::Ali::Mason" storage key.
+  const channelLabel = displayLabelForDM(t.group, currentUsername);
+  const isDM = isDMKey(t.group);
   const participantList = useMemo(() => Array.from(t.participants), [t.participants]);
   const lastRel = t.lastReplyAt
     ? formatDistanceToNow(new Date(t.lastReplyAt), { addSuffix: true })

@@ -12,6 +12,7 @@ import { useChatStore } from "@/stores/chatStore";
 import { useAppStore } from "@/stores/store";
 import type { MessageInterface } from "@/stores/query";
 import { MessageBubble } from "./MessageBubble";
+import { displayLabelForDM, isDMKey } from "./displayName";
 
 interface Props {
   currentUsername: string;
@@ -87,7 +88,11 @@ export function StarredView({ currentUsername, onReact }: Props) {
                     onClick={() => setGroupName(m._group)}
                     className="hover:text-foreground"
                   >
-                    #{m._group}
+                    {/* Display label — keeps the canonical
+                        "dm::Ali::Mason" out of the starred-list header. */}
+                    {isDMKey(m._group)
+                      ? displayLabelForDM(m._group, currentUsername)
+                      : `#${m._group}`}
                   </button>
                   <button
                     type="button"
