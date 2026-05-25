@@ -43,6 +43,7 @@ const DetailFoldersLazyRouteImport = createFileRoute('/detailFolders')()
 const ContractGeneratorLazyRouteImport = createFileRoute('/contractGenerator')()
 const ComponentsLazyRouteImport = createFileRoute('/components')()
 const ColdEmailLazyRouteImport = createFileRoute('/coldEmail')()
+const CodeLazyRouteImport = createFileRoute('/code')()
 const ChatLazyRouteImport = createFileRoute('/chat')()
 const BudgetaryLazyRouteImport = createFileRoute('/budgetary')()
 const BroadcastLazyRouteImport = createFileRoute('/broadcast')()
@@ -211,6 +212,11 @@ const ColdEmailLazyRoute = ColdEmailLazyRouteImport.update({
   path: '/coldEmail',
   getParentRoute: () => rootRouteImport,
 } as any).lazy(() => import('./routes/coldEmail.lazy').then((d) => d.Route))
+const CodeLazyRoute = CodeLazyRouteImport.update({
+  id: '/code',
+  path: '/code',
+  getParentRoute: () => rootRouteImport,
+} as any).lazy(() => import('./routes/code.lazy').then((d) => d.Route))
 const ChatLazyRoute = ChatLazyRouteImport.update({
   id: '/chat',
   path: '/chat',
@@ -298,6 +304,7 @@ export interface FileRoutesByFullPath {
   '/broadcast': typeof BroadcastLazyRoute
   '/budgetary': typeof BudgetaryLazyRoute
   '/chat': typeof ChatLazyRoute
+  '/code': typeof CodeLazyRoute
   '/coldEmail': typeof ColdEmailLazyRoute
   '/components': typeof ComponentsLazyRoute
   '/contractGenerator': typeof ContractGeneratorLazyRoute
@@ -343,6 +350,7 @@ export interface FileRoutesByTo {
   '/broadcast': typeof BroadcastLazyRoute
   '/budgetary': typeof BudgetaryLazyRoute
   '/chat': typeof ChatLazyRoute
+  '/code': typeof CodeLazyRoute
   '/coldEmail': typeof ColdEmailLazyRoute
   '/components': typeof ComponentsLazyRoute
   '/contractGenerator': typeof ContractGeneratorLazyRoute
@@ -389,6 +397,7 @@ export interface FileRoutesById {
   '/broadcast': typeof BroadcastLazyRoute
   '/budgetary': typeof BudgetaryLazyRoute
   '/chat': typeof ChatLazyRoute
+  '/code': typeof CodeLazyRoute
   '/coldEmail': typeof ColdEmailLazyRoute
   '/components': typeof ComponentsLazyRoute
   '/contractGenerator': typeof ContractGeneratorLazyRoute
@@ -436,6 +445,7 @@ export interface FileRouteTypes {
     | '/broadcast'
     | '/budgetary'
     | '/chat'
+    | '/code'
     | '/coldEmail'
     | '/components'
     | '/contractGenerator'
@@ -481,6 +491,7 @@ export interface FileRouteTypes {
     | '/broadcast'
     | '/budgetary'
     | '/chat'
+    | '/code'
     | '/coldEmail'
     | '/components'
     | '/contractGenerator'
@@ -526,6 +537,7 @@ export interface FileRouteTypes {
     | '/broadcast'
     | '/budgetary'
     | '/chat'
+    | '/code'
     | '/coldEmail'
     | '/components'
     | '/contractGenerator'
@@ -572,6 +584,7 @@ export interface RootRouteChildren {
   BroadcastLazyRoute: typeof BroadcastLazyRoute
   BudgetaryLazyRoute: typeof BudgetaryLazyRoute
   ChatLazyRoute: typeof ChatLazyRoute
+  CodeLazyRoute: typeof CodeLazyRoute
   ColdEmailLazyRoute: typeof ColdEmailLazyRoute
   ComponentsLazyRoute: typeof ComponentsLazyRoute
   ContractGeneratorLazyRoute: typeof ContractGeneratorLazyRoute
@@ -810,6 +823,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ColdEmailLazyRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/code': {
+      id: '/code'
+      path: '/code'
+      fullPath: '/code'
+      preLoaderRoute: typeof CodeLazyRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/chat': {
       id: '/chat'
       path: '/chat'
@@ -935,6 +955,7 @@ const rootRouteChildren: RootRouteChildren = {
   BroadcastLazyRoute: BroadcastLazyRoute,
   BudgetaryLazyRoute: BudgetaryLazyRoute,
   ChatLazyRoute: ChatLazyRoute,
+  CodeLazyRoute: CodeLazyRoute,
   ColdEmailLazyRoute: ColdEmailLazyRoute,
   ComponentsLazyRoute: ComponentsLazyRoute,
   ContractGeneratorLazyRoute: ContractGeneratorLazyRoute,

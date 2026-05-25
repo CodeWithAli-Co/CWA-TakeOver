@@ -66,6 +66,8 @@ import { _bindProjectAccessors } from "./actions/projects";
 import { _bindAgentAccessors } from "./actions/agent";
 import { _bindEnsembleAccessors } from "./actions/ensemble";
 import { _bindSleepAccessors } from "./actions/sleep";
+import { _bindThemeAccessors } from "./actions/theme";
+import { useThemeMode } from "@/stores/themeModeStore";
 import { runTurn } from "./engine/brain";
 import { handleDirectDisrespect } from "./engine/loyaltyMonitor";
 import {
@@ -1160,6 +1162,15 @@ export function AxonProvider({ children }: { children: React.ReactNode }) {
     _bindSleepAccessors(
       () => ({ forceSleep: settingsRef.current.forceSleep }),
       (partial) => updateSettings(partial),
+    );
+    // Theme accessors — Axon's set_theme / toggle_theme actions
+    // call through these to drive the themeMode store the same
+    // way the Profile → Appearance toggle does. Reading the
+    // store directly avoids prop-drilling + keeps the action
+    // file decoupled from React.
+    _bindThemeAccessors(
+      () => useThemeMode.getState().mode,
+      (mode) => useThemeMode.getState().setMode(mode),
     );
   }, [updateSettings]);
 

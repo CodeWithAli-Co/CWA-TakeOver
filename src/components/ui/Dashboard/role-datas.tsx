@@ -29,6 +29,7 @@ import {
   ClipboardCheck,
   Inbox,
   Send,
+  Code as CodeIcon,
   BookCopy,
   Network,
   Wallet,
@@ -92,6 +93,17 @@ export const internData = {
       isActive: false,
       icon: Send,
     },
+    {
+      title: "Code",
+      url: "/code",
+      isActive: false,
+      icon: CodeIcon,
+      items: [
+        { title: "Repositories",   url: "/code" },
+        { title: "Pull Requests",  url: "/code" },
+        { title: "AI Activity",    url: "/code" },
+      ],
+    },
 
     // Settings moved to the profile dropdown (see nav-user.tsx).
   ],
@@ -134,6 +146,17 @@ export const memberData = {
       url: "/reports/submit",
       isActive: false,
       icon: Send,
+    },
+    {
+      title: "Code",
+      url: "/code",
+      isActive: false,
+      icon: CodeIcon,
+      items: [
+        { title: "Repositories",   url: "/code" },
+        { title: "Pull Requests",  url: "/code" },
+        { title: "AI Activity",    url: "/code" },
+      ],
     },
 
     // Settings moved to the profile dropdown (see nav-user.tsx).
@@ -200,6 +223,19 @@ export const accountManagerData = {
       url: "/reports/submit",
       isActive: false,
       icon: Send,
+    },
+    {
+      // Code module — GitHub-lookalike repo dashboard. Folder with
+      // collapsible children for the three primary surfaces.
+      title: "Code",
+      url: "/code",
+      isActive: false,
+      icon: CodeIcon,
+      items: [
+        { title: "Repositories",   url: "/code" },
+        { title: "Pull Requests",  url: "/code" },
+        { title: "AI Activity",    url: "/code" },
+      ],
     },
     // Settings moved to the profile dropdown (see nav-user.tsx).
   ],
@@ -272,6 +308,17 @@ export const marketingData = {
       url: "/reports/submit",
       isActive: false,
       icon: Send,
+    },
+    {
+      title: "Code",
+      url: "/code",
+      isActive: false,
+      icon: CodeIcon,
+      items: [
+        { title: "Repositories",   url: "/code" },
+        { title: "Pull Requests",  url: "/code" },
+        { title: "AI Activity",    url: "/code" },
+      ],
     },
 
     // Settings moved to the profile dropdown (see nav-user.tsx).
@@ -354,6 +401,22 @@ export const adminData = {
       url: "/reports",
       isActive: false,
       icon: Inbox,
+    },
+    {
+      // Code module — GitHub-lookalike repo dashboard. The
+      // `items` array makes the sidebar render it as a folder
+      // with collapsible children (Repositories / Pull Requests
+      // / Activity). The parent itself links to /code so a
+      // click on the folder name also opens the dashboard.
+      title: "Code",
+      url: "/code",
+      isActive: false,
+      icon: CodeIcon,
+      items: [
+        { title: "Repositories",   url: "/code" },
+        { title: "Pull Requests",  url: "/code" },
+        { title: "AI Activity",    url: "/code" },
+      ],
     },
     {
       title: "Components",
@@ -532,6 +595,19 @@ export const projectManagerData = {
       isActive: false,
       icon: Send,
     },
+    {
+      // Code module — GitHub-lookalike repo dashboard. Folder with
+      // collapsible children for the three primary surfaces.
+      title: "Code",
+      url: "/code",
+      isActive: false,
+      icon: CodeIcon,
+      items: [
+        { title: "Repositories",   url: "/code" },
+        { title: "Pull Requests",  url: "/code" },
+        { title: "AI Activity",    url: "/code" },
+      ],
+    },
     // {
     //   title: "BioTech",
     //   url: "/bio",
@@ -650,6 +726,19 @@ export const securityEngineerData = {
       isActive: false,
       icon: Send,
     },
+    {
+      // Code module — GitHub-lookalike repo dashboard. Folder with
+      // collapsible children for the three primary surfaces.
+      title: "Code",
+      url: "/code",
+      isActive: false,
+      icon: CodeIcon,
+      items: [
+        { title: "Repositories",   url: "/code" },
+        { title: "Pull Requests",  url: "/code" },
+        { title: "AI Activity",    url: "/code" },
+      ],
+    },
     // {
     //   title: "BioTech",
     //   url: "/bio",
@@ -749,6 +838,22 @@ export const cooData = {
       url: "/reports",
       isActive: false,
       icon: Inbox,
+    },
+    {
+      // Code module — GitHub-lookalike repo dashboard. The
+      // `items` array makes the sidebar render it as a folder
+      // with collapsible children (Repositories / Pull Requests
+      // / Activity). The parent itself links to /code so a
+      // click on the folder name also opens the dashboard.
+      title: "Code",
+      url: "/code",
+      isActive: false,
+      icon: CodeIcon,
+      items: [
+        { title: "Repositories",   url: "/code" },
+        { title: "Pull Requests",  url: "/code" },
+        { title: "AI Activity",    url: "/code" },
+      ],
     },
     {
       title: "Components",
@@ -917,7 +1022,6 @@ export const cooData = {
       isActive: false,
       company: "simplicityFunds" as const,
     },
-
     // Settings moved to the profile dropdown (see nav-user.tsx).
   ],
   projects: [
@@ -1056,6 +1160,7 @@ export const ceoData = {
         { title: "Analytics",     url: "/analytics" },
         { title: "Submit Report", url: "/reports/submit" },
         { title: "Reports",       url: "/reports" },
+        { title: "Code",          url: "/code" },
         { title: "Roadmap",       url: "/roadmap" },
         { title: "Components",    url: "/components" },
       ],
@@ -1137,7 +1242,6 @@ export const ceoData = {
       isActive: false,
       company: "simplicityFunds" as const,
     },
-
     // Settings moved to the profile dropdown (see nav-user.tsx).
   ],
   projects: [
@@ -1206,6 +1310,7 @@ export const cfoData = {
     {
       title: "Onboarding",
       url: "/onboarding",
+      url: "/onboarding",
       isActive: false,
       icon: ClipboardCheck,
     },
@@ -1222,54 +1327,98 @@ export const cfoData = {
       icon: Inbox,
     },
     {
+      // Code module — GitHub-lookalike repo dashboard. Folder with
+      // collapsible children for the three primary surfaces.
+      title: "Code",
+      url: "/code",
+      isActive: false,
+      icon: CodeIcon,
+      items: [
+        { title: "Repositories",   url: "/code" },
+        { title: "Pull Requests",  url: "/code" },
+        { title: "AI Activity",    url: "/code" },
+      ],
+    },
+    {
       title: "Components",
       url: "/components",
       isActive: false,
       icon: Package,
     },
     {
-      title: "Finance Dashboard",
-      url: "/financialDashboard",
-      icon: DollarSign,
+      title: "Admin Permissions",
+      url: "/mod_logs",
+      icon: SquareTerminal,
+      isActive: true,
+      // items: [
+      //   // {
+      //   //   title: "Email Broadcast",
+      //   //   url: "/broadcast",
+      //   // },
+      //   // {
+      //   //   title: "Account Management",
+      //   //   url: "/details",
+      //   // },
+      //   // {
+      //   //   title: "Users",
+      //   //   url: "/employee",
+      //   // },
+      //   // {
+      //   //   title: "Mod logs",
+      //   //   url: "/mod_logs",
+      //   // },
+
+      // ],
+    },
+    // {
+    //   title: "Bot Management",
+    //   url: "/bot",
+    //   icon: Bot,
+    // },
+
+    {
+      title: "Chat",
+      url: "/chat",
       isActive: false,
+      icon: MessageCircle,
     },
     {
-      title: "Bookkeeping",
-      url: "/bookkeeping",
-      icon: BookCopy,
+      title: "Task",
+      url: "/task",
       isActive: false,
+      icon: ClipboardList,
     },
     {
-      title: "Invoicer",
-      url: "/invoicer",
-      icon: File,
+      title: "Weekly Quotas",
+      url: "/quota",
       isActive: false,
-      company: "codeWithAli" as const,
+      icon: Target,
     },
     {
-      title: "Financial Ops",
-      url: "/s-finance-ops",
-      icon: Activity,
+      title: "Schedule",
+      url: "/schedule",
       isActive: false,
-      company: "simplicityFunds" as const,
+      icon: CalendarDays,
     },
-    {
-      title: "Subscriptions",
-      url: "/invoicer",
-      icon: CreditCard,
-      isActive: false,
-      company: "simplicityFunds" as const,
-    },
-    {
-      title: "Users",
-      url: "/employee",
-      icon: Users,
-      isActive: false,
-    },
+    // {
+    //   title: "BioTech",
+    //   url: "/bio",
+    //   isActive: false,
+    //   icon: Cat,
+    // },
+
+ 
     // Settings moved to the profile dropdown (see nav-user.tsx).
   ],
-  projects: [] as ProjectItem[],
+  projects: [
+    {
+      name: "Budgetary",
+      url: "/budgetary",
+      icon: Frame,
+    },
+  ],
 };
+
 
 // ── Helpers ─────────────────────────────────────────────────────────
 // Imported by app-sidebar.tsx. Keep their signatures in sync with the
