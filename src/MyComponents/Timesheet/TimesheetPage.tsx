@@ -58,7 +58,6 @@ import { WarningsBar } from "./WarningsBar";
 import { DayView } from "./DayView";
 import { OpenShiftsInbox } from "./OpenShiftsInbox";
 import { SuggestPatternsBanner } from "./SuggestPatternsBanner";
-import { UpcomingHiringMeetingsWidget } from "@/MyComponents/Hiring/UpcomingHiringMeetingsWidget";
 
 type RangeMode = "week" | "day";
 
@@ -374,15 +373,8 @@ function TimesheetContent() {
         </div>
       )}
 
-      {/* ─────────────── UPCOMING HIRING MEETINGS (Me only) ─────────────── */}
-      {/* Each meeting row has a "To timesheet" button that creates a
-          matching shift on the operator's schedule. Lives here because
-          /schedule used to host it and the timesheet replaced /schedule. */}
-      {view === "me" && myId && (
-        <div className="px-6 lg:px-8 pt-3">
-          <UpcomingHiringMeetingsWidget days={14} />
-        </div>
-      )}
+      {/* (Hiring meetings now auto-mirror onto the grid via the
+          candidate_meetings_sync_shift DB trigger — no widget needed.) */}
 
       {/* ─────────────── STATS BAR ─────────────── */}
       <div className="px-6 lg:px-8 pt-4 pb-2">
