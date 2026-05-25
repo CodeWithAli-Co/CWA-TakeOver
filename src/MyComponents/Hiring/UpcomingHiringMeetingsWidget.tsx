@@ -11,7 +11,13 @@
  * switch into /hiring or /onboarding.
  */
 
-import { Loader2, ChevronRight, Clock, ExternalLink, Calendar } from "lucide-react";
+import { useState } from "react";
+import { Loader2, ChevronRight, Clock, ExternalLink, Calendar, CalendarPlus, Check } from "lucide-react";
+import { useQueryClient } from "@tanstack/react-query";
+import supabase from "@/MyComponents/supabase";
+import { ActiveUser } from "@/stores/query";
+import { shiftKeys } from "@/stores/shifts";
+import { useCompanyFilter } from "@/stores/store";
 import {
   useUpcomingHiringMeetings,
   formatMeetingTime,
@@ -79,6 +85,54 @@ export function UpcomingHiringMeetingsWidget({ days = 14 }: { days?: number } = 
 function MeetingRow({ m }: { m: CandidateMeeting }) {
   const name = m.candidates?.full_name ?? "Candidate";
   const role = m.candidates?.role_slug ?? "";
+  const { data: meRows } = ActiveUser();
+  const me = (meRows?.[0] as any) ?? null;
+  const { activeCompany } = useCompanyFilter();
+  const qc = useQueryClient();
+  const [adding, setAdding] = useState(false);
+  const [added, setAdded] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  // Add this meeting to the operator's timesheet as a shift. The
+  // shifts table already supports type="meeting"; we map the row
+  // 1:1 — start = scheduled_at, end = scheduled_at + duration_min.
+  // This is the manual bridge that closes the loop until Calendly
+  // OAuth + webhook (task #12) auto-creates these.
+  const handleAdd = async () => {
+    if (!me?.supa_id) {
+      setError("Sign in first.");
+      return;
+    }
+    setAdding(true);
+    setError(null);
+    try {
+      const starts = new Date(m.scheduled_at);
+      const ends = new Date(starts.getTime() + m.duration_min * 60_000);
+      const company = activeCompany === "simplicityFunds" ? "simplicity" : "CodeWithAli";
+      const { error: insErr } = await supabase.from("shifts").insert({
+        user_supa_id: me.supa_id,
+        username: me.username,
+        starts_at: starts.toISOString(),
+        ends_at: ends.toISOString(),
+        type: "meeting",
+        title: m.title || `Meeting with ${name}`,
+        notes: m.description ?? null,
+        location: m.meeting_url ?? m.calendly_event_url ?? null,
+        status: "scheduled",
+        is_billable: false,
+        company,
+        created_by: me.supa_id,
+      });
+      if (insErr) throw insErr;
+      qc.invalidateQueries({ queryKey: shiftKeys.all });
+      setAdded(true);
+    } catch (e: any) {
+      setError(e?.message || "Save failed");
+    } finally {
+      setAdding(false);
+    }
+  };
+
   return (
     <li className="px-5 py-3 hover:bg-white/[0.015] transition-colors flex items-center gap-3">
       <div className={"px-2 py-1 rounded-sm border text-[9.5px] font-bold uppercase tracking-wider flex-shrink-0 " + KIND_COLORS[m.kind]}>
@@ -95,8 +149,31 @@ function MeetingRow({ m }: { m: CandidateMeeting }) {
           {m.attendees?.length > 0 && (
             <span className="text-foreground/35"> · {m.attendees.length} attendee{m.attendees.length === 1 ? "" : "s"}</span>
           )}
+          {error && <span className="text-amber-400 ml-1">· {error}</span>}
         </div>
       </div>
+
+      {added ? (
+        <a
+          href="/timesheet"
+          className="text-[10.5px] font-semibold text-emerald-400 inline-flex items-center gap-1 flex-shrink-0"
+          title="View in timesheet"
+        >
+          <Check size={10} /> Added
+        </a>
+      ) : (
+        <button
+          type="button"
+          onClick={handleAdd}
+          disabled={adding}
+          className="text-[10.5px] font-semibold text-foreground/60 hover:text-red-400 inline-flex items-center gap-1 flex-shrink-0 disabled:opacity-40"
+          title="Add this meeting to your timesheet"
+        >
+          {adding ? <Loader2 size={10} className="animate-spin" /> : <CalendarPlus size={10} />}
+          To timesheet
+        </button>
+      )}
+
       {m.calendly_event_url && (
         <a
           href={m.calendly_event_url}

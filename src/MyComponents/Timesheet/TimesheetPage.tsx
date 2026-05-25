@@ -57,6 +57,8 @@ import { ShiftEditor } from "./ShiftEditor";
 import { WarningsBar } from "./WarningsBar";
 import { DayView } from "./DayView";
 import { OpenShiftsInbox } from "./OpenShiftsInbox";
+import { SuggestPatternsBanner } from "./SuggestPatternsBanner";
+import { UpcomingHiringMeetingsWidget } from "@/MyComponents/Hiring/UpcomingHiringMeetingsWidget";
 
 type RangeMode = "week" | "day";
 
@@ -372,6 +374,16 @@ function TimesheetContent() {
         </div>
       )}
 
+      {/* ─────────────── UPCOMING HIRING MEETINGS (Me only) ─────────────── */}
+      {/* Each meeting row has a "To timesheet" button that creates a
+          matching shift on the operator's schedule. Lives here because
+          /schedule used to host it and the timesheet replaced /schedule. */}
+      {view === "me" && myId && (
+        <div className="px-6 lg:px-8 pt-3">
+          <UpcomingHiringMeetingsWidget days={14} />
+        </div>
+      )}
+
       {/* ─────────────── STATS BAR ─────────────── */}
       <div className="px-6 lg:px-8 pt-4 pb-2">
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
@@ -398,13 +410,29 @@ function TimesheetContent() {
         </div>
       </div>
 
-      {/* ─────────────── WARNINGS + OPEN SHIFTS ─────────────── */}
-      <div className="px-6 lg:px-8 pt-2 space-y-2">
-        <WarningsBar shifts={shifts} />
-        {myId && (
-          <OpenShiftsInbox currentUserId={myId} currentUserName={myName} />
-        )}
-      </div>
+      {/* ─────────────── PATTERN SUGGESTION + WARNINGS + OPEN ─────────────── */}
+      {range === "week" && (
+        <div className="px-6 lg:px-8 pt-2 space-y-2">
+          <SuggestPatternsBanner
+            weekStart={weekStart}
+            visibleShifts={shifts}
+            scopeUserId={scopedUserId}
+            scopeLabel={`${view}:${scopedUserId ?? "all"}`}
+          />
+          <WarningsBar shifts={shifts} />
+          {myId && (
+            <OpenShiftsInbox currentUserId={myId} currentUserName={myName} />
+          )}
+        </div>
+      )}
+      {range === "day" && (
+        <div className="px-6 lg:px-8 pt-2 space-y-2">
+          <WarningsBar shifts={shifts} />
+          {myId && (
+            <OpenShiftsInbox currentUserId={myId} currentUserName={myName} />
+          )}
+        </div>
+      )}
 
       {/* ─────────────── GRID / DAY VIEW ─────────────── */}
       <main className="flex-1 min-h-0 px-6 lg:px-8 pb-6 pt-2">

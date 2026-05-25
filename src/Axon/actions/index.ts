@@ -33,6 +33,7 @@ import { registerRecruitingActions } from "./recruiting";
 import { registerOnboardingActions } from "./onboarding";
 import { registerSleepActions } from "./sleep";
 import { registerThemeActions } from "./theme";
+import { registerShiftActions } from "./shifts";
 
 let registered = false;
 
@@ -72,4 +73,5 @@ export function registerAllActions() {
   registerOnboardingActions();
   registerSleepActions();
   registerThemeActions();
+  registerShiftActions();
 }
