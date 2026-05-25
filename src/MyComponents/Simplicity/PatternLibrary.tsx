@@ -471,7 +471,7 @@ export const PatternLibrary = () => {
                 <button
                   onClick={handleSave}
                   disabled={submitting || !formTitle.trim() || !formCode.trim()}
-                  className="px-5 py-2 bg-primary hover:bg-primary/80 text-foreground text-[12px] font-medium rounded-sm disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                  className="px-5 py-2 bg-primary hover:bg-primary/80 text-primary-foreground text-[12px] font-medium rounded-sm disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
                 >
                   {submitting ? "Saving..." : editingPattern ? "Save Changes" : "Create Pattern"}
                 </button>

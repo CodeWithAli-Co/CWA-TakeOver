@@ -15,7 +15,7 @@ export const UnreadBadge: React.FC<Props> = ({ count, className = "" }) => {
 
   return (
     <span
-      className={`inline-flex items-center justify-center min-w-[16px] h-[16px] px-1 bg-red-500 text-foreground text-[9px] font-bold rounded-full leading-none ${className}`}
+      className={`inline-flex items-center justify-center min-w-[16px] h-[16px] px-1 bg-red-500 text-white text-[9px] font-bold rounded-full leading-none ${className}`}
     >
       {display}
     </span>

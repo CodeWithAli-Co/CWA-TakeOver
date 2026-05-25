@@ -318,7 +318,7 @@ export const InvoiceRenderer: React.FC<{
     <div className="relative h-screen">
       <div
         onClick={() => downloadInvoice(invoice, invoiceName || "invoice.pdf")}
-        className="absolute right-5 top-5 flex justify-center items-center p-2 rounded-sm bg-red-500 text-foreground shadow-md hover:bg-primary transition-colors cursor-pointer z-10"
+        className="absolute right-5 top-5 flex justify-center items-center p-2 rounded-sm bg-red-500 text-primary-foreground shadow-md hover:bg-primary transition-colors cursor-pointer z-10"
         title="Download Invoice"
       >
         <Download size={20} />

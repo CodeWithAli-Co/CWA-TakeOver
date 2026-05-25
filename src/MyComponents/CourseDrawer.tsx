@@ -140,7 +140,7 @@ function DrawerInner({
         exit={{ opacity: 0 }}
         transition={{ duration: 0.2 }}
         onClick={onClose}
-        className="fixed inset-0 z-40 bg-black/60 backdrop-blur-[2px]"
+        className="fixed inset-0 z-40 bg-background/60 backdrop-blur-[2px]"
       />
 
       {/* Panel */}
@@ -359,7 +359,7 @@ function IdentityBlock({ intel }: { intel: CourseIntel }) {
   const divisionCls =
     intel.division === "Upper Division"
       ? "bg-indigo-500/[0.14] text-indigo-200 border-indigo-400/40"
-      : "bg-zinc-500/[0.14] text-zinc-200 border-zinc-400/40";
+      : "bg-zinc-500/[0.14] text-foreground/90 border-zinc-400/40";
 
   const minGrade = intel.minGrade;
   const minGradeCls =
@@ -906,7 +906,7 @@ function WorkloadBlock({ intel }: { intel: CourseIntel }) {
                     : n <= 4
                       ? "bg-amber-400/80"
                       : "bg-red-400/80"
-                  : "bg-zinc-700/60"
+                  : "bg-muted/60"
               }`}
             />
           ))}

@@ -107,6 +107,16 @@ export function Orb() {
     const rgbRaw = getComputedStyle(c).getPropertyValue("--axon-accent-rgb").trim();
     const [R, G, B] = parseRgb(rgbRaw);
 
+    // Theme-aware rim — the colour the inner sphere fades to at the
+    // outer edge. Dark blue-black in dark mode (default), near-white
+    // in light mode (otherwise the floating orb reads as a black ball
+    // sitting on a white page). Read at canvas-init time; if the
+    // user flips theme mid-session a re-mount will pick it up.
+    const edgeRaw = getComputedStyle(c)
+      .getPropertyValue("--axon-orb-edge-rgb")
+      .trim();
+    const [edgeR, edgeG, edgeB] = parseRgb(edgeRaw || "5, 5, 10");
+
     const cx = W / 2;
     const cy = H / 2;
     const radius = (ORB_SIZE / 2) * dpr;
@@ -222,7 +232,7 @@ export function Orb() {
       );
       body.addColorStop(0, `rgba(${accentR}, ${accentG}, ${accentB}, ${0.55 * intensity})`);
       body.addColorStop(0.35, `rgba(${Math.round(accentR * 0.4)}, ${Math.round(accentG * 0.2)}, ${Math.round(accentB * 0.6)}, ${0.35 * intensity})`);
-      body.addColorStop(1, `rgba(5, 5, 10, 0.96)`);
+      body.addColorStop(1, `rgba(${edgeR}, ${edgeG}, ${edgeB}, 0.96)`);
       ctx.fillStyle = body;
       ctx.fillRect(cx - radius, cy - radius, radius * 2, radius * 2);
 

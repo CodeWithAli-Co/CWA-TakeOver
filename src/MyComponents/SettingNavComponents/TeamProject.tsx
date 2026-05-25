@@ -341,7 +341,7 @@ function StatusPill({ status }: { status: ProjectStatus }) {
     active:    { label: "Active",    cls: "border-emerald-500/40 bg-emerald-500/10 text-emerald-300" },
     paused:    { label: "Paused",    cls: "border-amber-500/40 bg-amber-500/10 text-amber-300" },
     completed: { label: "Completed", cls: "border-blue-500/40 bg-blue-500/10 text-blue-300" },
-    cancelled: { label: "Cancelled", cls: "border-zinc-600/40 bg-zinc-700/10 text-zinc-400" },
+    cancelled: { label: "Cancelled", cls: "border-border/40 bg-muted/10 text-muted-foreground" },
   };
   const c = cfg[status];
   return (
@@ -769,7 +769,7 @@ function MemberPicker({
                 onClick={() => onToggle(u.supa_id)}
                 className={[
                   "flex w-full items-center gap-2 rounded-sm px-2 py-1.5 text-left transition-colors",
-                  on ? "bg-primary/[0.12] text-foreground" : "text-foreground/90 hover:bg-muted/60",
+                  on ? "bg-primary/[0.12] text-primary-foreground" : "text-foreground/90 hover:bg-muted/60",
                 ].join(" ")}
               >
                 <Avatar user={u} />

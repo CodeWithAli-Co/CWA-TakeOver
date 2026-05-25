@@ -181,6 +181,128 @@ html, body {
     --text-muted: 215 15% 50%;
     --border-subtle: 240 4% 7%;
   }
+
+  /* ─────────────────────────────────────────────────────────────
+     LIGHT MODE VARIANTS
+     Applied when <html data-theme="light"> is set by themeModeStore.
+     The selectors stack with [data-company="…"] so each company
+     keeps its own light palette identity.
+
+     Why values shift the way they do:
+       background → near-white (98–99% L) so it reads as paper
+       card       → pure white so it lifts over the body
+       muted      → light gray (94–96%) for hover/buttons
+       border     → 86–88% — visible without being harsh
+       foreground → near-black with a hint of brand hue
+       primary    → unchanged red / slightly-darker teal so
+                    foreground text on primary chips stays bright
+  ────────────────────────────────────────────────────────────── */
+
+  [data-theme="light"]:root,
+  [data-theme="light"][data-company="codeWithAli"] {
+    /* Calibrated against Linear / Notion / Discord light modes.
+     *
+     * Body is OFF-white (not pure) so white cards visibly lift
+     * off the canvas. Pure-white body + pure-white card was the
+     * "everything blurs together" complaint.
+     *
+     * Borders sit at 78% L — well below the 90%+ default that
+     * tailwind/shadcn templates ship with. Strong enough to
+     * actually anchor a card, soft enough to not read as a hard
+     * box edge. Border-subtle at 86% is for inner dividers.
+     *
+     * Muted-foreground at 42% L stays comfortably below the
+     * AAA contrast cutoff against white surfaces. */
+    --background: 240 6% 96%;           /* zinc-100-ish off-white body */
+    --foreground: 240 10% 9%;           /* near-black with hue hint */
+    --card: 0 0% 100%;                  /* pure white — lifts off body */
+    --card-foreground: 240 10% 9%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 240 10% 9%;
+
+    --primary: 0 72% 51%;               /* brand red */
+    --primary-foreground: 0 0% 100%;
+    --secondary: 240 6% 92%;            /* deeper than muted, button-grade */
+    --secondary-foreground: 240 10% 15%;
+
+    --muted: 240 6% 93%;                /* hover/chip surface, distinct from body */
+    --muted-foreground: 240 5% 42%;
+    --accent: 240 6% 93%;
+    --accent-foreground: 240 10% 15%;
+    --destructive: 0 78% 50%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 240 6% 78%;               /* visible at a glance */
+    --input: 240 6% 90%;
+    --ring: 0 72% 51%;
+
+    /* Sidebar sits BRIGHTER than the body in light mode — the
+     * inverse of dark mode (where it sits darker). Reads as a
+     * clean white rail floating above the slightly-tinted body,
+     * matching the GitHub / Vercel / Linear pattern. The right
+     * border anchors it visually so the white-on-white edge
+     * doesn't disappear. */
+    --sidebar-background: 0 0% 100%;
+    --sidebar-foreground: 240 10% 9%;
+    --sidebar-primary: 0 72% 51%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 240 6% 93%;       /* subtle hover, matches --muted */
+    --sidebar-accent-foreground: 240 10% 9%;
+    --sidebar-border: 240 6% 82%;
+    --sidebar-ring: 0 72% 51%;
+
+    --brand-accent: 0 72% 51%;
+    --brand-accent-rgb: 220, 38, 38;
+    --brand-glow: 0 72% 51%;
+    --surface-hover: 240 6% 90%;
+    --surface-active: 240 6% 86%;
+    --text-dim: 240 5% 50%;
+    --text-muted: 240 5% 36%;
+    --border-subtle: 240 6% 86%;
+  }
+
+  [data-theme="light"][data-company="simplicityFunds"] {
+    --background: 220 14% 96%;
+    --foreground: 220 25% 11%;
+    --card: 0 0% 100%;
+    --card-foreground: 220 25% 11%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 220 25% 11%;
+
+    --primary: 168 76% 33%;             /* darker teal so foreground-on-primary stays bright */
+    --primary-foreground: 0 0% 100%;
+    --secondary: 220 12% 92%;
+    --secondary-foreground: 220 25% 15%;
+
+    --muted: 220 12% 93%;
+    --muted-foreground: 220 11% 40%;
+    --accent: 168 55% 90%;
+    --accent-foreground: 168 70% 18%;
+    --destructive: 0 78% 50%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 220 11% 78%;
+    --input: 220 10% 90%;
+    --ring: 168 76% 33%;
+
+    --sidebar-background: 0 0% 100%;
+    --sidebar-foreground: 220 25% 11%;
+    --sidebar-primary: 168 76% 33%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 220 12% 93%;
+    --sidebar-accent-foreground: 220 25% 11%;
+    --sidebar-border: 220 11% 82%;
+    --sidebar-ring: 168 76% 33%;
+
+    --brand-accent: 168 76% 33%;
+    --brand-accent-rgb: 18, 156, 142;
+    --brand-glow: 168 76% 33%;
+    --surface-hover: 220 11% 90%;
+    --surface-active: 220 11% 86%;
+    --text-dim: 220 11% 50%;
+    --text-muted: 220 11% 36%;
+    --border-subtle: 220 11% 86%;
+  }
 }
 
 @layer base {

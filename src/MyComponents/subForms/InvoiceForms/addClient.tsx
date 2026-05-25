@@ -120,7 +120,7 @@ export const AddClient = () => {
                   type="submit"
                   disabled={!canSubmit}
                   className="bg-red-950/20 hover:bg-red-900/20
-                text-foreground border border-red-700/40 shadow-lg shadow-red-950/20 px-5 py-4 text-lg font-medium ml-[65px]"
+                text-primary-foreground border border-red-700/40 shadow-lg shadow-red-950/20 px-5 py-4 text-lg font-medium ml-[65px]"
                 >
                   <div className="relative flex items-center justify-center text-gray-200 ">
                     {!canSubmit ? (

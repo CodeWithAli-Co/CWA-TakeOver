@@ -20,8 +20,91 @@
   --axon-glow-md: 0 0 28px rgba(var(--axon-accent-rgb), 0.45);
   --axon-glow-lg: 0 0 56px rgba(var(--axon-accent-rgb), 0.55);
 
-  --axon-glass: rgba(8, 8, 10, 0.72);
-  --axon-glass-hi: rgba(20, 20, 24, 0.82);
+  /* Glass surfaces. Dark by default (the Iron-Man HUD aesthetic);
+   * flipped to translucent white in light mode via the override
+   * block below. The rest of the stylesheet reads these vars so
+   * one swap re-themes the whole panel.
+   *   --axon-glass-hi is the BRIGHTER stop (top of the panel
+   *     gradient + live-transcript bubble + chip surfaces)
+   *   --axon-glass    is the dimmer base */
+  --axon-glass: rgba(4, 4, 6, 0.97);
+  --axon-glass-hi: rgba(8, 8, 10, 0.94);
+  /* Used by .axon-tabs and a few inner sections that wanted a
+   * deeper inset below the body. Was rgba(0,0,0, 0.4) hardcoded. */
+  --axon-glass-inset: rgba(0, 0, 0, 0.4);
+  /* Outer rim of the legacy .axon-orb gradient — the colour the
+   * orb fades to at its edge. Dark in dark mode (so the plasma
+   * sphere reads as a 3D ball floating in space), light in light
+   * mode (so the orb doesn't have a harsh black ring on white). */
+  --axon-orb-rim: rgba(0, 0, 0, 0.94);
+  --axon-orb-rim-out: rgba(0, 0, 0, 1);
+  --axon-orb-inset: rgba(0, 0, 0, 0.75);
+  /* RGB triple read by Orb.tsx for the inner sphere's fade-to-edge
+   * colour. Dark default → orb reads as a 3D ball in space. */
+  --axon-orb-edge-rgb: 5, 5, 10;
+  /* Drop shadow that the panel casts to the left of itself when
+   * it slides in. Big & dark on dark theme (so the panel reads as
+   * a heavy floating slab); soft + light on light theme (so it
+   * doesn't paint a fake black gradient across the page). */
+  --axon-panel-shadow: -32px 0 96px rgba(0, 0, 0, 0.78);
+  /* Composer footer background — the bar at the bottom of the
+   * panel where the user types. Was a hardcoded dark gradient;
+   * now flips through the theme. */
+  --axon-composer-bg: linear-gradient(180deg, rgba(0, 0, 0, 0.5), rgba(0, 0, 0, 0.7));
+
+  /* Text & micro-surfaces — defined as vars so the LIGHT
+   * override below can flip them without us having to touch the
+   * hundreds of rgba(255,255,255, …) sites scattered through
+   * this stylesheet. Default values match what the file was
+   * already hardcoding (dark-mode HUD). */
+  --axon-text-strong:  rgb(255 255 255 / 0.96);  /* primary body text */
+  --axon-text-soft:    rgb(255 255 255 / 0.78);  /* secondary text */
+  --axon-text-dim:     rgb(255 255 255 / 0.55);  /* tertiary */
+  --axon-text-faint:   rgb(255 255 255 / 0.32);  /* hint / disabled */
+  --axon-chip-bg:      rgb(255 255 255 / 0.05);  /* button / chip surface */
+  --axon-chip-hi:      rgb(255 255 255 / 0.12);  /* hovered chip */
+  --axon-divider:      rgb(255 255 255 / 0.08);  /* hairline divider */
+}
+
+/* ── LIGHT MODE ────────────────────────────────────────────────
+   Override the dark-glass + white-on-X tokens with light-mode
+   equivalents. The panel becomes a white frosted card, text
+   flips to near-black, hairlines go subtle-gray. Brand accent
+   (red / teal) and orb gradients stay as they are — they need
+   to be vivid on both surfaces. */
+[data-theme="light"] [data-axon],
+[data-theme="light"][data-axon] {
+  --axon-glass:        rgb(255 255 255 / 0.92);
+  --axon-glass-hi:     rgb(255 255 255 / 0.98);
+  /* Inset surfaces — tabs, audit pane, deeper sections. In dark
+   * mode this is rgba(0,0,0,0.4) — "even darker than the panel".
+   * In light mode the equivalent is a faint gray wash so the
+   * section sits *into* the panel, not on top of it. */
+  --axon-glass-inset:  rgb(20 20 24 / 0.04);
+
+  --axon-text-strong:  rgb(20 20 24 / 0.95);
+  --axon-text-soft:    rgb(20 20 24 / 0.75);
+  --axon-text-dim:     rgb(20 20 24 / 0.55);
+  --axon-text-faint:   rgb(20 20 24 / 0.32);
+  --axon-chip-bg:      rgb(20 20 24 / 0.05);
+  --axon-chip-hi:      rgb(20 20 24 / 0.10);
+  --axon-divider:      rgb(20 20 24 / 0.10);
+
+  /* Orb rim flips to white so the plasma sphere sits on a soft
+   * white halo instead of fading into a hard black ring. The
+   * accent red still pops in the centre — only the outer edge
+   * blends with the surrounding light surface. */
+  --axon-orb-rim:      rgb(255 255 255 / 0.92);
+  --axon-orb-rim-out:  rgb(255 255 255 / 1);
+  --axon-orb-inset:    rgb(255 255 255 / 0.5);
+  /* Light mode → orb fades to pale gray instead of pure black so it
+   * sits on a soft halo against the white page. */
+  --axon-orb-edge-rgb: 240, 240, 245;
+  /* Soft gray shadow on the panel — kills the "right-edge black
+   * gradient" that the dark-mode shadow was painting onto pages. */
+  --axon-panel-shadow: -16px 0 48px rgba(20, 20, 24, 0.08);
+  /* Composer bar uses a faint gray wash, not the dark gradient. */
+  --axon-composer-bg:  linear-gradient(180deg, rgb(20 20 24 / 0.03), rgb(20 20 24 / 0.06));
 }
 
 /* ══════════════════════════════════════════════════════════════════
@@ -66,14 +149,14 @@
       circle at 30% 28%,
       rgba(var(--axon-accent-rgb), 0.9) 0%,
       rgba(var(--axon-accent-rgb), 0.2) 42%,
-      rgba(0, 0, 0, 0.94) 72%,
-      rgba(0, 0, 0, 1) 100%
+      var(--axon-orb-rim) 72%,
+      var(--axon-orb-rim-out) 100%
     );
   box-shadow:
     0 0 0 1px rgba(var(--axon-accent-rgb), 0.5),
     var(--axon-glow-md),
-    inset 0 0 22px rgba(0, 0, 0, 0.75),
-    inset 0 0 2px rgba(255, 255, 255, 0.2);
+    inset 0 0 22px var(--axon-orb-inset),
+    inset 0 0 2px var(--axon-text-faint);
   transition:
     transform 260ms cubic-bezier(0.2, 0.9, 0.25, 1),
     box-shadow 260ms ease,
@@ -90,8 +173,8 @@
   box-shadow:
     0 0 0 1px rgba(var(--axon-accent-rgb), 0.7),
     var(--axon-glow-lg),
-    inset 0 0 22px rgba(0, 0, 0, 0.75),
-    inset 0 0 2px rgba(255, 255, 255, 0.2);
+    inset 0 0 22px var(--axon-orb-inset),
+    inset 0 0 2px var(--axon-text-faint);
 }
 
 /* Inner core — the "eye" */
@@ -102,7 +185,7 @@
   border-radius: 50%;
   background: radial-gradient(
     circle at 35% 35%,
-    rgba(255, 255, 255, 1) 0%,
+    var(--axon-text-strong) 0%,
     rgba(var(--axon-accent-rgb), 0.98) 55%,
     rgba(var(--axon-accent-rgb), 0.35) 100%
   );
@@ -238,18 +321,25 @@
   color: var(--axon-fg);
   font-family: var(--axon-font);
 
+  /* Background reads --axon-glass / --axon-glass-hi so the panel
+   * flips to white frosted glass in light mode. The dark gradient
+   * the file used to ship with is now reproduced via those vars
+   * (rgba(8,8,10,0.94) at top, rgba(4,4,6,0.97) at bottom). */
   background:
     linear-gradient(
       180deg,
-      rgba(8, 8, 10, 0.94) 0%,
-      rgba(4, 4, 6, 0.97) 100%
+      var(--axon-glass-hi) 0%,
+      var(--axon-glass) 100%
     );
   backdrop-filter: blur(32px) saturate(1.5);
   -webkit-backdrop-filter: blur(32px) saturate(1.5);
   border-left: 1px solid rgba(var(--axon-accent-rgb), 0.22);
+  /* --axon-panel-shadow flips theme-aware so the left-edge halo
+   * is a heavy black slab in dark mode but a soft gray in light
+   * mode (instead of painting a black gradient across the page). */
   box-shadow:
-    -32px 0 96px rgba(0, 0, 0, 0.78),
-    -1px 0 0 rgba(255, 255, 255, 0.04) inset;
+    var(--axon-panel-shadow),
+    -1px 0 0 var(--axon-chip-bg) inset;
 
   transform: translateX(100%);
   transition: transform 380ms cubic-bezier(0.22, 0.9, 0.28, 1);
@@ -279,10 +369,10 @@
   display: flex;
   flex-direction: column;
   gap: 12px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  border-bottom: 1px solid var(--axon-chip-bg);
   background: linear-gradient(
     180deg,
-    rgba(255, 255, 255, 0.018),
+    var(--axon-chip-bg),
     rgba(255, 255, 255, 0)
   );
 }
@@ -331,7 +421,7 @@
   text-transform: uppercase;
   border-radius: 999px;
   color: var(--axon-muted);
-  background: rgba(255, 255, 255, 0.035);
+  background: var(--axon-chip-bg);
   border: 1px solid rgba(var(--axon-accent-rgb), 0.2);
 }
 .axon-status-dot {
@@ -369,7 +459,7 @@
   gap: 4px;
   padding: 8px 12px;
   border-bottom: 1px solid var(--axon-border);
-  background: rgba(0, 0, 0, 0.4);
+  background: var(--axon-glass-inset);
 }
 /* Modern tab — flat, label-only, brand-color underline when active.
    No heavy outlined boxes, no background fill. The active state is
@@ -384,7 +474,7 @@
   letter-spacing: 0.14em;
   text-transform: uppercase;
   background: transparent;
-  color: rgba(255, 255, 255, 0.42);
+  color: var(--axon-text-dim);
   border: none;
   border-radius: 0;
   cursor: pointer;
@@ -392,10 +482,10 @@
 }
 .axon-tab:first-child { margin-left: 4px; }
 .axon-tab:hover {
-  color: rgba(255, 255, 255, 0.78);
+  color: var(--axon-text-soft);
 }
 .axon-tab[data-active="true"] {
-  color: rgba(255, 255, 255, 0.96);
+  color: var(--axon-text-strong);
   background: transparent;
   border: none;
   box-shadow: none;
@@ -447,14 +537,14 @@
   to   { opacity: 1; transform: translateY(0); }
 }
 .axon-turn[data-role="user"] {
-  background: rgba(255, 255, 255, 0.025);
-  border: 1px solid rgba(255, 255, 255, 0.06);
+  background: var(--axon-chip-bg);
+  border: 1px solid var(--axon-chip-bg);
   color: rgba(245, 245, 250, 0.95);
 }
 .axon-turn[data-role="axon"] {
   background: rgba(var(--axon-accent-rgb), 0.045);
   border: 1px solid rgba(var(--axon-accent-rgb), 0.18);
-  color: rgba(255, 255, 255, 0.97);
+  color: var(--axon-text-strong);
   box-shadow:
     0 1px 0 rgba(var(--axon-accent-rgb), 0.18) inset,
     0 0 24px -4px rgba(var(--axon-accent-rgb), 0.10);
@@ -491,9 +581,9 @@
   letter-spacing: 0.18em;
   padding: 2px 8px 2px 10px;
   border-radius: 999px;
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  color: rgba(255, 255, 255, 0.7);
+  background: var(--axon-chip-bg);
+  border: 1px solid var(--axon-chip-bg);
+  color: var(--axon-text-soft);
   position: relative;
 }
 .axon-turn-meta > span:first-child::before {
@@ -505,7 +595,7 @@
   width: 4px;
   height: 4px;
   border-radius: 50%;
-  background: rgba(255, 255, 255, 0.55);
+  background: var(--axon-text-dim);
 }
 .axon-turn[data-role="axon"] .axon-turn-meta > span:first-child {
   color: rgba(var(--axon-accent-rgb), 1);
@@ -520,13 +610,13 @@
   font-family: var(--axon-mono);
   font-variant-numeric: tabular-nums;
   letter-spacing: 0.06em;
-  color: rgba(255, 255, 255, 0.32);
+  color: var(--axon-text-faint);
 }
 
 .axon-turn-actions {
   margin-top: 8px;
   padding-top: 8px;
-  border-top: 1px dashed rgba(255, 255, 255, 0.09);
+  border-top: 1px dashed var(--axon-chip-bg);
   font-size: 11.5px;
   color: var(--axon-muted);
   font-family: var(--axon-mono);
@@ -546,12 +636,12 @@
   border-radius: 8px;
   font-size: 12.5px;
   margin-bottom: 6px;
-  background: rgba(255, 255, 255, 0.025);
-  border: 1px solid rgba(255, 255, 255, 0.04);
+  background: var(--axon-chip-bg);
+  border: 1px solid var(--axon-chip-bg);
   transition: background 140ms;
 }
 .axon-activity-row:hover {
-  background: rgba(255, 255, 255, 0.05);
+  background: var(--axon-chip-bg);
 }
 .axon-activity-row[data-error="true"] {
   background: rgba(255, 60, 60, 0.08);
@@ -577,7 +667,7 @@
   gap: 6px;
   padding: 10px 14px 6px;
   border-top: 1px solid var(--axon-border);
-  background: rgba(0, 0, 0, 0.4);
+  background: var(--axon-glass-inset);
 }
 .axon-quickrow-label {
   width: 100%;
@@ -610,8 +700,7 @@
 .axon-composer {
   padding: 12px 14px 16px;
   border-top: 1px solid var(--axon-border);
-  background:
-    linear-gradient(180deg, rgba(0, 0, 0, 0.5), rgba(0, 0, 0, 0.7));
+  background: var(--axon-composer-bg);
   display: flex;
   gap: 8px;
   align-items: center;
@@ -619,7 +708,7 @@
 .axon-composer input {
   flex: 1;
   padding: 11px 14px;
-  background: rgba(255, 255, 255, 0.04);
+  background: var(--axon-chip-bg);
   border: 1px solid rgba(var(--axon-accent-rgb), 0.28);
   border-radius: 8px;
   color: var(--axon-fg);
@@ -635,7 +724,7 @@
 .axon-composer input:focus {
   border-color: rgba(var(--axon-accent-rgb), 0.85);
   box-shadow: 0 0 0 3px rgba(var(--axon-accent-rgb), 0.15);
-  background: rgba(255, 255, 255, 0.06);
+  background: var(--axon-chip-bg);
 }
 
 /* Unified pill button — every header toggle (CALL / SIM / SEEING /
@@ -652,8 +741,8 @@
   align-items: center;
   justify-content: center;
   gap: 6px;
-  background: rgba(255, 255, 255, 0.04);
-  border: 1px solid rgba(255, 255, 255, 0.10);
+  background: var(--axon-chip-bg);
+  border: 1px solid var(--axon-chip-hi);
   color: rgba(245, 245, 250, 0.82);
   font-size: 10.5px;
   font-family: var(--axon-font);
@@ -671,9 +760,9 @@
   white-space: nowrap;
 }
 .axon-btn:hover {
-  background: rgba(255, 255, 255, 0.075);
-  border-color: rgba(255, 255, 255, 0.22);
-  color: rgba(255, 255, 255, 0.95);
+  background: var(--axon-chip-bg);
+  border-color: var(--axon-text-faint);
+  color: var(--axon-text-strong);
   transform: translateY(-0.5px);
 }
 .axon-btn:active {
@@ -698,7 +787,7 @@
   padding: 0;
   font-size: 14px;
   font-weight: 400;
-  color: rgba(255, 255, 255, 0.5);
+  color: var(--axon-text-dim);
 }
 .axon-btn--close:hover {
   background: rgba(248, 113, 113, 0.12);
@@ -731,19 +820,19 @@
   margin-bottom: 16px;
   padding: 18px 18px 16px;
   background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.022), rgba(255, 255, 255, 0));
-  border: 1px solid rgba(255, 255, 255, 0.06);
+    linear-gradient(180deg, var(--axon-chip-bg), rgba(255, 255, 255, 0));
+  border: 1px solid var(--axon-chip-bg);
   border-radius: 12px;
   box-shadow:
-    0 1px 0 rgba(255, 255, 255, 0.02) inset,
+    0 1px 0 var(--axon-chip-bg) inset,
     0 8px 24px -16px rgba(0, 0, 0, 0.6);
   /* Don't draw a horizontal rule under the last group anymore — the
      card border carries the visual closure. */
-  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  border-bottom: 1px solid var(--axon-chip-bg);
   transition: border-color 200ms ease, background 200ms ease;
 }
 .axon-settings-group:hover {
-  border-color: rgba(255, 255, 255, 0.10);
+  border-color: var(--axon-chip-hi);
 }
 .axon-settings-group:last-child { margin-bottom: 8px; }
 
@@ -782,7 +871,7 @@
 .axon-settings-label[style*="font-size"] {
   margin-top: 12px;
   margin-bottom: 6px;
-  color: rgba(255, 255, 255, 0.45) !important;
+  color: var(--axon-text-dim) !important;
   letter-spacing: 0.14em !important;
   font-weight: 600 !important;
 }
@@ -796,7 +885,7 @@
   gap: 16px;
   padding: 10px 0;
   font-size: 13px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+  border-bottom: 1px solid var(--axon-chip-bg);
 }
 .axon-settings-row:last-of-type { border-bottom: none; }
 .axon-settings-row > div:first-child {
@@ -805,13 +894,13 @@
 }
 .axon-settings-row > div:first-child > div {
   font-weight: 500;
-  color: rgba(255, 255, 255, 0.92);
+  color: var(--axon-text-strong);
   margin-bottom: 2px;
 }
 .axon-settings-row > div:first-child > small,
 .axon-settings-row > div:first-child > div + div {
   font-size: 11.5px;
-  color: rgba(255, 255, 255, 0.42);
+  color: var(--axon-text-dim);
   line-height: 1.45;
   font-weight: 400;
   display: block;
@@ -823,10 +912,10 @@
 .axon-settings-select {
   width: 100%;
   padding: 10px 12px;
-  background: rgba(0, 0, 0, 0.35);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: var(--axon-glass-inset);
+  border: 1px solid var(--axon-chip-bg);
   border-radius: 8px;
-  color: rgba(255, 255, 255, 0.95);
+  color: var(--axon-text-strong);
   font-size: 13px;
   font-family: var(--axon-font);
   transition:
@@ -835,17 +924,17 @@
     background 200ms;
 }
 .axon-settings-input::placeholder {
-  color: rgba(255, 255, 255, 0.28);
+  color: var(--axon-text-faint);
 }
 .axon-settings-input:hover,
 .axon-settings-select:hover {
-  border-color: rgba(255, 255, 255, 0.16);
+  border-color: var(--axon-chip-hi);
 }
 .axon-settings-input:focus,
 .axon-settings-select:focus {
   outline: none;
   border-color: rgba(var(--axon-accent-rgb), 0.7);
-  background: rgba(0, 0, 0, 0.5);
+  background: var(--axon-glass-inset);
   box-shadow:
     0 0 0 3px rgba(var(--axon-accent-rgb), 0.18),
     0 0 24px -8px rgba(var(--axon-accent-rgb), 0.4);
@@ -864,8 +953,8 @@
   width: 40px;
   height: 22px;
   appearance: none;
-  background: rgba(255, 255, 255, 0.08);
-  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: var(--axon-chip-bg);
+  border: 1px solid var(--axon-chip-hi);
   border-radius: 999px;
   cursor: pointer;
   transition: all 200ms ease;
@@ -873,8 +962,8 @@
   margin-top: 2px;
 }
 .axon-switch:hover {
-  background: rgba(255, 255, 255, 0.12);
-  border-color: rgba(255, 255, 255, 0.20);
+  background: var(--axon-chip-hi);
+  border-color: var(--axon-text-faint);
 }
 .axon-switch:checked {
   background: rgba(var(--axon-accent-rgb), 0.32);
@@ -895,7 +984,7 @@
 }
 .axon-switch:checked::after {
   left: 20px;
-  background: rgba(255, 255, 255, 1);
+  background: var(--axon-text-strong);
   box-shadow:
     0 1px 4px rgba(0, 0, 0, 0.5),
     0 0 12px rgba(var(--axon-accent-rgb), 0.95);
@@ -908,7 +997,7 @@
   position: fixed;
   inset: 0;
   z-index: 10000;
-  background: rgba(0, 0, 0, 0.62);
+  background: var(--axon-glass-inset);
   backdrop-filter: blur(6px);
   display: grid;
   place-items: center;
@@ -966,7 +1055,7 @@
   border-radius: 10px;
   font-size: 12px;
   line-height: 1.55;
-  color: rgba(255, 255, 255, 0.78);
+  color: var(--axon-text-soft);
   background:
     linear-gradient(
       180deg,
@@ -978,13 +1067,13 @@
     0 4px 14px -8px rgba(var(--axon-accent-rgb), 0.20);
 }
 .axon-hint code {
-  background: rgba(0, 0, 0, 0.35);
+  background: var(--axon-glass-inset);
   padding: 2px 6px;
   border-radius: 4px;
   font-family: var(--axon-mono);
   font-size: 11.5px;
   color: rgba(var(--axon-accent-rgb), 1);
-  border: 1px solid rgba(255, 255, 255, 0.06);
+  border: 1px solid var(--axon-chip-bg);
 }
 
 .axon-voicepill {
@@ -1000,8 +1089,8 @@
   text-transform: uppercase;
   font-weight: 600;
   color: var(--axon-muted);
-  background: rgba(255, 255, 255, 0.03);
-  border: 1px solid rgba(255, 255, 255, 0.06);
+  background: var(--axon-chip-bg);
+  border: 1px solid var(--axon-chip-bg);
 }
 .axon-voicepill[data-state="standby"] { color: rgba(var(--axon-accent-rgb), 0.9); border-color: rgba(var(--axon-accent-rgb), 0.3); }
 .axon-voicepill[data-state="armed"]   { color: #fff; background: rgba(var(--axon-accent-rgb), 0.25); border-color: rgba(var(--axon-accent-rgb), 0.85); }
@@ -1034,7 +1123,7 @@
   pointer-events: none;
 }
 .axon-subtitle[data-role="user"] {
-  border-color: rgba(255, 255, 255, 0.18);
+  border-color: var(--axon-chip-hi);
   box-shadow: 0 24px 60px rgba(0, 0, 0, 0.6);
 }
 .axon-subtitle[data-role="axon"] {
@@ -1149,7 +1238,6 @@
   white-space: nowrap;
 }
 
-
 /* ══════════════════════════════════════════════════════════════════
    MIND MAP — live graph of Axon's thinking. Sovereign treatment:
    quieter typography, restrained color, minimum visual weight.
@@ -1168,7 +1256,7 @@
       rgba(0, 0, 0, 0) 55%
     ),
     linear-gradient(180deg, rgba(10, 10, 12, 0.92) 0%, rgba(0, 0, 0, 0.98) 100%);
-  border: 1px solid rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--axon-chip-bg);
   border-radius: 14px;
   overflow: hidden;
   box-shadow:
@@ -1196,7 +1284,7 @@
   align-items: center;
   gap: 14px;
   padding: 14px 18px 12px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+  border-bottom: 1px solid var(--axon-chip-bg);
 }
 
 .axon-mindmap-title {
@@ -1212,7 +1300,7 @@
   display: none;
 }
 .axon-mindmap-prompt {
-  color: rgba(255, 255, 255, 0.78);
+  color: var(--axon-text-soft);
   font-size: 13px;
   font-weight: 400;
   letter-spacing: 0.005em;
@@ -1229,7 +1317,7 @@
   width: 5px;
   height: 5px;
   border-radius: 50%;
-  background: rgba(255, 255, 255, 0.28);
+  background: var(--axon-text-faint);
   flex-shrink: 0;
   transition: background 200ms ease;
 }
@@ -1250,7 +1338,7 @@
   gap: 0;
   font-size: 10.5px;
   font-weight: 400;
-  color: rgba(255, 255, 255, 0.4);
+  color: var(--axon-text-dim);
   letter-spacing: 0.01em;
   flex-shrink: 0;
 }
@@ -1270,12 +1358,12 @@
   width: 2px;
   height: 2px;
   border-radius: 50%;
-  background: rgba(255, 255, 255, 0.18);
+  background: var(--axon-chip-hi);
 }
 .axon-mindmap-stats em {
   font-style: normal;
   font-family: var(--axon-mono);
-  color: rgba(255, 255, 255, 0.85);
+  color: var(--axon-text-soft);
   font-variant-numeric: tabular-nums;
   font-size: 11px;
 }
@@ -1292,7 +1380,7 @@
   gap: 4px;
   padding: 0 8px 0 0 !important;
   margin-right: 4px;
-  border-right: 1px solid rgba(255, 255, 255, 0.08);
+  border-right: 1px solid var(--axon-chip-bg);
 }
 .axon-mindmap-ensemble-legend::before {
   display: none !important;
@@ -1350,12 +1438,12 @@
   padding: 11px 13px 12px;
   border-radius: 10px;
   background: rgba(14, 14, 16, 0.86);
-  border: 1px solid rgba(255, 255, 255, 0.06);
+  border: 1px solid var(--axon-chip-bg);
   backdrop-filter: blur(16px) saturate(1.2);
   -webkit-backdrop-filter: blur(16px) saturate(1.2);
   box-shadow:
     0 16px 40px rgba(0, 0, 0, 0.55),
-    inset 0 1px 0 rgba(255, 255, 255, 0.04);
+    inset 0 1px 0 var(--axon-chip-bg);
   pointer-events: none;
   animation: axon-mindmap-tt-in 160ms ease-out;
 }
@@ -1370,11 +1458,11 @@
   font-size: 9.5px;
   text-transform: uppercase;
   letter-spacing: 0.14em;
-  color: rgba(255, 255, 255, 0.45);
+  color: var(--axon-text-dim);
   margin-bottom: 7px;
 }
 .axon-mindmap-tt-head strong {
-  color: rgba(255, 255, 255, 0.78);
+  color: var(--axon-text-soft);
   font-weight: 500;
 }
 .axon-mindmap-tt-dot {
@@ -1387,7 +1475,7 @@
   margin-left: auto;
   font-family: var(--axon-mono);
   font-weight: 400;
-  color: rgba(255, 255, 255, 0.6);
+  color: var(--axon-text-dim);
   font-variant-numeric: tabular-nums;
   text-transform: none;
   letter-spacing: 0;
@@ -1396,7 +1484,7 @@
 .axon-mindmap-tt-label {
   font-size: 13px;
   font-weight: 500;
-  color: rgba(255, 255, 255, 0.92);
+  color: var(--axon-text-strong);
   word-break: break-word;
   letter-spacing: 0.005em;
 }
@@ -1404,7 +1492,7 @@
   margin-top: 7px;
   font-size: 11.5px;
   line-height: 1.5;
-  color: rgba(255, 255, 255, 0.55);
+  color: var(--axon-text-dim);
   word-break: break-word;
   display: -webkit-box;
   -webkit-line-clamp: 3;
@@ -1426,7 +1514,7 @@
   margin-top: 7px;
   font-family: var(--axon-mono);
   font-size: 10px;
-  color: rgba(255, 255, 255, 0.35);
+  color: var(--axon-text-faint);
   word-break: break-all;
   letter-spacing: 0.01em;
 }
@@ -1439,15 +1527,15 @@
   align-items: center;
   gap: 14px;
   padding: 10px 18px 12px;
-  border-top: 1px solid rgba(255, 255, 255, 0.04);
+  border-top: 1px solid var(--axon-chip-bg);
 }
 .axon-mindmap-scrub-btn {
   font-size: 9.5px;
   letter-spacing: 0.12em;
   text-transform: uppercase;
-  color: rgba(255, 255, 255, 0.45);
+  color: var(--axon-text-dim);
   background: transparent;
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  border: 1px solid var(--axon-chip-bg);
   border-radius: 999px;
   padding: 3px 9px;
   cursor: pointer;
@@ -1455,8 +1543,8 @@
   font-weight: 500;
 }
 .axon-mindmap-scrub-btn:hover {
-  color: rgba(255, 255, 255, 0.8);
-  border-color: rgba(255, 255, 255, 0.16);
+  color: var(--axon-text-soft);
+  border-color: var(--axon-chip-hi);
 }
 .axon-mindmap-scrub-btn[data-active="true"] {
   color: rgb(134, 239, 195);
@@ -1470,8 +1558,8 @@
   height: 2px;
   background: linear-gradient(
     90deg,
-    rgba(255, 255, 255, 0.22) 0%,
-    rgba(255, 255, 255, 0.06) 100%
+    var(--axon-text-faint) 0%,
+    var(--axon-chip-bg) 100%
   );
   border-radius: 999px;
   outline: none;
@@ -1483,7 +1571,7 @@
   width: 10px;
   height: 10px;
   border-radius: 50%;
-  background: rgba(255, 255, 255, 0.92);
+  background: var(--axon-text-strong);
   box-shadow:
     0 0 0 3px rgba(0, 0, 0, 0.4),
     0 1px 4px rgba(0, 0, 0, 0.4);
@@ -1500,7 +1588,7 @@
 .axon-mindmap-scrub-pos {
   font-family: var(--axon-mono);
   font-size: 10.5px;
-  color: rgba(255, 255, 255, 0.4);
+  color: var(--axon-text-dim);
   font-variant-numeric: tabular-nums;
   min-width: 52px;
   text-align: right;
@@ -1525,7 +1613,7 @@
   background: linear-gradient(
     90deg,
     rgba(255, 255, 255, 0) 0%,
-    rgba(255, 255, 255, 0.22) 50%,
+    var(--axon-text-faint) 50%,
     rgba(255, 255, 255, 0) 100%
   );
   border-radius: 0;
@@ -1537,7 +1625,7 @@
   50% { opacity: 0.85; }
 }
 .axon-mindmap-empty p {
-  color: rgba(255, 255, 255, 0.42);
+  color: var(--axon-text-dim);
   font-size: 12px;
   font-weight: 400;
   max-width: 280px;
@@ -1549,7 +1637,7 @@
   display: block;
   margin-top: 8px;
   font-size: 10.5px;
-  color: rgba(255, 255, 255, 0.22);
+  color: var(--axon-text-faint);
   letter-spacing: 0.04em;
 }
 
@@ -1563,8 +1651,8 @@
   height: 26px;
   margin-left: auto;
   border-radius: 8px;
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid var(--axon-chip-bg);
+  background: var(--axon-chip-bg);
   color: var(--axon-muted);
   cursor: pointer;
   transition: color 160ms, background 160ms, border-color 160ms, box-shadow 160ms;
@@ -1602,7 +1690,7 @@
   flex-direction: column;
   background:
     linear-gradient(180deg, rgba(20, 20, 24, 0.92) 0%, rgba(8, 8, 10, 0.96) 100%);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  border: 1px solid var(--axon-chip-bg);
   border-radius: 14px;
   box-shadow:
     0 24px 64px rgba(0, 0, 0, 0.6),
@@ -1638,8 +1726,8 @@
 .axon-diff-head {
   flex: 0 0 auto;
   padding: 12px 14px 10px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.02), rgba(255, 255, 255, 0));
+  border-bottom: 1px solid var(--axon-chip-bg);
+  background: linear-gradient(180deg, var(--axon-chip-bg), rgba(255, 255, 255, 0));
 }
 .axon-diff-head-row {
   display: flex;
@@ -1666,8 +1754,8 @@
   background: rgba(252, 211, 77, 0.10);
 }
 .axon-diff-op--neutral {
-  color: rgba(255, 255, 255, 0.55);
-  background: rgba(255, 255, 255, 0.04);
+  color: var(--axon-text-dim);
+  background: var(--axon-chip-bg);
 }
 .axon-diff-path {
   flex: 1;
@@ -1693,8 +1781,8 @@
   align-items: center;
   justify-content: center;
   border-radius: 6px;
-  background: rgba(255, 255, 255, 0.04);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: var(--axon-chip-bg);
+  border: 1px solid var(--axon-chip-bg);
   color: var(--axon-muted);
   font-size: 12px;
   cursor: pointer;
@@ -1733,7 +1821,7 @@
   font-weight: 600;
 }
 .axon-diff-stat--eq {
-  color: rgba(255, 255, 255, 0.4);
+  color: var(--axon-text-dim);
 }
 .axon-diff-stat--dur {
   margin-left: auto;
@@ -1758,9 +1846,9 @@
   font-family: var(--axon-mono);
   font-size: 12px;
   line-height: 1.55;
-  color: rgba(255, 255, 255, 0.92);
+  color: var(--axon-text-strong);
   scrollbar-width: thin;
-  scrollbar-color: rgba(255, 255, 255, 0.18) transparent;
+  scrollbar-color: var(--axon-chip-hi) transparent;
 }
 
 /* ── Live coder mode — pops the moment Axon starts a write/modify
@@ -1858,7 +1946,7 @@
   height: 8px;
 }
 .axon-diff-body::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.18);
+  background: var(--axon-chip-hi);
   border-radius: 4px;
 }
 .axon-diff-body::-webkit-scrollbar-track {
@@ -1892,38 +1980,41 @@
 .axon-diff-line--eq {
   background: transparent;
 }
+on-diff-line--eq {
+  background: transparent;
+}
 .axon-diff-line--skip {
   display: flex;
   align-items: center;
   gap: 12px;
   padding: 6px 14px;
-  color: rgba(255, 255, 255, 0.32);
+  color: var(--axon-text-faint);
   font-size: 10.5px;
   font-style: italic;
-  border-top: 1px dashed rgba(255, 255, 255, 0.08);
-  border-bottom: 1px dashed rgba(255, 255, 255, 0.08);
-  background: rgba(255, 255, 255, 0.015);
+  border-top: 1px dashed var(--axon-chip-bg);
+  border-bottom: 1px dashed var(--axon-chip-bg);
+  background: var(--axon-chip-bg);
   margin: 4px 0;
 }
 
 .axon-diff-lineno {
   text-align: right;
   padding-right: 6px;
-  color: rgba(255, 255, 255, 0.28);
+  color: var(--axon-text-faint);
   font-variant-numeric: tabular-nums;
   font-size: 10.5px;
   user-select: none;
 }
 .axon-diff-lineno--before {
-  border-right: 1px solid rgba(255, 255, 255, 0.05);
+  border-right: 1px solid var(--axon-chip-bg);
 }
 .axon-diff-lineno--after {
-  border-right: 1px solid rgba(255, 255, 255, 0.05);
+  border-right: 1px solid var(--axon-chip-bg);
 }
 .axon-diff-gutter {
   text-align: center;
   padding: 0;
-  color: rgba(255, 255, 255, 0.4);
+  color: var(--axon-text-dim);
   user-select: none;
   font-weight: 600;
 }
@@ -1934,7 +2025,7 @@
   color: rgb(248, 113, 113);
 }
 .axon-diff-gutter--skip {
-  color: rgba(255, 255, 255, 0.25);
+  color: var(--axon-text-faint);
 }
 .axon-diff-skip-label {
   flex: 1;

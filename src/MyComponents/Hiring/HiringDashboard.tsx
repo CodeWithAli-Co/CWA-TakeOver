@@ -77,18 +77,18 @@ export function HiringDashboard() {
   );
 
   return (
-    <div className="h-full flex flex-col bg-black text-white">
+    <div className="h-full flex flex-col bg-background text-foreground">
       {/* Header */}
-      <header className="border-b border-white/[0.04] px-6 py-4 flex items-center justify-between gap-4 flex-wrap">
+      <header className="border-b border-border px-6 py-4 flex items-center justify-between gap-4 flex-wrap">
         <div>
-          <div className="text-[10px] tracking-[0.12em] text-white/30 mb-0.5 uppercase">
+          <div className="text-[10px] tracking-[0.12em] text-foreground/30 mb-0.5 uppercase">
             <span className="inline-block w-1 h-1 rounded-full bg-red-500 mr-1.5 align-middle" />
             HIRING · PIPELINE
           </div>
-          <h1 className="font-bold text-[22px] tracking-tight text-white leading-tight">
+          <h1 className="font-bold text-[22px] tracking-tight text-foreground leading-tight">
             {candidates.length} {candidates.length === 1 ? "candidate" : "candidates"}
             {filters.roleSlug && (
-              <span className="text-white/40 font-normal text-base ml-2">
+              <span className="text-foreground/40 font-normal text-base ml-2">
                 · {postingsQ.data?.find((p) => p.slug === filters.roleSlug)?.title ?? filters.roleSlug}
               </span>
             )}
@@ -102,7 +102,7 @@ export function HiringDashboard() {
             onChange={(e) =>
               setFilters((f) => ({ ...f, roleSlug: e.target.value || undefined }))
             }
-            className="bg-white/[0.04] border border-white/[0.06] rounded-sm px-3 py-1.5 text-[12px] text-white/80 outline-none focus:border-red-500/40"
+            className="bg-muted/40 border border-border rounded-sm px-3 py-1.5 text-[12px] text-foreground/80 outline-none focus:border-red-500/40"
           >
             <option value="">All roles</option>
             {postingsQ.data?.map((p) => (
@@ -118,7 +118,7 @@ export function HiringDashboard() {
             onChange={(e) =>
               setFilters((f) => ({ ...f, status: e.target.value as CandidateStatus | "all" }))
             }
-            className="bg-white/[0.04] border border-white/[0.06] rounded-sm px-3 py-1.5 text-[12px] text-white/80 outline-none focus:border-red-500/40"
+            className="bg-muted/40 border border-border rounded-sm px-3 py-1.5 text-[12px] text-foreground/80 outline-none focus:border-red-500/40"
           >
             {STATUS_OPTIONS.map((s) => (
               <option key={s.value} value={s.value}>
@@ -127,7 +127,7 @@ export function HiringDashboard() {
             ))}
           </select>
 
-          <div className="w-px h-5 bg-white/[0.06] mx-1" />
+          <div className="w-px h-5 bg-muted/60 mx-1" />
 
           {/* Axon batch buttons */}
           <button
@@ -135,7 +135,7 @@ export function HiringDashboard() {
             disabled={parseAllM.isPending || pendingParseCount === 0}
             onClick={() => parseAllM.mutate()}
             title={pendingParseCount === 0 ? "No pending resumes" : `Parse ${pendingParseCount} pending`}
-            className="text-[11.5px] font-semibold px-3 py-1.5 rounded-sm bg-white/[0.04] border border-white/[0.06] text-white/80 hover:border-red-500/30 hover:bg-red-500/[0.06] inline-flex items-center gap-1.5 disabled:opacity-40 disabled:cursor-not-allowed"
+            className="text-[11.5px] font-semibold px-3 py-1.5 rounded-sm bg-muted/40 border border-border text-primary-foreground/80 hover:border-red-500/30 hover:bg-red-500/[0.06] inline-flex items-center gap-1.5 disabled:opacity-40 disabled:cursor-not-allowed"
           >
             {parseAllM.isPending ? <Loader2 size={11} className="animate-spin" /> : <Sparkles size={11} />}
             Parse pending {pendingParseCount > 0 && <span className="text-red-400">· {pendingParseCount}</span>}
@@ -156,7 +156,7 @@ export function HiringDashboard() {
             type="button"
             onClick={() => candidatesQ.refetch()}
             title="Refresh"
-            className="p-1.5 rounded-sm bg-white/[0.04] border border-white/[0.06] text-white/60 hover:text-white"
+            className="p-1.5 rounded-sm bg-muted/40 border border-border text-foreground/60 hover:text-foreground"
           >
             <RefreshCw size={12} className={candidatesQ.isFetching ? "animate-spin" : ""} />
           </button>
@@ -171,7 +171,7 @@ export function HiringDashboard() {
         {/* Candidate list */}
         <div className="overflow-y-auto">
           {candidatesQ.isLoading ? (
-            <div className="flex items-center justify-center h-full text-white/40 text-sm">
+            <div className="flex items-center justify-center h-full text-foreground/40 text-sm">
               <Loader2 size={16} className="animate-spin mr-2" /> Loading candidates…
             </div>
           ) : candidates.length === 0 ? (
@@ -199,7 +199,7 @@ export function HiringDashboard() {
               animate={{ x: 0, opacity: 1 }}
               exit={{ x: 540, opacity: 0 }}
               transition={{ duration: 0.22, ease: [0.32, 0.72, 0, 1] }}
-              className="border-l border-white/[0.04] bg-[#0a0a0a] overflow-y-auto"
+              className="border-l border-border bg-[#0a0a0a] overflow-y-auto"
             >
               <DetailDrawer id={selectedId} onClose={() => setSelectedId(null)} />
             </motion.div>
@@ -234,33 +234,33 @@ function CandidateRowItem({
       }
     >
       {/* Avatar */}
-      <div className={"w-10 h-10 rounded-full bg-gradient-to-br " + from + " " + to + " flex items-center justify-center text-white text-[11px] font-bold flex-shrink-0"}>
+      <div className={"w-10 h-10 rounded-full bg-gradient-to-br " + from + " " + to + " flex items-center justify-center text-foreground text-[11px] font-bold flex-shrink-0"}>
         {initials}
       </div>
 
       {/* Identity */}
       <div className="flex-1 min-w-0">
         <div className="flex items-baseline gap-2 mb-0.5">
-          <span className="text-[13.5px] font-semibold text-white truncate">{c.full_name}</span>
+          <span className="text-[13.5px] font-semibold text-foreground truncate">{c.full_name}</span>
           <span className={"text-[9.5px] font-bold tracking-wider px-1.5 py-0.5 rounded-full uppercase " + STATUS_COLORS[c.status]}>
             {c.status}
           </span>
         </div>
-        <div className="text-[11.5px] text-white/50 truncate">
+        <div className="text-[11.5px] text-foreground/50 truncate">
           {c.current_title ? `${c.current_title}${c.current_company ? ` · ${c.current_company}` : ""}` : "—"}
-          <span className="text-white/30"> · applied {timeAgo(c.created_at)}</span>
+          <span className="text-foreground/30"> · applied {timeAgo(c.created_at)}</span>
         </div>
       </div>
 
       {/* Role */}
-      <div className="hidden md:block text-[11px] text-white/40 max-w-[160px] truncate text-right">
+      <div className="hidden md:block text-[11px] text-foreground/40 max-w-[160px] truncate text-right">
         {c.role_slug.replace(/-/g, " ")}
       </div>
 
       {/* Score / parse-state pill */}
       <div className="flex-shrink-0 w-[130px] flex items-center justify-end gap-2">
         {c.parse_status === "pending" && (
-          <span className="text-[10px] text-white/40 italic">awaiting parse</span>
+          <span className="text-[10px] text-foreground/40 italic">awaiting parse</span>
         )}
         {c.parse_status === "processing" && (
           <span className="text-[10px] text-sky-400 inline-flex items-center gap-1">
@@ -287,7 +287,7 @@ function CandidateRowItem({
         )}
       </div>
 
-      <ChevronRight size={14} className="text-white/20 flex-shrink-0" />
+      <ChevronRight size={14} className="text-foreground/20 flex-shrink-0" />
     </li>
   );
 }
@@ -298,13 +298,13 @@ function EmptyState({ filters }: { filters: CandidateListFilters }) {
   const filtered = !!(filters.roleSlug || (filters.status && filters.status !== "all"));
   return (
     <div className="flex flex-col items-center justify-center h-full px-8 py-16 text-center">
-      <div className="w-12 h-12 rounded-full bg-white/[0.04] border border-white/[0.06] flex items-center justify-center mb-4">
-        <Inbox size={20} className="text-white/40" />
+      <div className="w-12 h-12 rounded-full bg-muted/40 border border-border flex items-center justify-center mb-4">
+        <Inbox size={20} className="text-foreground/40" />
       </div>
-      <h2 className="text-[15px] font-semibold text-white mb-1.5">
+      <h2 className="text-[15px] font-semibold text-foreground mb-1.5">
         {filtered ? "No candidates match those filters." : "No applications yet."}
       </h2>
-      <p className="text-[12.5px] text-white/40 max-w-sm leading-relaxed">
+      <p className="text-[12.5px] text-foreground/40 max-w-sm leading-relaxed">
         {filtered
           ? "Clear the filters above to see everything, or try a different role."
           : "When someone applies via takeover.codewithali.com/careers, they'll appear here. Axon will parse their resume and rank them against the role automatically."}
@@ -338,7 +338,7 @@ function DetailDrawer({ id, onClose }: { id: string; onClose: () => void }) {
 
   if (isLoading || !candidate) {
     return (
-      <div className="p-8 flex items-center justify-center text-white/40">
+      <div className="p-8 flex items-center justify-center text-foreground/40">
         <Loader2 size={16} className="animate-spin mr-2" /> Loading…
       </div>
     );
@@ -352,21 +352,21 @@ function DetailDrawer({ id, onClose }: { id: string; onClose: () => void }) {
   return (
     <div className="flex flex-col">
       {/* Header */}
-      <header className="sticky top-0 z-10 bg-[#0a0a0a]/95 backdrop-blur border-b border-white/[0.04] px-5 py-4 flex items-start gap-3">
-        <div className={"w-12 h-12 rounded-full bg-gradient-to-br " + from + " " + to + " flex items-center justify-center text-white text-[13px] font-bold flex-shrink-0"}>
+      <header className="sticky top-0 z-10 bg-[#0a0a0a]/95 backdrop-blur border-b border-border px-5 py-4 flex items-start gap-3">
+        <div className={"w-12 h-12 rounded-full bg-gradient-to-br " + from + " " + to + " flex items-center justify-center text-foreground text-[13px] font-bold flex-shrink-0"}>
           {initials}
           {c.fit_score != null && (
-            <div className="absolute -bottom-1 -right-1 w-6 h-6 rounded-full bg-red-500 text-white text-[9px] font-black flex items-center justify-center border-2 border-[#0a0a0a]">
+            <div className="absolute -bottom-1 -right-1 w-6 h-6 rounded-full bg-red-500 text-primary-foreground text-[9px] font-black flex items-center justify-center border-2 border-[#0a0a0a]">
               {c.fit_score}
             </div>
           )}
         </div>
         <div className="flex-1 min-w-0">
-          <h2 className="text-[16px] font-bold text-white tracking-tight leading-tight truncate">{c.full_name}</h2>
-          <div className="text-[11.5px] text-white/50 truncate">
+          <h2 className="text-[16px] font-bold text-foreground tracking-tight leading-tight truncate">{c.full_name}</h2>
+          <div className="text-[11.5px] text-foreground/50 truncate">
             {c.role_slug.replace(/-/g, " ")} · applied {timeAgo(c.created_at)}
           </div>
-          <div className="flex flex-wrap items-center gap-3 mt-1.5 text-[11px] text-white/40">
+          <div className="flex flex-wrap items-center gap-3 mt-1.5 text-[11px] text-foreground/40">
             <a className="inline-flex items-center gap-1 hover:text-red-400" href={`mailto:${c.email}`}><Mail size={10} />{c.email}</a>
             {c.phone && <span className="inline-flex items-center gap-1"><Phone size={10} />{c.phone}</span>}
             {c.location && <span className="inline-flex items-center gap-1"><MapPin size={10} />{c.location}</span>}
@@ -375,7 +375,7 @@ function DetailDrawer({ id, onClose }: { id: string; onClose: () => void }) {
             {c.portfolio_url && <a className="inline-flex items-center gap-1 hover:text-red-400" href={c.portfolio_url} target="_blank" rel="noreferrer"><Globe size={10} />Site</a>}
           </div>
         </div>
-        <button onClick={onClose} className="text-white/40 hover:text-white p-1 rounded-sm hover:bg-white/[0.05]" aria-label="Close">
+        <button onClick={onClose} className="text-foreground/40 hover:text-foreground p-1 rounded-sm hover:bg-white/[0.05]" aria-label="Close">
           <X size={16} />
         </button>
       </header>
@@ -388,7 +388,7 @@ function DetailDrawer({ id, onClose }: { id: string; onClose: () => void }) {
               type="button"
               disabled={parseM.isPending}
               onClick={() => parseM.mutate(c.id)}
-              className="text-[11.5px] font-semibold px-3 py-1.5 rounded-sm bg-white/[0.04] border border-white/[0.06] text-white/80 hover:border-red-500/30 inline-flex items-center gap-1.5 disabled:opacity-50"
+              className="text-[11.5px] font-semibold px-3 py-1.5 rounded-sm bg-muted/40 border border-border text-foreground/80 hover:border-red-500/30 inline-flex items-center gap-1.5 disabled:opacity-50"
             >
               {parseM.isPending ? <Loader2 size={11} className="animate-spin" /> : <Sparkles size={11} />}
               Parse resume
@@ -420,7 +420,7 @@ function DetailDrawer({ id, onClose }: { id: string; onClose: () => void }) {
               statusM.mutate({ candidateId: c.id, status: e.target.value as CandidateStatus })
             }
             disabled={statusM.isPending}
-            className="text-[11.5px] font-semibold px-3 py-1.5 rounded-sm bg-white/[0.04] border border-white/[0.06] text-white/80 outline-none focus:border-red-500/40 disabled:opacity-50"
+            className="text-[11.5px] font-semibold px-3 py-1.5 rounded-sm bg-muted/40 border border-border text-foreground/80 outline-none focus:border-red-500/40 disabled:opacity-50"
           >
             {STATUS_OPTIONS.filter((s) => s.value !== "all").map((s) => (
               <option key={s.value} value={s.value}>Move to: {s.label}</option>
@@ -444,24 +444,24 @@ function DetailDrawer({ id, onClose }: { id: string; onClose: () => void }) {
           <div className={"rounded-sm border p-4 " + tierColor.border + " " + tierColor.bg}>
             <div className="flex items-start gap-3">
               <div className="w-7 h-7 rounded-full bg-gradient-to-br from-red-500 to-red-700 flex items-center justify-center flex-shrink-0">
-                <Sparkles size={11} className="text-white" />
+                <Sparkles size={11} className="text-foreground" />
               </div>
               <div className="flex-1 min-w-0">
                 <div className="flex items-baseline gap-2 mb-1.5">
-                  <span className="text-[11px] font-semibold text-white">AXON · verdict</span>
+                  <span className="text-[11px] font-semibold text-foreground">AXON · verdict</span>
                   <span className={"text-[9px] font-bold px-1.5 py-0.5 rounded-full uppercase " + tierColor.bg + " " + tierColor.text}>
                     {c.verdict_tier}
                   </span>
                   {c.assessed_at && (
-                    <span className="text-[10px] text-white/30 ml-auto">{timeAgo(c.assessed_at)}</span>
+                    <span className="text-[10px] text-foreground/30 ml-auto">{timeAgo(c.assessed_at)}</span>
                   )}
                 </div>
-                <p className="text-[12.5px] text-white/80 leading-relaxed">{c.verdict_summary}</p>
+                <p className="text-[12.5px] text-foreground/80 leading-relaxed">{c.verdict_summary}</p>
               </div>
             </div>
           </div>
         ) : c.parse_status === "done" && c.fit_score == null ? (
-          <div className="rounded-sm border border-white/[0.06] bg-white/[0.02] p-4 text-[12px] text-white/50">
+          <div className="rounded-sm border border-border bg-white/[0.02] p-4 text-[12px] text-foreground/50">
             Resume parsed. Click <span className="text-red-400 font-semibold">Rate with Axon</span> above to score this candidate against the role.
           </div>
         ) : null}
@@ -492,8 +492,8 @@ function DetailDrawer({ id, onClose }: { id: string; onClose: () => void }) {
 
         {c.axon_assessment?.recommended_next_step && (
           <div className="rounded-sm border-l-2 border-red-500 bg-red-500/[0.04] px-4 py-3">
-            <div className="text-[9.5px] tracking-[0.12em] text-white/40 uppercase mb-1">Recommended next step</div>
-            <div className="text-[13px] text-white/85">{c.axon_assessment.recommended_next_step}</div>
+            <div className="text-[9.5px] tracking-[0.12em] text-foreground/40 uppercase mb-1">Recommended next step</div>
+            <div className="text-[13px] text-foreground/85">{c.axon_assessment.recommended_next_step}</div>
           </div>
         )}
 
@@ -501,12 +501,12 @@ function DetailDrawer({ id, onClose }: { id: string; onClose: () => void }) {
         {c.why_role && (
           <section>
             <SectionLabel>WHY THIS ROLE · IN THEIR WORDS</SectionLabel>
-            <blockquote className="rounded-sm border-l-2 border-white/[0.1] bg-white/[0.02] px-4 py-3 text-[12.5px] text-white/75 leading-relaxed italic">
+            <blockquote className="rounded-sm border-l-2 border-white/[0.1] bg-white/[0.02] px-4 py-3 text-[12.5px] text-foreground/75 leading-relaxed italic">
               &ldquo;{c.why_role}&rdquo;
             </blockquote>
             {c.why_takeover && (
-              <p className="mt-2 text-[11.5px] text-white/55 leading-relaxed">
-                <span className="text-white/40 font-semibold">On Takeover:</span> {c.why_takeover}
+              <p className="mt-2 text-[11.5px] text-foreground/55 leading-relaxed">
+                <span className="text-foreground/40 font-semibold">On Takeover:</span> {c.why_takeover}
               </p>
             )}
           </section>
@@ -518,7 +518,7 @@ function DetailDrawer({ id, onClose }: { id: string; onClose: () => void }) {
             {c.parsed_resume.summary && (
               <section>
                 <SectionLabel>SUMMARY</SectionLabel>
-                <p className="text-[12.5px] text-white/75 leading-relaxed">{c.parsed_resume.summary}</p>
+                <p className="text-[12.5px] text-foreground/75 leading-relaxed">{c.parsed_resume.summary}</p>
               </section>
             )}
 
@@ -527,17 +527,17 @@ function DetailDrawer({ id, onClose }: { id: string; onClose: () => void }) {
                 <SectionLabel>EXPERIENCE</SectionLabel>
                 <ul className="space-y-3">
                   {c.parsed_resume.employment_history.map((job, i) => (
-                    <li key={i} className="rounded-sm border border-white/[0.04] bg-white/[0.02] p-3">
+                    <li key={i} className="rounded-sm border border-border bg-white/[0.02] p-3">
                       <div className="flex items-baseline justify-between gap-3 mb-1">
-                        <span className="text-[12.5px] font-semibold text-white">
-                          {job.title} <span className="text-white/40 font-normal">· {job.company}</span>
+                        <span className="text-[12.5px] font-semibold text-foreground">
+                          {job.title} <span className="text-foreground/40 font-normal">· {job.company}</span>
                         </span>
-                        <span className="text-[10.5px] font-mono text-white/40 whitespace-nowrap">
+                        <span className="text-[10.5px] font-mono text-foreground/40 whitespace-nowrap">
                           {job.start}—{job.end}
                         </span>
                       </div>
                       {job.highlights?.length > 0 && (
-                        <ul className="text-[11.5px] text-white/60 leading-snug space-y-1 list-disc list-inside marker:text-red-500/60">
+                        <ul className="text-[11.5px] text-foreground/60 leading-snug space-y-1 list-disc list-inside marker:text-red-500/60">
                           {job.highlights.map((h, j) => <li key={j}>{h}</li>)}
                         </ul>
                       )}
@@ -550,12 +550,12 @@ function DetailDrawer({ id, onClose }: { id: string; onClose: () => void }) {
             {c.parsed_resume.education?.length > 0 && (
               <section>
                 <SectionLabel>EDUCATION</SectionLabel>
-                <ul className="space-y-1.5 text-[12px] text-white/70">
+                <ul className="space-y-1.5 text-[12px] text-foreground/70">
                   {c.parsed_resume.education.map((e, i) => (
                     <li key={i}>
-                      <span className="text-white">{e.institution}</span>
-                      {e.degree && <span className="text-white/50"> · {e.degree}{e.field ? ` in ${e.field}` : ""}</span>}
-                      {e.graduation && <span className="text-white/40"> ({e.graduation})</span>}
+                      <span className="text-foreground">{e.institution}</span>
+                      {e.degree && <span className="text-foreground/50"> · {e.degree}{e.field ? ` in ${e.field}` : ""}</span>}
+                      {e.graduation && <span className="text-foreground/40"> ({e.graduation})</span>}
                     </li>
                   ))}
                 </ul>
@@ -567,7 +567,7 @@ function DetailDrawer({ id, onClose }: { id: string; onClose: () => void }) {
                 <SectionLabel>SKILLS</SectionLabel>
                 <div className="flex flex-wrap gap-1.5">
                   {c.parsed_resume.skills.map((s) => (
-                    <span key={s} className="text-[11px] px-2 py-0.5 rounded-sm bg-white/[0.04] border border-white/[0.06] text-white/70">
+                    <span key={s} className="text-[11px] px-2 py-0.5 rounded-sm bg-muted/40 border border-border text-foreground/70">
                       {s}
                     </span>
                   ))}
@@ -597,19 +597,19 @@ function DetailDrawer({ id, onClose }: { id: string; onClose: () => void }) {
             <button
               type="button"
               onClick={toggleResume}
-              className="w-full text-[11.5px] font-semibold px-3 py-2 rounded-sm bg-white/[0.03] border border-white/[0.06] text-white/70 hover:bg-white/[0.05] inline-flex items-center justify-between gap-2"
+              className="w-full text-[11.5px] font-semibold px-3 py-2 rounded-sm bg-white/[0.03] border border-border text-foreground/70 hover:bg-white/[0.05] inline-flex items-center justify-between gap-2"
             >
               <span className="inline-flex items-center gap-2">
                 <FileText size={12} />
                 {c.resume_filename ?? "Resume.pdf"}
                 {c.resume_size_bytes && (
-                  <span className="text-white/30">· {Math.round(c.resume_size_bytes / 1024)} KB</span>
+                  <span className="text-foreground/30">· {Math.round(c.resume_size_bytes / 1024)} KB</span>
                 )}
               </span>
-              <span className="text-[10px] tracking-wider text-white/40">{resumeOpen ? "HIDE" : "OPEN PDF"}</span>
+              <span className="text-[10px] tracking-wider text-foreground/40">{resumeOpen ? "HIDE" : "OPEN PDF"}</span>
             </button>
             {resumeOpen && resumeUrl && (
-              <div className="mt-2 rounded-sm overflow-hidden border border-white/[0.06]">
+              <div className="mt-2 rounded-sm overflow-hidden border border-border">
                 <iframe src={resumeUrl} title="Resume preview" className="w-full h-[600px] bg-white" />
               </div>
             )}
@@ -622,7 +622,7 @@ function DetailDrawer({ id, onClose }: { id: string; onClose: () => void }) {
         {/* Application meta */}
         <section>
           <SectionLabel>APPLICATION</SectionLabel>
-          <dl className="text-[11.5px] grid grid-cols-[140px_1fr] gap-y-1.5 gap-x-3 text-white/60">
+          <dl className="text-[11.5px] grid grid-cols-[140px_1fr] gap-y-1.5 gap-x-3 text-foreground/60">
             <MetaRow label="Years experience" value={c.years_experience ?? "—"} />
             <MetaRow label="Expected comp" value={c.expected_compensation ?? "—"} />
             <MetaRow label="Earliest start" value={c.available_start_date ?? "—"} />
@@ -632,7 +632,7 @@ function DetailDrawer({ id, onClose }: { id: string; onClose: () => void }) {
         </section>
 
         {/* Footer */}
-        <div className="pt-3 border-t border-white/[0.04] text-[10.5px] text-white/30 inline-flex items-center gap-1.5">
+        <div className="pt-3 border-t border-border text-[10.5px] text-foreground/30 inline-flex items-center gap-1.5">
           <Eye size={10} />
           ID: <span className="font-mono">{c.id.slice(0, 8)}</span> · Source: {c.source ?? "website"}
         </div>
@@ -645,7 +645,7 @@ function DetailDrawer({ id, onClose }: { id: string; onClose: () => void }) {
 
 function SectionLabel({ children }: { children: React.ReactNode }) {
   return (
-    <div className="text-[9.5px] tracking-[0.12em] text-white/30 mb-2 uppercase">
+    <div className="text-[9.5px] tracking-[0.12em] text-foreground/30 mb-2 uppercase">
       <span className="inline-block w-1 h-1 rounded-full bg-red-500 mr-1.5 align-middle" />
       {children}
     </div>
@@ -655,9 +655,9 @@ function SectionLabel({ children }: { children: React.ReactNode }) {
 function ScoreCard({ label, score, note }: { label: string; score: number; note: string }) {
   const clamped = Math.max(0, Math.min(100, score));
   return (
-    <div className="rounded-sm border border-white/[0.06] bg-white/[0.02] p-3">
+    <div className="rounded-sm border border-border bg-white/[0.02] p-3">
       <div className="flex items-center justify-between mb-1.5">
-        <span className="text-[11.5px] font-semibold text-white">{label}</span>
+        <span className="text-[11.5px] font-semibold text-foreground">{label}</span>
         <span className="text-[12px] font-bold tabular-nums text-red-400">{clamped}</span>
       </div>
       <div className="h-1 rounded-full bg-white/[0.05] overflow-hidden mb-1.5">
@@ -668,7 +668,7 @@ function ScoreCard({ label, score, note }: { label: string; score: number; note:
           className="h-full bg-gradient-to-r from-red-500 to-red-400"
         />
       </div>
-      <div className="text-[10.5px] text-white/45 leading-snug">{note}</div>
+      <div className="text-[10.5px] text-foreground/45 leading-snug">{note}</div>
     </div>
   );
 }
@@ -708,8 +708,8 @@ function BulletPanel({
 function MetaRow({ label, value }: { label: string; value: React.ReactNode }) {
   return (
     <>
-      <dt className="text-white/35">{label}</dt>
-      <dd className="text-white/75">{value}</dd>
+      <dt className="text-foreground/35">{label}</dt>
+      <dd className="text-foreground/75">{value}</dd>
     </>
   );
 }

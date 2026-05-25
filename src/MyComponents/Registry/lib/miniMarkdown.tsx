@@ -201,7 +201,7 @@ function Block({ block }: { block: BlockNode }) {
     case "hr": return <hr className="my-3 border-border/60" />;
     case "quote":
       return (
-        <blockquote className="my-2 border-l-2 border-blue-500/40 bg-blue-500/5 pl-3 py-1 italic text-foreground/80">
+        <blockquote className="my-2 border-l-2 border-blue-500/40 bg-blue-500/5 pl-3 py-1 italic text-primary-foreground/80">
           {renderInline(block.text)}
         </blockquote>
       );

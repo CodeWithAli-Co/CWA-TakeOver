@@ -216,7 +216,7 @@ export function VoicePlayer({ src, compact = false }: Props) {
       </div>
     </div>
     {transcript && (
-      <div className="mt-1 max-w-[360px] rounded-md border border-primary/20 bg-primary/[0.04] px-2.5 py-1.5 text-[11.5px] leading-snug text-foreground/85">
+      <div className="mt-1 max-w-[360px] rounded-md border border-primary/20 bg-primary/[0.04] px-2.5 py-1.5 text-[11.5px] leading-snug text-primary-foreground/85">
         <div className="mb-0.5 font-mono text-[9px] uppercase tracking-widest text-primary">
           transcript
         </div>

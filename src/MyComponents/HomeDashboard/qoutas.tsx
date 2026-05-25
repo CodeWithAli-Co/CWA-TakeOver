@@ -195,7 +195,7 @@ export const QuotaFormDialog = ({
           </div>
         </div>
         <DialogFooter>
-          <Button className="bg-primary hover:bg-primary/80 text-foreground rounded-sm" type="submit">
+          <Button className="bg-primary hover:bg-primary/80 text-primary-foreground rounded-sm" type="submit">
             {editingQuota ? "Update" : "Add"} Quota
           </Button>
         </DialogFooter>
@@ -336,7 +336,7 @@ export default function Quotas() {
             <DialogTrigger asChild>
               <Button
                 onClick={() => setEditingQuota(null)}
-                className="bg-primary hover:bg-primary/80 text-foreground rounded-sm h-7 text-[11px] px-3"
+                className="bg-primary hover:bg-primary/80 text-primary-foreground rounded-sm h-7 text-[11px] px-3"
               >
                 <Plus className="h-3 w-3 mr-1" />
                 Add

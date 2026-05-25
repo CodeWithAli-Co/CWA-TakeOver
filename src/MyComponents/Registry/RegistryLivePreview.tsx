@@ -145,7 +145,7 @@ export function RegistryLivePreview({ storagePath, itemName }: Props) {
       </div>
 
       {/* Preview frame */}
-      <div className="relative h-[420px] rounded-b-md border border-t-0 border-border/60 bg-zinc-950 overflow-hidden">
+      <div className="relative h-[420px] rounded-b-md border border-t-0 border-border/60 bg-card overflow-hidden">
         <iframe
           ref={iframeRef}
           key={key}
@@ -154,7 +154,7 @@ export function RegistryLivePreview({ storagePath, itemName }: Props) {
           className="h-full w-full border-0"
         />
         {compileError && (
-          <div className="absolute inset-0 flex flex-col gap-2 overflow-auto bg-black/85 p-4 text-[11.5px] text-red-200">
+          <div className="absolute inset-0 flex flex-col gap-2 overflow-auto bg-background/85 p-4 text-[11.5px] text-red-200">
             <div className="flex items-center gap-1.5 text-red-300">
               <AlertCircle className="h-3.5 w-3.5" />
               <strong>Compile error</strong>

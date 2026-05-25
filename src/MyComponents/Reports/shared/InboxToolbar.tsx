@@ -47,7 +47,7 @@ export function InboxToolbar({
   filters, countLabel, onClearFilters, density, onDensityChange,
 }: Props) {
   return (
-    <div className="shrink-0 border-b border-border bg-zinc-950/40 px-5 py-3">
+    <div className="shrink-0 border-b border-border bg-muted/30 px-5 py-3">
       <div className="flex items-center gap-3">
         {/* Search */}
         <div className="relative flex-1 max-w-[360px]">

@@ -166,7 +166,7 @@ function TreeView({
         className={[
           "flex w-full items-center gap-1.5 py-1 pr-2 text-left transition-colors",
           isActive
-            ? "bg-blue-500/15 text-foreground"
+            ? "bg-blue-500/15 text-primary-foreground"
             : "text-muted-foreground hover:bg-muted/40 hover:text-foreground",
         ].join(" ")}
       >

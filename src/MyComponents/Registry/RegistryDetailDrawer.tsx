@@ -59,7 +59,7 @@ export function RegistryDetailDrawer({ item, onClose, username }: Props) {
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
         transition={{ duration: 0.15 }}
-        className="fixed inset-0 z-40 bg-black/50 backdrop-blur-sm"
+        className="fixed inset-0 z-40 bg-background/50 backdrop-blur-sm"
         onClick={onClose}
       />
 
@@ -320,7 +320,7 @@ function OverviewTab({
             type="button"
             onClick={doPublish}
             disabled={!file || publish.isPending}
-            className="mt-1 inline-flex items-center justify-center gap-1.5 rounded-md bg-gradient-to-b from-blue-500 to-blue-600 px-3 py-1.5 text-[12px] font-semibold text-white shadow-sm ring-1 ring-inset ring-white/15 hover:from-blue-400 hover:to-blue-500 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+            className="mt-1 inline-flex items-center justify-center gap-1.5 rounded-md bg-gradient-to-b from-blue-500 to-blue-600 px-3 py-1.5 text-[12px] font-semibold text-foreground shadow-sm ring-1 ring-inset ring-white/15 hover:from-blue-400 hover:to-blue-500 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
           >
             <Upload className="h-3.5 w-3.5" />
             {publish.isPending ? "Publishing…" : "Publish"}
@@ -439,7 +439,7 @@ function InstallTab({ item }: { item: RegistryItemWithLatest }) {
     <div className="flex flex-col gap-4">
       <section>
         <SectionLabel icon={Terminal}>Install via CLI</SectionLabel>
-        <div className="mt-1.5 flex items-center gap-2 rounded-md border border-border bg-zinc-900/60 px-3 py-2">
+        <div className="mt-1.5 flex items-center gap-2 rounded-md border border-border bg-muted/60 px-3 py-2">
           <span className="select-none text-muted-foreground">$</span>
           <code className="flex-1 truncate font-mono text-[12px] text-foreground">{cmd}</code>
           <button
@@ -503,7 +503,7 @@ function DeleteConfirm({
         <button
           type="button"
           onClick={onCancel}
-          className="rounded-md px-3 py-1 text-[11.5px] text-white/70 hover:text-white transition-colors"
+          className="rounded-md px-3 py-1 text-[11.5px] text-foreground/70 hover:text-foreground transition-colors"
         >
           Cancel
         </button>
@@ -515,7 +515,7 @@ function DeleteConfirm({
             })
           }
           disabled={del.isPending}
-          className="inline-flex items-center gap-1 rounded-md bg-red-500 px-3 py-1 text-[11.5px] font-semibold text-white hover:bg-red-600 disabled:opacity-50 transition-colors"
+          className="inline-flex items-center gap-1 rounded-md bg-red-500 px-3 py-1 text-[11.5px] font-semibold text-primary-foreground hover:bg-red-600 disabled:opacity-50 transition-colors"
         >
           <Trash2 className="h-3 w-3" />
           {del.isPending ? "Deleting…" : "Delete"}

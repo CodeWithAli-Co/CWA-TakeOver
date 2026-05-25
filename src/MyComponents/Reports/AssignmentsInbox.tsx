@@ -62,7 +62,7 @@ const STATUS_LABEL: Record<Status, string> = {
 const STATUS_COLOR: Record<Status, string> = {
   pending: "text-amber-400",
   submitted: "text-emerald-400",
-  canceled: "text-zinc-500",
+  canceled: "text-muted-foreground",
 };
 
 const RECURRENCE_LABEL: Record<Recurrence, string> = {
@@ -371,7 +371,7 @@ export function AssignmentsInbox({ refreshToken }: Props = {}) {
         ) : visible.length === 0 ? (
           <div className="flex h-full items-center justify-center p-12 text-center">
             <div>
-              <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-md border border-border bg-zinc-950">
+              <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-md border border-border bg-muted/40">
                 <CalendarDays className="h-6 w-6 text-muted-foreground/60" />
               </div>
               <p className="mt-4 text-[13px] font-semibold text-foreground tracking-tight">

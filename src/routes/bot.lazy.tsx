@@ -114,7 +114,7 @@ function Bot() {
             <CardTitle className="text-2xl font-bold text-center text-white">
               Bot Manager
             </CardTitle>
-            <CardDescription className="text-center text-sm text-zinc-400">
+            <CardDescription className="text-center text-sm text-muted-foreground">
               Control and monitor your bot
             </CardDescription>
           </CardHeader>
@@ -140,7 +140,7 @@ function Bot() {
             <div className="grid grid-cols-3 gap-4">
               <Button
                 onClick={() => fetchStatus()}
-                className="bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 text-zinc-400 shadow-sm transition-all duration-200"
+                className="bg-muted hover:bg-secondary border border-border text-muted-foreground shadow-sm transition-all duration-200"
               >
                 <Info className="mr-2 h-4 w-4" />
                 Status
@@ -149,14 +149,14 @@ function Bot() {
                 onClick={() =>
                   sendMessage("1327558265357205535", "Hello from tauri")
                 }
-                className="bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 text-zinc-400 shadow-sm transition-all duration-200"
+                className="bg-muted hover:bg-secondary border border-border text-muted-foreground shadow-sm transition-all duration-200"
               >
                 <Send className="mr-2 h-4 w-4" />
                 Send Msg
               </Button>
               <Button
                 onClick={() => getToken("admin", "CWA#2025:)")}
-                className="bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 text-zinc-400 shadow-sm transition-all duration-200"
+                className="bg-muted hover:bg-secondary border border-border text-muted-foreground shadow-sm transition-all duration-200"
               >
                 <LogIn className="mr-2 h-4 w-4" />
                 Log In

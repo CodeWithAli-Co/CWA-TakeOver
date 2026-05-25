@@ -225,7 +225,7 @@ function FolderBrowseOverlay({ manifest, onClose }: OverlayProps) {
 
   return (
     <div
-      className="fixed inset-0 z-[90] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4"
+      className="fixed inset-0 z-[90] flex items-center justify-center bg-background/80 backdrop-blur-sm p-4"
       onClick={onClose}
     >
       <div

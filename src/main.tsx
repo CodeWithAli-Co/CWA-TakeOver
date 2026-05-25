@@ -22,6 +22,12 @@ if (typeof globalThis.Buffer === "undefined") {
 import { installDiagnostics } from "./diagnostics/captureBuffer";
 installDiagnostics();
 
+// ── Theme mode ─────────────────────────────────────────────────
+// Importing the store runs its top-level `applyTheme()` call, so
+// the persisted light/dark choice lands on <html> before React
+// mounts — avoids the brief flash of the wrong theme on reload.
+import "./stores/themeModeStore";
+
 // Need this in order for app to see routes during production mode
 // Read more: https://tanstack.com/router/latest/docs/framework/react/guide/history-types
 const memoryHistory = createMemoryHistory({

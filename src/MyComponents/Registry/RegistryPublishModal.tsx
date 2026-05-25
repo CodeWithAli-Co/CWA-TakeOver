@@ -95,7 +95,7 @@ export function RegistryPublishModal({ open, onClose, defaultCompany, username }
         >
           {/* Backdrop — closes on click unless uploading. */}
           <div
-            className="absolute inset-0 bg-black/70 backdrop-blur-md"
+            className="absolute inset-0 bg-background/70 backdrop-blur-md"
             onClick={handleClose}
           />
 
@@ -115,7 +115,7 @@ export function RegistryPublishModal({ open, onClose, defaultCompany, username }
             exit={{ opacity: 0, scale: 0.98 }}
             transition={{ type: "spring", stiffness: 320, damping: 30 }}
             whileDrag={{ scale: 1.005, cursor: "grabbing" }}
-            className="relative z-10 w-[min(620px,calc(100vw-32px))] max-h-[calc(100vh-48px)] overflow-hidden rounded-2xl border border-white/10 bg-zinc-950/95 shadow-[0_24px_80px_-12px_rgba(0,0,0,0.8)] backdrop-blur-xl"
+            className="relative z-10 w-[min(620px,calc(100vw-32px))] max-h-[calc(100vh-48px)] overflow-hidden rounded-2xl border border-white/10 bg-card/95 shadow-[0_24px_80px_-12px_rgba(0,0,0,0.8)] backdrop-blur-xl"
           >
             <div
               className="h-1 w-full"
@@ -138,12 +138,12 @@ export function RegistryPublishModal({ open, onClose, defaultCompany, username }
                   </div>
                   <div>
                     <div className="flex items-center gap-1.5">
-                      <h2 className="text-[15px] font-semibold text-white">
+                      <h2 className="text-[15px] font-semibold text-foreground">
                         Publish to registry
                       </h2>
-                      <GripHorizontal className="h-3.5 w-3.5 text-white/30" />
+                      <GripHorizontal className="h-3.5 w-3.5 text-foreground/30" />
                     </div>
-                    <p className="mt-0.5 text-[12px] text-white/55 leading-snug">
+                    <p className="mt-0.5 text-[12px] text-foreground/55 leading-snug">
                       Pack a project or component as <code className="font-mono">.tgz</code> and upload.
                       Re-publishing the same name creates a new version.
                     </p>
@@ -154,7 +154,7 @@ export function RegistryPublishModal({ open, onClose, defaultCompany, username }
                   onClick={handleClose}
                   disabled={create.isPending}
                   onPointerDown={(e) => e.stopPropagation()}
-                  className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-white/50 hover:bg-white/5 hover:text-white/80 disabled:opacity-40 transition-colors"
+                  className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-foreground/50 hover:bg-white/5 hover:text-foreground/80 disabled:opacity-40 transition-colors"
                   aria-label="Close"
                 >
                   <X className="h-4 w-4" />
@@ -173,7 +173,7 @@ export function RegistryPublishModal({ open, onClose, defaultCompany, username }
                     placeholder="sidebar-nav"
                     value={name}
                     onChange={(e) => setName(e.target.value.toLowerCase().replace(/[^a-z0-9-_]/g, ""))}
-                    className="h-9 rounded-md border border-white/10 bg-white/5 px-3 text-[12.5px] text-white outline-none focus:border-blue-400/60 transition-colors"
+                    className="h-9 rounded-md border border-white/10 bg-white/5 px-3 text-[12.5px] text-foreground outline-none focus:border-blue-400/60 transition-colors"
                     autoFocus
                   />
                   <input
@@ -181,7 +181,7 @@ export function RegistryPublishModal({ open, onClose, defaultCompany, username }
                     placeholder="1.0.0"
                     value={version}
                     onChange={(e) => setVersion(e.target.value)}
-                    className="h-9 rounded-md border border-white/10 bg-white/5 px-3 text-center font-mono text-[12.5px] text-white outline-none focus:border-blue-400/60 transition-colors"
+                    className="h-9 rounded-md border border-white/10 bg-white/5 px-3 text-center font-mono text-[12.5px] text-foreground outline-none focus:border-blue-400/60 transition-colors"
                   />
                 </div>
 
@@ -229,40 +229,40 @@ export function RegistryPublishModal({ open, onClose, defaultCompany, username }
                     value={description}
                     onChange={(e) => setDescription(e.target.value)}
                     rows={2}
-                    className="mt-1 w-full rounded-md border border-white/10 bg-white/5 px-3 py-2 text-[12.5px] text-white outline-none focus:border-blue-400/60 resize-y transition-colors"
+                    className="mt-1 w-full rounded-md border border-white/10 bg-white/5 px-3 py-2 text-[12.5px] text-foreground outline-none focus:border-blue-400/60 resize-y transition-colors"
                   />
                 </div>
 
                 {/* Tags */}
                 <div>
-                  <FieldLabel>Tags <span className="text-white/35">(comma-separated)</span></FieldLabel>
+                  <FieldLabel>Tags <span className="text-foreground/35">(comma-separated)</span></FieldLabel>
                   <div className="mt-1 flex items-center gap-2 rounded-md border border-white/10 bg-white/5 px-3 py-0.5">
-                    <TagIcon className="h-3 w-3 text-white/40" />
+                    <TagIcon className="h-3 w-3 text-foreground/40" />
                     <input
                       type="text"
                       placeholder="navigation, sidebar, shadcn"
                       value={tagsRaw}
                       onChange={(e) => setTagsRaw(e.target.value)}
-                      className="flex-1 h-8 bg-transparent text-[12px] text-white outline-none"
+                      className="flex-1 h-8 bg-transparent text-[12px] text-foreground outline-none"
                     />
                   </div>
                 </div>
 
                 {/* Tarball */}
                 <div>
-                  <FieldLabel>Tarball <span className="text-white/35">(.tgz)</span></FieldLabel>
+                  <FieldLabel>Tarball <span className="text-foreground/35">(.tgz)</span></FieldLabel>
                   <input
                     type="file"
                     accept=".tgz,.tar.gz,application/gzip"
                     onChange={(e) => setTarball(e.target.files?.[0] ?? null)}
-                    className="mt-1 block w-full text-[11px] text-white/60 file:mr-3 file:rounded-md file:border-0 file:bg-blue-500 file:px-3 file:py-1.5 file:text-[11px] file:font-semibold file:text-white hover:file:bg-blue-400"
+                    className="mt-1 block w-full text-[11px] text-primary-foreground/60 file:mr-3 file:rounded-md file:border-0 file:bg-blue-500 file:px-3 file:py-1.5 file:text-[11px] file:font-semibold file:text-foreground hover:file:bg-blue-400"
                   />
                   {tarball && (
-                    <p className="mt-1 text-[10.5px] text-white/50">
+                    <p className="mt-1 text-[10.5px] text-foreground/50">
                       {tarball.name} · {formatBytes(tarball.size)}
                     </p>
                   )}
-                  <p className="mt-1 text-[10.5px] text-white/40 leading-snug">
+                  <p className="mt-1 text-[10.5px] text-foreground/40 leading-snug">
                     Run <code className="font-mono">cwa publish &lt;name&gt;</code> or{" "}
                     <code className="font-mono">cwa store &lt;name&gt;</code> from the project
                     folder to produce the <code className="font-mono">.tgz</code>, then upload
@@ -272,27 +272,27 @@ export function RegistryPublishModal({ open, onClose, defaultCompany, username }
 
                 {/* Cover */}
                 <div>
-                  <FieldLabel>Cover image <span className="text-white/35">(optional)</span></FieldLabel>
+                  <FieldLabel>Cover image <span className="text-foreground/35">(optional)</span></FieldLabel>
                   <div className="mt-1 flex items-center gap-2 rounded-md border border-white/10 bg-white/5 px-3 py-2">
-                    <ImageIcon className="h-3 w-3 text-white/40" />
+                    <ImageIcon className="h-3 w-3 text-foreground/40" />
                     <input
                       type="file"
                       accept="image/png,image/jpeg,image/webp"
                       onChange={(e) => setCover(e.target.files?.[0] ?? null)}
-                      className="flex-1 text-[11px] text-white/60 file:mr-3 file:rounded file:border-0 file:bg-white/10 file:px-2.5 file:py-1 file:text-[10.5px] file:font-semibold file:text-white hover:file:bg-white/15"
+                      className="flex-1 text-[11px] text-foreground/60 file:mr-3 file:rounded file:border-0 file:bg-white/10 file:px-2.5 file:py-1 file:text-[10.5px] file:font-semibold file:text-foreground hover:file:bg-white/15"
                     />
                   </div>
                 </div>
 
                 {/* Changelog */}
                 <div>
-                  <FieldLabel>Changelog <span className="text-white/35">(optional)</span></FieldLabel>
+                  <FieldLabel>Changelog <span className="text-foreground/35">(optional)</span></FieldLabel>
                   <textarea
                     placeholder="What changed in this version?"
                     value={changelog}
                     onChange={(e) => setChangelog(e.target.value)}
                     rows={2}
-                    className="mt-1 w-full rounded-md border border-white/10 bg-white/5 px-3 py-2 text-[12px] text-white outline-none focus:border-blue-400/60 resize-y transition-colors"
+                    className="mt-1 w-full rounded-md border border-white/10 bg-white/5 px-3 py-2 text-[12px] text-foreground outline-none focus:border-blue-400/60 resize-y transition-colors"
                   />
                 </div>
 
@@ -304,16 +304,16 @@ export function RegistryPublishModal({ open, onClose, defaultCompany, username }
               </div>
             </div>
 
-            <div className="flex items-center justify-between gap-2 border-t border-white/5 bg-black/30 px-6 py-3">
-              <p className="text-[10.5px] text-white/40">
-                Published by <span className="text-white/75">{username || "?"}</span>
+            <div className="flex items-center justify-between gap-2 border-t border-white/5 bg-background/30 px-6 py-3">
+              <p className="text-[10.5px] text-foreground/40">
+                Published by <span className="text-foreground/75">{username || "?"}</span>
               </p>
               <div className="flex items-center gap-2">
                 <button
                   type="button"
                   onClick={handleClose}
                   disabled={create.isPending}
-                  className="rounded-md px-3 py-1.5 text-[12px] font-medium text-white/70 hover:bg-white/5 hover:text-white disabled:opacity-40 transition-colors"
+                  className="rounded-md px-3 py-1.5 text-[12px] font-medium text-foreground/70 hover:bg-white/5 hover:text-foreground disabled:opacity-40 transition-colors"
                 >
                   Cancel
                 </button>
@@ -321,7 +321,7 @@ export function RegistryPublishModal({ open, onClose, defaultCompany, username }
                   type="button"
                   onClick={handleSubmit}
                   disabled={!canSubmit}
-                  className="inline-flex items-center gap-1.5 rounded-md bg-gradient-to-b from-blue-500 to-blue-600 px-4 py-1.5 text-[12px] font-semibold text-white shadow-[0_4px_14px_-2px_hsl(210_90%_55%/0.5)] ring-1 ring-inset ring-white/15 hover:from-blue-400 hover:to-blue-500 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+                  className="inline-flex items-center gap-1.5 rounded-md bg-gradient-to-b from-blue-500 to-blue-600 px-4 py-1.5 text-[12px] font-semibold text-foreground shadow-[0_4px_14px_-2px_hsl(210_90%_55%/0.5)] ring-1 ring-inset ring-white/15 hover:from-blue-400 hover:to-blue-500 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
                 >
                   {create.isPending ? (
                     <><Loader2 className="h-3.5 w-3.5 animate-spin" /> Uploading…</>
@@ -340,7 +340,7 @@ export function RegistryPublishModal({ open, onClose, defaultCompany, username }
 
 function FieldLabel({ children }: { children: React.ReactNode }) {
   return (
-    <label className="text-[10px] font-semibold uppercase tracking-wider text-white/50">
+    <label className="text-[10px] font-semibold uppercase tracking-wider text-foreground/50">
       {children}
     </label>
   );
@@ -363,17 +363,17 @@ function KindPill({
         "flex flex-col items-start gap-1 rounded-lg border px-3 py-2.5 text-left transition-all",
         active
           ? "border-blue-400/50 bg-blue-500/10 shadow-[0_0_0_1px_hsl(210_90%_55%/0.35)]"
-          : "border-white/10 bg-white/[0.02] hover:border-white/20 hover:bg-white/[0.04]",
+          : "border-white/10 bg-white/[0.02] hover:border-white/20 hover:bg-muted/40",
       ].join(" ")}
     >
       <div className="flex w-full items-center justify-between">
-        <span className="flex items-center gap-1.5 text-[12px] font-medium text-white">
+        <span className="flex items-center gap-1.5 text-[12px] font-medium text-foreground">
           <Icon className="h-3.5 w-3.5" />
           {label}
         </span>
         {active && <Check className="h-3 w-3 text-blue-300" />}
       </div>
-      <span className="text-[10.5px] leading-snug text-white/50">{blurb}</span>
+      <span className="text-[10.5px] leading-snug text-foreground/50">{blurb}</span>
     </button>
   );
 }
@@ -392,8 +392,8 @@ function CompanyPill({
       className={[
         "rounded-md border px-2.5 py-1.5 text-[12px] font-medium transition-all",
         active
-          ? "border-blue-400/50 bg-blue-500/10 text-white shadow-[0_0_0_1px_hsl(210_90%_55%/0.3)]"
-          : "border-white/10 bg-white/[0.02] text-white/65 hover:border-white/20 hover:text-white",
+          ? "border-blue-400/50 bg-blue-500/10 text-primary-foreground shadow-[0_0_0_1px_hsl(210_90%_55%/0.3)]"
+          : "border-white/10 bg-white/[0.02] text-foreground/65 hover:border-white/20 hover:text-foreground",
       ].join(" ")}
     >
       {label}

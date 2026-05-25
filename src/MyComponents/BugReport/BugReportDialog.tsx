@@ -35,7 +35,7 @@ type Severity = "low" | "medium" | "high" | "critical";
 type Area = "chat" | "huddle" | "onboarding" | "hiring" | "reports" | "tasks" | "axon" | "other";
 
 const SEVERITIES: { value: Severity; label: string; tone: string }[] = [
-  { value: "low",      label: "Low — minor annoyance",         tone: "border-zinc-600 text-zinc-300" },
+  { value: "low",      label: "Low — minor annoyance",         tone: "border-border text-foreground/80" },
   { value: "medium",   label: "Medium — workable, but wrong",  tone: "border-amber-500/50 text-amber-300" },
   { value: "high",     label: "High — blocks a real workflow", tone: "border-orange-500/60 text-orange-300" },
   { value: "critical", label: "Critical — data loss / crash",  tone: "border-red-500/60 text-red-300" },

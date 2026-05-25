@@ -334,7 +334,7 @@ function CelebrationOverlay({ onClose }: { onClose: () => void }) {
   return (
     <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 pointer-events-none">
       <div
-        className="absolute inset-0 bg-black/40 backdrop-blur-sm pointer-events-auto"
+        className="absolute inset-0 bg-background/40 backdrop-blur-sm pointer-events-auto"
         onClick={onClose}
       />
       <div

@@ -110,7 +110,7 @@ export const AdminModeComponent: React.FC<AdminModeProps> = ({
           <DropdownMenuTrigger asChild>
             <Button 
               variant="outline" 
-              className="w-[200px] justify-between bg-red-950 border border-red-700 text-foreground hover:bg-red-900 hover:border-red-600"
+              className="w-[200px] justify-between bg-red-950 border border-red-700 text-primary-foreground hover:bg-red-900 hover:border-red-600"
             >
               {selectedEmployee ? (
                 <div className="flex items-center">
@@ -161,7 +161,7 @@ export const AdminModeComponent: React.FC<AdminModeProps> = ({
         <div className="ml-auto flex flex-wrap gap-2 mt-2 sm:mt-0">
           <Button
             onClick={() => setShowMeetingModal(true)}
-            className="px-3 py-1.5 bg-blue-700 hover:bg-blue-600 text-foreground text-sm rounded-md flex items-center gap-1 transition-colors duration-150"
+            className="px-3 py-1.5 bg-blue-700 hover:bg-blue-600 text-primary-foreground text-sm rounded-md flex items-center gap-1 transition-colors duration-150"
             aria-label="Create meeting"
           >
             <Users size={16} />
@@ -174,7 +174,7 @@ export const AdminModeComponent: React.FC<AdminModeProps> = ({
               setEditingEvent(null); // Ensure we're creating a new shift
               setShowAddShiftModal(true);
             }}
-            className="px-3 py-1.5 bg-red-900/50 hover:bg-primary text-foreground text-sm rounded-md flex items-center gap-1 transition-colors duration-150"
+            className="px-3 py-1.5 bg-red-900/50 hover:bg-primary text-primary-foreground text-sm rounded-md flex items-center gap-1 transition-colors duration-150"
             aria-label="Add shift"
           >
             <Plus size={16} />
@@ -193,7 +193,7 @@ export const AdminModeComponent: React.FC<AdminModeProps> = ({
         
         <Button 
           variant="outline"
-          className="px-2 py-1 text-xs bg-red-900/50 hover:bg-red-800 text-foreground rounded border-red-700/40"
+          className="px-2 py-1 text-xs bg-red-900/50 hover:bg-red-800 text-primary-foreground rounded border-red-700/40"
         >
           Review Requests
         </Button>

@@ -83,7 +83,7 @@ export const GrowthRateField: React.FC<GrowthRateFieldProps> = ({
       max={max}
       value={value}
       onChange={(e) => onChange(Number(e.target.value))}
-      className="w-full h-1 bg-white/[0.06] rounded-full appearance-none cursor-pointer accent-red-500"
+      className="w-full h-1 bg-muted/60 rounded-full appearance-none cursor-pointer accent-red-500"
     />
     <div className="flex justify-between text-[10px] text-muted-foreground/30">
       <span>{min}%</span>
@@ -113,7 +113,7 @@ export const YearSelector: React.FC<YearSelectorProps> = ({ years, setYears }) =
         max={20}
         value={years}
         onChange={(e) => setYears(Number(e.target.value))}
-        className="w-full h-1 bg-white/[0.06] rounded-full appearance-none cursor-pointer accent-red-500"
+        className="w-full h-1 bg-muted/60 rounded-full appearance-none cursor-pointer accent-red-500"
       />
       <div className="flex gap-1.5">
         {quickYears.map((y) => (

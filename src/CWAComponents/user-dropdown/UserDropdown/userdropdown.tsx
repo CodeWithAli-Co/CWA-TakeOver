@@ -101,7 +101,7 @@ export const UserDropdown: React.FC = () => {
       {/* User Button  */}
       <button
         onClick={toggleDropdown}
-        className="group flex items-center group-data-[collapsible=icon]:h-full group-data-[collapsible=icon]:p-0 group-data-[collapsible=icon]:gap-0 w-full gap-2 px-3 py-2 rounded-xs transition-all duration-200 hover:bg-zinc-200/40 dark:hover:bg-zinc-950  border-transparent"
+        className="group flex items-center group-data-[collapsible=icon]:h-full group-data-[collapsible=icon]:p-0 group-data-[collapsible=icon]:gap-0 w-full gap-2 px-3 py-2 rounded-xs transition-all duration-200 hover:bg-zinc-200/40 dark:hover:bg-card  border-transparent"
       >
         {/* User Avatar */}
         <div className="w-7 h-7 group-data-[collapsible=icon]:justify-self-center group-data-[collapsible=icon]:bg-none bg-gradient-to-br from-teal-400 to-teal-500 dark:from-red-600 dark:to-red-800 rounded-full flex items-center justify-center text-white font-semibold text-sm">
@@ -128,7 +128,7 @@ export const UserDropdown: React.FC = () => {
       </button>
 
    {/* Dropdown Menu - Now slides upward */}
-      <div className={`absolute group-data-[collapsible=icon]:left-10  bottom-full mb-2 w-58 bg-white dark:bg-zinc-950 rounded-xs shadow-xl border border-teal-500 dark:border-red-800 z-50 overflow-hidden transition-all duration-300 ease-out ${
+      <div className={`absolute group-data-[collapsible=icon]:left-10  bottom-full mb-2 w-58 bg-white dark:bg-card rounded-xs shadow-xl border border-teal-500 dark:border-red-800 z-50 overflow-hidden transition-all duration-300 ease-out ${
         isOpen 
           ? 'opacity-100 transform translate-y-0 scale-100' 
           : 'opacity-0 transform translate-y-2 scale-95 pointer-events-none'

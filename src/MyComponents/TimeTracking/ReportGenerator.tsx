@@ -364,7 +364,7 @@ export const TimeReportGenerator = () => {
   return (
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
       {/* Report Configuration */}
-      <Card className="bg-zinc-950 high-dpi:bg-zinc-950/20 border-red-900/30 rounded-xs lg:col-span-1">
+      <Card className="bg-card high-dpi:bg-card/20 border-red-900/30 rounded-xs lg:col-span-1">
         <CardHeader>
           <CardTitle className="text-amber-50 flex items-center gap-2">
             <FileText className="h-5 w-5 text-red-500" />
@@ -490,7 +490,7 @@ export const TimeReportGenerator = () => {
       </Card>
 
       {/* Report Preview */}
-      <Card className="bg-zinc-950 high-dpi:bg-zinc-950/20 border-red-900/30 rounded-xs lg:col-span-2">
+      <Card className="bg-card high-dpi:bg-card/20 border-red-900/30 rounded-xs lg:col-span-2">
         <CardHeader>
           <CardTitle className="text-amber-50 flex items-center justify-between">
             <div className="flex items-center gap-2">

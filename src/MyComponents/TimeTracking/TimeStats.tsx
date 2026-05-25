@@ -41,22 +41,22 @@ const PERIOD_META: Record<
   { icon: React.ReactNode; gradient: string; title: string }
 > = {
   today: {
-    icon: <Clock className="h-3.5 w-3.5 text-white" />,
+    icon: <Clock className="h-3.5 w-3.5 text-foreground" />,
     gradient: "bg-gradient-to-br from-red-500/20 to-orange-500/20",
     title: "Today",
   },
   week: {
-    icon: <Calendar className="h-3.5 w-3.5 text-white" />,
+    icon: <Calendar className="h-3.5 w-3.5 text-foreground" />,
     gradient: "bg-gradient-to-br from-blue-500/20 to-cyan-500/20",
     title: "This Week",
   },
   month: {
-    icon: <Target className="h-3.5 w-3.5 text-white" />,
+    icon: <Target className="h-3.5 w-3.5 text-foreground" />,
     gradient: "bg-gradient-to-br from-purple-500/20 to-pink-500/20",
     title: "This Month",
   },
   year: {
-    icon: <TrendingUp className="h-3.5 w-3.5 text-white" />,
+    icon: <TrendingUp className="h-3.5 w-3.5 text-foreground" />,
     gradient: "bg-gradient-to-br from-emerald-500/20 to-teal-500/20",
     title: "This Year",
   },
@@ -131,7 +131,7 @@ export const TimeStatsCards = ({ period: controlledPeriod, onPeriodChange }: Tim
           </div>
 
           {/* Right side: tiny T/W/M/Y pill */}
-          <div className="flex items-center gap-0.5 bg-black/20 rounded-md p-0.5 border border-border shrink-0">
+          <div className="flex items-center gap-0.5 bg-background/20 rounded-md p-0.5 border border-border shrink-0">
             {PERIOD_OPTIONS.map((opt) => {
               const isActive = opt.id === period;
               return (
@@ -163,7 +163,7 @@ export const TimeStatsCards = ({ period: controlledPeriod, onPeriodChange }: Tim
             : "—"
         }
         subtitle="this month"
-        icon={<DollarSign className="h-3.5 w-3.5 text-white" />}
+        icon={<DollarSign className="h-3.5 w-3.5 text-foreground" />}
         gradient="bg-gradient-to-br from-emerald-500/20 to-green-500/20"
         delay={0.05}
       />
@@ -173,7 +173,7 @@ export const TimeStatsCards = ({ period: controlledPeriod, onPeriodChange }: Tim
         title="Avg / Day"
         value={formatHours(stats.average_hours_per_day)}
         subtitle={`best: ${stats.most_productive_day.slice(0, 3).toLowerCase()}`}
-        icon={<Zap className="h-3.5 w-3.5 text-white" />}
+        icon={<Zap className="h-3.5 w-3.5 text-foreground" />}
         gradient="bg-gradient-to-br from-indigo-500/20 to-violet-500/20"
         delay={0.1}
       />

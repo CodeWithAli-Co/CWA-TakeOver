@@ -323,14 +323,14 @@ const TaskSettings: React.FC = () => {
                 <button
                   onClick={() => setScope("mine")}
                   data-active={scope === "mine"}
-                  className="px-2.5 py-1 rounded text-[10.5px] font-bold uppercase tracking-wider transition-all text-muted-foreground hover:text-foreground data-[active=true]:bg-primary/10 data-[active=true]:text-primary"
+                  className="px-2.5 py-1 rounded text-[10.5px] font-bold uppercase tracking-wider transition-all text-muted-foreground hover:text-primary-foreground data-[active=true]:bg-primary/10 data-[active=true]:text-primary"
                 >
                   Mine
                 </button>
                 <button
                   onClick={() => setScope("everyone")}
                   data-active={scope === "everyone"}
-                  className="inline-flex items-center gap-1 px-2.5 py-1 rounded text-[10.5px] font-bold uppercase tracking-wider transition-all text-muted-foreground hover:text-foreground data-[active=true]:bg-primary/10 data-[active=true]:text-primary"
+                  className="inline-flex items-center gap-1 px-2.5 py-1 rounded text-[10.5px] font-bold uppercase tracking-wider transition-all text-muted-foreground hover:text-primary-foreground data-[active=true]:bg-primary/10 data-[active=true]:text-primary"
                 >
                   <Users className="h-3 w-3" />
                   Everyone
@@ -341,7 +341,7 @@ const TaskSettings: React.FC = () => {
               <button
                 onClick={() => setView("inbox")}
                 data-active={view === "inbox"}
-                className="p-1.5 rounded transition-colors text-muted-foreground hover:text-foreground data-[active=true]:bg-primary/10 data-[active=true]:text-primary"
+                className="p-1.5 rounded transition-colors text-muted-foreground hover:text-primary-foreground data-[active=true]:bg-primary/10 data-[active=true]:text-primary"
                 title="Inbox view"
                 aria-label="Inbox view"
               >
@@ -350,7 +350,7 @@ const TaskSettings: React.FC = () => {
               <button
                 onClick={() => setView("kanban")}
                 data-active={view === "kanban"}
-                className="p-1.5 rounded transition-colors text-muted-foreground hover:text-foreground data-[active=true]:bg-primary/10 data-[active=true]:text-primary"
+                className="p-1.5 rounded transition-colors text-muted-foreground hover:text-primary-foreground data-[active=true]:bg-primary/10 data-[active=true]:text-primary"
                 title="Kanban view"
                 aria-label="Kanban view"
               >
@@ -690,7 +690,7 @@ const InboxListItem: React.FC<{
       className={[
         "group relative block w-full rounded-md transition-all text-left px-2.5 py-2",
         isActive
-          ? "bg-primary/12 text-foreground"
+          ? "bg-primary/12 text-primary-foreground"
           : focal
             ? "bg-card hover:bg-secondary/60"
             : "hover:bg-secondary/40 text-foreground/85",
@@ -1148,7 +1148,7 @@ const FleetCockpit: React.FC<{
                 type="button"
                 onClick={() => filters.setStatus(s)}
                 data-active={isActive}
-                className="flex-1 px-1.5 py-1 rounded text-[10px] font-bold transition-all text-muted-foreground hover:text-foreground data-[active=true]:bg-primary/10 data-[active=true]:text-primary"
+                className="flex-1 px-1.5 py-1 rounded text-[10px] font-bold transition-all text-muted-foreground hover:text-primary-foreground data-[active=true]:bg-primary/10 data-[active=true]:text-primary"
               >
                 {labels[s]} <span className="opacity-60">({counts[s]})</span>
               </button>

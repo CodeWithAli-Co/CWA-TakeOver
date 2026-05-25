@@ -43,7 +43,7 @@ export function CategoryDialog({ open, onOpenChange, onCreate, initialValue = ""
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
           transition={{ duration: 0.15 }}
-          className="fixed inset-0 z-[80] flex items-start justify-center bg-black/60 p-4 pt-[18vh] backdrop-blur-sm"
+          className="fixed inset-0 z-[80] flex items-start justify-center bg-background/60 p-4 pt-[18vh] backdrop-blur-sm"
           onClick={() => onOpenChange(false)}
         >
           <motion.form

@@ -122,7 +122,7 @@ export const AddTodo = (props: Users) => {
       <DialogTrigger asChild>
         <Button
           className="group relative overflow-hidden bg-primary mb-2 
-          hover:bg-primary/80 text-foreground border border-primary/15 
+          hover:bg-primary/80 text-primary-foreground border border-primary/15 
           shadow-md shadow-red-950/20 transition-all duration-300 
           hover:scale-[1.02] active:scale-[0.98]"
         >
@@ -238,7 +238,7 @@ export const AddTodo = (props: Users) => {
                           <SelectItem
                             key={label}
                             value={label}
-                            className="text-foreground/70 
+                            className="text-primary-foreground/70 
                             hover:bg-primary/[0.12] focus:bg-primary/[0.15]"
                           >
                             {label}
@@ -277,7 +277,7 @@ export const AddTodo = (props: Users) => {
                           <SelectItem
                             key={status}
                             value={status}
-                            className="text-foreground/70 
+                            className="text-primary-foreground/70 
                                 hover:bg-primary/[0.12] focus:bg-primary/[0.15]"
                           >
                             {status === "to-do"
@@ -318,7 +318,7 @@ export const AddTodo = (props: Users) => {
                           <SelectItem
                             key={priority}
                             value={priority}
-                            className="text-foreground/70 
+                            className="text-primary-foreground/70 
                             hover:bg-primary/[0.12] focus:bg-primary/[0.15]"
                           >
                             {priority.charAt(0).toUpperCase() +
@@ -367,7 +367,7 @@ export const AddTodo = (props: Users) => {
                 setOpen(false);
                 form.reset();
               }}
-              className="border-primary/15 text-foreground/70 
+              className="border-primary/15 text-primary-foreground/70 
               hover:bg-primary/10 hover:text-foreground/80 
               transition-all duration-300"
             >
@@ -381,7 +381,7 @@ export const AddTodo = (props: Users) => {
                   disabled={!canSubmit}
                   className="bg-primary 
                   hover:bg-primary/80 
-                  text-foreground border border-primary/15 
+                  text-primary-foreground border border-primary/15 
                   disabled:opacity-50 disabled:cursor-not-allowed
                   transition-all duration-300 
                   hover:scale-[1.02] active:scale-[0.98]"

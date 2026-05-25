@@ -166,7 +166,7 @@ export const PromoteUser = (props: PromoteInterface) => {
             <button
               type="submit"
               disabled={!canSubmit}
-              className="px-4 py-1.5 bg-primary hover:bg-primary/80 text-foreground text-[11px] font-medium rounded-sm h-8
+              className="px-4 py-1.5 bg-primary hover:bg-primary/80 text-primary-foreground text-[11px] font-medium rounded-sm h-8
                 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
             >
               Update Role

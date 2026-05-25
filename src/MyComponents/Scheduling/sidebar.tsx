@@ -247,7 +247,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
       {/* Request Schedule Change Button */}
       <div className="p-3 border-t border-red-900/40">
         <button
-          className="w-full py-2 bg-red-800 hover:bg-red-700 text-foreground rounded-md text-sm transition-colors duration-150"
+          className="w-full py-2 bg-red-800 hover:bg-red-700 text-primary-foreground rounded-md text-sm transition-colors duration-150"
           onClick={() => isAdminMode && setShowAddShiftModal(true)}
         >
           {isAdminMode ? "Update Schedule" : "Request Schedule Change"}

@@ -293,7 +293,7 @@ export function OnboardingDashboard() {
               <button
                 type="button"
                 onClick={() => setShowProvision(true)}
-                className="inline-flex items-center gap-1.5 rounded-md bg-ed-brand px-3 py-1 text-[11px] font-bold text-white hover:opacity-90 uppercase tracking-wider transition-opacity"
+                className="inline-flex items-center gap-1.5 rounded-md bg-ed-brand px-3 py-1 text-[11px] font-bold text-foreground hover:opacity-90 uppercase tracking-wider transition-opacity"
                 style={{ boxShadow: "0 4px 16px -4px rgba(239,68,68,0.5)" }}
               >
                 <Sparkles className="h-2.5 w-2.5" />
@@ -368,7 +368,7 @@ export function OnboardingDashboard() {
                     type="button"
                     onClick={() => setFilterStatus(s)}
                     data-active={filterStatus === s}
-                    className="rounded-md px-1.5 py-0.5 text-[9.5px] font-bold uppercase tracking-wider transition-colors text-ed-fg-muted hover:text-ed-fg data-[active=true]:bg-ed-brand data-[active=true]:text-white"
+                    className="rounded-md px-1.5 py-0.5 text-[9.5px] font-bold uppercase tracking-wider transition-colors text-ed-fg-muted hover:text-ed-fg data-[active=true]:bg-ed-brand data-[active=true]:text-foreground"
                   >
                     {s}
                   </button>
@@ -664,7 +664,7 @@ function CandidateView({
         <div className="flex flex-col gap-2 shrink-0">
           <button
             type="button"
-            className="inline-flex items-center justify-center gap-2 rounded-md bg-ed-brand text-white px-4 py-2 text-[12px] font-bold transition-all hover:opacity-90 hover:scale-[1.02] active:scale-[0.99]"
+            className="inline-flex items-center justify-center gap-2 rounded-md bg-ed-brand text-foreground px-4 py-2 text-[12px] font-bold transition-all hover:opacity-90 hover:scale-[1.02] active:scale-[0.99]"
             style={{ boxShadow: "0 8px 24px -8px rgba(239,68,68,0.55)" }}
           >
             <Calendar size={12} />
@@ -762,7 +762,7 @@ function Avatar({ name, score }: { name: string; score: number }) {
   return (
     <div className="relative shrink-0">
       <div
-        className="w-[88px] h-[88px] rounded-full flex items-center justify-center text-white"
+        className="w-[88px] h-[88px] rounded-full flex items-center justify-center text-foreground"
         style={{
           background: "linear-gradient(135deg, rgb(239,68,68), rgb(185,28,28))",
           boxShadow: "0 12px 32px -8px rgba(239,68,68,0.55), inset 0 2px 0 rgba(255,255,255,0.15)",
@@ -840,13 +840,13 @@ function AxonVerdictCard({
               boxShadow: "0 6px 16px -4px rgba(239,68,68,0.6)",
             }}
           >
-            <Sparkles size={16} className="text-white" />
+            <Sparkles size={16} className="text-foreground" />
           </div>
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-3 flex-wrap mb-2">
               <Tracker tone="brand" size="sm">AXON · STATUS VERDICT</Tracker>
               <span
-                className="inline-flex items-center rounded-md px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-white"
+                className="inline-flex items-center rounded-md px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-foreground"
                 style={{
                   background: "rgb(239,68,68)",
                   boxShadow: "0 4px 12px -2px rgba(239,68,68,0.55)",
@@ -1124,7 +1124,7 @@ function AxonActivityRail({ instance }: { instance: OnboardingInstance }) {
                 <p className="flex-1 text-[11.5px] text-ed-fg leading-snug">{s.label}</p>
                 <button
                   type="button"
-                  className="inline-flex items-center justify-center rounded-md bg-ed-brand px-2.5 py-1 text-[10.5px] font-bold text-white uppercase tracking-wider hover:opacity-90 transition-opacity shrink-0"
+                  className="inline-flex items-center justify-center rounded-md bg-ed-brand px-2.5 py-1 text-[10.5px] font-bold text-foreground uppercase tracking-wider hover:opacity-90 transition-opacity shrink-0"
                   style={{ boxShadow: "0 4px 10px -2px rgba(239,68,68,0.55)" }}
                 >
                   {s.cta}
@@ -1221,7 +1221,7 @@ function EmptyMain({ hasResults, isAdmin, onProvision }: { hasResults: boolean; 
         <button
           type="button"
           onClick={onProvision}
-          className="inline-flex items-center gap-2 rounded-md bg-ed-brand text-white px-5 py-2.5 text-[12.5px] font-bold transition-opacity hover:opacity-90"
+          className="inline-flex items-center gap-2 rounded-md bg-ed-brand text-foreground px-5 py-2.5 text-[12.5px] font-bold transition-opacity hover:opacity-90"
           style={{ boxShadow: "0 8px 24px -8px rgba(239,68,68,0.55)" }}
         >
           <Sparkles size={13} />

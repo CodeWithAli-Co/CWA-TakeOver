@@ -142,7 +142,7 @@ export function GifPicker({ onPick }: Props) {
                 key={r.id}
                 type="button"
                 onClick={() => onPick(full)}
-                className="relative overflow-hidden rounded-md border border-border/40 bg-black/30 transition hover:border-primary/40 hover:ring-1 hover:ring-primary/30"
+                className="relative overflow-hidden rounded-md border border-border/40 bg-background/30 transition hover:border-primary/40 hover:ring-1 hover:ring-primary/30"
                 title={r.title}
               >
                 <img

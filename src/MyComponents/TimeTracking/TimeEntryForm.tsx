@@ -130,7 +130,7 @@ export const TimeEntryForm = ({ onSuccess, defaultDate, compact = false }: TimeE
   const selectStyles = cn(
     inputStyles,
     "appearance-none cursor-pointer",
-    "[&>option]:bg-zinc-900 [&>option]:text-white"
+    "[&>option]:bg-muted [&>option]:text-foreground"
   );
 
   const labelStyles = "text-xs font-medium text-muted-foreground/80 uppercase tracking-wider mb-2 block";
@@ -150,7 +150,7 @@ export const TimeEntryForm = ({ onSuccess, defaultDate, compact = false }: TimeE
               animate={{ scale: 1, opacity: 1 }}
               className="px-3 py-1.5 rounded-full bg-gradient-to-r from-red-500/20 to-orange-500/20 border border-primary/20"
             >
-              <span className="text-sm font-semibold text-white">{formatDuration(calculatedDuration)}</span>
+              <span className="text-sm font-semibold text-foreground">{formatDuration(calculatedDuration)}</span>
             </motion.div>
           )}
         </div>

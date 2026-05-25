@@ -84,10 +84,10 @@ const PRIORITY_DOT: Record<ReportPriority, string> = {
 };
 
 const STATUS_COLOR: Record<ReportStatus, string> = {
-  draft: "text-zinc-500",
+  draft: "text-muted-foreground",
   submitted: "text-primary",
   reviewed: "text-emerald-400",
-  archived: "text-zinc-500",
+  archived: "text-muted-foreground",
 };
 const STATUS_LABEL: Record<ReportStatus, string> = {
   draft: "Draft", submitted: "New", reviewed: "Reviewed", archived: "Archived",
@@ -628,7 +628,7 @@ function EmptyState({
   return (
     <div className="flex h-full items-center justify-center p-12 text-center">
       <div>
-        <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-md border border-border bg-zinc-950">
+        <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-md border border-border bg-muted/40">
           <Inbox className="h-6 w-6 text-muted-foreground/60" />
         </div>
         <p className="mt-4 text-[13px] font-semibold text-foreground">No matches</p>
@@ -639,7 +639,7 @@ function EmptyState({
           <button
             type="button"
             onClick={onClear}
-            className="mt-4 inline-flex items-center gap-1 rounded-md border border-border bg-zinc-950 px-3 py-1.5 text-[11px] font-semibold text-foreground hover:bg-muted/60 transition-colors"
+            className="mt-4 inline-flex items-center gap-1 rounded-md border border-border bg-muted/40 px-3 py-1.5 text-[11px] font-semibold text-foreground hover:bg-muted/60 transition-colors"
           >
             Clear filters
           </button>
@@ -823,7 +823,7 @@ function ReportDetailBody({
           onChange={(e) => setNotes(e.target.value)}
           rows={4}
           placeholder="Feedback, follow-ups, or acknowledgment for the sender."
-          className="w-full resize-y rounded-md border border-border bg-zinc-950 px-3 py-2.5 text-[12.5px] text-foreground placeholder:text-muted-foreground/60 outline-none focus:border-foreground/30 transition-colors leading-relaxed"
+          className="w-full resize-y rounded-md border border-border bg-muted/40 px-3 py-2.5 text-[12.5px] text-foreground placeholder:text-muted-foreground/60 outline-none focus:border-foreground/30 transition-colors leading-relaxed"
         />
         {err && (
           <p className="mt-2 rounded-md border border-red-500/30 bg-red-500/10 px-3 py-1.5 text-[11.5px] text-red-300">

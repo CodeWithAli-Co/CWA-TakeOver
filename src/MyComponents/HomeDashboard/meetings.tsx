@@ -262,7 +262,7 @@ const Meetings = () => {
         <UserView userRole={["CEO", "COO", "SoftwareDev"]}>
           <Button
             size="sm"
-            className="bg-muted/40 hover:bg-primary/15 border border-border hover:border-primary/25 text-muted-foreground hover:text-foreground transition-all rounded-md text-[11px] h-7"
+            className="bg-muted/40 hover:bg-primary/15 border border-border hover:border-primary/25 text-muted-foreground hover:text-primary-foreground transition-all rounded-md text-[11px] h-7"
             onClick={() => setIsShowing(!isShowing)}
           >
             <Calendar className="h-3 w-3 mr-1.5" />

@@ -68,7 +68,7 @@ export function RegistryInstallsView({ itemId, itemName, kind, installCount }: P
         <p className="mt-1 text-[11px] text-muted-foreground">
           Install via the CLI and it'll show up here:
         </p>
-        <code className="mt-2 inline-block rounded bg-zinc-900/60 px-2 py-1 font-mono text-[11px] text-foreground">
+        <code className="mt-2 inline-block rounded bg-muted/60 px-2 py-1 font-mono text-[11px] text-foreground">
           {cmd}
         </code>
       </div>

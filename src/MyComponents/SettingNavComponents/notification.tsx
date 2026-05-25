@@ -45,7 +45,7 @@ export const NotificationSetting = () => {
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Email Notifications */}
-        <Card className="bg-zinc-950 high-dpi:bg-zinc-950/20 border-red-900/30 rounded-xs ">
+        <Card className="bg-card high-dpi:bg-card/20 border-red-900/30 rounded-xs ">
           <CardHeader>
             <div className="flex items-center justify-between">
               <CardTitle className="text-amber-50">
@@ -87,7 +87,7 @@ export const NotificationSetting = () => {
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: i * 0.1 }}
-                  className="flex items-center justify-between p-3 rounded-lg bg-zinc-950/10 border border-red-900/30"
+                  className="flex items-center justify-between p-3 rounded-lg bg-card/10 border border-red-900/30"
                 >
                   <div className="flex items-center gap-3">
                     <div className="p-2 rounded-lg bg-red-900/20">
@@ -116,7 +116,7 @@ export const NotificationSetting = () => {
         </Card>
 
         {/* In-App Notifications */}
-        <Card className="bg-zinc-950 high-dpi:bg-zinc-950/20 border-red-900/30 rounded-xs ">
+        <Card className="bg-card high-dpi:bg-card/20 border-red-900/30 rounded-xs ">
           <CardHeader>
             <div className="flex items-center justify-between">
               <CardTitle className="text-amber-50">
@@ -162,7 +162,7 @@ export const NotificationSetting = () => {
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: i * 0.1 }}
-                  className="flex items-center justify-between p-3 rounded-lg bg-zinc-950/10 border border-red-900/30"
+                  className="flex items-center justify-between p-3 rounded-lg bg-card/10 border border-red-900/30"
                 >
                   <div className="flex items-center gap-3">
                     <div className="p-2 rounded-lg bg-red-900/20">
@@ -191,7 +191,7 @@ export const NotificationSetting = () => {
 
         {/* Notification Log */}
         {/* Recent Notifications */}
-        <Card className="bg-zinc-950 high-dpi:bg-zinc-950/20 border-red-900/30 col-span-2 rounded-xs ">
+        <Card className="bg-card high-dpi:bg-card/20 border-red-900/30 col-span-2 rounded-xs ">
           <CardHeader>
             <div className="flex items-center justify-between">
               <CardTitle className="text-amber-50">
@@ -262,7 +262,7 @@ export const NotificationSetting = () => {
                 ].map((notification, i) => (
                   <div
                     key={i}
-                    className="flex items-center gap-4 p-3 rounded-lg bg-zinc-950/10 border border-red-900/30"
+                    className="flex items-center gap-4 p-3 rounded-lg bg-card/10 border border-red-900/30"
                   >
                     <div
                       className={`p-2 rounded-lg ${

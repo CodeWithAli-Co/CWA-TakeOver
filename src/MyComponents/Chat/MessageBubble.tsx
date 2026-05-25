@@ -78,9 +78,15 @@ function isAxonSender(sender: string | null | undefined): boolean {
   return sender.trim().toLowerCase() === "axon";
 }
 
-/** Static orb avatar — radial red gradient with a sparkle glyph + a
- *  soft red glow shadow. Visually matches the canvas Orb used in the
- *  command panel without paying the canvas cost per message. */
+/** Static orb avatar — radial red gradient with a sparkle glyph +
+ *  a soft red glow. Visually matches the canvas Orb used in the
+ *  command panel without paying the canvas cost per message.
+ *
+ *  The gradient is brand-red in both themes (it IS the brand mark).
+ *  The Sparkles glyph is forced white via the `!` modifier because
+ *  the bulk theme tokenization swept `text-white` → `text-foreground`
+ *  globally — and on a saturated red orb we explicitly want a white
+ *  glyph in both light and dark modes. */
 function AxonOrbAvatar() {
   return (
     <div
@@ -94,7 +100,7 @@ function AxonOrbAvatar() {
       aria-label="AXON"
       title="AXON"
     >
-      <Sparkles size={14} className="text-white drop-shadow-[0_0_2px_rgba(255,255,255,0.6)]" />
+      <Sparkles size={14} className="!text-white drop-shadow-[0_0_2px_rgba(255,255,255,0.6)]" />
     </div>
   );
 }
@@ -718,7 +724,7 @@ export const MessageBubble: React.FC<Props> = ({
         {/* PDF preview overlay */}
         {pdfPreview && (
           <div
-            className="fixed inset-0 z-[90] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4"
+            className="fixed inset-0 z-[90] flex items-center justify-center bg-background/80 backdrop-blur-sm p-4"
             onClick={() => setPdfPreview(null)}
           >
             <div
@@ -751,7 +757,7 @@ export const MessageBubble: React.FC<Props> = ({
               <iframe
                 title={pdfPreview.name}
                 src={pdfPreview.url}
-                className="flex-1 border-0 bg-black"
+                className="flex-1 border-0 bg-background"
               />
             </div>
           </div>
@@ -785,7 +791,7 @@ export const MessageBubble: React.FC<Props> = ({
             })}
             <button
               onClick={() => setShowPicker(!showPicker)}
-              className="flex items-center justify-center h-[22px] w-[22px] rounded-full border border-border bg-muted/30 hover:bg-white/[0.06] text-muted-foreground hover:text-foreground/60 transition-colors opacity-0 group-hover:opacity-100"
+              className="flex items-center justify-center h-[22px] w-[22px] rounded-full border border-border bg-muted/30 hover:bg-muted/60 text-muted-foreground hover:text-foreground/60 transition-colors opacity-0 group-hover:opacity-100"
               title="Add reaction"
             >
               <Smile className="h-3 w-3" />
@@ -824,7 +830,7 @@ export const MessageBubble: React.FC<Props> = ({
                 <div
                   key={u}
                   title={u}
-                  className="flex h-3.5 w-3.5 items-center justify-center rounded-full border border-background text-[7.5px] font-semibold text-white/95"
+                  className="flex h-3.5 w-3.5 items-center justify-center rounded-full border border-background text-[7.5px] font-semibold text-foreground/95"
                   style={{ background: colorForName(u) }}
                 >
                   {u.slice(0, 1).toUpperCase()}
@@ -853,14 +859,14 @@ export const MessageBubble: React.FC<Props> = ({
           <div className="flex items-center gap-0.5 bg-[#0f0f0f] border border-border rounded-sm p-0.5 shadow-lg shadow-black/50">
             <button
               onClick={() => setShowPicker(true)}
-              className="p-1.5 rounded-sm hover:bg-white/[0.06] text-muted-foreground/70 hover:text-foreground/80 transition-colors"
+              className="p-1.5 rounded-sm hover:bg-muted/60 text-muted-foreground/70 hover:text-foreground/80 transition-colors"
               title="Add reaction"
             >
               <Smile className="h-3.5 w-3.5" />
             </button>
             <button
               onClick={() => onReply(msg)}
-              className="p-1.5 rounded-sm hover:bg-white/[0.06] text-muted-foreground/70 hover:text-foreground/80 transition-colors"
+              className="p-1.5 rounded-sm hover:bg-muted/60 text-muted-foreground/70 hover:text-foreground/80 transition-colors"
               title="Reply"
             >
               <Reply className="h-3.5 w-3.5" />
@@ -868,7 +874,7 @@ export const MessageBubble: React.FC<Props> = ({
             {onOpenThread && (
               <button
                 onClick={() => onOpenThread(msg)}
-                className="p-1.5 rounded-sm hover:bg-white/[0.06] text-muted-foreground/70 hover:text-foreground/80 transition-colors"
+                className="p-1.5 rounded-sm hover:bg-muted/60 text-muted-foreground/70 hover:text-foreground/80 transition-colors"
                 title="Open thread"
               >
                 <MessagesSquare className="h-3.5 w-3.5" />
@@ -877,7 +883,7 @@ export const MessageBubble: React.FC<Props> = ({
             {canPin && onTogglePin && (
               <button
                 onClick={() => onTogglePin(msg)}
-                className="p-1.5 rounded-sm hover:bg-white/[0.06] text-muted-foreground/70 hover:text-foreground/80 transition-colors"
+                className="p-1.5 rounded-sm hover:bg-muted/60 text-muted-foreground/70 hover:text-foreground/80 transition-colors"
                 title={isPinned ? "Unpin" : "Pin"}
               >
                 {isPinned ? (
@@ -890,7 +896,7 @@ export const MessageBubble: React.FC<Props> = ({
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <button
-                  className="p-1.5 rounded-sm hover:bg-white/[0.06] text-muted-foreground/70 hover:text-foreground/80 transition-colors"
+                  className="p-1.5 rounded-sm hover:bg-muted/60 text-muted-foreground/70 hover:text-foreground/80 transition-colors"
                   title="More"
                 >
                   <MoreVertical className="h-3.5 w-3.5" />
@@ -949,7 +955,7 @@ export const MessageBubble: React.FC<Props> = ({
       {/* Expanded image lightbox */}
       {expandedImage && (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-6"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 p-6"
           onClick={() => setExpandedImage(null)}
           role="dialog"
           aria-modal="true"

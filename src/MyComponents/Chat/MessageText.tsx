@@ -450,14 +450,14 @@ function EmbedCard({ embed }: { embed: Embed }) {
         rel="noopener noreferrer"
         className="mt-2 flex max-w-[320px] items-center gap-3 rounded-md border border-border bg-card p-2 hover:border-primary/40"
       >
-        <div className="relative h-16 w-24 overflow-hidden rounded bg-black">
+        <div className="relative h-16 w-24 overflow-hidden rounded bg-background">
           <img
             src={`https://i.ytimg.com/vi/${embed.videoId}/mqdefault.jpg`}
             alt=""
             className="h-full w-full object-cover"
           />
-          <div className="absolute inset-0 flex items-center justify-center bg-black/40">
-            <Play className="h-5 w-5 fill-white text-white" />
+          <div className="absolute inset-0 flex items-center justify-center bg-background/40">
+            <Play className="h-5 w-5 fill-white text-foreground" />
           </div>
         </div>
         <div className="min-w-0 flex-1">

@@ -184,7 +184,7 @@ export const AddDMGroup = (props: Subscribers) => {
           <button
             type="submit"
             disabled={!canSubmit}
-            className="w-full py-2 bg-primary hover:bg-primary/80 text-foreground text-[12px] font-medium rounded-sm disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+            className="w-full py-2 bg-primary hover:bg-primary/80 text-primary-foreground text-[12px] font-medium rounded-sm disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
           >
             Create Group
           </button>

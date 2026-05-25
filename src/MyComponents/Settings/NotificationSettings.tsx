@@ -138,7 +138,7 @@ export const NotificationSettings: React.FC<Props> = ({ className = "" }) => {
       onClick={onChange}
       disabled={disabled}
       className={`relative w-9 h-5 rounded-full transition-colors ${
-        checked ? "bg-red-500" : "bg-white/[0.06]"
+        checked ? "bg-red-500" : "bg-muted/60"
       } ${disabled ? "opacity-50 cursor-wait" : "cursor-pointer"}`}
     >
       <span
@@ -156,7 +156,7 @@ export const NotificationSettings: React.FC<Props> = ({ className = "" }) => {
           <div className="p-1.5 rounded-sm bg-primary/[0.08]">
             <Bell className="h-3.5 w-3.5 text-primary" />
           </div>
-          <h3 className="text-[13px] font-semibold text-white/85">Notifications</h3>
+          <h3 className="text-[13px] font-semibold text-foreground/85">Notifications</h3>
         </div>
       </div>
 
@@ -220,7 +220,7 @@ export const NotificationSettings: React.FC<Props> = ({ className = "" }) => {
         <div className="pt-3 border-t border-border">
           <button
             onClick={sendTestNotification}
-            className="flex w-full items-center justify-center gap-2 py-2 bg-muted/40 hover:bg-primary/[0.08] border border-border hover:border-primary/25 text-foreground/75 hover:text-primary text-[11.5px] font-medium rounded-sm transition-colors"
+            className="flex w-full items-center justify-center gap-2 py-2 bg-muted/40 hover:bg-primary/[0.08] border border-border hover:border-primary/25 text-primary-foreground/75 hover:text-primary text-[11.5px] font-medium rounded-sm transition-colors"
           >
             <Beaker className="h-3.5 w-3.5" />
             Send Test Notification
@@ -255,7 +255,7 @@ export const NotificationSettings: React.FC<Props> = ({ className = "" }) => {
               onClick={() => setThreadStyle("sidepanel")}
               className={`flex items-start gap-2 rounded-sm border px-2 py-2 text-left transition-colors ${
                 threadStyle === "sidepanel"
-                  ? "border-primary/40 bg-primary/[0.06] text-foreground"
+                  ? "border-primary/40 bg-primary/[0.06] text-primary-foreground"
                   : "border-border bg-muted/20 text-muted-foreground hover:text-foreground"
               }`}
             >
@@ -270,7 +270,7 @@ export const NotificationSettings: React.FC<Props> = ({ className = "" }) => {
               onClick={() => setThreadStyle("inline")}
               className={`flex items-start gap-2 rounded-sm border px-2 py-2 text-left transition-colors ${
                 threadStyle === "inline"
-                  ? "border-primary/40 bg-primary/[0.06] text-foreground"
+                  ? "border-primary/40 bg-primary/[0.06] text-primary-foreground"
                   : "border-border bg-muted/20 text-muted-foreground hover:text-foreground"
               }`}
             >

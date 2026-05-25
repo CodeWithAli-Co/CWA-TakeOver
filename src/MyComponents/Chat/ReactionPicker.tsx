@@ -17,7 +17,7 @@ export const ReactionPicker: React.FC<Props> = ({ onPick }) => {
         <button
           key={emoji}
           onClick={() => onPick(emoji)}
-          className="p-1.5 rounded-sm hover:bg-white/[0.06] text-base leading-none transition-colors"
+          className="p-1.5 rounded-sm hover:bg-muted/60 text-base leading-none transition-colors"
         >
           {emoji}
         </button>

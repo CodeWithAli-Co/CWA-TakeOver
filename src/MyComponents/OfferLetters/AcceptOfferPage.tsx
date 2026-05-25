@@ -170,7 +170,7 @@ export function AcceptOfferPage() {
       <FullPageShell>
         <div className="max-w-md mx-auto text-center">
           <div className={`mx-auto h-14 w-14 rounded-full ${tokens.accent} flex items-center justify-center mb-4`}>
-            <CheckCircle2 className="h-7 w-7 text-white" />
+            <CheckCircle2 className="h-7 w-7 text-foreground" />
           </div>
           <h1 className="text-[20px] font-semibold mb-1">
             Welcome aboard, {offer.candidate_name.split(" ")[0]}.
@@ -242,7 +242,7 @@ export function AcceptOfferPage() {
           {/* Letterhead */}
           <div className={`bg-gradient-to-br ${tokens.softBg} px-10 pt-8 pb-5 border-b border-border/60`}>
             <div className="flex items-center gap-3">
-              <div className="h-12 w-12 rounded-md bg-black/30 border border-white/10 flex items-center justify-center overflow-hidden">
+              <div className="h-12 w-12 rounded-md bg-background/30 border border-white/10 flex items-center justify-center overflow-hidden">
                 <img
                   src={tokens.logo}
                   alt=""
@@ -327,7 +327,7 @@ export function AcceptOfferPage() {
                   signatureName.trim().toLowerCase() !==
                     offer.candidate_name.trim().toLowerCase()
                 }
-                className={`flex flex-1 h-11 items-center justify-center gap-2 rounded-md ${tokens.accent} text-white font-semibold text-[13px] hover:brightness-110 disabled:opacity-50 disabled:hover:brightness-100 transition-all shadow-sm`}
+                className={`flex flex-1 h-11 items-center justify-center gap-2 rounded-md ${tokens.accent} text-foreground font-semibold text-[13px] hover:brightness-110 disabled:opacity-50 disabled:hover:brightness-100 transition-all shadow-sm`}
               >
                 {submitting ? (
                   <Loader2 className="h-4 w-4 animate-spin" />

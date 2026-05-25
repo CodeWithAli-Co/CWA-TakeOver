@@ -172,7 +172,7 @@ export function GlobalSearch({ open, onOpenChange }: Props) {
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          className="fixed inset-0 z-[60] flex items-start justify-center bg-black/60 p-4 pt-[12vh] backdrop-blur-sm"
+          className="fixed inset-0 z-[60] flex items-start justify-center bg-background/60 p-4 pt-[12vh] backdrop-blur-sm"
           onClick={() => onOpenChange(false)}
         >
           <motion.div
@@ -291,7 +291,7 @@ function highlight(text: string, needle: string): React.ReactNode {
     re.test(p) ? (
       <mark
         key={i}
-        className="rounded-sm bg-primary/30 px-0.5 text-foreground"
+        className="rounded-sm bg-primary/30 px-0.5 text-primary-foreground"
       >
         {p}
       </mark>

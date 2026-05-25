@@ -377,7 +377,7 @@ export const InvoiceFormDialog: React.FC<Props> = ({ open, onOpenChange, onCreat
               <button
                 type="submit"
                 disabled={submitting || !title || lineItems.every((l) => !l.name)}
-                className="px-5 py-2 bg-primary hover:bg-primary/80 text-foreground text-[12px] font-medium rounded-sm disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                className="px-5 py-2 bg-primary hover:bg-primary/80 text-primary-foreground text-[12px] font-medium rounded-sm disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
               >
                 {submitting ? "Creating..." : "Create Invoice"}
               </button>

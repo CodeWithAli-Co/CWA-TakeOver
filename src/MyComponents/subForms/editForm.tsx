@@ -330,7 +330,7 @@ export const EditData = (props: Props) => {
                 setOpen(false);
                 form.reset();
               }}
-              className="border-primary/15 text-foreground/70 
+              className="border-primary/15 text-primary-foreground/70 
               hover:bg-primary/10 hover:text-foreground/80 
               transition-all duration-300"
             >
@@ -344,7 +344,7 @@ export const EditData = (props: Props) => {
                   disabled={!canSubmit}
                   className="bg-primary 
                   hover:bg-primary/80 
-                  text-foreground border border-primary/15 
+                  text-primary-foreground border border-primary/15 
                   disabled:opacity-50 disabled:cursor-not-allowed
                   transition-all duration-300 
                   hover:scale-[1.02] active:scale-[0.98]"

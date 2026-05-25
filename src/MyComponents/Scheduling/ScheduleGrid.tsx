@@ -38,7 +38,7 @@ export const ScheduleGrid: React.FC<ScheduleGridProps> = ({
       } else if (event.title.includes("Afternoon")) {
         return <span className="ml-2 px-2 py-0.5 text-xs bg-yellow-600 text-foreground rounded">medium</span>;
       } else if (event.title.includes("Evening")) {
-        return <span className="ml-2 px-2 py-0.5 text-xs bg-red-700 text-foreground rounded">high</span>;
+        return <span className="ml-2 px-2 py-0.5 text-xs bg-red-700 text-primary-foreground rounded">high</span>;
       }
       return null;
     };

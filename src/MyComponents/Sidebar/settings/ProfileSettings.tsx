@@ -21,10 +21,11 @@
 import { useEffect, useState } from "react";
 import {
   UserCircle, Mail, Briefcase, Building2, Save, Check, AlertCircle, Loader2,
-  ShieldCheck,
+  ShieldCheck, Sun, Moon, Monitor, Palette,
 } from "lucide-react";
 import supabase from "@/MyComponents/supabase";
 import UploadAvatar from "@/MyComponents/Reusables/uploadAvatar";
+import { useThemeMode, type ThemeMode } from "@/stores/themeModeStore";
 
 interface ProfileSettingsProps {
   user: any;
@@ -145,6 +146,9 @@ export function ProfileSettings({ user }: ProfileSettingsProps) {
         </div>
       </div>
 
+      {/* Appearance card — theme mode toggle */}
+      <AppearanceCard />
+
       {/* Bio card */}
       <div className="rounded-lg border border-border bg-card/40 backdrop-blur-sm p-5 md:p-6">
         <div className="mb-4 flex items-center gap-2">
@@ -206,6 +210,98 @@ export function ProfileSettings({ user }: ProfileSettingsProps) {
         </button>
       </div>
     </div>
+  );
+}
+
+// ── Appearance card ──────────────────────────────────────────────
+// Lives in ProfileSettings so it's findable under Profile, not
+// buried in a separate "Preferences" surface. Three-button
+// segmented control: Light / Dark / System. Choice persists via
+// themeModeStore + applies the theme to <html> immediately.
+
+function AppearanceCard() {
+  const mode = useThemeMode((s) => s.mode);
+  const resolved = useThemeMode((s) => s.resolved);
+  const setMode = useThemeMode((s) => s.setMode);
+  return (
+    <div className="rounded-lg border border-border bg-card/40 backdrop-blur-sm p-5 md:p-6">
+      <div className="mb-4 flex items-center gap-2">
+        <Palette className="h-4 w-4 text-muted-foreground" />
+        <h2 className="text-[13px] font-mono uppercase tracking-widest text-muted-foreground">
+          Appearance
+        </h2>
+      </div>
+      <div className="grid gap-3 md:grid-cols-3">
+        <ThemeOption
+          mode="light"
+          label="Light"
+          icon={Sun}
+          description="Bright background, dark text."
+          active={mode === "light"}
+          onPick={() => setMode("light")}
+        />
+        <ThemeOption
+          mode="dark"
+          label="Dark"
+          icon={Moon}
+          description="Zinc background, light text."
+          active={mode === "dark"}
+          onPick={() => setMode("dark")}
+        />
+        <ThemeOption
+          mode="system"
+          label="System"
+          icon={Monitor}
+          description="Match your OS preference."
+          active={mode === "system"}
+          onPick={() => setMode("system")}
+        />
+      </div>
+      {mode === "system" && (
+        <p className="mt-3 text-[10.5px] text-muted-foreground">
+          Currently rendering <span className="font-semibold text-foreground/85">{resolved}</span> mode
+          {" "}— follows your OS in real time.
+        </p>
+      )}
+    </div>
+  );
+}
+
+function ThemeOption({
+  mode: _mode, label, icon: Icon, description, active, onPick,
+}: {
+  mode: ThemeMode;
+  label: string;
+  icon: typeof Sun;
+  description: string;
+  active: boolean;
+  onPick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onPick}
+      aria-pressed={active}
+      className={[
+        "group relative flex flex-col items-start gap-2 rounded-md border px-4 py-3 text-left transition-colors",
+        active
+          ? "border-primary/60 bg-primary/[0.07]"
+          : "border-border bg-background/40 hover:border-foreground/30 hover:bg-muted/30",
+      ].join(" ")}
+    >
+      <div className="flex items-center gap-2">
+        <Icon className={`h-4 w-4 ${active ? "text-primary" : "text-muted-foreground"}`} />
+        <span className={`text-[13px] font-semibold ${active ? "text-foreground" : "text-foreground/85"}`}>
+          {label}
+        </span>
+        {active && (
+          <Check className="ml-auto h-3.5 w-3.5 text-primary" />
+        )}
+      </div>
+      <p className="text-[10.5px] text-muted-foreground leading-snug">
+        {description}
+      </p>
+    </button>
   );
 }
 

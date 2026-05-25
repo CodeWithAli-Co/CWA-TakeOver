@@ -78,7 +78,7 @@ export const InvoicePreviewPane: React.FC<Props> = ({ invoiceId, onClose }) => {
       </div>
 
       {/* PDF */}
-      <div className="flex-1 bg-zinc-900">
+      <div className="flex-1 bg-muted">
         {isLoading || !invoice ? (
           <div className="h-full flex items-center justify-center">
             <div className="h-5 w-5 border-2 border-primary/30 border-t-primary rounded-full animate-spin" />

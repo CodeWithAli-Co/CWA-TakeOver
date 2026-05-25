@@ -498,7 +498,7 @@ function DocPreviewModal({
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
-      className="fixed inset-0 z-[70] flex items-start justify-center bg-black/70 p-4 pt-[4vh] backdrop-blur-sm"
+      className="fixed inset-0 z-[70] flex items-start justify-center bg-background/70 p-4 pt-[4vh] backdrop-blur-sm"
       onClick={onClose}
     >
       <motion.div
@@ -869,7 +869,7 @@ function ConvertRow({
         type="button"
         onClick={convert}
         disabled={!canConvert || converting}
-        className="flex h-9 items-center gap-2 rounded-md bg-emerald-600 px-3 text-[12px] font-semibold text-white hover:bg-emerald-500 disabled:opacity-50 disabled:hover:bg-emerald-600 shadow-sm"
+        className="flex h-9 items-center gap-2 rounded-md bg-emerald-600 px-3 text-[12px] font-semibold text-primary-foreground hover:bg-emerald-500 disabled:opacity-50 disabled:hover:bg-emerald-600 shadow-sm"
       >
         {converting ? (
           <Loader2 className="h-3.5 w-3.5 animate-spin" />
@@ -1376,7 +1376,7 @@ function SignatureRecordRow({ current }: { current: CurrentOffer }) {
                         d.status === "signed"
                           ? "border-emerald-500/40 bg-emerald-500/10 text-emerald-300"
                           : d.status === "waived"
-                            ? "border-zinc-500/40 bg-zinc-500/10 text-zinc-300"
+                            ? "border-zinc-500/40 bg-zinc-500/10 text-foreground/80"
                             : "border-amber-500/40 bg-amber-500/10 text-amber-300",
                       ].join(" ")}
                     >

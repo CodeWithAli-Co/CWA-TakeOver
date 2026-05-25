@@ -298,11 +298,11 @@ function PlanView({ data }: { data: PlanData }) {
             initial={{ width: 0 }}
             animate={{ width: `${remainingPct}%` }}
             transition={{ duration: 0.7, delay: 0.5, ease: "easeOut" }}
-            className="h-full bg-zinc-800/80 flex items-center justify-center"
+            className="h-full bg-secondary/80 flex items-center justify-center"
             title={`Remaining: ${totals.remaining} units`}
           >
             {remainingPct > 4 && (
-              <span className="text-[13px] font-bold text-zinc-300 tabular-nums">
+              <span className="text-[13px] font-bold text-foreground/80 tabular-nums">
                 {totals.remaining}
               </span>
             )}
@@ -312,7 +312,7 @@ function PlanView({ data }: { data: PlanData }) {
         <div className="mt-3 flex items-center gap-5 text-[11px] text-muted-foreground">
           <LegendDot color="bg-emerald-400" label="Completed (Passed + Prior)" />
           <LegendDot color="bg-amber-400" label="In Progress" />
-          <LegendDot color="bg-zinc-600" label="Remaining" />
+          <LegendDot color="bg-muted-foreground/30" label="Remaining" />
         </div>
       </motion.section>
 
@@ -1399,7 +1399,7 @@ function categoryStyle(cat: string): string {
   if (cat.startsWith("CS")) return "bg-indigo-500/[0.14] text-indigo-200 border-indigo-400/40";
   if (cat.startsWith("LING")) return "bg-violet-500/[0.14] text-violet-200 border-violet-400/40";
   if (cat.startsWith("Major Prep")) return "bg-amber-500/[0.14] text-amber-200 border-amber-400/40";
-  if (cat === "Major Elective") return "bg-zinc-500/[0.14] text-zinc-200 border-zinc-400/40";
+  if (cat === "Major Elective") return "bg-zinc-500/[0.14] text-foreground/90 border-zinc-400/40";
   return "bg-slate-500/[0.14] text-slate-200 border-slate-400/40";
 }
 

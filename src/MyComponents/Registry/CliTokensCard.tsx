@@ -50,7 +50,7 @@ export function CliTokensCard() {
         <button
           type="button"
           onClick={() => setShowCreate(true)}
-          className="inline-flex items-center gap-1.5 rounded-md bg-gradient-to-b from-amber-500 to-orange-500 px-2.5 py-1.5 text-[11.5px] font-semibold text-white shadow-sm ring-1 ring-inset ring-white/15 hover:from-amber-400 hover:to-orange-400 transition-all"
+          className="inline-flex items-center gap-1.5 rounded-md bg-gradient-to-b from-amber-500 to-orange-500 px-2.5 py-1.5 text-[11.5px] font-semibold text-foreground shadow-sm ring-1 ring-inset ring-white/15 hover:from-amber-400 hover:to-orange-400 transition-all"
         >
           <Plus className="h-3 w-3" />
           New token
@@ -116,7 +116,7 @@ function TokenRow({ token }: { token: RegistryToken }) {
           <button
             onClick={() => del.mutate(token.id)}
             disabled={del.isPending}
-            className="rounded bg-red-500 px-2 py-0.5 text-[10.5px] font-semibold text-white hover:bg-red-600 disabled:opacity-50"
+            className="rounded bg-red-500 px-2 py-0.5 text-[10.5px] font-semibold text-primary-foreground hover:bg-red-600 disabled:opacity-50"
           >
             Revoke
           </button>
@@ -187,7 +187,7 @@ function CreateTokenModal({
           className="fixed inset-0 z-[9990] flex items-center justify-center p-4"
         >
           <div
-            className="absolute inset-0 bg-black/70 backdrop-blur-md"
+            className="absolute inset-0 bg-background/70 backdrop-blur-md"
             onClick={handleClose}
           />
           <motion.div
@@ -201,7 +201,7 @@ function CreateTokenModal({
             exit={{ opacity: 0, scale: 0.98 }}
             transition={{ type: "spring", stiffness: 320, damping: 30 }}
             whileDrag={{ scale: 1.005 }}
-            className="relative z-10 w-[min(480px,calc(100vw-32px))] overflow-hidden rounded-2xl border border-white/10 bg-zinc-950/95 shadow-[0_24px_80px_-12px_rgba(0,0,0,0.8)] backdrop-blur-xl"
+            className="relative z-10 w-[min(480px,calc(100vw-32px))] overflow-hidden rounded-2xl border border-white/10 bg-card/95 shadow-[0_24px_80px_-12px_rgba(0,0,0,0.8)] backdrop-blur-xl"
           >
             <div
               className="h-1 w-full"
@@ -220,10 +220,10 @@ function CreateTokenModal({
                   </div>
                   <div>
                     <div className="flex items-center gap-1.5">
-                      <h3 className="text-[14px] font-semibold text-white">Generate CLI token</h3>
-                      <GripHorizontal className="h-3 w-3 text-white/30" />
+                      <h3 className="text-[14px] font-semibold text-foreground">Generate CLI token</h3>
+                      <GripHorizontal className="h-3 w-3 text-foreground/30" />
                     </div>
-                    <p className="mt-0.5 text-[11px] text-white/55">
+                    <p className="mt-0.5 text-[11px] text-foreground/55">
                       One-time reveal. Save it immediately.
                     </p>
                   </div>
@@ -232,7 +232,7 @@ function CreateTokenModal({
                   onClick={handleClose}
                   onPointerDown={(e) => e.stopPropagation()}
                   disabled={create.isPending}
-                  className="flex h-7 w-7 items-center justify-center rounded-md text-white/50 hover:bg-white/5 hover:text-white/80 disabled:opacity-40"
+                  className="flex h-7 w-7 items-center justify-center rounded-md text-foreground/50 hover:bg-white/5 hover:text-foreground/80 disabled:opacity-40"
                 >
                   <X className="h-4 w-4" />
                 </button>
@@ -242,7 +242,7 @@ function CreateTokenModal({
             <div className="px-5 pb-4 pt-1">
               {!revealed ? (
                 <>
-                  <label className="text-[10px] font-semibold uppercase tracking-wider text-white/50">
+                  <label className="text-[10px] font-semibold uppercase tracking-wider text-foreground/50">
                     Token label
                   </label>
                   <input
@@ -251,9 +251,9 @@ function CreateTokenModal({
                     value={label}
                     onChange={(e) => setLabel(e.target.value)}
                     placeholder='e.g. "laptop" or "ci-runner"'
-                    className="mt-1 h-9 w-full rounded-md border border-white/10 bg-white/5 px-3 text-[12.5px] text-white outline-none focus:border-amber-400/60"
+                    className="mt-1 h-9 w-full rounded-md border border-white/10 bg-white/5 px-3 text-[12.5px] text-foreground outline-none focus:border-amber-400/60"
                   />
-                  <p className="mt-2 text-[10.5px] text-white/40 leading-snug">
+                  <p className="mt-2 text-[10.5px] text-foreground/40 leading-snug">
                     A human-readable name so you can identify and revoke this
                     token later if the machine is compromised.
                   </p>
@@ -268,14 +268,14 @@ function CreateTokenModal({
                     <button
                       onClick={handleClose}
                       disabled={create.isPending}
-                      className="rounded-md px-3 py-1.5 text-[12px] text-white/70 hover:bg-white/5 hover:text-white disabled:opacity-40"
+                      className="rounded-md px-3 py-1.5 text-[12px] text-foreground/70 hover:bg-white/5 hover:text-foreground disabled:opacity-40"
                     >
                       Cancel
                     </button>
                     <button
                       onClick={handleGenerate}
                       disabled={!label.trim() || create.isPending}
-                      className="inline-flex items-center gap-1.5 rounded-md bg-gradient-to-b from-amber-500 to-orange-500 px-4 py-1.5 text-[12px] font-semibold text-white shadow-sm ring-1 ring-inset ring-white/15 hover:from-amber-400 hover:to-orange-400 disabled:opacity-50"
+                      className="inline-flex items-center gap-1.5 rounded-md bg-gradient-to-b from-amber-500 to-orange-500 px-4 py-1.5 text-[12px] font-semibold text-foreground shadow-sm ring-1 ring-inset ring-white/15 hover:from-amber-400 hover:to-orange-400 disabled:opacity-50"
                     >
                       <Key className="h-3.5 w-3.5" />
                       {create.isPending ? "Generating…" : "Generate"}
@@ -293,8 +293,8 @@ function CreateTokenModal({
                     </p>
                   </div>
 
-                  <div className="mt-3 flex items-center gap-2 rounded-md border border-white/10 bg-zinc-900/60 px-3 py-2">
-                    <code className="flex-1 truncate font-mono text-[11.5px] text-white">
+                  <div className="mt-3 flex items-center gap-2 rounded-md border border-white/10 bg-muted/60 px-3 py-2">
+                    <code className="flex-1 truncate font-mono text-[11.5px] text-foreground">
                       {revealed}
                     </code>
                     <button
@@ -303,7 +303,7 @@ function CreateTokenModal({
                         "inline-flex items-center gap-1 rounded-md border px-2 py-0.5 text-[10.5px] font-medium transition-colors",
                         copied
                           ? "border-emerald-400/40 bg-emerald-500/10 text-emerald-300"
-                          : "border-white/15 bg-white/5 text-white/75 hover:bg-white/10",
+                          : "border-white/15 bg-white/5 text-foreground/75 hover:bg-white/10",
                       ].join(" ")}
                     >
                       {copied ? <><CheckCircle2 className="h-2.5 w-2.5" /> Copied</> : <><Copy className="h-2.5 w-2.5" /> Copy</>}
@@ -313,7 +313,7 @@ function CreateTokenModal({
                   <div className="mt-4 flex items-center justify-end">
                     <button
                       onClick={handleClose}
-                      className="rounded-md bg-white/10 px-4 py-1.5 text-[12px] font-semibold text-white hover:bg-white/15"
+                      className="rounded-md bg-white/10 px-4 py-1.5 text-[12px] font-semibold text-foreground hover:bg-white/15"
                     >
                       Done
                     </button>

@@ -49,7 +49,7 @@ export const ErrorState: React.FC<{ retry: () => void }> = ({ retry }) => {
         <p className="mb-6">Unable to retrieve schedule data. Please try again.</p>
         <button 
           onClick={retry}
-          className="bg-red-700 hover:bg-primary text-foreground px-4 py-2 rounded-md"
+          className="bg-red-700 hover:bg-primary text-primary-foreground px-4 py-2 rounded-md"
         >
           Retry
         </button>

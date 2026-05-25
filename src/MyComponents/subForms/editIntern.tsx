@@ -145,7 +145,7 @@ export const EditIntern = (props: Props) => {
                     <button
                       type="submit"
                       className="w-full bg-primary hover:bg-primary/80 
-                      hover:to-red-950 text-foreground border border-border
+                      hover:to-red-950 text-primary-foreground border border-border
                       shadow-lg shadow-primary/10 disabled:opacity-50"
                       disabled={!canSubmit}
                     >

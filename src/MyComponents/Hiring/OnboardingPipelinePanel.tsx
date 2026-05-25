@@ -19,8 +19,9 @@
  *   │             │                              │ SUGGESTS    │
  *   └─────────────┴──────────────────────────────┴─────────────┘
  *
- * Color system: zinc shades with red brand accent. Page = zinc-950,
- * sidebar/rail = zinc-900/60, cards = zinc-900 with zinc-800 borders.
+ * Color system: theme tokens (bg-card / bg-muted / border-border)
+ * so the page adapts to light + dark modes. Red brand accent on
+ * rails + the verdict cards stays a literal hsl(var(--primary)).
  * Gives layered depth without the "floating in void" feel of pure
  * black + 4% white borders.
  */
@@ -110,7 +111,7 @@ export function OnboardingPipelinePanel() {
 
   if (isLoading) {
     return (
-      <div className="h-full flex items-center justify-center bg-zinc-900/40 text-zinc-500 text-sm">
+      <div className="h-full flex items-center justify-center bg-muted/40 text-foreground0 text-sm">
         <Loader2 size={16} className="animate-spin mr-2" /> Loading onboarding pipeline…
       </div>
     );
@@ -121,7 +122,7 @@ export function OnboardingPipelinePanel() {
   }
 
   return (
-    <div className="h-full flex bg-zinc-900/40 text-zinc-100">
+    <div className="h-full flex bg-muted/40 text-foreground">
       <Sidebar
         list={list}
         filtered={filtered}
@@ -167,36 +168,36 @@ function Sidebar({
   };
 
   return (
-    <aside className="w-[280px] flex-shrink-0 border-r border-zinc-700/70 flex flex-col bg-zinc-900/40">
+    <aside className="w-[280px] flex-shrink-0 border-r border-border/70 flex flex-col bg-muted/40">
       {/* Sub-nav: §01 Instances / §02 Templates */}
-      <div className="flex items-center gap-5 px-5 pt-4 pb-3 border-b border-zinc-700/70">
+      <div className="flex items-center gap-5 px-5 pt-4 pb-3 border-b border-border/70">
         <span className="text-[12px] tracking-tight">
-          <span className="font-mono text-[10px] text-zinc-500 mr-1.5">§01</span>
-          <span className="font-bold text-zinc-100 border-b-2 border-red-500 pb-1">Instances</span>
+          <span className="font-mono text-[10px] text-foreground0 mr-1.5">§01</span>
+          <span className="font-bold text-foreground border-b-2 border-red-500 pb-1">Instances</span>
         </span>
-        <span className="text-[12px] tracking-tight text-zinc-600">
-          <span className="font-mono text-[10px] text-zinc-700 mr-1.5">§02</span>
+        <span className="text-[12px] tracking-tight text-muted-foreground/70">
+          <span className="font-mono text-[10px] text-muted-foreground/50 mr-1.5">§02</span>
           Templates
         </span>
       </div>
 
-      <div className="px-5 pt-4 pb-2 text-[10px] tracking-[0.12em] text-zinc-500 uppercase">
+      <div className="px-5 pt-4 pb-2 text-[10px] tracking-[0.12em] text-foreground0 uppercase">
         <span className="inline-block w-1 h-1 rounded-full bg-red-500 mr-1.5 align-middle" />
         ALL HIRES · {list.length}
       </div>
 
       <div className="px-5 pb-2">
-        <div className="flex items-center gap-2 px-3 py-2 rounded-md bg-zinc-900 border border-zinc-700/70 focus-within:border-red-500/50">
-          <Search size={11} className="text-zinc-500" />
+        <div className="flex items-center gap-2 px-3 py-2 rounded-md bg-muted border border-border/70 focus-within:border-red-500/50">
+          <Search size={11} className="text-foreground0" />
           <input
             type="text"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Search…"
-            className="flex-1 bg-transparent text-[11.5px] outline-none placeholder:text-zinc-600 text-zinc-100"
+            className="flex-1 bg-transparent text-[11.5px] outline-none placeholder:text-muted-foreground/70 text-foreground"
           />
           {search && (
-            <button type="button" onClick={() => setSearch("")} className="text-zinc-500 hover:text-zinc-200">
+            <button type="button" onClick={() => setSearch("")} className="text-foreground0 hover:text-foreground/90">
               <X size={11} />
             </button>
           )}
@@ -216,7 +217,7 @@ function Sidebar({
                 "transition-colors " +
                 (active
                   ? "text-red-400 border-b border-red-400 pb-0.5"
-                  : "text-zinc-500 hover:text-zinc-300")
+                  : "text-foreground0 hover:text-foreground/80")
               }
               title={`${count} hire${count === 1 ? "" : "s"}`}
             >
@@ -228,7 +229,7 @@ function Sidebar({
 
       <div className="flex-1 overflow-y-auto px-2">
         {filtered.length === 0 ? (
-          <div className="px-3 py-8 text-center text-[11.5px] text-zinc-500 leading-snug">
+          <div className="px-3 py-8 text-center text-[11.5px] text-foreground0 leading-snug">
             No matches.
           </div>
         ) : (
@@ -273,24 +274,24 @@ function SidebarRow({
           "w-full text-left px-3 py-2 rounded-md flex items-start gap-2.5 transition-colors group " +
           (selected
             ? "bg-red-500/[0.08] ring-1 ring-red-500/40"
-            : "hover:bg-zinc-800/60")
+            : "hover:bg-secondary/60")
         }
       >
         <span
           className={
             "w-1 h-1 rounded-full mt-2 flex-shrink-0 " +
-            (selected ? "bg-red-400" : "bg-zinc-600")
+            (selected ? "bg-red-400" : "bg-muted-foreground/30")
           }
         />
         <div className="flex-1 min-w-0">
-          <div className={"text-[12.5px] font-semibold truncate " + (selected ? "text-red-400" : "text-zinc-200 group-hover:text-zinc-50")}>
+          <div className={"text-[12.5px] font-semibold truncate " + (selected ? "text-red-400" : "text-foreground/90 group-hover:text-foreground")}>
             {c.full_name}
           </div>
-          <div className="text-[10.5px] text-zinc-500 truncate mt-0.5">
+          <div className="text-[10.5px] text-foreground0 truncate mt-0.5">
             {c.role_slug.replace(/-/g, " ")}
           </div>
         </div>
-        <span className="text-[10px] tracking-wider text-zinc-500 mt-0.5">· {statusLabel}</span>
+        <span className="text-[10px] tracking-wider text-foreground0 mt-0.5">· {statusLabel}</span>
       </button>
     </li>
   );
@@ -331,7 +332,7 @@ function CenterHero({ candidate: c }: { candidate: OnboardingCandidate }) {
   return (
     <section className="flex-1 overflow-y-auto px-8 lg:px-12 py-6">
       {/* Breadcrumb — identity only, no truncated role slugs */}
-      <div className="text-[10px] tracking-[0.12em] text-zinc-500 uppercase mb-5">
+      <div className="text-[10px] tracking-[0.12em] text-foreground0 uppercase mb-5">
         <span className="inline-block w-1 h-1 rounded-full bg-red-500 mr-1.5 align-middle" />
         ONBOARDING · {c.status === "hired" ? "ACTIVE" : "AWAITING"} · {c.full_name.toUpperCase()}
       </div>
@@ -339,11 +340,11 @@ function CenterHero({ candidate: c }: { candidate: OnboardingCandidate }) {
       <div className="grid lg:grid-cols-[auto_1fr] gap-7 items-start">
         {/* Avatar with floating score badge */}
         <div className="relative">
-          <div className={"w-[88px] h-[88px] rounded-full bg-gradient-to-br " + from + " " + to + " flex items-center justify-center text-white text-[24px] font-bold shadow-xl shadow-black/40 ring-1 ring-zinc-800"}>
+          <div className={"w-[88px] h-[88px] rounded-full bg-gradient-to-br " + from + " " + to + " flex items-center justify-center text-white text-[24px] font-bold shadow-xl shadow-black/40 ring-1 ring-border"}>
             {initials}
           </div>
           {c.fit_score != null && (
-            <div className="absolute -bottom-1 -right-1 w-9 h-9 rounded-full bg-red-500 text-white text-[12px] font-black flex items-center justify-center border-[3px] border-zinc-950">
+            <div className="absolute -bottom-1 -right-1 w-9 h-9 rounded-full bg-red-500 text-white text-[12px] font-black flex items-center justify-center border-[3px] border-border">
               {c.fit_score}
             </div>
           )}
@@ -359,13 +360,13 @@ function CenterHero({ candidate: c }: { candidate: OnboardingCandidate }) {
               </span>
             )}
           </div>
-          <h1 className="font-display text-[40px] font-black tracking-tight text-zinc-50 leading-[1.02] mb-1">
+          <h1 className="font-display text-[40px] font-black tracking-tight text-foreground leading-[1.02] mb-1">
             {c.full_name}
           </h1>
-          <div className="text-[13px] text-zinc-400 mb-3">
+          <div className="text-[13px] text-muted-foreground mb-3">
             {c.role_slug.replace(/-/g, " ")}
             {c.current_title && (
-              <span className="text-zinc-500"> · was {c.current_title}{c.current_company ? ` @ ${c.current_company}` : ""}</span>
+              <span className="text-foreground0"> · was {c.current_title}{c.current_company ? ` @ ${c.current_company}` : ""}</span>
             )}
           </div>
 
@@ -375,7 +376,7 @@ function CenterHero({ candidate: c }: { candidate: OnboardingCandidate }) {
             <MetaPill icon={<FileText size={9} />} text={`#${c.id.slice(0, 8)}`} mono />
           </div>
 
-          <div className="flex flex-wrap items-center gap-x-4 gap-y-1 mt-3 text-[11px] text-zinc-500">
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-1 mt-3 text-[11px] text-foreground0">
             <a className="inline-flex items-center gap-1 hover:text-red-400" href={`mailto:${c.email}`}>
               <Mail size={11} />{c.email}
             </a>
@@ -394,28 +395,28 @@ function CenterHero({ candidate: c }: { candidate: OnboardingCandidate }) {
 
       {c.why_role && (
         <div className="mt-6 max-w-[920px]">
-          <div className="text-[10px] tracking-[0.12em] text-zinc-500 uppercase mb-2">
+          <div className="text-[10px] tracking-[0.12em] text-foreground0 uppercase mb-2">
             <span className="inline-block w-1 h-1 rounded-full bg-red-500 mr-1.5 align-middle" />
             FIRST IMPRESSION · WHY THIS ROLE · {timeAgo(c.created_at).toUpperCase()}
           </div>
-          <div className="rounded-md border border-zinc-700/70 border-l-2 border-l-red-500 bg-zinc-900/40 px-5 py-4">
-            <p className="text-[13.5px] text-zinc-100 italic leading-relaxed">&ldquo;{c.why_role}&rdquo;</p>
-            <div className="mt-2.5 text-[10px] tracking-[0.12em] text-zinc-500 uppercase">
+          <div className="rounded-md border border-border/70 border-l-2 border-l-red-500 bg-muted/40 px-5 py-4">
+            <p className="text-[13.5px] text-foreground italic leading-relaxed">&ldquo;{c.why_role}&rdquo;</p>
+            <div className="mt-2.5 text-[10px] tracking-[0.12em] text-foreground0 uppercase">
               — {c.full_name.split(" ")[0].toUpperCase()} · FROM THEIR APPLICATION
             </div>
           </div>
           {c.why_takeover && (
-            <p className="mt-2.5 text-[11.5px] text-zinc-400 leading-relaxed">
-              <span className="text-zinc-500 font-semibold uppercase tracking-wider text-[9.5px]">On Takeover:</span> {c.why_takeover}
+            <p className="mt-2.5 text-[11.5px] text-muted-foreground leading-relaxed">
+              <span className="text-foreground0 font-semibold uppercase tracking-wider text-[9.5px]">On Takeover:</span> {c.why_takeover}
             </p>
           )}
         </div>
       )}
 
       <div className="mt-7 max-w-[920px]">
-        <div className="text-[10px] tracking-[0.12em] text-zinc-500 uppercase mb-3 flex items-center justify-between">
+        <div className="text-[10px] tracking-[0.12em] text-foreground0 uppercase mb-3 flex items-center justify-between">
           <span>
-            <span className="font-mono text-zinc-600 mr-2">§02</span>
+            <span className="font-mono text-muted-foreground/70 mr-2">§02</span>
             30 / 60 / 90 PLAN
           </span>
           {c.onboarding_plan && (
@@ -423,7 +424,7 @@ function CenterHero({ candidate: c }: { candidate: OnboardingCandidate }) {
               type="button"
               onClick={() => planM.mutate({ candidateId: c.id, force: true })}
               disabled={planM.isPending}
-              className="text-[10px] tracking-wider text-zinc-500 hover:text-zinc-200 inline-flex items-center gap-1 disabled:opacity-50"
+              className="text-[10px] tracking-wider text-foreground0 hover:text-foreground/90 inline-flex items-center gap-1 disabled:opacity-50"
             >
               {planM.isPending ? <Loader2 size={10} className="animate-spin" /> : <Sparkles size={10} />}
               REGENERATE
@@ -434,8 +435,8 @@ function CenterHero({ candidate: c }: { candidate: OnboardingCandidate }) {
       </div>
 
       <div className="mt-7 max-w-[920px]">
-        <div className="text-[10px] tracking-[0.12em] text-zinc-500 uppercase mb-3">
-          <span className="font-mono text-zinc-600 mr-2">§03</span>
+        <div className="text-[10px] tracking-[0.12em] text-foreground0 uppercase mb-3">
+          <span className="font-mono text-muted-foreground/70 mr-2">§03</span>
           MEETINGS
         </div>
         <MeetingsBlock candidateId={c.id} />
@@ -503,14 +504,14 @@ function AxonVerdictCard({ candidate: c }: { candidate: OnboardingCandidate }) {
 
   if (!c.verdict_summary || !tier) {
     return (
-      <div className="rounded-md border border-zinc-700/70 border-l-2 border-l-zinc-700 bg-zinc-900/60 px-5 py-4 text-[12px] text-zinc-500 italic">
+      <div className="rounded-md border border-border/70 border-l-2 border-l-border bg-muted/60 px-5 py-4 text-[12px] text-foreground italic">
         No Axon verdict on file yet. Rate this candidate in /hiring.
       </div>
     );
   }
 
   return (
-    <div className="rounded-md border border-zinc-700/70 border-l-2 border-l-red-500 bg-zinc-900/40 overflow-hidden">
+    <div className="rounded-md border border-border/70 border-l-2 border-l-red-500 bg-muted/40 overflow-hidden">
       <div className="flex items-start gap-3 px-5 py-4">
         <div className="w-8 h-8 rounded-md bg-gradient-to-br from-red-500 to-red-700 flex items-center justify-center flex-shrink-0">
           <Sparkles size={13} className="text-white" />
@@ -522,7 +523,7 @@ function AxonVerdictCard({ candidate: c }: { candidate: OnboardingCandidate }) {
               {c.verdict_tier}
             </span>
           </div>
-          <p className="text-[13.5px] text-zinc-100 leading-relaxed">{c.verdict_summary}</p>
+          <p className="text-[13.5px] text-foreground leading-relaxed">{c.verdict_summary}</p>
           <button
             type="button"
             onClick={() => setExpanded((e) => !e)}
@@ -543,29 +544,29 @@ function AxonVerdictCard({ candidate: c }: { candidate: OnboardingCandidate }) {
             transition={{ duration: 0.2 }}
             className="overflow-hidden"
           >
-            <div className="px-5 pb-5 pt-1 border-t border-zinc-700/70 space-y-3">
+            <div className="px-5 pb-5 pt-1 border-t border-border/70 space-y-3">
               {c.axon_assessment?.scores && c.axon_assessment.scores.length > 0 && (
                 <div className="grid sm:grid-cols-2 gap-2">
                   {c.axon_assessment.scores.map((s) => (
-                    <div key={s.label} className="rounded-md border border-zinc-700/70 bg-zinc-900/40/60 p-2.5">
+                    <div key={s.label} className="rounded-md border border-border/70 bg-muted/40/60 p-2.5">
                       <div className="flex items-center justify-between mb-1">
-                        <span className="text-[11px] font-semibold text-zinc-100">{s.label}</span>
+                        <span className="text-[11px] font-semibold text-foreground">{s.label}</span>
                         <span className="text-[12px] font-bold tabular-nums text-red-400">{s.score}</span>
                       </div>
-                      <div className="h-0.5 rounded-full bg-zinc-800 overflow-hidden mb-1">
+                      <div className="h-0.5 rounded-full bg-secondary overflow-hidden mb-1">
                         <div
                           className="h-full bg-gradient-to-r from-red-500 to-red-400"
                           style={{ width: `${Math.max(0, Math.min(100, s.score))}%` }}
                         />
                       </div>
-                      <div className="text-[10.5px] text-zinc-400 leading-snug">{s.note}</div>
+                      <div className="text-[10.5px] text-muted-foreground leading-snug">{s.note}</div>
                     </div>
                   ))}
                 </div>
               )}
               {c.axon_assessment?.recommended_next_step && (
-                <div className="text-[11.5px] text-zinc-300">
-                  <span className="text-zinc-500 uppercase tracking-wider text-[9.5px] font-semibold">Recommended next:</span>{" "}
+                <div className="text-[11.5px] text-foreground/80">
+                  <span className="text-foreground0 uppercase tracking-wider text-[9.5px] font-semibold">Recommended next:</span>{" "}
                   {c.axon_assessment.recommended_next_step}
                 </div>
               )}
@@ -627,8 +628,8 @@ function PlanSection({
 
   if (!plan) {
     return (
-      <div className="rounded-md border border-dashed border-zinc-700/70 bg-zinc-900/40 px-5 py-6 text-center">
-        <p className="text-[12.5px] text-zinc-400 leading-relaxed mb-3">
+      <div className="rounded-md border border-dashed border-border/70 bg-muted/40 px-5 py-6 text-center">
+        <p className="text-[12.5px] text-muted-foreground leading-relaxed mb-3">
           No plan yet. Axon will draft a 30/60/90 tailored to {c.full_name.split(" ")[0]}'s resume + the role's ideal profile.
         </p>
         <button
@@ -647,15 +648,15 @@ function PlanSection({
   return (
     <div className="space-y-3">
       {plan.summary && (
-        <p className="text-[12.5px] text-zinc-400 leading-relaxed italic">{plan.summary}</p>
+        <p className="text-[12.5px] text-muted-foreground leading-relaxed italic">{plan.summary}</p>
       )}
       <PlanPhase label="FIRST 30 DAYS" items={plan.first_30_days} accent="emerald" />
       <PlanPhase label="FIRST 60 DAYS" items={plan.first_60_days} accent="sky" />
       <PlanPhase label="FIRST 90 DAYS" items={plan.first_90_days} accent="violet" />
       {plan.key_metrics?.length > 0 && (
-        <div className="mt-2 rounded-md border border-zinc-700/70 bg-zinc-900/40 px-4 py-3">
-          <div className="text-[9.5px] tracking-[0.12em] text-zinc-500 uppercase mb-1.5">SUCCESS METRICS</div>
-          <ul className="text-[11.5px] text-zinc-300 space-y-1">
+        <div className="mt-2 rounded-md border border-border/70 bg-muted/40 px-4 py-3">
+          <div className="text-[9.5px] tracking-[0.12em] text-foreground0 uppercase mb-1.5">SUCCESS METRICS</div>
+          <ul className="text-[11.5px] text-foreground/80 space-y-1">
             {plan.key_metrics.map((m, i) => (
               <li key={i} className="flex items-start gap-1.5">
                 <CheckCircle2 size={10} className="text-red-400 mt-1 flex-shrink-0" />
@@ -684,10 +685,10 @@ function PlanPhase({
                            "text-violet-400";
 
   return (
-    <div className={"rounded-md border border-zinc-700/70 bg-zinc-900/40 overflow-hidden"}>
-      <div className={"px-4 py-2 border-b border-zinc-700/70 text-[10px] tracking-[0.12em] uppercase font-bold flex items-center justify-between " + headerColor}>
+    <div className={"rounded-md border border-border/70 bg-muted/40 overflow-hidden"}>
+      <div className={"px-4 py-2 border-b border-border/70 text-[10px] tracking-[0.12em] uppercase font-bold flex items-center justify-between " + headerColor}>
         <span>{label}</span>
-        <span className="text-zinc-500 normal-case font-normal tracking-normal">· {items.length}</span>
+        <span className="text-foreground0 normal-case font-normal tracking-normal">· {items.length}</span>
       </div>
       <ul className="list-none">
         {items.map((it, i) => (
@@ -705,17 +706,17 @@ function PlanItem({
 }) {
   const [open, setOpen] = useState(false);
   return (
-    <li className="border-t border-zinc-700/70 first:border-t-0 list-none">
+    <li className="border-t border-border/70 first:border-t-0 list-none">
       <button
         type="button"
         onClick={() => setOpen((o) => !o)}
-        className="w-full text-left px-4 py-2 flex items-center gap-3 hover:bg-zinc-900/60 transition-colors"
+        className="w-full text-left px-4 py-2 flex items-center gap-3 hover:bg-muted/60 transition-colors"
       >
-        <span className="font-mono text-[10.5px] text-zinc-500 tabular-nums w-9 text-right flex-shrink-0">+{item.due_offset_days}d</span>
-        <span className="text-[12.5px] text-zinc-100 truncate">{item.title}</span>
-        <span className="text-[9px] tracking-wider text-zinc-500 uppercase bg-zinc-800/60 px-1.5 py-0.5 rounded">{item.owner.replace("_", " ")}</span>
+        <span className="font-mono text-[10.5px] text-foreground0 tabular-nums w-9 text-right flex-shrink-0">+{item.due_offset_days}d</span>
+        <span className="text-[12.5px] text-foreground truncate">{item.title}</span>
+        <span className="text-[9px] tracking-wider text-foreground0 uppercase bg-secondary/60 px-1.5 py-0.5 rounded">{item.owner.replace("_", " ")}</span>
         <span className="flex-1" />
-        <ChevronDown size={11} className={"text-zinc-500 transition-transform " + (open ? "rotate-180" : "")} />
+        <ChevronDown size={11} className={"text-foreground0 transition-transform " + (open ? "rotate-180" : "")} />
       </button>
       <AnimatePresence initial={false}>
         {open && (
@@ -726,7 +727,7 @@ function PlanItem({
             transition={{ duration: 0.18 }}
             className="overflow-hidden"
           >
-            <div className="px-4 pb-3 pl-[52px] text-[11.5px] text-zinc-400 leading-relaxed">
+            <div className="px-4 pb-3 pl-[52px] text-[11.5px] text-muted-foreground leading-relaxed">
               {item.detail}
             </div>
           </motion.div>
@@ -745,11 +746,11 @@ function MeetingsBlock({ candidateId }: { candidateId: string }) {
   const meetings = meetingsQ.data ?? [];
 
   if (meetingsQ.isLoading) {
-    return <div className="text-[11px] text-zinc-500">Loading…</div>;
+    return <div className="text-[11px] text-foreground0">Loading…</div>;
   }
   if (meetings.length === 0) {
     return (
-      <div className="rounded-md border border-dashed border-zinc-700/70 bg-zinc-900/40 px-4 py-4 text-[11.5px] text-zinc-500 leading-relaxed">
+      <div className="rounded-md border border-dashed border-border/70 bg-muted/40 px-4 py-4 text-[11.5px] text-foreground0 leading-relaxed">
         No meetings scheduled yet. Use <span className="text-red-400">Schedule kickoff</span> in the right rail.
       </div>
     );
@@ -766,15 +767,15 @@ function MeetingsBlock({ candidateId }: { candidateId: string }) {
 function MeetingRow({ m }: { m: CandidateMeeting }) {
   const color = KIND_COLORS[m.kind];
   return (
-    <li className={"rounded-md border border-zinc-700/70 bg-zinc-900/40 px-3.5 py-2.5 flex items-center gap-3 " + color}>
+    <li className={"rounded-md border border-border/70 bg-muted/40 px-3.5 py-2.5 flex items-center gap-3 " + color}>
       <Clock size={12} className="flex-shrink-0 opacity-70" />
       <div className="flex-1 min-w-0">
         <div className="flex items-baseline gap-2 mb-0.5">
           <span className="text-[10.5px] font-bold uppercase tracking-wider">{KIND_LABELS[m.kind]}</span>
           <span className="text-[10.5px] opacity-40">·</span>
-          <span className="text-[12px] text-zinc-100 truncate">{m.title}</span>
+          <span className="text-[12px] text-foreground truncate">{m.title}</span>
         </div>
-        <div className="text-[10.5px] text-zinc-400">
+        <div className="text-[10.5px] text-muted-foreground">
           {formatMeetingTime(m.scheduled_at)} · {m.duration_min}m
         </div>
       </div>
@@ -808,18 +809,18 @@ function RightRail({ candidate: c }: { candidate: OnboardingCandidate }) {
   const events = buildTimeline(c, meetings);
 
   return (
-    <aside className="w-[320px] flex-shrink-0 border-l border-zinc-700/70 bg-zinc-900/40 overflow-y-auto">
+    <aside className="w-[320px] flex-shrink-0 border-l border-border/70 bg-muted/40 overflow-y-auto">
       <div className="px-5 pt-5 pb-3 space-y-2">
         <ActionButtons candidate={c} />
       </div>
 
-      <div className="px-5 py-4 border-t border-zinc-700/70">
-        <div className="text-[10px] tracking-[0.12em] text-zinc-500 uppercase mb-3">
+      <div className="px-5 py-4 border-t border-border/70">
+        <div className="text-[10px] tracking-[0.12em] text-foreground0 uppercase mb-3">
           <span className="inline-block w-1 h-1 rounded-full bg-red-500 mr-1.5 align-middle" />
           AXON&apos;S TIMELINE WITH {c.full_name.split(" ")[0].toUpperCase()}
         </div>
         {events.length === 0 ? (
-          <div className="text-[11.5px] text-zinc-500 italic">No activity yet.</div>
+          <div className="text-[11.5px] text-foreground0 italic">No activity yet.</div>
         ) : (
           <ul className="space-y-3">
             {events.map((ev, i) => (
@@ -829,8 +830,8 @@ function RightRail({ candidate: c }: { candidate: OnboardingCandidate }) {
         )}
       </div>
 
-      <div className="px-5 py-4 border-t border-zinc-700/70">
-        <div className="text-[10px] tracking-[0.12em] text-zinc-500 uppercase mb-3">
+      <div className="px-5 py-4 border-t border-border/70">
+        <div className="text-[10px] tracking-[0.12em] text-foreground0 uppercase mb-3">
           <span className="inline-block w-1 h-1 rounded-full bg-red-500 mr-1.5 align-middle" />
           AXON SUGGESTS
         </div>
@@ -848,11 +849,11 @@ function TimelineRow({ event }: { event: TimelineEvent }) {
       </div>
       <div className="flex-1 min-w-0">
         <div className="text-[11px] font-semibold text-red-400">
-          AXON <span className="text-zinc-500 font-normal">· {timeAgo(event.when)}</span>
+          AXON <span className="text-foreground0 font-normal">· {timeAgo(event.when)}</span>
         </div>
-        <div className="text-[12px] text-zinc-100 leading-snug">{event.title}</div>
+        <div className="text-[12px] text-foreground leading-snug">{event.title}</div>
         {event.subtitle && (
-          <div className="text-[10.5px] text-zinc-500 leading-snug">{event.subtitle}</div>
+          <div className="text-[10.5px] text-foreground0 leading-snug">{event.subtitle}</div>
         )}
       </div>
     </li>
@@ -994,16 +995,16 @@ function Suggestions({
 
   if (items.length === 0) {
     return (
-      <div className="text-[11.5px] text-zinc-500 italic">All caught up — Axon has no pending suggestions.</div>
+      <div className="text-[11.5px] text-foreground0 italic">All caught up — Axon has no pending suggestions.</div>
     );
   }
 
   return (
     <ul className="space-y-2">
       {items.map((it, i) => (
-        <li key={i} className="rounded-md border border-zinc-700/70 bg-zinc-900/60 px-3 py-2.5 flex items-center gap-3">
+        <li key={i} className="rounded-md border border-border/70 bg-muted/60 px-3 py-2.5 flex items-center gap-3">
           <span className="text-red-400">{it.icon}</span>
-          <span className="flex-1 text-[11.5px] text-zinc-300 leading-snug">{it.text}</span>
+          <span className="flex-1 text-[11.5px] text-foreground/80 leading-snug">{it.text}</span>
           <button
             type="button"
             disabled={it.pending}
@@ -1054,7 +1055,7 @@ function ActionButtons({ candidate: c }: { candidate: OnboardingCandidate }) {
           type="button"
           disabled={welcomeM.isPending}
           onClick={() => welcomeM.mutate({ candidateId: c.id })}
-          className="w-full text-[11.5px] font-semibold px-3 py-2 rounded-md bg-zinc-800 border border-zinc-700 text-zinc-100 hover:bg-zinc-700 inline-flex items-center justify-center gap-1.5 disabled:opacity-50"
+          className="w-full text-[11.5px] font-semibold px-3 py-2 rounded-md bg-secondary border border-border text-foreground hover:bg-muted inline-flex items-center justify-center gap-1.5 disabled:opacity-50"
         >
           {welcomeM.isPending ? <Loader2 size={11} className="animate-spin" /> : <Mail size={11} />}
           Send welcome
@@ -1077,7 +1078,7 @@ function StatusBadge({ status }: { status: string }) {
   const cls =
     status === "hired" ? "bg-emerald-500/15 text-emerald-300 border border-emerald-500/30" :
     status === "offer" ? "bg-violet-500/15 text-violet-300 border border-violet-500/30" :
-                         "bg-zinc-800 text-zinc-300 border border-zinc-700";
+                         "bg-secondary text-foreground/80 border border-border";
   return (
     <span className={"text-[10px] font-bold tracking-[0.12em] px-2 py-0.5 rounded uppercase " + cls}>
       <span className="inline-block w-1 h-1 rounded-full bg-current opacity-60 mr-1.5 align-middle" />
@@ -1094,8 +1095,8 @@ function MetaPill({
   mono?: boolean;
 }) {
   return (
-    <span className={"inline-flex items-center gap-1 px-2 py-0.5 rounded border border-zinc-700/70 bg-zinc-900/60 text-zinc-400 " + (mono ? "font-mono" : "")}>
-      <span className="text-zinc-500">{icon}</span>
+    <span className={"inline-flex items-center gap-1 px-2 py-0.5 rounded border border-border/70 bg-muted/60 text-muted-foreground " + (mono ? "font-mono" : "")}>
+      <span className="text-foreground0">{icon}</span>
       {text}
     </span>
   );
@@ -1103,20 +1104,20 @@ function MetaPill({
 
 function FullEmptyState() {
   return (
-    <div className="h-full flex items-center justify-center bg-zinc-900/40">
-      <div className="max-w-md w-full px-8 py-10 text-center rounded-md border border-zinc-700/70 bg-zinc-900">
-        <div className="w-12 h-12 mx-auto rounded-full bg-zinc-800 border border-zinc-700 flex items-center justify-center mb-4">
-          <Inbox size={18} className="text-zinc-500" />
+    <div className="h-full flex items-center justify-center bg-muted/40">
+      <div className="max-w-md w-full px-8 py-10 text-center rounded-md border border-border/70 bg-muted">
+        <div className="w-12 h-12 mx-auto rounded-full bg-secondary border border-border flex items-center justify-center mb-4">
+          <Inbox size={18} className="text-foreground0" />
         </div>
-        <div className="text-[10px] tracking-[0.12em] text-zinc-500 mb-2 uppercase">
+        <div className="text-[10px] tracking-[0.12em] text-foreground0 mb-2 uppercase">
           <span className="inline-block w-1 h-1 rounded-full bg-red-500 mr-1.5 align-middle" />
           ONBOARDING PIPELINE
         </div>
-        <h3 className="text-[15px] font-semibold text-zinc-100 mb-2">
+        <h3 className="text-[15px] font-semibold text-foreground mb-2">
           No one in onboarding yet.
         </h3>
-        <p className="text-[12.5px] text-zinc-400 leading-relaxed">
-          Move a candidate to <span className="text-zinc-200">offer</span> or <span className="text-zinc-200">hired</span> in <a href="/hiring" className="text-red-400 hover:underline">/hiring</a> and they'll show up here.
+        <p className="text-[12.5px] text-muted-foreground leading-relaxed">
+          Move a candidate to <span className="text-foreground/90">offer</span> or <span className="text-foreground/90">hired</span> in <a href="/hiring" className="text-red-400 hover:underline">/hiring</a> and they'll show up here.
         </p>
       </div>
     </div>
@@ -1125,7 +1126,7 @@ function FullEmptyState() {
 
 function PickOneHint() {
   return (
-    <div className="h-full flex items-center justify-center text-[12.5px] text-zinc-500 flex-1">
+    <div className="h-full flex items-center justify-center text-[12.5px] text-foreground0 flex-1">
       <div className="flex items-center gap-2">
         <Target size={14} />
         Pick a candidate on the left to open their workspace.

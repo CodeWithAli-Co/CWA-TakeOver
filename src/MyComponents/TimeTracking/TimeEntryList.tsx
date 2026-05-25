@@ -179,7 +179,7 @@ export const TimeEntryList = ({
               className={cn(
                 "flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm transition-all",
                 showFilterPanel || hasActiveFilters
-                  ? "bg-white/10 text-white"
+                  ? "bg-white/10 text-foreground"
                   : "text-muted-foreground/80 hover:text-foreground hover:bg-white/[0.05]"
               )}
             >
@@ -218,7 +218,7 @@ export const TimeEntryList = ({
 
                 {/* Company — live data, real UUIDs (no more hardcoded constant) */}
                 <select
-                  className={cn(inputStyles, "w-full appearance-none cursor-pointer [&>option]:bg-zinc-900")}
+                  className={cn(inputStyles, "w-full appearance-none cursor-pointer [&>option]:bg-muted")}
                   value={filters.company_id || ""}
                   onChange={(e) => handleFilterChange("company_id", e.target.value)}
                 >
@@ -230,7 +230,7 @@ export const TimeEntryList = ({
 
                 {/* Category */}
                 <select
-                  className={cn(inputStyles, "w-full appearance-none cursor-pointer [&>option]:bg-zinc-900")}
+                  className={cn(inputStyles, "w-full appearance-none cursor-pointer [&>option]:bg-muted")}
                   value={filters.category || ""}
                   onChange={(e) => handleFilterChange("category", e.target.value)}
                 >
@@ -446,7 +446,7 @@ function EntryRow({
         <div className="flex items-center gap-4">
           {/* Duration */}
           <div className="min-w-[70px]">
-            <p className="text-[15px] font-semibold text-white tabular-nums">
+            <p className="text-[15px] font-semibold text-foreground tabular-nums">
               {formatDuration(entry.duration_minutes)}
             </p>
             <p className="text-[10px] text-muted-foreground uppercase tracking-wider tabular-nums">
@@ -455,7 +455,7 @@ function EntryRow({
           </div>
 
           {/* Divider */}
-          <div className="h-8 w-px bg-white/[0.06]" />
+          <div className="h-8 w-px bg-muted/60" />
 
           {/* Content */}
           <div className="flex-1 min-w-0">
@@ -509,7 +509,7 @@ function EntryRow({
                   <MoreHorizontal className="h-4 w-4" />
                 </button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent className="bg-zinc-900/95 backdrop-blur-xl border-white/10">
+              <DropdownMenuContent className="bg-muted/95 backdrop-blur-xl border-white/10">
                 {onEdit && (
                   <DropdownMenuItem
                     onClick={(e) => {

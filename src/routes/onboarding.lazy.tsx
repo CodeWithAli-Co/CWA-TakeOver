@@ -17,7 +17,7 @@ import { OnboardingPipelinePanel } from "@/MyComponents/Hiring/OnboardingPipelin
 
 function OnboardingRoute() {
   return (
-    <div className="h-full bg-zinc-950">
+    <div className="h-full bg-card">
       <OnboardingPipelinePanel />
     </div>
   );

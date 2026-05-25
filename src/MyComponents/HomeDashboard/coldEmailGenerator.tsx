@@ -35,7 +35,7 @@ const Button: React.FC<ButtonProps> = ({
   const baseClasses = "inline-flex items-center justify-center rounded-sm text-[12px] font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-red-500/30 disabled:opacity-30 disabled:pointer-events-none";
 
   const variants = {
-    default: "bg-primary text-foreground hover:bg-red-500",
+    default: "bg-primary text-primary-foreground hover:bg-red-500",
     outline: "bg-muted/30 border border-border hover:bg-muted/50 hover:border-border text-foreground/60 hover:text-foreground/85",
     ghost: "hover:bg-muted/50 text-foreground/60 hover:text-foreground/85",
   };

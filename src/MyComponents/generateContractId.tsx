@@ -1059,7 +1059,7 @@ export default function NexusContractGenerator(): JSX.Element {
         <div className="flex justify-end pt-2">
           <button
             type="submit"
-            className="flex items-center gap-2 px-5 py-2.5 bg-primary hover:bg-primary/80 text-foreground text-[13px] font-medium rounded-sm transition-colors"
+            className="flex items-center gap-2 px-5 py-2.5 bg-primary hover:bg-primary/80 text-primary-foreground text-[13px] font-medium rounded-sm transition-colors"
           >
             <FileText className="h-4 w-4" />
             Generate Contract Preview

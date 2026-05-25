@@ -154,7 +154,7 @@ export function ProvisionOnboarding({ onClose }: { onClose: () => void }) {
 
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
-      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} />
+      <div className="absolute inset-0 bg-background/60 backdrop-blur-sm" onClick={onClose} />
       <div className="relative w-full max-w-[560px] rounded-lg border border-border bg-card shadow-2xl">
         <button
           type="button"
@@ -242,7 +242,7 @@ export function ProvisionOnboarding({ onClose }: { onClose: () => void }) {
             </div>
           )}
           {success && (
-            <div className="rounded-sm border border-primary/30 bg-primary/10 px-3 py-2 text-[12px] text-foreground">
+            <div className="rounded-sm border border-primary/30 bg-primary/10 px-3 py-2 text-[12px] text-primary-foreground">
               {success}
             </div>
           )}

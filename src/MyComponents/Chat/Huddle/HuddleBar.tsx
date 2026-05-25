@@ -375,7 +375,7 @@ export function HuddleBar({
                     className="fixed inset-0 z-40"
                     onClick={() => setQualityMenuOpen(false)}
                   />
-                  <div className="absolute right-0 top-full z-50 mt-1 w-52 overflow-hidden rounded-lg border border-white/10 bg-zinc-950/95 shadow-2xl backdrop-blur-xl">
+                  <div className="absolute right-0 top-full z-50 mt-1 w-52 overflow-hidden rounded-lg border border-white/10 bg-card/95 shadow-2xl backdrop-blur-xl">
                     <div className="border-b border-white/5 px-3 py-1.5 text-[9.5px] font-semibold uppercase tracking-wider text-white/40">
                       Share Quality
                     </div>

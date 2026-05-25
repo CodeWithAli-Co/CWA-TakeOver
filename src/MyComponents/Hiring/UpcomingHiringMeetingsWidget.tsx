@@ -25,17 +25,17 @@ export function UpcomingHiringMeetingsWidget({ days = 14 }: { days?: number } = 
   const meetings = data ?? [];
 
   return (
-    <div className="rounded-sm border border-white/[0.04] bg-[#0a0a0a] overflow-hidden">
-      <header className="px-5 py-3 border-b border-white/[0.04] flex items-center justify-between">
+    <div className="rounded-sm border border-border bg-[#0a0a0a] overflow-hidden">
+      <header className="px-5 py-3 border-b border-border flex items-center justify-between">
         <div>
-          <div className="text-[10px] tracking-[0.12em] text-white/30 uppercase">
+          <div className="text-[10px] tracking-[0.12em] text-foreground/30 uppercase">
             <span className="inline-block w-1 h-1 rounded-full bg-red-500 mr-1.5 align-middle" />
             HIRING · UPCOMING MEETINGS
           </div>
-          <h3 className="text-[13px] font-bold text-white mt-0.5">
+          <h3 className="text-[13px] font-bold text-foreground mt-0.5">
             Next {days} days
             {!isLoading && (
-              <span className="text-white/40 font-normal ml-2">
+              <span className="text-foreground/40 font-normal ml-2">
                 · {meetings.length} {meetings.length === 1 ? "meeting" : "meetings"}
               </span>
             )}
@@ -50,11 +50,11 @@ export function UpcomingHiringMeetingsWidget({ days = 14 }: { days?: number } = 
       </header>
 
       {isLoading ? (
-        <div className="p-6 flex items-center justify-center text-white/40 text-sm">
+        <div className="p-6 flex items-center justify-center text-foreground/40 text-sm">
           <Loader2 size={14} className="animate-spin mr-2" /> Loading…
         </div>
       ) : meetings.length === 0 ? (
-        <div className="p-6 text-center text-[12px] text-white/40 leading-relaxed">
+        <div className="p-6 text-center text-[12px] text-foreground/40 leading-relaxed">
           <Calendar size={18} className="mx-auto mb-2 opacity-50" />
           No hiring meetings scheduled in the next {days} days.
           <br />
@@ -66,7 +66,7 @@ export function UpcomingHiringMeetingsWidget({ days = 14 }: { days?: number } = 
             <MeetingRow key={m.id} m={m} />
           ))}
           {meetings.length > 8 && (
-            <li className="px-5 py-2 text-[11px] text-white/40 text-center">
+            <li className="px-5 py-2 text-[11px] text-foreground/40 text-center">
               + {meetings.length - 8} more
             </li>
           )}
@@ -85,15 +85,15 @@ function MeetingRow({ m }: { m: CandidateMeeting }) {
         {KIND_LABELS[m.kind]}
       </div>
       <div className="flex-1 min-w-0">
-        <div className="text-[13px] font-semibold text-white truncate">
+        <div className="text-[13px] font-semibold text-foreground truncate">
           {name}
-          {role && <span className="text-white/40 font-normal ml-1.5">· {role.replace(/-/g, " ")}</span>}
+          {role && <span className="text-foreground/40 font-normal ml-1.5">· {role.replace(/-/g, " ")}</span>}
         </div>
-        <div className="text-[11px] text-white/50 flex items-center gap-1.5 mt-0.5">
+        <div className="text-[11px] text-foreground/50 flex items-center gap-1.5 mt-0.5">
           <Clock size={10} />
           {formatMeetingTime(m.scheduled_at)} · {m.duration_min}m
           {m.attendees?.length > 0 && (
-            <span className="text-white/35"> · {m.attendees.length} attendee{m.attendees.length === 1 ? "" : "s"}</span>
+            <span className="text-foreground/35"> · {m.attendees.length} attendee{m.attendees.length === 1 ? "" : "s"}</span>
           )}
         </div>
       </div>
@@ -102,7 +102,7 @@ function MeetingRow({ m }: { m: CandidateMeeting }) {
           href={m.calendly_event_url}
           target="_blank"
           rel="noreferrer"
-          className="text-[10.5px] font-semibold text-white/60 hover:text-red-400 inline-flex items-center gap-1 flex-shrink-0"
+          className="text-[10.5px] font-semibold text-foreground/60 hover:text-red-400 inline-flex items-center gap-1 flex-shrink-0"
         >
           Calendly <ExternalLink size={10} />
         </a>

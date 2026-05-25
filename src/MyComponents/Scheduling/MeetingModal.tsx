@@ -228,7 +228,7 @@ export const MeetingModal: React.FC<MeetingModalProps> = ({
                   <Button
                     id="start-time"
                     variant="outline"
-                    className="w-full justify-between mt-1 bg-background border border-border text-foreground hover:bg-primary/10"
+                    className="w-full justify-between mt-1 bg-background border border-border text-primary-foreground hover:bg-primary/10"
                   >
                     <div className="flex items-center gap-2">
                       <Clock size={16} className="text-primary" />
@@ -273,7 +273,7 @@ export const MeetingModal: React.FC<MeetingModalProps> = ({
                   <Button
                     id="end-time"
                     variant="outline"
-                    className="w-full justify-between mt-1 bg-background border border-border text-foreground hover:bg-primary/10"
+                    className="w-full justify-between mt-1 bg-background border border-border text-primary-foreground hover:bg-primary/10"
                   >
                     <div className="flex items-center gap-2">
                       <Clock size={16} className="text-primary" />
@@ -393,7 +393,7 @@ export const MeetingModal: React.FC<MeetingModalProps> = ({
           </Button>
           <Button 
             onClick={handleCreateMeeting}
-            className="bg-primary hover:bg-primary/80 text-foreground flex items-center gap-1"
+            className="bg-primary hover:bg-primary/80 text-primary-foreground flex items-center gap-1"
             disabled={!isFormValid}
           >
             <Clock size={14} />

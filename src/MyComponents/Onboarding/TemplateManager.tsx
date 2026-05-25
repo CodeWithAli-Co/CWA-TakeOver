@@ -788,7 +788,7 @@ function OwnerToggle({
           type="button"
           onClick={() => onChange(opt)}
           data-active={value === opt}
-          className="rounded-sm px-2.5 py-0.5 text-[10.5px] font-semibold capitalize text-muted-foreground hover:text-foreground data-[active=true]:bg-primary/15 data-[active=true]:text-primary transition-colors"
+          className="rounded-sm px-2.5 py-0.5 text-[10.5px] font-semibold capitalize text-muted-foreground hover:text-primary-foreground data-[active=true]:bg-primary/15 data-[active=true]:text-primary transition-colors"
         >
           {opt}
         </button>

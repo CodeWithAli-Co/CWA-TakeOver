@@ -305,7 +305,7 @@ if (!scheduleData || selectedDay === null) return <LoadingState />;
 
       {/* "Today" quick-jump button */}
       <button
-        className="fixed top-2 right-40 bg-red-700 text-foreground rounded-full p-2 shadow-lg"
+        className="fixed top-2 right-40 bg-red-700 text-primary-foreground rounded-full p-2 shadow-lg"
         onClick={goToToday}
         aria-label="Jump to today"
       >

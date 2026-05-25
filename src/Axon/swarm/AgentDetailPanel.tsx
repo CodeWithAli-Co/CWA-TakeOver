@@ -40,13 +40,13 @@ function timeAgo(ms: number | null): string {
 }
 
 const STATUS_BADGE: Record<string, string> = {
-  dormant:   "bg-zinc-500/15 text-zinc-400 border-zinc-500/30",
+  dormant:   "bg-zinc-500/15 text-muted-foreground border-zinc-500/30",
   watching:  "bg-emerald-500/15 text-emerald-400 border-emerald-500/30",
   thinking:  "bg-amber-500/15 text-amber-400 border-amber-500/30",
   acting:    "bg-sky-500/15 text-sky-400 border-sky-500/30",
   alerting:  "bg-red-500/15 text-red-400 border-red-500/30",
   error:     "bg-red-500/15 text-red-400 border-red-500/30",
-  muted:     "bg-zinc-500/10 text-zinc-500 border-zinc-500/20",
+  muted:     "bg-zinc-500/10 text-muted-foreground border-zinc-500/20",
 };
 
 const SOURCE_STATUS_DOT: Record<string, string> = {

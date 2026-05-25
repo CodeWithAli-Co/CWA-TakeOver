@@ -218,7 +218,7 @@ export const ChatSidebar: React.FC<Props> = ({ groups, employees, onCreateChanne
               onClick={() => handleSelect("__threads__")}
               className={`flex w-full items-center gap-2 rounded-sm px-3 py-1.5 mb-0.5 text-[12px] transition-all ${
                 GroupName === "__threads__"
-                  ? "bg-primary/[0.08] border border-primary/15 text-foreground"
+                  ? "bg-primary/[0.08] border border-primary/15 text-primary-foreground"
                   : "border border-transparent text-foreground/75 hover:bg-muted/30 hover:text-foreground"
               }`}
             >
@@ -233,7 +233,7 @@ export const ChatSidebar: React.FC<Props> = ({ groups, employees, onCreateChanne
                 onClick={() => handleSelect("__starred__")}
                 className={`flex w-full items-center gap-2 rounded-sm px-3 py-1.5 mb-0.5 text-[12px] transition-all ${
                   GroupName === "__starred__"
-                    ? "bg-primary/[0.08] border border-primary/15 text-foreground"
+                    ? "bg-primary/[0.08] border border-primary/15 text-primary-foreground"
                     : "border border-transparent text-foreground/75 hover:bg-muted/30 hover:text-foreground"
                 }`}
               >

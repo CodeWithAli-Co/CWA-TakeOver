@@ -358,7 +358,7 @@ export const EditMeeting = ({ meetingID, open, setOpen, onComplete }: EditMeetin
                           <SelectItem
                             key={attendees}
                             value={attendees}
-                            className="text-foreground/70 
+                            className="text-primary-foreground/70 
                             hover:bg-primary/[0.12] focus:bg-primary/[0.15]"
                           >
                             {attendees.charAt(0).toUpperCase() +
@@ -399,7 +399,7 @@ export const EditMeeting = ({ meetingID, open, setOpen, onComplete }: EditMeetin
                           <SelectItem
                             key={type}
                             value={type}
-                            className="text-foreground/70 
+                            className="text-primary-foreground/70 
                             hover:bg-primary/[0.12] focus:bg-primary/[0.15]"
                           >
                             {type.charAt(0).toUpperCase() + type.slice(1)}
@@ -494,7 +494,7 @@ export const EditMeeting = ({ meetingID, open, setOpen, onComplete }: EditMeetin
               onClick={() => {
                 setOpen(false);
               }}
-              className="border-primary/15 text-foreground/70 
+              className="border-primary/15 text-primary-foreground/70 
               hover:bg-primary/10 hover:text-foreground/80 
               transition-all duration-300"
             >
@@ -508,7 +508,7 @@ export const EditMeeting = ({ meetingID, open, setOpen, onComplete }: EditMeetin
                   disabled={!canSubmit}
                   className="bg-primary 
                   hover:bg-primary/80 
-                  text-foreground border border-primary/15 
+                  text-primary-foreground border border-primary/15 
                   disabled:opacity-50 disabled:cursor-not-allowed
                   transition-all duration-300 
                   hover:scale-[1.02] active:scale-[0.98]"

@@ -30,7 +30,7 @@ const KIND_STYLES: Record<string, { Icon: typeof Package; label: string; chipCla
 const COMPANY_STYLES: Record<string, { label: string; className: string; Icon: typeof Building2 }> = {
   cwa:        { label: "CWA",        className: "bg-red-500/10 text-red-300 border-red-400/30",         Icon: Building2 },
   simplicity: { label: "Simplicity", className: "bg-emerald-500/10 text-emerald-300 border-emerald-400/30", Icon: Building2 },
-  shared:     { label: "Shared",     className: "bg-zinc-500/10 text-zinc-300 border-zinc-400/20",      Icon: Globe2 },
+  shared:     { label: "Shared",     className: "bg-zinc-500/10 text-foreground/80 border-zinc-400/20",      Icon: Globe2 },
 };
 
 export function RegistryItemCard({ item, onClick }: Props) {
@@ -67,7 +67,7 @@ export function RegistryItemCard({ item, onClick }: Props) {
         </span>
         {/* Version badge */}
         {item.latestVersionStr && (
-          <span className="absolute right-2 top-2 rounded-full border border-white/15 bg-black/40 px-1.5 py-0.5 text-[9.5px] font-semibold text-white/90 backdrop-blur-sm">
+          <span className="absolute right-2 top-2 rounded-full border border-white/15 bg-background/40 px-1.5 py-0.5 text-[9.5px] font-semibold text-foreground/90 backdrop-blur-sm">
             v{item.latestVersionStr}
           </span>
         )}

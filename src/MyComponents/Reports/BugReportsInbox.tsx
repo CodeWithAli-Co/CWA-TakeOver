@@ -83,7 +83,7 @@ const SEVERITY_META: Record<
   Severity,
   { label: string; rail: string; dot: string; eyebrow: string }
 > = {
-  low:      { label: "Low",      rail: "#71717a", dot: "bg-zinc-400",  eyebrow: "text-zinc-400" },
+  low:      { label: "Low",      rail: "#71717a", dot: "bg-zinc-400",  eyebrow: "text-muted-foreground" },
   medium:   { label: "Medium",   rail: "#60a5fa", dot: "bg-blue-400",  eyebrow: "text-blue-400" },
   high:     { label: "High",     rail: "#f59e0b", dot: "bg-amber-400", eyebrow: "text-amber-400" },
   critical: { label: "Critical", rail: "#ef4444", dot: "bg-red-500",   eyebrow: "text-red-400" },
@@ -102,7 +102,7 @@ const STATUS_COLOR: Record<Status, string> = {
   open: "text-primary",
   in_progress: "text-amber-400",
   resolved: "text-emerald-400",
-  wontfix: "text-zinc-500",
+  wontfix: "text-muted-foreground",
 };
 
 const AREA_LABEL: Record<Area, string> = {
@@ -630,7 +630,7 @@ function EmptyState({
   return (
     <div className="flex h-full items-center justify-center p-12 text-center">
       <div>
-        <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-md border border-border bg-zinc-950">
+        <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-md border border-border bg-muted/40">
           <Bug className="h-6 w-6 text-muted-foreground/60" />
         </div>
         <p className="mt-4 text-[13px] font-semibold text-foreground">No matches</p>
@@ -641,7 +641,7 @@ function EmptyState({
           <button
             type="button"
             onClick={onClear}
-            className="mt-4 inline-flex items-center gap-1 rounded-md border border-border bg-zinc-950 px-3 py-1.5 text-[11px] font-semibold text-foreground hover:bg-muted/60 transition-colors"
+            className="mt-4 inline-flex items-center gap-1 rounded-md border border-border bg-muted/40 px-3 py-1.5 text-[11px] font-semibold text-foreground hover:bg-muted/60 transition-colors"
           >
             Clear filters
           </button>
@@ -773,7 +773,7 @@ function BugDetailBody({
             href={report.screenshot_url}
             target="_blank"
             rel="noopener noreferrer"
-            className="block rounded-md border border-border overflow-hidden bg-black/30 hover:border-foreground/30 transition-colors"
+            className="block rounded-md border border-border overflow-hidden bg-background/30 hover:border-foreground/30 transition-colors"
           >
             <img
               src={report.screenshot_url}
@@ -786,14 +786,14 @@ function BugDetailBody({
 
       {report.page_url && (
         <Section title="Page" icon={Globe}>
-          <code className="block rounded-md border border-border bg-zinc-950 px-3 py-2 text-[11.5px] text-foreground/85 break-all">
+          <code className="block rounded-md border border-border bg-muted/40 px-3 py-2 text-[11.5px] text-foreground/85 break-all">
             {report.page_url}
           </code>
         </Section>
       )}
 
       <Section title="Diagnostics" icon={Terminal}>
-        <div className="rounded-md border border-border bg-zinc-950 overflow-hidden">
+        <div className="rounded-md border border-border bg-muted/40 overflow-hidden">
           <div className="flex border-b border-border">
             <DiagTab active={logsTab === "console"} onClick={() => setLogsTab("console")} icon={Terminal}>
               Console ({report.console_logs?.length ?? 0})
@@ -830,7 +830,7 @@ function BugDetailBody({
               onChange={(e) => setResolutionNotes(e.target.value)}
               rows={4}
               placeholder="What was the fix, what was the workaround…"
-              className="w-full resize-y rounded-md border border-border bg-zinc-950 px-3 py-2.5 text-[12.5px] text-foreground placeholder:text-muted-foreground/60 outline-none focus:border-foreground/30 transition-colors leading-relaxed"
+              className="w-full resize-y rounded-md border border-border bg-muted/40 px-3 py-2.5 text-[12.5px] text-foreground placeholder:text-muted-foreground/60 outline-none focus:border-foreground/30 transition-colors leading-relaxed"
             />
             {err && (
               <p className="mt-2 rounded-md border border-red-500/30 bg-red-500/10 px-3 py-1.5 text-[11.5px] text-red-300">

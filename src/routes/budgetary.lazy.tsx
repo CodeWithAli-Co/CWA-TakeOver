@@ -629,29 +629,29 @@ YC W26 Application Checklist
       case 'personal': return 'bg-blue-500/20 text-blue-400 border-blue-500/50'
       case 'meeting': return 'bg-purple-500/20 text-purple-400 border-purple-500/50'
       case 'gym': return 'bg-orange-500/20 text-orange-400 border-orange-500/50'
-      case 'other': return 'bg-zinc-500/20 text-zinc-400 border-zinc-500/50'
+      case 'other': return 'bg-zinc-500/20 text-muted-foreground border-zinc-500/50'
     }
   }
 
   // ===== RENDER =====
 
   return (
-    <div className="h-screen bg-zinc-950 text-zinc-100 flex flex-col overflow-hidden font-mono">
+    <div className="h-screen bg-card text-foreground flex flex-col overflow-hidden font-mono">
       {/* ===== TOP BAR ===== */}
-      <header className="h-12 border-b border-zinc-800 flex items-center justify-between px-4 bg-zinc-900/50 backdrop-blur-sm">
+      <header className="h-12 border-b border-border flex items-center justify-between px-4 bg-muted/50 backdrop-blur-sm">
         <div className="flex items-center gap-4">
           <div className="flex items-center gap-2">
             <Rocket className="text-teal-500" size={20} />
             <span className="font-bold tracking-tight">SIMPLICITY</span>
-            <span className="text-zinc-500 text-sm">MISSION CONTROL</span>
+            <span className="text-muted-foreground text-sm">MISSION CONTROL</span>
           </div>
 
           {/* System Status Indicators */}
-          <div className="flex items-center gap-3 ml-6 pl-6 border-l border-zinc-800">
+          <div className="flex items-center gap-3 ml-6 pl-6 border-l border-border">
             {systemStatus.map(s => (
               <div key={s.name} className="flex items-center gap-1.5" title={`${s.name}: ${s.status}`}>
                 {getStatusIndicator(s.status)}
-                <span className="text-xs text-zinc-500">{s.name}</span>
+                <span className="text-xs text-muted-foreground">{s.name}</span>
               </div>
             ))}
           </div>
@@ -661,17 +661,17 @@ YC W26 Application Checklist
           {/* Quick Capture Button */}
           <button
             onClick={() => setShowCapture(true)}
-            className="flex items-center gap-2 px-3 py-1.5 bg-zinc-800 hover:bg-zinc-700 rounded text-sm transition-colors"
+            className="flex items-center gap-2 px-3 py-1.5 bg-secondary hover:bg-muted rounded text-sm transition-colors"
           >
             <Zap size={14} className="text-yellow-400" />
             <span>Capture</span>
-            <kbd className="text-xs text-zinc-500 bg-zinc-900 px-1.5 py-0.5 rounded">⌘.</kbd>
+            <kbd className="text-xs text-muted-foreground bg-muted px-1.5 py-0.5 rounded">⌘.</kbd>
           </button>
 
           {/* Clock */}
           <div className="text-right">
             <div className="text-sm font-bold">{currentTime.toLocaleTimeString()}</div>
-            <div className="text-xs text-zinc-500">{currentTime.toLocaleDateString()}</div>
+            <div className="text-xs text-muted-foreground">{currentTime.toLocaleDateString()}</div>
           </div>
         </div>
       </header>
@@ -679,7 +679,7 @@ YC W26 Application Checklist
       {/* ===== MAIN CONTENT ===== */}
       <div className="flex-1 flex overflow-hidden">
         {/* ===== SIDEBAR ===== */}
-        <nav className="w-16 border-r border-zinc-800 flex flex-col items-center py-4 gap-2 bg-zinc-900/30">
+        <nav className="w-16 border-r border-border flex flex-col items-center py-4 gap-2 bg-muted/30">
           {[
             { id: 'command', icon: Terminal, label: 'Command' },
 { id: 'schedule', icon: Calendar, label: 'Schedule' },
@@ -696,7 +696,7 @@ YC W26 Application Checklist
               className={`w-12 h-12 rounded-lg flex items-center justify-center transition-all group relative ${
                 activeStation === id
                   ? 'bg-teal-500/20 text-teal-400'
-                  : 'text-zinc-500 hover:text-zinc-300 hover:bg-zinc-800'
+                  : 'text-muted-foreground hover:text-foreground/80 hover:bg-secondary'
               }`}
               title={label}
             >
@@ -723,7 +723,7 @@ YC W26 Application Checklist
               >
                 {/* Welcome Message */}
                 {commandHistory.length === 0 && (
-                  <div className="text-zinc-500">
+                  <div className="text-muted-foreground">
                     <pre className="text-teal-500 text-xs mb-4">{`
   ███████╗██╗███╗   ███╗██████╗ ██╗     ██╗ ██████╗██╗████████╗██╗   ██╗
   ██╔════╝██║████╗ ████║██╔══██╗██║     ██║██╔════╝██║╚══██╔══╝╚██╗ ██╔╝
@@ -742,10 +742,10 @@ YC W26 Application Checklist
                   <div key={entry.id} className="space-y-1">
                     <div className="flex items-center gap-2 text-sm">
                       <span className="text-teal-500">→</span>
-                      <span className="text-zinc-300">{entry.command}</span>
+                      <span className="text-foreground/80">{entry.command}</span>
                     </div>
                     <pre className={`text-sm pl-4 whitespace-pre-wrap ${
-                      entry.status === 'error' ? 'text-primary' : 'text-zinc-400'
+                      entry.status === 'error' ? 'text-primary' : 'text-muted-foreground'
                     }`}>
                       {entry.output}
                     </pre>
@@ -754,7 +754,7 @@ YC W26 Application Checklist
               </div>
 
               {/* Command Input */}
-              <div className="border-t border-zinc-800 p-4 bg-zinc-900/50">
+              <div className="border-t border-border p-4 bg-muted/50">
                 <div className="flex items-center gap-3">
                   <span className="text-teal-500 font-bold">→</span>
                   <input
@@ -768,10 +768,10 @@ YC W26 Application Checklist
                       }
                     }}
                     placeholder="Enter command... (try 'help' or 'schedule')"
-                    className="flex-1 bg-transparent outline-none text-zinc-100 placeholder:text-zinc-600"
+                    className="flex-1 bg-transparent outline-none text-foreground placeholder:text-muted-foreground/70"
                     autoFocus
                   />
-                  <kbd className="text-xs text-zinc-600 bg-zinc-800 px-2 py-1 rounded">⌘K to focus</kbd>
+                  <kbd className="text-xs text-muted-foreground/70 bg-secondary px-2 py-1 rounded">⌘K to focus</kbd>
                 </div>
               </div>
             </div>
@@ -784,7 +784,7 @@ YC W26 Application Checklist
               <div className="flex items-center justify-between">
                 <div>
                   <h2 className="text-xl font-bold">Weekly Schedule</h2>
-                  <p className="text-sm text-zinc-500">Plan your days, avoid conflicts</p>
+                  <p className="text-sm text-muted-foreground">Plan your days, avoid conflicts</p>
                 </div>
                 <div className="flex items-center gap-4">
                   <button
@@ -793,7 +793,7 @@ YC W26 Application Checklist
                       newStart.setDate(newStart.getDate() - 7)
                       setCurrentWeekStart(newStart)
                     }}
-                    className="p-2 hover:bg-zinc-800 rounded-lg transition-colors"
+                    className="p-2 hover:bg-secondary rounded-lg transition-colors"
                   >
                     <ChevronLeft size={20} />
                   </button>
@@ -806,13 +806,13 @@ YC W26 Application Checklist
                       newStart.setDate(newStart.getDate() + 7)
                       setCurrentWeekStart(newStart)
                     }}
-                    className="p-2 hover:bg-zinc-800 rounded-lg transition-colors"
+                    className="p-2 hover:bg-secondary rounded-lg transition-colors"
                   >
                     <ChevronRight size={20} />
                   </button>
                   <button
                     onClick={() => setCurrentWeekStart(getStartOfWeek(new Date()))}
-                    className="px-3 py-1.5 bg-zinc-800 hover:bg-zinc-700 rounded-lg text-sm transition-colors"
+                    className="px-3 py-1.5 bg-secondary hover:bg-muted rounded-lg text-sm transition-colors"
                   >
                     Today
                   </button>
@@ -831,14 +831,14 @@ YC W26 Application Checklist
                   return (
                     <div
                       key={dateStr}
-                      className={`bg-zinc-900 border rounded-lg overflow-hidden ${
-                        isToday ? 'border-teal-500' : 'border-zinc-800'
+                      className={`bg-muted border rounded-lg overflow-hidden ${
+                        isToday ? 'border-teal-500' : 'border-border'
                       }`}
                     >
                       {/* Day Header */}
-                      <div className={`p-3 border-b ${isToday ? 'bg-teal-500/10 border-teal-500/30' : 'border-zinc-800'}`}>
-                        <p className="text-xs text-zinc-500 uppercase">{getDayName(day).slice(0, 3)}</p>
-                        <p className={`text-lg font-bold ${isToday ? 'text-teal-400' : 'text-zinc-100'}`}>
+                      <div className={`p-3 border-b ${isToday ? 'bg-teal-500/10 border-teal-500/30' : 'border-border'}`}>
+                        <p className="text-xs text-muted-foreground uppercase">{getDayName(day).slice(0, 3)}</p>
+                        <p className={`text-lg font-bold ${isToday ? 'text-teal-400' : 'text-foreground'}`}>
                           {day.getDate()}
                         </p>
                       </div>
@@ -859,7 +859,7 @@ YC W26 Application Checklist
                               </div>
                               <button
                                 onClick={() => toggleEventComplete(event.id)}
-                                className="text-zinc-400 hover:text-zinc-100"
+                                className="text-muted-foreground hover:text-foreground"
                               >
                                 {event.completed ? <Check size={12} /> : <span className="w-3 h-3 border border-current rounded" />}
                               </button>
@@ -883,7 +883,7 @@ YC W26 Application Checklist
                             setSelectedDate(dateStr)
                             setShowNewEvent(true)
                           }}
-                          className="w-full p-2 border border-dashed border-zinc-700 hover:border-teal-500 hover:bg-teal-500/5 rounded flex items-center justify-center gap-1 text-xs text-zinc-500 hover:text-teal-400 transition-colors"
+                          className="w-full p-2 border border-dashed border-border hover:border-teal-500 hover:bg-teal-500/5 rounded flex items-center justify-center gap-1 text-xs text-muted-foreground hover:text-teal-400 transition-colors"
                         >
                           <Plus size={12} />
                           <span>Add</span>
@@ -895,7 +895,7 @@ YC W26 Application Checklist
               </div>
 
               {/* Today's Summary */}
-              <div className="bg-zinc-900 border border-zinc-800 rounded-lg p-5">
+              <div className="bg-muted border border-border rounded-lg p-5">
                 <h3 className="font-bold mb-4 flex items-center gap-2">
                   <Clock size={18} className="text-teal-500" />
                   Today's Summary
@@ -907,7 +907,7 @@ YC W26 Application Checklist
                     .sort((a, b) => timeToMinutes(a.startTime) - timeToMinutes(b.startTime))
                   
                   if (todayEvents.length === 0) {
-                    return <p className="text-zinc-500 text-sm">No events scheduled for today</p>
+                    return <p className="text-muted-foreground text-sm">No events scheduled for today</p>
                   }
 
                   return (
@@ -946,7 +946,7 @@ YC W26 Application Checklist
                             </div>
                             <button
                               onClick={() => deleteEvent(event.id)}
-                              className="text-zinc-500 hover:text-primary transition-colors"
+                              className="text-muted-foreground hover:text-primary transition-colors"
                             >
                               <X size={16} />
                             </button>
@@ -972,7 +972,7 @@ YC W26 Application Checklist
                   <div className="text-center">
                     <Target size={48} className="text-teal-500 mx-auto mb-4" />
                     <h2 className="text-2xl font-bold mb-2">Start Focus Session</h2>
-                    <p className="text-zinc-500">25 minutes of deep work. No distractions.</p>
+                    <p className="text-muted-foreground">25 minutes of deep work. No distractions.</p>
                   </div>
 
                   <div className="space-y-4">
@@ -981,13 +981,13 @@ YC W26 Application Checklist
                       value={focusInput.task}
                       onChange={(e) => setFocusInput(prev => ({ ...prev, task: e.target.value }))}
                       placeholder="What are you working on?"
-                      className="w-full px-4 py-3 bg-zinc-900 border border-zinc-800 rounded-lg outline-none focus:border-teal-500 transition-colors"
+                      className="w-full px-4 py-3 bg-muted border border-border rounded-lg outline-none focus:border-teal-500 transition-colors"
                     />
 
                     <select
                       value={focusInput.project}
                       onChange={(e) => setFocusInput(prev => ({ ...prev, project: e.target.value }))}
-                      className="w-full px-4 py-3 bg-zinc-900 border border-zinc-800 rounded-lg outline-none focus:border-teal-500"
+                      className="w-full px-4 py-3 bg-muted border border-border rounded-lg outline-none focus:border-teal-500"
                     >
                       <option value="simplicity-web">Simplicity Web</option>
                       <option value="simplicity-desktop">Simplicity Desktop</option>
@@ -1026,7 +1026,7 @@ YC W26 Application Checklist
                   {/* Timer */}
                   <div className="relative">
                     <div className={`text-[120px] font-bold tabular-nums ${
-                      focusSession.status === 'active' ? 'text-teal-400' : 'text-zinc-500'
+                      focusSession.status === 'active' ? 'text-teal-400' : 'text-muted-foreground'
                     }`}>
                       {formatTime(focusTimeLeft)}
                     </div>
@@ -1039,8 +1039,8 @@ YC W26 Application Checklist
 
                   {/* Task Info */}
                   <div>
-                    <p className="text-xl text-zinc-300 mb-2">{focusSession.task}</p>
-                    <p className="text-sm text-zinc-500">{focusSession.project}</p>
+                    <p className="text-xl text-foreground/80 mb-2">{focusSession.task}</p>
+                    <p className="text-sm text-muted-foreground">{focusSession.project}</p>
                   </div>
 
                   {/* Controls */}
@@ -1052,7 +1052,7 @@ YC W26 Application Checklist
                           status: prev.status === 'active' ? 'paused' : 'active'
                         } : null)
                       }}
-                      className="w-16 h-16 rounded-full bg-zinc-800 hover:bg-zinc-700 flex items-center justify-center transition-colors"
+                      className="w-16 h-16 rounded-full bg-secondary hover:bg-muted flex items-center justify-center transition-colors"
                     >
                       {focusSession.status === 'active' ? <Pause size={28} /> : <Play size={28} />}
                     </button>
@@ -1061,26 +1061,26 @@ YC W26 Application Checklist
                         setFocusSession(null)
                         setFocusTimeLeft(25 * 60)
                       }}
-                      className="w-12 h-12 rounded-full bg-zinc-800 hover:bg-zinc-700 flex items-center justify-center transition-colors"
+                      className="w-12 h-12 rounded-full bg-secondary hover:bg-muted flex items-center justify-center transition-colors"
                     >
                       <X size={20} />
                     </button>
                     <button
                       onClick={() => setFocusTimeLeft(25 * 60)}
-                      className="w-12 h-12 rounded-full bg-zinc-800 hover:bg-zinc-700 flex items-center justify-center transition-colors"
+                      className="w-12 h-12 rounded-full bg-secondary hover:bg-muted flex items-center justify-center transition-colors"
                     >
                       <RotateCcw size={20} />
                     </button>
                   </div>
 
                   {/* Session Stats */}
-                  <div className="flex items-center justify-center gap-8 text-sm text-zinc-500">
+                  <div className="flex items-center justify-center gap-8 text-sm text-muted-foreground">
                     <div>
-                      <span className="text-zinc-400">Started: </span>
+                      <span className="text-muted-foreground">Started: </span>
                       {new Date(focusSession.startedAt).toLocaleTimeString()}
                     </div>
                     <div>
-                      <span className="text-zinc-400">Pomodoros: </span>
+                      <span className="text-muted-foreground">Pomodoros: </span>
                       {focusSession.completedPomodoros}
                     </div>
                   </div>
@@ -1095,7 +1095,7 @@ YC W26 Application Checklist
               <div className="flex items-center justify-between">
                 <div>
                   <h2 className="text-xl font-bold">Decision Journal</h2>
-                  <p className="text-sm text-zinc-500">Architecture decisions and their reasoning</p>
+                  <p className="text-sm text-muted-foreground">Architecture decisions and their reasoning</p>
                 </div>
                 <button
                   onClick={() => setShowNewDecision(true)}
@@ -1113,18 +1113,18 @@ YC W26 Application Checklist
                     key={dec.id}
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
-                    className="bg-zinc-900 border border-zinc-800 rounded-lg p-5 space-y-4"
+                    className="bg-muted border border-border rounded-lg p-5 space-y-4"
                   >
                     <div className="flex items-start justify-between">
                       <div>
-                        <h3 className="font-bold text-lg text-zinc-100">{dec.title}</h3>
-                        <p className="text-sm text-zinc-500 mt-1">
+                        <h3 className="font-bold text-lg text-foreground">{dec.title}</h3>
+                        <p className="text-sm text-muted-foreground mt-1">
                           {new Date(dec.timestamp).toLocaleDateString()} • {dec.project}
                         </p>
                       </div>
                       <div className="flex gap-2">
                         {dec.tags.map(tag => (
-                          <span key={tag} className="px-2 py-1 bg-zinc-800 rounded text-xs text-zinc-400">
+                          <span key={tag} className="px-2 py-1 bg-secondary rounded text-xs text-muted-foreground">
                             {tag}
                           </span>
                         ))}
@@ -1134,18 +1134,18 @@ YC W26 Application Checklist
                     <div className="space-y-3">
                       <div>
                         <p className="text-xs text-teal-500 uppercase tracking-wider mb-1">Context</p>
-                        <p className="text-zinc-300 text-sm">{dec.context}</p>
+                        <p className="text-foreground/80 text-sm">{dec.context}</p>
                       </div>
 
                       <div>
                         <p className="text-xs text-teal-500 uppercase tracking-wider mb-1">Decision</p>
-                        <p className="text-zinc-100 font-medium">{dec.decision}</p>
+                        <p className="text-foreground font-medium">{dec.decision}</p>
                       </div>
 
                       {dec.alternatives.length > 0 && (
                         <div>
-                          <p className="text-xs text-zinc-500 uppercase tracking-wider mb-1">Alternatives Considered</p>
-                          <ul className="list-disc list-inside text-sm text-zinc-400">
+                          <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1">Alternatives Considered</p>
+                          <ul className="list-disc list-inside text-sm text-muted-foreground">
                             {dec.alternatives.map((alt, i) => (
                               <li key={i}>{alt}</li>
                             ))}
@@ -1154,8 +1154,8 @@ YC W26 Application Checklist
                       )}
 
                       <div>
-                        <p className="text-xs text-zinc-500 uppercase tracking-wider mb-1">Reasoning</p>
-                        <p className="text-zinc-400 text-sm">{dec.reasoning}</p>
+                        <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1">Reasoning</p>
+                        <p className="text-muted-foreground text-sm">{dec.reasoning}</p>
                       </div>
                     </div>
                   </motion.div>
@@ -1173,10 +1173,10 @@ YC W26 Application Checklist
           {/* ===== WAR ROOM (YC) =====  */}
           {activeStation === 'warroom' && (
             <div className="flex-1 overflow-y-auto p-6 space-y-6">
-              <div className="text-center border-b border-zinc-800 pb-6">
+              <div className="text-center border-b border-border pb-6">
                 <Flame size={48} className="text-orange-500 mx-auto mb-4" />
                 <h2 className="text-2xl font-bold">YC W26 War Room</h2>
-                <p className="text-zinc-500">Everything you need to nail this application</p>
+                <p className="text-muted-foreground">Everything you need to nail this application</p>
               </div>
 
               {/* Countdown */}
@@ -1186,7 +1186,7 @@ YC W26 Application Checklist
               </div>
 
               {/* Checklist */}
-              <div className="bg-zinc-900 border border-zinc-800 rounded-lg p-5">
+              <div className="bg-muted border border-border rounded-lg p-5">
                 <h3 className="font-bold text-lg mb-4 flex items-center gap-2">
                   <CheckCircle size={20} className="text-teal-500" />
                   Application Checklist
@@ -1202,15 +1202,15 @@ YC W26 Application Checklist
                     { done: true, item: 'Traction metrics', notes: 'Beta signups, engagement data, NPS scores' },
                     { done: false, item: 'Technical architecture doc', notes: 'Next.js, Supabase, Plaid, Stripe stack overview' },
                   ].map((check, i) => (
-                    <div key={i} className="flex items-start gap-3 p-3 rounded-lg hover:bg-zinc-800/50 transition-colors">
-                      <div className={`mt-0.5 ${check.done ? 'text-green-500' : 'text-zinc-600'}`}>
+                    <div key={i} className="flex items-start gap-3 p-3 rounded-lg hover:bg-secondary/50 transition-colors">
+                      <div className={`mt-0.5 ${check.done ? 'text-green-500' : 'text-muted-foreground/70'}`}>
                         {check.done ? <CheckCircle size={18} /> : <ShieldAlert size={18} />}
                       </div>
                       <div className="flex-1">
-                        <p className={`font-medium ${check.done ? 'text-zinc-400 line-through' : 'text-zinc-200'}`}>
+                        <p className={`font-medium ${check.done ? 'text-muted-foreground line-through' : 'text-foreground/90'}`}>
                           {check.item}
                         </p>
-                        <p className="text-sm text-zinc-500 mt-1">{check.notes}</p>
+                        <p className="text-sm text-muted-foreground mt-1">{check.notes}</p>
                       </div>
                     </div>
                   ))}
@@ -1218,7 +1218,7 @@ YC W26 Application Checklist
               </div>
 
               {/* Key Metrics to Highlight */}
-              <div className="bg-zinc-900 border border-zinc-800 rounded-lg p-5">
+              <div className="bg-muted border border-border rounded-lg p-5">
                 <h3 className="font-bold text-lg mb-4 flex items-center gap-2">
                   <TrendingUp size={20} className="text-teal-500" />
                   Key Metrics to Highlight
@@ -1230,16 +1230,16 @@ YC W26 Application Checklist
                     { label: 'Beta Signups', value: '127' },
                     { label: 'Weekly Hours', value: '60-80' },
                   ].map((metric, i) => (
-                    <div key={i} className="bg-zinc-800/50 rounded-lg p-4 text-center">
+                    <div key={i} className="bg-secondary/50 rounded-lg p-4 text-center">
                       <p className="text-2xl font-bold text-teal-400">{metric.value}</p>
-                      <p className="text-xs text-zinc-500 mt-1">{metric.label}</p>
+                      <p className="text-xs text-muted-foreground mt-1">{metric.label}</p>
                     </div>
                   ))}
                 </div>
               </div>
 
               {/* Interview Prep */}
-              <div className="bg-zinc-900 border border-zinc-800 rounded-lg p-5">
+              <div className="bg-muted border border-border rounded-lg p-5">
                 <h3 className="font-bold text-lg mb-4 flex items-center gap-2">
                   <MessageSquare size={20} className="text-teal-500" />
                   Interview Talking Points
@@ -1251,9 +1251,9 @@ YC W26 Application Checklist
                     { q: 'Why now?', a: 'Open banking APIs (Plaid) make real-time bank data accessible. AI can now provide personalized coaching at scale. Economic uncertainty driving demand for financial tools.' },
                     { q: 'Why you?', a: '8 years self-taught dev. Built and shipped multiple products. Obsessed with this problem - working 60-80 hours/week while in school.' },
                   ].map((item, i) => (
-                    <div key={i} className="p-3 rounded-lg bg-zinc-800/30">
+                    <div key={i} className="p-3 rounded-lg bg-secondary/30">
                       <p className="font-medium text-orange-400">{item.q}</p>
-                      <p className="text-sm text-zinc-300 mt-2">{item.a}</p>
+                      <p className="text-sm text-foreground/80 mt-2">{item.a}</p>
                     </div>
                   ))}
                 </div>
@@ -1268,66 +1268,66 @@ YC W26 Application Checklist
 
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 {/* Validation Metrics */}
-                <div className="bg-zinc-900 border border-zinc-800 rounded-lg p-5">
-                  <h3 className="font-bold text-zinc-400 text-sm uppercase tracking-wider mb-4">Validation</h3>
+                <div className="bg-muted border border-border rounded-lg p-5">
+                  <h3 className="font-bold text-muted-foreground text-sm uppercase tracking-wider mb-4">Validation</h3>
                   <div className="space-y-4">
                     <div>
                       <p className="text-3xl font-bold text-teal-400">1,000+</p>
-                      <p className="text-sm text-zinc-500">Survey Responses</p>
+                      <p className="text-sm text-muted-foreground">Survey Responses</p>
                     </div>
                     <div>
                       <p className="text-3xl font-bold text-teal-400">40+</p>
-                      <p className="text-sm text-zinc-500">User Interviews</p>
+                      <p className="text-sm text-muted-foreground">User Interviews</p>
                     </div>
                     <div>
                       <p className="text-3xl font-bold text-teal-400">127</p>
-                      <p className="text-sm text-zinc-500">Beta Signups</p>
+                      <p className="text-sm text-muted-foreground">Beta Signups</p>
                     </div>
                   </div>
                 </div>
 
                 {/* Development Metrics */}
-                <div className="bg-zinc-900 border border-zinc-800 rounded-lg p-5">
-                  <h3 className="font-bold text-zinc-400 text-sm uppercase tracking-wider mb-4">Development</h3>
+                <div className="bg-muted border border-border rounded-lg p-5">
+                  <h3 className="font-bold text-muted-foreground text-sm uppercase tracking-wider mb-4">Development</h3>
                   <div className="space-y-4">
                     <div>
                       <p className="text-3xl font-bold text-blue-400">84</p>
-                      <p className="text-sm text-zinc-500">React Components</p>
+                      <p className="text-sm text-muted-foreground">React Components</p>
                     </div>
                     <div>
                       <p className="text-3xl font-bold text-blue-400">~45k</p>
-                      <p className="text-sm text-zinc-500">Lines of Code</p>
+                      <p className="text-sm text-muted-foreground">Lines of Code</p>
                     </div>
                     <div>
                       <p className="text-3xl font-bold text-blue-400">60%</p>
-                      <p className="text-sm text-zinc-500">Web Migration Complete</p>
+                      <p className="text-sm text-muted-foreground">Web Migration Complete</p>
                     </div>
                   </div>
                 </div>
 
                 {/* Founder Metrics */}
-                <div className="bg-zinc-900 border border-zinc-800 rounded-lg p-5">
-                  <h3 className="font-bold text-zinc-400 text-sm uppercase tracking-wider mb-4">Founder</h3>
+                <div className="bg-muted border border-border rounded-lg p-5">
+                  <h3 className="font-bold text-muted-foreground text-sm uppercase tracking-wider mb-4">Founder</h3>
                   <div className="space-y-4">
                     <div>
                       <p className="text-3xl font-bold text-purple-400">60-80</p>
-                      <p className="text-sm text-zinc-500">Weekly Hours</p>
+                      <p className="text-sm text-muted-foreground">Weekly Hours</p>
                     </div>
                     <div>
                       <p className="text-3xl font-bold text-purple-400">8+</p>
-                      <p className="text-sm text-zinc-500">Years Coding</p>
+                      <p className="text-sm text-muted-foreground">Years Coding</p>
                     </div>
                     <div>
                       <p className="text-3xl font-bold text-purple-400">5 AM</p>
-                      <p className="text-sm text-zinc-500">Daily Start Time</p>
+                      <p className="text-sm text-muted-foreground">Daily Start Time</p>
                     </div>
                   </div>
                 </div>
               </div>
 
               {/* Progress Bars */}
-              <div className="bg-zinc-900 border border-zinc-800 rounded-lg p-5 space-y-4">
-                <h3 className="font-bold text-zinc-400 text-sm uppercase tracking-wider">Project Progress</h3>
+              <div className="bg-muted border border-border rounded-lg p-5 space-y-4">
+                <h3 className="font-bold text-muted-foreground text-sm uppercase tracking-wider">Project Progress</h3>
                 {[
                   { name: 'Simplicity Web', progress: 60, color: 'bg-teal-500' },
                   { name: 'Simplicity Desktop', progress: 75, color: 'bg-blue-500' },
@@ -1336,10 +1336,10 @@ YC W26 Application Checklist
                 ].map((project) => (
                   <div key={project.name}>
                     <div className="flex justify-between text-sm mb-1">
-                      <span className="text-zinc-300">{project.name}</span>
-                      <span className="text-zinc-500">{project.progress}%</span>
+                      <span className="text-foreground/80">{project.name}</span>
+                      <span className="text-muted-foreground">{project.progress}%</span>
                     </div>
-                    <div className="h-2 bg-zinc-800 rounded-full overflow-hidden">
+                    <div className="h-2 bg-secondary rounded-full overflow-hidden">
                       <div
                         className={`h-full ${project.color} rounded-full transition-all`}
                         style={{ width: `${project.progress}%` }}
@@ -1353,14 +1353,14 @@ YC W26 Application Checklist
         </main>
 
         {/* ===== RIGHT SIDEBAR - Quick Captures ===== */}
-        <aside className="w-72 border-l border-zinc-800 flex flex-col bg-zinc-900/30">
-          <div className="p-4 border-b border-zinc-800">
-            <h3 className="font-bold text-sm uppercase tracking-wider text-zinc-400">Quick Captures</h3>
+        <aside className="w-72 border-l border-border flex flex-col bg-muted/30">
+          <div className="p-4 border-b border-border">
+            <h3 className="font-bold text-sm uppercase tracking-wider text-muted-foreground">Quick Captures</h3>
           </div>
           <div className="flex-1 overflow-y-auto p-3 space-y-2">
             {quickCaptures.length === 0 ? (
-              <p className="text-sm text-zinc-600 text-center py-8">
-                Press <kbd className="bg-zinc-800 px-1.5 py-0.5 rounded text-xs">⌘.</kbd> to capture a thought
+              <p className="text-sm text-muted-foreground/70 text-center py-8">
+                Press <kbd className="bg-secondary px-1.5 py-0.5 rounded text-xs">⌘.</kbd> to capture a thought
               </p>
             ) : (
               quickCaptures.map((capture) => (
@@ -1368,15 +1368,15 @@ YC W26 Application Checklist
                   key={capture.id}
                   className={`p-3 rounded-lg border ${
                     capture.processed
-                      ? 'bg-zinc-900/50 border-zinc-800 opacity-50'
-                      : 'bg-zinc-800/50 border-zinc-700'
+                      ? 'bg-muted/50 border-border opacity-50'
+                      : 'bg-secondary/50 border-border'
                   }`}
                 >
                   <div className="flex items-start gap-2">
                     {getCaptureIcon(capture.type)}
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm text-zinc-300 break-words">{capture.content}</p>
-                      <p className="text-xs text-zinc-600 mt-1">
+                      <p className="text-sm text-foreground/80 break-words">{capture.content}</p>
+                      <p className="text-xs text-muted-foreground/70 mt-1">
                         {new Date(capture.timestamp).toLocaleTimeString()}
                       </p>
                     </div>
@@ -1388,7 +1388,7 @@ YC W26 Application Checklist
                           )
                         )
                       }}
-                      className="text-zinc-600 hover:text-zinc-400"
+                      className="text-muted-foreground/70 hover:text-muted-foreground"
                     >
                       {capture.processed ? <RotateCcw size={14} /> : <Check size={14} />}
                     </button>
@@ -1416,7 +1416,7 @@ YC W26 Application Checklist
               initial={{ opacity: 0, y: -20, scale: 0.95 }}
               animate={{ opacity: 1, y: 0, scale: 1 }}
               exit={{ opacity: 0, y: -20, scale: 0.95 }}
-              className="bg-zinc-900 border border-zinc-700 rounded-xl w-full max-w-lg p-4 shadow-2xl"
+              className="bg-muted border border-border rounded-xl w-full max-w-lg p-4 shadow-2xl"
               onClick={(e) => e.stopPropagation()}
             >
               <div className="flex items-center gap-2 mb-4">
@@ -1432,7 +1432,7 @@ YC W26 Application Checklist
                     className={`px-3 py-1.5 rounded-lg text-sm flex items-center gap-1.5 transition-colors ${
                       captureType === type
                         ? 'bg-teal-500/20 text-teal-400 border border-teal-500/50'
-                        : 'bg-zinc-800 text-zinc-400 border border-transparent hover:bg-zinc-700'
+                        : 'bg-secondary text-muted-foreground border border-transparent hover:bg-muted'
                     }`}
                   >
                     {getCaptureIcon(type)}
@@ -1445,7 +1445,7 @@ YC W26 Application Checklist
                 value={captureInput}
                 onChange={(e) => setCaptureInput(e.target.value)}
                 placeholder="What's on your mind?"
-                className="w-full px-4 py-3 bg-zinc-800 border border-zinc-700 rounded-lg outline-none focus:border-teal-500 resize-none"
+                className="w-full px-4 py-3 bg-secondary border border-border rounded-lg outline-none focus:border-teal-500 resize-none"
                 rows={3}
                 autoFocus
                 onKeyDown={(e) => {
@@ -1456,7 +1456,7 @@ YC W26 Application Checklist
               />
               
               <div className="flex justify-between items-center mt-3">
-                <span className="text-xs text-zinc-600">⌘+Enter to save</span>
+                <span className="text-xs text-muted-foreground/70">⌘+Enter to save</span>
                 <button
                   onClick={handleQuickCapture}
                   disabled={!captureInput.trim()}
@@ -1484,7 +1484,7 @@ YC W26 Application Checklist
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.95 }}
-              className="bg-zinc-900 border border-zinc-700 rounded-xl w-full max-w-md p-6 shadow-2xl"
+              className="bg-muted border border-border rounded-xl w-full max-w-md p-6 shadow-2xl"
               onClick={(e) => e.stopPropagation()}
             >
               <h3 className="text-xl font-bold mb-4 flex items-center gap-2">
@@ -1498,47 +1498,47 @@ YC W26 Application Checklist
                   value={newEvent.title}
                   onChange={(e) => setNewEvent(prev => ({ ...prev, title: e.target.value }))}
                   placeholder="Event title"
-                  className="w-full px-4 py-3 bg-zinc-800 border border-zinc-700 rounded-lg outline-none focus:border-teal-500"
+                  className="w-full px-4 py-3 bg-secondary border border-border rounded-lg outline-none focus:border-teal-500"
                 />
                 
                 <textarea
                   value={newEvent.description}
                   onChange={(e) => setNewEvent(prev => ({ ...prev, description: e.target.value }))}
                   placeholder="Description (optional)"
-                  className="w-full px-4 py-3 bg-zinc-800 border border-zinc-700 rounded-lg outline-none focus:border-teal-500 resize-none"
+                  className="w-full px-4 py-3 bg-secondary border border-border rounded-lg outline-none focus:border-teal-500 resize-none"
                   rows={2}
                 />
                 
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label className="text-xs text-zinc-500 mb-1 block">Start Time</label>
+                    <label className="text-xs text-muted-foreground mb-1 block">Start Time</label>
                     <input
                       type="time"
                       value={newEvent.startTime}
                       onChange={(e) => setNewEvent(prev => ({ ...prev, startTime: e.target.value }))}
-                      className="w-full px-4 py-3 bg-zinc-800 border border-zinc-700 rounded-lg outline-none focus:border-teal-500"
+                      className="w-full px-4 py-3 bg-secondary border border-border rounded-lg outline-none focus:border-teal-500"
                     />
                   </div>
                   
                   <div>
-                    <label className="text-xs text-zinc-500 mb-1 block">Duration (min)</label>
+                    <label className="text-xs text-muted-foreground mb-1 block">Duration (min)</label>
                     <input
                       type="number"
                       value={newEvent.duration}
                       onChange={(e) => setNewEvent(prev => ({ ...prev, duration: parseInt(e.target.value) || 60 }))}
                       min={15}
                       step={15}
-                      className="w-full px-4 py-3 bg-zinc-800 border border-zinc-700 rounded-lg outline-none focus:border-teal-500"
+                      className="w-full px-4 py-3 bg-secondary border border-border rounded-lg outline-none focus:border-teal-500"
                     />
                   </div>
                 </div>
                 
                 <div>
-                  <label className="text-xs text-zinc-500 mb-1 block">Category</label>
+                  <label className="text-xs text-muted-foreground mb-1 block">Category</label>
                   <select
                     value={newEvent.category}
                     onChange={(e) => setNewEvent(prev => ({ ...prev, category: e.target.value as ScheduleEvent['category'] }))}
-                    className="w-full px-4 py-3 bg-zinc-800 border border-zinc-700 rounded-lg outline-none focus:border-teal-500"
+                    className="w-full px-4 py-3 bg-secondary border border-border rounded-lg outline-none focus:border-teal-500"
                   >
                     <option value="work">Work</option>
                     <option value="personal">Personal</option>
@@ -1552,7 +1552,7 @@ YC W26 Application Checklist
               <div className="flex justify-end gap-3 mt-6">
                 <button
                   onClick={() => setShowNewEvent(false)}
-                  className="px-4 py-2 text-zinc-400 hover:text-zinc-200"
+                  className="px-4 py-2 text-muted-foreground hover:text-foreground/90"
                 >
                   Cancel
                 </button>
@@ -1583,7 +1583,7 @@ YC W26 Application Checklist
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.95 }}
-              className="bg-zinc-900 border border-zinc-700 rounded-xl w-full max-w-2xl p-6 shadow-2xl max-h-[90vh] overflow-y-auto"
+              className="bg-muted border border-border rounded-xl w-full max-w-2xl p-6 shadow-2xl max-h-[90vh] overflow-y-auto"
               onClick={(e) => e.stopPropagation()}
             >
               <h3 className="text-xl font-bold mb-4">Record Decision</h3>
@@ -1594,14 +1594,14 @@ YC W26 Application Checklist
                   value={newDecision.title}
                   onChange={(e) => setNewDecision(prev => ({ ...prev, title: e.target.value }))}
                   placeholder="Decision Title"
-                  className="w-full px-4 py-3 bg-zinc-800 border border-zinc-700 rounded-lg outline-none focus:border-teal-500"
+                  className="w-full px-4 py-3 bg-secondary border border-border rounded-lg outline-none focus:border-teal-500"
                 />
                 
                 <textarea
                   value={newDecision.context}
                   onChange={(e) => setNewDecision(prev => ({ ...prev, context: e.target.value }))}
                   placeholder="Context - What situation led to this decision?"
-                  className="w-full px-4 py-3 bg-zinc-800 border border-zinc-700 rounded-lg outline-none focus:border-teal-500 resize-none"
+                  className="w-full px-4 py-3 bg-secondary border border-border rounded-lg outline-none focus:border-teal-500 resize-none"
                   rows={3}
                 />
                 
@@ -1609,7 +1609,7 @@ YC W26 Application Checklist
                   value={newDecision.decision}
                   onChange={(e) => setNewDecision(prev => ({ ...prev, decision: e.target.value }))}
                   placeholder="The Decision - What did you decide?"
-                  className="w-full px-4 py-3 bg-zinc-800 border border-zinc-700 rounded-lg outline-none focus:border-teal-500 resize-none"
+                  className="w-full px-4 py-3 bg-secondary border border-border rounded-lg outline-none focus:border-teal-500 resize-none"
                   rows={2}
                 />
                 
@@ -1617,7 +1617,7 @@ YC W26 Application Checklist
                   value={newDecision.alternatives}
                   onChange={(e) => setNewDecision(prev => ({ ...prev, alternatives: e.target.value }))}
                   placeholder="Alternatives Considered (one per line)"
-                  className="w-full px-4 py-3 bg-zinc-800 border border-zinc-700 rounded-lg outline-none focus:border-teal-500 resize-none"
+                  className="w-full px-4 py-3 bg-secondary border border-border rounded-lg outline-none focus:border-teal-500 resize-none"
                   rows={3}
                 />
                 
@@ -1625,7 +1625,7 @@ YC W26 Application Checklist
                   value={newDecision.reasoning}
                   onChange={(e) => setNewDecision(prev => ({ ...prev, reasoning: e.target.value }))}
                   placeholder="Reasoning - Why this choice?"
-                  className="w-full px-4 py-3 bg-zinc-800 border border-zinc-700 rounded-lg outline-none focus:border-teal-500 resize-none"
+                  className="w-full px-4 py-3 bg-secondary border border-border rounded-lg outline-none focus:border-teal-500 resize-none"
                   rows={3}
                 />
                 
@@ -1633,7 +1633,7 @@ YC W26 Application Checklist
                   <select
                     value={newDecision.project}
                     onChange={(e) => setNewDecision(prev => ({ ...prev, project: e.target.value }))}
-                    className="flex-1 px-4 py-3 bg-zinc-800 border border-zinc-700 rounded-lg outline-none focus:border-teal-500"
+                    className="flex-1 px-4 py-3 bg-secondary border border-border rounded-lg outline-none focus:border-teal-500"
                   >
                     <option value="simplicity-web">Simplicity Web</option>
                     <option value="simplicity-desktop">Simplicity Desktop</option>
@@ -1646,7 +1646,7 @@ YC W26 Application Checklist
                     value={newDecision.tags}
                     onChange={(e) => setNewDecision(prev => ({ ...prev, tags: e.target.value }))}
                     placeholder="Tags (comma separated)"
-                    className="flex-1 px-4 py-3 bg-zinc-800 border border-zinc-700 rounded-lg outline-none focus:border-teal-500"
+                    className="flex-1 px-4 py-3 bg-secondary border border-border rounded-lg outline-none focus:border-teal-500"
                   />
                 </div>
               </div>
@@ -1654,7 +1654,7 @@ YC W26 Application Checklist
               <div className="flex justify-end gap-3 mt-6">
                 <button
                   onClick={() => setShowNewDecision(false)}
-                  className="px-4 py-2 text-zinc-400 hover:text-zinc-200"
+                  className="px-4 py-2 text-muted-foreground hover:text-foreground/90"
                 >
                   Cancel
                 </button>

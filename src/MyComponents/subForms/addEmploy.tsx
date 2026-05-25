@@ -146,7 +146,7 @@ export const AddEmployee = () => {
             children={([canSubmit]) => (
               <button
                 type="submit"
-                className="mt-8 px-4 py-2 flex items-center bg-primary hover:bg-primary/80 text-foreground rounded-lg transition-colors"
+                className="mt-8 px-4 py-2 flex items-center bg-primary hover:bg-primary/80 text-primary-foreground rounded-lg transition-colors"
                 disabled={!canSubmit}
               >
                 <UserPlus className="w-4 h-4 mr-2" />

@@ -537,7 +537,7 @@ function StatusLabel({
     );
   }
   if (status === "archived") {
-    return <span className="text-zinc-500">Archived</span>;
+    return <span className="text-muted-foreground">Archived</span>;
   }
   return <span className="text-amber-400">Submitted</span>;
 }

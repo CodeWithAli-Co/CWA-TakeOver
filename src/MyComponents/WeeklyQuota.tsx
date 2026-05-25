@@ -306,7 +306,7 @@ export const QuotaFormDialog: React.FC<{
           </div>
         </div>
         <DialogFooter>
-          <Button className="bg-primary hover:bg-primary/80 text-foreground rounded-sm" type="submit">
+          <Button className="bg-primary hover:bg-primary/80 text-primary-foreground rounded-sm" type="submit">
             {editingQuota ? "Update" : "Add"} Quota
           </Button>
         </DialogFooter>

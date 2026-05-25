@@ -1248,8 +1248,8 @@ function PendingThumb({
       )}
 
       {uploading && (
-        <div className="absolute inset-0 flex items-center justify-center rounded-md bg-black/50">
-          <Loader2 className="h-3.5 w-3.5 animate-spin text-white" />
+        <div className="absolute inset-0 flex items-center justify-center rounded-md bg-background/50">
+          <Loader2 className="h-3.5 w-3.5 animate-spin text-foreground" />
         </div>
       )}
       <button

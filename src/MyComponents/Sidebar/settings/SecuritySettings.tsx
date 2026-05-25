@@ -266,7 +266,7 @@ function InfoRow({
   const tones = {
     good: "border-emerald-500/40 bg-emerald-500/10 text-emerald-300",
     warn: "border-amber-500/40 bg-amber-500/10 text-amber-300",
-    muted: "border-zinc-500/40 bg-zinc-500/10 text-zinc-400",
+    muted: "border-muted-foreground/40 bg-muted/30 text-muted-foreground",
   };
   return (
     <div className="flex items-start gap-2 rounded-md border border-border bg-background/30 px-3 py-2">

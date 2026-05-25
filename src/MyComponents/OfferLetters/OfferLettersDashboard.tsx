@@ -374,9 +374,9 @@ export function OfferLettersDashboard() {
             <div className="flex-1">
               <div className="font-semibold mb-0.5">Run the migration to enable saving</div>
               <p className="text-red-200/80 leading-relaxed">
-                The <code className="rounded bg-black/30 px-1">offer_letters</code> table isn't set up yet.
+                The <code className="rounded bg-background/30 px-1">offer_letters</code> table isn't set up yet.
                 Open Supabase → SQL editor, paste{" "}
-                <code className="rounded bg-black/30 px-1">migrations/offer_letters_init.sql</code>, and Run.
+                <code className="rounded bg-background/30 px-1">migrations/offer_letters_init.sql</code>, and Run.
                 You can still generate drafts — they just won't save until the table exists.
               </p>
             </div>
@@ -456,7 +456,7 @@ export function OfferLettersDashboard() {
               `}
             >
               <div className="flex items-center gap-3 mb-3">
-                <div className="h-12 w-12 rounded-lg bg-black/40 border border-white/10 flex items-center justify-center overflow-hidden">
+                <div className="h-12 w-12 rounded-lg bg-background/40 border border-white/10 flex items-center justify-center overflow-hidden">
                   <img
                     src={brandTokens.logo}
                     alt={brandTokens.label}
@@ -827,7 +827,7 @@ export function OfferLettersDashboard() {
                   {/* Letterhead */}
                   <div className={`bg-gradient-to-br ${brandTokens.softBg} px-10 pt-8 pb-5 border-b border-border/60`}>
                     <div className="flex items-center gap-3">
-                      <div className="h-11 w-11 rounded-md bg-black/30 border border-white/10 flex items-center justify-center overflow-hidden">
+                      <div className="h-11 w-11 rounded-md bg-background/30 border border-white/10 flex items-center justify-center overflow-hidden">
                         <img
                           src={brandTokens.logo}
                           alt=""

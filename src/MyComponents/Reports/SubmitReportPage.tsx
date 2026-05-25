@@ -422,7 +422,7 @@ export function SubmitReportPage() {
             );
           })()}
 
-          <div className="rounded-lg border border-border bg-zinc-950/40 p-5 md:p-6 space-y-4">
+          <div className="rounded-lg border border-border bg-muted/30 p-5 md:p-6 space-y-4">
             {/* Title */}
             <input
               ref={titleRef}
@@ -554,7 +554,7 @@ export function SubmitReportPage() {
               </p>
             </div>
           ) : (
-            <ul className="rounded-md border border-border bg-zinc-950/40 divide-y divide-border/60 overflow-hidden">
+            <ul className="rounded-md border border-border bg-muted/30 divide-y divide-border/60 overflow-hidden">
               {myReports.map((r) => (
                 <RecentRow key={r.id} report={r} />
               ))}
@@ -670,7 +670,7 @@ function RecommendationCard({
     <button
       type="button"
       onClick={onStart}
-      className="group relative overflow-hidden rounded-lg border border-border bg-zinc-950/40 hover:bg-zinc-950/60 hover:border-foreground/30 text-left transition-colors p-4"
+      className="group relative overflow-hidden rounded-lg border border-border bg-muted/30 hover:bg-muted/50 hover:border-foreground/30 text-left transition-colors p-4"
     >
       <span
         aria-hidden="true"
@@ -678,7 +678,7 @@ function RecommendationCard({
         style={{ background: meta.rail }}
       />
       <div className="pl-2 flex items-start gap-3">
-        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-zinc-900">
+        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-muted">
           <Icon className="h-4 w-4" style={{ color: meta.rail }} />
         </div>
         <div className="min-w-0 flex-1">
@@ -742,13 +742,13 @@ function AssignmentRow({
   const meta = TYPE_META[assignment.type];
   const Icon = meta.icon;
   return (
-    <div className="group relative flex items-center gap-3 rounded-md border border-border bg-zinc-950/40 hover:border-foreground/30 transition-colors px-3 py-2.5">
+    <div className="group relative flex items-center gap-3 rounded-md border border-border bg-muted/30 hover:border-foreground/30 transition-colors px-3 py-2.5">
       <span
         aria-hidden="true"
         className="absolute left-0 top-2 bottom-2 w-[2px] rounded-r-full"
         style={{ background: meta.rail }}
       />
-      <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-zinc-900 ml-1.5">
+      <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-muted ml-1.5">
         <Icon className="h-3.5 w-3.5" style={{ color: meta.rail }} />
       </div>
       <div className="min-w-0 flex-1">
@@ -792,7 +792,7 @@ function RecentRow({ report }: { report: ReportRow }) {
   return (
     <li className="px-4 py-3 hover:bg-muted/30 transition-colors">
       <div className="flex items-start gap-3">
-        <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-zinc-900">
+        <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-muted">
           <Icon className="h-3.5 w-3.5" style={{ color: meta.rail }} />
         </div>
         <div className="min-w-0 flex-1">
@@ -844,7 +844,7 @@ function StatusLabel({
     );
   }
   if (status === "archived") {
-    return <span className="text-zinc-500">Archived</span>;
+    return <span className="text-muted-foreground">Archived</span>;
   }
   return <span className="text-primary">Submitted</span>;
 }

@@ -226,7 +226,7 @@ function NodeGraph({ completedTasks, selectedNodeId, onSelectNode }: NodeGraphPr
               zIndex: 10,
             }}
             className={`rounded border-2 flex flex-col justify-center px-3 select-none ${cfg.bg} ${
-              isSelected ? `${cfg.border} shadow-lg` : "border-zinc-700/50"
+              isSelected ? `${cfg.border} shadow-lg` : "border-border/50"
             }`}
           >
             <div className={`text-[11px] font-bold tracking-widest uppercase ${cfg.text} mb-0.5`}>
@@ -235,7 +235,7 @@ function NodeGraph({ completedTasks, selectedNodeId, onSelectNode }: NodeGraphPr
             <div className="text-amber-50 text-[12px] font-semibold leading-tight truncate">
               {phase.title}
             </div>
-            <div className="mt-1.5 h-1 rounded-full bg-zinc-800 overflow-hidden">
+            <div className="mt-1.5 h-1 rounded-full bg-secondary overflow-hidden">
               <div
                 className={`h-full rounded-full transition-all duration-700`}
                 style={{ width: `${pct}%`, background: cfg.line }}
@@ -280,7 +280,7 @@ function NodeGraph({ completedTasks, selectedNodeId, onSelectNode }: NodeGraphPr
               zIndex: 10,
             }}
             className={`rounded border flex flex-col justify-center px-2.5 select-none ${
-              isSelected ? `${cfg.bg} ${cfg.border}` : "bg-zinc-900/70 border-zinc-700/40"
+              isSelected ? `${cfg.bg} ${cfg.border}` : "bg-muted/70 border-border/40"
             }`}
           >
             <div className={`text-[10px] font-semibold ${cfg.muted} uppercase tracking-widest`}>
@@ -289,7 +289,7 @@ function NodeGraph({ completedTasks, selectedNodeId, onSelectNode }: NodeGraphPr
             <div className="text-amber-50/90 text-[11px] leading-tight truncate">
               {month.title}
             </div>
-            <div className="mt-1 h-0.5 rounded-full bg-zinc-800 overflow-hidden">
+            <div className="mt-1 h-0.5 rounded-full bg-secondary overflow-hidden">
               <div
                 className="h-full rounded-full transition-all"
                 style={{ width: `${pct}%`, background: cfg.line }}
@@ -327,8 +327,8 @@ function NodeGraph({ completedTasks, selectedNodeId, onSelectNode }: NodeGraphPr
               isSelected
                 ? `${cfg.bg} ${cfg.border} shadow-md`
                 : pct === 100
-                ? "bg-zinc-900/50 border-zinc-600/50"
-                : "bg-zinc-950/80 border-zinc-800/50"
+                ? "bg-muted/50 border-border/50"
+                : "bg-card/80 border-border/50"
             }`}
           >
             <div
@@ -341,7 +341,7 @@ function NodeGraph({ completedTasks, selectedNodeId, onSelectNode }: NodeGraphPr
               <div className="text-amber-50/85 text-[10.5px] leading-tight truncate font-medium">
                 {week.title}
               </div>
-              <div className="text-zinc-500 text-[9px]">
+              <div className="text-muted-foreground text-[9px]">
                 {done}/{total} tasks
               </div>
             </div>
@@ -409,7 +409,7 @@ function DetailPanel({
             );
           })}
         </div>
-        <div className="mt-4 p-3 rounded bg-zinc-900/60 border border-zinc-800">
+        <div className="mt-4 p-3 rounded bg-muted/60 border border-border">
           <p className="text-amber-50/50 text-xs italic">{selPhase.subtitle}</p>
         </div>
       </PanelShell>
@@ -442,7 +442,7 @@ function DetailPanel({
                   <span className="text-amber-50/90 text-sm font-medium">Week {w.weekNumber}: {w.title}</span>
                   <span className={`text-xs ${cfg.text}`}>{pct}%</span>
                 </div>
-                <div className="h-1 bg-zinc-800 rounded-full overflow-hidden">
+                <div className="h-1 bg-secondary rounded-full overflow-hidden">
                   <div className="h-full rounded-full" style={{ width: `${pct}%`, background: PHASE_CONFIG[w.phaseId].line }} />
                 </div>
               </button>
@@ -471,7 +471,7 @@ function DetailPanel({
           ))}
         </div>
         <ProgressBar pct={Math.round(done / Math.max(1, selWeek.tasks.length) * 100)} cfg={cfg} />
-        <div className="text-xs text-zinc-500 mb-3 mt-1">{done}/{selWeek.tasks.length} tasks complete</div>
+        <div className="text-xs text-muted-foreground mb-3 mt-1">{done}/{selWeek.tasks.length} tasks complete</div>
 
         <div className="space-y-2">
           {selWeek.tasks.map((task) => {
@@ -484,13 +484,13 @@ function DetailPanel({
                 layout
                 className={`rounded border p-2.5 flex gap-2.5 items-start transition-all ${
                   isComplete
-                    ? "bg-zinc-900/30 border-zinc-800/40 opacity-50"
+                    ? "bg-muted/30 border-border/40 opacity-50"
                     : `${taskCfg.bg}`
                 }`}
               >
                 <button
                   onClick={() => onToggleTask(task.id)}
-                  className="mt-0.5 flex-shrink-0 text-zinc-400 hover:text-green-400 transition-colors"
+                  className="mt-0.5 flex-shrink-0 text-muted-foreground hover:text-green-400 transition-colors"
                 >
                   {isComplete ? (
                     <CheckCircle2 size={16} className="text-green-500" />
@@ -499,13 +499,13 @@ function DetailPanel({
                   )}
                 </button>
                 <div className="flex-1 min-w-0">
-                  <p className={`text-[12px] leading-snug ${isComplete ? "line-through text-zinc-500" : "text-amber-50/90"}`}>
+                  <p className={`text-[12px] leading-snug ${isComplete ? "line-through text-muted-foreground" : "text-amber-50/90"}`}>
                     {task.text}
                   </p>
                   <div className="flex items-center gap-2 mt-1">
                     <span className={`text-[10px] ${taskCfg.color}`}>{taskCfg.icon} {taskCfg.label}</span>
-                    <span className="text-zinc-600 text-[10px]">· {task.hours}h</span>
-                    <span className="text-zinc-600 text-[10px]">· {DAY_FULL_LABELS[task.day]}</span>
+                    <span className="text-muted-foreground/70 text-[10px]">· {task.hours}h</span>
+                    <span className="text-muted-foreground/70 text-[10px]">· {DAY_FULL_LABELS[task.day]}</span>
                     {isDeferred && <span className="text-amber-500 text-[10px]">↩ deferred to {DAY_FULL_LABELS[deferredTasks[task.id]]}</span>}
                   </div>
                 </div>
@@ -513,7 +513,7 @@ function DetailPanel({
                   <button
                     onClick={() => onDeferTask(task.id, selWeek)}
                     title="Defer to next day"
-                    className="flex-shrink-0 text-zinc-600 hover:text-amber-400 transition-colors mt-0.5"
+                    className="flex-shrink-0 text-muted-foreground/70 hover:text-amber-400 transition-colors mt-0.5"
                   >
                     <SkipForward size={13} />
                   </button>
@@ -523,14 +523,14 @@ function DetailPanel({
           })}
         </div>
 
-        <div className="mt-4 border-t border-zinc-800 pt-3">
-          <p className="text-zinc-500 text-xs mb-2 font-semibold uppercase tracking-widest">Daily Schedule</p>
+        <div className="mt-4 border-t border-border pt-3">
+          <p className="text-muted-foreground text-xs mb-2 font-semibold uppercase tracking-widest">Daily Schedule</p>
           <div className="space-y-1.5">
             {selWeek.dailySchedule.map((d) => (
               <div key={d.day} className="flex gap-2 items-start">
-                <span className="text-zinc-500 text-[10px] w-8 pt-0.5">{DAY_LABELS[d.day]}</span>
+                <span className="text-muted-foreground text-[10px] w-8 pt-0.5">{DAY_LABELS[d.day]}</span>
                 <span className="text-amber-50/70 text-[11px] flex-1 leading-snug">{d.focus}</span>
-                <span className="text-zinc-600 text-[10px] flex-shrink-0">{d.hours}h</span>
+                <span className="text-muted-foreground/70 text-[10px] flex-shrink-0">{d.hours}h</span>
               </div>
             ))}
           </div>
@@ -560,7 +560,7 @@ function PanelShell({
           <h3 className="text-amber-50 font-semibold text-sm leading-tight">{title}</h3>
           <p className={`text-xs mt-0.5 ${cfg.text}`}>{subtitle}</p>
         </div>
-        <button onClick={onClose} className="text-zinc-500 hover:text-amber-50 mt-0.5 flex-shrink-0">
+        <button onClick={onClose} className="text-muted-foreground hover:text-amber-50 mt-0.5 flex-shrink-0">
           <X size={15} />
         </button>
       </div>
@@ -573,7 +573,7 @@ function StatChip({ label, value, cfg }: { label: string; value: string; cfg: an
   return (
     <div className={`rounded px-2.5 py-1.5 border text-center flex-1 ${cfg.bg} ${cfg.border}`}>
       <div className={`text-base font-bold ${cfg.text}`}>{value}</div>
-      <div className="text-zinc-500 text-[10px]">{label}</div>
+      <div className="text-muted-foreground text-[10px]">{label}</div>
     </div>
   );
 }
@@ -582,10 +582,10 @@ function ProgressBar({ pct, cfg }: { pct: number; cfg: any }) {
   return (
     <div>
       <div className="flex justify-between text-xs mb-1">
-        <span className="text-zinc-500">Progress</span>
+        <span className="text-muted-foreground">Progress</span>
         <span className={cfg.text}>{pct}%</span>
       </div>
-      <div className="h-2 bg-zinc-800 rounded-full overflow-hidden">
+      <div className="h-2 bg-secondary rounded-full overflow-hidden">
         <motion.div
           initial={{ width: 0 }}
           animate={{ width: `${pct}%` }}
@@ -648,7 +648,7 @@ function WeekSchedule({ week, completedTasks, deferredTasks, onToggleTask, onDef
             <div className={`text-2xl font-bold ${cfg.text}`}>
               {Math.round(week.tasks.filter((t) => completedTasks[t.id]).length / Math.max(1, week.tasks.length) * 100)}%
             </div>
-            <div className="text-zinc-500 text-xs">complete</div>
+            <div className="text-muted-foreground text-xs">complete</div>
           </div>
         </div>
         <div className="flex gap-2 flex-wrap mt-3">
@@ -724,21 +724,21 @@ function DayCard({
   return (
     <div
       className={`rounded-lg border flex flex-col ${
-        isWeekend ? "bg-zinc-900/50 border-zinc-700/40" : "bg-zinc-950/80 border-zinc-800/40"
+        isWeekend ? "bg-muted/50 border-border/40" : "bg-card/80 border-border/40"
       }`}
     >
       {/* Day header */}
-      <div className={`px-3 py-2 border-b border-zinc-800/50 flex items-center justify-between`}>
+      <div className={`px-3 py-2 border-b border-border/50 flex items-center justify-between`}>
         <div>
           <span className="text-amber-50 font-semibold text-sm">{DAY_FULL_LABELS[day]}</span>
           {isWeekend && (
-            <span className="ml-2 text-[10px] text-zinc-500 italic">
+            <span className="ml-2 text-[10px] text-muted-foreground italic">
               {day === "saturday" ? "Sprint" : "Review + Plan"}
             </span>
           )}
         </div>
         {sched && (
-          <div className="flex items-center gap-1 text-zinc-500">
+          <div className="flex items-center gap-1 text-muted-foreground">
             <Clock size={10} />
             <span className="text-[10px]">{sched.hours}h</span>
           </div>
@@ -747,8 +747,8 @@ function DayCard({
 
       {/* Focus */}
       {sched && (
-        <div className="px-3 py-1.5 border-b border-zinc-800/30">
-          <p className="text-zinc-400 text-[11px] leading-snug">{sched.focus}</p>
+        <div className="px-3 py-1.5 border-b border-border/30">
+          <p className="text-muted-foreground text-[11px] leading-snug">{sched.focus}</p>
         </div>
       )}
 
@@ -764,7 +764,7 @@ function DayCard({
             >
               <button
                 onClick={() => onToggleTask(task.id)}
-                className="mt-0.5 flex-shrink-0 text-zinc-500 hover:text-green-400 transition-colors"
+                className="mt-0.5 flex-shrink-0 text-muted-foreground hover:text-green-400 transition-colors"
               >
                 <Circle size={14} />
               </button>
@@ -772,7 +772,7 @@ function DayCard({
                 <p className="text-amber-50/85 text-[11px] leading-snug">{task.text}</p>
                 <div className="flex gap-1.5 mt-0.5 flex-wrap">
                   <span className={`text-[9px] ${taskCfg.color}`}>{taskCfg.icon} {taskCfg.label}</span>
-                  <span className="text-zinc-600 text-[9px]">{task.hours}h</span>
+                  <span className="text-muted-foreground/70 text-[9px]">{task.hours}h</span>
                   {isDeferred && (
                     <span className="text-amber-500 text-[9px]">↩ deferred</span>
                   )}
@@ -781,7 +781,7 @@ function DayCard({
               <button
                 onClick={() => onDeferTask(task.id, week)}
                 title="Push to next day"
-                className="text-zinc-700 hover:text-amber-500 transition-colors flex-shrink-0"
+                className="text-muted-foreground/50 hover:text-amber-500 transition-colors flex-shrink-0"
               >
                 <SkipForward size={11} />
               </button>
@@ -789,15 +789,15 @@ function DayCard({
           );
         })}
         {doneTasks.map((task) => (
-          <div key={task.id} className="rounded border border-zinc-800/30 p-2 flex gap-2 items-start opacity-40">
+          <div key={task.id} className="rounded border border-border/30 p-2 flex gap-2 items-start opacity-40">
             <button onClick={() => onToggleTask(task.id)} className="mt-0.5 flex-shrink-0">
               <CheckCircle2 size={14} className="text-green-500" />
             </button>
-            <p className="text-zinc-500 text-[11px] line-through leading-snug">{task.text}</p>
+            <p className="text-muted-foreground text-[11px] line-through leading-snug">{task.text}</p>
           </div>
         ))}
         {tasks.length === 0 && (
-          <p className="text-zinc-700 text-[11px] italic px-1">No tasks scheduled</p>
+          <p className="text-muted-foreground/50 text-[11px] italic px-1">No tasks scheduled</p>
         )}
       </div>
     </div>
@@ -836,7 +836,7 @@ function TaskBoard({ week, completedTasks, deferredTasks, onToggleTask, onDeferT
   const colDef = [
     { key: "today" as const, label: "Today", icon: <Target size={14} />, color: "text-primary", border: "border-red-900/40", bg: "bg-red-950/10" },
     { key: "thisWeek" as const, label: "This Week", icon: <Calendar size={14} />, color: "text-amber-400", border: "border-amber-900/40", bg: "bg-amber-950/10" },
-    { key: "deferred" as const, label: "Deferred", icon: <SkipForward size={14} />, color: "text-zinc-400", border: "border-zinc-700/40", bg: "bg-zinc-900/20" },
+    { key: "deferred" as const, label: "Deferred", icon: <SkipForward size={14} />, color: "text-muted-foreground", border: "border-border/40", bg: "bg-muted/20" },
     { key: "done" as const, label: "Completed", icon: <CheckCircle2 size={14} />, color: "text-green-400", border: "border-green-900/40", bg: "bg-green-950/10" },
   ];
 
@@ -863,20 +863,20 @@ function TaskBoard({ week, completedTasks, deferredTasks, onToggleTask, onDeferT
                       initial={{ opacity: 0, y: 8 }}
                       animate={{ opacity: 1, y: 0 }}
                       exit={{ opacity: 0, scale: 0.95 }}
-                      className={`rounded border p-2.5 ${isDone ? "opacity-40 bg-zinc-900/30 border-zinc-800/30" : taskCfg.bg}`}
+                      className={`rounded border p-2.5 ${isDone ? "opacity-40 bg-muted/30 border-border/30" : taskCfg.bg}`}
                     >
-                      <p className={`text-[11.5px] leading-snug mb-1.5 ${isDone ? "line-through text-zinc-500" : "text-amber-50/90"}`}>
+                      <p className={`text-[11.5px] leading-snug mb-1.5 ${isDone ? "line-through text-muted-foreground" : "text-amber-50/90"}`}>
                         {task.text}
                       </p>
                       <div className="flex items-center gap-2">
                         <span className={`text-[9px] ${taskCfg.color}`}>{taskCfg.icon} {taskCfg.label}</span>
-                        <span className="text-zinc-600 text-[9px]">{task.hours}h</span>
-                        <span className="text-zinc-600 text-[9px]">{DAY_LABELS[task.day]}</span>
+                        <span className="text-muted-foreground/70 text-[9px]">{task.hours}h</span>
+                        <span className="text-muted-foreground/70 text-[9px]">{DAY_LABELS[task.day]}</span>
                         <div className="ml-auto flex gap-1">
                           {!isDone && (
                             <button
                               onClick={() => onDeferTask(task.id, week)}
-                              className="text-zinc-600 hover:text-amber-400 transition-colors"
+                              className="text-muted-foreground/70 hover:text-amber-400 transition-colors"
                               title="Defer to next day"
                             >
                               <SkipForward size={11} />
@@ -884,7 +884,7 @@ function TaskBoard({ week, completedTasks, deferredTasks, onToggleTask, onDeferT
                           )}
                           <button
                             onClick={() => onToggleTask(task.id)}
-                            className={`transition-colors ${isDone ? "text-green-500 hover:text-zinc-500" : "text-zinc-500 hover:text-green-400"}`}
+                            className={`transition-colors ${isDone ? "text-green-500 hover:text-muted-foreground" : "text-muted-foreground hover:text-green-400"}`}
                           >
                             {isDone ? <CheckCircle2 size={13} /> : <Circle size={13} />}
                           </button>
@@ -895,7 +895,7 @@ function TaskBoard({ week, completedTasks, deferredTasks, onToggleTask, onDeferT
                 })}
               </AnimatePresence>
               {tasks.length === 0 && (
-                <div className="flex items-center justify-center h-20 text-zinc-700 text-xs italic">
+                <div className="flex items-center justify-center h-20 text-muted-foreground/50 text-xs italic">
                   {col.key === "done" ? "Nothing completed yet" : "Empty"}
                 </div>
               )}
@@ -919,20 +919,20 @@ function ProgressView({ completedTasks }: { completedTasks: Record<string, boole
         const done = allTasks.filter((t) => completedTasks[t.id]).length;
         const pct = Math.round(done / Math.max(1, allTasks.length) * 100);
         return (
-          <Card key={phase.id} className={`bg-zinc-950 border ${cfg.border}`}>
+          <Card key={phase.id} className={`bg-card border ${cfg.border}`}>
             <CardHeader className="pb-2">
               <div className="flex items-center justify-between">
                 <div>
                   <CardTitle className={`text-base ${cfg.text}`}>
                     Phase {phase.phaseNumber}: {phase.title}
                   </CardTitle>
-                  <p className="text-zinc-500 text-xs mt-0.5">{phase.duration} · {phase.subtitle}</p>
+                  <p className="text-muted-foreground text-xs mt-0.5">{phase.duration} · {phase.subtitle}</p>
                 </div>
                 <div className={`text-3xl font-bold ${cfg.text}`}>{pct}%</div>
               </div>
             </CardHeader>
             <CardContent>
-              <div className="h-2 bg-zinc-800 rounded-full overflow-hidden mb-4">
+              <div className="h-2 bg-secondary rounded-full overflow-hidden mb-4">
                 <motion.div
                   initial={{ width: 0 }}
                   animate={{ width: `${pct}%` }}
@@ -950,9 +950,9 @@ function ProgressView({ completedTasks }: { completedTasks: Record<string, boole
                     <div key={month.id}>
                       <div className="flex justify-between text-xs mb-1">
                         <span className="text-amber-50/70">Month {month.monthNumber}: {month.title}</span>
-                        <span className="text-zinc-500">{mDone}/{mTasks.length} tasks</span>
+                        <span className="text-muted-foreground">{mDone}/{mTasks.length} tasks</span>
                       </div>
-                      <div className="h-1.5 bg-zinc-900 rounded-full overflow-hidden">
+                      <div className="h-1.5 bg-muted rounded-full overflow-hidden">
                         <div
                           className="h-full rounded-full transition-all duration-700"
                           style={{ width: `${mPct}%`, background: cfg.line, opacity: 0.7 }}
@@ -974,8 +974,8 @@ function ProgressView({ completedTasks }: { completedTasks: Record<string, boole
                     </p>
                     <ul className="space-y-1">
                       {cp.items.map((item) => (
-                        <li key={item} className="text-zinc-400 text-[11px] flex gap-1.5 items-start">
-                          <span className="mt-0.5 text-zinc-600">▸</span>
+                        <li key={item} className="text-muted-foreground text-[11px] flex gap-1.5 items-start">
+                          <span className="mt-0.5 text-muted-foreground/70">▸</span>
                           {item}
                         </li>
                       ))}
@@ -1055,7 +1055,7 @@ export default function TrainingPlanDashboard() {
             </div>
             <div>
               <h1 className="text-xl font-bold text-amber-50">Training Plan</h1>
-              <p className="text-zinc-500 text-xs">6–12 Month Full-Stack Mastery Curriculum</p>
+              <p className="text-muted-foreground text-xs">6–12 Month Full-Stack Mastery Curriculum</p>
             </div>
           </div>
 
@@ -1064,9 +1064,9 @@ export default function TrainingPlanDashboard() {
             <div className="hidden lg:flex items-center gap-4 mr-2">
               <div className="text-center">
                 <div className="text-xl font-bold text-amber-50">{overallPct}%</div>
-                <div className="text-[10px] text-zinc-500">Overall</div>
+                <div className="text-[10px] text-muted-foreground">Overall</div>
               </div>
-              <div className="w-32 h-2 bg-zinc-800 rounded-full overflow-hidden">
+              <div className="w-32 h-2 bg-secondary rounded-full overflow-hidden">
                 <motion.div
                   initial={{ width: 0 }}
                   animate={{ width: `${overallPct}%` }}
@@ -1075,8 +1075,8 @@ export default function TrainingPlanDashboard() {
                 />
               </div>
               <div className="text-center">
-                <div className="text-xl font-bold text-zinc-300">{doneTasks}</div>
-                <div className="text-[10px] text-zinc-500">/{totalTasks} Tasks</div>
+                <div className="text-xl font-bold text-foreground/80">{doneTasks}</div>
+                <div className="text-[10px] text-muted-foreground">/{totalTasks} Tasks</div>
               </div>
             </div>
 
@@ -1096,8 +1096,8 @@ export default function TrainingPlanDashboard() {
       {/* ── Main content ── */}
       <div className="flex-1 overflow-hidden">
         <Tabs value={activeTab} onValueChange={setActiveTab} className="h-full flex flex-col">
-          <div className="flex items-center gap-4 px-6 pt-4 pb-0 border-b border-zinc-800/50 flex-shrink-0">
-            <TabsList className="bg-zinc-900/50 border border-zinc-800">
+          <div className="flex items-center gap-4 px-6 pt-4 pb-0 border-b border-border/50 flex-shrink-0">
+            <TabsList className="bg-muted/50 border border-border">
               <TabsTrigger value="graph" className="gap-1.5 data-[state=active]:bg-red-900/40 data-[state=active]:text-amber-50">
                 <Network size={13} /> Node Graph
               </TabsTrigger>
@@ -1118,7 +1118,7 @@ export default function TrainingPlanDashboard() {
                 <button
                   onClick={() => setCurrentWeekNum((n) => Math.max(1, n - 1))}
                   disabled={currentWeekNum <= 1}
-                  className="p-1.5 rounded border border-zinc-700 text-zinc-400 hover:text-amber-50 disabled:opacity-30 transition-colors"
+                  className="p-1.5 rounded border border-border text-muted-foreground hover:text-amber-50 disabled:opacity-30 transition-colors"
                 >
                   <ChevronLeft size={14} />
                 </button>
@@ -1128,7 +1128,7 @@ export default function TrainingPlanDashboard() {
                 <button
                   onClick={() => setCurrentWeekNum((n) => Math.min(ALL_WEEKS.length, n + 1))}
                   disabled={currentWeekNum >= ALL_WEEKS.length}
-                  className="p-1.5 rounded border border-zinc-700 text-zinc-400 hover:text-amber-50 disabled:opacity-30 transition-colors"
+                  className="p-1.5 rounded border border-border text-muted-foreground hover:text-amber-50 disabled:opacity-30 transition-colors"
                 >
                   <ChevronRight size={14} />
                 </button>
@@ -1142,8 +1142,8 @@ export default function TrainingPlanDashboard() {
               {/* Graph canvas */}
               <ScrollArea className="flex-1 p-6">
                 <div className="flex flex-col gap-3 mb-4">
-                  <p className="text-zinc-500 text-xs">Click any node to explore. Click a week node to see tasks and schedule.</p>
-                  <div className="flex gap-4 text-xs text-zinc-500">
+                  <p className="text-muted-foreground text-xs">Click any node to explore. Click a week node to see tasks and schedule.</p>
+                  <div className="flex gap-4 text-xs text-muted-foreground">
                     {PHASES.map((p) => {
                       const cfg = PHASE_CONFIG[p.id];
                       return (
@@ -1171,7 +1171,7 @@ export default function TrainingPlanDashboard() {
                     animate={{ width: 360, opacity: 1 }}
                     exit={{ width: 0, opacity: 0 }}
                     transition={{ duration: 0.25 }}
-                    className="flex-shrink-0 border-l border-zinc-800 bg-zinc-950 flex flex-col overflow-hidden"
+                    className="flex-shrink-0 border-l border-border bg-card flex flex-col overflow-hidden"
                     style={{ width: 360 }}
                   >
                     <DetailPanel
@@ -1207,7 +1207,7 @@ export default function TrainingPlanDashboard() {
             <ScrollArea className="h-full p-6">
               <div className="mb-4">
                 <h2 className={`text-lg font-semibold ${phaseCfg.text}`}>Week {currentWeekNum}: {currentWeek.title}</h2>
-                <p className="text-zinc-500 text-sm mt-0.5">
+                <p className="text-muted-foreground text-sm mt-0.5">
                   Today is <span className="text-amber-50/70 capitalize">{currentDay}</span> ·{" "}
                   <span className={phaseCfg.text}>{weekPct}%</span> of this week complete
                 </p>
@@ -1228,10 +1228,10 @@ export default function TrainingPlanDashboard() {
             <ScrollArea className="h-full p-6">
               <div className="mb-6">
                 <h2 className="text-lg font-semibold text-amber-50">Overall Progress</h2>
-                <p className="text-zinc-500 text-sm mt-1">
+                <p className="text-muted-foreground text-sm mt-1">
                   {doneTasks} of {totalTasks} tasks complete across all phases
                 </p>
-                <div className="mt-3 h-3 bg-zinc-800 rounded-full overflow-hidden">
+                <div className="mt-3 h-3 bg-secondary rounded-full overflow-hidden">
                   <motion.div
                     initial={{ width: 0 }}
                     animate={{ width: `${overallPct}%` }}
@@ -1239,7 +1239,7 @@ export default function TrainingPlanDashboard() {
                     className="h-full rounded-full bg-gradient-to-r from-red-700 via-amber-600 to-purple-600"
                   />
                 </div>
-                <div className="flex justify-between text-xs text-zinc-500 mt-1">
+                <div className="flex justify-between text-xs text-muted-foreground mt-1">
                   <span>0%</span>
                   <span className="text-amber-50 font-semibold">{overallPct}%</span>
                   <span>100% — Senior Level</span>

@@ -362,7 +362,7 @@ export const AddShiftModal: React.FC = () => {
                     <Button
                       id="shift-type" 
                       variant="outline"
-                      className="w-full justify-between mt-1 bg-background border border-border text-foreground hover:bg-primary/10"
+                      className="w-full justify-between mt-1 bg-background border border-border text-primary-foreground hover:bg-primary/10"
                     >
                       <div className="flex items-center gap-2">
                         <span className={shiftTypeInfo.color}>{shiftTypeInfo.icon}</span>
@@ -531,7 +531,7 @@ export const AddShiftModal: React.FC = () => {
             <Button
               onClick={handleDeleteShift}
               variant="destructive"
-              className="bg-red-600/60 hover:bg-primary text-foreground flex items-center"
+              className="bg-red-600/60 hover:bg-primary text-primary-foreground flex items-center"
             >
               <Trash2 size={16} className="mr-1" />
               Delete
@@ -548,7 +548,7 @@ export const AddShiftModal: React.FC = () => {
             </Button>
             <Button 
               onClick={handleAddOrUpdateShift}
-              className={`bg-primary hover:bg-primary/80 text-foreground`}
+              className={`bg-primary hover:bg-primary/80 text-primary-foreground`}
               disabled={!isFormValid}
             >
               {isEditMode ? "Update" : "Add"} {shiftType.charAt(0).toUpperCase() + shiftType.slice(1)}

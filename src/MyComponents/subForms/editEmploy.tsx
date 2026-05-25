@@ -134,7 +134,7 @@ export const EditEmployee = (props: Props) => {
                     <button
                       type="submit"
                       disabled={!canSubmit}
-                      className="w-full py-2.5 bg-primary hover:bg-primary/80 text-foreground text-[13px] font-medium rounded-sm
+                      className="w-full py-2.5 bg-primary hover:bg-primary/80 text-primary-foreground text-[13px] font-medium rounded-sm
                         disabled:opacity-30 disabled:cursor-not-allowed flex items-center justify-center gap-2 transition-colors"
                     >
                       <UserPlus className="h-3.5 w-3.5" />

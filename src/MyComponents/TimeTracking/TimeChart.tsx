@@ -77,7 +77,7 @@ export const WeeklyBarChart = ({ weekOffset = 0, onWeekChange }: WeeklyChartProp
   };
 
   return (
-    <Card className="bg-zinc-950 high-dpi:bg-zinc-950/20 border-red-900/30 rounded-xs">
+    <Card className="bg-card high-dpi:bg-card/20 border-red-900/30 rounded-xs">
       <CardHeader className="pb-2">
         <CardTitle className="text-amber-50 flex items-center justify-between">
           <div className="flex items-center gap-2">
@@ -163,7 +163,7 @@ export const CompanyPieChart = ({ data }: CompanyPieChartProps) => {
   const total = chartData.reduce((sum, item) => sum + item.value, 0);
 
   return (
-    <Card className="bg-zinc-950 high-dpi:bg-zinc-950/20 border-red-900/30 rounded-xs">
+    <Card className="bg-card high-dpi:bg-card/20 border-red-900/30 rounded-xs">
       <CardHeader className="pb-2">
         <CardTitle className="text-amber-50 flex items-center gap-2">
           <div
@@ -246,7 +246,7 @@ export const CategoryBarChart = ({ data }: CategoryChartProps) => {
   }
 
   return (
-    <Card className="bg-zinc-950 high-dpi:bg-zinc-950/20 border-red-900/30 rounded-xs">
+    <Card className="bg-card high-dpi:bg-card/20 border-red-900/30 rounded-xs">
       <CardHeader className="pb-2">
         <CardTitle className="text-amber-50 flex items-center gap-2">
           Hours by Category
@@ -325,7 +325,7 @@ export const CalendarHeatmap = ({ data, month }: CalendarHeatmapProps) => {
   const weekDays = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
   return (
-    <Card className="bg-zinc-950 high-dpi:bg-zinc-950/20 border-red-900/30 rounded-xs">
+    <Card className="bg-card high-dpi:bg-card/20 border-red-900/30 rounded-xs">
       <CardHeader className="pb-2">
         <CardTitle className="text-amber-50">{format(month, "MMMM yyyy")}</CardTitle>
       </CardHeader>
@@ -392,7 +392,7 @@ export const YearlyTrendChart = ({ data }: YearlyTrendChartProps) => {
   }));
 
   return (
-    <Card className="bg-zinc-950 high-dpi:bg-zinc-950/20 border-red-900/30 rounded-xs">
+    <Card className="bg-card high-dpi:bg-card/20 border-red-900/30 rounded-xs">
       <CardHeader className="pb-2">
         <CardTitle className="text-amber-50">Yearly Trend</CardTitle>
       </CardHeader>

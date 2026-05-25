@@ -132,7 +132,7 @@ export const ClientSidebar = () => {
             />
             <button
               type="submit"
-              className="w-full py-1.5 bg-primary hover:bg-primary/80 text-foreground text-[11px] font-medium rounded-sm transition-colors"
+              className="w-full py-1.5 bg-primary hover:bg-primary/80 text-primary-foreground text-[11px] font-medium rounded-sm transition-colors"
             >
               Add Client
             </button>

@@ -52,7 +52,7 @@ export function SlideOver({ open, onClose, title, headerRight, footer, children 
             exit={{ opacity: 0 }}
             transition={{ duration: 0.15 }}
             onClick={onClose}
-            className="fixed inset-0 z-40 bg-black/45 backdrop-blur-[2px]"
+            className="fixed inset-0 z-40 bg-background/45 backdrop-blur-[2px]"
             aria-hidden="true"
           />
 
