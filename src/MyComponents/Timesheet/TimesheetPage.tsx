@@ -25,7 +25,7 @@
  */
 
 import { useMemo, useState, Suspense } from "react";
-import { Clock, Plus, Loader2, Users, User, ChevronDown, AlertCircle } from "lucide-react";
+import { Clock, Plus, Loader2, Users, User, ChevronDown, AlertCircle, Copy, CalendarDays, CalendarRange } from "lucide-react";
 import {
   startOfWeekMonday,
   endOfWeekSunday,
@@ -33,7 +33,12 @@ import {
   shiftHours,
   type Shift,
 } from "@/stores/shiftTypes";
-import { useShiftsInRange } from "@/stores/shifts";
+import {
+  useShiftsInRange,
+  useShiftsRealtime,
+  useUpdateShift,
+  useCopyWeek,
+} from "@/stores/shifts";
 import { Employees, ActiveUser } from "@/stores/query";
 import { Tracker, TrackerDot } from "@/components/editorial/Tracker";
 import { Mono } from "@/components/editorial/Mono";
@@ -49,6 +54,11 @@ import { WeekNavigator } from "./WeekNavigator";
 import { ClockBar } from "./ClockBar";
 import { WeekGrid } from "./WeekGrid";
 import { ShiftEditor } from "./ShiftEditor";
+import { WarningsBar } from "./WarningsBar";
+import { DayView } from "./DayView";
+import { OpenShiftsInbox } from "./OpenShiftsInbox";
+
+type RangeMode = "week" | "day";
 
 interface Employee {
   supa_id: string;
@@ -80,15 +90,33 @@ function TimesheetContent() {
 
   // -- View state --
   const [view, setView] = useState<ViewMode>("me");
+  const [range, setRange] = useState<RangeMode>("week");
   const [weekAnchor, setWeekAnchor] = useState<Date>(() => new Date());
   const [personId, setPersonId] = useState<string | null>(null);
   const [editorOpen, setEditorOpen] = useState(false);
   const [editingShift, setEditingShift] = useState<Shift | null>(null);
   const [prefillSlot, setPrefillSlot] = useState<{ start: Date; userSupaId?: string } | null>(null);
 
+  // Subscribe to realtime — invalidates cache on any shifts change.
+  useShiftsRealtime();
+  const updateShiftMut = useUpdateShift();
+  const copyWeekMut = useCopyWeek();
+
   const weekStart = useMemo(() => startOfWeekMonday(weekAnchor), [weekAnchor]);
   const weekEnd = useMemo(() => endOfWeekSunday(weekAnchor), [weekAnchor]);
   const days = useMemo(() => weekDays(weekAnchor), [weekAnchor]);
+
+  // Day-range window — the calendar day that contains weekAnchor.
+  const dayStart = useMemo(() => {
+    const d = new Date(weekAnchor);
+    d.setHours(0, 0, 0, 0);
+    return d;
+  }, [weekAnchor]);
+  const dayEnd = useMemo(() => {
+    const d = new Date(weekAnchor);
+    d.setHours(23, 59, 59, 999);
+    return d;
+  }, [weekAnchor]);
 
   // -- Scope: which user(s) to query --
   const scopedUserId: string | null =
@@ -98,9 +126,12 @@ function TimesheetContent() {
         ? personId
         : null; // "team" → fetch all
 
+  const queryStart = range === "day" ? dayStart : weekStart;
+  const queryEnd   = range === "day" ? dayEnd   : weekEnd;
+
   const { data: shifts = [], isLoading, error } = useShiftsInRange(
-    weekStart,
-    weekEnd,
+    queryStart,
+    queryEnd,
     { userSupaId: scopedUserId },
   );
 
@@ -136,6 +167,33 @@ function TimesheetContent() {
     setEditingShift(null);
     setPrefillSlot({ start, userSupaId });
     setEditorOpen(true);
+  };
+
+  // Drag-to-move/resize → optimistic update via mutation.
+  const handleShiftTimeChange = (shiftId: string, newStartIso: string, newEndIso: string) => {
+    updateShiftMut.mutate({
+      id: shiftId,
+      starts_at: newStartIso,
+      ends_at: newEndIso,
+    });
+  };
+
+  // Copy last week's shifts forward by 7 days.
+  const handleCopyLastWeek = async () => {
+    const prevWeekStart = new Date(weekStart);
+    prevWeekStart.setDate(prevWeekStart.getDate() - 7);
+    try {
+      const count = await copyWeekMut.mutateAsync({
+        sourceWeekStart: prevWeekStart,
+        destWeekStart: weekStart,
+        userSupaId: scopedUserId,
+      });
+      if (count === 0) {
+        alert("Last week had no shifts to copy.");
+      }
+    } catch (e: any) {
+      alert(`Copy failed: ${e?.message ?? "unknown"}`);
+    }
   };
 
   return (
@@ -218,6 +276,52 @@ function TimesheetContent() {
               </DropdownMenu>
             )}
 
+            {/* Range toggle — Day / Week */}
+            <div className="inline-flex items-center rounded-md border border-border bg-card overflow-hidden">
+              {([
+                { id: "week" as const, label: "Week", icon: CalendarRange },
+                { id: "day"  as const, label: "Day",  icon: CalendarDays  },
+              ]).map((r, i) => {
+                const isActive = range === r.id;
+                const Icon = r.icon;
+                return (
+                  <button
+                    key={r.id}
+                    type="button"
+                    onClick={() => setRange(r.id)}
+                    aria-pressed={isActive}
+                    className={[
+                      "inline-flex items-center gap-1.5 h-8 px-3 text-[11.5px] font-bold uppercase tracking-wider transition-colors",
+                      isActive
+                        ? "bg-primary/15 text-primary"
+                        : "text-muted-foreground hover:text-foreground hover:bg-secondary",
+                      i > 0 ? "border-l border-border" : "",
+                    ].join(" ")}
+                  >
+                    <Icon className="w-3 h-3" />
+                    {r.label}
+                  </button>
+                );
+              })}
+            </div>
+
+            {range === "week" && (
+              <button
+                type="button"
+                onClick={handleCopyLastWeek}
+                disabled={copyWeekMut.isPending}
+                className="inline-flex items-center gap-1.5 rounded-md border border-border-strong bg-secondary/40 px-3 h-8 text-[11.5px] font-bold uppercase tracking-wider text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors disabled:opacity-40"
+                title="Duplicate last week's shifts forward"
+              >
+                {copyWeekMut.isPending ? (
+                  <Loader2 className="w-3 h-3 animate-spin" />
+                ) : (
+                  <Copy className="w-3 h-3" />
+                )}
+                Copy last week
+              </button>
+            )}
+
             <button
               type="button"
               onClick={openNewShift}
@@ -231,16 +335,16 @@ function TimesheetContent() {
         </div>
 
         <WeekNavigator
-          weekStart={weekStart}
-          weekEnd={weekEnd}
+          weekStart={range === "day" ? dayStart : weekStart}
+          weekEnd={range === "day" ? dayEnd : weekEnd}
           onPrev={() => {
             const d = new Date(weekAnchor);
-            d.setDate(d.getDate() - 7);
+            d.setDate(d.getDate() - (range === "day" ? 1 : 7));
             setWeekAnchor(d);
           }}
           onNext={() => {
             const d = new Date(weekAnchor);
-            d.setDate(d.getDate() + 7);
+            d.setDate(d.getDate() + (range === "day" ? 1 : 7));
             setWeekAnchor(d);
           }}
           onToday={() => setWeekAnchor(new Date())}
@@ -272,7 +376,7 @@ function TimesheetContent() {
       <div className="px-6 lg:px-8 pt-4 pb-2">
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
           <StatChip
-            label="Scheduled"
+            label={range === "day" ? "Scheduled today" : "Scheduled"}
             value={`${stats.scheduledHours.toFixed(1)}h`}
             tone="default"
           />
@@ -294,8 +398,16 @@ function TimesheetContent() {
         </div>
       </div>
 
-      {/* ─────────────── WEEK GRID ─────────────── */}
-      <main className="flex-1 min-h-0 px-6 lg:px-8 pb-6">
+      {/* ─────────────── WARNINGS + OPEN SHIFTS ─────────────── */}
+      <div className="px-6 lg:px-8 pt-2 space-y-2">
+        <WarningsBar shifts={shifts} />
+        {myId && (
+          <OpenShiftsInbox currentUserId={myId} currentUserName={myName} />
+        )}
+      </div>
+
+      {/* ─────────────── GRID / DAY VIEW ─────────────── */}
+      <main className="flex-1 min-h-0 px-6 lg:px-8 pb-6 pt-2">
         {isLoading ? (
           <div className="h-64 flex items-center justify-center gap-2 text-muted-foreground">
             <Loader2 className="w-4 h-4 animate-spin text-primary" />
@@ -306,6 +418,21 @@ function TimesheetContent() {
             <User className="w-6 h-6 opacity-50" />
             <p className="text-[12.5px]">Pick a teammate from the dropdown above to see their schedule.</p>
           </div>
+        ) : range === "day" ? (
+          <DayView
+            day={dayStart}
+            shifts={shifts}
+            employees={
+              view === "team"
+                ? employees
+                : view === "person" && personId
+                  ? employees.filter((e) => e.supa_id === personId)
+                  : employees.filter((e) => e.supa_id === myId)
+            }
+            currentUserId={myId}
+            onShiftClick={openEditShift}
+            onEmptyCellClick={openNewAtSlot}
+          />
         ) : (
           <WeekGrid
             days={days}
@@ -315,6 +442,7 @@ function TimesheetContent() {
             currentUserId={myId}
             onShiftClick={openEditShift}
             onEmptyCellClick={openNewAtSlot}
+            onShiftTimeChange={handleShiftTimeChange}
           />
         )}
       </main>
@@ -332,6 +460,7 @@ function TimesheetContent() {
         employees={employees}
         currentUserId={myId}
         currentUserName={myName}
+        allShifts={shifts}
       />
     </div>
   );

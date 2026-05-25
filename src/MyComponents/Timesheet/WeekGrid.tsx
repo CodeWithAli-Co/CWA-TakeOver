@@ -35,7 +35,10 @@ import {
   isSameDay,
   shiftHours,
   weekdayAbbr,
+  splitAcrossMidnight,
+  isVirtualInstance,
   type Shift,
+  type ShiftSegment,
 } from "@/stores/shiftTypes";
 import { ShiftBlock, ShiftSwimlanePill } from "./ShiftBlock";
 
@@ -54,6 +57,8 @@ interface Props {
   currentUserId: string | null;
   onShiftClick: (s: Shift) => void;
   onEmptyCellClick: (start: Date, userSupaId?: string) => void;
+  /** Optional — wire to useUpdateShift to enable drag-to-move/resize. */
+  onShiftTimeChange?: (shiftId: string, newStartIso: string, newEndIso: string) => void;
 }
 
 const HOUR_HEIGHT_PX = 44;
@@ -72,6 +77,7 @@ export function WeekGrid({
   currentUserId,
   onShiftClick,
   onEmptyCellClick,
+  onShiftTimeChange,
 }: Props) {
   if (mode === "team" && employees) {
     return (
@@ -92,6 +98,7 @@ export function WeekGrid({
       shifts={shifts}
       onShiftClick={onShiftClick}
       onEmptyCellClick={onEmptyCellClick}
+      onShiftTimeChange={onShiftTimeChange}
     />
   );
 }
@@ -105,12 +112,19 @@ function HourlyGrid({
   shifts,
   onShiftClick,
   onEmptyCellClick,
+  onShiftTimeChange,
 }: {
   days: Date[];
   shifts: Shift[];
   onShiftClick: (s: Shift) => void;
   onEmptyCellClick: (start: Date) => void;
+  onShiftTimeChange?: (shiftId: string, newStartIso: string, newEndIso: string) => void;
 }) {
+  // Expand overnight shifts into per-day segments.
+  const segments: ShiftSegment[] = useMemo(
+    () => shifts.flatMap((s) => splitAcrossMidnight(s)),
+    [shifts],
+  );
   // Live "now line" — tick once a minute.
   const [now, setNow] = useState(() => new Date());
   useEffect(() => {
@@ -126,15 +140,19 @@ function HourlyGrid({
     scrollRef.current.scrollTo({ top: Math.max(0, target) });
   }, []);
 
-  // Per-day totals for the header row.
+  // Per-day totals for the header row — computed from segments so an
+  // overnight shift contributes to both calendar days proportionally.
   const dayTotals = useMemo(() => {
     return days.map((d) => {
-      const total = shifts
-        .filter((s) => isSameDay(s.starts_at, d))
-        .reduce((sum, s) => sum + shiftHours(s), 0);
+      const total = segments
+        .filter((seg) => isSameDay(seg._segmentStart, d))
+        .reduce((sum, seg) => {
+          const ms = new Date(seg._segmentEnd).getTime() - new Date(seg._segmentStart).getTime();
+          return sum + ms / 3_600_000;
+        }, 0);
       return total;
     });
-  }, [days, shifts]);
+  }, [days, segments]);
 
   return (
     <div className="rounded-xl border border-border bg-card overflow-hidden">
@@ -202,7 +220,7 @@ function HourlyGrid({
           {/* Day columns */}
           {days.map((day, dayIdx) => {
             const today = isSameDay(new Date().toISOString(), day);
-            const dayShifts = shifts.filter((s) => isSameDay(s.starts_at, day));
+            const daySegments = segments.filter((seg) => isSameDay(seg._segmentStart, day));
             return (
               <div
                 key={dayIdx}
@@ -237,14 +255,19 @@ function HourlyGrid({
                   <NowLine now={now} />
                 )}
 
-                {/* Shift blocks */}
-                {dayShifts.map((s) => (
+                {/* Shift segments (1 per single-day shift, 2+ for overnight) */}
+                {daySegments.map((seg) => (
                   <ShiftBlock
-                    key={s.id}
-                    shift={s}
+                    key={`${seg.id}::${seg._segmentIndex}`}
+                    shift={seg}
                     hourHeightPx={HOUR_HEIGHT_PX}
                     visibleStartHour={VISIBLE_START_HOUR}
-                    onClick={() => onShiftClick(s)}
+                    onClick={() => onShiftClick(seg)}
+                    onUpdateTime={
+                      onShiftTimeChange && !isVirtualInstance(seg) && seg._segmentCount === 1
+                        ? (s, e) => onShiftTimeChange(seg.id, s, e)
+                        : undefined
+                    }
                   />
                 ))}
               </div>

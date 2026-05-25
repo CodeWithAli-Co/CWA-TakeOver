@@ -20,7 +20,7 @@
  */
 
 import { useEffect, useMemo, useState } from "react";
-import { ChevronRight, Trash2, Loader2 } from "lucide-react";
+import { ChevronRight, Trash2, Loader2, AlertCircle, Repeat, HandHelping } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -35,10 +35,19 @@ import { Tracker, TrackerDot } from "@/components/editorial/Tracker";
 import {
   SHIFT_TYPES,
   SHIFT_TYPE_META,
+  isVirtualInstance,
   type Shift,
   type ShiftType,
+  type Recurrence,
 } from "@/stores/shiftTypes";
-import { useCreateShift, useUpdateShift, useDeleteShift } from "@/stores/shifts";
+import {
+  useCreateShift,
+  useUpdateShift,
+  useDeleteShift,
+  useRequestCoverage,
+  useCancelCoverageRequest,
+  findConflictsAgainst,
+} from "@/stores/shifts";
 
 interface Employee {
   supa_id: string;
@@ -55,7 +64,11 @@ interface Props {
   employees: Employee[];
   currentUserId: string | null;
   currentUserName: string;
+  /** Used for inline conflict detection. Pass the same array the grid renders. */
+  allShifts?: Shift[];
 }
+
+type RecurrenceKind = "none" | "weekdays" | "daily" | "weekly" | "custom";
 
 interface FormState {
   userSupaId: string;
@@ -67,6 +80,10 @@ interface FormState {
   endTime: string;       // HH:mm
   location: string;
   notes: string;
+  // v2 fields
+  recurrenceKind: RecurrenceKind;
+  customDays: number[];           // 0..6 (Sun..Sat) — only used with "custom"
+  recurrenceUntil: string;        // YYYY-MM-DD or ""
 }
 
 const blankForm = (): FormState => ({
@@ -79,7 +96,37 @@ const blankForm = (): FormState => ({
   endTime: "17:00",
   location: "",
   notes: "",
+  recurrenceKind: "none",
+  customDays: [],
+  recurrenceUntil: "",
 });
+
+/** Map our editor enum + custom-days picker into the Recurrence shape stored in jsonb. */
+function buildRecurrence(kind: RecurrenceKind, customDays: number[], anchorDate: string): Recurrence | null {
+  if (kind === "none") return null;
+  if (kind === "daily") return { freq: "daily" };
+  if (kind === "weekdays") return { freq: "weekly", days_of_week: [1, 2, 3, 4, 5] };
+  if (kind === "weekly") {
+    // Just the same weekday as the anchor.
+    const dow = new Date(anchorDate + "T00:00:00").getDay();
+    return { freq: "weekly", days_of_week: [dow] };
+  }
+  // custom — at least one day must be checked
+  if (kind === "custom" && customDays.length > 0) {
+    return { freq: "weekly", days_of_week: [...customDays].sort() };
+  }
+  return null;
+}
+
+/** Reverse-map a stored Recurrence back into our editor enum. */
+function inferRecurrenceKind(r: Recurrence | null, anchorDow: number): { kind: RecurrenceKind; days: number[] } {
+  if (!r) return { kind: "none", days: [] };
+  if (r.freq === "daily") return { kind: "daily", days: [] };
+  const days = r.days_of_week ?? [];
+  if (days.length === 5 && [1,2,3,4,5].every((d) => days.includes(d))) return { kind: "weekdays", days: [] };
+  if (days.length === 1 && days[0] === anchorDow) return { kind: "weekly", days: [] };
+  return { kind: "custom", days };
+}
 
 export function ShiftEditor({
   isOpen,
@@ -89,10 +136,13 @@ export function ShiftEditor({
   employees,
   currentUserId,
   currentUserName,
+  allShifts = [],
 }: Props) {
   const createMut = useCreateShift();
   const updateMut = useUpdateShift();
   const deleteMut = useDeleteShift();
+  const requestCoverage = useRequestCoverage();
+  const cancelCoverage = useCancelCoverageRequest();
 
   const [form, setForm] = useState<FormState>(blankForm);
   const [err, setErr] = useState<string | null>(null);
@@ -105,6 +155,8 @@ export function ShiftEditor({
     if (editing) {
       const s = new Date(editing.starts_at);
       const e = new Date(editing.ends_at);
+      const anchorDow = s.getDay();
+      const { kind, days } = inferRecurrenceKind(editing.recurrence, anchorDow);
       setForm({
         userSupaId: editing.user_supa_id,
         username: editing.username,
@@ -115,6 +167,9 @@ export function ShiftEditor({
         endTime: toLocalTimeInput(e),
         location: editing.location ?? "",
         notes: editing.notes ?? "",
+        recurrenceKind: kind,
+        customDays: days,
+        recurrenceUntil: editing.recurrence_until ?? "",
       });
       return;
     }
@@ -136,6 +191,17 @@ export function ShiftEditor({
     seed.username = target?.username ?? "";
     setForm(seed);
   }, [isOpen, editing, prefill, employees, currentUserId, currentUserName]);
+
+  // ─── Conflict detection ──────────────────────────────────────
+  // Runs against the same shifts the grid is rendering, so the warning
+  // appears the moment the user nudges the time into someone else's
+  // slot — no Supabase round-trip.
+  const conflicts = useMemo(() => {
+    if (!form.userSupaId || !form.date || form.startTime >= form.endTime) return [];
+    const starts_at = combineLocal(form.date, form.startTime);
+    const ends_at   = combineLocal(form.date, form.endTime);
+    return findConflictsAgainst(allShifts, form.userSupaId, starts_at, ends_at, editing?.id);
+  }, [allShifts, editing?.id, form.userSupaId, form.date, form.startTime, form.endTime]);
 
   const typeMeta = SHIFT_TYPE_META[form.type];
 
@@ -164,10 +230,16 @@ export function ShiftEditor({
     const starts_at = combineLocal(form.date, form.startTime);
     const ends_at   = combineLocal(form.date, form.endTime);
 
+    // Build recurrence payload from the picker state.
+    const recurrence = buildRecurrence(form.recurrenceKind, form.customDays, form.date);
+    const recurrence_until = recurrence && form.recurrenceUntil ? form.recurrenceUntil : null;
+
     try {
       if (editing) {
+        // Editing a virtual instance — bounce to the master.
+        const targetId = isVirtualInstance(editing) ? editing.recurrence_parent_id ?? editing.id : editing.id;
         await updateMut.mutateAsync({
-          id: editing.id,
+          id: targetId,
           user_supa_id: form.userSupaId,
           username: selectedEmployee?.username ?? form.username,
           type: form.type,
@@ -176,6 +248,8 @@ export function ShiftEditor({
           ends_at,
           location: form.location || null,
           notes: form.notes || null,
+          recurrence,
+          recurrence_until,
         });
       } else {
         await createMut.mutateAsync({
@@ -187,7 +261,9 @@ export function ShiftEditor({
           ends_at,
           location: form.location || null,
           notes: form.notes || null,
-        });
+          // ShiftCreate accepts these as optional partials.
+          ...(recurrence ? { recurrence: recurrence as any, recurrence_until: recurrence_until as any } : {}),
+        } as any);
       }
       onClose();
     } catch (e: any) {
@@ -197,12 +273,32 @@ export function ShiftEditor({
 
   const handleDelete = async () => {
     if (!editing) return;
-    if (!confirm("Delete this shift? This cannot be undone.")) return;
+    const isRecurring = !!editing.recurrence || isVirtualInstance(editing);
+    const msg = isRecurring
+      ? "Delete this recurring shift series? All future instances will disappear."
+      : "Delete this shift? This cannot be undone.";
+    if (!confirm(msg)) return;
     try {
-      await deleteMut.mutateAsync(editing.id);
+      const targetId = isVirtualInstance(editing) ? editing.recurrence_parent_id ?? editing.id : editing.id;
+      await deleteMut.mutateAsync(targetId);
       onClose();
     } catch (e: any) {
       setErr(e?.message || "Delete failed.");
+    }
+  };
+
+  const handleToggleCoverage = async () => {
+    if (!editing) return;
+    const targetId = isVirtualInstance(editing) ? editing.recurrence_parent_id ?? editing.id : editing.id;
+    try {
+      if (editing.coverage_requested_at) {
+        await cancelCoverage.mutateAsync(targetId);
+      } else {
+        await requestCoverage.mutateAsync(targetId);
+      }
+      onClose();
+    } catch (e: any) {
+      setErr(e?.message || "Coverage update failed.");
     }
   };
 
@@ -351,6 +447,107 @@ export function ShiftEditor({
             </Field>
           </div>
 
+          {/* CONFLICT WARNING — surfaces inline if anyone overlaps. */}
+          {conflicts.length > 0 && (
+            <div className="rounded-md border border-amber-500/40 bg-amber-500/5 px-3 py-2 flex items-start gap-2 text-[12px]">
+              <AlertCircle className="w-3.5 h-3.5 mt-0.5 shrink-0 text-amber-400" />
+              <div className="flex-1 min-w-0">
+                <p className="font-semibold text-amber-200 mb-1">
+                  {conflicts.length === 1 ? "Overlaps with another shift" : `Overlaps with ${conflicts.length} other shifts`}
+                </p>
+                <ul className="space-y-0.5">
+                  {conflicts.slice(0, 3).map((c) => (
+                    <li key={c.id} className="text-amber-100/80 truncate">
+                      · {c.title || SHIFT_TYPE_META[c.type].label} ({toLocalTimeInput(new Date(c.starts_at))}–{toLocalTimeInput(new Date(c.ends_at))})
+                    </li>
+                  ))}
+                  {conflicts.length > 3 && (
+                    <li className="text-amber-200/60">…and {conflicts.length - 3} more</li>
+                  )}
+                </ul>
+                <p className="mt-1 text-[11px] text-amber-200/70">
+                  You can still save — this is a warning, not a block.
+                </p>
+              </div>
+            </div>
+          )}
+
+          {/* REPEATS — recurrence picker. */}
+          <Field label="Repeats">
+            <div className="grid grid-cols-5 gap-1.5">
+              {(["none","weekdays","daily","weekly","custom"] as RecurrenceKind[]).map((k) => {
+                const isActive = form.recurrenceKind === k;
+                const label = k === "none" ? "Never" : k.charAt(0).toUpperCase() + k.slice(1);
+                return (
+                  <button
+                    key={k}
+                    type="button"
+                    onClick={() => setForm({ ...form, recurrenceKind: k })}
+                    className={[
+                      "rounded-md border px-2 py-1.5 text-[11px] font-bold uppercase tracking-wider transition-all inline-flex items-center justify-center gap-1",
+                      isActive
+                        ? "bg-primary/15 border-primary/50 text-primary"
+                        : "border-border text-muted-foreground hover:text-foreground hover:border-border-strong",
+                    ].join(" ")}
+                  >
+                    {k !== "none" && <Repeat className="w-2.5 h-2.5" />}
+                    {label}
+                  </button>
+                );
+              })}
+            </div>
+
+            {form.recurrenceKind === "custom" && (
+              <div className="mt-2 flex items-center gap-1">
+                {["S","M","T","W","T","F","S"].map((dl, i) => {
+                  const on = form.customDays.includes(i);
+                  return (
+                    <button
+                      key={i}
+                      type="button"
+                      onClick={() =>
+                        setForm({
+                          ...form,
+                          customDays: on
+                            ? form.customDays.filter((d) => d !== i)
+                            : [...form.customDays, i],
+                        })
+                      }
+                      aria-pressed={on}
+                      className={[
+                        "w-7 h-7 rounded-md text-[10.5px] font-bold transition-all",
+                        on
+                          ? "bg-primary/20 border border-primary/60 text-primary"
+                          : "bg-secondary/40 border border-border-strong text-muted-foreground hover:text-foreground",
+                      ].join(" ")}
+                    >
+                      {dl}
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+
+            {form.recurrenceKind !== "none" && (
+              <div className="mt-2 grid grid-cols-2 gap-2 items-end">
+                <div>
+                  <Label className="text-muted-foreground text-[10px] font-bold uppercase tracking-[0.12em] mb-1 block">
+                    Until <span className="text-muted-foreground/60 normal-case ml-1">(optional)</span>
+                  </Label>
+                  <Input
+                    type="date"
+                    value={form.recurrenceUntil}
+                    onChange={(e) => setForm({ ...form, recurrenceUntil: e.target.value })}
+                    className="bg-secondary/40 border-border-strong text-foreground h-9 text-[12.5px] font-semibold focus:border-primary/60 focus:ring-2 focus:ring-primary/20"
+                  />
+                </div>
+                <p className="text-[11px] text-muted-foreground/80 leading-snug">
+                  Master row generates instances on the fly. Editing the master changes every future occurrence.
+                </p>
+              </div>
+            )}
+          </Field>
+
           {/* LOCATION */}
           <Field label="Location" optional>
             <Input
@@ -386,6 +583,26 @@ export function ShiftEditor({
             >
               {deleting ? <Loader2 className="w-3 h-3 animate-spin" /> : <Trash2 className="w-3 h-3" />}
               Delete
+            </button>
+          )}
+          {editing && editing.user_supa_id === currentUserId && !isVirtualInstance(editing) && (
+            <button
+              type="button"
+              onClick={handleToggleCoverage}
+              disabled={saving || deleting || requestCoverage.isPending || cancelCoverage.isPending}
+              className={[
+                "inline-flex items-center gap-1.5 rounded-md border px-3 h-9 text-[11px] font-bold uppercase tracking-wider transition-colors disabled:opacity-40",
+                editing.coverage_requested_at
+                  ? "border-amber-500/40 bg-amber-500/10 text-amber-300 hover:bg-amber-500/20"
+                  : "border-border-strong text-muted-foreground hover:text-foreground hover:bg-secondary",
+              ].join(" ")}
+            >
+              {(requestCoverage.isPending || cancelCoverage.isPending) ? (
+                <Loader2 className="w-3 h-3 animate-spin" />
+              ) : (
+                <HandHelping className="w-3 h-3" />
+              )}
+              {editing.coverage_requested_at ? "Cancel coverage" : "Needs cover"}
             </button>
           )}
           <button

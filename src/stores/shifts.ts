@@ -10,10 +10,19 @@
  * overnight shifts straddling Sunday→Monday show up in both weeks.
  */
 
+import { useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import supabase from "@/MyComponents/supabase";
 import { useCompanyFilter } from "./store";
-import type { Shift, ShiftCreate, ShiftUpdate } from "./shiftTypes";
+import {
+  expandRecurrence,
+  findOverlaps,
+  isVirtualInstance,
+  masterIdOf,
+  type Shift,
+  type ShiftCreate,
+  type ShiftUpdate,
+} from "./shiftTypes";
 
 const SHIFTS_TABLE = "shifts";
 
@@ -57,31 +66,75 @@ export function useShiftsInRange(
     queryKey: shiftKeys.range(fromIso, toIso, scope),
     enabled: opts.enabled !== false,
     queryFn: async (): Promise<Shift[]> => {
-      // Overlap predicate: starts_at <= to AND ends_at >= from
-      let q = supabase
+      // Two passes, OR'd client-side:
+      //   1. Concrete rows whose [starts_at, ends_at] overlaps [from, to].
+      //   2. Recurrence masters that *could* generate instances inside the
+      //      window — i.e. their anchor is <= to AND (recurrence_until is
+      //      NULL OR >= from). We then expand them client-side.
+      const overlapQuery = supabase
         .from(SHIFTS_TABLE)
         .select("*")
         .lte("starts_at", toIso)
         .gte("ends_at", fromIso)
-        .order("starts_at", { ascending: true });
+        .is("recurrence", null);
+
+      const recurringQuery = supabase
+        .from(SHIFTS_TABLE)
+        .select("*")
+        .not("recurrence", "is", null)
+        .lte("starts_at", toIso);
+
+      let oq = overlapQuery;
+      let rq = recurringQuery;
 
       if (opts.userSupaId) {
-        q = q.eq("user_supa_id", opts.userSupaId);
+        oq = oq.eq("user_supa_id", opts.userSupaId);
+        rq = rq.eq("user_supa_id", opts.userSupaId);
       }
       if (activeCompany !== "all") {
-        q = q.eq("company", activeCompanyLabel());
+        oq = oq.eq("company", activeCompanyLabel());
+        rq = rq.eq("company", activeCompanyLabel());
       }
 
-      const { data, error } = await q;
-      if (error) {
-        // Surface the error code; the UI banner key-matches on this.
-        const code = (error as any).code;
-        const msg = code === "42P01"
-          ? `Table does not exist (code 42P01): ${error.message}`
-          : error.message;
-        throw new Error(msg);
+      const [overlapRes, recurringRes] = await Promise.all([oq, rq]);
+
+      const handle = (res: typeof overlapRes) => {
+        if (res.error) {
+          const code = (res.error as any).code;
+          const msg = code === "42P01"
+            ? `Table does not exist (code 42P01): ${res.error.message}`
+            : res.error.message;
+          throw new Error(msg);
+        }
+        return (res.data ?? []) as Shift[];
+      };
+
+      const concrete = handle(overlapRes);
+      const masters = handle(recurringRes);
+
+      // Expand recurring masters into virtual instances within the window.
+      // Drop any expansion whose date matches a concrete clock-in row (so a
+      // recurring template never double-renders on top of its materialized
+      // copy — e.g. an admin manually edited the Tuesday instance).
+      const concreteDateKeys = new Set(
+        concrete
+          .filter((s) => s.recurrence_parent_id)
+          .map((s) => `${s.recurrence_parent_id}::${s.starts_at.slice(0, 10)}`),
+      );
+
+      const expanded: Shift[] = [];
+      for (const m of masters) {
+        for (const inst of expandRecurrence(m, from, to)) {
+          const key = `${m.id}::${inst.starts_at.slice(0, 10)}`;
+          if (!concreteDateKeys.has(key)) expanded.push(inst);
+        }
       }
-      return (data ?? []) as Shift[];
+
+      // Final list: concrete rows that overlap the window + virtual instances.
+      // Sort by start time so renderers can rely on order.
+      return [...concrete, ...expanded].sort((a, b) =>
+        a.starts_at.localeCompare(b.starts_at),
+      );
     },
   });
 }
@@ -266,6 +319,227 @@ export function useClockOut() {
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: shiftKeys.all });
+    },
+  });
+}
+
+// ============================================================
+// v2 — realtime sync, conflict check, copy-week, coverage flow
+// ============================================================
+
+/**
+ * Subscribes to Supabase `postgres_changes` on the shifts table and
+ * invalidates the TanStack cache on any change. Mount once at the top
+ * of the page; teardown handled in effect cleanup.
+ */
+export function useShiftsRealtime() {
+  const qc = useQueryClient();
+  useEffect(() => {
+    const channel = supabase
+      .channel("shifts_realtime")
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: SHIFTS_TABLE },
+        () => {
+          // Cheap invalidate-all — granular patching is possible but the
+          // grid re-renders fast and the wins aren't worth the complexity
+          // until we see scale issues.
+          qc.invalidateQueries({ queryKey: shiftKeys.all });
+        },
+      )
+      .subscribe();
+    return () => {
+      channel.unsubscribe();
+    };
+  }, [qc]);
+}
+
+/**
+ * Returns conflicting shifts for a user within [starts_at, ends_at],
+ * excluding the row being edited (if any). Operates on already-loaded
+ * data so the editor can show conflicts inline without a round-trip.
+ */
+export function findConflictsAgainst(
+  shifts: Shift[],
+  userId: string,
+  starts_at: string,
+  ends_at: string,
+  ignoreId?: string,
+): Shift[] {
+  // Treat virtual instances as their master for the ignore filter so
+  // re-saving a recurring master doesn't conflict with itself.
+  const baseIgnore = ignoreId ? masterIdOf({ id: ignoreId } as Shift) : undefined;
+  return findOverlaps(shifts, userId, starts_at, ends_at, baseIgnore).filter(
+    (s) => !isVirtualInstance(s) || masterIdOf(s) !== baseIgnore,
+  );
+}
+
+/**
+ * Copy every shift in `[fromStart, fromEnd]` into `[toStart, toEnd]`
+ * shifted by 7 days. Skips virtual recurrence instances (their masters
+ * already repeat) and any cancelled rows. Returns the new row count.
+ */
+export function useCopyWeek() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (args: {
+      sourceWeekStart: Date;
+      destWeekStart: Date;
+      userSupaId?: string | null;
+    }): Promise<number> => {
+      const { sourceWeekStart, destWeekStart, userSupaId } = args;
+      const sourceEnd = new Date(sourceWeekStart);
+      sourceEnd.setDate(sourceEnd.getDate() + 7);
+      const shiftMs =
+        destWeekStart.getTime() - sourceWeekStart.getTime();
+
+      // Pull only concrete rows for the source week — recurring masters
+      // are excluded because they already paint forward on their own.
+      let q = supabase
+        .from(SHIFTS_TABLE)
+        .select("*")
+        .gte("starts_at", sourceWeekStart.toISOString())
+        .lt("starts_at", sourceEnd.toISOString())
+        .is("recurrence", null)
+        .neq("status", "cancelled");
+      if (userSupaId) q = q.eq("user_supa_id", userSupaId);
+
+      const { data: source, error: srcErr } = await q;
+      if (srcErr) throw srcErr;
+      if (!source || source.length === 0) return 0;
+
+      const { data: auth } = await supabase.auth.getUser();
+
+      const inserts = (source as Shift[]).map((s) => ({
+        user_supa_id: s.user_supa_id,
+        username: s.username,
+        starts_at: new Date(new Date(s.starts_at).getTime() + shiftMs).toISOString(),
+        ends_at:   new Date(new Date(s.ends_at).getTime()   + shiftMs).toISOString(),
+        type: s.type,
+        title: s.title,
+        notes: s.notes,
+        location: s.location,
+        color: s.color,
+        category: s.category,
+        is_billable: s.is_billable,
+        company: s.company,
+        status: "scheduled" as const,
+        created_by: auth.user?.id ?? null,
+      }));
+
+      const { error: insErr, data: inserted } = await supabase
+        .from(SHIFTS_TABLE)
+        .insert(inserts)
+        .select("id");
+      if (insErr) throw insErr;
+      return inserted?.length ?? inserts.length;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: shiftKeys.all });
+    },
+  });
+}
+
+/**
+ * Flag this shift as "needs cover" — anyone in the org can claim it
+ * from the OpenShiftsInbox.
+ */
+export function useRequestCoverage() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (shiftId: string): Promise<Shift> => {
+      const { data: auth } = await supabase.auth.getUser();
+      const { data, error } = await supabase
+        .from(SHIFTS_TABLE)
+        .update({
+          coverage_requested_at: new Date().toISOString(),
+          coverage_requested_by: auth.user?.id ?? null,
+        })
+        .eq("id", shiftId)
+        .select()
+        .single();
+      if (error) throw error;
+      return data as Shift;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: shiftKeys.all });
+    },
+  });
+}
+
+/** Cancel a coverage request — restores the shift to normal "yours" state. */
+export function useCancelCoverageRequest() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (shiftId: string): Promise<Shift> => {
+      const { data, error } = await supabase
+        .from(SHIFTS_TABLE)
+        .update({
+          coverage_requested_at: null,
+          coverage_requested_by: null,
+        })
+        .eq("id", shiftId)
+        .select()
+        .single();
+      if (error) throw error;
+      return data as Shift;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: shiftKeys.all });
+    },
+  });
+}
+
+/**
+ * Claim an open shift — reassigns user_supa_id to the claimer and
+ * clears the coverage flag. The previous owner keeps no link to the
+ * shift; if you need an audit trail later, capture it here.
+ */
+export function useClaimShift() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (args: {
+      shiftId: string;
+      claimerSupaId: string;
+      claimerUsername: string;
+    }): Promise<Shift> => {
+      const { data, error } = await supabase
+        .from(SHIFTS_TABLE)
+        .update({
+          user_supa_id: args.claimerSupaId,
+          username: args.claimerUsername,
+          coverage_requested_at: null,
+          coverage_requested_by: null,
+        })
+        .eq("id", args.shiftId)
+        .select()
+        .single();
+      if (error) throw error;
+      return data as Shift;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: shiftKeys.all });
+    },
+  });
+}
+
+/** All shifts currently flagged as "needs cover" — used by OpenShiftsInbox. */
+export function useOpenShifts() {
+  const { activeCompany } = useCompanyFilter();
+  return useQuery({
+    queryKey: ["shifts", "open", activeCompany],
+    refetchInterval: 30_000,
+    queryFn: async (): Promise<Shift[]> => {
+      let q = supabase
+        .from(SHIFTS_TABLE)
+        .select("*")
+        .not("coverage_requested_at", "is", null)
+        .gte("ends_at", new Date().toISOString())
+        .order("starts_at", { ascending: true });
+      if (activeCompany !== "all") q = q.eq("company", activeCompanyLabel());
+      const { data, error } = await q;
+      if (error) throw error;
+      return (data ?? []) as Shift[];
     },
   });
 }

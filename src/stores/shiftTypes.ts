@@ -59,9 +59,31 @@ export interface Shift {
 
   company: string;            // "CodeWithAli" | "simplicity"
 
+  // Recurrence (master row only — generated instances are virtual)
+  recurrence: Recurrence | null;
+  recurrence_parent_id: string | null;
+  recurrence_until: string | null;     // YYYY-MM-DD, inclusive
+
+  // Coverage-request flow ("needs cover")
+  coverage_requested_at: string | null;
+  coverage_requested_by: string | null;
+
   created_by: string | null;
   created_at: string;
   updated_at: string;
+}
+
+/**
+ * Lightweight recurrence rule. Stored as jsonb on the master row. The
+ * client expands it inside the visible date range — we never persist
+ * the generated instances.
+ */
+export interface Recurrence {
+  freq: "daily" | "weekly";
+  /** 0 = Sun ... 6 = Sat. Required for weekly. */
+  days_of_week?: number[];
+  /** Every Nth week/day. Defaults to 1. */
+  interval?: number;
 }
 
 // Insert payload — server fills the rest.
@@ -204,4 +226,210 @@ export function shiftTimeRange(s: Shift): string {
 export function isInPlannedWindow(s: Shift, now: Date = new Date()): boolean {
   const t = now.getTime();
   return t >= new Date(s.starts_at).getTime() && t <= new Date(s.ends_at).getTime();
+}
+
+// ============================================================
+// v2 helpers — overlap, weekly hours, recurrence, overnight
+// ============================================================
+
+/** True if two ISO time ranges overlap (open intervals — a shift ending exactly when another starts is fine). */
+export function rangesOverlap(
+  aStart: string, aEnd: string,
+  bStart: string, bEnd: string,
+): boolean {
+  return new Date(aStart) < new Date(bEnd) && new Date(bStart) < new Date(aEnd);
+}
+
+/** Returns conflicting shifts (other than `ignoreId`) for the same user that overlap [starts_at, ends_at]. */
+export function findOverlaps(
+  shifts: Shift[],
+  userId: string,
+  starts_at: string,
+  ends_at: string,
+  ignoreId?: string,
+): Shift[] {
+  return shifts.filter(
+    (s) =>
+      s.user_supa_id === userId &&
+      s.id !== ignoreId &&
+      s.status !== "cancelled" &&
+      rangesOverlap(s.starts_at, s.ends_at, starts_at, ends_at),
+  );
+}
+
+/** Rolls up planned hours per user across the given shifts. */
+export function weekHoursByUser(shifts: Shift[]): Map<string, number> {
+  const out = new Map<string, number>();
+  for (const s of shifts) {
+    if (s.status === "cancelled") continue;
+    out.set(s.user_supa_id, (out.get(s.user_supa_id) ?? 0) + shiftHours(s));
+  }
+  return out;
+}
+
+/**
+ * If a shift's window spans midnight, return one segment per calendar
+ * day it touches. Each segment keeps the original id but adds a
+ * `_segmentIndex` and `_segmentCount` for the renderer.
+ *
+ * Single-day shifts return [s] unchanged so callers can flat-map every
+ * shift through this function unconditionally.
+ */
+export interface ShiftSegment extends Shift {
+  _segmentIndex: number;
+  _segmentCount: number;
+  _segmentStart: string;
+  _segmentEnd: string;
+}
+
+export function splitAcrossMidnight(s: Shift): ShiftSegment[] {
+  const start = new Date(s.starts_at);
+  const end = new Date(s.ends_at);
+
+  // Same calendar day → no split needed.
+  if (
+    start.getFullYear() === end.getFullYear() &&
+    start.getMonth() === end.getMonth() &&
+    start.getDate() === end.getDate()
+  ) {
+    return [{
+      ...s,
+      _segmentIndex: 0,
+      _segmentCount: 1,
+      _segmentStart: s.starts_at,
+      _segmentEnd: s.ends_at,
+    }];
+  }
+
+  const segments: ShiftSegment[] = [];
+  let cursor = new Date(start);
+
+  while (cursor < end) {
+    // End-of-day for the cursor's calendar day.
+    const eod = new Date(cursor);
+    eod.setHours(23, 59, 59, 999);
+    const segEnd = eod < end ? eod : end;
+    segments.push({
+      ...s,
+      _segmentIndex: segments.length,
+      _segmentCount: -1, // patched after loop
+      _segmentStart: cursor.toISOString(),
+      _segmentEnd: segEnd.toISOString(),
+    });
+    // Advance to start of next day.
+    const nextDay = new Date(cursor);
+    nextDay.setDate(nextDay.getDate() + 1);
+    nextDay.setHours(0, 0, 0, 0);
+    cursor = nextDay;
+  }
+
+  for (const seg of segments) seg._segmentCount = segments.length;
+  return segments;
+}
+
+/**
+ * Expand a recurring master row into virtual instances that overlap
+ * [rangeStart, rangeEnd]. The original row's date is taken as the
+ * pattern anchor; each instance keeps the same wall-clock window but
+ * shifted onto matching days. Generated instances inherit a synthetic
+ * id of the form "<masterId>::<yyyy-mm-dd>" so React keys stay stable.
+ */
+export function expandRecurrence(
+  master: Shift,
+  rangeStart: Date,
+  rangeEnd: Date,
+): Shift[] {
+  if (!master.recurrence) return [master];
+  const { freq, days_of_week = [], interval = 1 } = master.recurrence;
+  if (interval < 1) return [master];
+
+  const anchorStart = new Date(master.starts_at);
+  const anchorEnd = new Date(master.ends_at);
+  const durationMs = anchorEnd.getTime() - anchorStart.getTime();
+
+  // Cap expansion at the recurrence_until date if present.
+  const hardEnd = master.recurrence_until
+    ? new Date(master.recurrence_until + "T23:59:59")
+    : rangeEnd;
+  const effectiveEnd = hardEnd < rangeEnd ? hardEnd : rangeEnd;
+
+  // Start walking from the earlier of (anchor day) or (rangeStart day) so
+  // an instance whose week-anchor lives in the past still shows up.
+  const walk = new Date(rangeStart);
+  walk.setHours(0, 0, 0, 0);
+  if (anchorStart > walk) walk.setTime(anchorStart.getTime());
+  walk.setHours(0, 0, 0, 0);
+
+  const out: Shift[] = [];
+  const MAX_ITERATIONS = 366; // hard cap so a malformed rule can't hang the UI
+  let iter = 0;
+
+  while (walk <= effectiveEnd && iter < MAX_ITERATIONS) {
+    iter++;
+    let match = false;
+    if (freq === "daily") {
+      // Days-of-week filter is optional for daily.
+      match =
+        days_of_week.length === 0 || days_of_week.includes(walk.getDay());
+    } else if (freq === "weekly") {
+      // Weekly with no days → use the master's anchor weekday.
+      const targetDays =
+        days_of_week.length > 0 ? days_of_week : [anchorStart.getDay()];
+      match = targetDays.includes(walk.getDay());
+      // Interval check: count whole weeks since anchor's Monday.
+      if (match && interval > 1) {
+        const weekDiff = Math.floor(
+          (walk.getTime() - startOfWeekMonday(anchorStart).getTime()) /
+            (7 * 86400_000),
+        );
+        match = weekDiff >= 0 && weekDiff % interval === 0;
+      }
+    }
+
+    if (match) {
+      const instanceStart = new Date(walk);
+      instanceStart.setHours(
+        anchorStart.getHours(),
+        anchorStart.getMinutes(),
+        0,
+        0,
+      );
+      const instanceEnd = new Date(instanceStart.getTime() + durationMs);
+
+      // Don't emit the master row again (instances live at different dates
+      // than the anchor, except when the anchor itself matches the rule).
+      const isAnchor =
+        instanceStart.getTime() === anchorStart.getTime();
+      if (isAnchor) {
+        out.push(master);
+      } else if (instanceEnd >= rangeStart) {
+        const dateKey = instanceStart.toISOString().split("T")[0]!;
+        out.push({
+          ...master,
+          id: `${master.id}::${dateKey}`,
+          starts_at: instanceStart.toISOString(),
+          ends_at: instanceEnd.toISOString(),
+          recurrence_parent_id: master.id,
+          // Virtual instances are never themselves clocked.
+          clock_in: null,
+          clock_out: null,
+          status: "scheduled",
+        });
+      }
+    }
+    walk.setDate(walk.getDate() + 1);
+  }
+
+  return out;
+}
+
+/** True if this Shift is a virtual instance generated by expandRecurrence. */
+export function isVirtualInstance(s: Shift): boolean {
+  return typeof s.id === "string" && s.id.includes("::");
+}
+
+/** Pull the master id off either a virtual instance or a real row. */
+export function masterIdOf(s: Shift): string {
+  if (isVirtualInstance(s)) return s.id.split("::")[0]!;
+  return s.recurrence_parent_id ?? s.id;
 }
