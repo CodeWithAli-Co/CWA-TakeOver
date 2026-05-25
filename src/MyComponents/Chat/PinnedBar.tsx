@@ -83,7 +83,10 @@ export function PinnedBar({
                 <button
                   type="button"
                   onClick={() => onJumpTo(m.msg_id)}
-                  className="flex min-w-0 flex-1 flex-col text-left"
+                  /* Cap reading width so the truncate ellipsis lands at
+                     a sane column edge instead of running across a
+                     maximized window and clipping at the viewport. */
+                  className="flex min-w-0 flex-1 flex-col text-left max-w-[860px]"
                 >
                   <span className="truncate text-[11px] font-semibold text-foreground">
                     {m.sent_by}

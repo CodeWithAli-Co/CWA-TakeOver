@@ -484,8 +484,13 @@ export const MessageBubble: React.FC<Props> = ({
         )}
       </div>
 
-      {/* Content column */}
-      <div className="flex-1 min-w-0">
+      {/* Content column. Capped at a sensible reading width so long
+          pasted blocks (security audits, multi-paragraph briefs, log
+          dumps) don't extend across a maximized window and clip on
+          the right edge. Matches the ~900px column Slack/Discord use.
+          The outer row stays full-width so hover states and grouped
+          time stamps align across the panel. */}
+      <div className="flex-1 min-w-0 max-w-[860px]">
         {!isGrouped && (
           <div className="flex items-baseline gap-2 mb-1">
             <span className={`text-[13px] font-semibold ${isOwn ? "text-primary" : "text-foreground"}`}>

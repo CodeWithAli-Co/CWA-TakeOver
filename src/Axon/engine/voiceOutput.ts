@@ -249,46 +249,101 @@ export class VoiceOutput {
   }
 
   // ── private ─────────────────────────────────────────────────
+
+  /** Resolve which voice path (ElevenLabs vs Web Speech) to use this turn.
+   *  Centralized so drain() + the prefetch path agree, and the
+   *  fallback diagnostic only logs in one place. */
+  private resolveVoicePath(): { kind: "eleven"; voiceId: string } | { kind: "web" } {
+    const presetEleven =
+      getVoicePreset(this.config.voicePresetId ?? null)?.elevenLabsVoiceId ?? null;
+    const effectiveEleven = presetEleven ?? this.config.elevenLabsVoiceId;
+    if (effectiveEleven && ELEVENLABS_API_KEY) {
+      return { kind: "eleven", voiceId: effectiveEleven };
+    }
+    if (!ELEVENLABS_API_KEY) {
+      logFallbackOnce("VITE_ELEVENLABS_API_KEY env var not set", {
+        presetVoiceId: presetEleven,
+        configVoiceId: this.config.elevenLabsVoiceId,
+        activePreset: this.config.voicePresetId,
+      });
+    } else if (!effectiveEleven) {
+      logFallbackOnce("no ElevenLabs voice id resolved", {
+        activePreset: this.config.voicePresetId,
+        presetHasVoiceId: presetEleven !== null,
+        configVoiceId: this.config.elevenLabsVoiceId,
+      });
+    }
+    return { kind: "web" };
+  }
+
   private async drain(): Promise<void> {
     if (this.draining) return;
     this.draining = true;
     const myGen = this.gen;
     this.callbacks.onStart?.();
 
-    while (this.queue.length > 0 && this.gen === myGen) {
-      const next = this.queue.shift()!;
+    // ── Prefetch buffer ───────────────────────────────────────
+    // Holds the next sentence's decoded ElevenLabs blob ready-to-play.
+    // While sentence N is audibly playing, we eagerly fetch sentence
+    // N+1 in parallel so the next playback starts the instant the
+    // previous one ends — closing the network-round-trip gap that
+    // was being heard as "Axon pauses too long between sentences."
+    // Only used on the ElevenLabs path; Web Speech can't prefetch
+    // (browser API doesn't expose the synthesized audio).
+    let prefetched: Promise<HTMLAudioElement | null> | null = null;
+
+    const startFetch = (text: string, voiceId: string): Promise<HTMLAudioElement | null> => {
+      return this.fetchElevenLabsAudio(text, myGen, voiceId).catch((e) => {
+        console.error("[voiceOutput] prefetch failed:", e, {
+          text: text.slice(0, 120),
+        });
+        return null;
+      });
+    };
+
+    while ((this.queue.length > 0 || prefetched) && this.gen === myGen) {
+      // Acquire the current sentence's audio. Either it was already
+      // prefetched while the prior one played, or this is the first
+      // pass through and we have to kick the fetch off now.
+      let audioPromise: Promise<HTMLAudioElement | null> | null = null;
+      let nextText: string | null = null;
+      const path = this.resolveVoicePath();
+
+      if (prefetched) {
+        audioPromise = prefetched;
+        prefetched = null;
+      } else if (this.queue.length > 0) {
+        nextText = this.queue.shift()!;
+        if (path.kind === "eleven") {
+          audioPromise = startFetch(nextText, path.voiceId);
+        }
+      }
+
+      // Kick off the NEXT sentence's fetch in parallel (only on the
+      // ElevenLabs path — Web Speech doesn't pre-synthesize). This is
+      // the bit that erases the inter-sentence network gap.
+      if (path.kind === "eleven" && this.queue.length > 0) {
+        const lookahead = this.queue.shift()!;
+        prefetched = startFetch(lookahead, path.voiceId);
+      }
+
       try {
-        // Preset wins; fall back to operator-set elevenLabsVoiceId.
-        const presetEleven =
-          getVoicePreset(this.config.voicePresetId ?? null)?.elevenLabsVoiceId ?? null;
-        const effectiveEleven = presetEleven ?? this.config.elevenLabsVoiceId;
-        if (effectiveEleven && ELEVENLABS_API_KEY) {
-          await this.speakElevenLabs(next, myGen, effectiveEleven);
-        } else {
-          // Loud diagnostic — distinguish "no key" from "no voice id"
-          // so the operator knows exactly what's missing. Once-per-
-          // reason to keep the console readable on long sessions.
-          if (!ELEVENLABS_API_KEY) {
-            logFallbackOnce("VITE_ELEVENLABS_API_KEY env var not set", {
-              presetVoiceId: presetEleven,
-              configVoiceId: this.config.elevenLabsVoiceId,
-              activePreset: this.config.voicePresetId,
-            });
-          } else if (!effectiveEleven) {
-            logFallbackOnce("no ElevenLabs voice id resolved", {
-              activePreset: this.config.voicePresetId,
-              presetHasVoiceId: presetEleven !== null,
-              configVoiceId: this.config.elevenLabsVoiceId,
-            });
+        if (audioPromise) {
+          const audio = await audioPromise;
+          if (this.gen !== myGen) break;
+          if (audio) {
+            await this.playPreparedAudio(audio, myGen);
           }
-          await this.speakWebSpeech(next, myGen);
+        } else if (nextText !== null) {
+          // Web Speech path (no prefetch possible).
+          await this.speakWebSpeech(nextText, myGen);
         }
       } catch (e) {
         // Bumped from warn to error — voice failures should be loud.
         // Includes the failing text so the operator can correlate
         // with what they just heard (or didn't hear).
         console.error("[voiceOutput] sentence playback failed:", e, {
-          text: next.slice(0, 120),
+          text: (nextText ?? "").slice(0, 120),
         });
         // Fall through to next sentence; don't abort entire queue.
       }
@@ -338,19 +393,32 @@ export class VoiceOutput {
     });
   }
 
-  /** ElevenLabs streaming endpoint — lower latency than the regular TTS.
-   *  voiceId is resolved by the caller (preset wins over config). */
-  private async speakElevenLabs(text: string, genAtCall: number, voiceId: string): Promise<void> {
+  /** Sentence-end punctuation strip for the voice path. v3 treats a
+   *  trailing period / question mark / exclamation as "end of utterance"
+   *  and pads the synthesized audio with ~400ms of dead silence. Stripping
+   *  the terminal punctuation just before the API call removes most of
+   *  that padding while keeping the natural prosodic contour intact
+   *  (the model still infers statement/question shape from word order).
+   *  Display text is unaffected — only the voice payload. */
+  private trimTerminalPunctForVoice(text: string): string {
+    return text.replace(/[\.!\?…]+\s*$/u, "").trim();
+  }
+
+  /** Fetch the ElevenLabs blob for a sentence and prep an Audio
+   *  element ready to play. Returns null if the gen counter rolled
+   *  (caller interrupted) or the API errored. Pure fetch — no
+   *  playback side effects. */
+  private async fetchElevenLabsAudio(
+    text: string,
+    genAtCall: number,
+    voiceId: string,
+  ): Promise<HTMLAudioElement | null> {
     if (!ELEVENLABS_API_KEY || !voiceId) {
       throw new Error("ElevenLabs not configured");
     }
-    if (this.gen !== genAtCall) return;
+    if (this.gen !== genAtCall) return null;
 
     const preset = getVoicePreset(this.config.voicePresetId ?? null);
-    // Expressive default — matches the SMOOTH_TUNED values in
-    // voiceCatalog.ts so a preset without an elevenLabsSettings
-    // override still gets expressive delivery rather than the
-    // monotone calm-narrator baseline.
     // v3 fallback when a preset doesn't carry an elevenLabsSettings
     // override. Matches SMOOTH_TUNED in voiceCatalog.ts. v3 doesn't
     // honor use_speaker_boost; speed is controlled via audio tags
@@ -360,6 +428,8 @@ export class VoiceOutput {
       similarity_boost: 0.75,
       style: 0.40,
     };
+
+    const voicePayload = this.trimTerminalPunctForVoice(cadence(text));
 
     const res = await fetch(
       `https://api.elevenlabs.io/v1/text-to-speech/${voiceId}/stream?output_format=mp3_44100_128`,
@@ -371,7 +441,7 @@ export class VoiceOutput {
           Accept: "audio/mpeg",
         },
         body: JSON.stringify({
-          text: cadence(text),
+          text: voicePayload,
           model_id: "eleven_v3",
           voice_settings,
         }),
@@ -394,7 +464,7 @@ export class VoiceOutput {
     }
 
     const blob = await res.blob();
-    if (this.gen !== genAtCall) return;
+    if (this.gen !== genAtCall) return null;
 
     const url = URL.createObjectURL(blob);
     const audio = new Audio(url);
@@ -402,28 +472,43 @@ export class VoiceOutput {
     // Rate influences speed on HTMLAudio too. Preset rate wins.
     const effectiveRate = preset?.rate ?? this.config.rate;
     audio.playbackRate = Math.max(0.5, Math.min(2, effectiveRate));
-    this.currentAudio = audio;
+    // Stash the URL on the element so playPreparedAudio can revoke
+    // it after playback (or after a skipped interrupt). Avoids a
+    // closure-over-url leak.
+    (audio as any).__cwaBlobUrl = url;
+    return audio;
+  }
 
+  /** Play an Audio element that was already prepared (and possibly
+   *  prefetched while the previous sentence was still speaking).
+   *  Resolves when playback ends or errors. */
+  private async playPreparedAudio(audio: HTMLAudioElement, genAtCall: number): Promise<void> {
+    if (this.gen !== genAtCall) {
+      const url = (audio as any).__cwaBlobUrl as string | undefined;
+      if (url) URL.revokeObjectURL(url);
+      return;
+    }
+    this.currentAudio = audio;
     return new Promise<void>((resolve) => {
-      audio.onended = () => {
-        URL.revokeObjectURL(url);
+      const cleanup = () => {
+        const url = (audio as any).__cwaBlobUrl as string | undefined;
+        if (url) URL.revokeObjectURL(url);
         if (this.currentAudio === audio) this.currentAudio = null;
+      };
+      audio.onended = () => {
+        cleanup();
         resolve();
       };
       audio.onerror = () => {
-        URL.revokeObjectURL(url);
-        if (this.currentAudio === audio) this.currentAudio = null;
+        cleanup();
         console.error("[voiceOutput] HTMLAudio playback failed for ElevenLabs blob", {
-          voiceId,
-          textPreview: text.slice(0, 80),
           audioError: audio.error,
         });
         this.callbacks.onError?.("ElevenLabs playback error");
         resolve();
       };
       audio.play().catch((e) => {
-        URL.revokeObjectURL(url);
-        if (this.currentAudio === audio) this.currentAudio = null;
+        cleanup();
         this.callbacks.onError?.(`Playback: ${e?.message ?? e}`);
         resolve();
       });
