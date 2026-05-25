@@ -392,6 +392,137 @@ function daysAgo(n: number): string {
   return new Date(Date.now() - n * 24 * 60 * 60_000).toISOString();
 }
 
+// ── PR conversation: comments + reviews ─────────────────────────
+
+export interface PrComment {
+  id: string;
+  prId: string;
+  /** Top-level on the conversation tab when null; otherwise inline
+   *  on this file/line in the Files Changed tab. */
+  filePath: string | null;
+  lineNumber: number | null;
+  parentId: string | null;
+  authorUsername: string | null;
+  authorAgentId: string | null;
+  body: string;
+  createdAt: string;
+}
+
+export interface PrReview {
+  id: string;
+  prId: string;
+  reviewerUsername: string | null;
+  reviewerAgentId: string | null;
+  state: "approved" | "changes_requested" | "commented" | "dismissed";
+  body: string | null;
+  createdAt: string;
+}
+
+export const MOCK_PR_COMMENTS: PrComment[] = [
+  // PR #247 — light theme for Axon
+  { id: "cm1", prId: "pr1", filePath: null, lineNumber: null, parentId: null,
+    authorAgentId: "a-architect", authorUsername: null,
+    body: "Opening this with the full reasoning in the AI explanation banner above. Headline change: --axon-orb-edge-rgb is the new lever that lets the canvas orb fade-to-edge swap by theme.",
+    createdAt: minutesAgo(44) },
+  { id: "cm2", prId: "pr1", filePath: null, lineNumber: null, parentId: null,
+    authorAgentId: "a-critic", authorUsername: null,
+    body: "Reviewed the override block. Two concerns:\n1. The `--axon-glass-inset` override is at 0.04 alpha — borderline invisible. Bump to 0.06?\n2. We're not handling the `[data-theme=\"system\"]` case; if a user picks system the orb falls back to dark always. Worth a follow-up.",
+    createdAt: minutesAgo(28) },
+  { id: "cm3", prId: "pr1", filePath: "src/Axon/axon.css", lineNumber: 67, parentId: null,
+    authorAgentId: "a-critic", authorUsername: null,
+    body: "Could you add a comment explaining why the inset value flips to rgb(20 20 24 / 0.04) instead of just `transparent`? Tabs would disappear without a wash.",
+    createdAt: minutesAgo(24) },
+  { id: "cm4", prId: "pr1", filePath: "src/Axon/axon.css", lineNumber: 67, parentId: "cm3",
+    authorAgentId: "a-architect", authorUsername: null,
+    body: "Good catch — added an inline comment in the override block.",
+    createdAt: minutesAgo(15) },
+  { id: "cm5", prId: "pr1", filePath: null, lineNumber: null, parentId: null,
+    authorUsername: "Ali", authorAgentId: null,
+    body: "Approved on look — let's merge once the cool-down on the orb halo lands.",
+    createdAt: minutesAgo(4) },
+];
+
+export const MOCK_PR_REVIEWS: PrReview[] = [
+  { id: "rv1", prId: "pr1", reviewerAgentId: "a-critic", reviewerUsername: null,
+    state: "changes_requested",
+    body: "Looks great, two minor concerns above.",
+    createdAt: minutesAgo(28) },
+  { id: "rv2", prId: "pr1", reviewerAgentId: null, reviewerUsername: "Ali",
+    state: "approved",
+    body: "Ready to ship after the comment lands.",
+    createdAt: minutesAgo(4) },
+];
+
+// ── Agent permissions (autonomy matrix) ────────────────────────
+
+export interface AgentPermission {
+  id: string;
+  repoId: string;
+  agentId: string;
+  branchPattern: string;
+  canCommitDirect: boolean;
+  canOpenPr: boolean;
+  canReviewPr: boolean;
+  canMergePr: boolean;
+  canMergeOwnPr: boolean;
+  canForcePush: boolean;
+  notes: string | null;
+}
+
+export interface BranchProtection {
+  id: string;
+  repoId: string;
+  branchPattern: string;
+  requiredApprovals: number;
+  requireHumanApproval: boolean;
+  requiredApproverRoles: string[];
+  requireResolvedThreads: boolean;
+  blockForcePush: boolean;
+  deleteAfterMerge: boolean;
+}
+
+/** Seeded as "what a sensible default org would have" — Architect
+ *  has commit-direct on feature branches, Engineer must always PR,
+ *  Critic can only review. Main is heavily protected. */
+export const MOCK_PERMISSIONS: AgentPermission[] = [
+  // r-cwa-manager
+  { id: "p1", repoId: "r-cwa-manager", agentId: "a-architect", branchPattern: "feature/*",
+    canCommitDirect: true, canOpenPr: true, canReviewPr: true,
+    canMergePr: true, canMergeOwnPr: false, canForcePush: false,
+    notes: "Architect drives design — trusted on feature branches." },
+  { id: "p2", repoId: "r-cwa-manager", agentId: "a-architect", branchPattern: "main",
+    canCommitDirect: false, canOpenPr: true, canReviewPr: true,
+    canMergePr: true, canMergeOwnPr: false, canForcePush: false,
+    notes: "Main requires PR + human sign-off." },
+  { id: "p3", repoId: "r-cwa-manager", agentId: "a-engineer-1", branchPattern: "*",
+    canCommitDirect: false, canOpenPr: true, canReviewPr: true,
+    canMergePr: false, canMergeOwnPr: false, canForcePush: false,
+    notes: "Engineer always PRs. Cannot merge own work." },
+  { id: "p4", repoId: "r-cwa-manager", agentId: "a-critic", branchPattern: "*",
+    canCommitDirect: false, canOpenPr: false, canReviewPr: true,
+    canMergePr: false, canMergeOwnPr: false, canForcePush: false,
+    notes: "Critic is review-only. Cannot author code." },
+
+  // r-takeover-web
+  { id: "p5", repoId: "r-takeover-web", agentId: "a-architect", branchPattern: "*",
+    canCommitDirect: false, canOpenPr: true, canReviewPr: true,
+    canMergePr: true, canMergeOwnPr: false, canForcePush: false, notes: null },
+  { id: "p6", repoId: "r-takeover-web", agentId: "a-engineer-1", branchPattern: "*",
+    canCommitDirect: false, canOpenPr: true, canReviewPr: true,
+    canMergePr: false, canMergeOwnPr: false, canForcePush: false, notes: null },
+];
+
+export const MOCK_BRANCH_PROTECTION: BranchProtection[] = [
+  { id: "bp1", repoId: "r-cwa-manager", branchPattern: "main",
+    requiredApprovals: 1, requireHumanApproval: true,
+    requiredApproverRoles: [], requireResolvedThreads: true,
+    blockForcePush: true, deleteAfterMerge: true },
+  { id: "bp2", repoId: "r-takeover-web", branchPattern: "main",
+    requiredApprovals: 1, requireHumanApproval: false,
+    requiredApproverRoles: ["critic"], requireResolvedThreads: false,
+    blockForcePush: true, deleteAfterMerge: true },
+];
+
 // ── Convenience lookups ─────────────────────────────────────────
 
 export const agentById = (id: string | null | undefined): AiAgent | null =>

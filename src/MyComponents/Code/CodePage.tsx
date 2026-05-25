@@ -31,15 +31,24 @@ import {
   type Repo, type AiAgent, type PullRequest, type CommitRow,
   type FileRow, type ActivityItem,
 } from "./mockData";
+import { PullRequestDetail } from "./PullRequestDetail";
+import { AgentAutonomyPanel } from "./AgentAutonomyPanel";
 
 type RepoTab = "code" | "issues" | "pulls" | "actions" | "insights" | "settings";
 
 export function CodePage() {
   const [activeRepoId, setActiveRepoId] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<RepoTab>("code");
+  /** When set, the Pulls tab shows the PR detail view instead of
+   * the list. Clearing it pops back to the list without leaving
+   * the repo or losing the tab. */
+  const [activePrId, setActivePrId] = useState<string | null>(null);
 
   const activeRepo = activeRepoId
     ? MOCK_REPOS.find((r) => r.id === activeRepoId) ?? null
+    : null;
+  const activePr = activePrId
+    ? MOCK_PRS.find((p) => p.id === activePrId) ?? null
     : null;
 
   return (
@@ -48,11 +57,18 @@ export function CodePage() {
         <RepoView
           repo={activeRepo}
           tab={activeTab}
-          onTabChange={setActiveTab}
-          onBack={() => setActiveRepoId(null)}
+          onTabChange={(t) => { setActiveTab(t); setActivePrId(null); }}
+          onBack={() => { setActiveRepoId(null); setActivePrId(null); }}
+          activePr={activePr}
+          onOpenPr={setActivePrId}
+          onClosePr={() => setActivePrId(null)}
         />
       ) : (
-        <CodeDashboard onPickRepo={(id) => { setActiveRepoId(id); setActiveTab("code"); }} />
+        <CodeDashboard onPickRepo={(id) => {
+          setActiveRepoId(id);
+          setActiveTab("code");
+          setActivePrId(null);
+        }} />
       )}
     </div>
   );
@@ -354,12 +370,15 @@ function activityIcon(kind: ActivityItem["kind"]) {
 // ════════════════════════════════════════════════════════════════
 
 function RepoView({
-  repo, tab, onTabChange, onBack,
+  repo, tab, onTabChange, onBack, activePr, onOpenPr, onClosePr,
 }: {
   repo: Repo;
   tab: RepoTab;
   onTabChange: (t: RepoTab) => void;
   onBack: () => void;
+  activePr: PullRequest | null;
+  onOpenPr: (id: string) => void;
+  onClosePr: () => void;
 }) {
   return (
     <div className="flex h-full min-h-0 flex-col">
@@ -410,10 +429,14 @@ function RepoView({
       <div className="flex-1 min-h-0 overflow-hidden">
         {tab === "code" && <CodeTab repo={repo} />}
         {tab === "issues" && <Placeholder kind="issues" />}
-        {tab === "pulls" && <PullsTab repo={repo} />}
+        {tab === "pulls" && (
+          activePr
+            ? <PullRequestDetail pr={activePr} onBack={onClosePr} />
+            : <PullsTab repo={repo} onOpenPr={onOpenPr} />
+        )}
         {tab === "actions" && <Placeholder kind="actions" />}
         {tab === "insights" && <Placeholder kind="insights" />}
-        {tab === "settings" && <Placeholder kind="settings" />}
+        {tab === "settings" && <AgentAutonomyPanel repo={repo} />}
       </div>
     </div>
   );
@@ -581,7 +604,7 @@ function DepSection({ title, paths }: { title: string; paths: string[] }) {
 
 // ── PULLS TAB ────────────────────────────────────────────────────
 
-function PullsTab({ repo }: { repo: Repo }) {
+function PullsTab({ repo, onOpenPr }: { repo: Repo; onOpenPr: (id: string) => void }) {
   const prs = MOCK_PRS.filter((p) => p.repoId === repo.id);
   const [statusFilter, setStatusFilter] = useState<"open" | "closed" | "all">("open");
 
@@ -631,7 +654,7 @@ function PullsTab({ repo }: { repo: Repo }) {
 
       <ul className="divide-y divide-border">
         {visible.map((p) => (
-          <PrRow key={p.id} pr={p} />
+          <PrRow key={p.id} pr={p} onClick={() => onOpenPr(p.id)} />
         ))}
         {visible.length === 0 && (
           <li className="px-6 py-12 text-center text-[12px] text-muted-foreground">
@@ -643,7 +666,7 @@ function PullsTab({ repo }: { repo: Repo }) {
   );
 }
 
-function PrRow({ pr }: { pr: PullRequest }) {
+function PrRow({ pr, onClick }: { pr: PullRequest; onClick: () => void }) {
   const author = pr.authorAgentId ? agentById(pr.authorAgentId) : null;
   const StatusIcon =
     pr.status === "merged" ? GitMerge
@@ -656,7 +679,10 @@ function PrRow({ pr }: { pr: PullRequest }) {
   : pr.status === "closed" ? "text-muted-foreground/70"
   : "text-emerald-400";
   return (
-    <li className="px-6 py-3 hover:bg-muted/30 transition-colors flex items-start gap-3">
+    <li
+      onClick={onClick}
+      className="px-6 py-3 hover:bg-muted/30 transition-colors flex items-start gap-3 cursor-pointer"
+    >
       <StatusIcon className={`h-4 w-4 mt-0.5 shrink-0 ${statusColor}`} />
       <div className="min-w-0 flex-1">
         <div className="flex items-baseline gap-2">
