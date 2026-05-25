@@ -26,6 +26,8 @@ import {
   setPersonalityEnabled,
   stampFirstSeenIfMissing,
 } from "../settings";
+import { PRESETS } from "../personality-prompts.config";
+import { PresetCard } from "./PresetCard";
 
 export function PersonalitySection() {
   // Initialise from localStorage. Subsequent toggles update both
@@ -137,13 +139,27 @@ export function PersonalitySection() {
           </div>
         )}
 
-        {/* PLACEHOLDER: presets + sliders + test composer land here
-            once the isolation build is signed off. Showing a stub
-            so we can verify the dimmed-when-off shell works
-            visually before any inner UI exists. */}
+        {/* P6.2 ISOLATION BUILD: one hardcoded PresetCard for visual
+            review. The grid + click handler + confirm dialog + active
+            state from localStorage all land in subsequent P6.2 sub-
+            steps once the operator signs off on this card\'s look. */}
+        <div style={{ marginBottom: 12, fontSize: 10.5, color: "var(--axon-muted)", fontStyle: "italic" }}>
+          P6.2 isolation — single card for visual review. Grid + state wiring next.
+        </div>
+        <div style={{ maxWidth: 280 }}>
+          <PresetCard
+            preset={PRESETS.jarvis}
+            isActive={false}
+            onSelect={() => console.log("[PresetCard] clicked: jarvis (not wired yet)")}
+          />
+        </div>
+
+        {/* Lower placeholder retained so the section still communicates
+            what\'s coming. Will be removed once P6.3-7 land. */}
         <div
           style={{
-            padding: "14px 12px",
+            marginTop: 14,
+            padding: "12px 12px",
             borderRadius: 8,
             background: "hsl(0 0% 50% / 0.04)",
             border: "1px solid hsl(0 0% 50% / 0.10)",
@@ -153,13 +169,11 @@ export function PersonalitySection() {
           }}
         >
           <div style={{ fontWeight: 600, color: "var(--axon-fg, inherit)", marginBottom: 4 }}>
-            Coming in P6.2–P6.7
+            Coming next
           </div>
-          Preset cards (Jarvis, Samantha, HAL Lite, Best Friend, Professor, Operator),
-          ten dimension sliders with band-divider ticks + live band labels,
-          test composer with per-test history, and a scoped Reset button.
-          This placeholder verifies the master-toggle + dimmed-shell behavior
-          in isolation before the inner UI lands.
+          Six-card preset grid, ten dimension sliders with band-divider ticks
+          + live band labels, test composer with per-test history, scoped
+          Reset button.
         </div>
       </div>
     </div>
