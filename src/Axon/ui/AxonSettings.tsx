@@ -8,6 +8,7 @@ import { getAvailableVoices } from "../engine/voiceOutput";
 import { MONITORS } from "../engine/monitors";
 import { enrollVoice } from "../engine/voicePrint";
 import { VOICE_PRESETS, presetsByAccent } from "../engine/voiceCatalog";
+import { PersonalitySection } from "../personality/ui/PersonalitySection";
 
 export function AxonSettingsPane() {
   const { settings, updateSettings, automations } = useAxon();
@@ -131,6 +132,12 @@ export function AxonSettingsPane() {
           />
         </div>
       </div>
+
+      {/* Personality (beta) — engine flag + presets + sliders + test.
+          Sits between Master and Autonomy by design: Master controls
+          existence, Personality controls identity, Autonomy + below
+          are progressively more technical concerns. */}
+      <PersonalitySection />
 
       {/* Autonomy — how much Axon does on its own vs. asking permission */}
       <div className="axon-settings-group">

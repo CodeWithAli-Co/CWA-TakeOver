@@ -1,23 +1,22 @@
 /**
- * src/Axon/personality/postProcess.ts
+ * src/Axon/personality/postProcess.ts  (v2)
  *
- * Runs on Claude's raw reply between the LLM call and TTS / display.
- * Two responsibilities:
+ * Runs on each sentence between Claude's stream and TTS / display.
  *
- *   1. Strip customer-service residue from the start of replies
- *      ("Certainly!", "Of course!", "As an AI...", etc.). These
- *      break the spell instantly — they get the boot before anything
- *      sees them.
- *
- *   2. Handle voice markers Claude inserted per the spec's hard
- *      constraints. [pause] / [laugh] / [sigh] / [smile] / [sarcasm]
- *      either get stripped (display path, or v2.5 TTS without SSML
- *      support) or converted to provider-specific cues (v3+ SSML).
- *
- * Bonus: tracks the last few opening phrases in localStorage and
- * surfaces a soft warning when two consecutive replies start the
- * same way. The brain doesn't act on this — it's diagnostic for
- * the playground / eval suite.
+ * v2 changes (operator-mandated):
+ *   - Widened marker regex: catches bracketed [pause], parenthetical
+ *     (pause), asterisk-wrapped *pause* / **pause**, AND verb forms
+ *     (laughs, sighs, smiles, pauses). NEVER strips bare words
+ *     — "Let me pause and think" is legitimate prose.
+ *   - splitOnPause(): [pause] becomes a chunk boundary so the natural
+ *     between-chunk gap serves as the pause (no SSML needed for
+ *     ElevenLabs v2.5). Other markers (laugh/sigh/smile/sarcasm)
+ *     are stripped from each chunk and never produce a split.
+ *   - Streaming-safe: postProcessReply now takes isFirstSentence
+ *     so the opening-variation tracker only fires on the first
+ *     sentence of a turn. Middle sentences\' "openings" are noise.
+ *   - voiceChunks output: array of text fragments ready to queue
+ *     separately. Single-element when no [pause] in input.
  */
 
 import { BANNED_OPENERS, VOICE_MARKERS } from "./personality-prompts.config";
@@ -25,48 +24,90 @@ import { BANNED_OPENERS, VOICE_MARKERS } from "./personality-prompts.config";
 // ── Public types ──────────────────────────────────────────────
 
 export interface PostProcessInput {
-  /** Raw text from Claude (assistant final message). */
+  /** Raw text from Claude (one sentence in streaming mode, or a
+   *  full reply when called whole-message). */
   text: string;
   /** When true, emit SSML cues compatible with ElevenLabs v3+
-   *  prosody. When false (default), strip markers entirely. */
+   *  prosody. Default false (v2.5 strip-only). */
   ssmlEnabled?: boolean;
-  /** Track openings for repetition detection. Pass false from the
-   *  playground when re-rolling variants of the same prompt. */
+  /** Tracks the first-N openings used. Pass false from the test
+   *  path so exploration doesn\'t burn the history. Pass false on
+   *  non-first sentences of a streamed reply. Defaults true. */
   trackOpenings?: boolean;
+  /** Set true ONLY for the first sentence of a streamed reply.
+   *  Gates banned-opener stripping (which is anchored to text
+   *  start) and opening-fingerprint registration. Middle sentences
+   *  pass false. Defaults true for full-message callers. */
+  isFirstSentence?: boolean;
 }
 
 export interface PostProcessOutput {
   /** Text for display in the UI (markers stripped). */
   displayText: string;
-  /** Text routed to TTS. Either stripped (v2.5) or SSML (v3+). */
+  /** Single voice-bound text — markers stripped. Use this when
+   *  the caller doesn\'t want to split on [pause]. */
   voiceText: string;
-  /** Whether any markers were detected — useful for the playground. */
+  /** Voice-bound chunks. Length 1 when no [pause] in input.
+   *  Length 2+ when [pause] split occurred. Callers can queue each
+   *  chunk separately to use the natural between-chunk gap as the
+   *  pause. */
+  voiceChunks: string[];
+  /** Whether any markers were detected. */
   hadMarkers: boolean;
   /** Whether an anti-robot opener was stripped. */
   strippedOpener: string | null;
-  /** True when this opening matches one of the last 3 — diagnostic
-   *  only; we do not rewrite. */
+  /** True when this opening matches one of the last N. Diagnostic. */
   openingRepeated: boolean;
 }
 
-/** Main entry. Pure function — same input, same output. The opening
- *  tracker has a side-effect on localStorage but it's idempotent. */
+/** Main entry. */
 export function postProcessReply(input: PostProcessInput): PostProcessOutput {
   const raw = input.text ?? "";
-  const { stripped, opener } = stripBannedOpeners(raw);
+  const isFirst = input.isFirstSentence ?? true;
+
+  // Anti-robot opener strip — only meaningful on first sentence.
+  const { stripped, opener } = isFirst
+    ? stripBannedOpeners(raw)
+    : { stripped: raw, opener: null };
+
   const trimmed = stripped.replace(/^\s+/, "");
 
-  // Marker extraction & routing.
-  const hadMarkers = VOICE_MARKERS.some((m) => trimmed.includes(m));
-  const displayText = stripVoiceMarkers(trimmed);
+  // Was a marker present in the source? (Diagnostic / playground.)
+  const hadMarkers = MARKER_REGEXES.some((re) => re.test(trimmed));
+  // Regexes are stateful (g flag) — reset before reuse.
+  for (const re of MARKER_REGEXES) re.lastIndex = 0;
+
+  // Diagnostic: warn when Claude emits any non-[pause] marker.
+  // Round 1.5 dropped laugh/sigh/smile/sarcasm from the prompt
+  // instructions; this catches if Claude still tries to use them
+  // so we can see how often the prose-instead-of-markers
+  // instruction is being violated.
+  const nonPause = detectNonPauseMarkers(trimmed);
+  if (nonPause.length > 0) {
+    console.warn(
+      "[postProcess] non-pause marker stripped (not supported in v1):",
+      nonPause,
+    );
+  }
+
+  // Build the voice-side output.
+  const displayText = stripAllMarkers(trimmed);
   const voiceText = input.ssmlEnabled
     ? markersToSsml(trimmed)
-    : stripVoiceMarkers(trimmed);
+    : stripAllMarkers(trimmed);
 
-  // Repetition detection.
+  // [pause] chunk split — only relevant when we\'re NOT emitting
+  // SSML. v2.5 has no inline break support, so we use natural
+  // queue gaps. Non-pause markers are stripped from each chunk.
+  const voiceChunks = input.ssmlEnabled
+    ? [voiceText].filter((c) => c.length > 0)
+    : splitOnPause(trimmed).map(stripAllMarkers).filter((c) => c.length > 0);
+
+  // Opening fingerprint — only on first sentence, only when
+  // tracking is on.
   const opening = openingFingerprint(displayText);
   let repeated = false;
-  if (input.trackOpenings !== false && opening) {
+  if (isFirst && input.trackOpenings !== false && opening) {
     const recent = readRecentOpenings();
     repeated = recent.length > 0 && recent[0] === opening;
     writeRecentOpening(opening, recent);
@@ -75,6 +116,7 @@ export function postProcessReply(input: PostProcessInput): PostProcessOutput {
   return {
     displayText,
     voiceText,
+    voiceChunks: voiceChunks.length > 0 ? voiceChunks : [displayText],
     hadMarkers,
     strippedOpener: opener,
     openingRepeated: repeated,
@@ -83,24 +125,12 @@ export function postProcessReply(input: PostProcessInput): PostProcessOutput {
 
 // ── Anti-robot opener strip ──────────────────────────────────
 
-/** Strips any BANNED_OPENERS prefix (case-insensitive on the first
- *  letter) plus the trailing whitespace / sentence terminator that
- *  followed it. Returns both the stripped text and the opener that
- *  was removed (null if nothing matched). */
 function stripBannedOpeners(text: string): { stripped: string; opener: string | null } {
   if (!text) return { stripped: text, opener: null };
   const leading = text.replace(/^\s+/, "");
-  // Try the longer-prefix variants first (already ordered in the
-  // BANNED_OPENERS array).
   for (const opener of BANNED_OPENERS) {
     if (caseInsensitiveStartsWith(leading, opener)) {
-      // Drop the opener AND any immediately-following punctuation
-      // + whitespace ("Certainly! Here's..." -> "Here's...").
-      const after = leading
-        .slice(opener.length)
-        .replace(/^[!,.\s]+/, "");
-      // Re-capitalize the first letter of the remainder so we don't
-      // hand TTS lowercase mid-sentence-looking text.
+      const after = leading.slice(opener.length).replace(/^[!,.\s]+/, "");
       const capped = after.length > 0
         ? after[0].toUpperCase() + after.slice(1)
         : after;
@@ -116,38 +146,109 @@ function caseInsensitiveStartsWith(haystack: string, needle: string): boolean {
   return haystack.slice(0, needle.length).toLowerCase() === needle.toLowerCase();
 }
 
-// ── Voice markers ────────────────────────────────────────────
+// ── Voice markers — widened regex set ────────────────────────
+//
+// Token vocabulary (case-insensitive, verb forms permitted):
+//   pause / pauses · laugh / laughs · sigh / sighs ·
+//   smile / smiles · sarcasm
+//
+// Wrappers we match (and strip):
+//   [token]            canonical bracket form
+//   (token)            parenthetical
+//   *token*  **token** asterisk emphasis (1+ asterisks per side)
+//
+// We deliberately DO NOT match bare standalone tokens.
+// "Let me pause and think" is a legitimate sentence.
 
-/** Removes [pause] / [laugh] / [sigh] / [smile] / [sarcasm] tokens
- *  for the display path. Collapses any double-spaces left behind. */
-function stripVoiceMarkers(text: string): string {
+const MARKER_TOKENS = "(pause|pauses|laugh|laughs|sigh|sighs|smile|smiles|sarcasm)";
+
+const MARKER_REGEXES: RegExp[] = [
+  // Bracket: [pause], [laughs]
+  new RegExp(`\\s*\\[\\s*${MARKER_TOKENS}\\s*\\]\\s*`, "gi"),
+  // Parenthetical: (pause), (sighs)
+  new RegExp(`\\s*\\(\\s*${MARKER_TOKENS}\\s*\\)\\s*`, "gi"),
+  // Asterisk emphasis: *pause*, **laugh** (1+ asterisks per side)
+  new RegExp(`\\s*\\*+\\s*${MARKER_TOKENS}\\s*\\*+\\s*`, "gi"),
+];
+
+// Non-pause marker detector — fires console.warn diagnostic when
+// Claude emits laugh/sigh/smile/sarcasm despite the v1.5 prompt
+// instruction to convey those via prose instead. Read-only; never
+// mutates the input. Returns the matched tokens for the log line.
+const NON_PAUSE_TOKEN = "(laugh|laughs|sigh|sighs|smile|smiles|sarcasm)";
+const NON_PAUSE_DETECT_REGEXES: RegExp[] = [
+  new RegExp(`\\[\\s*${NON_PAUSE_TOKEN}\\s*\\]`, "gi"),
+  new RegExp(`\\(\\s*${NON_PAUSE_TOKEN}\\s*\\)`, "gi"),
+  new RegExp(`\\*+\\s*${NON_PAUSE_TOKEN}\\s*\\*+`, "gi"),
+];
+
+function detectNonPauseMarkers(text: string): string[] {
+  const hits: string[] = [];
+  for (const re of NON_PAUSE_DETECT_REGEXES) {
+    re.lastIndex = 0;
+    let m: RegExpExecArray | null;
+    while ((m = re.exec(text)) !== null) {
+      hits.push(m[0]);
+    }
+  }
+  return hits;
+}
+
+/** Strip every flavour of marker, collapse whitespace. */
+function stripAllMarkers(text: string): string {
   let out = text;
-  for (const m of VOICE_MARKERS) {
-    // Each marker may appear with a space before and/or after.
-    const re = new RegExp(`\\s*${escapeRegex(m)}\\s*`, "g");
+  for (const re of MARKER_REGEXES) {
+    re.lastIndex = 0;
     out = out.replace(re, " ");
+  }
+  // Also handle the canonical legacy form from VOICE_MARKERS (kept
+  // for back-compat — already covered by the bracket regex above
+  // but loop here so unknown future marker tokens still strip).
+  for (const m of VOICE_MARKERS) {
+    out = out.replace(new RegExp(`\\s*${escapeRegex(m)}\\s*`, "gi"), " ");
   }
   return out.replace(/\s{2,}/g, " ").trim();
 }
 
-/** Converts markers to provider-flavoured SSML. Currently aimed at
- *  ElevenLabs v3 prosody hints; on v2.5 the caller should leave
- *  ssmlEnabled = false and just strip. */
+// ── [pause] chunk-splitter ───────────────────────────────────
+//
+// Only [pause] / (pause) / *pause* / *pauses* trigger a split.
+// Other markers stay in-text (they get stripped, not split).
+
+const PAUSE_TOKEN = "(pause|pauses)";
+const PAUSE_SPLIT_REGEXES: RegExp[] = [
+  new RegExp(`\\s*\\[\\s*${PAUSE_TOKEN}\\s*\\]\\s*`, "gi"),
+  new RegExp(`\\s*\\(\\s*${PAUSE_TOKEN}\\s*\\)\\s*`, "gi"),
+  new RegExp(`\\s*\\*+\\s*${PAUSE_TOKEN}\\s*\\*+\\s*`, "gi"),
+];
+
+/** Splits text on any pause marker. Returns [text] if no marker. */
+function splitOnPause(text: string): string[] {
+  // Replace every pause variant with a single unique sentinel,
+  // then split on that. Simpler than iterating regex.exec().
+  const SENTINEL = "\u0000PAUSE\u0000";
+  let work = text;
+  for (const re of PAUSE_SPLIT_REGEXES) {
+    re.lastIndex = 0;
+    work = work.replace(re, SENTINEL);
+  }
+  return work
+    .split(SENTINEL)
+    .map((s) => s.trim())
+    .filter((s) => s.length > 0);
+}
+
+// ── SSML path (v3 upgrade — not active until ssmlEnabled true) ─
+
 function markersToSsml(text: string): string {
   let out = text;
   // [pause] → SSML break.
-  out = out.replace(/\s*\[pause\]\s*/g, ' <break time="350ms"/> ');
-  // [sigh] / [laugh] / [smile] — ElevenLabs v3 inline performance
-  // hints. Format may shift; isolate the mapping here.
-  out = out.replace(/\s*\[sigh\]\s*/g, ' <prosody rate="slow"> </prosody> ');
-  out = out.replace(/\s*\[laugh\]\s*/g, " (laughs) ");
-  out = out.replace(/\s*\[smile\]\s*/g, " ");  // smile is a vibe; no SSML for it
-  // [sarcasm] — slow rate + breathy on the preceding sentence. v3
-  // doesn't have a real sarcasm tag; we apply rate modulation only.
-  // We can't easily target the prior sentence with regex without
-  // false positives, so we just emit a break + slow on the next
-  // breath; refine when we move to v3.
-  out = out.replace(/\s*\[sarcasm\]\s*/g, ' <break time="200ms"/> ');
+  out = out.replace(new RegExp(`\\s*\\[\\s*pauses?\\s*\\]\\s*`, "gi"), ' <break time="350ms"/> ');
+  out = out.replace(new RegExp(`\\s*\\(\\s*pauses?\\s*\\)\\s*`, "gi"), ' <break time="350ms"/> ');
+  out = out.replace(new RegExp(`\\s*\\*+\\s*pauses?\\s*\\*+\\s*`, "gi"), ' <break time="350ms"/> ');
+  // [sigh], [laugh], [smile], [sarcasm] — for v3 we\'ll wire
+  // proper prosody. For v2.5 the SSML path is opt-in only.
+  out = stripAllMarkers(out);  // safe: SSML break tags don\'t match marker regex.
   return out.replace(/\s{2,}/g, " ").trim();
 }
 
@@ -160,10 +261,8 @@ function escapeRegex(s: string): string {
 const OPENING_HISTORY_KEY = "axon:opening-history";
 const OPENING_HISTORY_MAX = 3;
 
-/** First 4 words of the display text, lowercased, punctuation
- *  removed. A coarse fingerprint — exact match is the signal. */
 function openingFingerprint(text: string): string {
-  const first = text.replace(/^[\s"']+/, "").slice(0, 200);
+  const first = text.replace(/^[\s"\']+/, "").slice(0, 200);
   return first
     .toLowerCase()
     .replace(/[^a-z0-9\s]/g, "")
@@ -189,14 +288,9 @@ function writeRecentOpening(opening: string, recent: string[]): void {
   try {
     const next = [opening, ...recent.filter((o) => o !== opening)].slice(0, OPENING_HISTORY_MAX);
     localStorage.setItem(OPENING_HISTORY_KEY, JSON.stringify(next));
-  } catch {
-    /* private mode / quota — drop silently */
-  }
+  } catch { /* private mode / quota — drop silently */ }
 }
 
-/** Reset the tracker. Settings UI exposes this when the operator
- *  switches presets so the new persona doesn't get penalised for
- *  matching the last one's opening. */
 export function resetOpeningHistory(): void {
   try { localStorage.removeItem(OPENING_HISTORY_KEY); } catch { /* ignore */ }
 }

@@ -152,6 +152,27 @@ export function resetRelationshipClock(): void {
   try { localStorage.removeItem(RELATIONSHIP_KEY); } catch { /* ignore */ }
 }
 
+/** Stamp `firstSeenAt` now if no stamp exists. Called when the
+ *  master toggle flips ON for the first time, so the relationship
+ *  clock measures "how long has this user had personality enabled"
+ *  rather than "how long since their first composed turn." */
+export function stampFirstSeenIfMissing(): void {
+  try {
+    if (!localStorage.getItem(RELATIONSHIP_KEY)) {
+      localStorage.setItem(RELATIONSHIP_KEY, String(Date.now()));
+    }
+  } catch { /* ignore */ }
+}
+
+/** Wipe persisted personality settings (preset + sliders). Does NOT
+ *  touch the master enabled flag, the relationship clock, or the
+ *  opening-history tracker — those are separate concerns per the
+ *  namespace contract. The "Reset to defaults" button in the
+ *  Personality section calls this. */
+export function resetPersonalitySettings(): void {
+  try { localStorage.removeItem(SETTINGS_KEY); } catch { /* ignore */ }
+}
+
 // ── Convenience: one-call payload for the runTurn caller ─────
 
 /** Returns the three personality fields to splat into BrainRunOpts.

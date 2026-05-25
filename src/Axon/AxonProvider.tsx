@@ -71,6 +71,7 @@ import { useThemeMode } from "@/stores/themeModeStore";
 import { runTurn } from "./engine/brain";
 import { handleDirectDisrespect } from "./engine/loyaltyMonitor";
 import { getPersonalityTurnPayload } from "./personality/settings";
+import { postProcessReply } from "./personality/postProcess";
 import {
   VoiceInput,
   ensureMicPermission,
@@ -585,6 +586,11 @@ export function AxonProvider({ children }: { children: React.ReactNode }) {
         latestUserMessage: clean,
       });
 
+      // First-sentence flag for postProcessReply — banned-opener
+      // stripping + opening-fingerprint tracker only fire on the
+      // first sentence of a streamed reply.
+      let isFirstSentence = true;
+
       let res: Awaited<ReturnType<typeof runTurn>>;
       try {
         res = await runTurn(clean, conversationRef.current, ctx, {
@@ -597,10 +603,31 @@ export function AxonProvider({ children }: { children: React.ReactNode }) {
             // Skip empty-after-sanitize fragments (pure markdown/bullets).
             const meaningful = s.replace(/[*_`|#~\-•>]/g, "").trim();
             if (meaningful.length < 2) return;
-            spokeAny = true;
-            queuedSpeech = true;
-            lastSpokenTextRef.current = s;
-            voiceOutRef.current?.queueSentence(s);
+
+            // Run the post-processor: strips voice markers
+            // ([pause], *laugh*, etc.), strips banned openers on
+            // the first sentence, splits [pause] into chunk
+            // boundaries so the natural between-chunk gap serves
+            // as the pause. trackOpenings stays true on the
+            // production path; the future test path will pass
+            // false.
+            const processed = postProcessReply({
+              text: s,
+              trackOpenings: true,
+              isFirstSentence,
+              // ssmlEnabled left undefined (v2.5 strip-only mode).
+            });
+            isFirstSentence = false;
+
+            // Queue each chunk separately. Single chunk for most
+            // sentences; 2+ when [pause] split fired.
+            for (const chunk of processed.voiceChunks) {
+              if (chunk.length < 2) continue;
+              spokeAny = true;
+              queuedSpeech = true;
+              lastSpokenTextRef.current = chunk;
+              voiceOutRef.current?.queueSentence(chunk);
+            }
           },
         });
       } catch (e) {

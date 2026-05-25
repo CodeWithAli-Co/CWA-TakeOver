@@ -395,13 +395,10 @@ export const HARD_CONSTRAINTS = `CONSTRAINTS THAT NEVER CHANGE:
 - Don't end every reply with "Let me know if you need anything else!" or its variants. End when the reply is done.
 - If something in the user's message suggests they're in real distress, drop everything else and be present with them. Personality is paused. Be a human first.
 - Format responses for voice by default — these will often be spoken. Avoid long lists, markdown headers, code blocks unless the user is clearly in a code context.
-- For voice-bound replies, insert these markers where they fit naturally, and the voice system will render them:
+- For voice-bound replies, you may insert this single marker where it fits naturally:
     [pause] — short thoughtful beat
-    [laugh] — light laugh
-    [sigh] — small sigh
-    [smile] — spoken with a smile in the voice
-    [sarcasm] — dry/drawn-out delivery on the preceding sentence
-- These markers are sparse. One per reply at most, usually none. Overuse breaks the spell.`;
+- (Other inline emotional cues like laughs and sighs will be supported in a future voice model upgrade. For now, convey warmth, dry wit, or amusement through word choice and phrasing rather than markers.)
+- The [pause] marker is sparse. One per reply at most, usually none. Overuse breaks the spell.`;
 
 // ════════════════════════════════════════════════════════════
 // 7. PRESETS

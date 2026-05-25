@@ -32,31 +32,43 @@ export interface VoicePreset {
   rate: number;
   /** Preferred pitch (0–2). */
   pitch: number;
-  /** ElevenLabs voice_settings — tuned per preset for smoothness. */
+  /** ElevenLabs voice_settings — tuned per preset for smoothness.
+   *  `speed` is a synthesis-time pacing knob (0.7–1.2) supported on
+   *  multilingual_v2 and later; ignored on models that don't accept
+   *  it, so it's safe to include even if a model later drops it. */
   elevenLabsSettings?: {
     stability: number;
     similarity_boost: number;
     style: number;
     use_speaker_boost: boolean;
+    speed?: number;
   };
   /** Sort order in pickers. */
   sort: number;
 }
 
-// Smooth defaults — higher stability, lower style = less jitter.
+// Expressive-default tuning (May 2026). Was "smooth" = monotone
+// at stability 0.55 / style 0.10 — produced calm-narrator delivery
+// with no emotional range. Operator review found it robotic. New
+// values target "engaged conversationalist" — stability low enough
+// that the model varies tone between similar phrases, style high
+// enough that emotional inflection actually shows up.
 const SMOOTH_TUNED = {
-  stability: 0.55,
-  similarity_boost: 0.8,
-  style: 0.1,
+  stability: 0.30,
+  similarity_boost: 0.75,
+  style: 0.55,
   use_speaker_boost: true,
+  speed: 1.13,
 } as const;
 
-// Slightly more expressive for personalities (Charlotte, Dorothy).
+// Bolder expressive — pushes style further for voices intentionally
+// chosen for personality (Charlotte, Dorothy, Matilda).
 const EXPRESSIVE_TUNED = {
-  stability: 0.45,
-  similarity_boost: 0.78,
-  style: 0.25,
+  stability: 0.25,
+  similarity_boost: 0.72,
+  style: 0.65,
   use_speaker_boost: true,
+  speed: 1.12,
 } as const;
 
 export const VOICE_PRESETS: VoicePreset[] = [
@@ -77,7 +89,7 @@ export const VOICE_PRESETS: VoicePreset[] = [
       "Oliver",
       "Arthur",
     ],
-    rate: 0.96,
+    rate: 1.00,
     pitch: 0.92,
     elevenLabsSettings: SMOOTH_TUNED,
     sort: 10,
@@ -116,7 +128,7 @@ export const VOICE_PRESETS: VoicePreset[] = [
       "Microsoft Libby - English (United Kingdom)",
       "Serena",
     ],
-    rate: 0.97,
+    rate: 1.00,
     pitch: 1.0,
     elevenLabsSettings: SMOOTH_TUNED,
     sort: 12,

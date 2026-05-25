@@ -283,16 +283,20 @@ export class VoiceOutput {
     if (this.gen !== genAtCall) return;
 
     const preset = getVoicePreset(this.config.voicePresetId ?? null);
-    // Smoother default than v3's hardcoded values.
+    // Expressive default — matches the SMOOTH_TUNED values in
+    // voiceCatalog.ts so a preset without an elevenLabsSettings
+    // override still gets expressive delivery rather than the
+    // monotone calm-narrator baseline.
     const voice_settings = preset?.elevenLabsSettings ?? {
-      stability: 0.55,
-      similarity_boost: 0.8,
-      style: 0.1,
+      stability: 0.30,
+      similarity_boost: 0.75,
+      style: 0.55,
       use_speaker_boost: true,
+      speed: 1.13,
     };
 
     const res = await fetch(
-      `https://api.elevenlabs.io/v1/text-to-speech/${voiceId}/stream?optimize_streaming_latency=3&output_format=mp3_44100_128`,
+      `https://api.elevenlabs.io/v1/text-to-speech/${voiceId}/stream?optimize_streaming_latency=2&output_format=mp3_44100_128`,
       {
         method: "POST",
         headers: {
@@ -302,7 +306,7 @@ export class VoiceOutput {
         },
         body: JSON.stringify({
           text: cadence(text),
-          model_id: "eleven_turbo_v2_5",
+          model_id: "eleven_multilingual_v2",
           voice_settings,
         }),
       }
