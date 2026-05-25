@@ -213,10 +213,10 @@ export const accountManagerData = {
       icon: Target,
     },
     {
-      title: "Schedule",
-      url: "/schedule",
+      title: "Timesheet",
+      url: "/timesheet",
       isActive: false,
-      icon: CalendarDays,
+      icon: Clock,
     },
     {
       title: "Submit Report",
@@ -298,10 +298,10 @@ export const marketingData = {
       icon: Target,
     },
     {
-      title: "Schedule",
-      url: "/schedule",
+      title: "Timesheet",
+      url: "/timesheet",
       isActive: false,
-      icon: CalendarDays,
+      icon: Clock,
     },
     {
       title: "Submit Report",
@@ -474,10 +474,10 @@ export const adminData = {
       icon: Target,
     },
     {
-      title: "Schedule",
-      url: "/schedule",
+      title: "Timesheet",
+      url: "/timesheet",
       isActive: false,
-      icon: CalendarDays,
+      icon: Clock,
     },
     // {
     //   title: "BioTech",
@@ -584,10 +584,10 @@ export const projectManagerData = {
       icon: Target,
     },
     {
-      title: "Schedule",
-      url: "/schedule",
+      title: "Timesheet",
+      url: "/timesheet",
       isActive: false,
-      icon: CalendarDays,
+      icon: Clock,
     },
     {
       title: "Submit Report",
@@ -715,10 +715,10 @@ export const securityEngineerData = {
       icon: Target,
     },
     {
-      title: "Schedule",
-      url: "/schedule",
+      title: "Timesheet",
+      url: "/timesheet",
       isActive: false,
-      icon: CalendarDays,
+      icon: Clock,
     },
     {
       title: "Submit Report",
@@ -934,19 +934,13 @@ export const cooData = {
       company: "codeWithAli" as const,
     },
     {
-      title: "Schedule",
-      url: "/schedule",
-      isActive: false,
-      icon: CalendarDays,
-      company: "codeWithAli" as const,
-    },
-    {
-      title: "Time Tracking",
-      url: "/timetracking",
+      title: "Timesheet",
+      url: "/timesheet",
       isActive: false,
       icon: Clock,
       company: "codeWithAli" as const,
     },
+    // (Time Tracking has been merged into the Timesheet entry above.)
     {
       title: "Arabic Learning",
       url: "/arabic",
@@ -1144,8 +1138,7 @@ export const ceoData = {
       items: [
         { title: "Tasks",         url: "/task" },
         { title: "Weekly Quotas", url: "/quota" },
-        { title: "Schedule",      url: "/schedule" },
-        { title: "Time Tracking", url: "/timetracking" },
+        { title: "Timesheet",     url: "/timesheet" },
       ],
     },
 
@@ -1394,10 +1387,10 @@ export const cfoData = {
       icon: Target,
     },
     {
-      title: "Schedule",
-      url: "/schedule",
+      title: "Timesheet",
+      url: "/timesheet",
       isActive: false,
-      icon: CalendarDays,
+      icon: Clock,
     },
     // {
     //   title: "BioTech",

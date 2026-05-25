@@ -14,6 +14,7 @@ import { Route as rootRouteImport } from './routes/__root'
 
 const TrainingplanLazyRouteImport = createFileRoute('/trainingplan')()
 const TimetrackingLazyRouteImport = createFileRoute('/timetracking')()
+const TimesheetLazyRouteImport = createFileRoute('/timesheet')()
 const TaskLazyRouteImport = createFileRoute('/task')()
 const SettingsLazyRouteImport = createFileRoute('/settings')()
 const ScheduleLazyRouteImport = createFileRoute('/schedule')()
@@ -71,6 +72,11 @@ const TimetrackingLazyRoute = TimetrackingLazyRouteImport.update({
   path: '/timetracking',
   getParentRoute: () => rootRouteImport,
 } as any).lazy(() => import('./routes/timetracking.lazy').then((d) => d.Route))
+const TimesheetLazyRoute = TimesheetLazyRouteImport.update({
+  id: '/timesheet',
+  path: '/timesheet',
+  getParentRoute: () => rootRouteImport,
+} as any).lazy(() => import('./routes/timesheet.lazy').then((d) => d.Route))
 const TaskLazyRoute = TaskLazyRouteImport.update({
   id: '/task',
   path: '/task',
@@ -332,6 +338,7 @@ export interface FileRoutesByFullPath {
   '/schedule': typeof ScheduleLazyRoute
   '/settings': typeof SettingsLazyRoute
   '/task': typeof TaskLazyRoute
+  '/timesheet': typeof TimesheetLazyRoute
   '/timetracking': typeof TimetrackingLazyRoute
   '/trainingplan': typeof TrainingplanLazyRoute
   '/reports/submit': typeof ReportsSubmitLazyRoute
@@ -378,6 +385,7 @@ export interface FileRoutesByTo {
   '/schedule': typeof ScheduleLazyRoute
   '/settings': typeof SettingsLazyRoute
   '/task': typeof TaskLazyRoute
+  '/timesheet': typeof TimesheetLazyRoute
   '/timetracking': typeof TimetrackingLazyRoute
   '/trainingplan': typeof TrainingplanLazyRoute
   '/reports/submit': typeof ReportsSubmitLazyRoute
@@ -425,6 +433,7 @@ export interface FileRoutesById {
   '/schedule': typeof ScheduleLazyRoute
   '/settings': typeof SettingsLazyRoute
   '/task': typeof TaskLazyRoute
+  '/timesheet': typeof TimesheetLazyRoute
   '/timetracking': typeof TimetrackingLazyRoute
   '/trainingplan': typeof TrainingplanLazyRoute
   '/reports/submit': typeof ReportsSubmitLazyRoute
@@ -473,6 +482,7 @@ export interface FileRouteTypes {
     | '/schedule'
     | '/settings'
     | '/task'
+    | '/timesheet'
     | '/timetracking'
     | '/trainingplan'
     | '/reports/submit'
@@ -519,6 +529,7 @@ export interface FileRouteTypes {
     | '/schedule'
     | '/settings'
     | '/task'
+    | '/timesheet'
     | '/timetracking'
     | '/trainingplan'
     | '/reports/submit'
@@ -565,6 +576,7 @@ export interface FileRouteTypes {
     | '/schedule'
     | '/settings'
     | '/task'
+    | '/timesheet'
     | '/timetracking'
     | '/trainingplan'
     | '/reports/submit'
@@ -612,6 +624,7 @@ export interface RootRouteChildren {
   ScheduleLazyRoute: typeof ScheduleLazyRoute
   SettingsLazyRoute: typeof SettingsLazyRoute
   TaskLazyRoute: typeof TaskLazyRoute
+  TimesheetLazyRoute: typeof TimesheetLazyRoute
   TimetrackingLazyRoute: typeof TimetrackingLazyRoute
   TrainingplanLazyRoute: typeof TrainingplanLazyRoute
   ClientIndexLazyRoute: typeof ClientIndexLazyRoute
@@ -632,6 +645,13 @@ declare module '@tanstack/react-router' {
       path: '/timetracking'
       fullPath: '/timetracking'
       preLoaderRoute: typeof TimetrackingLazyRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/timesheet': {
+      id: '/timesheet'
+      path: '/timesheet'
+      fullPath: '/timesheet'
+      preLoaderRoute: typeof TimesheetLazyRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/task': {
@@ -983,6 +1003,7 @@ const rootRouteChildren: RootRouteChildren = {
   ScheduleLazyRoute: ScheduleLazyRoute,
   SettingsLazyRoute: SettingsLazyRoute,
   TaskLazyRoute: TaskLazyRoute,
+  TimesheetLazyRoute: TimesheetLazyRoute,
   TimetrackingLazyRoute: TimetrackingLazyRoute,
   TrainingplanLazyRoute: TrainingplanLazyRoute,
   ClientIndexLazyRoute: ClientIndexLazyRoute,
