@@ -72,36 +72,32 @@ export function postProcessReply(input: PostProcessInput): PostProcessOutput {
 
   const trimmed = stripped.replace(/^\s+/, "");
 
-  // Was a marker present in the source? (Diagnostic / playground.)
-  const hadMarkers = MARKER_REGEXES.some((re) => re.test(trimmed));
-  // Regexes are stateful (g flag) — reset before reuse.
-  for (const re of MARKER_REGEXES) re.lastIndex = 0;
-
-  // Diagnostic: warn when Claude emits any non-[pause] marker.
-  // Round 1.5 dropped laugh/sigh/smile/sarcasm from the prompt
-  // instructions; this catches if Claude still tries to use them
-  // so we can see how often the prose-instead-of-markers
-  // instruction is being violated.
-  const nonPause = detectNonPauseMarkers(trimmed);
-  if (nonPause.length > 0) {
+  // Diagnostic: warn when Claude emits a tag NOT in the v3
+  // supported palette. v3 interprets a wide tag vocabulary
+  // descriptively; this catches invented tokens (e.g. [smile]
+  // from the v1 era, or freelance tags Claude tries) so we
+  // can tighten the prompt if it happens.
+  const unsupported = detectUnsupportedTags(trimmed);
+  const hadMarkers = unsupported.length > 0 ||
+    /\[(pause|pauses|laughs|chuckles|sighs|whispers|fast-paced|drawn out|excited|frustrated|tired|sorrowful|sad)\]/i.test(trimmed);
+  if (unsupported.length > 0) {
     console.warn(
-      "[postProcess] non-pause marker stripped (not supported in v1):",
-      nonPause,
+      "[postProcess] unsupported v3 tag stripped:",
+      unsupported,
     );
   }
 
-  // Build the voice-side output.
-  const displayText = stripAllMarkers(trimmed);
-  const voiceText = input.ssmlEnabled
-    ? markersToSsml(trimmed)
-    : stripAllMarkers(trimmed);
-
-  // [pause] chunk split — only relevant when we\'re NOT emitting
-  // SSML. v2.5 has no inline break support, so we use natural
-  // queue gaps. Non-pause markers are stripped from each chunk.
-  const voiceChunks = input.ssmlEnabled
-    ? [voiceText].filter((c) => c.length > 0)
-    : splitOnPause(trimmed).map(stripAllMarkers).filter((c) => c.length > 0);
+  // Build the voice-side output. v3 renders [laughs] / [sighs] /
+  // etc. as audible sounds, so we PRESERVE supported tags. [pause]
+  // gets converted to <break time="0.2s" /> inline per v3 docs —
+  // this replaces the v1 chunk-splitting workaround entirely.
+  const displayText = stripAllTagsForDisplay(trimmed);
+  const voiceBody = pauseToBreak(stripDeprecatedOnly(trimmed));
+  const voiceText = voiceBody;
+  // voiceChunks always length 1 on v3 — no more chunk-splitting.
+  // The break tag handles the pause; the caller queues a single
+  // chunk per sentence as before.
+  const voiceChunks = voiceBody.length > 0 ? [voiceBody] : [];
 
   // Opening fingerprint — only on first sentence, only when
   // tracking is on.
@@ -160,39 +156,105 @@ function caseInsensitiveStartsWith(haystack: string, needle: string): boolean {
 // We deliberately DO NOT match bare standalone tokens.
 // "Let me pause and think" is a legitimate sentence.
 
-const MARKER_TOKENS = "(pause|pauses|laugh|laughs|sigh|sighs|smile|smiles|sarcasm)";
+// ── v3 marker palette ─────────────────────────────────────────
+//
+// v3 renders these tags as audible sounds. They pass through to
+// ElevenLabs as inline text and the model interprets them. Pause
+// gets special handling: converted inline to <break time="0.2s" />
+// per v3 docs since that produces a deterministic silence instead
+// of the previous chunk-splitting workaround.
 
-const MARKER_REGEXES: RegExp[] = [
-  // Bracket: [pause], [laughs]
-  new RegExp(`\\s*\\[\\s*${MARKER_TOKENS}\\s*\\]\\s*`, "gi"),
-  // Parenthetical: (pause), (sighs)
-  new RegExp(`\\s*\\(\\s*${MARKER_TOKENS}\\s*\\)\\s*`, "gi"),
-  // Asterisk emphasis: *pause*, **laugh** (1+ asterisks per side)
-  new RegExp(`\\s*\\*+\\s*${MARKER_TOKENS}\\s*\\*+\\s*`, "gi"),
+const SUPPORTED_V3_TAGS = [
+  "pause", "pauses",
+  "laughs", "laughs harder", "starts laughing", "chuckles",
+  "sighs", "sigh",
+  "whispers", "shouts",
+  "fast-paced", "drawn out", "rushed",
+  "excited", "frustrated", "tired", "sorrowful", "sad",
+  "calm", "angry", "happily", "curious", "nervous",
+  "cheerfully", "flatly", "deadpan", "playfully",
+  "resigned tone", "hesitates", "stammers",
+  "gulps", "gasps", "clears throat",
+] as const;
+
+// Deprecated custom tokens we used to emit. Always strip — these
+// never rendered as sounds and would read as text.
+const DEPRECATED_TOKENS = ["smile", "smiles", "sarcasm"] as const;
+
+// Generic detector regex — catches anything in brackets / parens
+// / asterisks that looks like a tag token. Used by the warn path
+// to flag tokens NOT in SUPPORTED_V3_TAGS so we see if Claude
+// invents new ones.
+const GENERIC_TAG_REGEXES: RegExp[] = [
+  /\[\s*([a-z\- ]+?)\s*\]/gi,
+  /\(\s*([a-z\- ]+?)\s*\)/gi,
+  /\*+\s*([a-z\- ]+?)\s*\*+/gi,
 ];
 
-// Non-pause marker detector — fires console.warn diagnostic when
-// Claude emits laugh/sigh/smile/sarcasm despite the v1.5 prompt
-// instruction to convey those via prose instead. Read-only; never
-// mutates the input. Returns the matched tokens for the log line.
-const NON_PAUSE_TOKEN = "(laugh|laughs|sigh|sighs|smile|smiles|sarcasm)";
-const NON_PAUSE_DETECT_REGEXES: RegExp[] = [
-  new RegExp(`\\[\\s*${NON_PAUSE_TOKEN}\\s*\\]`, "gi"),
-  new RegExp(`\\(\\s*${NON_PAUSE_TOKEN}\\s*\\)`, "gi"),
-  new RegExp(`\\*+\\s*${NON_PAUSE_TOKEN}\\s*\\*+`, "gi"),
-];
+/** Convert every [pause] / (pause) / *pause* / *pauses* variant
+ *  to a v3 SSML break tag inline. Replaces the v1 chunk-splitting
+ *  approach — v3 honors <break time="x.xs" /> directly. */
+function pauseToBreak(text: string): string {
+  let out = text;
+  out = out.replace(/\s*\[\s*pauses?\s*\]\s*/gi, ' <break time="0.2s" /> ');
+  out = out.replace(/\s*\(\s*pauses?\s*\)\s*/gi, ' <break time="0.2s" /> ');
+  out = out.replace(/\s*\*+\s*pauses?\s*\*+\s*/gi, ' <break time="0.2s" /> ');
+  return out.replace(/\s{2,}/g, " ").trim();
+}
 
-function detectNonPauseMarkers(text: string): string[] {
+/** Strip ONLY deprecated tokens. Everything else (the v3 supported
+ *  palette) passes through to TTS unchanged. */
+function stripDeprecatedOnly(text: string): string {
+  let out = text;
+  for (const tok of DEPRECATED_TOKENS) {
+    out = out.replace(new RegExp(`\\s*\\[\\s*${tok}\\s*\\]\\s*`, "gi"), " ");
+    out = out.replace(new RegExp(`\\s*\\(\\s*${tok}\\s*\\)\\s*`, "gi"), " ");
+    out = out.replace(new RegExp(`\\s*\\*+\\s*${tok}\\s*\\*+\\s*`, "gi"), " ");
+  }
+  return out.replace(/\s{2,}/g, " ").trim();
+}
+
+/** Strip ALL tags including v3-supported ones — for the DISPLAY
+ *  text path. Users don't want to see "[laughs]" in chat. */
+function stripAllTagsForDisplay(text: string): string {
+  let out = text;
+  // Strip every plausible tag form. We don't care about preserving
+  // tokens for display — anything bracketed/asterisked goes.
+  out = out.replace(/\s*\[[a-z\- ]+?\]\s*/gi, " ");
+  // Don't strip parens generally — the prose uses them. Only strip
+  // when content is a known tag token.
+  for (const tok of [...SUPPORTED_V3_TAGS, ...DEPRECATED_TOKENS]) {
+    out = out.replace(new RegExp(`\\s*\\(\\s*${tok}\\s*\\)\\s*`, "gi"), " ");
+    out = out.replace(new RegExp(`\\s*\\*+\\s*${tok}\\s*\\*+\\s*`, "gi"), " ");
+  }
+  return out.replace(/\s{2,}/g, " ").trim();
+}
+
+/** Detect ANY tag-shaped token in the input. Returns the list of
+ *  raw bracketed tokens for the diagnostic warn. Used to flag
+ *  tokens that aren't in SUPPORTED_V3_TAGS so we see if Claude
+ *  invents unsupported ones. */
+function detectUnsupportedTags(text: string): string[] {
   const hits: string[] = [];
-  for (const re of NON_PAUSE_DETECT_REGEXES) {
+  const supportedLower = new Set<string>([
+    ...SUPPORTED_V3_TAGS.map((t) => t.toLowerCase()),
+    ...DEPRECATED_TOKENS.map((t) => t.toLowerCase()),
+  ]);
+  for (const re of GENERIC_TAG_REGEXES) {
     re.lastIndex = 0;
     let m: RegExpExecArray | null;
     while ((m = re.exec(text)) !== null) {
-      hits.push(m[0]);
+      const token = (m[1] ?? "").trim().toLowerCase();
+      if (token && !supportedLower.has(token)) {
+        hits.push(m[0]);
+      }
     }
   }
   return hits;
 }
+
+// ── Legacy aliases kept so postProcessReply\'s call sites compile. ──
+const MARKER_REGEXES: RegExp[] = GENERIC_TAG_REGEXES;
 
 /** Strip every flavour of marker, collapse whitespace. */
 function stripAllMarkers(text: string): string {

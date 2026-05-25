@@ -169,6 +169,26 @@ function isQuestion(text: string): boolean {
   return false;
 }
 
+/**
+ * Maps a mood tag from the personality engine\'s classifier to an
+ * ElevenLabs v3 audio tag. Returns an empty string for neutral /
+ * focused / undefined — those moods don\'t want explicit tonal
+ * coloring (focused especially: a tag would impose a register the
+ * user didn\'t ask for). Sad uses [sorrowful] because that\'s the
+ * companion-friendly variant in the v3 palette per docs.
+ */
+function moodToTagPrefix(mood: string | undefined): string {
+  switch (mood) {
+    case "excited":    return "[excited] ";
+    case "frustrated": return "[frustrated] ";
+    case "tired":      return "[tired] ";
+    case "sad":        return "[sorrowful] ";
+    case "focused":
+    case "neutral":
+    default:           return "";
+  }
+}
+
 // ─────────────────────────────────────────────────────────────────
 export function AxonProvider({ children }: { children: React.ReactNode }) {
   const { data: userRows } = ActiveUser();
@@ -604,24 +624,33 @@ export function AxonProvider({ children }: { children: React.ReactNode }) {
             const meaningful = s.replace(/[*_`|#~\-•>]/g, "").trim();
             if (meaningful.length < 2) return;
 
-            // Run the post-processor: strips voice markers
-            // ([pause], *laugh*, etc.), strips banned openers on
-            // the first sentence, splits [pause] into chunk
-            // boundaries so the natural between-chunk gap serves
-            // as the pause. trackOpenings stays true on the
-            // production path; the future test path will pass
-            // false.
+            // Run the post-processor: strips banned openers on the
+            // first sentence, preserves v3-supported audio tags
+            // ([laughs], [sighs], etc.) so ElevenLabs renders them,
+            // converts [pause] to <break time="0.4s" /> inline per
+            // v3 docs.
             const processed = postProcessReply({
               text: s,
               trackOpenings: true,
               isFirstSentence,
-              // ssmlEnabled left undefined (v2.5 strip-only mode).
             });
+            // Mood-to-tag bridge: on the FIRST sentence of a reply,
+            // prepend a v3 audio tag matching the detected mood so
+            // ElevenLabs colours the delivery. Subsequent sentences
+            // inherit the tonal frame naturally — tagging every
+            // sentence would sound melodramatic.
+            const moodPrefix = isFirstSentence
+              ? moodToTagPrefix(personalityPayload.personalityContext?.recentMoodSignal)
+              : "";
             isFirstSentence = false;
 
-            // Queue each chunk separately. Single chunk for most
-            // sentences; 2+ when [pause] split fired.
-            for (const chunk of processed.voiceChunks) {
+            // v3 returns voiceChunks of length 1 (pause split moved
+            // to inline <break>). Loop preserved for back-compat
+            // with future routing where v2/Flash might still split.
+            const chunks = moodPrefix && processed.voiceChunks.length > 0
+              ? [moodPrefix + processed.voiceChunks[0], ...processed.voiceChunks.slice(1)]
+              : processed.voiceChunks;
+            for (const chunk of chunks) {
               if (chunk.length < 2) continue;
               spokeAny = true;
               queuedSpeech = true;

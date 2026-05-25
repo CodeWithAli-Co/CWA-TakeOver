@@ -32,15 +32,17 @@ export interface VoicePreset {
   rate: number;
   /** Preferred pitch (0–2). */
   pitch: number;
-  /** ElevenLabs voice_settings — tuned per preset for smoothness.
-   *  `speed` is a synthesis-time pacing knob (0.7–1.2) supported on
-   *  multilingual_v2 and later; ignored on models that don't accept
-   *  it, so it's safe to include even if a model later drops it. */
+  /** ElevenLabs voice_settings — tuned per preset.
+   *  Schema is v3-targeted: use_speaker_boost is omitted because
+   *  v3 doesn't honor it, speed is omitted because v3 controls
+   *  pace via inline audio tags rather than a slider. Both are
+   *  preserved as optional for back-compat with v2/Flash if we
+   *  ever route. */
   elevenLabsSettings?: {
     stability: number;
     similarity_boost: number;
     style: number;
-    use_speaker_boost: boolean;
+    use_speaker_boost?: boolean;
     speed?: number;
   };
   /** Sort order in pickers. */
@@ -53,22 +55,28 @@ export interface VoicePreset {
 // values target "engaged conversationalist" — stability low enough
 // that the model varies tone between similar phrases, style high
 // enough that emotional inflection actually shows up.
+// v3-tuned defaults (May 2026). stability=0.5 maps to "Natural"
+// in v3's Creative/Natural/Robust mode language. style backs off
+// from the v2 0.55 because v3's audio tags now carry the emotional
+// inflection — over-styling here would over-color every sentence
+// regardless of mood. use_speaker_boost + speed omitted (unsupported
+// on v3; pace is controlled via inline [fast-paced] / [drawn out]
+// tags when needed).
 const SMOOTH_TUNED = {
-  stability: 0.30,
+  stability: 0.50,
   similarity_boost: 0.75,
-  style: 0.55,
-  use_speaker_boost: true,
-  speed: 1.13,
+  style: 0.40,
 } as const;
 
 // Bolder expressive — pushes style further for voices intentionally
 // chosen for personality (Charlotte, Dorothy, Matilda).
+// EXPRESSIVE preset — slightly lower stability for personalities
+// that should feel more emotionally fluid (Charlotte, Dorothy,
+// Matilda). Still inside the Natural mode band per v3 docs.
 const EXPRESSIVE_TUNED = {
-  stability: 0.25,
+  stability: 0.40,
   similarity_boost: 0.72,
-  style: 0.65,
-  use_speaker_boost: true,
-  speed: 1.12,
+  style: 0.55,
 } as const;
 
 export const VOICE_PRESETS: VoicePreset[] = [
@@ -89,7 +97,7 @@ export const VOICE_PRESETS: VoicePreset[] = [
       "Oliver",
       "Arthur",
     ],
-    rate: 1.00,
+    rate: 1.12,
     pitch: 0.92,
     elevenLabsSettings: SMOOTH_TUNED,
     sort: 10,
@@ -108,7 +116,7 @@ export const VOICE_PRESETS: VoicePreset[] = [
       "Microsoft Ryan - English (United Kingdom)",
       "Oliver",
     ],
-    rate: 1.0,
+    rate: 1.12,
     pitch: 0.95,
     elevenLabsSettings: SMOOTH_TUNED,
     sort: 11,
@@ -128,7 +136,7 @@ export const VOICE_PRESETS: VoicePreset[] = [
       "Microsoft Libby - English (United Kingdom)",
       "Serena",
     ],
-    rate: 1.00,
+    rate: 1.12,
     pitch: 1.0,
     elevenLabsSettings: SMOOTH_TUNED,
     sort: 12,
@@ -146,7 +154,7 @@ export const VOICE_PRESETS: VoicePreset[] = [
       "Microsoft Sonia - English (United Kingdom)",
       "Kate",
     ],
-    rate: 1.0,
+    rate: 1.12,
     pitch: 1.02,
     elevenLabsSettings: EXPRESSIVE_TUNED,
     sort: 13,
@@ -164,7 +172,7 @@ export const VOICE_PRESETS: VoicePreset[] = [
       "Kate",
       "Microsoft Libby - English (United Kingdom)",
     ],
-    rate: 1.0,
+    rate: 1.12,
     pitch: 1.05,
     elevenLabsSettings: EXPRESSIVE_TUNED,
     sort: 14,
@@ -185,7 +193,7 @@ export const VOICE_PRESETS: VoicePreset[] = [
       "Microsoft David - English (United States)",
       "Daniel (English (United States))",
     ],
-    rate: 1.0,
+    rate: 1.12,
     pitch: 0.9,
     elevenLabsSettings: SMOOTH_TUNED,
     sort: 20,
@@ -202,7 +210,7 @@ export const VOICE_PRESETS: VoicePreset[] = [
       "Alex",
       "Microsoft David - English (United States)",
     ],
-    rate: 1.0,
+    rate: 1.12,
     pitch: 0.95,
     elevenLabsSettings: SMOOTH_TUNED,
     sort: 21,
@@ -219,7 +227,7 @@ export const VOICE_PRESETS: VoicePreset[] = [
       "Samantha",
       "Microsoft Zira - English (United States)",
     ],
-    rate: 1.0,
+    rate: 1.12,
     pitch: 1.0,
     elevenLabsSettings: SMOOTH_TUNED,
     sort: 22,
@@ -235,7 +243,7 @@ export const VOICE_PRESETS: VoicePreset[] = [
       "Microsoft Aria Online (Natural) - English (United States)",
       "Samantha",
     ],
-    rate: 1.02,
+    rate: 1.14,
     pitch: 1.05,
     elevenLabsSettings: EXPRESSIVE_TUNED,
     sort: 23,
@@ -254,7 +262,7 @@ export const VOICE_PRESETS: VoicePreset[] = [
       "Microsoft William - English (Australia)",
       "Lee",
     ],
-    rate: 1.0,
+    rate: 1.12,
     pitch: 0.95,
     elevenLabsSettings: SMOOTH_TUNED,
     sort: 30,

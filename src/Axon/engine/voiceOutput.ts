@@ -18,6 +18,39 @@ import {
   type VoicePreset,
 } from "./voiceCatalog";
 
+// ── Startup diagnostic ────────────────────────────────────────
+// Loud, one-shot log of the ElevenLabs key state so this entire
+// class of "voice silently fell back" bug never reaches a test
+// session unannounced again. Module-level: fires once at import.
+if (typeof window !== "undefined") {
+  if (!ELEVENLABS_API_KEY) {
+    console.error(
+      "[voiceOutput] VITE_ELEVENLABS_API_KEY is MISSING. Axon will " +
+      "fall back to the browser's Web Speech API for ALL voice output. " +
+      "Voice quality will be degraded — no ElevenLabs voices, no audio " +
+      "tags, no v3 model. Add the key to .env at the project root and " +
+      "RESTART `vite dev` (env is captured at server boot).",
+    );
+  } else {
+    // Light info on the happy path so we can spot the key going stale
+    // if it ever stops working mid-session for a different reason.
+    console.info(
+      "[voiceOutput] ElevenLabs API key loaded (length=" +
+      ELEVENLABS_API_KEY.length + "). v3 path active.",
+    );
+  }
+}
+
+/** One-shot guard so the per-turn fallback log doesn't spam every
+ *  sentence with the same warning. Each unique reason logs once
+ *  per page load. */
+const loggedFallbackReasons = new Set<string>();
+function logFallbackOnce(reason: string, detail: Record<string, unknown> = {}): void {
+  if (loggedFallbackReasons.has(reason)) return;
+  loggedFallbackReasons.add(reason);
+  console.error(`[voiceOutput] falling back to Web Speech — ${reason}`, detail);
+}
+
 const PREFERRED_VOICE_ORDER = [
   "Google UK English Male",
   "Daniel",
@@ -232,10 +265,31 @@ export class VoiceOutput {
         if (effectiveEleven && ELEVENLABS_API_KEY) {
           await this.speakElevenLabs(next, myGen, effectiveEleven);
         } else {
+          // Loud diagnostic — distinguish "no key" from "no voice id"
+          // so the operator knows exactly what's missing. Once-per-
+          // reason to keep the console readable on long sessions.
+          if (!ELEVENLABS_API_KEY) {
+            logFallbackOnce("VITE_ELEVENLABS_API_KEY env var not set", {
+              presetVoiceId: presetEleven,
+              configVoiceId: this.config.elevenLabsVoiceId,
+              activePreset: this.config.voicePresetId,
+            });
+          } else if (!effectiveEleven) {
+            logFallbackOnce("no ElevenLabs voice id resolved", {
+              activePreset: this.config.voicePresetId,
+              presetHasVoiceId: presetEleven !== null,
+              configVoiceId: this.config.elevenLabsVoiceId,
+            });
+          }
           await this.speakWebSpeech(next, myGen);
         }
       } catch (e) {
-        console.warn("[AXON] sentence playback failed:", e);
+        // Bumped from warn to error — voice failures should be loud.
+        // Includes the failing text so the operator can correlate
+        // with what they just heard (or didn't hear).
+        console.error("[voiceOutput] sentence playback failed:", e, {
+          text: next.slice(0, 120),
+        });
         // Fall through to next sentence; don't abort entire queue.
       }
     }
@@ -248,6 +302,7 @@ export class VoiceOutput {
 
   private async speakWebSpeech(text: string, genAtCall: number): Promise<void> {
     if (typeof window === "undefined" || !("speechSynthesis" in window)) {
+      console.error("[voiceOutput] Web Speech API also unavailable — Axon will be silent.");
       this.callbacks.onError?.("Speech synthesis not available.");
       return;
     }
@@ -255,6 +310,15 @@ export class VoiceOutput {
     const voices = await getAvailableVoices();
     const preset = getVoicePreset(this.config.voicePresetId ?? null);
     const voice = pickVoice(preset, this.config.preferredVoice, voices);
+    // Only logs the first time per page load to avoid spamming. The
+    // voice name + lang tells the operator which OS voice is being
+    // used as the fallback (Microsoft David, Google UK English Male,
+    // etc.) — useful when diagnosing "why does Axon sound like X."
+    logFallbackOnce("Web Speech voice selected", {
+      name: voice?.name ?? "(none — browser default)",
+      lang: voice?.lang ?? "(unknown)",
+      presetId: this.config.voicePresetId,
+    });
     const utt = new SpeechSynthesisUtterance(cadence(text));
     if (voice) utt.voice = voice;
     // Preset rate/pitch take precedence — keeps each voice in character.
@@ -287,16 +351,18 @@ export class VoiceOutput {
     // voiceCatalog.ts so a preset without an elevenLabsSettings
     // override still gets expressive delivery rather than the
     // monotone calm-narrator baseline.
+    // v3 fallback when a preset doesn't carry an elevenLabsSettings
+    // override. Matches SMOOTH_TUNED in voiceCatalog.ts. v3 doesn't
+    // honor use_speaker_boost; speed is controlled via audio tags
+    // rather than a slider, so both are omitted from the request.
     const voice_settings = preset?.elevenLabsSettings ?? {
-      stability: 0.30,
+      stability: 0.50,
       similarity_boost: 0.75,
-      style: 0.55,
-      use_speaker_boost: true,
-      speed: 1.13,
+      style: 0.40,
     };
 
     const res = await fetch(
-      `https://api.elevenlabs.io/v1/text-to-speech/${voiceId}/stream?optimize_streaming_latency=2&output_format=mp3_44100_128`,
+      `https://api.elevenlabs.io/v1/text-to-speech/${voiceId}/stream?output_format=mp3_44100_128`,
       {
         method: "POST",
         headers: {
@@ -306,7 +372,7 @@ export class VoiceOutput {
         },
         body: JSON.stringify({
           text: cadence(text),
-          model_id: "eleven_multilingual_v2",
+          model_id: "eleven_v3",
           voice_settings,
         }),
       }
@@ -314,6 +380,16 @@ export class VoiceOutput {
 
     if (!res.ok) {
       const msg = await res.text().catch(() => "");
+      // Loud — most common cause is invalid/expired key (401), tier
+      // mismatch (403), rate limit (429), or model deprecation (400).
+      // The msg body usually carries the specific reason.
+      console.error("[voiceOutput] ElevenLabs HTTP error", {
+        status: res.status,
+        statusText: res.statusText,
+        body: msg.slice(0, 400),
+        voiceId,
+        model_id: "eleven_v3",
+      });
       throw new Error(`ElevenLabs ${res.status}: ${msg.slice(0, 160)}`);
     }
 
@@ -337,6 +413,11 @@ export class VoiceOutput {
       audio.onerror = () => {
         URL.revokeObjectURL(url);
         if (this.currentAudio === audio) this.currentAudio = null;
+        console.error("[voiceOutput] HTMLAudio playback failed for ElevenLabs blob", {
+          voiceId,
+          textPreview: text.slice(0, 80),
+          audioError: audio.error,
+        });
         this.callbacks.onError?.("ElevenLabs playback error");
         resolve();
       };
