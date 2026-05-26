@@ -1,0 +1,119 @@
+# Release workflow for CWA TakeOver.
+#
+# Trigger: push a tag matching v* (e.g. `git tag v1.6.0 && git push --tags`).
+#
+# What it does:
+#   1. Builds the Tauri app on Windows.
+#   2. Signs the MSI with the Tauri updater private key (from repo secrets).
+#   3. Creates a GitHub Release at the pushed tag with the MSI + latest.json
+#      attached.  This is the modern updater endpoint
+#      (https://github.com/.../releases/latest/download/latest.json).
+#   4. ALSO mirrors latest.json -> release.json onto the legacy
+#      `latest-release` tag so any production install still running the OLD
+#      baked-in endpoint URL can pick up this update and roll forward.
+#      (After every active install is on >= the version that ships the new
+#      endpoint URL, the legacy step can be deleted.)
+#
+# Required repo secrets (Settings -> Secrets and variables -> Actions):
+#   TAURI_SIGNING_PRIVATE_KEY           - contents of the private .key file
+#                                         that pairs with the pubkey in
+#                                         src-tauri/tauri.conf.json
+#   TAURI_SIGNING_PRIVATE_KEY_PASSWORD  - the password set when generating
+#                                         that key (empty string if none)
+
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+  # Allow re-running the workflow against an existing tag from the Actions UI.
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Tag to release (e.g. v1.6.0)"
+        required: true
+
+jobs:
+  publish-tauri:
+    permissions:
+      contents: write
+
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: windows-latest
+            args: ""
+
+    runs-on: ${{ matrix.platform }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.inputs.tag || github.ref }}
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v1
+
+      - name: Setup Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Rust cache
+        uses: swatinem/rust-cache@v2
+        with:
+          workspaces: ./src-tauri -> target
+
+      - name: Install frontend dependencies
+        run: bun install
+
+      - name: Build, sign, and publish Tauri release
+        id: tauri
+        uses: tauri-apps/tauri-action@v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+        with:
+          tagName: ${{ github.event.inputs.tag || github.ref_name }}
+          releaseName: "CWA TakeOver v__VERSION__"
+          releaseBody: |
+            CWA TakeOver __VERSION__.
+
+            Installed copies of older versions will auto-update on next launch.
+            New installs: download the .msi asset below.
+          releaseDraft: false
+          prerelease: false
+          args: ${{ matrix.args }}
+
+      # --- Legacy compatibility step ---------------------------------------
+      # Copies the manifest from the new release to the legacy `latest-release`
+      # tag under the filename old clients expect (release.json), so anyone
+      # still running a version with the old hardcoded endpoint can update
+      # one more time and roll forward to the new endpoint.
+      - name: Mirror manifest to legacy latest-release tag
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ github.event.inputs.tag || github.ref_name }}
+        run: |
+          set -euo pipefail
+          mkdir -p ./_legacy
+          echo "Downloading latest.json from release $TAG..."
+          gh release download "$TAG" \
+            --repo "${{ github.repository }}" \
+            --pattern "latest.json" \
+            --dir ./_legacy
+          mv ./_legacy/latest.json ./_legacy/release.json
+
+          echo "Replacing legacy latest-release tag..."
+          gh release delete latest-release \
+            --repo "${{ github.repository }}" \
+            --yes --cleanup-tag || true
+
+          gh release create latest-release \
+            --repo "${{ github.repository }}" \
+            --title "Latest manifest (legacy endpoint)" \
+            --notes "Auto-mirrored from $TAG so clients on the old updater endpoint can still pick up updates." \
+            ./_legacy/release.json

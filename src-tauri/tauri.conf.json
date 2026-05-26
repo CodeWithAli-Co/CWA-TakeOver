@@ -46,6 +46,7 @@
       "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDI3MUI1OEJDNUMzNjgxOEMKUldTTWdUWmN2RmdiSi83RXVTaEpPTnJNVkU0UXZtV1UvNWp3NFVwZEFiYWxXbDMvR3A4amlYVDkK",
       "dangerousInsecureTransportProtocol": false,
       "endpoints": [
+        "https://github.com/CodeWithAli-Co/CWA-TakeOver/releases/latest/download/latest.json",
         "https://github.com/CodeWithAli-Co/CWA-TakeOver/releases/download/latest-release/release.json"
       ],
       "windows": {
