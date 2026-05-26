@@ -247,3 +247,36 @@
   color: inherit;
   box-shadow: none;
 }
+
+/* ── Collaboration cursors (CollaborationCursor extension) ───────── */
+/* The extension renders two <span> elements at each remote selection:
+   `.collaboration-cursor__caret`  — a thin vertical bar
+   `.collaboration-cursor__label`  — the username pill above the caret
+   Both are colored via inline style from the awareness `user.color`. */
+
+.workspace-prose .collaboration-cursor__caret {
+  border-left: 1px solid currentColor;
+  border-right: 1px solid currentColor;
+  margin-left: -1px;
+  margin-right: -1px;
+  position: relative;
+  word-break: normal;
+  pointer-events: none;
+}
+
+.workspace-prose .collaboration-cursor__label {
+  border-radius: 3px;
+  border-bottom-left-radius: 0;
+  color: white;
+  font-size: 10.5px;
+  font-style: normal;
+  font-weight: 700;
+  left: -1px;
+  line-height: normal;
+  padding: 1.5px 4px;
+  position: absolute;
+  top: -1.3em;
+  user-select: none;
+  white-space: nowrap;
+  letter-spacing: 0.02em;
+}

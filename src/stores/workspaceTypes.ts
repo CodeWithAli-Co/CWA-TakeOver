@@ -19,8 +19,14 @@ export type WorkspaceRole = "viewer" | "commenter" | "editor";
 export interface WorkspaceDocument {
   id: string;
   title: string;
-  /** TipTap doc JSON. Empty placeholder is { type: "doc", content: [] }. */
+  /** TipTap doc JSON. Empty placeholder is { type: "doc", content: [] }.
+   *  Kept in sync with y_state on every save so non-collab readers
+   *  (landing list, search) don't have to load Y.js. */
   content: JSONContent;
+  /** Base64-encoded Y.Doc binary — authoritative for collaboration.
+   *  When present, preferred over `content` for editor bootstrap so
+   *  reconnecting clients don't double-up edits. */
+  y_state: string | null;
   owner: string;
   visibility: WorkspaceVisibility;
   icon: string | null;

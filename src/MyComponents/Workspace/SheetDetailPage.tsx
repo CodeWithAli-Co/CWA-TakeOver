@@ -28,6 +28,7 @@ import {
 } from "@/stores/workspace";
 import { ActiveUser } from "@/stores/query";
 import { SheetEditor } from "./SheetEditor";
+import { PresenceBar } from "./PresenceBar";
 import "./workspace-sheet.css";
 
 interface Props {
@@ -117,6 +118,7 @@ export function SheetDetailPage({ id }: Props) {
             className="flex-1 max-w-[420px] bg-transparent text-[14px] font-bold text-foreground placeholder:text-foreground/30 outline-none border-0 focus:ring-0"
           />
           <div className="flex-1" />
+          <PresenceBar channelName={`sheet:${sheet.id}`} self={username} />
           <button
             type="button"
             onClick={handleToggleVisibility}
