@@ -15,6 +15,31 @@ import type { JSONContent } from "@tiptap/react";
 export type WorkspaceVisibility = "private" | "shared" | "public";
 export type WorkspaceRole = "viewer" | "commenter" | "editor";
 
+// ── Folders ────────────────────────────────────────────────────────
+// Shared across the workspace — every authenticated user sees the
+// same folder tree. parent_folder_id is recursive (no depth limit).
+// NULL parent_folder_id = top-level folder.
+export interface WorkspaceFolder {
+  id: string;
+  name: string;
+  owner: string;
+  parent_folder_id: string | null;
+  icon: string | null;
+  color: string | null;
+  position: number;
+  created_at: string;
+  updated_at: string;
+}
+
+/** Aggregated counts from the workspace_folder_counts view —
+ *  lets the sidebar render "Funding · 4" cheaply. */
+export interface WorkspaceFolderCounts {
+  folder_id: string;
+  doc_count: number;
+  sheet_count: number;
+  total_count: number;
+}
+
 // ── Documents ──────────────────────────────────────────────────────
 export interface WorkspaceDocument {
   id: string;
@@ -31,6 +56,8 @@ export interface WorkspaceDocument {
   visibility: WorkspaceVisibility;
   icon: string | null;
   archived: boolean;
+  /** Folder this doc belongs to. NULL = lives at the workspace root. */
+  folder_id: string | null;
   created_at: string;
   updated_at: string;
   updated_by: string | null;
@@ -46,6 +73,8 @@ export interface WorkspaceSpreadsheet {
   visibility: WorkspaceVisibility;
   icon: string | null;
   archived: boolean;
+  /** Folder this sheet belongs to. NULL = lives at the workspace root. */
+  folder_id: string | null;
   created_at: string;
   updated_at: string;
   updated_by: string | null;
@@ -61,6 +90,7 @@ export interface WorkspaceResource {
   owner: string;
   visibility: WorkspaceVisibility;
   icon: string | null;
+  folder_id: string | null;
   updated_at: string;
   updated_by: string | null;
 }

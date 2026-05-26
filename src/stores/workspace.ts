@@ -34,6 +34,8 @@ import type {
   WorkspaceRole,
   CommentAnchor,
   WorkspaceVersion,
+  WorkspaceFolder,
+  WorkspaceFolderCounts,
 } from "./workspaceTypes";
 import type { JSONContent } from "@tiptap/react";
 
@@ -42,6 +44,8 @@ const SHEET_TABLE = "workspace_spreadsheets";
 const COLLAB_TABLE = "workspace_collaborators";
 const COMMENT_TABLE = "workspace_comments";
 const VERSION_TABLE = "workspace_versions";
+const FOLDER_TABLE = "workspace_folders";
+const FOLDER_COUNTS_VIEW = "workspace_folder_counts";
 
 // ============================================================
 // Query keys
@@ -53,6 +57,8 @@ export const workspaceKeys = {
   spreadsheets:     ["workspace", "spreadsheets"] as const,
   spreadsheet:      (id: string) => ["workspace", "spreadsheets", "byId", id] as const,
   resources:        ["workspace", "resources"] as const,
+  folders:          ["workspace", "folders"] as const,
+  folderCounts:     ["workspace", "folders", "counts"] as const,
   collaborators:    (kind: WorkspaceResourceKind, id: string) =>
                       ["workspace", "collaborators", kind, id] as const,
   comments:         (kind: WorkspaceResourceKind, id: string) =>
@@ -74,11 +80,11 @@ export function useWorkspaceResources(
       const [docsRes, sheetsRes] = await Promise.all([
         supabase
           .from(DOC_TABLE)
-          .select("id, title, owner, visibility, icon, updated_at, updated_by, archived")
+          .select("id, title, owner, visibility, icon, folder_id, updated_at, updated_by, archived")
           .order("updated_at", { ascending: false }),
         supabase
           .from(SHEET_TABLE)
-          .select("id, title, owner, visibility, icon, updated_at, updated_by, archived")
+          .select("id, title, owner, visibility, icon, folder_id, updated_at, updated_by, archived")
           .order("updated_at", { ascending: false }),
       ]);
       if (docsRes.error) throw docsRes.error;
@@ -702,9 +708,216 @@ export function useWorkspaceRealtime() {
           }
         },
       )
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: FOLDER_TABLE },
+        () => {
+          qc.invalidateQueries({ queryKey: workspaceKeys.folders });
+          qc.invalidateQueries({ queryKey: workspaceKeys.folderCounts });
+          qc.invalidateQueries({ queryKey: workspaceKeys.resources });
+        },
+      )
       .subscribe();
     return () => {
       ch.unsubscribe();
     };
   }, [qc]);
+}
+
+// ============================================================
+// Folders — list, create, rename, move, delete
+// ============================================================
+
+/** Flat list of all folders. The UI walks the parent_folder_id
+ *  pointers to build the tree. Sorted by position within each
+ *  parent level, with stable fallback to created_at. */
+export function useFolders() {
+  return useQuery({
+    queryKey: workspaceKeys.folders,
+    queryFn: async (): Promise<WorkspaceFolder[]> => {
+      const { data, error } = await supabase
+        .from(FOLDER_TABLE)
+        .select("*")
+        .order("position", { ascending: true })
+        .order("created_at", { ascending: true });
+      if (error) throw error;
+      return (data ?? []) as WorkspaceFolder[];
+    },
+    staleTime: 30_000,
+  });
+}
+
+/** Aggregated counts per folder, served by the workspace_folder_counts
+ *  view defined in the migration. Returns a Map<folder_id, totals>
+ *  for O(1) lookup in the tree renderer. */
+export function useFolderCounts() {
+  return useQuery({
+    queryKey: workspaceKeys.folderCounts,
+    queryFn: async (): Promise<Map<string, WorkspaceFolderCounts>> => {
+      const { data, error } = await supabase
+        .from(FOLDER_COUNTS_VIEW)
+        .select("*");
+      if (error) throw error;
+      const m = new Map<string, WorkspaceFolderCounts>();
+      for (const row of (data ?? []) as WorkspaceFolderCounts[]) {
+        m.set(row.folder_id, row);
+      }
+      return m;
+    },
+    staleTime: 30_000,
+  });
+}
+
+function useFolderInvalidate() {
+  const qc = useQueryClient();
+  return () => {
+    qc.invalidateQueries({ queryKey: workspaceKeys.folders });
+    qc.invalidateQueries({ queryKey: workspaceKeys.folderCounts });
+    qc.invalidateQueries({ queryKey: workspaceKeys.resources });
+  };
+}
+
+export function useCreateFolder() {
+  const invalidate = useFolderInvalidate();
+  return useMutation({
+    mutationFn: async (input: {
+      name: string;
+      owner: string;
+      parent_folder_id?: string | null;
+      icon?: string | null;
+      color?: string | null;
+    }) => {
+      // Sibling position = max(position) + 1 among siblings.
+      const { data: siblings } = await supabase
+        .from(FOLDER_TABLE)
+        .select("position")
+        .eq("parent_folder_id", input.parent_folder_id ?? null)
+        .order("position", { ascending: false })
+        .limit(1);
+      const nextPos = (siblings?.[0]?.position ?? 0) + 1;
+
+      const { data, error } = await supabase
+        .from(FOLDER_TABLE)
+        .insert({
+          name: input.name,
+          owner: input.owner,
+          parent_folder_id: input.parent_folder_id ?? null,
+          icon: input.icon ?? null,
+          color: input.color ?? null,
+          position: nextPos,
+        })
+        .select()
+        .single();
+      if (error) throw error;
+      return data as WorkspaceFolder;
+    },
+    onSuccess: invalidate,
+  });
+}
+
+export function useRenameFolder() {
+  const invalidate = useFolderInvalidate();
+  return useMutation({
+    mutationFn: async (input: { id: string; name: string }) => {
+      const { error } = await supabase
+        .from(FOLDER_TABLE)
+        .update({ name: input.name })
+        .eq("id", input.id);
+      if (error) throw error;
+    },
+    onSuccess: invalidate,
+  });
+}
+
+/** Move a folder to a different parent (or root if newParent is null).
+ *  Lightweight guard: refuses to set parent_folder_id to a descendant
+ *  of self, which would create a cycle. The DB has no recursive check
+ *  so we enforce client-side. */
+export function useMoveFolder() {
+  const invalidate = useFolderInvalidate();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (input: { id: string; newParentId: string | null }) => {
+      if (input.id === input.newParentId) {
+        throw new Error("A folder can't be its own parent.");
+      }
+      // Cycle guard
+      if (input.newParentId) {
+        const folders =
+          qc.getQueryData<WorkspaceFolder[]>(workspaceKeys.folders) ?? [];
+        const descendants = collectDescendantIds(folders, input.id);
+        if (descendants.has(input.newParentId)) {
+          throw new Error("Can't move a folder into its own descendant.");
+        }
+      }
+      const { error } = await supabase
+        .from(FOLDER_TABLE)
+        .update({ parent_folder_id: input.newParentId })
+        .eq("id", input.id);
+      if (error) throw error;
+    },
+    onSuccess: invalidate,
+  });
+}
+
+export function useDeleteFolder() {
+  const invalidate = useFolderInvalidate();
+  return useMutation({
+    mutationFn: async (id: string) => {
+      // ON DELETE CASCADE on workspace_folders takes care of child folders.
+      // ON DELETE SET NULL on workspace_documents.folder_id /
+      // workspace_spreadsheets.folder_id falls the contained resources
+      // back to the workspace root instead of vaporizing them.
+      const { error } = await supabase
+        .from(FOLDER_TABLE)
+        .delete()
+        .eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: invalidate,
+  });
+}
+
+/** Move a doc or sheet into / out of a folder. Pass null to drop it
+ *  back to the root. */
+export function useMoveResourceToFolder() {
+  const invalidate = useFolderInvalidate();
+  return useMutation({
+    mutationFn: async (input: {
+      kind: WorkspaceResourceKind;
+      id: string;
+      folder_id: string | null;
+    }) => {
+      const table = input.kind === "document" ? DOC_TABLE : SHEET_TABLE;
+      const { error } = await supabase
+        .from(table)
+        .update({ folder_id: input.folder_id })
+        .eq("id", input.id);
+      if (error) throw error;
+    },
+    onSuccess: invalidate,
+  });
+}
+
+// ─── Helpers ──────────────────────────────────────────────────────
+
+/** Walks the folder list and returns every id that is a descendant
+ *  of `rootId` (excluding rootId itself). Used by the move-folder
+ *  cycle guard. */
+function collectDescendantIds(folders: WorkspaceFolder[], rootId: string): Set<string> {
+  const childrenByParent = new Map<string, string[]>();
+  for (const f of folders) {
+    const p = f.parent_folder_id ?? "__root__";
+    if (!childrenByParent.has(p)) childrenByParent.set(p, []);
+    childrenByParent.get(p)!.push(f.id);
+  }
+  const out = new Set<string>();
+  const stack = [...(childrenByParent.get(rootId) ?? [])];
+  while (stack.length) {
+    const id = stack.pop()!;
+    if (out.has(id)) continue;
+    out.add(id);
+    stack.push(...(childrenByParent.get(id) ?? []));
+  }
+  return out;
 }
