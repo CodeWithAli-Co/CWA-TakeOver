@@ -21,7 +21,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import {
-  ArrowLeft, Lock, Globe, Trash2, Loader2, Share2, MessageSquare,
+  ArrowLeft, Lock, Globe, Trash2, Loader2, Share2, MessageSquare, History,
 } from "lucide-react";
 import * as Y from "yjs";
 import { getSchema } from "@tiptap/core";
@@ -42,6 +42,7 @@ import { makeRemoteUser } from "@/lib/yjs/awareness";
 import { PresenceBar } from "./PresenceBar";
 import { ShareDialog } from "./ShareDialog";
 import { CommentsSidebar } from "./CommentsSidebar";
+import { VersionHistoryPanel } from "./VersionHistoryPanel";
 import "./workspace.css";
 import "tippy.js/dist/tippy.css";
 
@@ -75,6 +76,7 @@ export function DocDetailPage({ id }: Props) {
 
   const [shareOpen, setShareOpen] = useState(false);
   const [commentsOpen, setCommentsOpen] = useState(false);
+  const [historyOpen, setHistoryOpen] = useState(false);
   const [focusedCommentId, setFocusedCommentId] = useState<string | null>(null);
   const createCommentMut = useCreateComment();
   const { data: commentsData = [] } = useComments("document", doc?.id ?? null);
@@ -211,7 +213,27 @@ export function DocDetailPage({ id }: Props) {
           {provider && <PresenceBar provider={provider} self={username} />}
           <button
             type="button"
-            onClick={() => setCommentsOpen((v) => !v)}
+            onClick={() => {
+              setHistoryOpen((v) => !v);
+              if (!historyOpen) setCommentsOpen(false);
+            }}
+            className={
+              "inline-flex items-center gap-1.5 px-2 h-7 rounded-sm text-[10.5px] font-semibold uppercase tracking-wider transition-colors " +
+              (historyOpen
+                ? "bg-sky-500/10 border border-sky-500/30 text-sky-300"
+                : "bg-muted/40 border border-border text-foreground/65 hover:text-foreground")
+            }
+            title={historyOpen ? "Hide history" : "Show history"}
+          >
+            <History size={11} />
+            History
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              setCommentsOpen((v) => !v);
+              if (!commentsOpen) setHistoryOpen(false);
+            }}
             className={
               "inline-flex items-center gap-1.5 px-2 h-7 rounded-sm text-[10.5px] font-semibold uppercase tracking-wider transition-colors " +
               (commentsOpen
@@ -321,6 +343,20 @@ export function DocDetailPage({ id }: Props) {
             focusedCommentId={focusedCommentId}
             onFocusComment={setFocusedCommentId}
             onClose={() => setCommentsOpen(false)}
+          />
+        )}
+
+        {historyOpen && (
+          <VersionHistoryPanel
+            kind="document"
+            resourceId={doc.id}
+            currentUsername={username}
+            getCurrentSnapshot={() => {
+              if (!ydoc) return doc.content;
+              return yDocToProsemirrorJSON(ydoc);
+            }}
+            onAfterRestore={() => setHistoryOpen(false)}
+            onClose={() => setHistoryOpen(false)}
           />
         )}
       </main>

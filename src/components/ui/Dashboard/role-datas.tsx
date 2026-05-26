@@ -962,6 +962,13 @@ export const cooData = {
       company: "codeWithAli" as const,
     },
     {
+      title: "Workspace",
+      url: "/workspace",
+      isActive: false,
+      icon: FileText,
+      company: "codeWithAli" as const,
+    },
+    {
       title: "Task",
       url: "/task",
       isActive: false,
@@ -1125,6 +1132,13 @@ export const ceoData = {
       url: "/chat",
       isActive: false,
       icon: MessageCircle,
+      company: "codeWithAli" as const,
+    },
+    {
+      title: "Workspace",
+      url: "/workspace",
+      isActive: false,
+      icon: FileText,
       company: "codeWithAli" as const,
     },
     {

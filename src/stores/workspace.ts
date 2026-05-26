@@ -33,6 +33,7 @@ import type {
   WorkspaceResourceKind,
   WorkspaceRole,
   CommentAnchor,
+  WorkspaceVersion,
 } from "./workspaceTypes";
 import type { JSONContent } from "@tiptap/react";
 
@@ -40,6 +41,7 @@ const DOC_TABLE = "workspace_documents";
 const SHEET_TABLE = "workspace_spreadsheets";
 const COLLAB_TABLE = "workspace_collaborators";
 const COMMENT_TABLE = "workspace_comments";
+const VERSION_TABLE = "workspace_versions";
 
 // ============================================================
 // Query keys
@@ -55,6 +57,8 @@ export const workspaceKeys = {
                       ["workspace", "collaborators", kind, id] as const,
   comments:         (kind: WorkspaceResourceKind, id: string) =>
                       ["workspace", "comments", kind, id] as const,
+  versions:         (kind: WorkspaceResourceKind, id: string) =>
+                      ["workspace", "versions", kind, id] as const,
 };
 
 // ============================================================
@@ -483,6 +487,159 @@ export function useDeleteComment() {
 }
 
 // ============================================================
+// Version history
+// ============================================================
+export function useVersions(
+  kind: WorkspaceResourceKind,
+  resourceId: string | null | undefined,
+) {
+  return useQuery({
+    queryKey: workspaceKeys.versions(kind, resourceId ?? ""),
+    enabled: !!resourceId,
+    queryFn: async (): Promise<WorkspaceVersion[]> => {
+      const { data, error } = await supabase
+        .from(VERSION_TABLE)
+        .select("*")
+        .eq("resource_type", kind)
+        .eq("resource_id", resourceId!)
+        .order("created_at", { ascending: false });
+      if (error) throw error;
+      return (data ?? []) as WorkspaceVersion[];
+    },
+  });
+}
+
+export function useCreateVersion() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (vars: {
+      kind: WorkspaceResourceKind;
+      resourceId: string;
+      snapshot: unknown;
+      createdBy: string;
+      label?: string | null;
+    }): Promise<WorkspaceVersion> => {
+      const { data, error } = await supabase
+        .from(VERSION_TABLE)
+        .insert({
+          resource_type: vars.kind,
+          resource_id: vars.resourceId,
+          snapshot: vars.snapshot,
+          created_by: vars.createdBy,
+          label: vars.label ?? null,
+        })
+        .select("*")
+        .single();
+      if (error) throw error;
+      return data as WorkspaceVersion;
+    },
+    onSuccess: (row) => {
+      qc.invalidateQueries({
+        queryKey: workspaceKeys.versions(row.resource_type, row.resource_id),
+      });
+    },
+  });
+}
+
+/**
+ * Restore a document to a previous version. We write to BOTH `content`
+ * and `y_state` — clearing y_state forces the next mount to re-bootstrap
+ * from the restored content JSON (so connected clients that refresh see
+ * the rolled-back doc). Live collaborators won't auto-sync; they have
+ * to reload to pick up the restored state.
+ */
+export function useRestoreDocumentVersion() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (vars: {
+      docId: string;
+      snapshot: unknown;
+      restoredBy: string;
+    }): Promise<WorkspaceDocument> => {
+      const { data, error } = await supabase
+        .from(DOC_TABLE)
+        .update({
+          content: vars.snapshot,
+          y_state: null,
+          updated_by: vars.restoredBy,
+        })
+        .eq("id", vars.docId)
+        .select("*")
+        .single();
+      if (error) throw error;
+      return data as WorkspaceDocument;
+    },
+    onSuccess: (doc) => {
+      qc.setQueryData(workspaceKeys.document(doc.id), doc);
+      qc.invalidateQueries({ queryKey: workspaceKeys.resources });
+    },
+  });
+}
+
+export function useRestoreSpreadsheetVersion() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (vars: {
+      sheetId: string;
+      snapshot: unknown;
+      restoredBy: string;
+    }): Promise<WorkspaceSpreadsheet> => {
+      const { data, error } = await supabase
+        .from(SHEET_TABLE)
+        .update({
+          snapshot: vars.snapshot,
+          updated_by: vars.restoredBy,
+        })
+        .eq("id", vars.sheetId)
+        .select("*")
+        .single();
+      if (error) throw error;
+      return data as WorkspaceSpreadsheet;
+    },
+    onSuccess: (sheet) => {
+      qc.setQueryData(workspaceKeys.spreadsheet(sheet.id), sheet);
+      qc.invalidateQueries({ queryKey: workspaceKeys.resources });
+    },
+  });
+}
+
+/**
+ * Combined list of recent edits across docs + sheets for the activity
+ * feed widget. Uses the same data the landing list already fetches —
+ * we just expose a wrapper that limits + sorts in a feed-friendly way.
+ */
+export function useRecentActivity(limit = 12) {
+  return useQuery({
+    queryKey: [...workspaceKeys.resources, "activity", limit],
+    queryFn: async (): Promise<WorkspaceResource[]> => {
+      const [docs, sheets] = await Promise.all([
+        supabase
+          .from(DOC_TABLE)
+          .select("id, title, owner, visibility, icon, updated_at, updated_by, archived")
+          .eq("archived", false)
+          .order("updated_at", { ascending: false })
+          .limit(limit),
+        supabase
+          .from(SHEET_TABLE)
+          .select("id, title, owner, visibility, icon, updated_at, updated_by, archived")
+          .eq("archived", false)
+          .order("updated_at", { ascending: false })
+          .limit(limit),
+      ]);
+      if (docs.error) throw docs.error;
+      if (sheets.error) throw sheets.error;
+      const merged = [
+        ...((docs.data ?? []) as any[]).map((r) => ({ ...r, kind: "document" as const })),
+        ...((sheets.data ?? []) as any[]).map((r) => ({ ...r, kind: "spreadsheet" as const })),
+      ];
+      return merged
+        .sort((a, b) => b.updated_at.localeCompare(a.updated_at))
+        .slice(0, limit);
+    },
+  });
+}
+
+// ============================================================
 // Realtime — invalidate keys on remote edits.
 // Mount once in a parent component (WorkspacePage / detail pages).
 // ============================================================
@@ -529,6 +686,18 @@ export function useWorkspaceRealtime() {
           if (row) {
             qc.invalidateQueries({
               queryKey: workspaceKeys.comments(row.resource_type, row.resource_id),
+            });
+          }
+        },
+      )
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: VERSION_TABLE },
+        (payload) => {
+          const row = (payload.new ?? payload.old) as WorkspaceVersion | undefined;
+          if (row) {
+            qc.invalidateQueries({
+              queryKey: workspaceKeys.versions(row.resource_type, row.resource_id),
             });
           }
         },

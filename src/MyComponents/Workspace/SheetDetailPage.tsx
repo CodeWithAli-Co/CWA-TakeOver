@@ -16,10 +16,10 @@
  * landing page card refreshes immediately when another user saves.
  */
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import {
-  ArrowLeft, Lock, Globe, Trash2, Loader2, Share2,
+  ArrowLeft, Lock, Globe, Trash2, Loader2, Share2, History,
 } from "lucide-react";
 import {
   useSpreadsheet,
@@ -30,6 +30,7 @@ import { ActiveUser } from "@/stores/query";
 import { SheetEditor } from "./SheetEditor";
 import { PresenceBar } from "./PresenceBar";
 import { ShareDialog } from "./ShareDialog";
+import { VersionHistoryPanel } from "./VersionHistoryPanel";
 import "./workspace-sheet.css";
 
 interface Props {
@@ -48,6 +49,11 @@ export function SheetDetailPage({ id }: Props) {
 
   const [title, setTitle] = useState("");
   const [shareOpen, setShareOpen] = useState(false);
+  const [historyOpen, setHistoryOpen] = useState(false);
+  // The Univer API doesn't have a stable React-friendly way to expose
+  // the live snapshot through props, so we let SheetEditor stash a
+  // getter we can call. (Same pattern Univer's own samples use.)
+  const sheetSnapshotRef = useRef<() => Record<string, unknown>>(() => ({}));
   useEffect(() => {
     if (sheet) setTitle(sheet.title);
   }, [sheet?.title, sheet]);
@@ -123,6 +129,20 @@ export function SheetDetailPage({ id }: Props) {
           <PresenceBar channelName={`sheet:${sheet.id}`} self={username} />
           <button
             type="button"
+            onClick={() => setHistoryOpen((v) => !v)}
+            className={
+              "inline-flex items-center gap-1.5 px-2 h-7 rounded-sm text-[10.5px] font-semibold uppercase tracking-wider transition-colors " +
+              (historyOpen
+                ? "bg-sky-500/10 border border-sky-500/30 text-sky-300"
+                : "bg-muted/40 border border-border text-foreground/65 hover:text-foreground")
+            }
+            title={historyOpen ? "Hide history" : "Show history"}
+          >
+            <History size={11} />
+            History
+          </button>
+          <button
+            type="button"
             onClick={() => setShareOpen(true)}
             className="inline-flex items-center gap-1.5 px-2 h-7 rounded-sm bg-primary text-primary-foreground text-[10.5px] font-bold uppercase tracking-wider hover:opacity-90 transition-opacity"
             title="Share"
@@ -163,17 +183,31 @@ export function SheetDetailPage({ id }: Props) {
       </header>
 
       {/* ── Univer canvas ──────────────────────────────────────── */}
-      <main className="flex-1 min-h-0 overflow-hidden">
-        <SheetEditor
-          snapshot={(sheet.snapshot ?? {}) as Record<string, unknown>}
-          onSave={async (next) => {
-            await updateMut.mutateAsync({
-              id: sheet.id,
-              patch: { snapshot: next as any },
-              updatedBy: username,
-            });
-          }}
-        />
+      <main className="flex-1 min-h-0 overflow-hidden flex">
+        <div className="flex-1 min-h-0 overflow-hidden">
+          <SheetEditor
+            snapshot={(sheet.snapshot ?? {}) as Record<string, unknown>}
+            onSave={async (next) => {
+              sheetSnapshotRef.current = () => next;
+              await updateMut.mutateAsync({
+                id: sheet.id,
+                patch: { snapshot: next as any },
+                updatedBy: username,
+              });
+            }}
+          />
+        </div>
+
+        {historyOpen && (
+          <VersionHistoryPanel
+            kind="spreadsheet"
+            resourceId={sheet.id}
+            currentUsername={username}
+            getCurrentSnapshot={() => sheetSnapshotRef.current()}
+            onAfterRestore={() => setHistoryOpen(false)}
+            onClose={() => setHistoryOpen(false)}
+          />
+        )}
       </main>
 
       <ShareDialog

@@ -21,8 +21,12 @@ import {
   useCreateSpreadsheet,
   useWorkspaceRealtime,
 } from "@/stores/workspace";
+import supabase from "@/MyComponents/supabase";
 import type { WorkspaceResource } from "@/stores/workspaceTypes";
 import { ActiveUser } from "@/stores/query";
+import { ActivityFeed } from "./ActivityFeed";
+import { extractDocText, matchesQuery } from "./searchHelpers";
+import { useQuery } from "@tanstack/react-query";
 
 type TabId = "all" | "documents" | "spreadsheets";
 
@@ -42,16 +46,42 @@ export function WorkspacePage() {
   const [tab, setTab] = useState<TabId>("all");
   const [filter, setFilter] = useState("");
 
+  // When the user actually types a query we fetch doc bodies so search
+  // can match prose, not just titles. Empty query skips the fetch.
+  // Sheets are title-only because their Univer snapshots are opaque.
+  const trimmedQuery = filter.trim();
+  const { data: bodyHits } = useQuery({
+    queryKey: ["workspace", "search", "bodies", trimmedQuery],
+    enabled: trimmedQuery.length >= 2,
+    queryFn: async (): Promise<Set<string>> => {
+      const { data, error } = await supabase
+        .from("workspace_documents")
+        .select("id, content")
+        .eq("archived", false);
+      if (error) throw error;
+      const matches = new Set<string>();
+      for (const r of data ?? []) {
+        const text = extractDocText((r as any).content);
+        if (matchesQuery(text, trimmedQuery)) matches.add((r as any).id);
+      }
+      return matches;
+    },
+    staleTime: 5_000,
+  });
+
   const filtered = useMemo<WorkspaceResource[]>(() => {
     const byTab = resources.filter((r) => {
       if (tab === "documents") return r.kind === "document";
       if (tab === "spreadsheets") return r.kind === "spreadsheet";
       return true;
     });
-    const q = filter.trim().toLowerCase();
-    if (!q) return byTab;
-    return byTab.filter((r) => r.title.toLowerCase().includes(q));
-  }, [resources, tab, filter]);
+    if (!trimmedQuery) return byTab;
+    return byTab.filter((r) => {
+      if (matchesQuery(r.title, trimmedQuery)) return true;
+      if (r.kind === "document" && bodyHits?.has(r.id)) return true;
+      return false;
+    });
+  }, [resources, tab, trimmedQuery, bodyHits]);
 
   const counts = useMemo(() => {
     return {
@@ -155,34 +185,44 @@ export function WorkspacePage() {
           />
         </div>
 
-        {/* ── Grid ────────────────────────────────────────────── */}
-        {isLoading ? (
-          <div className="py-16 flex items-center justify-center text-foreground/40 text-[13px]">
-            <Loader2 size={14} className="animate-spin mr-2" /> Loading workspace…
-          </div>
-        ) : filtered.length === 0 ? (
-          <EmptyState
-            filtered={!!filter}
-            onNewDoc={handleNewDoc}
-            onNewSheet={handleNewSheet}
-          />
-        ) : (
-          <ul className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-            {filtered.map((r) => (
-              <ResourceCard
-                key={`${r.kind}-${r.id}`}
-                resource={r}
-                onOpen={() => {
-                  if (r.kind === "document") {
-                    navigate({ to: "/workspace/docs/$id", params: { id: r.id } });
-                  } else {
-                    navigate({ to: "/workspace/sheets/$id", params: { id: r.id } });
-                  }
-                }}
+        {/* ── Grid + Activity ─────────────────────────────────── */}
+        <div className="grid grid-cols-1 lg:grid-cols-[1fr_280px] gap-6">
+          {/* Main column — resource cards */}
+          <div>
+            {isLoading ? (
+              <div className="py-16 flex items-center justify-center text-foreground/40 text-[13px]">
+                <Loader2 size={14} className="animate-spin mr-2" /> Loading workspace…
+              </div>
+            ) : filtered.length === 0 ? (
+              <EmptyState
+                filtered={!!filter}
+                onNewDoc={handleNewDoc}
+                onNewSheet={handleNewSheet}
               />
-            ))}
-          </ul>
-        )}
+            ) : (
+              <ul className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                {filtered.map((r) => (
+                  <ResourceCard
+                    key={`${r.kind}-${r.id}`}
+                    resource={r}
+                    onOpen={() => {
+                      if (r.kind === "document") {
+                        navigate({ to: "/workspace/docs/$id", params: { id: r.id } });
+                      } else {
+                        navigate({ to: "/workspace/sheets/$id", params: { id: r.id } });
+                      }
+                    }}
+                  />
+                ))}
+              </ul>
+            )}
+          </div>
+
+          {/* Side rail — activity feed */}
+          <div className="lg:sticky lg:top-6 lg:self-start">
+            <ActivityFeed />
+          </div>
+        </div>
       </div>
     </div>
   );
