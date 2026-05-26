@@ -307,6 +307,25 @@ export function useHuddle({ group, username, joined, muted, camera, quality = "s
       });
     }
 
+    // ── Replay our current state TO the new peer ────────────────
+    // State broadcasts otherwise only fire on local state changes.
+    // That means a reconnecting peer never learns we're sharing
+    // (they missed the broadcast at our subscribe time). The result
+    // visible to the user: "Hasan's icon doesn't show as sharing
+    // and his screen never appears" — we have the PC, the tracks
+    // arrive, but peers[id].sharing stays false because no state
+    // message ever arrives. Push it to them directly on PC creation.
+    broadcast({
+      from: username,
+      to: peerId,
+      kind: "state",
+      state: {
+        muted: stateRef.current.muted,
+        camera: stateRef.current.camera,
+        sharing: stateRef.current.sharing,
+      },
+    });
+
     pc.onicecandidate = (e) => {
       if (e.candidate) {
         broadcast({
@@ -976,6 +995,25 @@ export function useHuddle({ group, username, joined, muted, camera, quality = "s
               console.error("[huddle] setRemote(answer) failed:", err);
             } finally {
               meta.isSettingRemoteAnswerPending = false;
+            }
+            // ── Bucketing-signal repair ─────────────────────────
+            // Handshake is settled. If we're sharing, re-broadcast
+            // our screen-tracks signal to the peer so they have it
+            // even if the original signal raced ahead of (or behind)
+            // the SDP exchange. This is the fix for the "both peers
+            // sharing simultaneously and one stream goes to the
+            // wrong bucket" race. Cheap to send, harmless if it's
+            // a redundant repeat.
+            if (stateRef.current.sharing) {
+              const screen = localScreenStreamRef.current;
+              if (screen) {
+                broadcast({
+                  from: username,
+                  to: msg.from,
+                  kind: "screen-tracks",
+                  screenTrackIds: screen.getTracks().map((t) => t.id),
+                });
+              }
             }
           }
         })

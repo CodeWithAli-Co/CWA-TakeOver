@@ -15,7 +15,7 @@ import { AnimatePresence, motion } from "framer-motion";
 import {
   Mic, MicOff, Video, VideoOff, PhoneOff, Volume2, AlertCircle,
   Monitor, MonitorOff, Maximize2, Minimize2, ChevronDown, RefreshCw,
-  Sparkles, Check, Columns2, Rows2,
+  Sparkles, Check, Columns2, Rows2, LayoutGrid, Pin,
 } from "lucide-react";
 import type { HuddlePeer } from "./useHuddle";
 import { ShareSourceModal } from "./ShareSourceModal";
@@ -183,6 +183,30 @@ export function HuddleBar({
       return next;
     });
   };
+
+  // Multi-screen view mode: "tile" (all screens side-by-side, original
+  // behavior) or "focus" (Discord-style: one big screen + others as
+  // clickable thumbs across the top). Persisted across sessions.
+  //
+  // When in focus mode AND multiple people are sharing, this picks
+  // which screen takes the big stage. Click a thumb to swap focus.
+  const [screenView, setScreenView] = useState<"tile" | "focus">(() => {
+    try {
+      return window.localStorage.getItem("cwa-huddle-screen-view") === "tile"
+        ? "tile" : "focus";
+    } catch { return "focus"; }
+  });
+  const toggleScreenView = () => {
+    setScreenView((cur) => {
+      const next = cur === "tile" ? "focus" : "tile";
+      try { window.localStorage.setItem("cwa-huddle-screen-view", next); }
+      catch { /* noop */ }
+      return next;
+    });
+  };
+  /** Name (peer id / "username (you)") of the screen we want to feature
+   *  in focus mode. Null = use first screen. */
+  const [focusedScreenName, setFocusedScreenName] = useState<string | null>(null);
 
   // Persisted drag offset — remember where the user dragged the bar to.
   // On mount we clamp it back into the visible viewport so a resize or
@@ -469,6 +493,25 @@ export function HuddleBar({
                   : <Columns2 className="h-3.5 w-3.5" />}
               </button>
             )}
+            {/* View mode toggle — only useful when 2+ people share.
+                "focus" = Discord-style (one big + thumbnails on top,
+                click to switch). "tile" = all equal-sized side-by-side. */}
+            {primaryScreens.length > 1 && (
+              <button
+                type="button"
+                onClick={toggleScreenView}
+                className="rounded-md p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
+                title={
+                  screenView === "focus"
+                    ? "Show all screens side-by-side"
+                    : "Focus one screen, others as thumbnails"
+                }
+              >
+                {screenView === "focus"
+                  ? <LayoutGrid className="h-3.5 w-3.5" />
+                  : <Pin className="h-3.5 w-3.5" />}
+              </button>
+            )}
             {/* Minimize to pill. Disabled while expanded — collapse first. */}
             <button
               type="button"
@@ -505,25 +548,35 @@ export function HuddleBar({
               // well for presentations where the presenter's face +
               // reactions from participants both matter.
               <div className="flex flex-1 min-h-0 gap-2">
-                <div
-                  className="grid flex-1 min-h-0 gap-2"
-                  style={{
-                    gridTemplateColumns: `repeat(${
-                      primaryScreens.length === 1
-                        ? 1
-                        : Math.min(2, primaryScreens.length)
-                    }, 1fr)`,
-                    gridAutoRows: "1fr",
-                  }}
-                >
-                  {primaryScreens.map((s, i) => (
-                    <ScreenShareTile
-                      key={s.isLocal ? "local-screen" : `${s.name}-${i}`}
-                      name={s.name}
-                      stream={s.stream}
+                {primaryScreens.length > 1 && screenView === "focus" ? (
+                  <div className="flex-1 min-h-0">
+                    <ScreenFocusStage
+                      screens={primaryScreens}
+                      focusedName={focusedScreenName}
+                      onFocus={setFocusedScreenName}
                     />
-                  ))}
-                </div>
+                  </div>
+                ) : (
+                  <div
+                    className="grid flex-1 min-h-0 gap-2"
+                    style={{
+                      gridTemplateColumns: `repeat(${
+                        primaryScreens.length === 1
+                          ? 1
+                          : Math.min(2, primaryScreens.length)
+                      }, 1fr)`,
+                      gridAutoRows: "1fr",
+                    }}
+                  >
+                    {primaryScreens.map((s, i) => (
+                      <ScreenShareTile
+                        key={s.isLocal ? "local-screen" : `${s.name}-${i}`}
+                        name={s.name}
+                        stream={s.stream}
+                      />
+                    ))}
+                  </div>
+                )}
                 <div
                   className="flex flex-col gap-2 shrink-0 overflow-y-auto"
                   style={{ width: expanded ? 280 : 200 }}
@@ -556,29 +609,39 @@ export function HuddleBar({
             ) : (
               // ── Stacked layout (original / default) ───────────
               <>
-                {/* Screen-share primary stage — tiles side-by-side
-                    when multiple people are sharing at once. */}
-                <div
-                  className="grid flex-1 min-h-0 gap-2"
-                  style={{
-                    gridTemplateColumns: `repeat(${
-                      primaryScreens.length === 1
-                        ? 1
-                        : primaryScreens.length === 2
-                          ? 2
-                          : Math.min(3, primaryScreens.length)
-                    }, 1fr)`,
-                    gridAutoRows: "1fr",
-                  }}
-                >
-                  {primaryScreens.map((s, i) => (
-                    <ScreenShareTile
-                      key={s.isLocal ? "local-screen" : `${s.name}-${i}`}
-                      name={s.name}
-                      stream={s.stream}
-                    />
-                  ))}
-                </div>
+                {/* Screen-share primary stage. Two modes:
+                    · TILE — all screens side-by-side, original behavior
+                    · FOCUS — Discord-style: one big + clickable thumbs
+                      above. Click any thumb to switch focus. */}
+                {primaryScreens.length > 1 && screenView === "focus" ? (
+                  <ScreenFocusStage
+                    screens={primaryScreens}
+                    focusedName={focusedScreenName}
+                    onFocus={setFocusedScreenName}
+                  />
+                ) : (
+                  <div
+                    className="grid flex-1 min-h-0 gap-2"
+                    style={{
+                      gridTemplateColumns: `repeat(${
+                        primaryScreens.length === 1
+                          ? 1
+                          : primaryScreens.length === 2
+                            ? 2
+                            : Math.min(3, primaryScreens.length)
+                      }, 1fr)`,
+                      gridAutoRows: "1fr",
+                    }}
+                  >
+                    {primaryScreens.map((s, i) => (
+                      <ScreenShareTile
+                        key={s.isLocal ? "local-screen" : `${s.name}-${i}`}
+                        name={s.name}
+                        stream={s.stream}
+                      />
+                    ))}
+                  </div>
+                )}
                 {/* Participants row below */}
                 <div className="flex items-center gap-2 overflow-x-auto pb-1">
                   <PeerTile
@@ -929,6 +992,113 @@ function PeerAudioSink({ stream }: { stream: MediaStream }) {
     el.play().catch(() => { /* noop — autoplay policy or re-render */ });
   }, [stream]);
   return <audio ref={ref} autoPlay playsInline className="hidden" />;
+}
+
+// ──────────────────────────────────────────────────────────────────
+// ScreenFocusStage — Discord-style multi-screen viewer.
+//
+// Renders ONE big screen tile in the center, with the other sharers
+// shown as small clickable thumbnails across the top. Click any thumb
+// to swap focus. Default focus = the first non-local sharer (so when
+// the local user is also sharing they tend to want to watch what the
+// other person is showing, not their own).
+//
+// Pure presentational — focus state lives in the parent so it
+// survives unmounts (e.g. switching screen layout).
+// ──────────────────────────────────────────────────────────────────
+function ScreenFocusStage({
+  screens,
+  focusedName,
+  onFocus,
+}: {
+  screens: { name: string; stream: MediaStream; isLocal?: boolean }[];
+  focusedName: string | null;
+  onFocus: (name: string | null) => void;
+}) {
+  // Resolve focused screen. Fallback: first remote if any, else first.
+  const focused = useMemo(() => {
+    if (focusedName) {
+      const hit = screens.find((s) => s.name === focusedName);
+      if (hit) return hit;
+    }
+    const firstRemote = screens.find((s) => !s.isLocal);
+    return firstRemote ?? screens[0];
+  }, [screens, focusedName]);
+
+  return (
+    <div className="flex flex-1 flex-col min-h-0 gap-2">
+      {/* Thumbnail strip — small clickable previews of every active
+          screen. The currently-focused one gets a blue ring; others
+          dim slightly until hovered. */}
+      <div className="flex items-center gap-2 overflow-x-auto pb-0.5 flex-shrink-0">
+        {screens.map((s, i) => {
+          const isFocused = s === focused;
+          return (
+            <button
+              key={s.isLocal ? "local-thumb" : `${s.name}-thumb-${i}`}
+              type="button"
+              onClick={() => onFocus(s.name)}
+              className={
+                "relative shrink-0 overflow-hidden rounded-md border bg-black transition-all " +
+                (isFocused
+                  ? "border-blue-400/70 ring-1 ring-blue-400/40"
+                  : "border-border opacity-70 hover:opacity-100 hover:border-blue-400/50")
+              }
+              style={{ width: 120, height: 68 }}
+              title={isFocused ? `Focused: ${s.name}` : `Switch focus to ${s.name}`}
+            >
+              <ScreenThumbVideo stream={s.stream} />
+              <div className="absolute bottom-0.5 left-0.5 right-0.5 truncate rounded bg-black/70 px-1 py-0.5 text-[9.5px] font-semibold text-blue-100">
+                {s.name}{s.isLocal ? " · you" : ""}
+              </div>
+              {isFocused && (
+                <div className="absolute top-0.5 right-0.5 flex items-center gap-0.5 rounded-sm bg-blue-500/90 px-1 py-0.5 text-[8.5px] font-bold uppercase tracking-wider text-white">
+                  <Pin className="h-2 w-2" />
+                </div>
+              )}
+            </button>
+          );
+        })}
+      </div>
+
+      {/* Focused screen — fills the remaining stage height. */}
+      <div className="flex-1 min-h-0">
+        {focused && (
+          <ScreenShareTile
+            key={focused.isLocal ? "local-focus" : `${focused.name}-focus`}
+            name={focused.name}
+            stream={focused.stream}
+          />
+        )}
+      </div>
+    </div>
+  );
+}
+
+// Lightweight video element used in the thumb strip. Mirrors
+// ScreenShareTile's attach pattern but skips the bottom name overlay
+// and chrome — the parent button renders the label.
+function ScreenThumbVideo({ stream }: { stream: MediaStream }) {
+  const ref = useRef<HTMLVideoElement | null>(null);
+  const attach = (el: HTMLVideoElement | null) => {
+    ref.current = el;
+    if (el && stream && el.srcObject !== stream) el.srcObject = stream;
+  };
+  useEffect(() => {
+    const el = ref.current;
+    if (!el || !stream) return;
+    if (el.srcObject !== stream) el.srcObject = stream;
+    el.play().catch(() => { /* noop */ });
+  }, [stream]);
+  return (
+    <video
+      ref={attach}
+      autoPlay
+      playsInline
+      muted
+      className="h-full w-full object-cover"
+    />
+  );
 }
 
 function ScreenShareTile({ name, stream }: { name: string; stream: MediaStream }) {
