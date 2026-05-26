@@ -14,6 +14,12 @@
  * never leak to other parts of the app.
  */
 
+/* The container that Univer mounts into is absolutely positioned by
+   the JSX so it inherits real pixel dimensions from its `relative`
+   parent. Nothing structural here — just our editorial typography +
+   a background fallback so the area isn't transparent on first paint.
+   Avoid `overflow: hidden` and explicit `position` on this rule; we
+   let Univer manage its own internal layout. */
 .workspace-sheet-canvas {
   background: hsl(var(--background));
   font-feature-settings: "tnum" 1, "lnum" 1;

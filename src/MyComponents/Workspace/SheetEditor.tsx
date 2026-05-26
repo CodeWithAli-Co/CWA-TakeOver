@@ -26,7 +26,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { Loader2, Check } from "lucide-react";
-import { createUniver, LocaleType } from "@univerjs/presets";
+import { createUniver, LocaleType, defaultTheme } from "@univerjs/presets";
 import { UniverSheetsCorePreset } from "@univerjs/presets/preset-sheets-core";
 import sheetsCoreEnUS from "@univerjs/presets/preset-sheets-core/locales/en-US";
 import "@univerjs/presets/lib/styles/preset-sheets-core.css";
@@ -53,77 +53,106 @@ export function SheetEditor({ snapshot, onSave }: Props) {
 
     let cancelled = false;
     let pollHandle: ReturnType<typeof setInterval> | null = null;
-
-    // createUniver hands back the API + dispose. The container option
-    // accepts either an HTMLElement or a selector string — pass the
-    // DOM node directly to avoid timing races with selector lookup.
-    const { univerAPI, univer } = createUniver({
-      locale: LocaleType.EN_US,
-      locales: { [LocaleType.EN_US]: sheetsCoreEnUS },
-      presets: [
-        UniverSheetsCorePreset({
-          container: containerRef.current,
-        }),
-      ],
+    // Univer's render relies on the container having real dimensions at
+    // the moment createUniver runs. If we run synchronously inside the
+    // effect, a flex parent may not have laid out yet and the canvas
+    // mounts at 0×0 and stays empty. Two rAFs (one to flush layout, one
+    // to let Univer subscribe to ResizeObserver) is enough on every
+    // browser I've seen this on.
+    let setupHandle: number | null = null;
+    setupHandle = requestAnimationFrame(() => {
+      setupHandle = requestAnimationFrame(() => {
+        if (cancelled || !containerRef.current) return;
+        boot();
+      });
     });
 
-    univerApiRef.current = univerAPI;
-    disposeRef.current = () => {
-      try { univer.dispose(); } catch { /* ignore */ }
-    };
+    function boot() {
+      // createUniver hands back the API + dispose. The container option
+      // accepts either an HTMLElement or a selector string — pass the
+      // DOM node directly to avoid timing races with selector lookup.
+      const { univerAPI, univer } = createUniver({
+        locale: LocaleType.EN_US,
+        locales: { [LocaleType.EN_US]: sheetsCoreEnUS },
+        theme: defaultTheme,
+        presets: [
+          UniverSheetsCorePreset({
+            container: containerRef.current!,
+          }),
+        ],
+      });
 
-    // Hydrate from the saved snapshot. Empty / placeholder objects fall
-    // back to a default workbook so the user lands on a blank sheet.
-    const initialSnapshot =
-      snapshot && Object.keys(snapshot).length > 0 ? snapshot : undefined;
-    try {
-      // Newer Univer: createWorkbook(snapshot?) — undefined → default.
-      univerAPI.createWorkbook(initialSnapshot ?? {});
-    } catch (e) {
-      console.error("[SheetEditor] failed to load snapshot:", e);
-      // Fall back to empty workbook so the user at least sees a grid.
-      try { univerAPI.createWorkbook({}); } catch { /* noop */ }
+      univerApiRef.current = univerAPI;
+      disposeRef.current = () => {
+        try { univer.dispose(); } catch { /* ignore */ }
+      };
+
+      // Hydrate from the saved snapshot when it has real content;
+      // otherwise spin up a minimal default workbook. Univer's
+      // createWorkbook() fills in defaults for any fields we leave off
+      // of the seed; passing only `name` is enough to get a fresh sheet.
+      const hasSavedData =
+        snapshot &&
+        typeof snapshot === "object" &&
+        // A saved snapshot has a sheets / sheetOrder / id; an empty
+        // placeholder `{}` from the DB default does not.
+        ("sheets" in (snapshot as any) || "sheetOrder" in (snapshot as any));
+
+      try {
+        if (hasSavedData) {
+          univerAPI.createWorkbook(snapshot as any);
+        } else {
+          univerAPI.createWorkbook({ name: "Untitled" } as any);
+        }
+      } catch (e) {
+        console.error("[SheetEditor] createWorkbook failed:", e);
+        try {
+          univerAPI.createWorkbook({ name: "Untitled" } as any);
+        } catch (e2) {
+          console.error("[SheetEditor] fallback createWorkbook also failed:", e2);
+        }
+      }
+
+      // Start the save loop. Simple interval + JSON diff captures any
+      // cell value, format, or sheet add/remove change without us
+      // subscribing to Univer's command system.
+      pollHandle = setInterval(async () => {
+        if (cancelled) return;
+        const wb = univerAPI.getActiveWorkbook?.();
+        if (!wb || typeof wb.save !== "function") return;
+        let current: any;
+        try {
+          current = wb.save();
+        } catch (e) {
+          console.warn("[SheetEditor] workbook.save() threw:", e);
+          return;
+        }
+        const currentJson = safeStringify(current);
+        if (currentJson === lastSavedJsonRef.current) return;
+
+        setSaving(true);
+        try {
+          await onSave(current);
+          lastSavedJsonRef.current = currentJson;
+          setSavedAt(Date.now());
+        } catch (e) {
+          console.error("[SheetEditor] save failed:", e);
+        } finally {
+          if (!cancelled) setSaving(false);
+        }
+      }, SAVE_POLL_INTERVAL_MS);
     }
-
-    // Start the save loop. We use a simple interval + JSON diff so any
-    // cell value, format, sheet add/remove, etc. is captured uniformly
-    // without us needing to subscribe to Univer's command system.
-    pollHandle = setInterval(async () => {
-      if (cancelled) return;
-      const wb = univerAPI.getActiveWorkbook?.();
-      if (!wb || typeof wb.save !== "function") return;
-      let current: any;
-      try {
-        current = wb.save();
-      } catch (e) {
-        console.warn("[SheetEditor] workbook.save() threw:", e);
-        return;
-      }
-      const currentJson = safeStringify(current);
-      if (currentJson === lastSavedJsonRef.current) return;
-
-      setSaving(true);
-      try {
-        await onSave(current);
-        lastSavedJsonRef.current = currentJson;
-        setSavedAt(Date.now());
-      } catch (e) {
-        console.error("[SheetEditor] save failed:", e);
-      } finally {
-        if (!cancelled) setSaving(false);
-      }
-    }, SAVE_POLL_INTERVAL_MS);
 
     return () => {
       cancelled = true;
+      if (setupHandle != null) cancelAnimationFrame(setupHandle);
       if (pollHandle) clearInterval(pollHandle);
       disposeRef.current?.();
       disposeRef.current = null;
       univerApiRef.current = null;
     };
-    // We intentionally only mount/dispose Univer ONCE per page open —
-    // external snapshot changes (realtime) are reconciled in a separate
-    // effect below so we don't tear down the canvas mid-edit.
+    // Mount/dispose Univer ONCE per page open. External snapshot
+    // updates are reconciled below so we don't tear down the canvas.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -139,10 +168,15 @@ export function SheetEditor({ snapshot, onSave }: Props) {
   }, [snapshot]);
 
   return (
-    <div className="flex-1 flex flex-col min-h-0 relative">
+    // Outer wrapper takes the full size of its parent (h-full / w-full)
+    // so the inner absolutely-positioned container has real pixel
+    // dimensions on first paint. flex-1 was unreliable here because
+    // the parent isn't always a flex container — explicit h-full
+    // works no matter what the layout chain above us is doing.
+    <div className="h-full w-full relative">
       <div
         ref={containerRef}
-        className="flex-1 min-h-0 w-full workspace-sheet-canvas"
+        className="absolute inset-0 workspace-sheet-canvas"
       />
 
       {/* Save indicator — bottom-right overlay so it doesn't fight
