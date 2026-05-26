@@ -34,7 +34,7 @@
  * expansion, MFN, discounts).
  */
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { motion } from "framer-motion";
 import {
   Calculator,
@@ -46,8 +46,12 @@ import {
   Save,
   AlertTriangle,
   Sparkles,
+  RotateCcw,
+  Trash2,
+  Check,
 } from "lucide-react";
 import { formatDollars, formatPercent, prettyRoundName } from "./fundingMath";
+import { computeCapTable } from "./fundingCalculatorMath";
 import type { FundingRoundType } from "./Funding.queries";
 
 // ═══════════════════════════════════════════════════════════════════
@@ -179,6 +183,7 @@ function defaultState(): CalcState {
 }
 
 const STORAGE_KEY = "cwa-funding-calculator-v1";
+const SAVED_KEY = "cwa-funding-calculator-saves-v1";
 
 function loadState(): CalcState {
   try {
@@ -199,140 +204,32 @@ function persistState(state: CalcState) {
   } catch { /* quota / private mode — ignore */ }
 }
 
-// ═══════════════════════════════════════════════════════════════════
-// STUB MATH (Day 1) — returns a hardcoded plausible cap-table walk
-// so the shell visual fidelity can be evaluated before the real
-// arithmetic is wired up. Day 2 swaps this for the real algorithm.
-// ═══════════════════════════════════════════════════════════════════
+// ─── Saved scenarios (separate persistent slot) ─────────────────────
 
-function stubComputeCapTable(scenario: CalculatorScenario): RoundSnapshot[] {
-  // Walk: founding → included rounds in chronological order.
-  // Stub takes the ali/hanif/pool ratio at founding then dilutes
-  // everyone naively round by round so the visual bars look real
-  // enough for design sign-off.
-
-  const founderTotal = scenario.ali + scenario.hanif;
-  const totalAtFounding = founderTotal + scenario.initialPool;
-  // Normalize to 100% if user's inputs sum elsewhere.
-  const norm = totalAtFounding > 0 ? 100 / totalAtFounding : 1;
-
-  const snapshots: RoundSnapshot[] = [];
-
-  // Founding state
-  let aliPct = (scenario.ali * norm) / 100;
-  let hanifPct = (scenario.hanif * norm) / 100;
-  let poolPct = (scenario.initialPool * norm) / 100;
-  let investorSegments: { key: string; label: string; pct: number; round: CalcRoundKey }[] = [];
-
-  snapshots.push({
-    key: "founding",
-    label: "Founding",
-    date: "Day 0",
-    cumulativeRaise: 0,
-    postMoney: 0,
-    newInvestorPct: 0,
-    founderDilutionDelta: 0,
-    cumulativeFounderDilution: 0,
-    pricePerShare: null,
-    segments: buildSegments(aliPct, hanifPct, poolPct, investorSegments),
-  });
-
-  let cumulativeRaise = 0;
-  const founderStart = aliPct + hanifPct;
-
-  for (const key of ROUND_ORDER) {
-    const r = scenario.rounds[key];
-    if (!r.included) continue;
-
-    // STUB: investor pct = raise / post_money where post_money ~= valuation
-    // (priced) or valuation (SAFE cap as post-money). This is a rough proxy
-    // and not the real formula — just plausible enough to render bars.
-    const postMoney = r.instrument === "priced" ? r.valuation + r.raise : r.valuation;
-    const newPct = postMoney > 0 ? r.raise / postMoney : 0;
-    const dilutionFactor = 1 - newPct;
-
-    // Stub pool expansion: if expandPool flag set, bump pool to target % pre-investor (founder dilution).
-    if (r.expandPool && r.poolTargetAfter > poolPct * 100) {
-      const targetPool = r.poolTargetAfter / 100;
-      const expansion = targetPool - poolPct;
-      // Dilute founders proportionally to provide the expansion.
-      const founderTotal2 = aliPct + hanifPct;
-      if (founderTotal2 > 0) {
-        const aliShare = aliPct / founderTotal2;
-        const hanifShare = hanifPct / founderTotal2;
-        aliPct -= expansion * aliShare;
-        hanifPct -= expansion * hanifShare;
-        poolPct = targetPool;
-      }
-    }
-
-    aliPct *= dilutionFactor;
-    hanifPct *= dilutionFactor;
-    poolPct *= dilutionFactor;
-    investorSegments = investorSegments.map((s) => ({ ...s, pct: s.pct * dilutionFactor }));
-    investorSegments.push({
-      key: `${key}-investors`,
-      label: `${prettyRoundName(ROUND_TYPE_MAP[key])} Investors`,
-      pct: newPct,
-      round: key,
-    });
-
-    cumulativeRaise += r.raise;
-    const founderEnd = aliPct + hanifPct;
-    snapshots.push({
-      key,
-      label: prettyRoundName(ROUND_TYPE_MAP[key]),
-      date: r.dateLabel || null,
-      cumulativeRaise,
-      postMoney,
-      newInvestorPct: newPct,
-      founderDilutionDelta: dilutionFactor < 1 ? 1 - dilutionFactor : 0,
-      cumulativeFounderDilution: founderStart > 0 ? 1 - founderEnd / founderStart : 0,
-      pricePerShare: null,
-      segments: buildSegments(aliPct, hanifPct, poolPct, investorSegments),
-    });
-  }
-
-  return snapshots;
+export interface SavedScenario {
+  id: string;
+  name: string;
+  scenario: CalculatorScenario;
+  savedAt: string; // ISO timestamp
+  scenarioKey: CalcScenarioKey; // which slot it was saved from
 }
 
-function buildSegments(
-  aliPct: number,
-  hanifPct: number,
-  poolPct: number,
-  investors: { key: string; label: string; pct: number; round: CalcRoundKey }[],
-): OwnerSegment[] {
-  const segs: OwnerSegment[] = [];
-  if (aliPct > 0) segs.push({
-    key: "ali", label: "Ali", pct: aliPct, group: "founder-ali",
-    colorClass: "bg-emerald-500",
-  });
-  if (hanifPct > 0) segs.push({
-    key: "hanif", label: "Hanif", pct: hanifPct, group: "founder-hanif",
-    colorClass: "bg-emerald-500/60",
-  });
-  if (poolPct > 0) segs.push({
-    key: "pool", label: "Option Pool", pct: poolPct, group: "pool",
-    colorClass: "bg-zinc-500/70",
-  });
-  for (const inv of investors) {
-    segs.push({
-      key: inv.key,
-      label: inv.label,
-      pct: inv.pct,
-      group: "investor",
-      colorClass: INVESTOR_COLORS[inv.round],
-    });
+function loadSaves(): SavedScenario[] {
+  try {
+    const raw = window.localStorage.getItem(SAVED_KEY);
+    if (!raw) return [];
+    const arr = JSON.parse(raw) as SavedScenario[];
+    return Array.isArray(arr) ? arr : [];
+  } catch {
+    return [];
   }
-  return segs;
 }
 
-const INVESTOR_COLORS: Record<CalcRoundKey, string> = {
-  preseed: "bg-amber-300/70",
-  seed:    "bg-amber-500/70",
-  seriesA: "bg-orange-500/70",
-  seriesB: "bg-red-500/70",
-};
+function persistSaves(saves: SavedScenario[]) {
+  try {
+    window.localStorage.setItem(SAVED_KEY, JSON.stringify(saves));
+  } catch { /* quota — ignore */ }
+}
 
 // ═══════════════════════════════════════════════════════════════════
 // Top-level component
@@ -340,14 +237,25 @@ const INVESTOR_COLORS: Record<CalcRoundKey, string> = {
 
 export default function FundingCalculator() {
   const [state, setState] = useState<CalcState>(() => loadState());
+  const [saves, setSaves] = useState<SavedScenario[]>(() => loadSaves());
   useEffect(() => { persistState(state); }, [state]);
+  useEffect(() => { persistSaves(saves); }, [saves]);
 
   const scenario = state.scenarios[state.active];
 
   // Memo the snapshots — recomputes only when active scenario changes.
-  // Day 2 will wrap this in a debounce-on-slider-drag if needed.
-  const snapshots = useMemo(() => stubComputeCapTable(scenario), [scenario]);
+  // The real cap-table math (computeCapTable) is pure and fast; no
+  // need for debounce even on slider drag.
+  const snapshots = useMemo(() => computeCapTable(scenario), [scenario]);
   const finalSnapshot = snapshots[snapshots.length - 1];
+
+  // Index snapshots by round key so each RoundSection can show its
+  // own readouts (price/share, new investor %, founder dilution delta).
+  const snapshotByRound = useMemo(() => {
+    const map = new Map<string, RoundSnapshot>();
+    for (const snap of snapshots) map.set(snap.key, snap);
+    return map;
+  }, [snapshots]);
 
   // Helpers to update nested scenario state
   function updateActive(patch: Partial<CalculatorScenario>) {
@@ -380,6 +288,35 @@ export default function FundingCalculator() {
       scenarios: { ...s.scenarios, [s.active]: structuredClone(s.scenarios.base) },
     }));
   }
+  function resetActive() {
+    setState((s) => ({
+      ...s,
+      scenarios: { ...s.scenarios, [s.active]: defaultScenario() },
+    }));
+  }
+  function saveCurrent(name: string) {
+    const trimmed = name.trim();
+    if (!trimmed) return;
+    const newSave: SavedScenario = {
+      id: `sav_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
+      name: trimmed,
+      scenario: structuredClone(scenario),
+      savedAt: new Date().toISOString(),
+      scenarioKey: state.active,
+    };
+    setSaves((arr) => [newSave, ...arr].slice(0, 24)); // cap at 24
+  }
+  function loadSave(id: string) {
+    const found = saves.find((s) => s.id === id);
+    if (!found) return;
+    setState((s) => ({
+      ...s,
+      scenarios: { ...s.scenarios, [s.active]: structuredClone(found.scenario) },
+    }));
+  }
+  function deleteSave(id: string) {
+    setSaves((arr) => arr.filter((s) => s.id !== id));
+  }
 
   const founderSum = scenario.ali + scenario.hanif;
   const founderImbalance = Math.abs(founderSum - 100) > 0.1;
@@ -392,8 +329,21 @@ export default function FundingCalculator() {
           active={state.active}
           onChange={setActive}
           onCopyFromBase={copyFromBase}
+          onReset={resetActive}
+          savesCount={saves.length}
         />
       </div>
+
+      {/* ── Saved scenarios strip (only when there are saves) ───── */}
+      {saves.length > 0 && (
+        <div className="px-10 pb-4">
+          <SavedScenariosStrip
+            saves={saves}
+            onLoad={loadSave}
+            onDelete={deleteSave}
+          />
+        </div>
+      )}
 
       {/* ── Split layout ─────────────────────────────────────────── */}
       <div className="grid grid-cols-1 lg:grid-cols-[45fr_55fr] gap-6 px-10 pb-16">
@@ -419,6 +369,7 @@ export default function FundingCalculator() {
               key={key}
               roundKey={key}
               inputs={scenario.rounds[key]}
+              snapshot={snapshotByRound.get(key)}
               onPatch={(patch) => updateRound(key, patch)}
             />
           ))}
@@ -436,7 +387,12 @@ export default function FundingCalculator() {
 
           <SummaryTable snapshots={snapshots} scenario={scenario} />
 
-          <ExportRow scenario={scenario} snapshots={snapshots} />
+          <ExportRow
+            scenario={scenario}
+            snapshots={snapshots}
+            scenarioLabel={SCENARIO_LABELS[state.active]}
+            onSave={saveCurrent}
+          />
         </div>
       </div>
     </div>
@@ -450,18 +406,27 @@ function clamp01(value: number, max: number): number {
 // ═══════════════════════════════════════════════════════════════════
 // Scenario tabs
 // ═══════════════════════════════════════════════════════════════════
+const SCENARIO_LABELS: Record<CalcScenarioKey, string> = {
+  conservative: "Conservative",
+  base: "Base Case",
+  aggressive: "Aggressive",
+};
+
 function ScenarioTabs({
-  active, onChange, onCopyFromBase,
+  active, onChange, onCopyFromBase, onReset, savesCount,
 }: {
   active: CalcScenarioKey;
   onChange: (k: CalcScenarioKey) => void;
   onCopyFromBase: () => void;
+  onReset: () => void;
+  savesCount: number;
 }) {
   const tabs: { id: CalcScenarioKey; label: string; tone: string }[] = [
     { id: "conservative", label: "Conservative", tone: "text-emerald-200" },
     { id: "base",         label: "Base Case",    tone: "text-foreground" },
     { id: "aggressive",   label: "Aggressive",   tone: "text-red-200" },
   ];
+  const [confirmingReset, setConfirmingReset] = useState(false);
   return (
     <div className="flex items-center justify-between gap-3 flex-wrap">
       <div className="inline-flex items-stretch border border-border rounded-sm overflow-hidden bg-card">
@@ -487,17 +452,97 @@ function ScenarioTabs({
           );
         })}
       </div>
-      {active !== "base" && (
-        <button
-          type="button"
-          onClick={onCopyFromBase}
-          className="inline-flex items-center gap-1.5 px-3 h-8 rounded-sm border border-border text-[11px] uppercase tracking-[0.16em] font-semibold text-muted-foreground hover:text-foreground hover:bg-muted/30 transition-colors"
-          title="Copy Base Case values into this scenario"
-        >
-          <Sparkles className="h-3 w-3" />
-          Copy from Base Case
-        </button>
-      )}
+      <div className="flex items-center gap-2">
+        {savesCount > 0 && (
+          <span className="text-[10.5px] uppercase tracking-[0.16em] text-muted-foreground/70 font-semibold">
+            {savesCount} saved
+          </span>
+        )}
+        {active !== "base" && (
+          <button
+            type="button"
+            onClick={onCopyFromBase}
+            className="inline-flex items-center gap-1.5 px-3 h-8 rounded-sm border border-border text-[11px] uppercase tracking-[0.16em] font-semibold text-muted-foreground hover:text-foreground hover:bg-muted/30 transition-colors"
+            title="Copy Base Case values into this scenario"
+          >
+            <Sparkles className="h-3 w-3" />
+            Copy from Base Case
+          </button>
+        )}
+        {confirmingReset ? (
+          <span className="inline-flex items-center gap-1">
+            <button
+              type="button"
+              onClick={() => { onReset(); setConfirmingReset(false); }}
+              className="inline-flex items-center gap-1.5 px-3 h-8 rounded-sm border border-red-500/40 bg-red-500/10 text-[11px] uppercase tracking-[0.16em] font-semibold text-red-200 hover:bg-red-500/20 transition-colors"
+            >
+              Confirm reset
+            </button>
+            <button
+              type="button"
+              onClick={() => setConfirmingReset(false)}
+              className="inline-flex items-center px-2 h-8 rounded-sm border border-border text-[11px] uppercase tracking-[0.16em] font-semibold text-muted-foreground hover:text-foreground hover:bg-muted/30 transition-colors"
+            >
+              Cancel
+            </button>
+          </span>
+        ) : (
+          <button
+            type="button"
+            onClick={() => setConfirmingReset(true)}
+            className="inline-flex items-center gap-1.5 px-3 h-8 rounded-sm border border-border text-[11px] uppercase tracking-[0.16em] font-semibold text-muted-foreground hover:text-foreground hover:bg-muted/30 transition-colors"
+            title="Reset this scenario to defaults"
+          >
+            <RotateCcw className="h-3 w-3" />
+            Reset
+          </button>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// Saved scenarios strip
+// ═══════════════════════════════════════════════════════════════════
+function SavedScenariosStrip({
+  saves, onLoad, onDelete,
+}: {
+  saves: SavedScenario[];
+  onLoad: (id: string) => void;
+  onDelete: (id: string) => void;
+}) {
+  return (
+    <div className="border border-border rounded-sm bg-card/30 px-3 py-2.5 overflow-x-auto">
+      <div className="flex items-center gap-2 min-w-0">
+        <span className="text-[10px] uppercase tracking-[0.18em] text-muted-foreground/70 font-bold shrink-0 pl-1 pr-2">
+          Saved
+        </span>
+        {saves.map((sav) => (
+          <div
+            key={sav.id}
+            className="group inline-flex items-stretch border border-border rounded-sm overflow-hidden shrink-0"
+          >
+            <button
+              type="button"
+              onClick={() => onLoad(sav.id)}
+              className="px-3 py-1.5 text-[11.5px] font-semibold text-foreground/85 hover:bg-muted/40 transition-colors text-left max-w-[160px] truncate"
+              title={`Load "${sav.name}" into current scenario\nSaved ${new Date(sav.savedAt).toLocaleString()} from ${SCENARIO_LABELS[sav.scenarioKey]}`}
+            >
+              {sav.name}
+            </button>
+            <button
+              type="button"
+              onClick={() => onDelete(sav.id)}
+              className="px-2 border-l border-border/60 text-muted-foreground/60 hover:text-red-300 hover:bg-red-500/10 transition-colors opacity-0 group-hover:opacity-100"
+              title="Delete saved scenario"
+              aria-label={`Delete ${sav.name}`}
+            >
+              <Trash2 className="h-3 w-3" />
+            </button>
+          </div>
+        ))}
+      </div>
     </div>
   );
 }
@@ -584,10 +629,11 @@ function OptionPoolSection({
 // Round section
 // ═══════════════════════════════════════════════════════════════════
 function RoundSection({
-  roundKey, inputs, onPatch,
+  roundKey, inputs, snapshot, onPatch,
 }: {
   roundKey: CalcRoundKey;
   inputs: RoundInputs;
+  snapshot: RoundSnapshot | undefined;
   onPatch: (patch: Partial<RoundInputs>) => void;
 }) {
   const niceName = prettyRoundName(ROUND_TYPE_MAP[roundKey]);
@@ -708,11 +754,43 @@ function RoundSection({
           )}
         </div>
 
-        {/* Live calculated readouts — Day 1 stubs */}
+        {/* Live calculated readouts — wired to real cap-table math */}
         <div className="mt-4 grid grid-cols-3 gap-2 pt-3 border-t border-border/60">
-          <ReadoutTile label="Price / share" value="—" hint="post-conversion" />
-          <ReadoutTile label="New investor %" value="—" hint="this round" />
-          <ReadoutTile label="Founder dilution" value="—" hint="this round" />
+          <ReadoutTile
+            label="Price / share"
+            value={
+              !inputs.included
+                ? "—"
+                : snapshot?.pricePerShare && snapshot.pricePerShare > 0
+                  ? `$${snapshot.pricePerShare.toFixed(snapshot.pricePerShare < 1 ? 3 : 2)}`
+                  : inputs.instrument === "safe"
+                    ? "n/a"
+                    : "—"
+            }
+            hint={inputs.instrument === "safe" ? "SAFE — no price set" : "post-conversion"}
+          />
+          <ReadoutTile
+            label="New investor %"
+            value={
+              !inputs.included
+                ? "—"
+                : snapshot
+                  ? formatPercent(snapshot.newInvestorPct * 100, 1)
+                  : "—"
+            }
+            hint="this round"
+          />
+          <ReadoutTile
+            label="Founder dilution"
+            value={
+              !inputs.included
+                ? "—"
+                : snapshot
+                  ? formatPercent(snapshot.founderDilutionDelta * 100, 1)
+                  : "—"
+            }
+            hint="vs. prev round"
+          />
         </div>
       </div>
     </SectionCard>
@@ -922,36 +1000,169 @@ function SummaryTable({
 }
 
 // ═══════════════════════════════════════════════════════════════════
-// Right column — Export row
+// Right column — Export row (Copy summary + Save scenario)
 // ═══════════════════════════════════════════════════════════════════
 function ExportRow({
-  scenario: _scenario, snapshots: _snapshots,
+  scenario, snapshots, scenarioLabel, onSave,
 }: {
   scenario: CalculatorScenario;
   snapshots: RoundSnapshot[];
+  scenarioLabel: string;
+  onSave: (name: string) => void;
 }) {
+  const [copied, setCopied] = useState(false);
+  const [savingName, setSavingName] = useState<string | null>(null);
+  const inputRef = useRef<HTMLInputElement | null>(null);
+
+  // Default save name when user clicks Save — current scenario label + timestamp.
+  function startSave() {
+    const stamp = new Date().toLocaleString(undefined, {
+      month: "short", day: "numeric", hour: "numeric", minute: "2-digit",
+    });
+    setSavingName(`${scenarioLabel} — ${stamp}`);
+    // focus on next tick once input mounts
+    setTimeout(() => {
+      inputRef.current?.focus();
+      inputRef.current?.select();
+    }, 0);
+  }
+  function commitSave() {
+    if (savingName !== null) {
+      onSave(savingName);
+      setSavingName(null);
+    }
+  }
+
+  async function copySummary() {
+    const md = buildSummaryMarkdown(scenario, snapshots, scenarioLabel);
+    try {
+      await navigator.clipboard.writeText(md);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1500);
+    } catch {
+      // Fallback: open prompt with the text so user can copy manually.
+      // In Tauri WKWebView prompt() is suppressed — log to console as final fallback.
+      console.warn("Clipboard write failed. Summary:\n\n" + md);
+    }
+  }
+
+  const hasRounds = snapshots.length > 1;
+
   return (
-    <div className="flex items-center gap-2 justify-end">
-      <button
-        type="button"
-        disabled
-        className="inline-flex items-center gap-1.5 px-3 h-8 rounded-sm border border-border text-[11px] uppercase tracking-[0.16em] font-semibold text-muted-foreground opacity-50 cursor-not-allowed"
-        title="Wired in Day 3"
-      >
-        <Copy className="h-3 w-3" />
-        Copy summary
-      </button>
-      <button
-        type="button"
-        disabled
-        className="inline-flex items-center gap-1.5 px-3 h-8 rounded-sm border border-border text-[11px] uppercase tracking-[0.16em] font-semibold text-muted-foreground opacity-50 cursor-not-allowed"
-        title="Wired in Day 3"
-      >
-        <Save className="h-3 w-3" />
-        Save scenario
-      </button>
+    <div className="flex items-center gap-2 justify-end flex-wrap">
+      {savingName !== null ? (
+        <div className="inline-flex items-stretch border border-border rounded-sm overflow-hidden">
+          <input
+            ref={inputRef}
+            type="text"
+            value={savingName}
+            onChange={(e) => setSavingName(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") commitSave();
+              if (e.key === "Escape") setSavingName(null);
+            }}
+            placeholder="Scenario name"
+            maxLength={60}
+            className="bg-background px-3 h-8 text-[12px] text-foreground w-56 focus:outline-none focus:bg-muted/30"
+          />
+          <button
+            type="button"
+            onClick={commitSave}
+            disabled={!savingName.trim()}
+            className="px-3 h-8 border-l border-border bg-emerald-500/15 text-[11px] uppercase tracking-[0.16em] font-bold text-emerald-200 hover:bg-emerald-500/25 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+          >
+            Save
+          </button>
+          <button
+            type="button"
+            onClick={() => setSavingName(null)}
+            className="px-2 h-8 border-l border-border text-muted-foreground hover:text-foreground hover:bg-muted/30 transition-colors"
+            aria-label="Cancel save"
+          >
+            ✕
+          </button>
+        </div>
+      ) : (
+        <>
+          <button
+            type="button"
+            onClick={copySummary}
+            disabled={!hasRounds}
+            className="inline-flex items-center gap-1.5 px-3 h-8 rounded-sm border border-border text-[11px] uppercase tracking-[0.16em] font-semibold text-muted-foreground hover:text-foreground hover:bg-muted/30 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+            title={hasRounds ? "Copy scenario summary as markdown to clipboard" : "Toggle on at least one round first"}
+          >
+            {copied ? <Check className="h-3 w-3 text-emerald-300" /> : <Copy className="h-3 w-3" />}
+            {copied ? "Copied" : "Copy summary"}
+          </button>
+          <button
+            type="button"
+            onClick={startSave}
+            disabled={!hasRounds}
+            className="inline-flex items-center gap-1.5 px-3 h-8 rounded-sm border border-border text-[11px] uppercase tracking-[0.16em] font-semibold text-muted-foreground hover:text-foreground hover:bg-muted/30 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+            title={hasRounds ? "Save this scenario to the named-scenarios shelf" : "Toggle on at least one round first"}
+          >
+            <Save className="h-3 w-3" />
+            Save scenario
+          </button>
+        </>
+      )}
     </div>
   );
+}
+
+/**
+ * Build a markdown summary of a scenario for clipboard pasting into
+ * email / pitch deck / investor update.
+ */
+function buildSummaryMarkdown(
+  scenario: CalculatorScenario,
+  snapshots: RoundSnapshot[],
+  scenarioLabel: string,
+): string {
+  const final = snapshots[snapshots.length - 1];
+  if (!final) return `# Cap Table — ${scenarioLabel}\n\n(no rounds modeled)`;
+
+  const lines: string[] = [];
+  lines.push(`# Cap Table — ${scenarioLabel}`);
+  lines.push("");
+  lines.push(`**Total raised:** ${formatDollars(final.cumulativeRaise, { compact: true })}  `);
+  if (final.postMoney > 0) {
+    lines.push(`**Final post-money:** ${formatDollars(final.postMoney, { compact: true })}  `);
+  }
+  lines.push(`**Cumulative founder dilution:** ${formatPercent(final.cumulativeFounderDilution * 100, 1)}`);
+  lines.push("");
+
+  // Final ownership
+  lines.push("## Final Ownership");
+  lines.push("");
+  lines.push("| Holder | % |");
+  lines.push("|---|---:|");
+  for (const seg of final.segments) {
+    lines.push(`| ${seg.label} | ${formatPercent(seg.pct * 100, 1)} |`);
+  }
+  lines.push("");
+
+  // Round walk
+  const rounds = snapshots.slice(1);
+  if (rounds.length > 0) {
+    lines.push("## Round Walk");
+    lines.push("");
+    lines.push("| Round | Date | Instrument | Raise | Valuation | Post-Money | New Inv % | Cum. Dilution |");
+    lines.push("|---|---|---|---:|---:|---:|---:|---:|");
+    for (const r of rounds) {
+      const inputs = scenario.rounds[r.key as CalcRoundKey];
+      const valuation = inputs?.valuation ?? 0;
+      const instrument = inputs?.instrument === "safe" ? "SAFE" : "Priced";
+      const raise = inputs?.raise ?? 0;
+      lines.push(
+        `| ${r.label} | ${r.date ?? "—"} | ${instrument} | ${formatDollars(raise, { compact: true })} | ${formatDollars(valuation, { compact: true })} | ${formatDollars(r.postMoney, { compact: true })} | ${formatPercent(r.newInvestorPct * 100, 1)} | ${formatPercent(r.cumulativeFounderDilution * 100, 1)} |`,
+      );
+    }
+    lines.push("");
+  }
+
+  lines.push(`_Generated by CWA TakeOver Cap Table Calculator — ${new Date().toLocaleString()}_`);
+  return lines.join("\n");
 }
 
 // ═══════════════════════════════════════════════════════════════════
