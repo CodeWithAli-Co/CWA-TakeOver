@@ -57,6 +57,7 @@ const AxonSwarmLazyRouteImport = createFileRoute('/axonSwarm')()
 const ArabicLazyRouteImport = createFileRoute('/arabic')()
 const AnalyticsLazyRouteImport = createFileRoute('/analytics')()
 const IndexLazyRouteImport = createFileRoute('/')()
+const WorkspaceIndexLazyRouteImport = createFileRoute('/workspace/')()
 const ClientIndexLazyRouteImport = createFileRoute('/client/')()
 const ReportsSubmitLazyRouteImport = createFileRoute('/reports/submit')()
 const WorkspaceSheetsIdLazyRouteImport = createFileRoute(
@@ -288,6 +289,13 @@ const IndexLazyRoute = IndexLazyRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any).lazy(() => import('./routes/index.lazy').then((d) => d.Route))
+const WorkspaceIndexLazyRoute = WorkspaceIndexLazyRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => WorkspaceLazyRoute,
+} as any).lazy(() =>
+  import('./routes/workspace.index.lazy').then((d) => d.Route),
+)
 const ClientIndexLazyRoute = ClientIndexLazyRouteImport.update({
   id: '/client/',
   path: '/client/',
@@ -368,6 +376,7 @@ export interface FileRoutesByFullPath {
   '/workspace': typeof WorkspaceLazyRouteWithChildren
   '/reports/submit': typeof ReportsSubmitLazyRoute
   '/client/': typeof ClientIndexLazyRoute
+  '/workspace/': typeof WorkspaceIndexLazyRoute
   '/offer/accept/$token': typeof OfferAcceptTokenLazyRoute
   '/workspace/docs/$id': typeof WorkspaceDocsIdLazyRoute
   '/workspace/sheets/$id': typeof WorkspaceSheetsIdLazyRoute
@@ -415,9 +424,9 @@ export interface FileRoutesByTo {
   '/timesheet': typeof TimesheetLazyRoute
   '/timetracking': typeof TimetrackingLazyRoute
   '/trainingplan': typeof TrainingplanLazyRoute
-  '/workspace': typeof WorkspaceLazyRouteWithChildren
   '/reports/submit': typeof ReportsSubmitLazyRoute
   '/client': typeof ClientIndexLazyRoute
+  '/workspace': typeof WorkspaceIndexLazyRoute
   '/offer/accept/$token': typeof OfferAcceptTokenLazyRoute
   '/workspace/docs/$id': typeof WorkspaceDocsIdLazyRoute
   '/workspace/sheets/$id': typeof WorkspaceSheetsIdLazyRoute
@@ -469,6 +478,7 @@ export interface FileRoutesById {
   '/workspace': typeof WorkspaceLazyRouteWithChildren
   '/reports/submit': typeof ReportsSubmitLazyRoute
   '/client/': typeof ClientIndexLazyRoute
+  '/workspace/': typeof WorkspaceIndexLazyRoute
   '/offer/accept/$token': typeof OfferAcceptTokenLazyRoute
   '/workspace/docs/$id': typeof WorkspaceDocsIdLazyRoute
   '/workspace/sheets/$id': typeof WorkspaceSheetsIdLazyRoute
@@ -521,6 +531,7 @@ export interface FileRouteTypes {
     | '/workspace'
     | '/reports/submit'
     | '/client/'
+    | '/workspace/'
     | '/offer/accept/$token'
     | '/workspace/docs/$id'
     | '/workspace/sheets/$id'
@@ -568,9 +579,9 @@ export interface FileRouteTypes {
     | '/timesheet'
     | '/timetracking'
     | '/trainingplan'
-    | '/workspace'
     | '/reports/submit'
     | '/client'
+    | '/workspace'
     | '/offer/accept/$token'
     | '/workspace/docs/$id'
     | '/workspace/sheets/$id'
@@ -621,6 +632,7 @@ export interface FileRouteTypes {
     | '/workspace'
     | '/reports/submit'
     | '/client/'
+    | '/workspace/'
     | '/offer/accept/$token'
     | '/workspace/docs/$id'
     | '/workspace/sheets/$id'
@@ -977,6 +989,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexLazyRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/workspace/': {
+      id: '/workspace/'
+      path: '/'
+      fullPath: '/workspace/'
+      preLoaderRoute: typeof WorkspaceIndexLazyRouteImport
+      parentRoute: typeof WorkspaceLazyRoute
+    }
     '/client/': {
       id: '/client/'
       path: '/client'
@@ -1028,11 +1047,13 @@ const ReportsLazyRouteWithChildren = ReportsLazyRoute._addFileChildren(
 )
 
 interface WorkspaceLazyRouteChildren {
+  WorkspaceIndexLazyRoute: typeof WorkspaceIndexLazyRoute
   WorkspaceDocsIdLazyRoute: typeof WorkspaceDocsIdLazyRoute
   WorkspaceSheetsIdLazyRoute: typeof WorkspaceSheetsIdLazyRoute
 }
 
 const WorkspaceLazyRouteChildren: WorkspaceLazyRouteChildren = {
+  WorkspaceIndexLazyRoute: WorkspaceIndexLazyRoute,
   WorkspaceDocsIdLazyRoute: WorkspaceDocsIdLazyRoute,
   WorkspaceSheetsIdLazyRoute: WorkspaceSheetsIdLazyRoute,
 }

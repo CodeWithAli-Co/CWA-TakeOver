@@ -133,7 +133,7 @@ export function VersionHistoryPanel({
             <input
               value={label}
               onChange={(e) => setLabel(e.target.value)}
-              placeholder="Optional label (e.g. \"Pre-launch\")"
+              placeholder={`Optional label (e.g. "Pre-launch")`}
               className="w-full h-8 pl-7 pr-2 rounded-sm bg-muted/30 border border-border text-[12px] text-foreground placeholder:text-foreground/35 outline-none focus:border-primary/40"
               onKeyDown={(e) => {
                 if (e.key === "Enter") handleSaveVersion();

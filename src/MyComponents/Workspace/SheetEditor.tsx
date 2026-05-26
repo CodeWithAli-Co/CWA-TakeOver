@@ -26,7 +26,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { Loader2, Check } from "lucide-react";
-import { createUniver, LocaleType, mergeLocales } from "@univerjs/presets";
+import { createUniver, LocaleType } from "@univerjs/presets";
 import { UniverSheetsCorePreset } from "@univerjs/presets/preset-sheets-core";
 import sheetsCoreEnUS from "@univerjs/presets/preset-sheets-core/locales/en-US";
 import "@univerjs/presets/lib/styles/preset-sheets-core.css";
@@ -59,7 +59,7 @@ export function SheetEditor({ snapshot, onSave }: Props) {
     // DOM node directly to avoid timing races with selector lookup.
     const { univerAPI, univer } = createUniver({
       locale: LocaleType.EN_US,
-      locales: { [LocaleType.EN_US]: mergeLocales(sheetsCoreEnUS) },
+      locales: { [LocaleType.EN_US]: sheetsCoreEnUS },
       presets: [
         UniverSheetsCorePreset({
           container: containerRef.current,
