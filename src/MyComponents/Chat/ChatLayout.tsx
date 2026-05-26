@@ -475,6 +475,7 @@ export const ChatLayout = () => {
         />
       )}
 
+
       {/* Create channel dialog (admin only) */}
       <CreateChannelDialog
         open={createChannelOpen}

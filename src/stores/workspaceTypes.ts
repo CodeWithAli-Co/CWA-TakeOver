@@ -1,0 +1,104 @@
+/**
+ * workspaceTypes.ts — Type definitions for the /workspace product.
+ *
+ * Three resource types — Document, Spreadsheet, and a shared
+ * WorkspaceResource union used by the landing page list. Plus the
+ * collaboration model (Collaborator, Comment, Version) for the later
+ * phases (sharing, comments, version history).
+ *
+ * Schema lives in migrations/workspace_schema.sql.
+ */
+
+import type { JSONContent } from "@tiptap/react";
+
+// ── Visibility / roles ──────────────────────────────────────────────
+export type WorkspaceVisibility = "private" | "shared" | "public";
+export type WorkspaceRole = "viewer" | "commenter" | "editor";
+
+// ── Documents ──────────────────────────────────────────────────────
+export interface WorkspaceDocument {
+  id: string;
+  title: string;
+  /** TipTap doc JSON. Empty placeholder is { type: "doc", content: [] }. */
+  content: JSONContent;
+  owner: string;
+  visibility: WorkspaceVisibility;
+  icon: string | null;
+  archived: boolean;
+  created_at: string;
+  updated_at: string;
+  updated_by: string | null;
+}
+
+// ── Spreadsheets ───────────────────────────────────────────────────
+export interface WorkspaceSpreadsheet {
+  id: string;
+  title: string;
+  /** Univer snapshot JSON. Opaque to us — Univer owns the shape. */
+  snapshot: Record<string, unknown>;
+  owner: string;
+  visibility: WorkspaceVisibility;
+  icon: string | null;
+  archived: boolean;
+  created_at: string;
+  updated_at: string;
+  updated_by: string | null;
+}
+
+// ── Union for the landing list ─────────────────────────────────────
+export type WorkspaceResourceKind = "document" | "spreadsheet";
+
+export interface WorkspaceResource {
+  kind: WorkspaceResourceKind;
+  id: string;
+  title: string;
+  owner: string;
+  visibility: WorkspaceVisibility;
+  icon: string | null;
+  updated_at: string;
+  updated_by: string | null;
+}
+
+// ── Collaboration (used by later phases) ──────────────────────────
+export interface WorkspaceCollaborator {
+  id: string;
+  resource_type: WorkspaceResourceKind;
+  resource_id: string;
+  username: string;
+  role: WorkspaceRole;
+  added_by: string | null;
+  added_at: string;
+}
+
+/**
+ * Doc-anchored comment: {from, to} character offsets within the editor.
+ * Sheet-anchored comment: {sheet_id, cell_a1}.
+ * The UI is responsible for interpreting based on resource_type.
+ */
+export type CommentAnchor =
+  | { kind: "doc-range"; from: number; to: number }
+  | { kind: "sheet-cell"; sheet_id: string; cell_a1: string };
+
+export interface WorkspaceComment {
+  id: string;
+  resource_type: WorkspaceResourceKind;
+  resource_id: string;
+  parent_id: string | null;
+  author: string;
+  body: string;
+  anchor: CommentAnchor | null;
+  status: "open" | "resolved";
+  kind: "comment" | "suggestion";
+  created_at: string;
+  updated_at: string;
+}
+
+export interface WorkspaceVersion {
+  id: string;
+  resource_type: WorkspaceResourceKind;
+  resource_id: string;
+  snapshot: unknown;
+  label: string | null;
+  created_by: string;
+  created_at: string;
+}

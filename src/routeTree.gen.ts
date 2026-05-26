@@ -12,6 +12,7 @@ import { createFileRoute } from '@tanstack/react-router'
 
 import { Route as rootRouteImport } from './routes/__root'
 
+const WorkspaceLazyRouteImport = createFileRoute('/workspace')()
 const TrainingplanLazyRouteImport = createFileRoute('/trainingplan')()
 const TimetrackingLazyRouteImport = createFileRoute('/timetracking')()
 const TimesheetLazyRouteImport = createFileRoute('/timesheet')()
@@ -58,10 +59,19 @@ const AnalyticsLazyRouteImport = createFileRoute('/analytics')()
 const IndexLazyRouteImport = createFileRoute('/')()
 const ClientIndexLazyRouteImport = createFileRoute('/client/')()
 const ReportsSubmitLazyRouteImport = createFileRoute('/reports/submit')()
+const WorkspaceSheetsIdLazyRouteImport = createFileRoute(
+  '/workspace/sheets/$id',
+)()
+const WorkspaceDocsIdLazyRouteImport = createFileRoute('/workspace/docs/$id')()
 const OfferAcceptTokenLazyRouteImport = createFileRoute(
   '/offer/accept/$token',
 )()
 
+const WorkspaceLazyRoute = WorkspaceLazyRouteImport.update({
+  id: '/workspace',
+  path: '/workspace',
+  getParentRoute: () => rootRouteImport,
+} as any).lazy(() => import('./routes/workspace.lazy').then((d) => d.Route))
 const TrainingplanLazyRoute = TrainingplanLazyRouteImport.update({
   id: '/trainingplan',
   path: '/trainingplan',
@@ -290,6 +300,20 @@ const ReportsSubmitLazyRoute = ReportsSubmitLazyRouteImport.update({
 } as any).lazy(() =>
   import('./routes/reports.submit.lazy').then((d) => d.Route),
 )
+const WorkspaceSheetsIdLazyRoute = WorkspaceSheetsIdLazyRouteImport.update({
+  id: '/sheets/$id',
+  path: '/sheets/$id',
+  getParentRoute: () => WorkspaceLazyRoute,
+} as any).lazy(() =>
+  import('./routes/workspace.sheets.$id.lazy').then((d) => d.Route),
+)
+const WorkspaceDocsIdLazyRoute = WorkspaceDocsIdLazyRouteImport.update({
+  id: '/docs/$id',
+  path: '/docs/$id',
+  getParentRoute: () => WorkspaceLazyRoute,
+} as any).lazy(() =>
+  import('./routes/workspace.docs.$id.lazy').then((d) => d.Route),
+)
 const OfferAcceptTokenLazyRoute = OfferAcceptTokenLazyRouteImport.update({
   id: '/offer/accept/$token',
   path: '/offer/accept/$token',
@@ -341,9 +365,12 @@ export interface FileRoutesByFullPath {
   '/timesheet': typeof TimesheetLazyRoute
   '/timetracking': typeof TimetrackingLazyRoute
   '/trainingplan': typeof TrainingplanLazyRoute
+  '/workspace': typeof WorkspaceLazyRouteWithChildren
   '/reports/submit': typeof ReportsSubmitLazyRoute
   '/client/': typeof ClientIndexLazyRoute
   '/offer/accept/$token': typeof OfferAcceptTokenLazyRoute
+  '/workspace/docs/$id': typeof WorkspaceDocsIdLazyRoute
+  '/workspace/sheets/$id': typeof WorkspaceSheetsIdLazyRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexLazyRoute
@@ -388,9 +415,12 @@ export interface FileRoutesByTo {
   '/timesheet': typeof TimesheetLazyRoute
   '/timetracking': typeof TimetrackingLazyRoute
   '/trainingplan': typeof TrainingplanLazyRoute
+  '/workspace': typeof WorkspaceLazyRouteWithChildren
   '/reports/submit': typeof ReportsSubmitLazyRoute
   '/client': typeof ClientIndexLazyRoute
   '/offer/accept/$token': typeof OfferAcceptTokenLazyRoute
+  '/workspace/docs/$id': typeof WorkspaceDocsIdLazyRoute
+  '/workspace/sheets/$id': typeof WorkspaceSheetsIdLazyRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -436,9 +466,12 @@ export interface FileRoutesById {
   '/timesheet': typeof TimesheetLazyRoute
   '/timetracking': typeof TimetrackingLazyRoute
   '/trainingplan': typeof TrainingplanLazyRoute
+  '/workspace': typeof WorkspaceLazyRouteWithChildren
   '/reports/submit': typeof ReportsSubmitLazyRoute
   '/client/': typeof ClientIndexLazyRoute
   '/offer/accept/$token': typeof OfferAcceptTokenLazyRoute
+  '/workspace/docs/$id': typeof WorkspaceDocsIdLazyRoute
+  '/workspace/sheets/$id': typeof WorkspaceSheetsIdLazyRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -485,9 +518,12 @@ export interface FileRouteTypes {
     | '/timesheet'
     | '/timetracking'
     | '/trainingplan'
+    | '/workspace'
     | '/reports/submit'
     | '/client/'
     | '/offer/accept/$token'
+    | '/workspace/docs/$id'
+    | '/workspace/sheets/$id'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -532,9 +568,12 @@ export interface FileRouteTypes {
     | '/timesheet'
     | '/timetracking'
     | '/trainingplan'
+    | '/workspace'
     | '/reports/submit'
     | '/client'
     | '/offer/accept/$token'
+    | '/workspace/docs/$id'
+    | '/workspace/sheets/$id'
   id:
     | '__root__'
     | '/'
@@ -579,9 +618,12 @@ export interface FileRouteTypes {
     | '/timesheet'
     | '/timetracking'
     | '/trainingplan'
+    | '/workspace'
     | '/reports/submit'
     | '/client/'
     | '/offer/accept/$token'
+    | '/workspace/docs/$id'
+    | '/workspace/sheets/$id'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -627,12 +669,20 @@ export interface RootRouteChildren {
   TimesheetLazyRoute: typeof TimesheetLazyRoute
   TimetrackingLazyRoute: typeof TimetrackingLazyRoute
   TrainingplanLazyRoute: typeof TrainingplanLazyRoute
+  WorkspaceLazyRoute: typeof WorkspaceLazyRouteWithChildren
   ClientIndexLazyRoute: typeof ClientIndexLazyRoute
   OfferAcceptTokenLazyRoute: typeof OfferAcceptTokenLazyRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/workspace': {
+      id: '/workspace'
+      path: '/workspace'
+      fullPath: '/workspace'
+      preLoaderRoute: typeof WorkspaceLazyRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/trainingplan': {
       id: '/trainingplan'
       path: '/trainingplan'
@@ -941,6 +991,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ReportsSubmitLazyRouteImport
       parentRoute: typeof ReportsLazyRoute
     }
+    '/workspace/sheets/$id': {
+      id: '/workspace/sheets/$id'
+      path: '/sheets/$id'
+      fullPath: '/workspace/sheets/$id'
+      preLoaderRoute: typeof WorkspaceSheetsIdLazyRouteImport
+      parentRoute: typeof WorkspaceLazyRoute
+    }
+    '/workspace/docs/$id': {
+      id: '/workspace/docs/$id'
+      path: '/docs/$id'
+      fullPath: '/workspace/docs/$id'
+      preLoaderRoute: typeof WorkspaceDocsIdLazyRouteImport
+      parentRoute: typeof WorkspaceLazyRoute
+    }
     '/offer/accept/$token': {
       id: '/offer/accept/$token'
       path: '/offer/accept/$token'
@@ -961,6 +1025,20 @@ const ReportsLazyRouteChildren: ReportsLazyRouteChildren = {
 
 const ReportsLazyRouteWithChildren = ReportsLazyRoute._addFileChildren(
   ReportsLazyRouteChildren,
+)
+
+interface WorkspaceLazyRouteChildren {
+  WorkspaceDocsIdLazyRoute: typeof WorkspaceDocsIdLazyRoute
+  WorkspaceSheetsIdLazyRoute: typeof WorkspaceSheetsIdLazyRoute
+}
+
+const WorkspaceLazyRouteChildren: WorkspaceLazyRouteChildren = {
+  WorkspaceDocsIdLazyRoute: WorkspaceDocsIdLazyRoute,
+  WorkspaceSheetsIdLazyRoute: WorkspaceSheetsIdLazyRoute,
+}
+
+const WorkspaceLazyRouteWithChildren = WorkspaceLazyRoute._addFileChildren(
+  WorkspaceLazyRouteChildren,
 )
 
 const rootRouteChildren: RootRouteChildren = {
@@ -1006,6 +1084,7 @@ const rootRouteChildren: RootRouteChildren = {
   TimesheetLazyRoute: TimesheetLazyRoute,
   TimetrackingLazyRoute: TimetrackingLazyRoute,
   TrainingplanLazyRoute: TrainingplanLazyRoute,
+  WorkspaceLazyRoute: WorkspaceLazyRouteWithChildren,
   ClientIndexLazyRoute: ClientIndexLazyRoute,
   OfferAcceptTokenLazyRoute: OfferAcceptTokenLazyRoute,
 }

@@ -76,6 +76,12 @@ export const internData = {
       icon: MessageCircle,
     },
     {
+      title: "Workspace",
+      url: "/workspace",
+      isActive: false,
+      icon: FileText,
+    },
+    {
       title: "Task",
       url: "/task",
       isActive: false,
@@ -128,6 +134,12 @@ export const memberData = {
       url: "/chat",
       isActive: false,
       icon: MessageCircle,
+    },
+    {
+      title: "Workspace",
+      url: "/workspace",
+      isActive: false,
+      icon: FileText,
     },
     {
       title: "Task",
@@ -199,6 +211,12 @@ export const accountManagerData = {
       url: "/chat",
       isActive: false,
       icon: MessageCircle,
+    },
+    {
+      title: "Workspace",
+      url: "/workspace",
+      isActive: false,
+      icon: FileText,
     },
     {
       title: "Task",
@@ -284,6 +302,12 @@ export const marketingData = {
       url: "/chat",
       isActive: false,
       icon: MessageCircle,
+    },
+    {
+      title: "Workspace",
+      url: "/workspace",
+      isActive: false,
+      icon: FileText,
     },
     {
       title: "Task",
@@ -462,6 +486,12 @@ export const adminData = {
       icon: MessageCircle,
     },
     {
+      title: "Workspace",
+      url: "/workspace",
+      isActive: false,
+      icon: FileText,
+    },
+    {
       title: "Task",
       url: "/task",
       isActive: false,
@@ -570,6 +600,12 @@ export const projectManagerData = {
       url: "/chat",
       isActive: false,
       icon: MessageCircle,
+    },
+    {
+      title: "Workspace",
+      url: "/workspace",
+      isActive: false,
+      icon: FileText,
     },
     {
       title: "Task",
@@ -701,6 +737,12 @@ export const securityEngineerData = {
       url: "/chat",
       isActive: false,
       icon: MessageCircle,
+    },
+    {
+      title: "Workspace",
+      url: "/workspace",
+      isActive: false,
+      icon: FileText,
     },
     {
       title: "Task",
@@ -1373,6 +1415,12 @@ export const cfoData = {
       url: "/chat",
       isActive: false,
       icon: MessageCircle,
+    },
+    {
+      title: "Workspace",
+      url: "/workspace",
+      isActive: false,
+      icon: FileText,
     },
     {
       title: "Task",
