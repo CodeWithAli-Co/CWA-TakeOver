@@ -54,6 +54,8 @@
     "@tiptap/react": "^2.10.4",
     "@tiptap/starter-kit": "^2.10.4",
     "@tiptap/suggestion": "^2.10.4",
+    "@univerjs/preset-sheets-core": "^0.6.0",
+    "@univerjs/presets": "^0.6.0",
     "tippy.js": "^6.3.7",
     "@tanstack/react-router": "^1.114.13",
     "@tauri-apps/api": "^2.3.0",

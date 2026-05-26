@@ -1,17 +1,25 @@
 /**
  * SheetDetailPage.tsx — Container for /workspace/sheets/$id.
  *
- * Phase 1 stub. Spreadsheet rows can be created from the landing page
- * and renamed here; the actual Univer canvas integration is Session 3.
+ * Mounts the Univer canvas (SheetEditor) inside the workspace chrome
+ * (back button, title, visibility toggle, delete). The page layout is
+ * full-height so Univer has the entire viewport below the header for
+ * its grid + toolbar.
  *
- * The header + title + visibility / delete affordances are wired now
- * so the route works end-to-end and the doc/sheet UX feels symmetric.
+ * Save model:
+ *   · SheetEditor owns the change-detection loop (2s polling + diff)
+ *   · onSave passes the snapshot up to useUpdateSpreadsheet
+ *
+ * Realtime: workspace.ts already subscribes via useWorkspaceRealtime,
+ * which invalidates the spreadsheet query on change; for v1 that's a
+ * no-op while the editor is open (we don't tear it down), but the
+ * landing page card refreshes immediately when another user saves.
  */
 
 import { useEffect, useState } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import {
-  ArrowLeft, Lock, Globe, Trash2, Loader2, Sheet, Sparkles,
+  ArrowLeft, Lock, Globe, Trash2, Loader2,
 } from "lucide-react";
 import {
   useSpreadsheet,
@@ -19,6 +27,8 @@ import {
   useDeleteSpreadsheet,
 } from "@/stores/workspace";
 import { ActiveUser } from "@/stores/query";
+import { SheetEditor } from "./SheetEditor";
+import "./workspace-sheet.css";
 
 interface Props {
   id: string;
@@ -83,17 +93,29 @@ export function SheetDetailPage({ id }: Props) {
   }
 
   return (
-    <div className="min-h-[100dvh] w-full bg-background text-foreground flex flex-col">
+    <div className="h-[100dvh] w-full bg-background text-foreground flex flex-col overflow-hidden">
       {/* ── Top bar ─────────────────────────────────────────────── */}
-      <header className="border-b border-border/60 sticky top-0 bg-background/95 backdrop-blur z-10">
-        <div className="mx-auto w-full max-w-[1200px] px-6 h-12 flex items-center gap-3">
+      <header className="border-b border-border/60 bg-background flex-shrink-0">
+        <div className="mx-auto w-full max-w-[1600px] px-6 h-12 flex items-center gap-3">
           <button
             type="button"
             onClick={() => navigate({ to: "/workspace" })}
             className="inline-flex items-center gap-1.5 text-[11.5px] font-semibold text-foreground/55 hover:text-foreground transition-colors"
+            title="Back to workspace"
           >
             <ArrowLeft size={13} /> Workspace
           </button>
+          <span className="text-foreground/25 text-[11px]">·</span>
+          <input
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
+            onBlur={handleCommitTitle}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") (e.target as HTMLInputElement).blur();
+            }}
+            placeholder="Untitled spreadsheet"
+            className="flex-1 max-w-[420px] bg-transparent text-[14px] font-bold text-foreground placeholder:text-foreground/30 outline-none border-0 focus:ring-0"
+          />
           <div className="flex-1" />
           <button
             type="button"
@@ -128,56 +150,19 @@ export function SheetDetailPage({ id }: Props) {
         </div>
       </header>
 
-      {/* ── Title ──────────────────────────────────────────────── */}
-      <div className="mx-auto w-full max-w-[1200px] px-6 pt-8">
-        <input
-          value={title}
-          onChange={(e) => setTitle(e.target.value)}
-          onBlur={handleCommitTitle}
-          onKeyDown={(e) => {
-            if (e.key === "Enter") (e.target as HTMLInputElement).blur();
+      {/* ── Univer canvas ──────────────────────────────────────── */}
+      <main className="flex-1 min-h-0 overflow-hidden">
+        <SheetEditor
+          snapshot={(sheet.snapshot ?? {}) as Record<string, unknown>}
+          onSave={async (next) => {
+            await updateMut.mutateAsync({
+              id: sheet.id,
+              patch: { snapshot: next as any },
+              updatedBy: username,
+            });
           }}
-          placeholder="Untitled"
-          className="w-full bg-transparent text-[28px] font-bold text-foreground placeholder:text-foreground/30 outline-none border-0 focus:ring-0 leading-tight mb-2"
         />
-        <div className="flex items-center gap-2 text-[11px] text-foreground/45">
-          <Sheet size={11} className="text-emerald-400" />
-          <span>Spreadsheet · last edited {formatRelative(sheet.updated_at)}</span>
-        </div>
-      </div>
-
-      {/* ── Coming-soon canvas ─────────────────────────────────── */}
-      <main className="flex-1 flex items-center justify-center px-6 py-12">
-        <div className="rounded-sm border border-dashed border-border bg-card/40 px-10 py-14 text-center max-w-md">
-          <div className="h-12 w-12 rounded-sm bg-emerald-500/10 border border-emerald-500/25 mx-auto mb-4 flex items-center justify-center">
-            <Sparkles className="h-5 w-5 text-emerald-300" />
-          </div>
-          <p className="text-[14.5px] font-semibold text-foreground mb-1">
-            Spreadsheet canvas — coming next session
-          </p>
-          <p className="text-[12.5px] text-foreground/55 leading-relaxed max-w-[40ch] mx-auto">
-            The sheet shell is wired up: you can create, rename, share, and
-            delete spreadsheets. The cell grid (formulas, formatting, charts)
-            lands in Session 3 once Univer is integrated.
-          </p>
-          <p className="text-[10.5px] text-foreground/35 uppercase tracking-[0.14em] mt-5 font-mono">
-            ID · {sheet.id.slice(0, 8)}
-          </p>
-        </div>
       </main>
     </div>
   );
-}
-
-function formatRelative(iso: string): string {
-  const d = new Date(iso);
-  const ms = Date.now() - d.getTime();
-  const mins = Math.floor(ms / 60_000);
-  if (mins < 1) return "just now";
-  if (mins < 60) return `${mins}m ago`;
-  const hrs = Math.floor(mins / 60);
-  if (hrs < 24) return `${hrs}h ago`;
-  const days = Math.floor(hrs / 24);
-  if (days < 7) return `${days}d ago`;
-  return d.toLocaleDateString();
 }

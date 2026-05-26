@@ -1,0 +1,64 @@
+/* workspace-sheet.css — Editorial dark-theme adjustments for the
+ * Univer spreadsheet canvas.
+ *
+ * Univer ships its own design tokens (light theme by default) and a
+ * fairly dense toolbar. We don't try to fully re-skin it — too many
+ * surfaces, too easy to break — but we do soften the seam where Univer
+ * meets the rest of the app:
+ *
+ *   · Background tones nudged toward the app's neutrals
+ *   · Toolbar shadow/borders aligned to our border tokens
+ *   · Grid lines + selected-cell highlight tinted to match our primary
+ *
+ * All overrides are scoped under `.workspace-sheet-canvas` so they
+ * never leak to other parts of the app.
+ */
+
+.workspace-sheet-canvas {
+  background: hsl(var(--background));
+  font-feature-settings: "tnum" 1, "lnum" 1;
+}
+
+/* Soften Univer's bright surfaces against the editorial dark UI. The
+   `univer-` prefix is stable across the suite (core/design/sheets/ui). */
+.workspace-sheet-canvas .univer-toolbar,
+.workspace-sheet-canvas .univer-sheet-bar,
+.workspace-sheet-canvas .univer-formula-bar {
+  border-color: hsl(var(--border) / 0.7) !important;
+}
+
+/* Cell selection highlight — pick up the app primary instead of the
+   Univer default blue. */
+.workspace-sheet-canvas .univer-selection {
+  border-color: hsl(var(--primary)) !important;
+}
+
+/* Headers (row + column gutters). Slightly muted to reduce contrast
+   against the editorial dark background. */
+.workspace-sheet-canvas .univer-sheet-row-header,
+.workspace-sheet-canvas .univer-sheet-column-header {
+  background: hsl(var(--muted) / 0.4) !important;
+}
+
+/* Active sheet tab pill at the bottom — align with our primary so it
+   matches other "currently selected" affordances in the app. */
+.workspace-sheet-canvas .univer-sheet-bar-tabs .univer-sheet-bar-tab--active {
+  border-bottom-color: hsl(var(--primary)) !important;
+  color: hsl(var(--foreground)) !important;
+}
+
+/* Scrollbars inside the canvas, kept minimal so they don't dominate. */
+.workspace-sheet-canvas ::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+.workspace-sheet-canvas ::-webkit-scrollbar-thumb {
+  background: hsl(var(--muted-foreground) / 0.25);
+  border-radius: 2px;
+}
+.workspace-sheet-canvas ::-webkit-scrollbar-thumb:hover {
+  background: hsl(var(--muted-foreground) / 0.4);
+}
+.workspace-sheet-canvas ::-webkit-scrollbar-track {
+  background: transparent;
+}
