@@ -33,7 +33,10 @@ import {
   Plus,
   Trash2,
   ChevronDown,
+  FileText,
+  Calculator as CalculatorIcon,
 } from "lucide-react";
+import FundingCalculator from "./FundingCalculator";
 
 import supabase from "./supabase";
 import {
@@ -121,8 +124,21 @@ function ErrorState({ message }: { message: string }) {
 // ═══════════════════════════════════════════════════════════════════
 // Main view
 // ═══════════════════════════════════════════════════════════════════
+type FundingMode = "plan" | "calculator";
+
 function FundingView({ data }: { data: FundingData }) {
   const [scenario, setScenario] = useState<FundingScenario>("base");
+  // Top-level mode toggle — Plan (the existing live document quoted
+  // to investors) vs Calculator (what-if dilution modeling tool).
+  // Persists across visits so the user lands where they left off.
+  const [mode, setMode] = useState<FundingMode>(() => {
+    try {
+      return (window.localStorage.getItem("cwa-funding-mode") as FundingMode) ?? "plan";
+    } catch { return "plan"; }
+  });
+  useEffect(() => {
+    try { window.localStorage.setItem("cwa-funding-mode", mode); } catch { /* noop */ }
+  }, [mode]);
 
   const activeCompany = useMemo(
     () => data.companies.find((c) => c.is_active_raise) ?? data.companies[0],
@@ -141,12 +157,22 @@ function FundingView({ data }: { data: FundingData }) {
 
   return (
     <div className="min-h-screen w-full bg-background text-foreground overflow-y-auto">
+      {/* ── Mode toggle: Plan vs Calculator ────────────────────────
+          Sits at the very top of the page above the Hero so the
+          user can switch between strategic documentation (Plan) and
+          interactive modeling (Calculator) without leaving /funding. */}
+      <ModeToggle mode={mode} onChange={setMode} />
+
+      {mode === "calculator" ? (
+        <FundingCalculator />
+      ) : (
+        <>
       {/* 1 · HERO HEADER */}
       <motion.section
         initial={{ opacity: 0, y: 6 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.4, ease: "easeOut" }}
-        className="px-10 pt-10 pb-6"
+        className="px-10 pt-6 pb-6"
       >
         <Hero
           activeCompany={activeCompany}
@@ -279,6 +305,54 @@ function FundingView({ data }: { data: FundingData }) {
         </div>
         <InterBusinessFlow data={data} scenario={scenario} />
       </motion.section>
+        </>
+      )}
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// Mode toggle (Plan / Calculator)
+// ═══════════════════════════════════════════════════════════════════
+function ModeToggle({
+  mode, onChange,
+}: {
+  mode: FundingMode;
+  onChange: (m: FundingMode) => void;
+}) {
+  const options: { id: FundingMode; label: string; icon: React.ReactNode; hint: string }[] = [
+    { id: "plan",       label: "Plan",       icon: <FileText className="h-3.5 w-3.5" />,        hint: "Live document quoted to investors" },
+    { id: "calculator", label: "Calculator", icon: <CalculatorIcon className="h-3.5 w-3.5" />,  hint: "What-if dilution modeling" },
+  ];
+  return (
+    <div className="px-10 pt-6 pb-2">
+      <div className="inline-flex items-stretch border border-border rounded-sm overflow-hidden bg-card">
+        {options.map((opt) => {
+          const isActive = opt.id === mode;
+          return (
+            <button
+              key={opt.id}
+              onClick={() => onChange(opt.id)}
+              className={`relative px-4 py-2 inline-flex items-center gap-2 text-[12px] font-semibold transition-colors ${
+                isActive
+                  ? "bg-muted/60 text-foreground"
+                  : "text-muted-foreground/70 hover:text-foreground/85 hover:bg-muted/30"
+              }`}
+              title={opt.hint}
+            >
+              {opt.icon}
+              {opt.label}
+              {isActive && (
+                <motion.div
+                  layoutId="funding-mode-underline"
+                  className="absolute left-0 right-0 bottom-0 h-[2px] bg-primary"
+                  transition={{ type: "spring", damping: 28, stiffness: 320 }}
+                />
+              )}
+            </button>
+          );
+        })}
+      </div>
     </div>
   );
 }
