@@ -28,11 +28,18 @@ import type {
   WorkspaceSpreadsheet,
   WorkspaceResource,
   WorkspaceVisibility,
+  WorkspaceCollaborator,
+  WorkspaceComment,
+  WorkspaceResourceKind,
+  WorkspaceRole,
+  CommentAnchor,
 } from "./workspaceTypes";
 import type { JSONContent } from "@tiptap/react";
 
 const DOC_TABLE = "workspace_documents";
 const SHEET_TABLE = "workspace_spreadsheets";
+const COLLAB_TABLE = "workspace_collaborators";
+const COMMENT_TABLE = "workspace_comments";
 
 // ============================================================
 // Query keys
@@ -44,6 +51,10 @@ export const workspaceKeys = {
   spreadsheets:     ["workspace", "spreadsheets"] as const,
   spreadsheet:      (id: string) => ["workspace", "spreadsheets", "byId", id] as const,
   resources:        ["workspace", "resources"] as const,
+  collaborators:    (kind: WorkspaceResourceKind, id: string) =>
+                      ["workspace", "collaborators", kind, id] as const,
+  comments:         (kind: WorkspaceResourceKind, id: string) =>
+                      ["workspace", "comments", kind, id] as const,
 };
 
 // ============================================================
@@ -264,6 +275,214 @@ export function useDeleteSpreadsheet() {
 }
 
 // ============================================================
+// Collaborators
+// ============================================================
+export function useCollaborators(
+  kind: WorkspaceResourceKind,
+  resourceId: string | null | undefined,
+) {
+  return useQuery({
+    queryKey: workspaceKeys.collaborators(kind, resourceId ?? ""),
+    enabled: !!resourceId,
+    queryFn: async (): Promise<WorkspaceCollaborator[]> => {
+      const { data, error } = await supabase
+        .from(COLLAB_TABLE)
+        .select("*")
+        .eq("resource_type", kind)
+        .eq("resource_id", resourceId!)
+        .order("added_at", { ascending: true });
+      if (error) throw error;
+      return (data ?? []) as WorkspaceCollaborator[];
+    },
+  });
+}
+
+export function useAddCollaborator() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (vars: {
+      kind: WorkspaceResourceKind;
+      resourceId: string;
+      username: string;
+      role: WorkspaceRole;
+      addedBy: string;
+    }): Promise<WorkspaceCollaborator> => {
+      const { data, error } = await supabase
+        .from(COLLAB_TABLE)
+        .insert({
+          resource_type: vars.kind,
+          resource_id: vars.resourceId,
+          username: vars.username,
+          role: vars.role,
+          added_by: vars.addedBy,
+        })
+        .select("*")
+        .single();
+      if (error) throw error;
+      return data as WorkspaceCollaborator;
+    },
+    onSuccess: (row) => {
+      qc.invalidateQueries({
+        queryKey: workspaceKeys.collaborators(row.resource_type, row.resource_id),
+      });
+    },
+  });
+}
+
+export function useUpdateCollaboratorRole() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (vars: {
+      id: string;
+      kind: WorkspaceResourceKind;
+      resourceId: string;
+      role: WorkspaceRole;
+    }): Promise<WorkspaceCollaborator> => {
+      const { data, error } = await supabase
+        .from(COLLAB_TABLE)
+        .update({ role: vars.role })
+        .eq("id", vars.id)
+        .select("*")
+        .single();
+      if (error) throw error;
+      return data as WorkspaceCollaborator;
+    },
+    onSuccess: (row) => {
+      qc.invalidateQueries({
+        queryKey: workspaceKeys.collaborators(row.resource_type, row.resource_id),
+      });
+    },
+  });
+}
+
+export function useRemoveCollaborator() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (vars: {
+      id: string;
+      kind: WorkspaceResourceKind;
+      resourceId: string;
+    }): Promise<void> => {
+      const { error } = await supabase.from(COLLAB_TABLE).delete().eq("id", vars.id);
+      if (error) throw error;
+    },
+    onSuccess: (_void, vars) => {
+      qc.invalidateQueries({
+        queryKey: workspaceKeys.collaborators(vars.kind, vars.resourceId),
+      });
+    },
+  });
+}
+
+// ============================================================
+// Comments
+// ============================================================
+export function useComments(
+  kind: WorkspaceResourceKind,
+  resourceId: string | null | undefined,
+) {
+  return useQuery({
+    queryKey: workspaceKeys.comments(kind, resourceId ?? ""),
+    enabled: !!resourceId,
+    queryFn: async (): Promise<WorkspaceComment[]> => {
+      const { data, error } = await supabase
+        .from(COMMENT_TABLE)
+        .select("*")
+        .eq("resource_type", kind)
+        .eq("resource_id", resourceId!)
+        .order("created_at", { ascending: true });
+      if (error) throw error;
+      return (data ?? []) as WorkspaceComment[];
+    },
+  });
+}
+
+export function useCreateComment() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (vars: {
+      kind: WorkspaceResourceKind;
+      resourceId: string;
+      author: string;
+      body: string;
+      anchor?: CommentAnchor | null;
+      parentId?: string | null;
+      commentKind?: "comment" | "suggestion";
+    }): Promise<WorkspaceComment> => {
+      const { data, error } = await supabase
+        .from(COMMENT_TABLE)
+        .insert({
+          resource_type: vars.kind,
+          resource_id: vars.resourceId,
+          author: vars.author,
+          body: vars.body,
+          anchor: vars.anchor ?? null,
+          parent_id: vars.parentId ?? null,
+          kind: vars.commentKind ?? "comment",
+        })
+        .select("*")
+        .single();
+      if (error) throw error;
+      return data as WorkspaceComment;
+    },
+    onSuccess: (row) => {
+      qc.invalidateQueries({
+        queryKey: workspaceKeys.comments(row.resource_type, row.resource_id),
+      });
+    },
+  });
+}
+
+export function useUpdateComment() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (vars: {
+      id: string;
+      kind: WorkspaceResourceKind;
+      resourceId: string;
+      body?: string;
+      status?: "open" | "resolved";
+    }): Promise<WorkspaceComment> => {
+      const patch: any = {};
+      if (vars.body !== undefined) patch.body = vars.body;
+      if (vars.status !== undefined) patch.status = vars.status;
+      const { data, error } = await supabase
+        .from(COMMENT_TABLE)
+        .update(patch)
+        .eq("id", vars.id)
+        .select("*")
+        .single();
+      if (error) throw error;
+      return data as WorkspaceComment;
+    },
+    onSuccess: (row) => {
+      qc.invalidateQueries({
+        queryKey: workspaceKeys.comments(row.resource_type, row.resource_id),
+      });
+    },
+  });
+}
+
+export function useDeleteComment() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (vars: {
+      id: string;
+      kind: WorkspaceResourceKind;
+      resourceId: string;
+    }): Promise<void> => {
+      const { error } = await supabase.from(COMMENT_TABLE).delete().eq("id", vars.id);
+      if (error) throw error;
+    },
+    onSuccess: (_void, vars) => {
+      qc.invalidateQueries({
+        queryKey: workspaceKeys.comments(vars.kind, vars.resourceId),
+      });
+    },
+  });
+}
+
+// ============================================================
 // Realtime — invalidate keys on remote edits.
 // Mount once in a parent component (WorkspacePage / detail pages).
 // ============================================================
@@ -288,6 +507,30 @@ export function useWorkspaceRealtime() {
           const row = (payload.new ?? payload.old) as WorkspaceSpreadsheet | undefined;
           if (row?.id) qc.invalidateQueries({ queryKey: workspaceKeys.spreadsheet(row.id) });
           qc.invalidateQueries({ queryKey: workspaceKeys.resources });
+        },
+      )
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: COLLAB_TABLE },
+        (payload) => {
+          const row = (payload.new ?? payload.old) as WorkspaceCollaborator | undefined;
+          if (row) {
+            qc.invalidateQueries({
+              queryKey: workspaceKeys.collaborators(row.resource_type, row.resource_id),
+            });
+          }
+        },
+      )
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: COMMENT_TABLE },
+        (payload) => {
+          const row = (payload.new ?? payload.old) as WorkspaceComment | undefined;
+          if (row) {
+            qc.invalidateQueries({
+              queryKey: workspaceKeys.comments(row.resource_type, row.resource_id),
+            });
+          }
         },
       )
       .subscribe();

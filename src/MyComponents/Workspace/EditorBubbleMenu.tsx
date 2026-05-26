@@ -20,14 +20,21 @@ import {
   Bold, Italic, Underline as UnderlineIcon, Strikethrough,
   Code, Link as LinkIcon, Highlighter,
   AlignLeft, AlignCenter, AlignRight,
-  Heading1, Heading2, Heading3, ChevronDown,
+  Heading1, Heading2, Heading3, ChevronDown, MessageSquare,
 } from "lucide-react";
 
 interface Props {
   editor: Editor | null;
+  /** Optional comment hook. When provided, a "Comment" button shows up
+   *  on the toolbar. The callback receives the selected text and a
+   *  function to apply the comment mark once a comment id is known. */
+  onAddComment?: (
+    selectedText: string,
+    applyMark: (commentId: string) => void,
+  ) => void;
 }
 
-export function EditorBubbleMenu({ editor }: Props) {
+export function EditorBubbleMenu({ editor, onAddComment }: Props) {
   const headingRef = useRef<HTMLDetailsElement>(null);
   if (!editor) return null;
 
@@ -170,6 +177,33 @@ export function EditorBubbleMenu({ editor }: Props) {
         active={editor.isActive("link")}
         onClick={promptLink}
       />
+
+      {onAddComment && (
+        <BubbleButton
+          icon={MessageSquare}
+          label="Add comment"
+          active={editor.isActive("commentMark")}
+          onClick={() => {
+            const { from, to } = editor.state.selection;
+            if (from === to) return;
+            const selected = editor.state.doc.textBetween(from, to, " ");
+            if (!selected) return;
+            // Snapshot the range — the user may click elsewhere while
+            // their comment is in flight, so we apply the mark to the
+            // remembered positions, not the live selection.
+            const snapshotFrom = from;
+            const snapshotTo = to;
+            onAddComment(selected, (commentId) => {
+              editor
+                .chain()
+                .focus()
+                .setTextSelection({ from: snapshotFrom, to: snapshotTo })
+                .setMark("commentMark", { commentId })
+                .run();
+            });
+          }}
+        />
+      )}
 
       <Divider />
 

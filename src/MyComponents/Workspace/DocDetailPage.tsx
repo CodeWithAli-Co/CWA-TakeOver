@@ -21,7 +21,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import {
-  ArrowLeft, Lock, Globe, Trash2, Loader2,
+  ArrowLeft, Lock, Globe, Trash2, Loader2, Share2, MessageSquare,
 } from "lucide-react";
 import * as Y from "yjs";
 import { getSchema } from "@tiptap/core";
@@ -31,6 +31,8 @@ import {
   useDocument,
   useUpdateDocument,
   useDeleteDocument,
+  useCreateComment,
+  useComments,
 } from "@/stores/workspace";
 import { ActiveUser } from "@/stores/query";
 import { DocEditor } from "./DocEditor";
@@ -38,6 +40,8 @@ import { getBaseDocExtensions } from "./docSchema";
 import { SupabaseYProvider, bytesToB64, b64ToBytes } from "@/lib/yjs/SupabaseYProvider";
 import { makeRemoteUser } from "@/lib/yjs/awareness";
 import { PresenceBar } from "./PresenceBar";
+import { ShareDialog } from "./ShareDialog";
+import { CommentsSidebar } from "./CommentsSidebar";
 import "./workspace.css";
 import "tippy.js/dist/tippy.css";
 
@@ -68,6 +72,15 @@ export function DocDetailPage({ id }: Props) {
   const [ydoc, setYdoc] = useState<Y.Doc | null>(null);
   const [provider, setProvider] = useState<SupabaseYProvider | null>(null);
   const hydratedRef = useRef<boolean>(false);
+
+  const [shareOpen, setShareOpen] = useState(false);
+  const [commentsOpen, setCommentsOpen] = useState(false);
+  const [focusedCommentId, setFocusedCommentId] = useState<string | null>(null);
+  const createCommentMut = useCreateComment();
+  const { data: commentsData = [] } = useComments("document", doc?.id ?? null);
+  const openCommentCount = commentsData.filter(
+    (c) => c.parent_id == null && c.status === "open",
+  ).length;
 
   // Construct Y.Doc + provider once per doc id, after the document
   // record is loaded (so we have the saved state to bootstrap from).
@@ -198,6 +211,28 @@ export function DocDetailPage({ id }: Props) {
           {provider && <PresenceBar provider={provider} self={username} />}
           <button
             type="button"
+            onClick={() => setCommentsOpen((v) => !v)}
+            className={
+              "inline-flex items-center gap-1.5 px-2 h-7 rounded-sm text-[10.5px] font-semibold uppercase tracking-wider transition-colors " +
+              (commentsOpen
+                ? "bg-amber-500/10 border border-amber-500/30 text-amber-300"
+                : "bg-muted/40 border border-border text-foreground/65 hover:text-foreground")
+            }
+            title={commentsOpen ? "Hide comments" : "Show comments"}
+          >
+            <MessageSquare size={11} />
+            {openCommentCount > 0 ? openCommentCount : "Comments"}
+          </button>
+          <button
+            type="button"
+            onClick={() => setShareOpen(true)}
+            className="inline-flex items-center gap-1.5 px-2 h-7 rounded-sm bg-primary text-primary-foreground text-[10.5px] font-bold uppercase tracking-wider hover:opacity-90 transition-opacity"
+            title="Share"
+          >
+            <Share2 size={11} /> Share
+          </button>
+          <button
+            type="button"
             onClick={handleToggleVisibility}
             disabled={updateMut.isPending}
             className={
@@ -231,30 +266,75 @@ export function DocDetailPage({ id }: Props) {
       </header>
 
       {/* ── Title + body ───────────────────────────────────────── */}
-      <main className="flex-1 flex flex-col min-h-0">
-        <div className="mx-auto w-full max-w-[860px] px-6 py-10 flex-1 flex flex-col min-h-0">
-          <input
-            value={title}
-            onChange={(e) => setTitle(e.target.value)}
-            onBlur={handleCommitTitle}
-            onKeyDown={(e) => {
-              if (e.key === "Enter") (e.target as HTMLInputElement).blur();
-            }}
-            placeholder="Untitled"
-            className="w-full bg-transparent text-[32px] font-bold text-foreground placeholder:text-foreground/30 outline-none border-0 focus:ring-0 leading-tight mb-6 flex-shrink-0"
-          />
-
-          {ydoc && provider && (
-            <DocEditor
-              key={doc.id}
-              ydoc={ydoc}
-              provider={provider}
-              user={makeRemoteUser(username)}
-              onLocalChange={handleLocalChange}
+      <main className="flex-1 flex min-h-0">
+        <div
+          className={
+            "flex-1 flex flex-col min-h-0 transition-all " +
+            (commentsOpen ? "" : "")
+          }
+        >
+          <div className="mx-auto w-full max-w-[860px] px-6 py-10 flex-1 flex flex-col min-h-0">
+            <input
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              onBlur={handleCommitTitle}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") (e.target as HTMLInputElement).blur();
+              }}
+              placeholder="Untitled"
+              className="w-full bg-transparent text-[32px] font-bold text-foreground placeholder:text-foreground/30 outline-none border-0 focus:ring-0 leading-tight mb-6 flex-shrink-0"
             />
-          )}
+
+            {ydoc && provider && (
+              <DocEditor
+                key={doc.id}
+                ydoc={ydoc}
+                provider={provider}
+                user={makeRemoteUser(username)}
+                onLocalChange={handleLocalChange}
+                onAddComment={async (selectedText, applyMark) => {
+                  const created = await createCommentMut.mutateAsync({
+                    kind: "document",
+                    resourceId: doc.id,
+                    author: username,
+                    body: "",
+                    anchor: { kind: "doc-mark", selected_text: selectedText } as any,
+                  });
+                  applyMark(created.id);
+                  setCommentsOpen(true);
+                  setFocusedCommentId(created.id);
+                }}
+                onFocusComment={(id) => {
+                  setCommentsOpen(true);
+                  setFocusedCommentId(id);
+                }}
+              />
+            )}
+          </div>
         </div>
+
+        {commentsOpen && (
+          <CommentsSidebar
+            kind="document"
+            resourceId={doc.id}
+            currentUsername={username}
+            focusedCommentId={focusedCommentId}
+            onFocusComment={setFocusedCommentId}
+            onClose={() => setCommentsOpen(false)}
+          />
+        )}
       </main>
+
+      <ShareDialog
+        open={shareOpen}
+        onOpenChange={setShareOpen}
+        kind="document"
+        resourceId={doc.id}
+        resourceTitle={doc.title}
+        owner={doc.owner}
+        currentUsername={username}
+        visibility={doc.visibility}
+      />
     </div>
   );
 }

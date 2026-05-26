@@ -37,6 +37,14 @@ interface Props {
   user: RemoteUser;
   /** Notifies the parent that the doc just changed (debounced save). */
   onLocalChange: () => void;
+  /** Called when the user picks "Comment" in the bubble menu. */
+  onAddComment?: (
+    selectedText: string,
+    applyMark: (commentId: string) => void,
+  ) => void;
+  /** Called when the user clicks an existing comment mark — opens that
+   *  thread in the sidebar. */
+  onFocusComment?: (commentId: string) => void;
 }
 
 const SYNC_INDICATOR_MS = 1500;
@@ -82,7 +90,9 @@ function imagePasteDropPlugin(getOnInsert: () => (url: string, alt: string) => v
 
 const imagePasteDropKey = new PluginKey("workspaceImagePasteDropOuter");
 
-export function DocEditor({ ydoc, provider, user, onLocalChange }: Props) {
+export function DocEditor({
+  ydoc, provider, user, onLocalChange, onAddComment, onFocusComment,
+}: Props) {
   const [saving, setSaving] = useState(false);
   const [recentlySaved, setRecentlySaved] = useState(false);
   const [synced, setSynced] = useState<boolean>(provider?.synced ?? false);
@@ -160,10 +170,18 @@ export function DocEditor({ ydoc, provider, user, onLocalChange }: Props) {
 
   return (
     <div className="flex-1 flex flex-col min-h-0">
-      <EditorBubbleMenu editor={editor} />
+      <EditorBubbleMenu editor={editor} onAddComment={onAddComment} />
       <EditorContent
         editor={editor}
         className="flex-1 min-h-0 overflow-y-auto workspace-prose"
+        onClick={(e) => {
+          if (!onFocusComment) return;
+          const target = e.target as HTMLElement | null;
+          // Walk up — clicks usually land on text nodes inside the span.
+          const span = target?.closest?.("[data-comment-id]") as HTMLElement | null;
+          const commentId = span?.getAttribute("data-comment-id");
+          if (commentId) onFocusComment(commentId);
+        }}
       />
 
       <footer className="flex items-center justify-between px-2 pt-3 mt-4 border-t border-border/60 text-[10.5px] uppercase tracking-[0.12em] text-foreground/40 flex-shrink-0">

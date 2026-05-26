@@ -34,6 +34,7 @@ import Table from "@tiptap/extension-table";
 import TableRow from "@tiptap/extension-table-row";
 import TableHeader from "@tiptap/extension-table-header";
 import TableCell from "@tiptap/extension-table-cell";
+import { CommentMark } from "./CommentMark";
 
 export interface BaseExtensionOpts {
   /** Whether to include History (false when Collaboration owns undo/redo). */
@@ -84,5 +85,6 @@ export function getBaseDocExtensions(opts: BaseExtensionOpts = {}) {
     TableRow,
     TableHeader,
     TableCell,
+    CommentMark,
   ];
 }

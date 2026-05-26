@@ -19,7 +19,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import {
-  ArrowLeft, Lock, Globe, Trash2, Loader2,
+  ArrowLeft, Lock, Globe, Trash2, Loader2, Share2,
 } from "lucide-react";
 import {
   useSpreadsheet,
@@ -29,6 +29,7 @@ import {
 import { ActiveUser } from "@/stores/query";
 import { SheetEditor } from "./SheetEditor";
 import { PresenceBar } from "./PresenceBar";
+import { ShareDialog } from "./ShareDialog";
 import "./workspace-sheet.css";
 
 interface Props {
@@ -46,6 +47,7 @@ export function SheetDetailPage({ id }: Props) {
   const deleteMut = useDeleteSpreadsheet();
 
   const [title, setTitle] = useState("");
+  const [shareOpen, setShareOpen] = useState(false);
   useEffect(() => {
     if (sheet) setTitle(sheet.title);
   }, [sheet?.title, sheet]);
@@ -121,6 +123,14 @@ export function SheetDetailPage({ id }: Props) {
           <PresenceBar channelName={`sheet:${sheet.id}`} self={username} />
           <button
             type="button"
+            onClick={() => setShareOpen(true)}
+            className="inline-flex items-center gap-1.5 px-2 h-7 rounded-sm bg-primary text-primary-foreground text-[10.5px] font-bold uppercase tracking-wider hover:opacity-90 transition-opacity"
+            title="Share"
+          >
+            <Share2 size={11} /> Share
+          </button>
+          <button
+            type="button"
             onClick={handleToggleVisibility}
             disabled={updateMut.isPending}
             className={
@@ -165,6 +175,17 @@ export function SheetDetailPage({ id }: Props) {
           }}
         />
       </main>
+
+      <ShareDialog
+        open={shareOpen}
+        onOpenChange={setShareOpen}
+        kind="spreadsheet"
+        resourceId={sheet.id}
+        resourceTitle={sheet.title}
+        owner={sheet.owner}
+        currentUsername={username}
+        visibility={sheet.visibility}
+      />
     </div>
   );
 }
