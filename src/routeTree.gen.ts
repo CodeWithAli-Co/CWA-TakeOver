@@ -47,6 +47,7 @@ const ComponentsLazyRouteImport = createFileRoute('/components')()
 const ColdEmailLazyRouteImport = createFileRoute('/coldEmail')()
 const CodeLazyRouteImport = createFileRoute('/code')()
 const ChatLazyRouteImport = createFileRoute('/chat')()
+const CapitalPlanLazyRouteImport = createFileRoute('/capitalPlan')()
 const BudgetaryLazyRouteImport = createFileRoute('/budgetary')()
 const BroadcastLazyRouteImport = createFileRoute('/broadcast')()
 const BotLazyRouteImport = createFileRoute('/bot')()
@@ -239,6 +240,11 @@ const ChatLazyRoute = ChatLazyRouteImport.update({
   path: '/chat',
   getParentRoute: () => rootRouteImport,
 } as any).lazy(() => import('./routes/chat.lazy').then((d) => d.Route))
+const CapitalPlanLazyRoute = CapitalPlanLazyRouteImport.update({
+  id: '/capitalPlan',
+  path: '/capitalPlan',
+  getParentRoute: () => rootRouteImport,
+} as any).lazy(() => import('./routes/capitalPlan.lazy').then((d) => d.Route))
 const BudgetaryLazyRoute = BudgetaryLazyRouteImport.update({
   id: '/budgetary',
   path: '/budgetary',
@@ -341,6 +347,7 @@ export interface FileRoutesByFullPath {
   '/bot': typeof BotLazyRoute
   '/broadcast': typeof BroadcastLazyRoute
   '/budgetary': typeof BudgetaryLazyRoute
+  '/capitalPlan': typeof CapitalPlanLazyRoute
   '/chat': typeof ChatLazyRoute
   '/code': typeof CodeLazyRoute
   '/coldEmail': typeof ColdEmailLazyRoute
@@ -392,6 +399,7 @@ export interface FileRoutesByTo {
   '/bot': typeof BotLazyRoute
   '/broadcast': typeof BroadcastLazyRoute
   '/budgetary': typeof BudgetaryLazyRoute
+  '/capitalPlan': typeof CapitalPlanLazyRoute
   '/chat': typeof ChatLazyRoute
   '/code': typeof CodeLazyRoute
   '/coldEmail': typeof ColdEmailLazyRoute
@@ -443,6 +451,7 @@ export interface FileRoutesById {
   '/bot': typeof BotLazyRoute
   '/broadcast': typeof BroadcastLazyRoute
   '/budgetary': typeof BudgetaryLazyRoute
+  '/capitalPlan': typeof CapitalPlanLazyRoute
   '/chat': typeof ChatLazyRoute
   '/code': typeof CodeLazyRoute
   '/coldEmail': typeof ColdEmailLazyRoute
@@ -496,6 +505,7 @@ export interface FileRouteTypes {
     | '/bot'
     | '/broadcast'
     | '/budgetary'
+    | '/capitalPlan'
     | '/chat'
     | '/code'
     | '/coldEmail'
@@ -547,6 +557,7 @@ export interface FileRouteTypes {
     | '/bot'
     | '/broadcast'
     | '/budgetary'
+    | '/capitalPlan'
     | '/chat'
     | '/code'
     | '/coldEmail'
@@ -597,6 +608,7 @@ export interface FileRouteTypes {
     | '/bot'
     | '/broadcast'
     | '/budgetary'
+    | '/capitalPlan'
     | '/chat'
     | '/code'
     | '/coldEmail'
@@ -649,6 +661,7 @@ export interface RootRouteChildren {
   BotLazyRoute: typeof BotLazyRoute
   BroadcastLazyRoute: typeof BroadcastLazyRoute
   BudgetaryLazyRoute: typeof BudgetaryLazyRoute
+  CapitalPlanLazyRoute: typeof CapitalPlanLazyRoute
   ChatLazyRoute: typeof ChatLazyRoute
   CodeLazyRoute: typeof CodeLazyRoute
   ColdEmailLazyRoute: typeof ColdEmailLazyRoute
@@ -919,6 +932,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ChatLazyRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/capitalPlan': {
+      id: '/capitalPlan'
+      path: '/capitalPlan'
+      fullPath: '/capitalPlan'
+      preLoaderRoute: typeof CapitalPlanLazyRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/budgetary': {
       id: '/budgetary'
       path: '/budgetary'
@@ -1073,6 +1093,7 @@ const rootRouteChildren: RootRouteChildren = {
   BotLazyRoute: BotLazyRoute,
   BroadcastLazyRoute: BroadcastLazyRoute,
   BudgetaryLazyRoute: BudgetaryLazyRoute,
+  CapitalPlanLazyRoute: CapitalPlanLazyRoute,
   ChatLazyRoute: ChatLazyRoute,
   CodeLazyRoute: CodeLazyRoute,
   ColdEmailLazyRoute: ColdEmailLazyRoute,

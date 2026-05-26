@@ -33,6 +33,7 @@ import {
   BookCopy,
   Network,
   Wallet,
+  Coins,
   type LucideIcon,
 } from "lucide-react";
 
@@ -840,6 +841,14 @@ export const cooData = {
       icon: Network,
     },
     {
+      // Capital Plan — fundraising + budget + runway + AXON-advised
+      // scenario modeling. Gated to CEO/COO/CFO via is_finance_role().
+      title: "Capital Plan",
+      url: "/capitalPlan",
+      isActive: false,
+      icon: Coins,
+    },
+    {
       title: "Roadmap",
       url: "/roadmap",
       isActive: false,
@@ -1241,6 +1250,7 @@ export const ceoData = {
       items: [
         { title: "Account Management", url: "/details" },
         { title: "Mod Logs",           url: "/mod_logs" },
+        { title: "Capital Plan",       url: "/capitalPlan" },
       ],
     },
 
@@ -1331,6 +1341,15 @@ export const cfoData = {
       url: "/axonSwarm",
       isActive: false,
       icon: Network,
+    },
+    {
+      // Capital Plan — fundraising + budget + runway + AXON-advised
+      // scenario modeling. The CFO's primary command surface for the
+      // raise-and-deploy workflow.
+      title: "Capital Plan",
+      url: "/capitalPlan",
+      isActive: false,
+      icon: Coins,
     },
     {
       title: "Roadmap",
