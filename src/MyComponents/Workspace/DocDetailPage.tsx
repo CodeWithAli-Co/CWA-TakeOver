@@ -23,6 +23,8 @@ import {
 } from "@/stores/workspace";
 import { ActiveUser } from "@/stores/query";
 import { DocEditor } from "./DocEditor";
+import "./workspace.css";
+import "tippy.js/dist/tippy.css";
 
 interface Props {
   id: string;

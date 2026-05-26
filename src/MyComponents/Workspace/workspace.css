@@ -1,0 +1,249 @@
+/* workspace.css — prose + table + tippy styling for the doc editor.
+ *
+ * We don't rely on @tailwindcss/typography here because the editorial
+ * aesthetic in Takeover wants tighter line-heights, smaller headings,
+ * and a darker-than-default code block — none of which the default
+ * "prose" preset gives without per-class overrides.
+ *
+ * Scoped under `.workspace-prose` so it can only style content rendered
+ * inside the doc editor (and the rendered viewer when we add one).
+ */
+
+.workspace-prose {
+  color: hsl(var(--foreground) / 0.92);
+}
+
+.workspace-prose .ProseMirror {
+  outline: none;
+  min-height: 500px;
+}
+
+.workspace-prose .ProseMirror > * + * {
+  margin-top: 0.65em;
+}
+
+.workspace-prose h1,
+.workspace-prose h2,
+.workspace-prose h3,
+.workspace-prose h4 {
+  color: hsl(var(--foreground));
+  font-weight: 700;
+  line-height: 1.3;
+}
+
+.workspace-prose h1 {
+  font-size: 28px;
+  margin-top: 1.6em;
+  margin-bottom: 0.4em;
+}
+.workspace-prose h2 {
+  font-size: 22px;
+  margin-top: 1.4em;
+  margin-bottom: 0.35em;
+}
+.workspace-prose h3 {
+  font-size: 18px;
+  margin-top: 1.2em;
+  margin-bottom: 0.3em;
+}
+.workspace-prose h4 {
+  font-size: 15.5px;
+  margin-top: 1em;
+  margin-bottom: 0.25em;
+}
+
+.workspace-prose p {
+  line-height: 1.7;
+}
+
+.workspace-prose strong {
+  color: hsl(var(--foreground));
+  font-weight: 700;
+}
+
+.workspace-prose em {
+  font-style: italic;
+}
+
+.workspace-prose mark,
+.workspace-prose [data-highlight] {
+  background-color: hsl(var(--primary) / 0.18);
+  color: inherit;
+  padding: 0 2px;
+  border-radius: 2px;
+}
+
+.workspace-prose ul,
+.workspace-prose ol {
+  padding-left: 1.4em;
+}
+
+.workspace-prose ul {
+  list-style: disc;
+}
+.workspace-prose ol {
+  list-style: decimal;
+}
+
+.workspace-prose li {
+  margin-top: 0.15em;
+  margin-bottom: 0.15em;
+}
+
+.workspace-prose li > p {
+  margin: 0;
+}
+
+/* Task list (TaskList + TaskItem) */
+.workspace-prose ul[data-type="taskList"] {
+  list-style: none;
+  padding-left: 0.4em;
+}
+
+.workspace-prose ul[data-type="taskList"] li {
+  display: flex;
+  gap: 0.45em;
+  align-items: flex-start;
+}
+
+.workspace-prose ul[data-type="taskList"] li > label {
+  margin-top: 0.35em;
+  flex-shrink: 0;
+}
+
+.workspace-prose ul[data-type="taskList"] li > div {
+  flex: 1;
+  min-width: 0;
+}
+
+.workspace-prose blockquote {
+  border-left: 2px solid hsl(var(--primary) / 0.45);
+  padding-left: 0.8em;
+  color: hsl(var(--foreground) / 0.7);
+  font-style: italic;
+  margin: 0.75em 0;
+}
+
+.workspace-prose code {
+  background: hsl(var(--muted) / 0.5);
+  color: hsl(var(--primary));
+  padding: 1px 5px;
+  border-radius: 3px;
+  font-size: 13px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+}
+
+.workspace-prose pre {
+  background: hsl(var(--muted) / 0.45);
+  border: 1px solid hsl(var(--border) / 0.6);
+  border-radius: 3px;
+  padding: 12px 14px;
+  margin: 1em 0;
+  overflow-x: auto;
+  font-size: 12.5px;
+  line-height: 1.55;
+}
+
+.workspace-prose pre code {
+  background: transparent;
+  color: inherit;
+  padding: 0;
+  font-size: inherit;
+}
+
+.workspace-prose hr {
+  border: 0;
+  border-top: 1px solid hsl(var(--border) / 0.6);
+  margin: 1.6em 0;
+}
+
+.workspace-prose a {
+  color: hsl(var(--primary));
+  text-decoration: underline;
+  text-decoration-color: hsl(var(--primary) / 0.4);
+  text-underline-offset: 2px;
+}
+
+/* ── Tables ──────────────────────────────────────────────────────── */
+.workspace-prose table {
+  border-collapse: collapse;
+  table-layout: fixed;
+  width: 100%;
+  margin: 1em 0;
+  overflow: hidden;
+  border-radius: 3px;
+  border: 1px solid hsl(var(--border) / 0.7);
+}
+
+.workspace-prose table th,
+.workspace-prose table td {
+  border: 1px solid hsl(var(--border) / 0.5);
+  padding: 6px 10px;
+  vertical-align: top;
+  min-width: 80px;
+  position: relative;
+}
+
+.workspace-prose table th {
+  background: hsl(var(--muted) / 0.35);
+  font-weight: 700;
+  color: hsl(var(--foreground));
+  text-align: left;
+}
+
+.workspace-prose table td > p,
+.workspace-prose table th > p {
+  margin: 0;
+}
+
+.workspace-prose .selectedCell::after {
+  background: hsl(var(--primary) / 0.18);
+  content: "";
+  inset: 0;
+  pointer-events: none;
+  position: absolute;
+}
+
+.workspace-prose .column-resize-handle {
+  background-color: hsl(var(--primary) / 0.6);
+  bottom: 0;
+  pointer-events: none;
+  position: absolute;
+  right: -2px;
+  top: 0;
+  width: 3px;
+}
+
+/* ── Placeholder ─────────────────────────────────────────────────── */
+.workspace-prose .ProseMirror p.is-editor-empty:first-child::before {
+  color: hsl(var(--foreground) / 0.3);
+  content: attr(data-placeholder);
+  float: left;
+  height: 0;
+  pointer-events: none;
+}
+
+/* ── Image hover halo ────────────────────────────────────────────── */
+.workspace-prose img {
+  display: block;
+  margin: 1em 0;
+  max-width: 100%;
+  border-radius: 3px;
+  border: 1px solid transparent;
+  transition: border-color 0.15s;
+}
+
+.workspace-prose img:hover {
+  border-color: hsl(var(--primary) / 0.35);
+}
+
+/* ── Tippy theme (slash command + bubble menu) ───────────────────── */
+.tippy-box[data-animation="fade"] {
+  transition-property: transform, visibility, opacity;
+}
+
+.tippy-box[data-theme] {
+  background: transparent;
+  color: inherit;
+  box-shadow: none;
+}

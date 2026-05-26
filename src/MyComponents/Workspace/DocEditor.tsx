@@ -1,14 +1,24 @@
 /**
  * DocEditor.tsx — TipTap-based rich document editor for /workspace/docs/$id.
  *
- * Phase 1: rich text + lists + headings + links + tables + task lists +
- * placeholder + character count + typography. No slash commands yet
- * (Session 2), no collaborative cursors yet (Session 4).
+ * Phase 2 capabilities:
+ *   · StarterKit baseline (paragraphs, headings, bold/italic, lists,
+ *     code, blockquote, horizontal rule, undo/redo)
+ *   · Tables (with header row)
+ *   · Task lists with nested support
+ *   · Links + auto-linking
+ *   · Images with paste/drop upload to Supabase storage
+ *   · Underline, highlight, text-align
+ *   · Slash command palette ("/" → block menu)
+ *   · Bubble menu (selection toolbar)
+ *   · Character + word count footer
  *
- * Save model: editor change → 800ms debounce → useUpdateDocument
- * mutation with the full JSON content. The TanStack Query layer then
- * updates the cache; remote changes (when realtime fires) merge in
- * via the BubbleMenu pattern below.
+ * Save model: debounced 800ms after the last change. Editor change →
+ * `onSave(JSONContent)` → caller persists to Supabase.
+ *
+ * Realtime reconcile: external `content` prop updates trigger a
+ * setContent() call ONLY when the editor isn't currently focused, so
+ * the local user's typing isn't interrupted.
  */
 
 import { useEffect, useRef, useState } from "react";
@@ -25,7 +35,15 @@ import Typography from "@tiptap/extension-typography";
 import TaskList from "@tiptap/extension-task-list";
 import TaskItem from "@tiptap/extension-task-item";
 import CharacterCount from "@tiptap/extension-character-count";
+import Table from "@tiptap/extension-table";
+import TableRow from "@tiptap/extension-table-row";
+import TableHeader from "@tiptap/extension-table-header";
+import TableCell from "@tiptap/extension-table-cell";
+import { Plugin, PluginKey } from "@tiptap/pm/state";
 import { Loader2, Check } from "lucide-react";
+import { SlashCommand } from "./SlashCommand";
+import { EditorBubbleMenu } from "./EditorBubbleMenu";
+import { uploadWorkspaceImage, extractImageFiles } from "./imageUpload";
 
 interface Props {
   /** Initial content from the database. */
@@ -34,31 +52,79 @@ interface Props {
   currentUsername: string;
   /** Called with the latest JSONContent on every debounced save tick. */
   onSave: (content: JSONContent) => Promise<void>;
-  /** Optional external value to reconcile when realtime updates arrive. */
-  externalContent?: JSONContent;
   placeholder?: string;
 }
 
 const AUTOSAVE_DELAY_MS = 800;
 
+/**
+ * ProseMirror plugin that intercepts paste/drop events containing
+ * image files, uploads them to Supabase storage, then dispatches
+ * setImage commands to insert them into the document.
+ *
+ * Implemented as a ProseMirror plugin (rather than a TipTap event
+ * handler) so we get fine-grained control over preventDefault and
+ * access to the EditorView for inserting at the drop position.
+ */
+const imagePasteDropKey = new PluginKey("workspaceImagePasteDrop");
+
+function imagePasteDropPlugin(getOnInsert: () => (url: string, alt: string) => void) {
+  return new Plugin({
+    key: imagePasteDropKey,
+    props: {
+      handlePaste(_view, event) {
+        const files = extractImageFiles(event.clipboardData);
+        if (files.length === 0) return false;
+        event.preventDefault();
+        files.forEach(async (file) => {
+          try {
+            const { publicUrl } = await uploadWorkspaceImage(file);
+            getOnInsert()(publicUrl, file.name || "Image");
+          } catch (e) {
+            console.error("[DocEditor] paste upload failed:", e);
+          }
+        });
+        return true;
+      },
+      handleDrop(_view, event, _slice, moved) {
+        if (moved) return false; // intra-document move — let PM handle it
+        const dt = (event as DragEvent).dataTransfer;
+        const files = extractImageFiles(dt);
+        if (files.length === 0) return false;
+        event.preventDefault();
+        files.forEach(async (file) => {
+          try {
+            const { publicUrl } = await uploadWorkspaceImage(file);
+            getOnInsert()(publicUrl, file.name || "Image");
+          } catch (e) {
+            console.error("[DocEditor] drop upload failed:", e);
+          }
+        });
+        return true;
+      },
+    },
+  });
+}
+
 export function DocEditor({
   content,
-  currentUsername,
   onSave,
-  placeholder = "Start writing…",
+  placeholder = "Type \"/\" for commands, or start writing…",
 }: Props) {
   const [saving, setSaving] = useState(false);
   const [savedAt, setSavedAt] = useState<number | null>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  // Lazy ref so the plugin's closure can reach the editor instance —
+  // breaks the chicken/egg between useEditor and the plugin definition.
+  const insertImageRef = useRef<(url: string, alt: string) => void>(
+    () => { /* assigned after useEditor returns */ },
+  );
+
   const editor = useEditor({
     extensions: [
       StarterKit.configure({
-        // Headings: H1–H4 covers most doc structure. H5/H6 deferred —
-        // the toolbar gets too crowded otherwise and few writers use them.
         heading: { levels: [1, 2, 3, 4] },
-        // We bring our own Link extension below (with autolinking) so
-        // disable StarterKit's bundled one to avoid double-registration.
       }),
       Placeholder.configure({
         placeholder,
@@ -68,7 +134,8 @@ export function DocEditor({
         openOnClick: false,
         autolink: true,
         HTMLAttributes: {
-          class: "text-primary underline underline-offset-2 decoration-primary/40 hover:decoration-primary",
+          class:
+            "text-primary underline underline-offset-2 decoration-primary/40 hover:decoration-primary",
         },
       }),
       Image.configure({
@@ -81,25 +148,21 @@ export function DocEditor({
       TaskList,
       TaskItem.configure({ nested: true }),
       CharacterCount,
+      Table.configure({
+        resizable: true,
+        HTMLAttributes: { class: "workspace-table" },
+      }),
+      TableRow,
+      TableHeader,
+      TableCell,
+      SlashCommand,
     ],
     content,
     editorProps: {
       attributes: {
         class:
           "outline-none focus:outline-none min-h-[500px] " +
-          "text-[15px] leading-[1.7] text-foreground/90 " +
-          "prose-headings:font-bold prose-headings:text-foreground " +
-          "prose-h1:text-[28px] prose-h1:mt-6 prose-h1:mb-3 " +
-          "prose-h2:text-[22px] prose-h2:mt-5 prose-h2:mb-2.5 " +
-          "prose-h3:text-[18px] prose-h3:mt-4 prose-h3:mb-2 " +
-          "prose-h4:text-[15.5px] prose-h4:mt-3 prose-h4:mb-1.5 " +
-          "prose-p:my-2 prose-p:leading-[1.7] " +
-          "prose-strong:text-foreground prose-em:text-foreground/90 " +
-          "prose-ul:my-2 prose-ol:my-2 prose-li:my-0.5 " +
-          "prose-blockquote:border-l-2 prose-blockquote:border-primary/40 prose-blockquote:pl-3 prose-blockquote:text-foreground/70 prose-blockquote:italic " +
-          "prose-code:bg-muted/40 prose-code:px-1 prose-code:py-[1px] prose-code:rounded-sm prose-code:text-[13px] prose-code:text-primary " +
-          "prose-pre:bg-muted/40 prose-pre:border prose-pre:border-border/60 prose-pre:rounded-sm prose-pre:p-3 prose-pre:my-3 prose-pre:text-[12.5px] " +
-          "prose-hr:my-6 prose-hr:border-border/60",
+          "text-[15px] leading-[1.7] text-foreground/90",
       },
     },
     onUpdate: ({ editor }) => {
@@ -119,15 +182,27 @@ export function DocEditor({
     },
   });
 
-  // External content sync (e.g. realtime update from another user).
-  // For phase 1 we just hard-replace on first mount; phase 4 will
-  // swap this for proper Y.js collab so concurrent edits merge.
+  // Wire the imagePasteDropPlugin into the editor view after it's
+  // initialized. Registering a plugin post-hoc requires the
+  // registerPlugin EditorView API.
+  useEffect(() => {
+    if (!editor) return;
+    insertImageRef.current = (url, alt) => {
+      editor.chain().focus().setImage({ src: url, alt }).run();
+    };
+    const plugin = imagePasteDropPlugin(() => insertImageRef.current);
+    editor.registerPlugin(plugin);
+    return () => {
+      editor.unregisterPlugin(imagePasteDropKey);
+    };
+  }, [editor]);
+
+  // Sync external content (e.g. realtime update from another user)
+  // when the local editor isn't focused — avoids fighting active typing.
   useEffect(() => {
     if (!editor) return;
     const current = editor.getJSON();
     if (JSON.stringify(current) === JSON.stringify(content)) return;
-    // Don't fight an active typing session — only sync if the doc
-    // hasn't been touched since mount.
     if (!editor.isFocused) {
       editor.commands.setContent(content, { emitUpdate: false });
     }
@@ -137,7 +212,11 @@ export function DocEditor({
 
   return (
     <div className="flex-1 flex flex-col min-h-0">
-      <EditorContent editor={editor} className="flex-1 min-h-0 overflow-y-auto" />
+      <EditorBubbleMenu editor={editor} />
+      <EditorContent
+        editor={editor}
+        className="flex-1 min-h-0 overflow-y-auto workspace-prose"
+      />
 
       <footer className="flex items-center justify-between px-2 pt-3 mt-4 border-t border-border/60 text-[10.5px] uppercase tracking-[0.12em] text-foreground/40 flex-shrink-0">
         <div className="flex items-center gap-1.5">
