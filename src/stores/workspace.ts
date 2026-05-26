@@ -197,6 +197,30 @@ export function useDeleteDocument() {
   });
 }
 
+/** Updates the tabs metadata array on a document.
+ *  Tab CONTENT lives inside the Y.Doc fragments — this only updates
+ *  the tab list, titles, icons, positions, and fields. The main save
+ *  loop (content + y_state) handles content automatically. */
+export function useUpdateDocTabs() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (input: { id: string; tabs: import("./workspaceTypes").WorkspaceDocTab[] }) => {
+      const { data, error } = await supabase
+        .from(DOC_TABLE)
+        .update({ tabs: input.tabs })
+        .eq("id", input.id)
+        .select()
+        .single();
+      if (error) throw error;
+      return data as WorkspaceDocument;
+    },
+    onSuccess: (doc) => {
+      qc.setQueryData(workspaceKeys.document(doc.id), doc);
+      qc.invalidateQueries({ queryKey: workspaceKeys.resources });
+    },
+  });
+}
+
 // ============================================================
 // Spreadsheets
 // ============================================================

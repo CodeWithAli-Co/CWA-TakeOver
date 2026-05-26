@@ -40,6 +40,24 @@ export interface WorkspaceFolderCounts {
   total_count: number;
 }
 
+// ── Document tabs (Google-Docs-style pages within one doc) ─────────
+//
+// Each tab is metadata pointing at a Y.js XML fragment inside the
+// document's shared Y.Doc. The editor's Collaboration extension binds
+// to `field` to render that tab's content. Empty tabs[] on a document
+// means "single-tab mode" using the legacy 'default' fragment, which
+// keeps every existing doc working without a backfill.
+export interface WorkspaceDocTab {
+  id: string;       // uuid; stable across renames + reorders
+  title: string;
+  icon: string | null;
+  position: number;
+  /** Y.js fragment name the editor binds to for this tab.
+   *  By convention: 'default' for the first/legacy tab,
+   *  'tab:<id>' for everything created afterwards. */
+  field: string;
+}
+
 // ── Documents ──────────────────────────────────────────────────────
 export interface WorkspaceDocument {
   id: string;
@@ -58,6 +76,9 @@ export interface WorkspaceDocument {
   archived: boolean;
   /** Folder this doc belongs to. NULL = lives at the workspace root. */
   folder_id: string | null;
+  /** Per-doc tab metadata. Empty = single-tab mode using 'default'
+   *  Y.js fragment. See WorkspaceDocTab above. */
+  tabs: WorkspaceDocTab[];
   created_at: string;
   updated_at: string;
   updated_by: string | null;

@@ -22,7 +22,9 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import {
   ArrowLeft, Lock, Globe, Trash2, Loader2, Share2, MessageSquare, History,
+  Plus, Pencil, X,
 } from "lucide-react";
+import { motion } from "framer-motion";
 import * as Y from "yjs";
 import { getSchema } from "@tiptap/core";
 import { prosemirrorJSONToYDoc, yDocToProsemirrorJSON } from "y-prosemirror";
@@ -33,7 +35,9 @@ import {
   useDeleteDocument,
   useCreateComment,
   useComments,
+  useUpdateDocTabs,
 } from "@/stores/workspace";
+import type { WorkspaceDocTab } from "@/stores/workspaceTypes";
 import { ActiveUser } from "@/stores/query";
 import { DocEditor } from "./DocEditor";
 import { getBaseDocExtensions } from "./docSchema";
@@ -79,6 +83,98 @@ export function DocDetailPage({ id }: Props) {
   const [historyOpen, setHistoryOpen] = useState(false);
   const [focusedCommentId, setFocusedCommentId] = useState<string | null>(null);
   const createCommentMut = useCreateComment();
+  const updateTabsMut = useUpdateDocTabs();
+
+  // ── Doc tabs (multi-page within one document) ────────────────
+  // Persisted in workspace_documents.tabs as a JSONB array. Empty
+  // array = single-tab / legacy mode using the 'default' Y.js
+  // fragment. As soon as the user creates a tab we promote the doc
+  // to multi-tab mode and back-mark the legacy content as "Page 1"
+  // (still bound to 'default' for content preservation).
+  const tabs: WorkspaceDocTab[] = doc?.tabs ?? [];
+  const hasTabs = tabs.length > 0;
+  const [activeTabId, setActiveTabId] = useState<string | null>(null);
+  const [renamingTabId, setRenamingTabId] = useState<string | null>(null);
+  const [pendingDeleteTabId, setPendingDeleteTabId] = useState<string | null>(null);
+
+  // Ensure activeTabId is always either null (single-tab mode) or a
+  // valid tab id from the current tabs list.
+  useEffect(() => {
+    if (!hasTabs) {
+      setActiveTabId(null);
+      return;
+    }
+    if (!activeTabId || !tabs.some((t) => t.id === activeTabId)) {
+      setActiveTabId(tabs[0].id);
+    }
+  }, [hasTabs, tabs, activeTabId]);
+
+  /** Y.js fragment the editor binds to. 'default' for single-tab
+   *  and legacy docs; 'tab:<id>' for the active tab in multi-tab mode. */
+  const activeField = useMemo(() => {
+    if (!hasTabs || !activeTabId) return "default";
+    return tabs.find((t) => t.id === activeTabId)?.field ?? "default";
+  }, [hasTabs, activeTabId, tabs]);
+
+  // ── Tab CRUD ──
+  const handleAddTab = async () => {
+    if (!doc) return;
+    const newId = crypto.randomUUID();
+    let next: WorkspaceDocTab[];
+    if (tabs.length === 0) {
+      // Promote: the existing doc becomes "Page 1" (still using the
+      // 'default' fragment so its content survives), and we add a
+      // fresh "Page 2" using a new fragment.
+      next = [
+        { id: crypto.randomUUID(), title: "Page 1", icon: null, position: 1, field: "default" },
+        { id: newId, title: "Page 2", icon: null, position: 2, field: `tab:${newId}` },
+      ];
+    } else {
+      next = [
+        ...tabs,
+        {
+          id: newId,
+          title: `Page ${tabs.length + 1}`,
+          icon: null,
+          position: (tabs[tabs.length - 1]?.position ?? tabs.length) + 1,
+          field: `tab:${newId}`,
+        },
+      ];
+    }
+    await updateTabsMut.mutateAsync({ id: doc.id, tabs: next });
+    setActiveTabId(newId);
+  };
+
+  const handleCommitTabRename = async (tabId: string, title: string) => {
+    if (!doc) return;
+    const trimmed = title.trim();
+    if (!trimmed) {
+      setRenamingTabId(null);
+      return;
+    }
+    const next = tabs.map((t) => (t.id === tabId ? { ...t, title: trimmed } : t));
+    await updateTabsMut.mutateAsync({ id: doc.id, tabs: next });
+    setRenamingTabId(null);
+  };
+
+  const handleCommitTabDelete = async () => {
+    if (!doc || !pendingDeleteTabId) return;
+    // Don't allow deleting the last tab — that'd leave the doc in a
+    // weird state. Just collapse back to single-tab mode by emptying
+    // tabs[] (the 'default' fragment content survives because it was
+    // never moved).
+    let next: WorkspaceDocTab[];
+    if (tabs.length <= 1) {
+      next = [];
+    } else {
+      next = tabs.filter((t) => t.id !== pendingDeleteTabId);
+    }
+    await updateTabsMut.mutateAsync({ id: doc.id, tabs: next });
+    if (activeTabId === pendingDeleteTabId) {
+      setActiveTabId(next[0]?.id ?? null);
+    }
+    setPendingDeleteTabId(null);
+  };
   const { data: commentsData = [] } = useComments("document", doc?.id ?? null);
   const openCommentCount = commentsData.filter(
     (c) => c.parent_id == null && c.status === "open",
@@ -307,12 +403,39 @@ export function DocDetailPage({ id }: Props) {
               className="w-full bg-transparent text-[32px] font-bold text-foreground placeholder:text-foreground/30 outline-none border-0 focus:ring-0 leading-tight mb-6 flex-shrink-0"
             />
 
+            {/* ── Tab bar (only when this doc has been promoted to
+                    multi-tab mode). Single-tab docs show a tiny "+ Add tab"
+                    button instead so users can opt in.  ──────────────── */}
+            <DocTabBar
+              tabs={tabs}
+              activeTabId={activeTabId}
+              renamingTabId={renamingTabId}
+              pendingDeleteTabId={pendingDeleteTabId}
+              onSelect={setActiveTabId}
+              onAddTab={handleAddTab}
+              onBeginRename={(id) => {
+                setRenamingTabId(id);
+                setPendingDeleteTabId(null);
+              }}
+              onCommitRename={handleCommitTabRename}
+              onCancelRename={() => setRenamingTabId(null)}
+              onBeginDelete={(id) => {
+                setPendingDeleteTabId(id);
+                setRenamingTabId(null);
+              }}
+              onCommitDelete={handleCommitTabDelete}
+              onCancelDelete={() => setPendingDeleteTabId(null)}
+            />
+
             {ydoc && provider && (
               <DocEditor
-                key={doc.id}
+                // Key includes the active tab so the editor remounts on
+                // tab switch — clean fragment binding, no save/restore.
+                key={`${doc.id}:${activeField}`}
                 ydoc={ydoc}
                 provider={provider}
                 user={makeRemoteUser(username)}
+                field={activeField}
                 onLocalChange={handleLocalChange}
                 onAddComment={async (selectedText, applyMark) => {
                   const created = await createCommentMut.mutateAsync({
@@ -372,5 +495,212 @@ export function DocDetailPage({ id }: Props) {
         visibility={doc.visibility}
       />
     </div>
+  );
+}
+
+// ═════════════════════════════════════════════════════════════════
+// DocTabBar — Google-Docs-style tab strip above the editor.
+//
+//   · When `tabs` is empty the bar collapses to a single "+ Add tab"
+//     pill. The first click promotes the doc to multi-tab mode.
+//   · Each tab supports click-to-switch, hover-reveal rename/delete,
+//     inline rename input, and inline red delete confirm.
+//   · Active tab gets a Framer-Motion `layoutId` underline that
+//     animates between tabs on switch.
+// ═════════════════════════════════════════════════════════════════
+function DocTabBar({
+  tabs,
+  activeTabId,
+  renamingTabId,
+  pendingDeleteTabId,
+  onSelect,
+  onAddTab,
+  onBeginRename,
+  onCommitRename,
+  onCancelRename,
+  onBeginDelete,
+  onCommitDelete,
+  onCancelDelete,
+}: {
+  tabs: WorkspaceDocTab[];
+  activeTabId: string | null;
+  renamingTabId: string | null;
+  pendingDeleteTabId: string | null;
+  onSelect: (id: string) => void;
+  onAddTab: () => void;
+  onBeginRename: (id: string) => void;
+  onCommitRename: (id: string, name: string) => void;
+  onCancelRename: () => void;
+  onBeginDelete: (id: string) => void;
+  onCommitDelete: () => void;
+  onCancelDelete: () => void;
+}) {
+  // Empty state: tiny inline button. Doesn't dominate the layout.
+  if (tabs.length === 0) {
+    return (
+      <div className="flex items-center mb-4">
+        <button
+          type="button"
+          onClick={onAddTab}
+          className="inline-flex items-center gap-1.5 px-2.5 h-7 rounded-sm text-[11px] font-semibold uppercase tracking-wider text-foreground/45 hover:text-foreground hover:bg-muted/40 transition-colors"
+          title="Split this document into multiple tabs"
+        >
+          <Plus size={11} />
+          Add tab
+        </button>
+      </div>
+    );
+  }
+
+  const sorted = [...tabs].sort((a, b) => a.position - b.position);
+
+  return (
+    <div className="mb-4">
+      <div className="flex items-center gap-1 border-b border-border/60">
+        {sorted.map((tab) => {
+          const isActive = tab.id === activeTabId;
+          const isRenaming = tab.id === renamingTabId;
+          return (
+            <div
+              key={tab.id}
+              className={
+                "relative group flex items-center gap-1 px-3 h-9 cursor-pointer transition-colors " +
+                (isActive
+                  ? "text-foreground"
+                  : "text-foreground/45 hover:text-foreground/70")
+              }
+              onClick={() => !isRenaming && onSelect(tab.id)}
+              onDoubleClick={(e) => {
+                e.stopPropagation();
+                onBeginRename(tab.id);
+              }}
+            >
+              {tab.icon && (
+                <span className="text-[13px] leading-none">{tab.icon}</span>
+              )}
+              {isRenaming ? (
+                <TabInlineRename
+                  initial={tab.title}
+                  onCommit={(name) => onCommitRename(tab.id, name)}
+                  onCancel={onCancelRename}
+                />
+              ) : (
+                <span className="text-[12px] font-bold uppercase tracking-wider whitespace-nowrap">
+                  {tab.title}
+                </span>
+              )}
+
+              {!isRenaming && (
+                <div
+                  className="hidden group-hover:flex items-center gap-0.5 ml-1"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <button
+                    type="button"
+                    onClick={() => onBeginRename(tab.id)}
+                    title="Rename"
+                    className="p-0.5 text-foreground/40 hover:text-foreground transition-colors"
+                  >
+                    <Pencil size={9} />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => onBeginDelete(tab.id)}
+                    title="Delete tab"
+                    className="p-0.5 text-foreground/40 hover:text-red-400 transition-colors"
+                  >
+                    <X size={10} />
+                  </button>
+                </div>
+              )}
+
+              {isActive && (
+                <motion.span
+                  layoutId="doc-tab-underline"
+                  className="absolute left-0 right-0 bottom-[-1px] h-[2px] bg-primary"
+                  transition={{ type: "spring", damping: 28, stiffness: 320 }}
+                />
+              )}
+            </div>
+          );
+        })}
+
+        {/* Add-tab pill at the end of the strip */}
+        <button
+          type="button"
+          onClick={onAddTab}
+          className="inline-flex items-center gap-1 px-2.5 h-9 text-[11px] font-semibold uppercase tracking-wider text-foreground/40 hover:text-foreground hover:bg-muted/40 transition-colors"
+          title="New tab"
+        >
+          <Plus size={11} />
+        </button>
+      </div>
+
+      {/* Inline delete-confirm row directly below the bar */}
+      {pendingDeleteTabId && (
+        <div className="flex items-center gap-2 px-3 py-2 mt-1 rounded-sm bg-red-500/[0.08] border border-red-500/30">
+          <X size={11} className="text-red-300 shrink-0" />
+          <span className="flex-1 text-[11.5px] text-foreground/85">
+            Delete tab "
+            {sorted.find((t) => t.id === pendingDeleteTabId)?.title ?? "?"}
+            "? Its content is removed from the document.
+          </span>
+          <button
+            type="button"
+            onClick={onCommitDelete}
+            className="px-2 h-6 rounded-sm bg-red-500/20 hover:bg-red-500/30 text-red-200 text-[11px] font-bold uppercase tracking-wider transition-colors"
+          >
+            Delete
+          </button>
+          <button
+            type="button"
+            onClick={onCancelDelete}
+            className="px-2 h-6 rounded-sm text-foreground/55 hover:text-foreground hover:bg-muted text-[11px] font-medium transition-colors"
+          >
+            Cancel
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function TabInlineRename({
+  initial,
+  onCommit,
+  onCancel,
+}: {
+  initial: string;
+  onCommit: (name: string) => void;
+  onCancel: () => void;
+}) {
+  const [value, setValue] = useState(initial);
+  const ref = useRef<HTMLInputElement>(null);
+  useEffect(() => {
+    ref.current?.focus();
+    ref.current?.select();
+  }, []);
+  return (
+    <input
+      ref={ref}
+      value={value}
+      onChange={(e) => setValue(e.target.value)}
+      onKeyDown={(e) => {
+        e.stopPropagation();
+        if (e.key === "Enter") {
+          e.preventDefault();
+          onCommit(value);
+        } else if (e.key === "Escape") {
+          e.preventDefault();
+          onCancel();
+        }
+      }}
+      onClick={(e) => e.stopPropagation()}
+      onBlur={() => {
+        if (value.trim()) onCommit(value);
+        else onCancel();
+      }}
+      className="bg-background border border-primary/40 rounded-sm px-1.5 py-0.5 text-[12px] font-bold uppercase tracking-wider text-foreground outline-none focus:border-primary/60 min-w-[80px]"
+    />
   );
 }

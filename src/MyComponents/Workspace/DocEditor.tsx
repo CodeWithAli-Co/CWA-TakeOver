@@ -35,6 +35,10 @@ interface Props {
   ydoc: Y.Doc;
   provider: SupabaseYProvider | null;
   user: RemoteUser;
+  /** Y.js XML fragment name to bind to. Defaults to 'default' for
+   *  single-tab / legacy documents. Multi-tab docs pass `tab:<id>`
+   *  so each tab gets its own fragment within the same Y.Doc. */
+  field?: string;
   /** Notifies the parent that the doc just changed (debounced save). */
   onLocalChange: () => void;
   /** Called when the user picks "Comment" in the bubble menu. */
@@ -91,7 +95,8 @@ function imagePasteDropPlugin(getOnInsert: () => (url: string, alt: string) => v
 const imagePasteDropKey = new PluginKey("workspaceImagePasteDropOuter");
 
 export function DocEditor({
-  ydoc, provider, user, onLocalChange, onAddComment, onFocusComment,
+  ydoc, provider, user, field = "default",
+  onLocalChange, onAddComment, onFocusComment,
 }: Props) {
   const [saving, setSaving] = useState(false);
   const [recentlySaved, setRecentlySaved] = useState(false);
@@ -118,7 +123,11 @@ export function DocEditor({
     {
       extensions: [
         ...getBaseDocExtensions({ withHistory: false }),
-        Collaboration.configure({ document: ydoc }),
+        // `field` binds the editor to a specific named XML fragment
+        // inside the Y.Doc. Multi-tab docs pass 'tab:<id>' so each
+        // tab has its own fragment; single-tab/legacy docs default
+        // to 'default' so old content keeps rendering.
+        Collaboration.configure({ document: ydoc, field }),
         ...(provider
           ? [CollaborationCursor.configure({ provider, user })]
           : []),
@@ -145,8 +154,10 @@ export function DocEditor({
         }, 900);
       },
     },
-    // Recreate the editor if we get a different Y.Doc or provider.
-    [ydoc, provider],
+    // Recreate the editor if we get a different Y.Doc, provider, or
+    // field. Field change happens on tab switch — fresh editor binds
+    // to the new fragment cleanly without any save/restore dance.
+    [ydoc, provider, field],
   );
 
   const onUpdateTimerRef = useRef<number | null>(null);
