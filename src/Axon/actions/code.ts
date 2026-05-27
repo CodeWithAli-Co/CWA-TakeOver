@@ -13,6 +13,7 @@
 
 import type { AxonAction } from "../types";
 import { registerAction } from "./registry";
+import { isSafeModeOn } from "./workspace";
 import {
   pickWorkspaceDirectory,
   ensureWorkspaceExists,
@@ -516,6 +517,12 @@ export const modifyFileAction: AxonAction<
   mutating: true,
   requiresConfirmation: true,
   handler: async ({ filename, brief, language }, ctx) => {
+    if (isSafeModeOn()) {
+      throw new Error(
+        "Refused: Workspace Safe Mode is on and modify_file rewrites existing files. " +
+        "Use generate_file (which only creates new) or disable Workspace Safe Mode in AXON settings."
+      );
+    }
     const ws = workspaceOrNull();
     if (!ws) {
       return { summary: "No workspace set." };
@@ -654,6 +661,12 @@ export const deleteWorkspaceFileAction: AxonAction<
   mutating: true,
   requiresConfirmation: true,
   handler: async ({ path }, ctx) => {
+    if (isSafeModeOn()) {
+      throw new Error(
+        "Refused: Workspace Safe Mode is on and delete_workspace_file is destructive. " +
+        "Disable Workspace Safe Mode in AXON settings if you really want AXON to delete files."
+      );
+    }
     const ws = workspaceOrNull();
     if (!ws) return { summary: "No workspace set." };
     let snapshot: string | null = null;

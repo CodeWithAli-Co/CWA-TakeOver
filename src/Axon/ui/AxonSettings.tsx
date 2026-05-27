@@ -183,6 +183,54 @@ export function AxonSettingsPane() {
 
         <div className="axon-settings-row" style={{ marginTop: 10 }}>
           <div style={{ display: "flex", flexDirection: "column", flex: 1 }}>
+            <span>Workspace safe mode</span>
+            <span style={{ fontSize: 11, color: "var(--axon-muted)" }}>
+              AXON can create new docs, append sections, and fill [FILL: …] placeholders.
+              Cannot overwrite existing content or delete docs/files. Recommended.
+            </span>
+          </div>
+          <input
+            className="axon-switch"
+            type="checkbox"
+            checked={settings.workspaceSafeMode !== false}
+            onChange={(e) =>
+              updateSettings({ workspaceSafeMode: e.target.checked })
+            }
+          />
+        </div>
+
+        <div
+          className="axon-settings-row"
+          style={{
+            borderRadius: 8,
+            padding: "8px 10px",
+            background: settings.workspaceSafeMode !== false
+              ? "hsl(142 71% 45% / 0.08)"
+              : "hsl(0 72% 51% / 0.08)",
+            border: `1px solid ${
+              settings.workspaceSafeMode !== false
+                ? "hsl(142 71% 45% / 0.25)"
+                : "hsl(0 72% 51% / 0.25)"
+            }`,
+          }}
+        >
+          <div style={{ display: "flex", flexDirection: "column", flex: 1, gap: 2 }}>
+            <span style={{
+              fontSize: 11, fontWeight: 600, letterSpacing: "0.08em",
+              color: settings.workspaceSafeMode !== false ? "hsl(142 71% 65%)" : "hsl(0 72% 68%)",
+            }}>
+              {settings.workspaceSafeMode !== false ? "🟢 SAFE MODE" : "🔴 FULL EDIT POWER"}
+            </span>
+            <span style={{ fontSize: 11, color: "var(--axon-muted)", lineHeight: 1.4 }}>
+              {settings.workspaceSafeMode !== false
+                ? "Writes are additive only. AXON cannot clobber your existing content."
+                : "AXON can overwrite and delete. Trust the undo stack to save you."}
+            </span>
+          </div>
+        </div>
+
+        <div className="axon-settings-row" style={{ marginTop: 10 }}>
+          <div style={{ display: "flex", flexDirection: "column", flex: 1 }}>
             <span>Continuous listen mode</span>
             <span style={{ fontSize: 11, color: "var(--axon-muted)" }}>
               After the wake word, stay armed until you say "stand down".

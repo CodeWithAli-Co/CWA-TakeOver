@@ -1,0 +1,629 @@
+// ───────────────────────────────────────────────────────────────────
+// Workspace actions — gives AXON safe read + write access to the
+// Workspace module (docs, sheets, folders).
+//
+// Two design constraints:
+//   1) BULK READ. AXON can read every doc in the workspace in one call
+//      (tree + previews) and then deep-read specific docs by id. No
+//      more page-by-page navigation.
+//
+//   2) SAFE WRITES. When `workspaceSafeMode` is on (default), AXON can
+//      only do non-destructive operations:
+//        ✓ workspace_create_doc      — net-new doc
+//        ✓ workspace_append_to_doc   — adds a paragraph block at the end
+//        ✓ workspace_fill_placeholders — replaces only [FILL: hint] markers
+//      Any attempt to delete or overwrite existing content is refused
+//      with an error explaining the safe alternative.
+//
+// All mutations write to the Supabase `content` column (TipTap JSON)
+// and null out `y_state` so the next editor session re-initializes
+// from JSON. Anyone with the doc currently open will see AXON's
+// changes after a refresh. This trades real-time collaboration for
+// predictability — exactly what the operator asked for.
+// ───────────────────────────────────────────────────────────────────
+
+import supabase from "@/MyComponents/supabase";
+import type { AxonAction } from "../types";
+import { registerAction } from "./registry";
+import { registerUndoHandler } from "../engine/undoStack";
+import { AXON_SETTINGS_KEY } from "../config";
+import type { JSONContent } from "@tiptap/react";
+
+const DOC_TABLE = "workspace_documents";
+const SHEET_TABLE = "workspace_spreadsheets";
+const FOLDER_TABLE = "workspace_folders";
+
+// ─── Safe-mode helper ─────────────────────────────────────────────
+
+/** Read the workspace_safe_mode flag from persisted Axon settings.
+ *  Defaults to TRUE (safe) when settings are missing or malformed —
+ *  fail-safe is the only correct default for this kind of gate. */
+function isSafeModeOn(): boolean {
+  try {
+    const raw = window.localStorage.getItem(AXON_SETTINGS_KEY);
+    if (!raw) return true;
+    const parsed = JSON.parse(raw);
+    return parsed?.workspaceSafeMode !== false;
+  } catch {
+    return true;
+  }
+}
+
+/** Throw a structured refusal that AXON's brain will surface verbatim
+ *  to the operator. Use when safe-mode blocks a destructive call. */
+function refuseDestructive(actionName: string, alternative: string): never {
+  throw new Error(
+    `Refused: safe-mode is on and ${actionName} is destructive. ` +
+    `Try ${alternative} instead, or disable Workspace Safe Mode in AXON settings.`
+  );
+}
+
+// ─── Persistable undo handlers ────────────────────────────────────
+
+registerUndoHandler<{ docId: string; title: string }>(
+  "workspace.delete-created-doc",
+  async ({ docId, title }) => {
+    const { error } = await supabase.from(DOC_TABLE).delete().eq("id", docId);
+    if (error) throw new Error(error.message);
+    return `Reverted — deleted doc "${title}".`;
+  },
+);
+
+registerUndoHandler<{ docId: string; previousContent: JSONContent; previousYState: string | null }>(
+  "workspace.restore-content",
+  async ({ docId, previousContent, previousYState }) => {
+    const { error } = await supabase
+      .from(DOC_TABLE)
+      .update({ content: previousContent, y_state: previousYState })
+      .eq("id", docId);
+    if (error) throw new Error(error.message);
+    return `Reverted — restored previous doc content.`;
+  },
+);
+
+// ─── JSONContent helpers ──────────────────────────────────────────
+
+/** Walk a TipTap JSON tree and concatenate all text into a single
+ *  string. Used for previews + keyword search. */
+function flattenText(node: JSONContent | null | undefined): string {
+  if (!node) return "";
+  if (node.type === "text" && typeof node.text === "string") return node.text;
+  if (!node.content) return "";
+  return node.content.map(flattenText).join(node.type === "paragraph" ? " " : "\n");
+}
+
+/** Build a short preview from a doc's content. ~200 chars, single line. */
+function buildPreview(content: JSONContent | null | undefined, maxChars = 200): string {
+  const text = flattenText(content).replace(/\s+/g, " ").trim();
+  if (text.length <= maxChars) return text;
+  return text.slice(0, maxChars).trim() + "…";
+}
+
+/** Append a freshly-built paragraph (or heading) block to the END of
+ *  the doc's content. Pure — returns the new JSONContent. */
+function appendParagraphs(
+  current: JSONContent | null | undefined,
+  paragraphs: { text: string; heading?: 1 | 2 | 3 }[],
+): JSONContent {
+  const root: JSONContent = current && current.type === "doc"
+    ? { ...current, content: [...(current.content ?? [])] }
+    : { type: "doc", content: [] };
+  for (const p of paragraphs) {
+    if (p.heading) {
+      root.content!.push({
+        type: "heading",
+        attrs: { level: p.heading },
+        content: [{ type: "text", text: p.text }],
+      });
+    } else {
+      root.content!.push({
+        type: "paragraph",
+        content: [{ type: "text", text: p.text }],
+      });
+    }
+  }
+  return root;
+}
+
+/** Walk JSONContent and replace every text node containing a
+ *  `[FILL: hint here]` marker with the supplied value for that hint.
+ *  Returns { content, replacedCount, hintsSeen }. Pure. */
+function fillPlaceholders(
+  current: JSONContent | null | undefined,
+  values: Record<string, string>,
+): { content: JSONContent; replacedCount: number; hintsSeen: string[] } {
+  const hintsSeen: string[] = [];
+  let replacedCount = 0;
+  const re = /\[FILL:\s*([^\]]+?)\s*\]/gi;
+
+  function walk(node: JSONContent): JSONContent {
+    if (node.type === "text" && typeof node.text === "string") {
+      const text = node.text;
+      // Capture all hints first so we can report them even if we don't fill
+      const matches = [...text.matchAll(re)];
+      for (const m of matches) hintsSeen.push(m[1].trim());
+      const replaced = text.replace(re, (_match, hint) => {
+        const key = String(hint).trim();
+        const lookup = values[key] ?? values[key.toLowerCase()];
+        if (lookup !== undefined) {
+          replacedCount++;
+          return lookup;
+        }
+        return _match;
+      });
+      return { ...node, text: replaced };
+    }
+    if (node.content) {
+      return { ...node, content: node.content.map(walk) };
+    }
+    return node;
+  }
+
+  const out = current ? walk(current) : { type: "doc", content: [] };
+  return { content: out, replacedCount, hintsSeen };
+}
+
+// ═════════════════════════════════════════════════════════════════
+// READ actions
+// ═════════════════════════════════════════════════════════════════
+
+// ─── workspace_overview ───────────────────────────────────────────
+/** Returns the entire workspace as a flat list with title + folder +
+ *  short preview per doc. Designed to be ONE call, not 50 round-trips. */
+export const workspaceOverviewAction: AxonAction<
+  { includeArchived?: boolean; folderId?: string | null; maxDocs?: number },
+  {
+    folders: { id: string; name: string; parent_folder_id: string | null }[];
+    docs: { id: string; title: string; folder_id: string | null; updated_at: string; preview: string }[];
+    sheets: { id: string; title: string; folder_id: string | null; updated_at: string }[];
+    totalDocs: number;
+    truncated: boolean;
+  }
+> = {
+  name: "workspace_overview",
+  description:
+    "Read the entire workspace in one call: folder tree + every doc with a short preview (~200 chars) + every spreadsheet. " +
+    "Use this BEFORE asking the operator to navigate to specific docs — you can usually answer from previews. " +
+    "Call workspace_read_doc with an id when you need the full text.",
+  input_schema: {
+    type: "object",
+    properties: {
+      includeArchived: { type: "boolean", description: "Include archived docs/sheets." },
+      folderId: { type: "string", description: "Filter to one folder id (omit for all)." },
+      maxDocs: { type: "number", description: "Cap on docs returned (default 200)." },
+    },
+  },
+  handler: async (input) => {
+    const cap = Math.max(1, Math.min(500, input.maxDocs ?? 200));
+    const [foldersRes, docsRes, sheetsRes] = await Promise.all([
+      supabase.from(FOLDER_TABLE).select("id, name, parent_folder_id").order("position", { ascending: true }),
+      supabase.from(DOC_TABLE)
+        .select("id, title, folder_id, updated_at, archived, content")
+        .order("updated_at", { ascending: false }),
+      supabase.from(SHEET_TABLE)
+        .select("id, title, folder_id, updated_at, archived")
+        .order("updated_at", { ascending: false }),
+    ]);
+    if (foldersRes.error) throw new Error(foldersRes.error.message);
+    if (docsRes.error) throw new Error(docsRes.error.message);
+    if (sheetsRes.error) throw new Error(sheetsRes.error.message);
+
+    const allDocs = (docsRes.data ?? []) as any[];
+    let docsFiltered = allDocs.filter((d) => input.includeArchived || !d.archived);
+    if (input.folderId !== undefined) docsFiltered = docsFiltered.filter((d) => d.folder_id === input.folderId);
+    const totalDocs = docsFiltered.length;
+    const truncated = totalDocs > cap;
+    const docs = docsFiltered.slice(0, cap).map((d) => ({
+      id: d.id,
+      title: d.title,
+      folder_id: d.folder_id ?? null,
+      updated_at: d.updated_at,
+      preview: buildPreview(d.content),
+    }));
+
+    const sheets = (sheetsRes.data ?? [])
+      .filter((s: any) => input.includeArchived || !s.archived)
+      .map((s: any) => ({
+        id: s.id, title: s.title, folder_id: s.folder_id ?? null, updated_at: s.updated_at,
+      }));
+
+    return {
+      summary: `Read overview: ${docs.length} docs, ${sheets.length} sheets, ${foldersRes.data?.length ?? 0} folders${truncated ? ` (truncated from ${totalDocs})` : ""}.`,
+      data: {
+        folders: (foldersRes.data ?? []) as any,
+        docs, sheets, totalDocs, truncated,
+      },
+    };
+  },
+};
+
+// ─── workspace_read_doc ───────────────────────────────────────────
+/** Full content of one doc. */
+export const workspaceReadDocAction: AxonAction<
+  { docId: string },
+  { id: string; title: string; updated_at: string; text: string; folder_id: string | null }
+> = {
+  name: "workspace_read_doc",
+  description: "Read the full text of one workspace doc. Pass the id returned by workspace_overview.",
+  input_schema: {
+    type: "object",
+    properties: { docId: { type: "string", description: "UUID of the doc to read." } },
+    required: ["docId"],
+  },
+  handler: async ({ docId }) => {
+    const { data, error } = await supabase
+      .from(DOC_TABLE)
+      .select("id, title, updated_at, folder_id, content")
+      .eq("id", docId)
+      .maybeSingle();
+    if (error) throw new Error(error.message);
+    if (!data) throw new Error(`No doc with id ${docId}.`);
+    const text = flattenText((data as any).content);
+    return {
+      summary: `Read "${data.title}" (${text.length} chars).`,
+      data: {
+        id: data.id, title: data.title, updated_at: data.updated_at,
+        folder_id: (data as any).folder_id ?? null, text,
+      },
+    };
+  },
+};
+
+// ─── workspace_search ─────────────────────────────────────────────
+/** Keyword search across all doc text. Returns matches ranked by hit count. */
+export const workspaceSearchAction: AxonAction<
+  { query: string; maxResults?: number },
+  { matches: { docId: string; title: string; hits: number; snippet: string }[] }
+> = {
+  name: "workspace_search",
+  description:
+    "Keyword search across every workspace doc. Returns the top matches by hit count, " +
+    "each with a snippet around the first hit. Use this when you don't know which docs are relevant " +
+    "and the operator hasn't told you.",
+  input_schema: {
+    type: "object",
+    properties: {
+      query: { type: "string", description: "Search terms (whitespace-separated; matched case-insensitive)." },
+      maxResults: { type: "number", description: "Cap on results (default 12, max 30)." },
+    },
+    required: ["query"],
+  },
+  handler: async ({ query, maxResults }) => {
+    const cap = Math.max(1, Math.min(30, maxResults ?? 12));
+    const terms = query.toLowerCase().split(/\s+/).filter(Boolean);
+    if (terms.length === 0) {
+      return { summary: "Empty search query.", data: { matches: [] } };
+    }
+    const { data, error } = await supabase
+      .from(DOC_TABLE).select("id, title, content, archived");
+    if (error) throw new Error(error.message);
+
+    const ranked = ((data ?? []) as any[])
+      .filter((d) => !d.archived)
+      .map((d) => {
+        const text = flattenText(d.content);
+        const lower = text.toLowerCase();
+        let hits = 0;
+        let firstHit = -1;
+        for (const t of terms) {
+          const idx = lower.indexOf(t);
+          if (idx >= 0) {
+            hits++;
+            if (firstHit < 0 || idx < firstHit) firstHit = idx;
+          }
+        }
+        if (hits === 0) return null;
+        const start = Math.max(0, firstHit - 40);
+        const end = Math.min(text.length, firstHit + 160);
+        const snippet = (start > 0 ? "…" : "") + text.slice(start, end).replace(/\s+/g, " ") + (end < text.length ? "…" : "");
+        return { docId: d.id, title: d.title, hits, snippet };
+      })
+      .filter((x): x is { docId: string; title: string; hits: number; snippet: string } => x !== null)
+      .sort((a, b) => b.hits - a.hits)
+      .slice(0, cap);
+
+    return {
+      summary: `Search for "${query}" → ${ranked.length} doc${ranked.length === 1 ? "" : "s"} matched.`,
+      data: { matches: ranked },
+    };
+  },
+};
+
+// ═════════════════════════════════════════════════════════════════
+// SAFE WRITE actions (also work in destructive mode)
+// ═════════════════════════════════════════════════════════════════
+
+// ─── workspace_create_doc ─────────────────────────────────────────
+/** Create a new doc with optional initial paragraphs. Always allowed
+ *  in safe mode — creation is by definition non-destructive. */
+export const workspaceCreateDocAction: AxonAction<
+  { title: string; paragraphs?: string[]; folderId?: string | null },
+  { docId: string; title: string }
+> = {
+  name: "workspace_create_doc",
+  description:
+    "Create a new workspace doc. Pass `paragraphs` to seed it with body content. " +
+    "Always safe — this never overwrites existing content.",
+  input_schema: {
+    type: "object",
+    properties: {
+      title: { type: "string", description: "Doc title." },
+      paragraphs: { type: "array", items: { type: "string" }, description: "Optional initial paragraphs (each becomes a paragraph block)." },
+      folderId: { type: "string", description: "Folder UUID to place the doc in. Omit for root." },
+    },
+    required: ["title"],
+  },
+  mutating: true,
+  handler: async ({ title, paragraphs, folderId }, ctx) => {
+    const content = appendParagraphs(
+      { type: "doc", content: [] },
+      (paragraphs ?? []).map((p) => ({ text: p })),
+    );
+    const { data, error } = await supabase
+      .from(DOC_TABLE)
+      .insert({
+        title,
+        content,
+        owner: ctx.operator.supa_id,
+        visibility: "private",
+        folder_id: folderId ?? null,
+        updated_by: ctx.operator.supa_id,
+      })
+      .select("id, title")
+      .single();
+    if (error) throw new Error(error.message);
+
+    ctx.pushUndo({
+      actionName: "workspace_create_doc",
+      label: `Delete doc "${title}"`,
+      descriptor: { kind: "workspace.delete-created-doc", payload: { docId: data.id, title } },
+    });
+
+    return {
+      summary: `Created doc "${title}"${paragraphs?.length ? ` with ${paragraphs.length} paragraph${paragraphs.length === 1 ? "" : "s"}` : ""}.`,
+      data: { docId: data.id, title: data.title },
+    };
+  },
+};
+
+// ─── workspace_append_to_doc ──────────────────────────────────────
+/** Append one or more paragraphs to the END of an existing doc.
+ *  Safe — never modifies existing content. */
+export const workspaceAppendAction: AxonAction<
+  { docId: string; paragraphs: string[]; heading?: string },
+  { docId: string; title: string; appendedBlocks: number }
+> = {
+  name: "workspace_append_to_doc",
+  description:
+    "Append new paragraphs to the END of an existing doc. Optionally inserts a heading first. " +
+    "Safe — never modifies existing content above the append point. " +
+    "Anyone with the doc currently open should refresh to see the new content.",
+  input_schema: {
+    type: "object",
+    properties: {
+      docId: { type: "string", description: "Doc UUID." },
+      paragraphs: { type: "array", items: { type: "string" }, description: "Paragraphs to append." },
+      heading: { type: "string", description: "Optional H2 heading inserted before the paragraphs." },
+    },
+    required: ["docId", "paragraphs"],
+  },
+  mutating: true,
+  handler: async ({ docId, paragraphs, heading }, ctx) => {
+    if (paragraphs.length === 0) throw new Error("No paragraphs supplied.");
+
+    // Read current state for undo + append.
+    const { data: current, error: readErr } = await supabase
+      .from(DOC_TABLE).select("title, content, y_state").eq("id", docId).single();
+    if (readErr) throw new Error(readErr.message);
+
+    const blocks: { text: string; heading?: 1 | 2 | 3 }[] = [];
+    if (heading) blocks.push({ text: heading, heading: 2 });
+    for (const p of paragraphs) blocks.push({ text: p });
+
+    const nextContent = appendParagraphs(current.content as JSONContent, blocks);
+
+    const { error: writeErr } = await supabase
+      .from(DOC_TABLE)
+      .update({
+        content: nextContent,
+        // Null out y_state so any open editor session re-initializes from
+        // the JSON content on next mount; otherwise the editor's stale
+        // Y.Doc state would overwrite our changes on its next debounced save.
+        y_state: null,
+        updated_by: ctx.operator.supa_id,
+      })
+      .eq("id", docId);
+    if (writeErr) throw new Error(writeErr.message);
+
+    ctx.pushUndo({
+      actionName: "workspace_append_to_doc",
+      label: `Undo append to "${current.title}"`,
+      descriptor: {
+        kind: "workspace.restore-content",
+        payload: { docId, previousContent: current.content, previousYState: current.y_state ?? null },
+      },
+    });
+
+    return {
+      summary: `Appended ${blocks.length} block${blocks.length === 1 ? "" : "s"} to "${current.title}".`,
+      data: { docId, title: current.title, appendedBlocks: blocks.length },
+    };
+  },
+};
+
+// ─── workspace_fill_placeholders ──────────────────────────────────
+/** Find `[FILL: hint]` markers in a doc and replace them with values.
+ *  Safe — only modifies text within the marker syntax. */
+export const workspaceFillAction: AxonAction<
+  { docId: string; values: Record<string, string> },
+  { docId: string; title: string; replacedCount: number; hintsSeen: string[]; hintsUnfilled: string[] }
+> = {
+  name: "workspace_fill_placeholders",
+  description:
+    "Find [FILL: hint] markers in a doc and replace them with values. " +
+    "Example: if the doc contains 'Total: [FILL: total_raise]', pass values={total_raise: '$1.5M'}. " +
+    "Safe — never modifies any text outside the marker syntax.",
+  input_schema: {
+    type: "object",
+    properties: {
+      docId: { type: "string", description: "Doc UUID." },
+      values: {
+        type: "object",
+        description: "Map of hint → replacement text. Hints are matched against the text inside [FILL: …] (trimmed, case-insensitive fallback).",
+      },
+    },
+    required: ["docId", "values"],
+  },
+  mutating: true,
+  handler: async ({ docId, values }, ctx) => {
+    const { data: current, error: readErr } = await supabase
+      .from(DOC_TABLE).select("title, content, y_state").eq("id", docId).single();
+    if (readErr) throw new Error(readErr.message);
+
+    const { content: nextContent, replacedCount, hintsSeen } =
+      fillPlaceholders(current.content as JSONContent, values);
+
+    if (replacedCount === 0) {
+      const seen = Array.from(new Set(hintsSeen));
+      return {
+        summary: seen.length === 0
+          ? `No [FILL: …] markers found in "${current.title}".`
+          : `Found ${seen.length} marker${seen.length === 1 ? "" : "s"} but none matched the supplied values: ${seen.join(", ")}.`,
+        data: { docId, title: current.title, replacedCount: 0, hintsSeen: seen, hintsUnfilled: seen },
+      };
+    }
+
+    const { error: writeErr } = await supabase
+      .from(DOC_TABLE)
+      .update({ content: nextContent, y_state: null, updated_by: ctx.operator.supa_id })
+      .eq("id", docId);
+    if (writeErr) throw new Error(writeErr.message);
+
+    const seen = Array.from(new Set(hintsSeen));
+    const unfilled = seen.filter((h) => !(h in values) && !(h.toLowerCase() in values));
+
+    ctx.pushUndo({
+      actionName: "workspace_fill_placeholders",
+      label: `Undo placeholder fills in "${current.title}"`,
+      descriptor: {
+        kind: "workspace.restore-content",
+        payload: { docId, previousContent: current.content, previousYState: current.y_state ?? null },
+      },
+    });
+
+    return {
+      summary: `Filled ${replacedCount} placeholder${replacedCount === 1 ? "" : "s"} in "${current.title}"${unfilled.length ? ` (${unfilled.length} unfilled: ${unfilled.join(", ")})` : ""}.`,
+      data: { docId, title: current.title, replacedCount, hintsSeen: seen, hintsUnfilled: unfilled },
+    };
+  },
+};
+
+// ═════════════════════════════════════════════════════════════════
+// DESTRUCTIVE actions — refused in safe mode
+// ═════════════════════════════════════════════════════════════════
+
+// ─── workspace_replace_doc_content ────────────────────────────────
+/** Replace a doc's entire content with new text. REFUSED in safe mode. */
+export const workspaceReplaceAction: AxonAction<
+  { docId: string; paragraphs: string[] },
+  { docId: string; title: string }
+> = {
+  name: "workspace_replace_doc_content",
+  description:
+    "Replace a doc's ENTIRE content with new paragraphs. DESTRUCTIVE — refused while Workspace Safe Mode is on. " +
+    "Prefer workspace_append_to_doc or workspace_fill_placeholders when possible.",
+  input_schema: {
+    type: "object",
+    properties: {
+      docId: { type: "string", description: "Doc UUID." },
+      paragraphs: { type: "array", items: { type: "string" }, description: "Full new content." },
+    },
+    required: ["docId", "paragraphs"],
+  },
+  mutating: true,
+  requiresConfirmation: true,
+  handler: async ({ docId, paragraphs }, ctx) => {
+    if (isSafeModeOn()) {
+      refuseDestructive(
+        "workspace_replace_doc_content",
+        "workspace_append_to_doc (additive) or workspace_fill_placeholders (only fills [FILL: …] markers)"
+      );
+    }
+
+    const { data: current, error: readErr } = await supabase
+      .from(DOC_TABLE).select("title, content, y_state").eq("id", docId).single();
+    if (readErr) throw new Error(readErr.message);
+
+    const nextContent = appendParagraphs({ type: "doc", content: [] }, paragraphs.map((p) => ({ text: p })));
+
+    const { error: writeErr } = await supabase
+      .from(DOC_TABLE)
+      .update({ content: nextContent, y_state: null, updated_by: ctx.operator.supa_id })
+      .eq("id", docId);
+    if (writeErr) throw new Error(writeErr.message);
+
+    ctx.pushUndo({
+      actionName: "workspace_replace_doc_content",
+      label: `Undo content replace on "${current.title}"`,
+      descriptor: {
+        kind: "workspace.restore-content",
+        payload: { docId, previousContent: current.content, previousYState: current.y_state ?? null },
+      },
+    });
+
+    return {
+      summary: `Replaced content of "${current.title}".`,
+      data: { docId, title: current.title },
+    };
+  },
+};
+
+// ─── workspace_delete_doc ─────────────────────────────────────────
+export const workspaceDeleteAction: AxonAction<
+  { docId: string },
+  { docId: string; title: string }
+> = {
+  name: "workspace_delete_doc",
+  description:
+    "Delete a workspace doc. DESTRUCTIVE — refused while Workspace Safe Mode is on. " +
+    "Prefer setting `archived: true` if you want to hide a doc.",
+  input_schema: {
+    type: "object",
+    properties: { docId: { type: "string", description: "Doc UUID." } },
+    required: ["docId"],
+  },
+  mutating: true,
+  requiresConfirmation: true,
+  handler: async ({ docId }, _ctx) => {
+    if (isSafeModeOn()) {
+      refuseDestructive("workspace_delete_doc", "archiving (set the archived flag on the doc instead)");
+    }
+    const { data: current, error: readErr } = await supabase
+      .from(DOC_TABLE).select("title").eq("id", docId).single();
+    if (readErr) throw new Error(readErr.message);
+    const { error } = await supabase.from(DOC_TABLE).delete().eq("id", docId);
+    if (error) throw new Error(error.message);
+    return {
+      summary: `Deleted doc "${current.title}".`,
+      data: { docId, title: current.title },
+    };
+  },
+};
+
+// ═════════════════════════════════════════════════════════════════
+// Registration
+// ═════════════════════════════════════════════════════════════════
+
+export function registerWorkspaceActions() {
+  registerAction(workspaceOverviewAction);
+  registerAction(workspaceReadDocAction);
+  registerAction(workspaceSearchAction);
+  registerAction(workspaceCreateDocAction);
+  registerAction(workspaceAppendAction);
+  registerAction(workspaceFillAction);
+  registerAction(workspaceReplaceAction);
+  registerAction(workspaceDeleteAction);
+}
+
+// Public helper so other action files can check safe-mode the same way.
+export { isSafeModeOn };

@@ -243,6 +243,20 @@ export interface AxonSettings {
    * Axon again. Use when you need guaranteed silence.
    */
   forceSleep: boolean;
+  /**
+   * Workspace safe-mode — when true, AXON's workspace + filesystem write
+   * powers are scoped to NON-DESTRUCTIVE operations only:
+   *   ✓ Create new docs / files
+   *   ✓ Append new sections to existing docs
+   *   ✓ Fill recognized [FILL: hint] placeholder markers
+   *   ✗ Overwrite existing non-placeholder content
+   *   ✗ Delete docs / files / folders
+   *   ✗ Modify content above the last-modified line
+   * The operator can disable this if they want AXON to have full edit
+   * power, but the default ON makes AXON behave more like a co-author
+   * than a destructive editor. Default: true.
+   */
+  workspaceSafeMode: boolean;
 }
 
 export const DEFAULT_SETTINGS: AxonSettings = {
@@ -285,6 +299,7 @@ export const DEFAULT_SETTINGS: AxonSettings = {
     "at ease",
   ],
   forceSleep: false,
+  workspaceSafeMode: true,
 };
 
 // ── Code projects ──────────────────────────────────────────────────
