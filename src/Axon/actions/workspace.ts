@@ -100,6 +100,44 @@ function assertObject(value: unknown, fieldName: string, action: string): Record
   return value as Record<string, string>;
 }
 
+/** Read the doc id from the current URL (if on a /workspace/docs/<id> page). */
+function currentDocIdFromUrl(): string | null {
+  try {
+    const m = window.location.pathname.match(/\/workspace\/docs\/([0-9a-f-]{36})/i);
+    return m ? m[1] : null;
+  } catch { return null; }
+}
+
+/** Reports whether the doc we're about to write is the one the user
+ *  is actively viewing. Used to add a soft warning to the action
+ *  summary — NOT a refusal. The user explicitly wants AXON to write
+ *  in the background while they work; the data-loss risk only fires
+ *  if they're actively typing in the same doc, which is rare.
+ *
+ *  ONLY workspace_replace_doc_content still treats this as a hard
+ *  refusal because losing the whole doc on a stale save would be
+ *  catastrophic. Append + fill are additive and recoverable. */
+function describeOpenConflict(docId: string): string | null {
+  const open = currentDocIdFromUrl();
+  if (open && open === docId) {
+    return "You have this doc open — if you keep typing, your editor's next save may overwrite my changes. Navigate away or refresh after I finish.";
+  }
+  return null;
+}
+
+/** Hard refusal — used ONLY for destructive replace where stale-save
+ *  data loss would wipe the whole doc. */
+function assertNotCurrentlyOpenStrict(docId: string, action: string): void {
+  const open = currentDocIdFromUrl();
+  if (open && open === docId) {
+    throw new Error(
+      `${action} refused: you have this doc open right now. ` +
+      `Navigate away (or close the tab) first — otherwise your live editor will overwrite my changes on the next keystroke. ` +
+      `This is a destructive operation; the safer path is to navigate away then re-run.`
+    );
+  }
+}
+
 // ─── Persistable undo handlers ────────────────────────────────────
 
 registerUndoHandler<{ docId: string; title: string }>(
@@ -141,8 +179,16 @@ function buildPreview(content: JSONContent | null | undefined, maxChars = 200): 
   return text.slice(0, maxChars).trim() + "…";
 }
 
-/** Append a freshly-built paragraph (or heading) block to the END of
- *  the doc's content. Pure — returns the new JSONContent. */
+/** Append paragraph or heading blocks to the END of the doc's content.
+ *  Pure — returns new JSONContent.
+ *
+ *  Defensive about TipTap invariants:
+ *    - Text nodes MUST have non-empty `text` (TipTap throws otherwise).
+ *      Empty text → emit an empty paragraph block instead.
+ *    - Always ensure the doc ends with a paragraph so the editor can
+ *      place the cursor (avoids "TextSelection endpoint not pointing
+ *      into a node with inline content" warnings).
+ */
 function appendParagraphs(
   current: JSONContent | null | undefined,
   paragraphs: { text: string; heading?: 1 | 2 | 3 }[],
@@ -150,19 +196,31 @@ function appendParagraphs(
   const root: JSONContent = current && current.type === "doc"
     ? { ...current, content: [...(current.content ?? [])] }
     : { type: "doc", content: [] };
+
   for (const p of paragraphs) {
-    if (p.heading) {
+    const trimmed = (p.text ?? "").trim();
+    if (p.heading && trimmed) {
       root.content!.push({
         type: "heading",
         attrs: { level: p.heading },
-        content: [{ type: "text", text: p.text }],
+        content: [{ type: "text", text: trimmed }],
       });
-    } else {
+    } else if (trimmed) {
       root.content!.push({
         type: "paragraph",
         content: [{ type: "text", text: p.text }],
       });
+    } else {
+      // Empty paragraph block — TipTap-legal, gives the user a visual
+      // line break without violating the no-empty-text-node invariant.
+      root.content!.push({ type: "paragraph" });
     }
+  }
+
+  // Ensure trailing paragraph for safe cursor placement.
+  const last = root.content![root.content!.length - 1];
+  if (!last || (last.type !== "paragraph" && last.type !== "heading")) {
+    root.content!.push({ type: "paragraph" });
   }
   return root;
 }
@@ -178,7 +236,7 @@ function fillPlaceholders(
   let replacedCount = 0;
   const re = /\[FILL:\s*([^\]]+?)\s*\]/gi;
 
-  function walk(node: JSONContent): JSONContent {
+  function walk(node: JSONContent): JSONContent | null {
     if (node.type === "text" && typeof node.text === "string") {
       const text = node.text;
       // Capture all hints first so we can report them even if we don't fill
@@ -189,19 +247,27 @@ function fillPlaceholders(
         const lookup = values[key] ?? values[key.toLowerCase()];
         if (lookup !== undefined) {
           replacedCount++;
-          return lookup;
+          // Replace with the value but treat empty string as a literal
+          // placeholder removal — drop the node downstream by returning "".
+          return String(lookup);
         }
         return _match;
       });
+      // TipTap invariant: text nodes can't be empty. Returning null
+      // here is filtered out by the parent walker.
+      if (replaced === "") return null;
       return { ...node, text: replaced };
     }
     if (node.content) {
-      return { ...node, content: node.content.map(walk) };
+      const newContent = node.content
+        .map(walk)
+        .filter((c): c is JSONContent => c !== null);
+      return { ...node, content: newContent };
     }
     return node;
   }
 
-  const out = current ? walk(current) : { type: "doc", content: [] };
+  const out = (current && walk(current)) || { type: "doc", content: [] };
   return { content: out, replacedCount, hintsSeen };
 }
 
@@ -273,6 +339,41 @@ export const workspaceOverviewAction: AxonAction<
         folders: (foldersRes.data ?? []) as any,
         docs, sheets, totalDocs, truncated,
       },
+    };
+  },
+};
+
+// ─── workspace_current_doc ────────────────────────────────────────
+/** Returns the doc id of the doc the operator is CURRENTLY viewing,
+ *  derived from the URL. Lets AXON skip workspace_overview when the
+ *  user clearly means "this doc". Returns null when not on a doc page. */
+export const workspaceCurrentDocAction: AxonAction<
+  Record<string, never>,
+  { docId: string | null; title: string | null }
+> = {
+  name: "workspace_current_doc",
+  description: "Get the id of the doc the operator is viewing right now. Use this BEFORE workspace_overview when the user says 'this doc' or 'the doc I'm in'.",
+  input_schema: { type: "object", properties: {} },
+  handler: async () => {
+    let docId: string | null = null;
+    try {
+      const path = window.location.pathname;
+      const m = path.match(/\/workspace\/docs\/([0-9a-f-]{36})/i);
+      if (m) docId = m[1];
+    } catch { /* SSR / no window */ }
+
+    if (!docId) {
+      return {
+        summary: "Not on a doc page right now.",
+        data: { docId: null, title: null },
+      };
+    }
+    const { data, error } = await supabase
+      .from(DOC_TABLE).select("title").eq("id", docId).maybeSingle();
+    if (error) throw new Error(error.message);
+    return {
+      summary: data ? `Currently viewing "${data.title}".` : "On a doc page but couldn't read the title.",
+      data: { docId, title: data?.title ?? null },
     };
   },
 };
@@ -382,25 +483,57 @@ export const workspaceCreateDocAction: AxonAction<
   { docId: string; title: string }
 > = {
   name: "workspace_create_doc",
-  description: "Create a new doc. Optional paragraphs seed body content. Always safe.",
+  description: "Create a new doc with initial body paragraphs. Use for background report writing — operator does not need to be on the doc. Always safe. IMPORTANT: every paragraph string must be REAL prose; do not pass empty strings or placeholders like '...' or 'TBD'.",
   input_schema: {
     type: "object",
     properties: {
       title: { type: "string", description: "Doc title." },
-      paragraphs: { type: "array", items: { type: "string" }, description: "Optional initial paragraphs." },
+      paragraphs: {
+        type: "array",
+        items: { type: "string" },
+        description: "Body paragraphs as full prose strings. Each becomes a paragraph block. Must contain actual content — empty strings are rejected.",
+      },
       folderId: { type: "string", description: "Optional folder UUID." },
     },
     required: ["title"],
   },
   mutating: true,
   handler: async (input, ctx) => {
+    // Verbose log so we can SEE what the brain passed in. The
+    // hallucinated-write bug ("created with 14 paragraphs" but doc
+    // is empty) is hard to diagnose without seeing the actual input.
+    console.log("[workspace_create_doc] input:", JSON.stringify(input, null, 2));
+
     if (typeof input?.title !== "string" || !input.title.trim()) {
       throw new Error("workspace_create_doc needs a non-empty title.");
     }
     const title = input.title.trim();
-    const paragraphs = Array.isArray(input.paragraphs)
-      ? input.paragraphs.filter((p): p is string => typeof p === "string")
-      : [];
+
+    // Filter to meaningful prose ONLY. Empty strings, whitespace, and
+    // dot-placeholders ("...", "tbd", "lorem ipsum") all get dropped.
+    // If the caller passed an array but nothing survived, that's a
+    // content-generation failure — throw so AXON re-tries with real
+    // prose instead of silently shipping a blank doc.
+    const rawArr = Array.isArray(input.paragraphs) ? input.paragraphs : [];
+    const paragraphs = rawArr.filter((p): p is string => {
+      if (typeof p !== "string") return false;
+      const t = p.trim();
+      if (t.length < 3) return false;                                 // drop "", " ", "."
+      if (/^[\.…\-_=*]+$/.test(t)) return false;                      // drop "...", "---", etc.
+      if (/^(tbd|tba|todo|placeholder|fill in|fill me|n\/a)$/i.test(t)) return false;
+      return true;
+    });
+    if (rawArr.length > 0 && paragraphs.length === 0) {
+      console.warn(
+        "[workspace_create_doc] all paragraphs filtered out. raw input was:",
+        rawArr,
+      );
+      throw new Error(
+        `workspace_create_doc refused: you passed ${rawArr.length} paragraph(s) but none contained real prose. ` +
+        `Re-call with full sentence strings — every paragraph must be the actual body content you want in the doc, not "", "...", "TBD", or a placeholder.`
+      );
+    }
+
     const folderId = typeof input.folderId === "string" && UUID_RE.test(input.folderId) ? input.folderId : null;
     const content = appendParagraphs(
       { type: "doc", content: [] },
@@ -441,7 +574,7 @@ export const workspaceAppendAction: AxonAction<
   { docId: string; title: string; appendedBlocks: number }
 > = {
   name: "workspace_append_to_doc",
-  description: "Append paragraphs to the END of an existing doc. Safe — never modifies content above. docId from workspace_overview.",
+  description: "Append paragraphs to the END of a doc. Use to extend reports, log notes, or write a long doc section-by-section in the background. Each paragraph must be REAL prose — empty strings or placeholders like '...' will be rejected. Safe — never modifies content above. docId from workspace_overview or workspace_current_doc.",
   input_schema: {
     type: "object",
     properties: {
@@ -454,6 +587,7 @@ export const workspaceAppendAction: AxonAction<
   mutating: true,
   handler: async (input, ctx) => {
     const docId = assertId(input?.docId, "docId", "workspace_append_to_doc");
+    const openWarning = describeOpenConflict(docId);
     const paragraphsRaw = assertNonEmptyArray<unknown>(input?.paragraphs, "paragraphs", "workspace_append_to_doc");
     const paragraphs = paragraphsRaw.filter((p): p is string => typeof p === "string" && p.trim().length > 0);
     if (paragraphs.length === 0) {
@@ -495,8 +629,12 @@ export const workspaceAppendAction: AxonAction<
       },
     });
 
+    const summary = openWarning
+      ? `Appended ${blocks.length} block${blocks.length === 1 ? "" : "s"} to "${current.title}". ⚠ ${openWarning}`
+      : `Appended ${blocks.length} block${blocks.length === 1 ? "" : "s"} to "${current.title}". Open the doc to see the changes.`;
+
     return {
-      summary: `Appended ${blocks.length} block${blocks.length === 1 ? "" : "s"} to "${current.title}".`,
+      summary,
       data: { docId, title: current.title, appendedBlocks: blocks.length },
     };
   },
@@ -522,6 +660,7 @@ export const workspaceFillAction: AxonAction<
   mutating: true,
   handler: async (input, ctx) => {
     const docId = assertId(input?.docId, "docId", "workspace_fill_placeholders");
+    const openWarning = describeOpenConflict(docId);
     const values = assertObject(input?.values, "values", "workspace_fill_placeholders");
     const { data: current, error: readErr } = await supabase
       .from(DOC_TABLE).select("title, content, y_state").eq("id", docId).single();
@@ -559,7 +698,7 @@ export const workspaceFillAction: AxonAction<
     });
 
     return {
-      summary: `Filled ${replacedCount} placeholder${replacedCount === 1 ? "" : "s"} in "${current.title}"${unfilled.length ? ` (${unfilled.length} unfilled: ${unfilled.join(", ")})` : ""}.`,
+      summary: `Filled ${replacedCount} placeholder${replacedCount === 1 ? "" : "s"} in "${current.title}"${unfilled.length ? ` (${unfilled.length} unfilled: ${unfilled.join(", ")})` : ""}.${openWarning ? ` ⚠ ${openWarning}` : ""}`,
       data: { docId, title: current.title, replacedCount, hintsSeen: seen, hintsUnfilled: unfilled },
     };
   },
@@ -595,6 +734,7 @@ export const workspaceReplaceAction: AxonAction<
       );
     }
     const docId = assertId(input?.docId, "docId", "workspace_replace_doc_content");
+    assertNotCurrentlyOpenStrict(docId, "workspace_replace_doc_content");
     const paragraphsRaw = assertNonEmptyArray<unknown>(input?.paragraphs, "paragraphs", "workspace_replace_doc_content");
     const paragraphs = paragraphsRaw.filter((p): p is string => typeof p === "string");
     if (paragraphs.length === 0) {
@@ -665,6 +805,7 @@ export const workspaceDeleteAction: AxonAction<
 // ═════════════════════════════════════════════════════════════════
 
 export function registerWorkspaceActions() {
+  registerAction(workspaceCurrentDocAction);
   registerAction(workspaceOverviewAction);
   registerAction(workspaceReadDocAction);
   registerAction(workspaceSearchAction);

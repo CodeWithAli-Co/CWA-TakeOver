@@ -200,10 +200,17 @@ export function DocDetailPage({ id }: Props) {
     // Bootstrap path B: no y_state, but we have TipTap JSON content.
     // Use prosemirrorJSONToYDoc with a schema built from the SAME
     // extension list the editor uses, so the doc shape lines up.
+    //
+    // CRITICAL: the third arg to prosemirrorJSONToYDoc is the Y.Doc
+    // fragment name. It defaults to "prosemirror", but our DocEditor
+    // binds to "default" (or `tab:<id>` for multi-tab docs). Without
+    // passing "default" the seeded content lands in the wrong fragment
+    // and the editor renders empty — manifested as "AXON wrote a doc
+    // but the body is blank when I open it."
     if (!hydratedRef.current && doc.content?.content?.length) {
       try {
         const schema = getSchema(getBaseDocExtensions({ withHistory: true }) as any);
-        const seeded = prosemirrorJSONToYDoc(schema, doc.content as any);
+        const seeded = prosemirrorJSONToYDoc(schema, doc.content as any, "default");
         Y.applyUpdate(next, Y.encodeStateAsUpdate(seeded));
         seeded.destroy();
         hydratedRef.current = true;
