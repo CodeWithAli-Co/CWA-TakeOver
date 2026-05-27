@@ -760,6 +760,7 @@ function ConvertRow({
       role,
       company,
       avatar,
+      email: current.candidate_email,
       // Most installs of app_users have these columns but not all.
       // Supabase will reject unknowns — we attempt, then fall back.
     };
@@ -814,6 +815,7 @@ function ConvertRow({
           username: payload.username,
           role,
           avatar,
+          email: payload.email,
           ...(authUserId ? { supa_id: authUserId } : {}),
         })
         .select()
