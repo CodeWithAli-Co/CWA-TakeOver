@@ -13,6 +13,8 @@ const roleDefinition = [
   { key: "ProjectManager", name: "Project Manager"},
   { key: "Marketing", name: "Marketing Specialist"},
   { key: "CustomerSupport", name: "Customer Support"},
+  { key: "HeadOfInternalAffairs", name: "Head of Internal Affairs" },
+  { key: "HeadOfGrowth", name: "Head of Growth" },
   { key: "Admin", name: "Admin"},
   { key: "SecurityEngineer", name: "SecurityEngineer"},
   { key: "Partner", name: "Partnership Lead"},

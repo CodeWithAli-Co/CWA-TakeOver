@@ -84,8 +84,7 @@ jobs:
           releaseBody: |
             CWA TakeOver __VERSION__.
 
-            Installed copies of older versions will auto-update on next launch.
-            New installs: download the .msi asset below.
+            New Update Available!
           releaseDraft: false
           prerelease: false
           args: ${{ matrix.args }}

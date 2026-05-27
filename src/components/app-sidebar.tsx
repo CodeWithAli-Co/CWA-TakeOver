@@ -24,6 +24,8 @@ import {
   filterNavByCompany,
   filterProjectsByCompany,
   accountManagerData,
+  headOfInternalAffairsData,
+  headOfGrowthData,
 } from "./ui/Dashboard/role-datas";
 import UserView, { Role } from "@/MyComponents/Reusables/userView";
 import { RolePreviewSelector } from "./ui/Dashboard/role-preview";
@@ -52,9 +54,8 @@ function SidebarBrand() {
             {isSimplicity ? "Simplicity" : "CWA TakeOver"}
           </span>
           <span className="text-[10px] text-muted-foreground leading-none">
-            {/* {isSimplicity ? "Funds Admin" : "v1.6.0"} */}
-            {/* *This is the version of TakeOver app */}
-            v1.6.0
+            {/* *This is the version of Simplicity & TakeOver app */}
+            {isSimplicity ? "v1.4.6" : "v1.7.0"}
           </span>
         </div>
       )}
@@ -75,7 +76,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
           </div>
 
           {/* Company Toggle — switches entire dashboard theme */}
-          <UserView userRole={[Role.CEO, Role.COO, Role.AccManager]}>
+          <UserView userRole={[Role.CEO, Role.COO, Role.HeadOfGrowth, Role.HeadOfInternalAffairs]}>
             <CompanyToggle />
           </UserView>
 
@@ -108,6 +109,16 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
           {/* Marketing Specialist View */}
           <UserView userRole={Role.Marketing}>
             <NavMain items={marketingData.navMain} />
+          </UserView>
+
+          {/* Head of Internal Affairs */}
+          <UserView userRole={Role.HeadOfInternalAffairs}>
+            <NavMain items={filterNavByCompany(headOfInternalAffairsData.navMain as any, activeCompany)} />
+          </UserView>
+
+          {/* Head of Growth */}
+          <UserView userRole={Role.HeadOfGrowth}>
+            <NavMain items={filterNavByCompany(headOfGrowthData.navMain as any, activeCompany)} />
           </UserView>
 
           {/* Admin View */}

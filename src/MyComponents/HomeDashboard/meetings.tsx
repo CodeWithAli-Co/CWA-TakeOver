@@ -1,4 +1,4 @@
-import { ScrollArea } from "@radix-ui/react-scroll-area";
+import { ScrollArea } from "@/components/ui/shadcnComponents/scroll-area";
 import { motion } from "framer-motion";
 import {
   Users,
@@ -309,7 +309,8 @@ const Meetings = () => {
         <div className="absolute inset-x-0 top-0 h-[1px] bg-gradient-to-r from-transparent via-primary/40 to-transparent pointer-events-none" />
         {Header}
         <div className="px-5 pb-5 flex-1 min-h-0">
-          <ScrollArea className="h-full min-h-[200px]">
+          {/* *This is 60px bigger than Tasks ScrollArea fixed height */}
+          <ScrollArea className="h-[400px]">
             <div className="space-y-2">
               {list.map((meeting: any, i: number) => (
                 <motion.div

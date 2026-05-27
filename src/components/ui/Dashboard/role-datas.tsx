@@ -45,7 +45,11 @@ export interface NavItem {
   isActive?: boolean;
   /** Which company this item belongs to. undefined = shared (both). */
   company?: "codeWithAli" | "simplicityFunds";
-  items?: { title: string; url?: string; company?: "codeWithAli" | "simplicityFunds" }[];
+  items?: {
+    title: string;
+    url?: string;
+    company?: "codeWithAli" | "simplicityFunds";
+  }[];
 }
 
 export interface ProjectItem {
@@ -106,9 +110,9 @@ export const internData = {
       isActive: false,
       icon: CodeIcon,
       items: [
-        { title: "Repositories",   url: "/code" },
-        { title: "Pull Requests",  url: "/code" },
-        { title: "AI Activity",    url: "/code" },
+        { title: "Repositories", url: "/code" },
+        { title: "Pull Requests", url: "/code" },
+        { title: "AI Activity", url: "/code" },
       ],
     },
 
@@ -166,9 +170,9 @@ export const memberData = {
       isActive: false,
       icon: CodeIcon,
       items: [
-        { title: "Repositories",   url: "/code" },
-        { title: "Pull Requests",  url: "/code" },
-        { title: "AI Activity",    url: "/code" },
+        { title: "Repositories", url: "/code" },
+        { title: "Pull Requests", url: "/code" },
+        { title: "AI Activity", url: "/code" },
       ],
     },
 
@@ -203,7 +207,7 @@ export const accountManagerData = {
         },
         {
           title: "Cold Email Generator",
-          url: "/coldEmail"
+          url: "/coldEmail",
         },
       ],
     },
@@ -251,9 +255,9 @@ export const accountManagerData = {
       isActive: false,
       icon: CodeIcon,
       items: [
-        { title: "Repositories",   url: "/code" },
-        { title: "Pull Requests",  url: "/code" },
-        { title: "AI Activity",    url: "/code" },
+        { title: "Repositories", url: "/code" },
+        { title: "Pull Requests", url: "/code" },
+        { title: "AI Activity", url: "/code" },
       ],
     },
     // Settings moved to the profile dropdown (see nav-user.tsx).
@@ -340,15 +344,584 @@ export const marketingData = {
       isActive: false,
       icon: CodeIcon,
       items: [
-        { title: "Repositories",   url: "/code" },
-        { title: "Pull Requests",  url: "/code" },
-        { title: "AI Activity",    url: "/code" },
+        { title: "Repositories", url: "/code" },
+        { title: "Pull Requests", url: "/code" },
+        { title: "AI Activity", url: "/code" },
       ],
     },
 
     // Settings moved to the profile dropdown (see nav-user.tsx).
   ],
 };
+
+export const headOfInternalAffairsData = {
+  user: {
+    name: "CodeWithAli",
+    email: "unfold@codewithali.com",
+    avatar: "/public/codewithali_logo.png",
+  },
+  teams: [
+    {
+      name: "CodeWithAli Co.",
+      logo: GalleryVerticalEnd,
+      plan: "Enterprise",
+    },
+    {
+      name: "Interns",
+      logo: AudioWaveform,
+      plan: "Startup",
+    },
+    {
+      name: "Members",
+      logo: Command,
+      plan: "Free",
+    },
+  ],
+  navMain: [
+    {
+      title: "Home",
+      url: "/",
+      isActive: false,
+      icon: Home,
+    },
+    // {
+    //   // Mixture-of-Operators control room. Surfaced for leadership
+    //   // roles so they have visibility into the agent swarm.
+    //   title: "Axon Swarm",
+    //   url: "/axonSwarm",
+    //   isActive: false,
+    //   icon: Network,
+    // },
+    // {
+    //   // Capital Plan — fundraising + budget + runway + AXON-advised
+    //   // scenario modeling. Gated to CEO/COO/CFO via is_finance_role().
+    //   title: "Capital Plan",
+    //   url: "/capitalPlan",
+    //   isActive: false,
+    //   icon: Coins,
+    // },
+    // {
+    //   title: "Roadmap",
+    //   url: "/roadmap",
+    //   isActive: false,
+    //   icon: Map,
+    // },
+    // {
+    //   title: "Analytics",
+    //   url: "/analytics",
+    //   isActive: false,
+    //   icon: BarChart3,
+    // },
+    {
+      title: "Candidates",
+      url: "/hiring",
+      isActive: false,
+      icon: Inbox,
+    },
+    {
+      title: "Offer Letters",
+      url: "/offers",
+      isActive: false,
+      icon: FileText,
+    },
+    {
+      title: "Onboarding",
+      url: "/onboarding",
+      isActive: false,
+      icon: ClipboardCheck,
+    },
+    // {
+    //   title: "Submit Report",
+    //   url: "/reports/submit",
+    //   isActive: false,
+    //   icon: Send,
+    // },
+    // {
+    //   title: "Reports",
+    //   url: "/reports",
+    //   isActive: false,
+    //   icon: Inbox,
+    // },
+    // {
+    //   // Code module — GitHub-lookalike repo dashboard. The
+    //   // `items` array makes the sidebar render it as a folder
+    //   // with collapsible children (Repositories / Pull Requests
+    //   // / Activity). The parent itself links to /code so a
+    //   // click on the folder name also opens the dashboard.
+    //   title: "Code",
+    //   url: "/code",
+    //   isActive: false,
+    //   icon: CodeIcon,
+    //   items: [
+    //     { title: "Repositories",   url: "/code" },
+    //     { title: "Pull Requests",  url: "/code" },
+    //     { title: "AI Activity",    url: "/code" },
+    //   ],
+    // },
+    // {
+    //   title: "Components",
+    //   url: "/components",
+    //   isActive: false,
+    //   icon: Package,
+    // },
+    // ── CWA-only items ──
+    // {
+    //   title: "Personal Life",
+    //   url: "/personal",
+    //   isActive: false,
+    //   icon: User,
+    //   company: "codeWithAli" as const,
+    // },
+    // {
+    //   title: "Graduation Plan",
+    //   url: "/graduationPlan",
+    //   isActive: false,
+    //   icon: GraduationCap,
+    //   company: "codeWithAli" as const,
+    // },
+    {
+      title: "Admin Permissions",
+      url: "/details",
+      icon: SquareTerminal,
+      isActive: false,
+      company: "codeWithAli" as const,
+      items: [
+        // {
+        //   title: "Account Management",
+        //   url: "/details",
+        // },
+        // {
+        //   title: "Contract",
+        //   url: "/contractGenerator",
+        // },
+        {
+          title: "Mod logs",
+          url: "/mod_logs",
+        },
+        // {
+        //   title: "Bio",
+        //   url: "/bio"
+        // },
+        {
+          title: "Cold Email Generator",
+          url: "/coldEmail",
+        },
+      ],
+    },
+    {
+      title: "Invoicer",
+      url: "/invoicer",
+      icon: File,
+      isActive: false,
+      company: "codeWithAli" as const,
+    },
+    {
+      title: "Chat",
+      url: "/chat",
+      isActive: false,
+      icon: MessageCircle,
+      company: "codeWithAli" as const,
+    },
+    {
+      title: "Workspace",
+      url: "/workspace",
+      isActive: false,
+      icon: FileText,
+      company: "codeWithAli" as const,
+    },
+    {
+      title: "Task",
+      url: "/task",
+      isActive: false,
+      icon: ClipboardList,
+      company: "codeWithAli" as const,
+    },
+    {
+      title: "Weekly Quotas",
+      url: "/quota",
+      isActive: false,
+      icon: Target,
+      company: "codeWithAli" as const,
+    },
+    {
+      title: "Timesheet",
+      url: "/timesheet",
+      isActive: false,
+      icon: Clock,
+      company: "codeWithAli" as const,
+    },
+    // // (Time Tracking has been merged into the Timesheet entry above.)
+    // {
+    //   title: "Arabic Learning",
+    //   url: "/arabic",
+    //   isActive: false,
+    //   icon: Languages,
+    //   company: "codeWithAli" as const,
+    // },
+
+    // ── Shared items ──
+    // {
+    //   title: "Users",
+    //   url: "/employee",
+    //   icon: Users,
+    //   isActive: false,
+    // },
+    {
+      title: "Finance Dashboard",
+      url: "/financialDashboard",
+      icon: DollarSign,
+      isActive: false,
+    },
+    // {
+    //   title: "Bookkeeping",
+    //   url: "/bookkeeping",
+    //   icon: BookCopy,
+    //   isActive: false,
+    // },
+
+    // ── Simplicity-only items ──
+    // {
+    //   title: "Simplicity Admin",
+    //   url: "/s-users",
+    //   icon: SquareTerminal,
+    //   isActive: true,
+    //   company: "simplicityFunds" as const,
+    //   items: [
+    //     {
+    //       title: "User Management",
+    //       url: "/s-users",
+    //     },
+    //     {
+    //       title: "Analytics & Surveys",
+    //       url: "/s-analytics",
+    //     },
+    //     {
+    //       title: "Broadcast Center",
+    //       url: "/s-broadcast",
+    //     },
+    //     {
+    //       title: "Manual Overrides",
+    //       url: "/s-overrides",
+    //     },
+    //   ],
+    // },
+    // {
+    //   title: "Financial Ops",
+    //   url: "/s-finance-ops",
+    //   icon: Activity,
+    //   isActive: false,
+    //   company: "simplicityFunds" as const,
+    // },
+    // {
+    //   title: "Subscriptions",
+    //   url: "/invoicer",
+    //   icon: CreditCard,
+    //   isActive: false,
+    //   company: "simplicityFunds" as const,
+    // },
+    // {
+    //   title: "Dev Console",
+    //   url: "/s-dev-console",
+    //   icon: Terminal,
+    //   isActive: false,
+    //   company: "simplicityFunds" as const,
+    // },
+    // Settings moved to the profile dropdown (see nav-user.tsx).
+  ],
+  projects: [
+    // {
+    //   name: "Budgetary",
+    //   url: "/budgetary",
+    //   icon: Frame,
+    //   company: "codeWithAli" as const,
+    // },
+  ],
+};
+
+export const headOfGrowthData = {
+  user: {
+    name: "CodeWithAli",
+    email: "unfold@codewithali.com",
+    avatar: "/public/codewithali_logo.png",
+  },
+  teams: [
+    {
+      name: "CodeWithAli Co.",
+      logo: GalleryVerticalEnd,
+      plan: "Enterprise",
+    },
+    {
+      name: "Interns",
+      logo: AudioWaveform,
+      plan: "Startup",
+    },
+    {
+      name: "Members",
+      logo: Command,
+      plan: "Free",
+    },
+  ],
+  navMain: [
+    {
+      title: "Home",
+      url: "/",
+      isActive: false,
+      icon: Home,
+    },
+    // {
+    //   // Mixture-of-Operators control room. Surfaced for leadership
+    //   // roles so they have visibility into the agent swarm.
+    //   title: "Axon Swarm",
+    //   url: "/axonSwarm",
+    //   isActive: false,
+    //   icon: Network,
+    // },
+    // {
+    //   // Capital Plan — fundraising + budget + runway + AXON-advised
+    //   // scenario modeling. Gated to CEO/COO/CFO via is_finance_role().
+    //   title: "Capital Plan",
+    //   url: "/capitalPlan",
+    //   isActive: false,
+    //   icon: Coins,
+    // },
+    // {
+    //   title: "Roadmap",
+    //   url: "/roadmap",
+    //   isActive: false,
+    //   icon: Map,
+    // },
+    // {
+    //   title: "Analytics",
+    //   url: "/analytics",
+    //   isActive: false,
+    //   icon: BarChart3,
+    // },
+    {
+      title: "Candidates",
+      url: "/hiring",
+      isActive: false,
+      icon: Inbox,
+    },
+    {
+      title: "Offer Letters",
+      url: "/offers",
+      isActive: false,
+      icon: FileText,
+    },
+    {
+      title: "Onboarding",
+      url: "/onboarding",
+      isActive: false,
+      icon: ClipboardCheck,
+    },
+    // {
+    //   title: "Submit Report",
+    //   url: "/reports/submit",
+    //   isActive: false,
+    //   icon: Send,
+    // },
+    // {
+    //   title: "Reports",
+    //   url: "/reports",
+    //   isActive: false,
+    //   icon: Inbox,
+    // },
+    // {
+    //   // Code module — GitHub-lookalike repo dashboard. The
+    //   // `items` array makes the sidebar render it as a folder
+    //   // with collapsible children (Repositories / Pull Requests
+    //   // / Activity). The parent itself links to /code so a
+    //   // click on the folder name also opens the dashboard.
+    //   title: "Code",
+    //   url: "/code",
+    //   isActive: false,
+    //   icon: CodeIcon,
+    //   items: [
+    //     { title: "Repositories",   url: "/code" },
+    //     { title: "Pull Requests",  url: "/code" },
+    //     { title: "AI Activity",    url: "/code" },
+    //   ],
+    // },
+    // {
+    //   title: "Components",
+    //   url: "/components",
+    //   isActive: false,
+    //   icon: Package,
+    // },
+    // ── CWA-only items ──
+    // {
+    //   title: "Personal Life",
+    //   url: "/personal",
+    //   isActive: false,
+    //   icon: User,
+    //   company: "codeWithAli" as const,
+    // },
+    // {
+    //   title: "Graduation Plan",
+    //   url: "/graduationPlan",
+    //   isActive: false,
+    //   icon: GraduationCap,
+    //   company: "codeWithAli" as const,
+    // },
+    {
+      title: "Admin Permissions",
+      url: "/details",
+      icon: SquareTerminal,
+      isActive: false,
+      company: "codeWithAli" as const,
+      items: [
+        // {
+        //   title: "Account Management",
+        //   url: "/details",
+        // },
+        // {
+        //   title: "Contract",
+        //   url: "/contractGenerator",
+        // },
+        {
+          title: "Mod logs",
+          url: "/mod_logs",
+        },
+        // {
+        //   title: "Bio",
+        //   url: "/bio"
+        // },
+        {
+          title: "Cold Email Generator",
+          url: "/coldEmail",
+        },
+      ],
+    },
+    {
+      title: "Invoicer",
+      url: "/invoicer",
+      icon: File,
+      isActive: false,
+      company: "codeWithAli" as const,
+    },
+    {
+      title: "Chat",
+      url: "/chat",
+      isActive: false,
+      icon: MessageCircle,
+      company: "codeWithAli" as const,
+    },
+    {
+      title: "Workspace",
+      url: "/workspace",
+      isActive: false,
+      icon: FileText,
+      company: "codeWithAli" as const,
+    },
+    {
+      title: "Task",
+      url: "/task",
+      isActive: false,
+      icon: ClipboardList,
+      company: "codeWithAli" as const,
+    },
+    {
+      title: "Weekly Quotas",
+      url: "/quota",
+      isActive: false,
+      icon: Target,
+      company: "codeWithAli" as const,
+    },
+    {
+      title: "Timesheet",
+      url: "/timesheet",
+      isActive: false,
+      icon: Clock,
+      company: "codeWithAli" as const,
+    },
+    // (Time Tracking has been merged into the Timesheet entry above.)
+    {
+      title: "Arabic Learning",
+      url: "/arabic",
+      isActive: false,
+      icon: Languages,
+      company: "codeWithAli" as const,
+    },
+
+    // ── Shared items ──
+    // {
+    //   title: "Users",
+    //   url: "/employee",
+    //   icon: Users,
+    //   isActive: false,
+    // },
+    {
+      title: "Finance Dashboard",
+      url: "/financialDashboard",
+      icon: DollarSign,
+      isActive: false,
+    },
+    // {
+    //   title: "Bookkeeping",
+    //   url: "/bookkeeping",
+    //   icon: BookCopy,
+    //   isActive: false,
+    // },
+
+    // ── Simplicity-only items ──
+    // {
+    //   title: "Simplicity Admin",
+    //   url: "/s-users",
+    //   icon: SquareTerminal,
+    //   isActive: true,
+    //   company: "simplicityFunds" as const,
+    //   items: [
+    //     {
+    //       title: "User Management",
+    //       url: "/s-users",
+    //     },
+    //     {
+    //       title: "Analytics & Surveys",
+    //       url: "/s-analytics",
+    //     },
+    //     {
+    //       title: "Broadcast Center",
+    //       url: "/s-broadcast",
+    //     },
+    //     {
+    //       title: "Manual Overrides",
+    //       url: "/s-overrides",
+    //     },
+    //   ],
+    // },
+    // {
+    //   title: "Financial Ops",
+    //   url: "/s-finance-ops",
+    //   icon: Activity,
+    //   isActive: false,
+    //   company: "simplicityFunds" as const,
+    // },
+    // {
+    //   title: "Subscriptions",
+    //   url: "/invoicer",
+    //   icon: CreditCard,
+    //   isActive: false,
+    //   company: "simplicityFunds" as const,
+    // },
+    // {
+    //   title: "Dev Console",
+    //   url: "/s-dev-console",
+    //   icon: Terminal,
+    //   isActive: false,
+    //   company: "simplicityFunds" as const,
+    // },
+    // Settings moved to the profile dropdown (see nav-user.tsx).
+  ],
+  projects: [
+    // {
+    //   name: "Budgetary",
+    //   url: "/budgetary",
+    //   icon: Frame,
+    //   company: "codeWithAli" as const,
+    // },
+  ],
+};
+
 
 // Admin Data set (What Admins can see)
 export const adminData = {
@@ -438,9 +1011,9 @@ export const adminData = {
       isActive: false,
       icon: CodeIcon,
       items: [
-        { title: "Repositories",   url: "/code" },
-        { title: "Pull Requests",  url: "/code" },
-        { title: "AI Activity",    url: "/code" },
+        { title: "Repositories", url: "/code" },
+        { title: "Pull Requests", url: "/code" },
+        { title: "AI Activity", url: "/code" },
       ],
     },
     {
@@ -517,7 +1090,6 @@ export const adminData = {
     //   icon: Cat,
     // },
 
- 
     // Settings moved to the profile dropdown (see nav-user.tsx).
   ],
   projects: [
@@ -640,9 +1212,9 @@ export const projectManagerData = {
       isActive: false,
       icon: CodeIcon,
       items: [
-        { title: "Repositories",   url: "/code" },
-        { title: "Pull Requests",  url: "/code" },
-        { title: "AI Activity",    url: "/code" },
+        { title: "Repositories", url: "/code" },
+        { title: "Pull Requests", url: "/code" },
+        { title: "AI Activity", url: "/code" },
       ],
     },
     // {
@@ -777,9 +1349,9 @@ export const securityEngineerData = {
       isActive: false,
       icon: CodeIcon,
       items: [
-        { title: "Repositories",   url: "/code" },
-        { title: "Pull Requests",  url: "/code" },
-        { title: "AI Activity",    url: "/code" },
+        { title: "Repositories", url: "/code" },
+        { title: "Pull Requests", url: "/code" },
+        { title: "AI Activity", url: "/code" },
       ],
     },
     // {
@@ -788,7 +1360,6 @@ export const securityEngineerData = {
     //   isActive: false,
     //   icon: Cat,
     // },
-
 
     // Settings moved to the profile dropdown (see nav-user.tsx).
   ],
@@ -901,9 +1472,9 @@ export const cooData = {
       isActive: false,
       icon: CodeIcon,
       items: [
-        { title: "Repositories",   url: "/code" },
-        { title: "Pull Requests",  url: "/code" },
-        { title: "AI Activity",    url: "/code" },
+        { title: "Repositories", url: "/code" },
+        { title: "Pull Requests", url: "/code" },
+        { title: "AI Activity", url: "/code" },
       ],
     },
     {
@@ -948,11 +1519,11 @@ export const cooData = {
         },
         {
           title: "Bio",
-          url: "/bio"
+          url: "/bio",
         },
         {
           title: "Cold Email Generator",
-          url: "/coldEmail"
+          url: "/coldEmail",
         },
       ],
     },
@@ -999,13 +1570,13 @@ export const cooData = {
       company: "codeWithAli" as const,
     },
     // (Time Tracking has been merged into the Timesheet entry above.)
-    // {
-    //   title: "Arabic Learning",
-    //   url: "/arabic",
-    //   isActive: false,
-    //   icon: Languages,
-    //   company: "codeWithAli" as const,
-    // },
+    {
+      title: "Arabic Learning",
+      url: "/arabic",
+      isActive: false,
+      icon: Languages,
+      company: "codeWithAli" as const,
+    },
 
     // ── Shared items ──
     {
@@ -1170,12 +1741,12 @@ export const ceoData = {
       isActive: false,
       company: "codeWithAli" as const,
       items: [
-        { title: "Candidates",     url: "/hiring" },
-        { title: "Offer Letters",  url: "/offers" },
-        { title: "Onboarding",     url: "/onboarding" },
-        { title: "Users",          url: "/employee" },
-        { title: "Training Plan",  url: "/trainingplan" },
-        { title: "Contract",       url: "/contractGenerator" },
+        { title: "Candidates", url: "/hiring" },
+        { title: "Offer Letters", url: "/offers" },
+        { title: "Onboarding", url: "/onboarding" },
+        { title: "Users", url: "/employee" },
+        { title: "Training Plan", url: "/trainingplan" },
+        { title: "Contract", url: "/contractGenerator" },
       ],
     },
 
@@ -1187,8 +1758,8 @@ export const ceoData = {
       isActive: false,
       company: "codeWithAli" as const,
       items: [
-        { title: "Dashboard",  url: "/financialDashboard" },
-        { title: "Invoicer",   url: "/invoicer" },
+        { title: "Dashboard", url: "/financialDashboard" },
+        { title: "Invoicer", url: "/invoicer" },
         { title: "Bookkeeping", url: "/bookkeeping" },
       ],
     },
@@ -1201,9 +1772,9 @@ export const ceoData = {
       isActive: false,
       company: "codeWithAli" as const,
       items: [
-        { title: "Tasks",         url: "/task" },
+        { title: "Tasks", url: "/task" },
         { title: "Weekly Quotas", url: "/quota" },
-        { title: "Timesheet",     url: "/timesheet" },
+        { title: "Timesheet", url: "/timesheet" },
       ],
     },
 
@@ -1215,12 +1786,12 @@ export const ceoData = {
       isActive: false,
       company: "codeWithAli" as const,
       items: [
-        { title: "Analytics",     url: "/analytics" },
+        { title: "Analytics", url: "/analytics" },
         { title: "Submit Report", url: "/reports/submit" },
-        { title: "Reports",       url: "/reports" },
-        { title: "Code",          url: "/code" },
-        { title: "Roadmap",       url: "/roadmap" },
-        { title: "Components",    url: "/components" },
+        { title: "Reports", url: "/reports" },
+        { title: "Code", url: "/code" },
+        { title: "Roadmap", url: "/roadmap" },
+        { title: "Components", url: "/components" },
       ],
     },
 
@@ -1232,11 +1803,11 @@ export const ceoData = {
       isActive: false,
       company: "codeWithAli" as const,
       items: [
-        { title: "Personal Life",    url: "/personal" },
-        { title: "Graduation Plan",  url: "/graduationPlan" },
-        { title: "Arabic Learning",  url: "/arabic" },
-        { title: "Bio",              url: "/bio" },
-        { title: "Cold Email",       url: "/coldEmail" },
+        { title: "Personal Life", url: "/personal" },
+        { title: "Graduation Plan", url: "/graduationPlan" },
+        { title: "Arabic Learning", url: "/arabic" },
+        { title: "Bio", url: "/bio" },
+        { title: "Cold Email", url: "/coldEmail" },
       ],
     },
 
@@ -1249,8 +1820,8 @@ export const ceoData = {
       company: "codeWithAli" as const,
       items: [
         { title: "Account Management", url: "/details" },
-        { title: "Mod Logs",           url: "/mod_logs" },
-        { title: "Capital Plan",       url: "/capitalPlan" },
+        { title: "Mod Logs", url: "/mod_logs" },
+        { title: "Capital Plan", url: "/capitalPlan" },
       ],
     },
 
@@ -1401,9 +1972,9 @@ export const cfoData = {
       isActive: false,
       icon: CodeIcon,
       items: [
-        { title: "Repositories",   url: "/code" },
-        { title: "Pull Requests",  url: "/code" },
-        { title: "AI Activity",    url: "/code" },
+        { title: "Repositories", url: "/code" },
+        { title: "Pull Requests", url: "/code" },
+        { title: "AI Activity", url: "/code" },
       ],
     },
     {
@@ -1480,7 +2051,6 @@ export const cfoData = {
     //   icon: Cat,
     // },
 
- 
     // Settings moved to the profile dropdown (see nav-user.tsx).
   ],
   projects: [
@@ -1491,7 +2061,6 @@ export const cfoData = {
     },
   ],
 };
-
 
 // ── Helpers ─────────────────────────────────────────────────────────
 // Imported by app-sidebar.tsx. Keep their signatures in sync with the
@@ -1525,8 +2094,11 @@ export function filterNavByCompany(
       if (!it.items) return it;
       return {
         ...it,
-        items: it.items.filter((sub) =>
-          activeCompany === "all" || !sub.company || sub.company === activeCompany,
+        items: it.items.filter(
+          (sub) =>
+            activeCompany === "all" ||
+            !sub.company ||
+            sub.company === activeCompany,
         ),
       };
     });
@@ -1539,6 +2111,7 @@ export function filterProjectsByCompany(
 ): ProjectItem[] {
   if (!items) return [];
   return items.filter(
-    (it) => activeCompany === "all" || !it.company || it.company === activeCompany,
+    (it) =>
+      activeCompany === "all" || !it.company || it.company === activeCompany,
   );
 }

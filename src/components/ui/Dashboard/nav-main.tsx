@@ -49,7 +49,7 @@ export function NavMain({
                 <CollapsibleTrigger asChild>
                   <SidebarMenuButton
                     tooltip={item.title}
-                    onClick={() => navigate({ to: item.url })}
+                    onClick={() => navigate({ to: !item.isActive ? "#" : item.url })}
                     className="hover:bg-muted/60 text-foreground/90 hover:text-foreground rounded-sm transition-colors data-[active=true]:bg-primary/[0.12] data-[active=true]:text-primary"
                   >
                     {item.icon && <item.icon className="h-4 w-4 text-muted-foreground" />}

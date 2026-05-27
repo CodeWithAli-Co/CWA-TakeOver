@@ -181,7 +181,7 @@ const Index = () => {
               </div>
 
               <UserView userRole={[Role.CEO, Role.COO, Role.ProjectManager, Role.Marketing]}>
-                <div className="col-span-12 lg:col-span-5 h-full">
+                <div className="col-span-12 lg:col-span-5">
                   <Meetings />
                 </div>
               </UserView>

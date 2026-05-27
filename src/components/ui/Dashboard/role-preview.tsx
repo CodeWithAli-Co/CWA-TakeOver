@@ -20,6 +20,8 @@ const previewableRoles = [
   { key: Role.Admin, label: "Admin" },
   { key: Role.ProjectManager, label: "Project Manager" },
   { key: Role.SecurityEngineer, label: "Security Engineer" },
+  { key: Role.HeadOfInternalAffairs, label: "Head of Internal Affairs" },
+  { key: Role.HeadOfGrowth, label: "Head of Growth" },
   { key: Role.COO, label: "COO" },
   { key: Role.CEO, label: "CEO" },
 ];

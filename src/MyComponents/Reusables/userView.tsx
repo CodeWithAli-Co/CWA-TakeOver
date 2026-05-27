@@ -17,6 +17,8 @@ export const enum Role {
   ProjectManager = "Project Manager",
   Marketing = "Marketing Specialist",
   CustomerSupport = "Customer Support",
+  HeadOfInternalAffairs = "Head of Internal Affairs",
+  HeadOfGrowth = "Head of Growth",
   Admin = "Admin",
   SecurityEngineer = "Security Engineer",
   Partner = "Partnership Lead",

@@ -748,6 +748,9 @@ export const Route = createRootRoute({
                 console.log(`downloaded ${downloaded} from ${contentLength}`);
                 break;
               case "Finished":
+                sendNotification({
+                  title: `Version ${update.version} has been downloaded!`
+                })
                 console.log("download finished");
                 break;
             }
