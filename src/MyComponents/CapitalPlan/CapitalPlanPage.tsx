@@ -20,7 +20,7 @@
  * phases fill in Checks (CRM), Allocation, Runway, Scenarios.
  */
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import {
   Coins,           // Rounds icon
@@ -31,6 +31,8 @@ import {
   Sparkles,        // AXON column trigger
   AlertCircle,
   Loader2,
+  Copy,
+  Check,
 } from "lucide-react";
 import {
   useCapitalPlan,
@@ -45,6 +47,11 @@ import { AllocationTab } from "./tabs/AllocationTab";
 import { RunwayTab } from "./tabs/RunwayTab";
 import { ScenariosTab } from "./tabs/ScenariosTab";
 import { AxonAdvisorRail } from "./AxonAdvisorRail";
+import {
+  buildInvestorUpdateMarkdown, buildFullSnapshotMarkdown,
+} from "./capitalSnapshot";
+
+const CASH_KEY = "cwa-capital-plan-cash-on-hand";
 
 // ─── Tab definition ─────────────────────────────────────────────
 
@@ -123,6 +130,7 @@ export default function CapitalPlanPage() {
         totalRaised={totalRaised}
         checksCount={plan.checks.length}
         scenariosCount={plan.scenarios.length}
+        plan={plan}
         axonOpen={axonOpen}
         onToggleAxon={() => setAxonOpen((o) => !o)}
       />
@@ -196,7 +204,7 @@ export default function CapitalPlanPage() {
 
 // ─── Header strip — at-a-glance state ──────────────────────────
 function HeaderStrip({
-  rounds, activeRounds, totalRaised, checksCount, scenariosCount,
+  rounds, activeRounds, totalRaised, checksCount, scenariosCount, plan,
   axonOpen, onToggleAxon,
 }: {
   rounds: CapitalRound[];
@@ -204,6 +212,7 @@ function HeaderStrip({
   totalRaised: number;
   checksCount: number;
   scenariosCount: number;
+  plan: import("./CapitalPlan.queries").CapitalPlanData;
   axonOpen: boolean;
   onToggleAxon: () => void;
 }) {
@@ -229,6 +238,7 @@ function HeaderStrip({
             subtle="committed + wired"
             tone="text-emerald-200"
           />
+          <SnapshotButton plan={plan} />
           <button
             type="button"
             onClick={onToggleAxon}
@@ -244,6 +254,77 @@ function HeaderStrip({
           </button>
         </div>
       </div>
+    </div>
+  );
+}
+
+// ─── Copy-snapshot button (header) ─────────────────────────────
+function SnapshotButton({ plan }: { plan: import("./CapitalPlan.queries").CapitalPlanData }) {
+  const [open, setOpen] = useState(false);
+  const [copied, setCopied] = useState<"short" | "full" | null>(null);
+
+  // Read cash from the same key Runway + Scenarios use
+  function getCash(): number {
+    try { return Number(window.localStorage.getItem(CASH_KEY)) || 0; } catch { return 0; }
+  }
+
+  async function copy(kind: "short" | "full") {
+    const cash = getCash();
+    const md = kind === "short"
+      ? buildInvestorUpdateMarkdown({ plan, cashOnHand: cash })
+      : buildFullSnapshotMarkdown({ plan, cashOnHand: cash });
+    try {
+      await navigator.clipboard.writeText(md);
+      setCopied(kind);
+      setTimeout(() => { setCopied(null); setOpen(false); }, 1200);
+    } catch {
+      console.warn("[CapitalPlan] clipboard write failed. Snapshot:\n\n" + md);
+    }
+  }
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    if (!open) return;
+    function onDocClick() { setOpen(false); }
+    window.addEventListener("click", onDocClick);
+    return () => window.removeEventListener("click", onDocClick);
+  }, [open]);
+
+  return (
+    <div className="relative" onClick={(e) => e.stopPropagation()}>
+      <button
+        type="button"
+        onClick={() => setOpen((o) => !o)}
+        className="inline-flex items-center gap-1.5 px-3 h-8 rounded-sm border border-border text-[11px] uppercase tracking-[0.16em] font-semibold text-muted-foreground hover:text-foreground hover:bg-muted/30 transition-colors"
+        title="Copy capital state as markdown for investor updates / co-founder review"
+      >
+        {copied ? <Check className="h-3 w-3 text-emerald-300" /> : <Copy className="h-3 w-3" />}
+        {copied ? "Copied" : "Snapshot"}
+      </button>
+      {open && !copied && (
+        <div className="absolute right-0 top-full mt-1 z-30 min-w-[220px] border border-border bg-background rounded-sm shadow-lg overflow-hidden">
+          <button
+            type="button"
+            onClick={() => copy("short")}
+            className="w-full text-left px-3 py-2.5 hover:bg-muted/40 transition-colors border-b border-border/60"
+          >
+            <div className="text-[12px] font-bold text-foreground normal-case tracking-normal">Investor update</div>
+            <div className="text-[10.5px] text-muted-foreground normal-case tracking-normal mt-0.5">
+              One-pager: cash, burn, runway, in-flight rounds
+            </div>
+          </button>
+          <button
+            type="button"
+            onClick={() => copy("full")}
+            className="w-full text-left px-3 py-2.5 hover:bg-muted/40 transition-colors"
+          >
+            <div className="text-[12px] font-bold text-foreground normal-case tracking-normal">Full snapshot</div>
+            <div className="text-[10.5px] text-muted-foreground normal-case tracking-normal mt-0.5">
+              Everything: rounds + investors + budgets + actuals
+            </div>
+          </button>
+        </div>
+      )}
     </div>
   );
 }

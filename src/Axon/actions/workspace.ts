@@ -499,11 +499,6 @@ export const workspaceCreateDocAction: AxonAction<
   },
   mutating: true,
   handler: async (input, ctx) => {
-    // Verbose log so we can SEE what the brain passed in. The
-    // hallucinated-write bug ("created with 14 paragraphs" but doc
-    // is empty) is hard to diagnose without seeing the actual input.
-    console.log("[workspace_create_doc] input:", JSON.stringify(input, null, 2));
-
     if (typeof input?.title !== "string" || !input.title.trim()) {
       throw new Error("workspace_create_doc needs a non-empty title.");
     }
@@ -524,10 +519,6 @@ export const workspaceCreateDocAction: AxonAction<
       return true;
     });
     if (rawArr.length > 0 && paragraphs.length === 0) {
-      console.warn(
-        "[workspace_create_doc] all paragraphs filtered out. raw input was:",
-        rawArr,
-      );
       throw new Error(
         `workspace_create_doc refused: you passed ${rawArr.length} paragraph(s) but none contained real prose. ` +
         `Re-call with full sentence strings — every paragraph must be the actual body content you want in the doc, not "", "...", "TBD", or a placeholder.`
