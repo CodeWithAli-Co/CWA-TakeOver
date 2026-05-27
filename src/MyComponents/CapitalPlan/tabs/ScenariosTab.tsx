@@ -196,10 +196,10 @@ function Composer({
   onPatch: <K extends keyof ScenarioInput>(key: K, value: ScenarioInput[K]) => void;
 }) {
   return (
-    <div className="border border-border rounded-sm bg-card/30 overflow-hidden">
-      <div className="px-4 py-3 border-b border-border flex items-center gap-2">
-        <Calculator className="h-3.5 w-3.5 text-primary" />
-        <span className="text-[10.5px] uppercase tracking-[0.18em] text-muted-foreground font-bold">
+    <div className="border border-zinc-800/80 border-l-[3px] border-l-rose-500 rounded-md bg-zinc-900/90 overflow-hidden shadow-[0_4px_12px_rgba(0,0,0,0.35)]">
+      <div className="px-4 py-3 border-b border-zinc-800 bg-zinc-950/40 flex items-center gap-2">
+        <Calculator className="h-3.5 w-3.5 text-rose-300" />
+        <span className="text-[10.5px] uppercase tracking-[0.18em] text-rose-300/80 font-bold">
           Candidate spend
         </span>
       </div>
@@ -326,13 +326,13 @@ function ImpactPanel({
   const verdict = VERDICT_META[impact.verdict];
 
   return (
-    <div className={`border-l-2 rounded-sm overflow-hidden bg-card/30 transition-colors ${
+    <div className={`border-l-[3px] rounded-md overflow-hidden bg-zinc-900/90 transition-colors shadow-[0_4px_12px_rgba(0,0,0,0.35)] ${
       impact.verdict === "strong-yes" || impact.verdict === "yes" ? "border-l-emerald-500" :
       impact.verdict === "caution" ? "border-l-amber-500" :
       impact.verdict === "no" ? "border-l-red-500" :
-      "border-l-border"
-    } border-y border-r border-border`}>
-      <div className="px-4 py-3 border-b border-border flex items-center justify-between">
+      "border-l-zinc-700"
+    } border-y border-r border-zinc-800/80`}>
+      <div className="px-4 py-3 border-b border-zinc-800 bg-zinc-950/40 flex items-center justify-between">
         <div className="flex items-center gap-2">
           <Sparkles className="h-3.5 w-3.5 text-violet-300" />
           <span className="text-[10.5px] uppercase tracking-[0.18em] text-muted-foreground font-bold">
@@ -449,7 +449,7 @@ function ImpactKPI({
   icon, label, value, sub, tone,
 }: { icon: React.ReactNode; label: string; value: string; sub?: string; tone?: string }) {
   return (
-    <div className="border border-border rounded-sm bg-background p-2.5">
+    <div className="border border-zinc-800/80 rounded-md bg-zinc-950/60 p-3">
       <div className="flex items-center gap-1 text-[9.5px] uppercase tracking-[0.16em] text-muted-foreground/70 font-semibold mb-1">
         <span className="text-muted-foreground/50">{icon}</span>
         {label}
@@ -476,8 +476,8 @@ function SavedScenarios({
   }
 
   return (
-    <div className="border border-border rounded-sm bg-card/30 overflow-hidden">
-      <div className="px-4 py-3 border-b border-border flex items-center gap-2">
+    <div className="border border-zinc-800/80 rounded-md bg-zinc-900/90 overflow-hidden shadow-[0_4px_12px_rgba(0,0,0,0.35)]">
+      <div className="px-4 py-3 border-b border-zinc-800 bg-zinc-950/40 flex items-center gap-2">
         <GitBranch className="h-3.5 w-3.5 text-muted-foreground" />
         <span className="text-[10.5px] uppercase tracking-[0.18em] text-muted-foreground font-bold">
           Saved scenarios ({scenarios.length})

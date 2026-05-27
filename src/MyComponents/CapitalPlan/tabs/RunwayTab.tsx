@@ -144,13 +144,17 @@ export function RunwayTab({ plan }: { plan: CapitalPlanData }) {
 function KPI({
   icon, label, value, sub, tone,
 }: { icon: React.ReactNode; label: string; value: string; sub?: string; tone?: string }) {
+  const accent = tone?.includes("red") ? "border-l-red-500"
+    : tone?.includes("amber") ? "border-l-amber-500"
+    : tone?.includes("emerald") ? "border-l-emerald-500"
+    : "border-l-cyan-500/70";
   return (
-    <div className="border border-border rounded-sm bg-card/30 p-3.5">
-      <div className="flex items-center gap-1.5 text-[9.5px] uppercase tracking-[0.18em] text-muted-foreground/80 font-bold mb-1">
-        <span className="text-muted-foreground/60">{icon}</span>
+    <div className={`border border-zinc-800/80 border-l-[3px] ${accent} rounded-md bg-zinc-900/90 p-4 shadow-[0_4px_12px_rgba(0,0,0,0.35)] hover:bg-zinc-900 hover:border-zinc-700 transition-colors`}>
+      <div className="flex items-center gap-1.5 text-[9.5px] uppercase tracking-[0.18em] text-muted-foreground font-bold mb-1.5">
+        <span className="text-muted-foreground/70">{icon}</span>
         {label}
       </div>
-      <div className={`text-[20px] font-bold tabular-nums tracking-tight ${tone ?? "text-foreground"}`}>
+      <div className={`text-[22px] font-bold tabular-nums tracking-tight ${tone ?? "text-foreground"}`}>
         {value}
       </div>
       {sub && <div className="text-[10px] text-muted-foreground/70 mt-1">{sub}</div>}
@@ -173,11 +177,11 @@ function CashKPI({
   }
   return (
     <div
-      className="border border-border rounded-sm bg-card/30 p-3.5 cursor-pointer hover:border-foreground/30 transition-colors"
+      className="border border-zinc-800/80 border-l-[3px] border-l-emerald-500 rounded-md bg-zinc-900/90 p-4 cursor-pointer hover:bg-zinc-900 hover:border-zinc-700 transition-colors shadow-[0_4px_12px_rgba(0,0,0,0.35)]"
       onClick={() => { if (!editing) { setDraft(cashOnHand); setEditing(true); } }}
     >
-      <div className="flex items-center gap-1.5 text-[9.5px] uppercase tracking-[0.18em] text-muted-foreground/80 font-bold mb-1">
-        <BanknoteIcon className="h-3.5 w-3.5 text-muted-foreground/60" />
+      <div className="flex items-center gap-1.5 text-[9.5px] uppercase tracking-[0.18em] text-muted-foreground font-bold mb-1.5">
+        <BanknoteIcon className="h-3.5 w-3.5 text-muted-foreground/70" />
         Cash on hand
       </div>
       {editing ? (
@@ -267,9 +271,9 @@ function RunwayTimeline({
   );
 
   return (
-    <div className="border border-border rounded-sm bg-card/30 p-5">
+    <div className="border border-zinc-800/80 rounded-md bg-zinc-900/90 p-5 shadow-[0_4px_12px_rgba(0,0,0,0.35)]">
       <div className="flex items-center justify-between mb-4">
-        <span className="text-[10.5px] uppercase tracking-[0.18em] text-muted-foreground font-bold">
+        <span className="text-[10.5px] uppercase tracking-[0.18em] text-cyan-300/80 font-bold">
           Runway timeline
         </span>
         {monthlyBurn > 0 && cashOnHand > 0 && (
@@ -353,9 +357,9 @@ function BurnComposer({ plan }: { plan: CapitalPlanData }) {
   }
 
   return (
-    <div className="border border-border rounded-sm bg-card/30 overflow-hidden">
-      <div className="px-4 py-3 border-b border-border">
-        <span className="text-[10.5px] uppercase tracking-[0.18em] text-muted-foreground font-bold">
+    <div className="border border-zinc-800/80 rounded-md bg-zinc-900/90 overflow-hidden shadow-[0_4px_12px_rgba(0,0,0,0.35)]">
+      <div className="px-4 py-3 border-b border-zinc-800 bg-zinc-950/40">
+        <span className="text-[10.5px] uppercase tracking-[0.18em] text-emerald-300/80 font-bold">
           Log a spend
         </span>
       </div>
@@ -463,9 +467,9 @@ function ActualsList({ plan }: { plan: CapitalPlanData }) {
   );
 
   return (
-    <div className="border border-border rounded-sm bg-card/30 overflow-hidden">
-      <div className="px-4 py-3 border-b border-border flex items-center justify-between">
-        <span className="text-[10.5px] uppercase tracking-[0.18em] text-muted-foreground font-bold">
+    <div className="border border-zinc-800/80 rounded-md bg-zinc-900/90 overflow-hidden shadow-[0_4px_12px_rgba(0,0,0,0.35)]">
+      <div className="px-4 py-3 border-b border-zinc-800 bg-zinc-950/40 flex items-center justify-between">
+        <span className="text-[10.5px] uppercase tracking-[0.18em] text-amber-300/80 font-bold">
           Recent actuals ({plan.actuals.length})
         </span>
         {plan.actuals.length > 0 && (
@@ -547,11 +551,11 @@ function VarianceChart({ plan }: { plan: CapitalPlanData }) {
   if (rows.length === 0) return null;
 
   return (
-    <div className="border border-border rounded-sm bg-card/30 overflow-hidden">
+    <div className="border border-zinc-800/80 rounded-md bg-zinc-900/90 overflow-hidden shadow-[0_4px_12px_rgba(0,0,0,0.35)]">
       <button
         type="button"
         onClick={() => setCollapsed((c) => !c)}
-        className="w-full px-4 py-3 border-b border-border/60 flex items-center justify-between hover:bg-muted/10 transition-colors"
+        className="w-full px-4 py-3 border-b border-zinc-800 bg-zinc-950/40 flex items-center justify-between hover:bg-zinc-950/60 transition-colors"
       >
         <span className="inline-flex items-center gap-2 text-[10.5px] uppercase tracking-[0.18em] text-muted-foreground font-bold">
           {collapsed ? <ChevronRight className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}

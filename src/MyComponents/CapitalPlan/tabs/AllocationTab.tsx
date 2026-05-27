@@ -169,10 +169,10 @@ function RoundHeaderCard({
   const matches = Math.abs(variance) < 1; // float tolerance
 
   return (
-    <div className="border border-border rounded-sm bg-card/30 p-5">
+    <div className="border border-violet-500/30 border-l-[3px] border-l-violet-500 rounded-md bg-zinc-900/90 p-5 shadow-[0_4px_16px_rgba(167,139,250,0.08),0_2px_8px_rgba(0,0,0,0.4)]">
       <div className="flex items-start justify-between gap-4 flex-wrap">
         <div>
-          <div className="text-[10.5px] uppercase tracking-[0.18em] text-muted-foreground/80 font-bold mb-1">
+          <div className="text-[10.5px] uppercase tracking-[0.18em] text-violet-300/90 font-bold mb-1">
             {round.name}
           </div>
           <h2 className="text-[18px] font-bold text-foreground tracking-tight">
@@ -250,9 +250,9 @@ function BucketList({
     : null;
 
   return (
-    <div className="border border-border rounded-sm bg-card/30 overflow-hidden">
-      <div className="px-4 py-3 border-b border-border flex items-center justify-between">
-        <span className="text-[10.5px] uppercase tracking-[0.18em] text-muted-foreground font-bold">
+    <div className="border border-zinc-800/80 rounded-md bg-zinc-900/90 overflow-hidden shadow-[0_4px_12px_rgba(0,0,0,0.35)]">
+      <div className="px-4 py-3 border-b border-zinc-800 bg-zinc-950/40 flex items-center justify-between">
+        <span className="text-[10.5px] uppercase tracking-[0.18em] text-violet-300/80 font-bold">
           Buckets ({allocations.length})
         </span>
         <button
@@ -323,20 +323,26 @@ function BucketRow({
   const lineItemsCoverage = allocation.planned_amount > 0
     ? Math.min(1, lineItemsTotal / allocation.planned_amount) : 0;
 
+  const accentColor = allocation.color || meta.color;
   return (
-    <div className="group">
+    <div
+      className="group transition-colors"
+      style={expanded ? { borderLeft: `2px solid ${accentColor}` } : { borderLeft: "2px solid transparent" }}
+    >
       <div
-        className="px-4 py-3 grid grid-cols-[auto_1fr_auto] gap-3 items-center hover:bg-muted/20 cursor-pointer"
+        className={`px-4 py-3 grid grid-cols-[auto_1fr_auto] gap-3 items-center cursor-pointer transition-colors ${
+          expanded ? "bg-card/50" : "hover:bg-muted/25"
+        }`}
         onClick={onToggleExpand}
       >
         <div className="flex items-center gap-2">
           {expanded
-            ? <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" />
+            ? <ChevronDown className="h-3.5 w-3.5 text-foreground/80" />
             : <ChevronRight className="h-3.5 w-3.5 text-muted-foreground" />
           }
           <div
-            className="w-2 h-2 rounded-sm"
-            style={{ backgroundColor: allocation.color || meta.color }}
+            className="w-2.5 h-2.5 rounded-full ring-2 ring-background"
+            style={{ backgroundColor: accentColor, boxShadow: `0 0 8px ${accentColor}40` }}
             aria-hidden="true"
           />
         </div>
@@ -786,16 +792,16 @@ function AllocationDonut({
   });
 
   return (
-    <div className="border border-border rounded-sm bg-card/30 overflow-hidden">
-      <div className="px-4 py-3 border-b border-border">
-        <span className="text-[10.5px] uppercase tracking-[0.18em] text-muted-foreground font-bold">
+    <div className="border border-zinc-800/80 rounded-md bg-zinc-900/90 overflow-hidden shadow-[0_4px_12px_rgba(0,0,0,0.35)]">
+      <div className="px-4 py-3 border-b border-zinc-800 bg-zinc-950/40">
+        <span className="text-[10.5px] uppercase tracking-[0.18em] text-foreground/70 font-bold">
           Distribution
         </span>
       </div>
       <div className="p-5 flex items-center gap-5">
-        <svg width={160} height={160} viewBox="0 0 160 160" className="shrink-0">
+        <svg width={160} height={160} viewBox="0 0 160 160" className="shrink-0 drop-shadow-[0_4px_12px_rgba(0,0,0,0.3)]">
           {paths.map((p) => (
-            <path key={p.key} d={p.d} fill={p.color} stroke="hsl(var(--background))" strokeWidth="1" />
+            <path key={p.key} d={p.d} fill={p.color} stroke="hsl(var(--background))" strokeWidth="1.5" />
           ))}
           <text x={80} y={80} textAnchor="middle" dy="-0.1em" className="fill-foreground text-[18px] font-bold tabular-nums">
             {formatCompact(totalPlanned)}
@@ -854,9 +860,9 @@ function CompareStrip({
   onSelect: (id: string) => void;
 }) {
   return (
-    <div className="border border-border rounded-sm bg-card/30 overflow-hidden">
-      <div className="px-4 py-3 border-b border-border">
-        <span className="text-[10.5px] uppercase tracking-[0.18em] text-muted-foreground font-bold">
+    <div className="border border-zinc-800/80 rounded-md bg-zinc-900/90 overflow-hidden shadow-[0_4px_12px_rgba(0,0,0,0.35)]">
+      <div className="px-4 py-3 border-b border-zinc-800 bg-zinc-950/40">
+        <span className="text-[10.5px] uppercase tracking-[0.18em] text-foreground/70 font-bold">
           Compare across rounds
         </span>
       </div>

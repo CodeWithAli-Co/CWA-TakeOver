@@ -272,7 +272,7 @@ export function ChecksTab({
 // ─── Kanban column ─────────────────────────────────────────────
 
 function KanbanColumn({
-  status: _status, label, tone, count, children,
+  status, label, tone, count, children,
   isDragOver, onDragOver, onDragLeave, onDrop,
 }: {
   status: CapitalCheckStatus;
@@ -285,26 +285,40 @@ function KanbanColumn({
   onDragLeave: () => void;
   onDrop: (e: React.DragEvent) => void;
 }) {
+  // Per-column tinted background that matches the column's tone.
+  const tint =
+    status === "lead"        ? "from-zinc-800/40 to-zinc-900/90"
+    : status === "intro"     ? "from-blue-500/[0.12] to-zinc-900/95"
+    : status === "meeting"   ? "from-indigo-500/[0.12] to-zinc-900/95"
+    : status === "diligence" ? "from-violet-500/[0.12] to-zinc-900/95"
+    : status === "verbal"    ? "from-amber-500/[0.12] to-zinc-900/95"
+    : status === "term-sheet" ? "from-orange-500/[0.14] to-zinc-900/95"
+    : status === "signed"    ? "from-emerald-500/[0.14] to-zinc-900/95"
+    : status === "wired"     ? "from-emerald-600/[0.18] to-zinc-900"
+    :                          "from-zinc-800/40 to-zinc-900/90";
+
   return (
     <div
       onDragOver={onDragOver}
       onDragLeave={onDragLeave}
       onDrop={onDrop}
-      className={`w-[240px] shrink-0 flex flex-col border rounded-sm bg-card/30 transition-colors ${
-        isDragOver ? "border-primary/60 bg-primary/5" : `border-border ${tone}`
+      className={`w-[240px] shrink-0 flex flex-col border border-zinc-800/80 rounded-md bg-gradient-to-b ${tint} transition-all shadow-[0_4px_12px_rgba(0,0,0,0.3)] ${
+        isDragOver
+          ? "border-primary/60 ring-2 ring-primary/30 scale-[1.01]"
+          : ""
       }`}
     >
-      <div className="px-3 py-2 border-b border-border/60 flex items-center justify-between">
+      <div className="px-3 py-2 border-b border-zinc-800 bg-zinc-950/50 flex items-center justify-between">
         <span className={`text-[10.5px] uppercase tracking-[0.18em] font-bold ${tone.split(" ")[1] ?? ""}`}>
           {label}
         </span>
-        <span className="text-[10px] tabular-nums text-muted-foreground/70 font-semibold">
+        <span className="text-[10px] tabular-nums text-muted-foreground/70 font-semibold px-1.5 py-0.5 rounded-sm bg-background/40">
           {count}
         </span>
       </div>
       <div className="flex-1 p-2 space-y-2 min-h-[120px]">
         {count === 0 && (
-          <div className="text-[10.5px] text-muted-foreground/50 italic text-center py-6">
+          <div className="text-[10.5px] text-muted-foreground/40 italic text-center py-8 border border-dashed border-border/30 rounded-sm">
             drop here
           </div>
         )}

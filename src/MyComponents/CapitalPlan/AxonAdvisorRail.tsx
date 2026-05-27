@@ -98,11 +98,16 @@ export function AxonAdvisorRail({
   const tabSpecificChips = QUICK_CHIPS[activeTab] ?? QUICK_CHIPS.default;
 
   return (
-    <aside className="border-l border-border bg-card/20 min-h-[calc(100vh-64px)] flex flex-col">
+    <aside className="border-l border-teal-500/30 bg-gradient-to-b from-teal-950/30 via-zinc-900/95 to-zinc-900 min-h-[calc(100vh-64px)] flex flex-col shadow-[-4px_0_16px_rgba(0,0,0,0.3)]">
       {/* Header */}
-      <div className="sticky top-0 bg-card/40 backdrop-blur-sm border-b border-border px-4 py-3 flex items-center justify-between z-10">
+      <div className="sticky top-0 bg-gradient-to-r from-teal-500/[0.15] to-zinc-900 backdrop-blur-sm border-b border-teal-500/30 px-4 py-3 flex items-center justify-between z-10">
         <div className="flex items-center gap-2">
-          <Sparkles className="h-4 w-4 text-violet-300" />
+          <div className="relative">
+            <Sparkles className="h-4 w-4 text-teal-300" />
+            <span className="absolute inset-0 animate-pulse">
+              <Sparkles className="h-4 w-4 text-teal-300/40" />
+            </span>
+          </div>
           <span className="text-[12px] font-bold tracking-tight text-foreground">AXON Advisor</span>
         </div>
         <div className="flex items-center gap-1">
@@ -170,7 +175,7 @@ export function AxonAdvisorRail({
             type="button"
             onClick={() => ask(input)}
             disabled={!input.trim()}
-            className="px-3 bg-violet-500/15 border-l border-border text-violet-200 hover:bg-violet-500/25 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+            className="px-3 bg-teal-500/15 border-l border-border text-teal-200 hover:bg-teal-500/25 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
             aria-label="Ask AXON"
           >
             <Send className="h-3.5 w-3.5" />
@@ -245,7 +250,7 @@ const TONE_META: Record<AdvisorTone, {
   headlineClass: string;
 }> = {
   ok:       { icon: CheckCircle2,   borderClass: "border-emerald-500/40", iconClass: "text-emerald-300", headlineClass: "text-emerald-200" },
-  info:     { icon: Info,           borderClass: "border-violet-500/40",  iconClass: "text-violet-300",  headlineClass: "text-violet-200" },
+  info:     { icon: Info,           borderClass: "border-teal-500/40",  iconClass: "text-teal-300",  headlineClass: "text-teal-200" },
   caution:  { icon: AlertCircle,    borderClass: "border-amber-500/40",   iconClass: "text-amber-300",   headlineClass: "text-amber-200" },
   warn:     { icon: AlertTriangle,  borderClass: "border-orange-500/50",  iconClass: "text-orange-300",  headlineClass: "text-orange-200" },
   critical: { icon: AlertTriangle,  borderClass: "border-red-500/60",     iconClass: "text-red-300",     headlineClass: "text-red-200" },

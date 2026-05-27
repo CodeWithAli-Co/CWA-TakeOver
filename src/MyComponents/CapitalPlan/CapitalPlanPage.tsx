@@ -123,7 +123,7 @@ export default function CapitalPlanPage() {
   const totalRaised = totalRaisedToDate(plan.rounds, plan.checks);
 
   return (
-    <div className="min-h-[calc(100vh-64px)] w-full bg-background text-foreground">
+    <div className="min-h-[calc(100vh-64px)] w-full bg-zinc-950 text-foreground">
       <HeaderStrip
         rounds={plan.rounds}
         activeRounds={activeRounds}
@@ -139,7 +139,7 @@ export default function CapitalPlanPage() {
         {/* ─── Main column ─── */}
         <div className="min-w-0">
           {/* Tab bar */}
-          <div className="border-b border-border px-8 pt-1">
+          <div className="border-b border-zinc-800 px-8 pt-1 bg-zinc-900/70">
             <div className="inline-flex items-stretch">
               {TABS.map((t) => {
                 const isActive = activeTab === t.key;
@@ -151,7 +151,7 @@ export default function CapitalPlanPage() {
                     className={`relative inline-flex items-center gap-2 px-4 py-3 text-[12.5px] font-semibold transition-colors ${
                       isActive
                         ? `${t.tone}`
-                        : "text-muted-foreground/70 hover:text-foreground/85"
+                        : "text-muted-foreground/70 hover:text-foreground/85 hover:bg-card/40"
                     }`}
                   >
                     <Icon className="h-3.5 w-3.5" />
@@ -159,7 +159,13 @@ export default function CapitalPlanPage() {
                     {isActive && (
                       <motion.div
                         layoutId="capital-tab-underline"
-                        className="absolute left-0 right-0 -bottom-px h-[2px] bg-primary"
+                        className={`absolute left-0 right-0 -bottom-px h-[2px] ${
+                          t.key === "rounds" ? "bg-emerald-400" :
+                          t.key === "checks" ? "bg-amber-400" :
+                          t.key === "allocation" ? "bg-violet-400" :
+                          t.key === "runway" ? "bg-cyan-400" :
+                          "bg-rose-400"
+                        }`}
                         transition={{ type: "spring", damping: 28, stiffness: 320 }}
                       />
                     )}
@@ -217,15 +223,18 @@ function HeaderStrip({
   onToggleAxon: () => void;
 }) {
   return (
-    <div className="border-b border-border bg-card/30">
+    <div className="border-b border-zinc-800 bg-zinc-900 shadow-[0_1px_0_0_rgba(255,255,255,0.04)_inset]">
       <div className="px-8 py-4 flex items-center justify-between gap-6 flex-wrap">
-        <div>
-          <h1 className="text-[18px] font-bold text-foreground tracking-tight">
-            Capital Plan
-          </h1>
-          <p className="text-[11.5px] text-muted-foreground mt-0.5">
-            Rounds, checks, allocation, runway. Visible to CEO, COO, CFO.
-          </p>
+        <div className="flex items-center gap-3">
+          <div className="w-1 h-9 rounded-full bg-gradient-to-b from-emerald-400 via-violet-400 to-amber-400" />
+          <div>
+            <h1 className="text-[18px] font-bold text-foreground tracking-tight">
+              Capital Plan
+            </h1>
+            <p className="text-[11.5px] text-muted-foreground mt-0.5">
+              Rounds, checks, allocation, runway. Visible to CEO, COO, CFO.
+            </p>
+          </div>
         </div>
 
         <div className="flex items-center gap-5 text-[11px] uppercase tracking-[0.16em] text-muted-foreground/80 font-semibold">

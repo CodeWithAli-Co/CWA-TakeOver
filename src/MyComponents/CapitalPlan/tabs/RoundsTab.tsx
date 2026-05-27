@@ -153,13 +153,21 @@ function RoundCard({
   const StatusIcon = status.icon;
   const typeLabel = ROUND_TYPE_OPTIONS.find((o) => o.value === round.round_type)?.label ?? round.round_type;
 
+  // Left-border accent by status so cards aren't all identical.
+  const statusAccent =
+    round.status === "raising" ? "border-l-amber-500"
+    : round.status === "closed" ? "border-l-emerald-500"
+    : round.status === "on-hold" ? "border-l-zinc-500"
+    : round.status === "skipped" ? "border-l-red-500"
+    : "border-l-zinc-700";
+
   return (
     <div
       onClick={onClick}
-      className={`group border rounded-sm p-5 cursor-pointer transition-all ${
+      className={`group border border-zinc-800/80 border-l-[3px] ${statusAccent} rounded-md p-5 cursor-pointer transition-all bg-zinc-900/90 shadow-[0_4px_12px_rgba(0,0,0,0.35)] ${
         isSelected
-          ? "border-primary/60 bg-primary/[0.04] ring-1 ring-primary/30"
-          : "border-border bg-card/40 hover:border-foreground/30 hover:bg-card/60"
+          ? "ring-2 ring-primary/40 border-primary/40 shadow-[0_8px_24px_rgba(132,204,22,0.15)]"
+          : "hover:bg-zinc-900 hover:border-zinc-700 hover:shadow-[0_6px_16px_rgba(0,0,0,0.45)]"
       }`}
     >
       <div className="flex items-start justify-between mb-3">
