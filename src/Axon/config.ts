@@ -3,6 +3,8 @@
 // All secrets live in Vite env (VITE_*). Never hardcode keys.
 // ───────────────────────────────────────────────────────────────────
 
+import { Role } from "@/MyComponents/Reusables/userView";
+
 export const ANTHROPIC_API_KEY: string | undefined =
   import.meta.env.VITE_ANTHROPIC_API_KEY;
 
@@ -21,7 +23,7 @@ export const ANTHROPIC_API_URL = "https://api.anthropic.com/v1/messages";
 export const ANTHROPIC_API_VERSION = "2023-06-01";
 
 /** Roles allowed to see/operate AXON. */
-export const AXON_ALLOWED_ROLES = ["Admin", "CEO", "COO"] as const;
+export const AXON_ALLOWED_ROLES = [Role.CEO, Role.COO, Role.Admin, Role.HeadOfInternalAffairs, Role.HeadOfGrowth] as const;
 
 /** Storage key for persisted settings (not secrets).
  *  Bumped to v5 — added projects + activeProjectId. Bumping drops any
