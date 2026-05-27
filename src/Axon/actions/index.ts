@@ -35,6 +35,7 @@ import { registerSleepActions } from "./sleep";
 import { registerThemeActions } from "./theme";
 import { registerShiftActions } from "./shifts";
 import { registerWorkspaceActions } from "./workspace";
+import { registerCapitalPlanActions } from "./capital_plan";
 
 let registered = false;
 
@@ -76,4 +77,5 @@ export function registerAllActions() {
   registerThemeActions();
   registerShiftActions();
   registerWorkspaceActions();
+  registerCapitalPlanActions();
 }
