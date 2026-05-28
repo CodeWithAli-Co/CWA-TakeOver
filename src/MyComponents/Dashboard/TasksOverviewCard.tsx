@@ -891,6 +891,16 @@ function LoadRow({
 // ──────────────────────────────────────────────────────────────────
 // Person modal
 // ──────────────────────────────────────────────────────────────────
+
+type FilterKey =
+  | "all"
+  | "overdue"
+  | "highPriority"
+  | "thisWeek"
+  | "noDeadline";
+
+type PillTone = "neutral" | "destructive" | "warning" | "primary";
+
 function PersonTasksModal({
   user,
   tasks,
@@ -902,13 +912,76 @@ function PersonTasksModal({
   onClose: () => void;
   onTaskNavigate: () => void;
 }) {
-  const open = tasks.filter((t) => t.status === "to-do");
-  const inProgress = tasks.filter((t) => t.status === "in-progress");
-  const done = tasks.filter((t) => t.status === "done");
-  const overdue = tasks.filter((t) => {
-    if (!t.deadline || t.status === "done") return false;
-    return new Date(t.deadline).getTime() < Date.now();
-  });
+  // Active filter — defaults to "all" on every open since this is local state.
+  const [filter, setFilter] = useState<FilterKey>("all");
+
+  // ── Counts — computed against the full task set so pills always
+  //    show the true bucket size regardless of which filter is active. ──
+  const counts = useMemo(() => {
+    const now = Date.now();
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const weekEnd = today.getTime() + 7 * 24 * 60 * 60 * 1000;
+
+    let overdue = 0;
+    let highPriority = 0;
+    let thisWeek = 0;
+    let noDeadline = 0;
+
+    for (const t of tasks) {
+      if (t.status === "done") continue;
+      if (t.priority === "high") highPriority++;
+      if (!t.deadline) {
+        noDeadline++;
+        continue;
+      }
+      const ms = new Date(t.deadline).getTime();
+      if (Number.isNaN(ms)) continue;
+      if (ms < now) overdue++;
+      else if (ms < weekEnd) thisWeek++;
+    }
+
+    return { overdue, highPriority, thisWeek, noDeadline };
+  }, [tasks]);
+
+  // ── Predicate for the active filter ──
+  const matchesFilter = (t: TodosInterface): boolean => {
+    if (filter === "all") return true;
+    if (t.status === "done") return false; // all filters exclude done
+    if (filter === "overdue") {
+      if (!t.deadline) return false;
+      const ms = new Date(t.deadline).getTime();
+      return !Number.isNaN(ms) && ms < Date.now();
+    }
+    if (filter === "highPriority") return t.priority === "high";
+    if (filter === "thisWeek") {
+      if (!t.deadline) return false;
+      const ms = new Date(t.deadline).getTime();
+      if (Number.isNaN(ms)) return false;
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      const weekEnd = today.getTime() + 7 * 24 * 60 * 60 * 1000;
+      return ms >= Date.now() && ms < weekEnd;
+    }
+    if (filter === "noDeadline") return !t.deadline;
+    return true;
+  };
+
+  const visible = tasks.filter(matchesFilter);
+  const open = visible.filter((t) => t.status === "to-do");
+  const inProgress = visible.filter((t) => t.status === "in-progress");
+  const done = visible.filter((t) => t.status === "done");
+  const visibleTotal = open.length + inProgress.length + done.length;
+  const overdueTotal = counts.overdue;
+
+  // Pill defs — `count` is the unfiltered bucket size for clarity.
+  const pills: { key: FilterKey; label: string; count?: number; tone: PillTone }[] = [
+    { key: "all", label: "All", count: tasks.length, tone: "neutral" },
+    { key: "overdue", label: "Overdue", count: counts.overdue, tone: "destructive" },
+    { key: "highPriority", label: "High priority", count: counts.highPriority, tone: "warning" },
+    { key: "thisWeek", label: "This week", count: counts.thisWeek, tone: "primary" },
+    { key: "noDeadline", label: "No deadline", count: counts.noDeadline, tone: "neutral" },
+  ];
 
   return (
     <motion.div
@@ -927,6 +1000,7 @@ function PersonTasksModal({
         className="w-[560px] max-w-[92vw] max-h-[80vh] bg-card border border-xs border-border-soft rounded-xl shadow-2xl overflow-hidden flex flex-col"
         onClick={(e) => e.stopPropagation()}
       >
+        {/* Header */}
         <header className="flex items-center justify-between gap-3 px-5 py-3 border-b border-xs border-border-soft bg-popover/40">
           <div className="flex items-center gap-2.5 min-w-0">
             <div
@@ -938,7 +1012,7 @@ function PersonTasksModal({
             <div className="min-w-0">
               <div className="text-[14px] font-bold text-foreground truncate">{user}</div>
               <div className="text-[10.5px] text-text-tertiary uppercase tracking-wider">
-                {tasks.length} total · {open.length + inProgress.length} active
+                {tasks.length} total · {tasks.filter((t) => t.status !== "done").length} active
               </div>
             </div>
           </div>
@@ -952,30 +1026,84 @@ function PersonTasksModal({
           </button>
         </header>
 
+        {/* Filter pills */}
+        <div className="px-4 py-2.5 border-b border-xs border-border-soft bg-card flex items-center gap-1.5 overflow-x-auto">
+          {pills.map((p) => (
+            <FilterPill
+              key={p.key}
+              label={p.label}
+              count={p.count}
+              tone={p.tone}
+              active={filter === p.key}
+              onClick={() => setFilter(p.key)}
+            />
+          ))}
+        </div>
+
+        {/* Body */}
         <div className="flex-1 min-h-0 overflow-y-auto">
-          {overdue.length > 0 && (
-            <div className="px-5 pt-3.5 pb-1">
-              <div className="flex items-center gap-2 text-[11px] text-destructive font-semibold uppercase tracking-wider">
-                <AlertTriangle className="h-3 w-3" />
-                {overdue.length} overdue
-              </div>
+          {/* Clickable overdue banner — toggles the overdue filter */}
+          {overdueTotal > 0 && (
+            <div className="px-5 pt-3 pb-1">
+              <button
+                type="button"
+                onClick={() =>
+                  setFilter((cur) => (cur === "overdue" ? "all" : "overdue"))
+                }
+                className={`w-full flex items-center justify-between gap-2 px-3 py-2 rounded-md border-xs transition-colors ${
+                  filter === "overdue"
+                    ? "bg-destructive/[0.12] border-destructive/40 text-destructive"
+                    : "bg-destructive/[0.05] border-destructive/20 text-destructive hover:bg-destructive/[0.09]"
+                }`}
+              >
+                <span className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-wider">
+                  <AlertTriangle className="h-3 w-3" />
+                  {filter === "overdue"
+                    ? `Showing ${overdueTotal} overdue`
+                    : `${overdueTotal} overdue`}
+                </span>
+                <span className="text-[9.5px] opacity-70 normal-case tracking-normal">
+                  {filter === "overdue" ? "Tap to clear" : "Tap to filter"}
+                </span>
+              </button>
             </div>
           )}
 
-          <PersonSection title="Open" accent="primary" tasks={open} onTaskClick={onTaskNavigate} />
-          <PersonSection title="In progress" accent="warning" tasks={inProgress} onTaskClick={onTaskNavigate} />
-          <PersonSection
-            title="Done"
-            accent="success"
-            tasks={done.slice(0, 10)}
-            onTaskClick={onTaskNavigate}
-            footnote={done.length > 10 ? `+${done.length - 10} more completed` : undefined}
-          />
+          {/* Sections OR filtered-empty state */}
+          {visibleTotal === 0 ? (
+            <div className="px-5 py-14 text-center">
+              <div className="text-[12px] text-text-tertiary mb-2">
+                No tasks match this filter.
+              </div>
+              <button
+                type="button"
+                onClick={() => setFilter("all")}
+                className="text-[10.5px] uppercase tracking-wider font-bold text-primary hover:text-primary/80 transition-colors"
+              >
+                Show all tasks
+              </button>
+            </div>
+          ) : (
+            <>
+              <PersonSection title="Open" accent="primary" tasks={open} onTaskClick={onTaskNavigate} />
+              <PersonSection title="In progress" accent="warning" tasks={inProgress} onTaskClick={onTaskNavigate} />
+              <PersonSection
+                title="Done"
+                accent="success"
+                tasks={done.slice(0, 10)}
+                onTaskClick={onTaskNavigate}
+                footnote={done.length > 10 ? `+${done.length - 10} more completed` : undefined}
+              />
+            </>
+          )}
         </div>
 
+        {/* Footer */}
         <div className="px-5 py-3 border-t border-xs border-border-soft bg-popover/40 flex items-center justify-between">
           <span className="text-[10.5px] text-text-tertiary uppercase tracking-wider">
-            All assigned tasks
+            {filter === "all"
+              ? "All assigned tasks"
+              : `Filtered · ${visibleTotal} of ${tasks.length}`}
           </span>
           <button
             type="button"
@@ -988,6 +1116,51 @@ function PersonTasksModal({
         </div>
       </motion.div>
     </motion.div>
+  );
+}
+
+/**
+ * One pill in the modal's filter row. Active state uses tone-tinted bg +
+ * border, inactive uses neutral border-soft. Count badge embedded inline.
+ */
+function FilterPill({
+  label,
+  count,
+  tone,
+  active,
+  onClick,
+}: {
+  label: string;
+  count?: number;
+  tone: PillTone;
+  active: boolean;
+  onClick: () => void;
+}) {
+  const activeToneCls = {
+    neutral: "bg-foreground/[0.10] border-foreground/15 text-foreground",
+    destructive: "bg-destructive/[0.15] border-destructive/30 text-destructive",
+    warning: "bg-warning/[0.15] border-warning/30 text-warning",
+    primary: "bg-primary/[0.15] border-primary/30 text-primary",
+  }[tone];
+
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      aria-pressed={active}
+      className={`flex-shrink-0 inline-flex items-center gap-1.5 px-2.5 h-6 rounded-md border-xs text-[10.5px] font-semibold uppercase tracking-wider transition-colors ${
+        active
+          ? activeToneCls
+          : "border-border-soft text-text-tertiary hover:text-foreground hover:bg-foreground/[0.04]"
+      }`}
+    >
+      <span>{label}</span>
+      {typeof count === "number" && (
+        <span className={`tabular-nums ${active ? "opacity-70" : "opacity-50"}`}>
+          {count}
+        </span>
+      )}
+    </button>
   );
 }
 
@@ -1016,50 +1189,58 @@ function PersonSection({
 
   return (
     <section className="px-5 py-3 border-b border-xs border-border-soft last:border-b-0">
-      <div className={`flex items-center gap-1.5 mb-2 text-[10.5px] font-semibold uppercase tracking-wider ${text}`}>
-        <span className={`w-1.5 h-1.5 rounded-full ${dot}`} />
-        {title}
-        <span className="text-text-tertiary font-normal">· {tasks.length}</span>
+      {/* Section header — bumped to 11.5px with a heavier dot so it
+          reads as a proper heading instead of a form label. */}
+      <div className={`flex items-center gap-2 mb-2.5 text-[11px] font-bold uppercase tracking-[0.14em] ${text}`}>
+        <span className={`w-2 h-2 rounded-full ${dot}`} />
+        <span>{title}</span>
+        <span className="text-text-tertiary/80 font-semibold">·</span>
+        <span className="text-foreground/60 font-bold tabular-nums">{tasks.length}</span>
       </div>
-      <ul className="space-y-1">
+      <ul className="list-none m-0 p-0 space-y-0.5">
         {tasks.map((t) => {
           const overdue =
             t.deadline &&
             t.status !== "done" &&
             new Date(t.deadline).getTime() < Date.now();
+          // Flame / Zap / Leaf — same icon vocabulary the drill
+          // panel uses, so the priority signal is consistent.
+          const PriorityIcon =
+            t.priority === "high" ? Flame :
+            t.priority === "medium" ? Zap :
+                                      Leaf;
+          const priorityCls =
+            t.priority === "high"
+              ? "text-destructive"
+              : t.priority === "medium"
+              ? "text-warning"
+              : "text-success";
           return (
-            <li key={t.todo_id}>
+            <li key={t.todo_id} className="list-none">
               <button
                 type="button"
                 onClick={onTaskClick}
-                className="w-full text-left flex items-center gap-2.5 py-1.5 px-2 rounded-md hover:bg-foreground/[0.04] transition-colors group/task"
+                className="w-full text-left flex items-center gap-2.5 py-1.5 px-2 rounded-md hover:bg-foreground/[0.06] transition-colors group/task"
               >
-                <span
-                  className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${
-                    t.priority === "high"
-                      ? "bg-destructive"
-                      : t.priority === "medium"
-                      ? "bg-warning"
-                      : "bg-success"
-                  }`}
-                />
+                <PriorityIcon className={`h-3 w-3 flex-shrink-0 ${priorityCls}`} />
                 <span className="text-[12.5px] text-foreground truncate flex-1">{t.title}</span>
                 {t.deadline && (
                   <span
-                    className={`text-[10px] uppercase tracking-wider flex-shrink-0 ${
+                    className={`text-[10px] uppercase tracking-wider tabular-nums flex-shrink-0 ${
                       overdue ? "text-destructive font-semibold" : "text-text-tertiary"
                     }`}
                   >
                     {formatDeadline(t.deadline)}
                   </span>
                 )}
+                <ChevronRight className="h-3 w-3 text-text-tertiary opacity-0 group-hover/task:opacity-100 transition-opacity flex-shrink-0" />
               </button>
             </li>
           );
         })}
       </ul>
       {footnote && (
-        <div className="text-[10px] text-text-tertiary italic mt-1 pl-2">{footnote}</div>
+        <div className="text-[10px] text-text-tertiary italic mt-1.5 pl-2">{footnote}</div>
       )}
     </section>
   );
@@ -1072,7 +1253,15 @@ function formatDeadline(iso: string) {
   const now = new Date();
   const dayMs = 24 * 60 * 60 * 1000;
   const diff = Math.round((d.getTime() - now.getTime()) / dayMs);
-  if (diff < -1) return `Overdue ${Math.abs(diff)}d`;
+
+  // Cap absurd overdue values so a bad data row doesn't scream
+  // "OVERDUE 9005D" at the user. Anything past a year reads "1y+".
+  if (diff < -1) {
+    const absDays = Math.abs(diff);
+    if (absDays >= 365) return "Overdue 1y+";
+    if (absDays >= 60) return `Overdue ${Math.floor(absDays / 30)}mo`;
+    return `Overdue ${absDays}d`;
+  }
   if (diff === -1) return "Overdue 1d";
   if (diff === 0) return "Today";
   if (diff === 1) return "Tomorrow";
