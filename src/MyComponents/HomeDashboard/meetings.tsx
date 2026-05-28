@@ -85,7 +85,7 @@ function MeetingRow({ meeting, onEdit, onDelete }: { meeting: any; onEdit: (id: 
       layout
       initial={{ opacity: 0, y: 4 }}
       animate={{ opacity: 1, y: 0 }}
-      className="group relative flex items-stretch rounded-md bg-card/50 hover:bg-card/80 border border-white/[0.04] hover:border-white/[0.08] transition-all overflow-hidden"
+      className="group relative flex items-stretch rounded-md bg-zinc-950/40 border border-zinc-800 overflow-hidden"
     >
       {/* Company accent rail */}
       <div className={`w-[3px] rounded-l-md ${co.rail}`} />
@@ -231,7 +231,7 @@ const Meetings = () => {
   };
 
   const Header = (
-    <div className="px-5 pt-4 pb-3 flex items-center justify-between gap-3">
+    <div className="px-5 py-3 flex items-center justify-between gap-3 bg-zinc-900/50 border-b border-zinc-800">
       <div className="flex items-center gap-3 min-w-0">
         <div className="p-2 rounded-md bg-gradient-to-br from-primary/15 to-primary/[0.03] border border-primary/20">
           <Calendar className="h-4 w-4 text-primary" />
@@ -256,16 +256,36 @@ const Meetings = () => {
         </div>
       </div>
       <div className="flex items-center gap-2 shrink-0">
-        <UserView userRole={["CEO", "COO", "ProjectManager", "Marketing"]}>
+        <UserView
+          userRole={[
+            "CEO", "COO", "ProjectManager", "Marketing",
+            // Head of Growth + Head of Internal Affairs can also create
+            // meetings. Both string forms (display value used by the
+            // Role enum + the key form some surfaces store) are listed
+            // so this gates work regardless of which form app_users.role
+            // happens to carry.
+            "Head of Growth", "Head of Internal Affairs",
+            "HeadOfGrowth", "HeadOfInternalAffairs",
+          ]}
+        >
           <AddMeeting />
         </UserView>
-        <UserView userRole={["CEO", "COO", "SoftwareDev"]}>
+        <UserView
+          userRole={[
+            "CEO", "COO", "SoftwareDev",
+            "Head of Growth", "Head of Internal Affairs",
+            "HeadOfGrowth", "HeadOfInternalAffairs",
+          ]}
+        >
           <Button
             size="sm"
-            className="bg-muted/40 hover:bg-primary/15 border border-border hover:border-primary/25 text-muted-foreground hover:text-primary-foreground transition-all rounded-md text-[11px] h-7"
+            // Cleaned ghost button — matches Tasks search bar styling
+            // (bg-zinc-950 + border-zinc-800) so the Tasks and Meetings
+            // panels share one visual language.
+            className="inline-flex items-center gap-1.5 h-7 px-3 rounded-md bg-zinc-950/60 hover:bg-zinc-900 border border-zinc-800 hover:border-zinc-700 text-zinc-400 hover:text-zinc-200 text-[11px] font-bold uppercase tracking-wider transition-colors"
             onClick={() => setIsShowing(!isShowing)}
           >
-            <Calendar className="h-3 w-3 mr-1.5" />
+            <Calendar className="h-3 w-3" />
             Schedule
           </Button>
         </UserView>
@@ -275,7 +295,7 @@ const Meetings = () => {
 
   if (list.length === 0) {
     return (
-      <div className="relative bg-card border border-border rounded-md overflow-hidden h-full flex flex-col">
+      <div className="relative bg-zinc-950/40 border border-zinc-800 rounded-lg overflow-hidden h-full flex flex-col">
         <div className="absolute inset-x-0 top-0 h-[1px] bg-gradient-to-r from-transparent via-primary/40 to-transparent pointer-events-none" />
         {Header}
         <div className="flex-1 flex items-center justify-center px-5 pb-5">
@@ -305,7 +325,7 @@ const Meetings = () => {
         />
       )}
 
-      <div className="relative bg-card border border-border rounded-md h-full overflow-hidden flex flex-col">
+      <div className="relative bg-zinc-950/40 border border-zinc-800 rounded-lg h-full overflow-hidden flex flex-col">
         <div className="absolute inset-x-0 top-0 h-[1px] bg-gradient-to-r from-transparent via-primary/40 to-transparent pointer-events-none" />
         {Header}
         <div className="px-5 pb-5 flex-1 min-h-0">

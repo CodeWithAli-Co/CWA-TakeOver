@@ -55,11 +55,10 @@ function StatCard({
   delay?: number;
 }) {
   return (
-    <BentoCard delay={delay}>
+    <BentoCard label={label} delay={delay}>
       <div className="flex items-start justify-between">
         <div>
-          <BentoLabel>{label}</BentoLabel>
-          <div className="mt-1">
+          <div>
             <BentoValue>{value}</BentoValue>
           </div>
           {change && (
@@ -112,10 +111,9 @@ function CWADashboardContent() {
       </div>
 
       {/* ── Row 2: Area Chart (8 cols) + Tasks (4 cols) ── */}
-      <BentoCard span="col-span-8 row-span-2" delay={0.25} noPadding>
-        <div className="px-4 pt-4 pb-2">
-          <BentoLabel>Revenue vs Expenses</BentoLabel>
-          <p className="text-[11px] text-muted-foreground mt-0.5">Last 8 months</p>
+      <BentoCard label="Revenue vs Expenses" span="col-span-8 row-span-2" delay={0.25} noPadding>
+        <div className="px-4 pt-3 pb-2">
+          <p className="text-[11px] text-muted-foreground">Last 8 months</p>
         </div>
         <div className="h-[280px] px-2">
           <ResponsiveContainer width="100%" height="100%">
@@ -149,9 +147,8 @@ function CWADashboardContent() {
         </div>
       </BentoCard>
 
-      <BentoCard span="col-span-4 row-span-2" delay={0.3}>
-        <BentoLabel>Tasks Overview</BentoLabel>
-        <div className="mt-3 space-y-3">
+      <BentoCard label="Tasks Overview" span="col-span-4 row-span-2" delay={0.3}>
+        <div className="space-y-3">
           <div className="flex items-center justify-between">
             <span className="text-sm text-foreground">Open Tasks</span>
             <span className="text-sm font-bold text-primary tabular-nums">{openTasks}</span>
@@ -194,9 +191,8 @@ function CWADashboardContent() {
       </BentoCard>
 
       {/* ── Row 3: Quick Links ── */}
-      <BentoCard span="col-span-4" delay={0.35}>
-        <BentoLabel>Quick Stats</BentoLabel>
-        <div className="mt-3 space-y-2.5">
+      <BentoCard label="Quick Stats" span="col-span-4" delay={0.35}>
+        <div className="space-y-2.5">
           <div className="flex items-center justify-between py-1">
             <div className="flex items-center gap-2">
               <MessageSquare className="h-3.5 w-3.5 text-primary" />
@@ -221,16 +217,20 @@ function CWADashboardContent() {
         </div>
       </BentoCard>
 
-      <BentoCard span="col-span-8" delay={0.4}>
-        <BentoLabel>Active Projects</BentoLabel>
-        <div className="mt-3 grid grid-cols-4 gap-3">
+      <BentoCard label="Active Projects" span="col-span-8" delay={0.4}>
+        <div className="grid grid-cols-4 gap-3">
           {[
             { name: "Simplicity", status: "In Progress", progress: 72 },
             { name: "CWA Invoicer", status: "Active", progress: 85 },
             { name: "Mario Hauling", status: "Active", progress: 60 },
             { name: "Registry Site", status: "Planning", progress: 20 },
           ].map((project, i) => (
-            <div key={i} className="p-3 rounded-md bg-muted/30 border border-border-subtle">
+            <div
+              key={i}
+              // Same chrome rule as the outer BentoCard: zinc-800
+              // border, slightly-darker zinc body, no hover.
+              className="p-3 rounded-md border border-zinc-800 bg-zinc-950/40"
+            >
               <p className="text-sm font-medium text-foreground">{project.name}</p>
               <p className="text-[10px] text-muted-foreground mt-0.5">{project.status}</p>
               <div className="mt-2 w-full h-1 bg-muted rounded-full overflow-hidden">

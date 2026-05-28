@@ -120,18 +120,26 @@ export const AddTodo = (props: Users) => {
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button
-          className="group relative overflow-hidden bg-primary mb-2 
-          hover:bg-primary/80 text-primary-foreground border border-primary/15 
-          shadow-md shadow-red-950/20 transition-all duration-300 
-          hover:scale-[1.02] active:scale-[0.98]"
-        >
-          <span className="absolute inset-0 bg-red-700/10 opacity-0 group-hover:opacity-20 transition-opacity"></span>
-          <PlusCircle className={`h-4 w-4 ${props.homeDash ? "m-0" : " mr-2"} transition-transform group-hover:rotate-90`} />
-          {!props.homeDash && (
+        {props.homeDash ? (
+          // Compact icon-only toolbar variant for the dashboard header.
+          // Slim h-7 button matches the inline search input, no scale
+          // animation (too jumpy inside a header), simple primary fill.
+          <Button
+            size="icon"
+            className="h-7 w-7 p-0 bg-primary/90 hover:bg-primary text-primary-foreground border border-primary/30 rounded-md transition-colors"
+            title="Create task"
+          >
+            <PlusCircle className="h-3.5 w-3.5" />
+          </Button>
+        ) : (
+          <Button
+            className="group relative overflow-hidden bg-primary mb-2 hover:bg-primary/80 text-primary-foreground border border-primary/15 shadow-md shadow-red-950/20 transition-all duration-300 hover:scale-[1.02] active:scale-[0.98]"
+          >
+            <span className="absolute inset-0 bg-red-700/10 opacity-0 group-hover:opacity-20 transition-opacity"></span>
+            <PlusCircle className="h-4 w-4 mr-2 transition-transform group-hover:rotate-90" />
             <span>Create Task</span>
-          )}
-        </Button>
+          </Button>
+        )}
       </DialogTrigger>
       <DialogContent className="max-w-lg">
         <DialogHeader>

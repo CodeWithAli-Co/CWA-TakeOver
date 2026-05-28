@@ -137,19 +137,17 @@ export const AddMeeting = () => {
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <motion.div
-          whileHover={{ scale: 1.02 }}
-          whileTap={{ scale: 0.98 }}
-          transition={{ type: "spring", stiffness: 400, damping: 17 }}
+        {/* Cleaned-up branded button — replaces the previous green
+            outline that didn't match the app's red/zinc language.
+            Same primary fill the AddTodo button uses, slim h-7 form
+            so it sits cleanly in the Meetings panel header. */}
+        <Button
+          size="sm"
+          className="inline-flex items-center gap-1.5 h-7 px-3 rounded-md bg-primary/90 hover:bg-primary text-primary-foreground border border-primary/30 text-[11px] font-bold uppercase tracking-wider transition-colors"
         >
-          <Button
-            size={"default"}
-            className="relative bg-green-950/20 hover:bg-green-950/10  active:to-green-950/20 w-auto h-auto px-4 py-2 transform transition-all ease-out border border-green-900 group rounded-xs  duration-300"
-          >
-            <Plus className="h-4 w-4 mr-1" />
-            Add Meeting
-          </Button>
-        </motion.div>
+          <Plus className="h-3 w-3" />
+          Add Meeting
+        </Button>
       </DialogTrigger>
       <DialogContent className="max-w-lg">
         <DialogHeader>

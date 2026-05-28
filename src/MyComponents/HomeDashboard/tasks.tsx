@@ -14,6 +14,7 @@ import {
   CheckCircle2,
   CalendarClock,
   Building2,
+  Search,
 } from "lucide-react";
 import { Input } from "@/components/ui/shadcnComponents/input";
 import { ScrollArea } from "@/components/ui/shadcnComponents/scroll-area";
@@ -113,7 +114,7 @@ function TaskItem({ task }: { task: any }) {
       initial={{ opacity: 0, y: 4 }}
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, y: -4 }}
-      className="relative group flex items-stretch rounded-md bg-card/50 hover:bg-card/80 border border-white/[0.04] hover:border-white/[0.08] transition-all"
+      className="relative group flex items-stretch rounded-md bg-zinc-950/40 border border-zinc-800"
     >
       {/* Left rail — company color */}
       <div className={`w-[3px] rounded-l-md ${co.rail}`} />
@@ -236,69 +237,73 @@ export const TasksComponent = () => {
   const simpCount = todos?.filter((t: any) => t.company === "simplicity").length ?? 0;
 
   return (
-    <div className="relative bg-card border border-border rounded-md h-full overflow-hidden flex flex-col">
-      {/* Ambient accent rail at top */}
-      <div className="absolute inset-x-0 top-0 h-[1px] bg-gradient-to-r from-transparent via-primary/40 to-transparent pointer-events-none" />
-
-      <div className="px-5 pt-4 pb-3 flex items-center justify-between gap-3">
-        <div className="flex items-center gap-3 min-w-0">
-          <div className="p-2 rounded-md bg-gradient-to-br from-primary/15 to-primary/[0.03] border border-primary/20">
-            <ListTodo className="h-4 w-4 text-primary" />
+    <div className="relative bg-zinc-950/40 border border-zinc-800 rounded-lg h-full overflow-hidden flex flex-col">
+      {/* Single-row header — title + counts + filter tabs + search + add,
+          all on one line so the body has more room for the actual task
+          list. Title block collapses CWA/Simpl badges inline so the
+          header doesn't get vertically tall. */}
+      <div className="px-5 py-2.5 flex items-center gap-4 bg-zinc-900/50 border-b border-zinc-800">
+        {/* Left: title + counts, inline */}
+        <div className="flex items-center gap-3 min-w-0 flex-shrink-0">
+          <div className="p-1.5 rounded-md bg-gradient-to-br from-primary/15 to-primary/[0.03] border border-primary/20">
+            <ListTodo className="h-3.5 w-3.5 text-primary" />
           </div>
-          <div className="min-w-0">
-            <div className="flex items-center gap-2">
-              <span className="text-[11px] text-muted-foreground/80 uppercase tracking-[0.18em] font-semibold">
-                Tasks
-              </span>
-              <span className="text-[10px] text-muted-foreground/60 tabular-nums">{totalTasks}</span>
-            </div>
-            <div className="flex items-center gap-2 mt-1">
-              <span className="inline-flex items-center gap-1 text-[9.5px] text-muted-foreground/60 uppercase tracking-wider">
-                <span className="w-1.5 h-1.5 rounded-full bg-red-500" />
-                CWA {cwaCount}
-              </span>
-              <span className="inline-flex items-center gap-1 text-[9.5px] text-muted-foreground/60 uppercase tracking-wider">
-                <span className="w-1.5 h-1.5 rounded-full bg-teal-400" />
-                Simpl {simpCount}
-              </span>
-            </div>
+          <div className="flex items-center gap-3 min-w-0">
+            <span className="text-[11px] text-foreground/85 uppercase tracking-[0.16em] font-semibold">
+              Tasks
+            </span>
+            <span className="text-[10.5px] text-zinc-500 tabular-nums">{totalTasks}</span>
+            <span className="text-zinc-700">·</span>
+            <span className="inline-flex items-center gap-1 text-[9.5px] text-zinc-400 uppercase tracking-wider">
+              <span className="w-1 h-1 rounded-full bg-red-500" />
+              CWA {cwaCount}
+            </span>
+            <span className="inline-flex items-center gap-1 text-[9.5px] text-zinc-400 uppercase tracking-wider">
+              <span className="w-1 h-1 rounded-full bg-teal-400" />
+              Simpl {simpCount}
+            </span>
           </div>
         </div>
 
-        <div className="flex items-center gap-2 shrink-0">
-          <Input
-            placeholder="Search tasks…"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-[140px] h-7 text-[11px] bg-muted/30 border-border placeholder:text-muted-foreground/40 focus:border-primary/30"
-          />
-          <AddTodo Users={AllEmployees || []} homeDash />
-        </div>
-      </div>
-
-      <div className="px-5 pb-4">
-        <Tabs value={selectedTab} className="mb-3" onValueChange={(v) => setSelectedTab(v as any)}>
-          <TabsList className="bg-muted/30 border border-border rounded-md h-7 p-0.5">
+        {/* Middle: filter tabs (was below the header) */}
+        <Tabs value={selectedTab} onValueChange={(v) => setSelectedTab(v as any)}>
+          <TabsList className="bg-zinc-950/60 border border-zinc-800 rounded-md h-7 p-0.5">
             <TabsTrigger
               value="to-do"
-              className="data-[state=active]:bg-primary/15 data-[state=active]:text-primary data-[state=active]:shadow-[inset_0_-2px_0_rgba(var(--brand-accent-rgb),0.8)] text-muted-foreground/80 rounded-[4px] text-[10.5px] h-6 px-3 font-semibold uppercase tracking-wider"
+              className="data-[state=active]:bg-primary/15 data-[state=active]:text-primary text-zinc-400 rounded-[4px] text-[10.5px] h-6 px-2.5 font-semibold uppercase tracking-wider"
             >
               Open · {todoCount}
             </TabsTrigger>
             <TabsTrigger
               value="in-progress"
-              className="data-[state=active]:bg-amber-500/15 data-[state=active]:text-amber-300 text-muted-foreground/80 rounded-[4px] text-[10.5px] h-6 px-3 font-semibold uppercase tracking-wider"
+              className="data-[state=active]:bg-amber-500/15 data-[state=active]:text-amber-300 text-zinc-400 rounded-[4px] text-[10.5px] h-6 px-2.5 font-semibold uppercase tracking-wider"
             >
               Active · {inProgressCount}
             </TabsTrigger>
             <TabsTrigger
               value="done"
-              className="data-[state=active]:bg-emerald-500/15 data-[state=active]:text-emerald-300 text-muted-foreground/80 rounded-[4px] text-[10.5px] h-6 px-3 font-semibold uppercase tracking-wider"
+              className="data-[state=active]:bg-emerald-500/15 data-[state=active]:text-emerald-300 text-zinc-400 rounded-[4px] text-[10.5px] h-6 px-2.5 font-semibold uppercase tracking-wider"
             >
               Done · {doneCount}
             </TabsTrigger>
           </TabsList>
         </Tabs>
+
+        <div className="flex-1" />
+
+        {/* Right: modern search input with icon + clean add button */}
+        <div className="flex items-center gap-2 shrink-0">
+          <div className="relative">
+            <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3 w-3 text-zinc-500 pointer-events-none" />
+            <Input
+              placeholder="Search…"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-[170px] h-7 pl-7 pr-2 text-[11px] bg-zinc-950/60 border border-zinc-800 placeholder:text-zinc-500 text-zinc-200 focus:border-zinc-600 focus-visible:ring-0 rounded-md"
+            />
+          </div>
+          <AddTodo Users={AllEmployees || []} homeDash />
+        </div>
       </div>
 
       <div className="px-5 pb-5 flex-1 min-h-0">

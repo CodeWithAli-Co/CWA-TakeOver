@@ -22,8 +22,19 @@ export const CLAUDE_MODEL = "claude-sonnet-4-6";
 export const ANTHROPIC_API_URL = "https://api.anthropic.com/v1/messages";
 export const ANTHROPIC_API_VERSION = "2023-06-01";
 
-/** Roles allowed to see/operate AXON. */
-export const AXON_ALLOWED_ROLES = [Role.CEO, Role.COO, Role.Admin, Role.HeadOfInternalAffairs, Role.HeadOfGrowth] as const;
+/** Roles allowed to see/operate AXON.
+ *  Listed in both display-value form (Role.X resolves to "Head of Growth")
+ *  AND key form ("HeadOfGrowth") so the gate works regardless of which
+ *  string the app_users.role column happens to carry for legacy rows. */
+export const AXON_ALLOWED_ROLES = [
+  Role.CEO,
+  Role.COO,
+  Role.Admin,
+  Role.HeadOfInternalAffairs,
+  Role.HeadOfGrowth,
+  "HeadOfGrowth",
+  "HeadOfInternalAffairs",
+] as const;
 
 /** Storage key for persisted settings (not secrets).
  *  Bumped to v5 — added projects + activeProjectId. Bumping drops any

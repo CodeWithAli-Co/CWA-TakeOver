@@ -50,8 +50,16 @@ const Index = () => {
 
   return (
     <div className="min-h-screen bg-background overflow-y-auto transition-colors duration-500">
-      {/* ── Header ── */}
-      <div className="px-8 pt-7 pb-1">
+      {/* ── Page header — solid zinc-900 band with both a sharp zinc
+            border AND a brand-accent gradient hairline at the very
+            bottom for a real visible "title bar" feel. The accent line
+            ties it to the rest of the app's red language without
+            painting the whole strip red. */}
+      <div className="px-8 py-7 bg-zinc-950/40 border-b border-zinc-700 relative">
+        <div
+          aria-hidden
+          className="pointer-events-none absolute inset-x-0 -bottom-px h-px bg-gradient-to-r from-transparent via-amber-500 to-transparent"
+        />
         <div className="flex items-end justify-between">
           <div>
             <motion.h1
