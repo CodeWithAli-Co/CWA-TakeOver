@@ -34,6 +34,7 @@ const OffersLazyRouteImport = createFileRoute('/offers')()
 const Mod_logsLazyRouteImport = createFileRoute('/mod_logs')()
 const InvoicerLazyRouteImport = createFileRoute('/invoicer')()
 const HiringLazyRouteImport = createFileRoute('/hiring')()
+const GrowthLazyRouteImport = createFileRoute('/growth')()
 const GraduationPlanLazyRouteImport = createFileRoute('/graduationPlan')()
 const FundingLazyRouteImport = createFileRoute('/funding')()
 const FinancialDashboardLazyRouteImport = createFileRoute(
@@ -179,6 +180,11 @@ const HiringLazyRoute = HiringLazyRouteImport.update({
   path: '/hiring',
   getParentRoute: () => rootRouteImport,
 } as any).lazy(() => import('./routes/hiring.lazy').then((d) => d.Route))
+const GrowthLazyRoute = GrowthLazyRouteImport.update({
+  id: '/growth',
+  path: '/growth',
+  getParentRoute: () => rootRouteImport,
+} as any).lazy(() => import('./routes/growth.lazy').then((d) => d.Route))
 const GraduationPlanLazyRoute = GraduationPlanLazyRouteImport.update({
   id: '/graduationPlan',
   path: '/graduationPlan',
@@ -359,6 +365,7 @@ export interface FileRoutesByFullPath {
   '/financialDashboard': typeof FinancialDashboardLazyRoute
   '/funding': typeof FundingLazyRoute
   '/graduationPlan': typeof GraduationPlanLazyRoute
+  '/growth': typeof GrowthLazyRoute
   '/hiring': typeof HiringLazyRoute
   '/invoicer': typeof InvoicerLazyRoute
   '/mod_logs': typeof Mod_logsLazyRoute
@@ -411,6 +418,7 @@ export interface FileRoutesByTo {
   '/financialDashboard': typeof FinancialDashboardLazyRoute
   '/funding': typeof FundingLazyRoute
   '/graduationPlan': typeof GraduationPlanLazyRoute
+  '/growth': typeof GrowthLazyRoute
   '/hiring': typeof HiringLazyRoute
   '/invoicer': typeof InvoicerLazyRoute
   '/mod_logs': typeof Mod_logsLazyRoute
@@ -463,6 +471,7 @@ export interface FileRoutesById {
   '/financialDashboard': typeof FinancialDashboardLazyRoute
   '/funding': typeof FundingLazyRoute
   '/graduationPlan': typeof GraduationPlanLazyRoute
+  '/growth': typeof GrowthLazyRoute
   '/hiring': typeof HiringLazyRoute
   '/invoicer': typeof InvoicerLazyRoute
   '/mod_logs': typeof Mod_logsLazyRoute
@@ -517,6 +526,7 @@ export interface FileRouteTypes {
     | '/financialDashboard'
     | '/funding'
     | '/graduationPlan'
+    | '/growth'
     | '/hiring'
     | '/invoicer'
     | '/mod_logs'
@@ -569,6 +579,7 @@ export interface FileRouteTypes {
     | '/financialDashboard'
     | '/funding'
     | '/graduationPlan'
+    | '/growth'
     | '/hiring'
     | '/invoicer'
     | '/mod_logs'
@@ -620,6 +631,7 @@ export interface FileRouteTypes {
     | '/financialDashboard'
     | '/funding'
     | '/graduationPlan'
+    | '/growth'
     | '/hiring'
     | '/invoicer'
     | '/mod_logs'
@@ -673,6 +685,7 @@ export interface RootRouteChildren {
   FinancialDashboardLazyRoute: typeof FinancialDashboardLazyRoute
   FundingLazyRoute: typeof FundingLazyRoute
   GraduationPlanLazyRoute: typeof GraduationPlanLazyRoute
+  GrowthLazyRoute: typeof GrowthLazyRoute
   HiringLazyRoute: typeof HiringLazyRoute
   InvoicerLazyRoute: typeof InvoicerLazyRoute
   Mod_logsLazyRoute: typeof Mod_logsLazyRoute
@@ -853,6 +866,13 @@ declare module '@tanstack/react-router' {
       path: '/hiring'
       fullPath: '/hiring'
       preLoaderRoute: typeof HiringLazyRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/growth': {
+      id: '/growth'
+      path: '/growth'
+      fullPath: '/growth'
+      preLoaderRoute: typeof GrowthLazyRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/graduationPlan': {
@@ -1105,6 +1125,7 @@ const rootRouteChildren: RootRouteChildren = {
   FinancialDashboardLazyRoute: FinancialDashboardLazyRoute,
   FundingLazyRoute: FundingLazyRoute,
   GraduationPlanLazyRoute: GraduationPlanLazyRoute,
+  GrowthLazyRoute: GrowthLazyRoute,
   HiringLazyRoute: HiringLazyRoute,
   InvoicerLazyRoute: InvoicerLazyRoute,
   Mod_logsLazyRoute: Mod_logsLazyRoute,

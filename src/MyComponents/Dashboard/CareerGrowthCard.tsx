@@ -14,6 +14,7 @@
  */
 
 import { ArrowRight, Plus, Sparkles, TrendingUp } from "lucide-react";
+import { useNavigate } from "@tanstack/react-router";
 import { BentoCard } from "./BentoCard";
 import { ActiveUser, useMyGrowthTrack } from "@/stores/query";
 import { isCLevel } from "./row4ViewStore";
@@ -98,6 +99,7 @@ function TrackBody({
   track: NonNullable<ReturnType<typeof useMyGrowthTrack>["data"]>;
   canManage: boolean;
 }) {
+  const navigate = useNavigate();
   const openDialog = useCreateGrowthTrackDialog((s) => s.openDialog);
   const steps = Array.isArray(track.milestone_steps)
     ? track.milestone_steps
@@ -190,9 +192,8 @@ function TrackBody({
         )}
         <button
           type="button"
-          disabled
-          title="Track detail view comes online with the breakdown route"
-          className="flex items-center gap-1 text-[10px] font-semibold uppercase tracking-[0.12em] text-text-tertiary/60 cursor-not-allowed"
+          onClick={() => navigate({ to: "/growth" })}
+          className="flex items-center gap-1 text-[10px] font-semibold uppercase tracking-[0.12em] text-text-tertiary hover:text-foreground transition-colors"
         >
           View breakdown
           <ArrowRight className="h-2.5 w-2.5" />

@@ -1,5 +1,11 @@
 import supabase from "@/MyComponents/supabase";
-import { keepPreviousData, useQuery, useSuspenseQuery } from "@tanstack/react-query";
+import {
+  keepPreviousData,
+  useMutation,
+  useQuery,
+  useQueryClient,
+  useSuspenseQuery,
+} from "@tanstack/react-query";
 import { message } from "@tauri-apps/plugin-dialog";
 import { useCompanyFilter } from "./store";
 
@@ -462,6 +468,61 @@ export const useMyGrowthTrack = () => {
 };
 
 /**
+ * All approved tracks the current user is permitted to read.
+ * Non-managers get just their own row (RLS scopes by user_id);
+ * managers (CEO/COO/CFO) get everyone's tracks because the
+ * manager-select policy grants them broad read access.
+ *
+ * Returns rows with the owner's username + role joined in so the
+ * /growth page can render employee names without a separate join.
+ */
+export interface GrowthTrackWithOwner extends GrowthTrackRow {
+  owner_username: string | null;
+  owner_role: string | null;
+}
+
+export const useAllVisibleGrowthTracks = () => {
+  return useQuery({
+    queryKey: ["growth_tracks", "all-visible"],
+    queryFn: async (): Promise<GrowthTrackWithOwner[]> => {
+      // Pull the tracks first.
+      const { data: tracks, error } = await supabase
+        .from("growth_tracks")
+        .select("*")
+        .eq("manager_approved", true)
+        .order("updated_at", { ascending: false });
+      if (error) {
+        console.warn(
+          "[growth_tracks/all-visible] query error:",
+          error.message,
+        );
+        return [];
+      }
+      const rows = (tracks ?? []) as GrowthTrackRow[];
+      if (rows.length === 0) return [];
+
+      // Resolve owner usernames in a single follow-up query —
+      // cheap, avoids needing a view or a foreign-table join.
+      const ownerIds = Array.from(new Set(rows.map((r) => r.user_id)));
+      const { data: owners } = await supabase
+        .from("app_users")
+        .select("supa_id, username, role")
+        .in("supa_id", ownerIds);
+      const ownerMap = new Map<string, { username: string; role: string | null }>();
+      for (const o of (owners ?? []) as any[]) {
+        ownerMap.set(o.supa_id, { username: o.username, role: o.role ?? null });
+      }
+      return rows.map((r) => ({
+        ...r,
+        owner_username: ownerMap.get(r.user_id)?.username ?? null,
+        owner_role: ownerMap.get(r.user_id)?.role ?? null,
+      }));
+    },
+    staleTime: 30_000,
+  });
+};
+
+/**
  * Fetch a specific user's current approved growth track. Used by
  * the manager create/edit modal to pre-fill an "edit existing"
  * flow when the picked employee already has a track.
@@ -487,6 +548,87 @@ export const useGrowthTrackForUser = (userId: string | null) => {
       return (data as GrowthTrackRow | null) ?? null;
     },
     staleTime: 30_000,
+  });
+};
+
+/**
+ * Mutation: toggle a milestone step's `completed` flag. Calls the
+ * server-side RPC `toggle_growth_step_completion` which validates
+ * the caller is either the track owner or a manager, then patches
+ * the JSONB in place. Owner-only update on the row itself stays
+ * disallowed by RLS — the RPC is the single supported path.
+ *
+ * On mutate we apply an optimistic update to the affected caches
+ * so the checkmark flips immediately. On error we roll back and
+ * surface the message; on settled we invalidate to reconcile.
+ */
+export const useToggleGrowthStep = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (vars: {
+      trackId: string;
+      stepId: string;
+      completed: boolean;
+    }) => {
+      const { data, error } = await supabase.rpc(
+        "toggle_growth_step_completion",
+        {
+          p_track_id: vars.trackId,
+          p_step_id: vars.stepId,
+          p_completed: vars.completed,
+        },
+      );
+      if (error) throw new Error(error.message);
+      return data as GrowthTrackRow;
+    },
+
+    // Optimistic update: patch the affected caches before the
+    // server replies so the UI flips instantly.
+    onMutate: async (vars) => {
+      const patchSteps = (steps: GrowthMilestoneStep[] | undefined) =>
+        (steps ?? []).map((s) =>
+          s.id === vars.stepId ? { ...s, completed: vars.completed } : s,
+        );
+
+      // Snapshot every growth_tracks cache so we can roll back.
+      await queryClient.cancelQueries({ queryKey: ["growth_tracks"] });
+      const snapshots = queryClient.getQueriesData<any>({
+        queryKey: ["growth_tracks"],
+      });
+
+      for (const [key, value] of snapshots) {
+        if (!value) continue;
+        if (Array.isArray(value)) {
+          queryClient.setQueryData(
+            key,
+            value.map((t: any) =>
+              t?.id === vars.trackId
+                ? { ...t, milestone_steps: patchSteps(t.milestone_steps) }
+                : t,
+            ),
+          );
+        } else if (value?.id === vars.trackId) {
+          queryClient.setQueryData(key, {
+            ...value,
+            milestone_steps: patchSteps(value.milestone_steps),
+          });
+        }
+      }
+      return { snapshots };
+    },
+
+    onError: (_err, _vars, ctx) => {
+      // Roll back to the snapshot taken before the mutation.
+      if (!ctx?.snapshots) return;
+      for (const [key, value] of ctx.snapshots) {
+        queryClient.setQueryData(key, value);
+      }
+    },
+
+    onSettled: () => {
+      void queryClient.invalidateQueries({ queryKey: ["growth_tracks"] });
+    },
   });
 };
 
