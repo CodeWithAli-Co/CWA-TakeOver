@@ -19,6 +19,7 @@
 import { Activity, ArrowRight, ArrowUpRight, HandHeart, Trophy } from "lucide-react";
 import { BentoCard } from "./BentoCard";
 import { useTeamActivity, type TeamActivityRow } from "@/stores/query";
+import { useSendKudosDialog } from "./sendKudosStore";
 
 function relativeTime(createdAt: string): string {
   const ageMs = Date.now() - new Date(createdAt).getTime();
@@ -43,16 +44,25 @@ function iconForType(type: TeamActivityRow["activity_type"]) {
 }
 
 function EmptyState() {
+  const openKudos = useSendKudosDialog((s) => s.openDialog);
   return (
     <div className="flex-1 min-h-0 flex items-center justify-center">
       <div className="text-center px-4">
         <div className="mx-auto h-7 w-7 rounded-full bg-foreground/[0.04] border-xs border-border-soft flex items-center justify-center mb-2">
           <Activity className="h-3.5 w-3.5 text-text-tertiary" />
         </div>
-        <p className="text-[11.5px] text-text-tertiary leading-snug max-w-[200px] mx-auto">
-          Quiet so far. Activity will show here as people ship work,
-          celebrate wins, and share kudos.
+        <p className="text-[11.5px] text-text-tertiary leading-snug max-w-[200px] mx-auto mb-2">
+          Quiet so far. Mark a task as done or send someone kudos to
+          start the feed.
         </p>
+        <button
+          type="button"
+          onClick={() => openKudos()}
+          className="inline-flex items-center gap-1.5 text-[10.5px] font-semibold text-primary hover:text-primary/80 transition-colors"
+        >
+          <HandHeart className="h-3 w-3" />
+          Send the first kudos
+        </button>
       </div>
     </div>
   );

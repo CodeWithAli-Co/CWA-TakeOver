@@ -38,26 +38,43 @@ function pacingChip(status: "on_track" | "attention_needed" | "ahead") {
   }
 }
 
-/** Empty state — no approved track yet. */
-function PreparingCard() {
+/** Empty state — no approved track yet. C-level users see a CTA
+ *  to create one (acting as managers until manager_id wires up);
+ *  everyone else sees the "preparing" copy. */
+function PreparingCard({ canManage }: { canManage: boolean }) {
+  const openDialog = useCreateGrowthTrackDialog((s) => s.openDialog);
   return (
-    <div className="flex flex-col h-full items-center justify-center text-center px-4">
-      <div className="h-7 w-7 rounded-full bg-primary/10 border-xs border-primary/20 flex items-center justify-center mb-2">
+    <div className="flex flex-col h-full items-center justify-center text-center px-4 gap-2">
+      <div className="h-7 w-7 rounded-full bg-primary/10 border-xs border-primary/20 flex items-center justify-center">
         <Sparkles className="h-3.5 w-3.5 text-primary" />
       </div>
-      <p className="text-[12px] font-semibold text-foreground mb-1">
-        Your growth track is being prepared
+      <p className="text-[12px] font-semibold text-foreground">
+        {canManage ? "No growth track yet" : "Your growth track is being prepared"}
       </p>
-      <p className="text-[11px] text-text-tertiary leading-snug max-w-[220px]">
-        Axon drafts the milestones from your work patterns. Once
-        your manager approves, the arc shows up here.
+      <p className="text-[11px] text-text-tertiary leading-snug max-w-[240px]">
+        {canManage
+          ? "Author a track for anyone on the team — role, milestone, steps. The employee sees it on their dashboard immediately."
+          : "Axon drafts the milestones from your work patterns. Once your manager approves, the arc shows up here."}
       </p>
+      {canManage && (
+        <button
+          type="button"
+          onClick={() => openDialog()}
+          className="mt-1 inline-flex items-center gap-1.5 text-[11px] font-semibold text-white bg-primary hover:bg-primary/90 rounded-md px-3 py-1.5 transition-colors"
+        >
+          <Plus className="h-3 w-3" />
+          Create a track
+        </button>
+      )}
     </div>
   );
 }
 
 export function CareerGrowthCard() {
   const { data: track, isLoading } = useMyGrowthTrack();
+  const { data: meRows } = ActiveUser();
+  const role: string | undefined = (meRows?.[0] as any)?.role ?? undefined;
+  const canManage = isCLevel(role);
 
   return (
     <BentoCard label="GROWTH" withHeaderBar className="h-full">
@@ -66,9 +83,9 @@ export function CareerGrowthCard() {
           Loading your track…
         </div>
       ) : !track ? (
-        <PreparingCard />
+        <PreparingCard canManage={canManage} />
       ) : (
-        <TrackBody track={track} />
+        <TrackBody track={track} canManage={canManage} />
       )}
     </BentoCard>
   );
@@ -76,9 +93,12 @@ export function CareerGrowthCard() {
 
 function TrackBody({
   track,
+  canManage,
 }: {
   track: NonNullable<ReturnType<typeof useMyGrowthTrack>["data"]>;
+  canManage: boolean;
 }) {
+  const openDialog = useCreateGrowthTrackDialog((s) => s.openDialog);
   const steps = Array.isArray(track.milestone_steps)
     ? track.milestone_steps
     : [];
@@ -154,8 +174,20 @@ function TrackBody({
         </div>
       )}
 
-      {/* Footer link */}
-      <div className="mt-auto pt-1">
+      {/* Footer — manager-edit button on the left, disabled detail
+          link on the right (route lands later). */}
+      <div className="mt-auto pt-1 flex items-center justify-between">
+        {canManage ? (
+          <button
+            type="button"
+            onClick={() => openDialog({ employeeId: track.user_id })}
+            className="flex items-center gap-1 text-[10px] font-semibold uppercase tracking-[0.12em] text-foreground/75 hover:text-foreground transition-colors"
+          >
+            Edit track
+          </button>
+        ) : (
+          <span />
+        )}
         <button
           type="button"
           disabled
