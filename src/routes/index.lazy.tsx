@@ -8,7 +8,9 @@ import {
   File,
   CalendarSearch,
   Clock,
+  Sparkles,
 } from "lucide-react";
+import { useDemoMode } from "@/stores/demoMode";
 import { motion } from "framer-motion";
 import UserView, { Role } from "@/MyComponents/Reusables/userView";
 import Quotas from "@/MyComponents/HomeDashboard/qoutas";
@@ -36,6 +38,8 @@ const Index = () => {
   const { data: user } = ActiveUser();
   const username = user?.[0]?.username || "there";
   const { activeCompany } = useCompanyFilter();
+  const demoOn = useDemoMode((s) => s.enabled);
+  const toggleDemo = useDemoMode((s) => s.toggle);
 
   const currentDate = new Date().toLocaleDateString("en-US", {
     weekday: "short",
@@ -50,15 +54,14 @@ const Index = () => {
 
   return (
     <div className="min-h-screen bg-background overflow-y-auto transition-colors duration-500">
-      {/* ── Page header — solid zinc-900 band with both a sharp zinc
-            border AND a brand-accent gradient hairline at the very
-            bottom for a real visible "title bar" feel. The accent line
-            ties it to the rest of the app's red language without
-            painting the whole strip red. */}
-      <div className="px-8 py-7 bg-zinc-950/40 border-b border-zinc-700 relative">
+      {/* ── Page header — elevated tier (bg-popover) so it sits above
+            the canvas as a distinct title bar. Soft hairline border
+            + a brand-red gradient hairline at the very bottom ties it
+            to the app's accent language without painting the strip red. */}
+      <div className="px-8 py-7 bg-popover border-b border-xs border-border-soft relative">
         <div
           aria-hidden
-          className="pointer-events-none absolute inset-x-0 -bottom-px h-px bg-gradient-to-r from-transparent via-amber-500 to-transparent"
+          className="pointer-events-none absolute inset-x-0 -bottom-px h-px bg-gradient-to-r from-transparent via-primary/70 to-transparent"
         />
         <div className="flex items-end justify-between">
           <div>
@@ -87,6 +90,33 @@ const Index = () => {
             animate={{ opacity: 1 }}
             transition={{ delay: 0.15 }}
             className="flex items-center gap-1.5"
+          >
+            {/* Demo-mode toggle — purely a display layer. Real data is
+                never overwritten; flipping this back instantly restores
+                the live numbers. Persisted to localStorage so a pitch
+                rehearsal survives a dev restart. */}
+            <button
+              type="button"
+              onClick={toggleDemo}
+              title={demoOn ? "Switch back to real data" : "Show demo data"}
+              className={
+                "inline-flex items-center gap-1.5 h-7 px-2.5 rounded-lg border text-[10.5px] font-bold uppercase tracking-wider transition-colors " +
+                (demoOn
+                  ? "bg-success/15 border-success/30 text-success"
+                  : "bg-background/50 border-border-soft text-text-tertiary hover:text-foreground hover:border-foreground/15")
+              }
+            >
+              <Sparkles className="h-3 w-3" />
+              {demoOn ? "Demo on" : "Demo"}
+            </button>
+          </motion.div>
+
+          {/* Quick nav */}
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.18 }}
+            className="flex items-center gap-1.5 ml-1.5"
           >
             <UserView userRole={[Role.CEO, Role.COO, Role.ProjectManager, Role.Marketing]}>
               <QuickActionCard icon={Terminal} url="/details" title="Accounts" />

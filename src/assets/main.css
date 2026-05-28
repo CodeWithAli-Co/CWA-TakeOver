@@ -59,42 +59,57 @@ html, body {
 @layer base {
   :root,
   [data-company="codeWithAli"] {
-    /* Surfaces — true zinc tones, NOT pure black.
+    /* Elevation system — three surface layers, tuned for real visible
+     * separation rather than the washed-out feel of the first pass.
+     * ~6pt lightness steps + 10% saturation on the warm violet tint.
      *
-     * Calibrated against Tailwind's zinc scale so surfaces match the
-     * "Discord-with-mood-lighting" feel the user asked for:
-     *   background ≈ zinc-900    (10% lightness, clearly visible)
-     *   card       ≈ zinc-800/700 mix (14%, lifts off the body)
-     *   muted      ≈ zinc-700ish  (17%, used as button/hover surfaces)
-     *   border     ≈ zinc-600     (26%, actually visible at low contrast)
-     *
-     * Earlier values had body at 6% (basically void) and text-dim at
-     * 28% lightness which faded any non-active text into nothing. */
-    --background: 240 6% 10%;       /* zinc-900-ish body */
+     *   canvas    --background  hsl(270 10% 4%)   ≈ #0B0A0D
+     *   surface   --card        hsl(280 9% 10%)   ≈ #1B181D   (cards)
+     *   elevated  --popover     hsl(270 9% 15%)   ≈ #2A2630   (hover/popovers)
+     */
+    --background: 270 10% 4%;
     --foreground: 0 0% 98%;
-    --card: 240 5% 14%;             /* clearly elevated card surface */
+    --card: 280 9% 10%;
     --card-foreground: 0 0% 98%;
-    --popover: 240 5% 15%;
+    --popover: 270 9% 15%;
     --popover-foreground: 0 0% 98%;
 
-    /* Brand */
-    --primary: 0 72% 51%;          /* Red-600 */
+    /* Brand — reserved exclusively for brand moments (logo, the name
+     * accent in "Good morning, X", primary CTAs). NOT for data or
+     * decoration. Genuine alerts use --destructive (a different red). */
+    --primary: 0 72% 51%;
     --primary-foreground: 0 0% 100%;
-    --secondary: 240 5% 17%;        /* mid-elevation, button-grade surface */
+    --secondary: 270 6% 14%;
     --secondary-foreground: 0 0% 97%;
 
-    /* Utility */
-    --muted: 240 5% 17%;
-    --muted-foreground: 240 4% 70%; /* was 60% — readable, not whispered */
-    --accent: 240 5% 17%;
+    /* Utility surfaces */
+    --muted: 270 6% 14%;
+    --muted-foreground: 0 0% 60%;       /* secondary text — rgba 0.60ish */
+    --accent: 270 6% 14%;
     --accent-foreground: 0 0% 97%;
-    --destructive: 0 84% 60%;
+    --destructive: 0 84% 60%;           /* alert red — more saturated than brand */
     --destructive-foreground: 0 0% 100%;
 
-    /* Borders & Inputs — strong enough to actually anchor cards */
-    --border: 240 5% 26%;           /* zinc-600-ish, visible at a glance */
-    --input: 240 5% 16%;
+    /* Semantic state colors (added in the polish pass) */
+    --success: 152 64% 54%;             /* ≈ #3DD68C — positive / growth */
+    --success-foreground: 0 0% 100%;
+    --warning: 38 92% 50%;              /* amber */
+    --warning-foreground: 0 0% 0%;
+
+    /* Borders & Inputs — `--border` stays anchored at zinc-600-ish so
+     * form fields, dropdowns, dividers etc. don't disappear. Cards on
+     * the dashboard use `--border-soft` for the near-invisible hairline
+     * look (white at ~6% alpha — defined with the slash syntax so
+     * hsl(var(--border-soft)) resolves to a translucent stroke). */
+    --border: 240 5% 26%;
+    --border-soft: 0 0% 100% / 0.08;
+    --input: 270 7% 14%;
     --ring: 0 72% 51%;
+
+    /* Text hierarchy — tertiary tier (labels like "TEAM MEMBERS") at
+     * ~40% alpha. Primary uses --foreground; secondary uses
+     * --muted-foreground. Apply via text-text-tertiary utility. */
+    --text-tertiary: 0 0% 100% / 0.40;
 
     /* Charts */
     --chart-1: 0 72% 51%;          /* Red */

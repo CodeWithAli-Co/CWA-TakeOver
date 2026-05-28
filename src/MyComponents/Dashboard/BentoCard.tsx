@@ -4,12 +4,10 @@ import { motion } from "framer-motion";
 interface BentoCardProps {
   children: ReactNode;
   className?: string;
-  /** Optional label. By default this renders as an inline tag at the
-   *  top-left of the card body (the original BentoLabel behavior).
-   *  Pass `withHeaderBar` if you want it lifted into a full zinc
-   *  header strip with a border-b — looks good on larger cards
-   *  (Active Projects, Quick Stats, Revenue chart) but cramped on
-   *  the small StatCard tiles. */
+  /** Optional label. Renders as a quiet uppercase tag at the top-left
+   *  of the card body by default. Pass `withHeaderBar` to lift it into
+   *  a full elevated header strip (good for big multi-control panels;
+   *  cramped on small stat tiles). */
   label?: string;
   withHeaderBar?: boolean;
   /** col-span and row-span classes */
@@ -19,14 +17,17 @@ interface BentoCardProps {
 }
 
 /**
- * Common chrome:
- *   · border-zinc-800 + bg-zinc-950/40 — consistent silhouette across
- *     all dashboard cards, with the page background bleeding through
- *     just enough that cards visually recede into the layout.
- *   · No hover state. Cards are containers, not buttons.
+ * Single, consistent card chrome — wired through semantic tokens so
+ * theme switching + future palette tunes happen at the token layer:
  *
- * Label rendering is per-call: inline tag by default, full header
- * strip if `withHeaderBar` is true.
+ *   · bg-card        — the "surface" elevation tier (sits ON canvas)
+ *   · border-border-soft — near-invisible hairline (white at ~6% alpha)
+ *   · rounded-xl     — the unified card radius (~14px), softer + warmer
+ *                       than the previous rounded-lg/rounded-md mix
+ *   · no hover state — cards are containers, not interactive controls
+ *
+ * Header bar (opt-in) uses bg-popover (the "elevated" tier) so it
+ * reads as a distinct strip without dragging in arbitrary zinc shades.
  */
 export function BentoCard({
   children,
@@ -42,28 +43,28 @@ export function BentoCard({
       initial={{ opacity: 0, y: 8, scale: 0.98 }}
       animate={{ opacity: 1, y: 0, scale: 1 }}
       transition={{ delay, duration: 0.3, ease: "easeOut" }}
-      className={`bento-card rounded-lg border border-zinc-800 bg-zinc-950/40 overflow-hidden ${span} ${className}`}
+      className={`bento-card rounded-xl border-xs border-border-soft bg-card overflow-hidden ${span} ${className}`}
     >
       {label && withHeaderBar && (
-        <header className="bg-zinc-900/50 border-b border-zinc-800 px-4 py-2">
-          <span className="text-[10px] font-semibold uppercase tracking-[0.15em] text-zinc-400">
+        <header className="bg-popover/70 border-b border-xs border-border-soft px-4 py-2">
+          <span className="text-[10px] font-semibold uppercase tracking-[0.15em] text-text-tertiary">
             {label}
           </span>
         </header>
       )}
-      {/* When the body is unpadded (chart cards etc.), the inline label
-          needs its own padding wrapper so it doesn't sit flush against
-          the card edge. */}
+      {/* `noPadding` cards (chart panels) still need the inline label to
+          breathe — give it its own padding wrapper so it doesn't sit
+          flush against the card edge. */}
       {label && !withHeaderBar && noPadding && (
         <div className="px-4 pt-4 pb-1">
-          <span className="text-[10px] font-semibold uppercase tracking-[0.15em] text-zinc-400">
+          <span className="text-[10px] font-semibold uppercase tracking-[0.15em] text-text-tertiary">
             {label}
           </span>
         </div>
       )}
       <div className={noPadding ? "" : "p-4"}>
         {label && !withHeaderBar && !noPadding && (
-          <span className="text-[10px] font-semibold uppercase tracking-[0.15em] text-zinc-400 block mb-2">
+          <span className="text-[10px] font-semibold uppercase tracking-[0.15em] text-text-tertiary block mb-2">
             {label}
           </span>
         )}
@@ -73,11 +74,10 @@ export function BentoCard({
   );
 }
 
-/** Standalone label — still exported for ad-hoc use, but BentoCard's
- *  built-in `label` prop is preferred for consistency. */
+/** Legacy inline label. Prefer BentoCard's `label` prop for new code. */
 export function BentoLabel({ children }: { children: ReactNode }) {
   return (
-    <span className="text-[10px] font-semibold uppercase tracking-[0.15em] text-zinc-400">
+    <span className="text-[10px] font-semibold uppercase tracking-[0.15em] text-text-tertiary">
       {children}
     </span>
   );
@@ -91,7 +91,7 @@ export function BentoValue({
   className?: string;
 }) {
   return (
-    <span className={`text-xl font-bold text-foreground tabular-nums ${className}`}>
+    <span className={`text-3xl font-bold text-foreground tabular-nums leading-none ${className}`}>
       {children}
     </span>
   );

@@ -30,18 +30,8 @@ import { EditMeeting } from "../subForms/MeetingForms/editMeeting";
 
 // ── Company tinting tokens ─────────────────────────────────────
 const COMPANY_STYLE = {
-  CodeWithAli: {
-    label: "CWA",
-    pill: "bg-red-500/[0.08] text-red-300/85 border-red-500/20",
-    rail: "bg-gradient-to-b from-red-500/70 via-red-500/40 to-red-500/10",
-    timePill: "bg-red-500/[0.08] text-red-300/85 border-red-500/15",
-  },
-  simplicity: {
-    label: "SIMPL",
-    pill: "bg-teal-500/[0.08] text-teal-300/90 border-teal-400/25",
-    rail: "bg-gradient-to-b from-teal-400/80 via-teal-400/40 to-teal-400/10",
-    timePill: "bg-teal-500/[0.08] text-teal-300/85 border-teal-400/20",
-  },
+  CodeWithAli: { label: "CWA",   rail: "bg-primary" },
+  simplicity:  { label: "SIMPL", rail: "bg-teal-400" },
 } as const;
 
 function companyStyle(co: string | undefined | null) {
@@ -49,13 +39,14 @@ function companyStyle(co: string | undefined | null) {
   return COMPANY_STYLE.CodeWithAli;
 }
 
+// Meeting-type colors used as inline dot + label, no bordered pills.
 const TYPE_STYLE: Record<
   string,
-  { icon: typeof Video; className: string }
+  { icon: typeof Video; text: string; dot: string }
 > = {
-  online:      { icon: Video, className: "bg-blue-500/[0.08] text-blue-300/85 border-blue-500/20" },
-  hybrid:      { icon: Video, className: "bg-purple-500/[0.08] text-purple-300/85 border-purple-500/20" },
-  "in-person": { icon: MapPin, className: "bg-emerald-500/[0.08] text-emerald-300/85 border-emerald-500/20" },
+  online:      { icon: Video,  text: "text-blue-300",     dot: "bg-blue-400" },
+  hybrid:      { icon: Video,  text: "text-purple-300",   dot: "bg-purple-400" },
+  "in-person": { icon: MapPin, text: "text-success",      dot: "bg-success" },
 };
 
 function formatDate(dateStr: string) {
@@ -85,58 +76,54 @@ function MeetingRow({ meeting, onEdit, onDelete }: { meeting: any; onEdit: (id: 
       layout
       initial={{ opacity: 0, y: 4 }}
       animate={{ opacity: 1, y: 0 }}
-      className="group relative flex items-stretch rounded-md bg-zinc-950/40 border border-zinc-800 overflow-hidden"
+      className="group relative flex items-stretch rounded-lg bg-card border-xs border-border-soft overflow-hidden"
     >
-      {/* Company accent rail */}
-      <div className={`w-[3px] rounded-l-md ${co.rail}`} />
+      {/* Company accent rail — solid, slim, no gradient */}
+      <div className={`w-[2px] ${co.rail} opacity-80`} />
 
-      <div className="flex-1 min-w-0 p-3.5">
-        {/* Top line — title + time chip */}
+      <div className="flex-1 min-w-0 py-3 pl-3.5 pr-3.5">
+        {/* Top line — title + time on right */}
         <div className="flex items-start justify-between gap-2">
-          <div className="flex items-center gap-2 min-w-0">
-            <h3 className="text-[13px] font-semibold text-foreground/90 truncate">
-              {meeting.meeting_title}
-            </h3>
-            <span
-              className={`inline-flex items-center gap-1 px-1.5 py-[1px] text-[9.5px] uppercase tracking-wider font-semibold border rounded-sm ${co.pill}`}
-            >
-              <Building2 className="h-2.5 w-2.5" />
-              {co.label}
-            </span>
-          </div>
+          <h3 className="text-[13px] font-semibold text-foreground truncate leading-snug">
+            {meeting.meeting_title}
+          </h3>
           {meeting.time && (
-            <span
-              className={`shrink-0 inline-flex items-center gap-1 px-2 py-0.5 text-[10.5px] tabular-nums font-semibold border rounded-sm ${co.timePill}`}
-            >
-              <Clock className="h-2.5 w-2.5" />
+            <span className="shrink-0 inline-flex items-center gap-1 text-[10.5px] tabular-nums font-semibold text-foreground/80">
+              <Clock className="h-2.5 w-2.5 text-text-tertiary" />
               {meeting.time}
             </span>
           )}
         </div>
 
-        {/* Meta row */}
-        <div className="mt-2 flex items-center gap-3 text-[11px] text-muted-foreground/70">
-          <span className="flex items-center gap-1">
-            <Calendar className="h-3 w-3" />
+        {/* Dot-separated metadata: date · attendees · type · company */}
+        <div className="mt-1 flex items-center gap-2 text-[10.5px] text-text-tertiary">
+          <span className="inline-flex items-center gap-1">
+            <Calendar className="h-2.5 w-2.5" />
             {formatDate(meeting.date)}
           </span>
-          <span className="flex items-center gap-1">
-            <Users className="h-3 w-3" />
+          <span className="text-text-tertiary/40">·</span>
+          <span className="inline-flex items-center gap-1">
+            <Users className="h-2.5 w-2.5" />
             {meeting.attendees ?? 1}
           </span>
           {typeInfo && meeting.meeting_type && (
-            <span
-              className={`inline-flex items-center gap-1 px-1.5 py-[1px] text-[9.5px] uppercase tracking-wider font-semibold border rounded-sm ${typeInfo.className}`}
-            >
-              <typeInfo.icon className="h-2.5 w-2.5" />
-              {meeting.meeting_type}
-            </span>
+            <>
+              <span className="text-text-tertiary/40">·</span>
+              <span className={`inline-flex items-center gap-1 ${typeInfo.text}`}>
+                <span className={`w-1.5 h-1.5 rounded-full ${typeInfo.dot}`} />
+                <span className="uppercase tracking-wider font-medium">
+                  {meeting.meeting_type}
+                </span>
+              </span>
+            </>
           )}
+          <span className="text-text-tertiary/40">·</span>
+          <span className="uppercase tracking-wider">{co.label}</span>
         </div>
 
-        {/* Location / link row */}
+        {/* Location / link — subtler, single line, truncating */}
         {meeting.location && meeting.meeting_type && (
-          <div className="mt-2 text-[11px] text-muted-foreground/60">
+          <div className="mt-1 text-[10.5px] text-text-tertiary truncate">
             {meeting.meeting_type === "online" && typeof meeting.location === "string" && (
               <a
                 href={meeting.location}
@@ -144,32 +131,32 @@ function MeetingRow({ meeting, onEdit, onDelete }: { meeting: any; onEdit: (id: 
                 rel="noopener noreferrer"
                 className="inline-flex items-center gap-1 hover:text-primary transition-colors"
               >
-                <ExternalLink className="h-3 w-3" />
+                <ExternalLink className="h-2.5 w-2.5" />
                 Join meeting
               </a>
             )}
             {meeting.meeting_type === "in-person" && typeof meeting.location === "string" && (
-              <div className="flex items-center gap-1">
-                <MapPin className="h-3 w-3" />
+              <span className="inline-flex items-center gap-1">
+                <MapPin className="h-2.5 w-2.5" />
                 {meeting.location}
-              </div>
+              </span>
             )}
             {meeting.meeting_type === "hybrid" && isHybridLoc(meeting.hybrid_location) && (
-              <div className="space-y-0.5">
-                <div className="flex items-center gap-1">
-                  <MapPin className="h-3 w-3" />
+              <span className="inline-flex items-center gap-2">
+                <span className="inline-flex items-center gap-1">
+                  <MapPin className="h-2.5 w-2.5" />
                   {meeting.hybrid_location.address}
-                </div>
+                </span>
                 <a
                   href={meeting.hybrid_location.url}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="inline-flex items-center gap-1 hover:text-primary transition-colors"
                 >
-                  <ExternalLink className="h-3 w-3" />
-                  Join online
+                  <ExternalLink className="h-2.5 w-2.5" />
+                  Join
                 </a>
-              </div>
+              </span>
             )}
           </div>
         )}
@@ -231,7 +218,7 @@ const Meetings = () => {
   };
 
   const Header = (
-    <div className="px-5 py-3 flex items-center justify-between gap-3 bg-zinc-900/50 border-b border-zinc-800">
+    <div className="px-5 py-3 flex items-center justify-between gap-3 bg-popover/70 border-b border-xs border-border-soft">
       <div className="flex items-center gap-3 min-w-0">
         <div className="p-2 rounded-md bg-gradient-to-br from-primary/15 to-primary/[0.03] border border-primary/20">
           <Calendar className="h-4 w-4 text-primary" />
@@ -282,7 +269,7 @@ const Meetings = () => {
             // Cleaned ghost button — matches Tasks search bar styling
             // (bg-zinc-950 + border-zinc-800) so the Tasks and Meetings
             // panels share one visual language.
-            className="inline-flex items-center gap-1.5 h-7 px-3 rounded-md bg-zinc-950/60 hover:bg-zinc-900 border border-zinc-800 hover:border-zinc-700 text-zinc-400 hover:text-zinc-200 text-[11px] font-bold uppercase tracking-wider transition-colors"
+            className="inline-flex items-center gap-1.5 h-7 px-3 rounded-lg bg-background/60 hover:bg-popover border-xs border-border-soft hover:border-foreground/15 text-text-tertiary hover:text-foreground text-[11px] font-bold uppercase tracking-wider transition-colors"
             onClick={() => setIsShowing(!isShowing)}
           >
             <Calendar className="h-3 w-3" />
@@ -295,7 +282,7 @@ const Meetings = () => {
 
   if (list.length === 0) {
     return (
-      <div className="relative bg-zinc-950/40 border border-zinc-800 rounded-lg overflow-hidden h-full flex flex-col">
+      <div className="relative bg-card border-xs border-border-soft rounded-xl overflow-hidden h-full flex flex-col">
         <div className="absolute inset-x-0 top-0 h-[1px] bg-gradient-to-r from-transparent via-primary/40 to-transparent pointer-events-none" />
         {Header}
         <div className="flex-1 flex items-center justify-center px-5 pb-5">
@@ -325,7 +312,7 @@ const Meetings = () => {
         />
       )}
 
-      <div className="relative bg-zinc-950/40 border border-zinc-800 rounded-lg h-full overflow-hidden flex flex-col">
+      <div className="relative bg-card border-xs border-border-soft rounded-xl h-full overflow-hidden flex flex-col">
         <div className="absolute inset-x-0 top-0 h-[1px] bg-gradient-to-r from-transparent via-primary/40 to-transparent pointer-events-none" />
         {Header}
         <div className="px-5 pb-5 flex-1 min-h-0">

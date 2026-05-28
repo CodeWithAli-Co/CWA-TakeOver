@@ -53,6 +53,25 @@ export default {
   				DEFAULT: 'hsl(var(--destructive))',
   				foreground: 'hsl(var(--destructive-foreground))'
   			},
+  			/* ── Polish-pass additions: semantic state colors + soft border
+  			 *    + tertiary text. The `border-soft` and `text-tertiary`
+  			 *    vars carry their own alpha via the slash syntax. */
+  			success: {
+  				DEFAULT: 'hsl(var(--success))',
+  				foreground: 'hsl(var(--success-foreground))'
+  			},
+  			warning: {
+  				DEFAULT: 'hsl(var(--warning))',
+  				foreground: 'hsl(var(--warning-foreground))'
+  			},
+  			'border-soft': 'hsl(var(--border-soft))',
+  			'text-tertiary': 'hsl(var(--text-tertiary))',
+  		},
+  		borderWidth: {
+  			/* True hairline — 0.5 logical pixel. Renders as 1 device pixel
+  			 *  with subpixel AA on standard DPI, halfpx on retina. The
+  			 *  most subtle stroke that still anchors a card edge. */
+  			xs: '0.5px',
 			  borderRadius: {
 				lg: "var(--radius)",
 				md: "calc(var(--radius) - 2px)",
