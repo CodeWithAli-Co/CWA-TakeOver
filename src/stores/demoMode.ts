@@ -81,3 +81,120 @@ export const DEMO_PROJECTS = [
   { name: "Northwind CRM",    status: "Active",      progress: 88 },
   { name: "Helios Recruit",   status: "Active",      progress: 41 },
 ] as const;
+
+// ─── Row 4 Redux demo fixtures ─────────────────────────────
+//
+// These power AxonCheckin, CareerGrowth, and TeamPulse when
+// useDemoMode().enabled is true. Realistic, varied, and recent —
+// the goal is "this person clearly uses the product daily" not
+// "look, demo data."
+
+/** Demo Axon check-ins. Shown as the last 3 reflections when
+ *  demo mode is on. Mixed across days + times-of-day. */
+export const DEMO_CHECKINS: Array<{
+  id: string;
+  prompt: string;
+  entry: string;
+  axon_acknowledgement: string;
+  time_of_day: "morning" | "midday" | "afternoon" | "evening";
+  // Days ago from "today" so the labels stay correct on any
+  // date the demo is shown. 0 = today, 1 = yesterday, etc.
+  days_ago: number;
+}> = [
+  {
+    id: "demo-checkin-1",
+    prompt: "Good morning, Ali. What are you focused on today?",
+    entry:
+      "Personality engine ships today. Last QA pass on the mood overrides, then I want to record a quick demo for the team before the standup.",
+    axon_acknowledgement:
+      "Got it. I'll keep mood eval quiet on my end so you can focus.",
+    time_of_day: "morning",
+    days_ago: 0,
+  },
+  {
+    id: "demo-checkin-2",
+    prompt: "How did today go? Anything carrying over to tomorrow?",
+    entry:
+      "Hit a blocker on the Univer theme override — the CSS isolation is fighting me. Pushed a workaround but it's ugly. Sleeping on it.",
+    axon_acknowledgement:
+      "Noted. We can look at the override layer fresh in the morning if you want.",
+    time_of_day: "evening",
+    days_ago: 1,
+  },
+  {
+    id: "demo-checkin-3",
+    prompt: "How's the day going so far?",
+    entry:
+      "Worked late again but the v3 voice swap finally feels right. Tired but proud — this is the unlock for the demo.",
+    axon_acknowledgement:
+      "That's a real win. The voice carries the product.",
+    time_of_day: "evening",
+    days_ago: 2,
+  },
+];
+
+/** Demo growth track — deliberately a LONGER-ARC career-track
+ *  story than the Goal card's short-term sprint focus, so the two
+ *  cards visually demonstrate distinct scopes. */
+export const DEMO_GROWTH_TRACK = {
+  current_role: "Founder / CEO",
+  next_milestone: "Series A readiness",
+  milestone_steps: [
+    { id: "s1", label: "Enterprise tier shipped",                 completed: true,  due_date: null },
+    { id: "s2", label: "First 3 enterprise pilots signed",        completed: true,  due_date: null },
+    { id: "s3", label: "ARR run-rate clears $1M",                 completed: false, due_date: "2026-08-15" },
+    { id: "s4", label: "Repeatable enterprise GTM motion",        completed: false, due_date: "2026-09-30" },
+    { id: "s5", label: "Lead investor identified + diligence",    completed: false, due_date: "2026-10-31" },
+    { id: "s6", label: "Term sheet signed",                       completed: false, due_date: "2026-12-15" },
+  ],
+  axon_note:
+    "Two milestones cleared puts you ahead of where most founders are at this stage. The next one — clearing $1M run-rate — is the inflection point.",
+  pacing_status: "ahead" as const,
+};
+
+/** Demo team-activity feed — 6 mixed entries (wins / status /
+ *  kudos) per the spec. Hours_ago is relative so labels stay
+ *  fresh; the formatter maps to "2h", "yesterday", "2d ago". */
+export const DEMO_TEAM_ACTIVITY: Array<{
+  id: string;
+  activity_type: "win" | "status_change" | "kudos";
+  description: string;
+  hours_ago: number;
+}> = [
+  {
+    id: "demo-act-1",
+    activity_type: "win",
+    description: "Sem closed the Bay Area Frontier Research Club lead",
+    hours_ago: 1,
+  },
+  {
+    id: "demo-act-2",
+    activity_type: "kudos",
+    description: "Emily → Ali: clean work on the personality engine ship",
+    hours_ago: 3,
+  },
+  {
+    id: "demo-act-3",
+    activity_type: "status_change",
+    description: "Ali marked v3 voice swap as shipped",
+    hours_ago: 5,
+  },
+  {
+    id: "demo-act-4",
+    activity_type: "status_change",
+    description: "Sam wrapped angel investor research — 47 names in the doc",
+    hours_ago: 26,
+  },
+  {
+    id: "demo-act-5",
+    activity_type: "status_change",
+    description: "Emily marked pitch deck v1 as shipped",
+    hours_ago: 30,
+  },
+  {
+    id: "demo-act-6",
+    activity_type: "kudos",
+    description: "Ali → Sem: thanks for tonight's outreach push",
+    hours_ago: 50,
+  },
+];

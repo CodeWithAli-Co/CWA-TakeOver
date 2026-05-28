@@ -2,32 +2,35 @@
  * row4ViewStore.ts — Which Row 4 variant is the home dashboard
  * currently showing?
  *
- *   · "lists"   — the original full Tasks + Meetings widgets.
- *                 Useful for triage and queue-management.
+ *   · "components"  — the canonical Row 4 Redux: Axon Daily
+ *                     Check-in (left 60%) + Career Growth (top
+ *                     right) + Team Pulse (bottom right). The
+ *                     default for everyone.
  *
- *   · "today"   — the unified Today Agenda + AddMeeting panel.
- *                 Useful when you want a focused, time-anchored
- *                 view of your day rather than full lists.
+ *   · "lists"       — the original full Tasks + Meetings widgets.
+ *                     Preserved as a power-user backdoor for
+ *                     operators who want the lists view back.
+ *                     Reachable via Cmd+Shift+D and the Cmd+K
+ *                     palette verb "Switch row 4 view".
  *
- * Default-by-role:
- *   · CEO / COO       → "lists" (managerial overview)
- *   · everyone else   → "today" (focused day-plan)
+ * The store holds an explicit `preference`:
+ *   · null   → "use the canonical components view"
+ *   · "lists" or "components" → user's explicit pick (persisted)
  *
- * The store holds an explicit `preference` that is `null` until the
- * user picks one — at which point the role default no longer applies.
- * Toggles via Cmd+Shift+D and the Cmd+K palette publish into the
- * preference so the user's choice persists across reloads.
+ * Historically this enum was "today" | "lists" where "today" meant
+ * the Today Agenda + AddMeeting panel. That content moved to Row 5
+ * when Row 4 was redesigned, so we map any persisted "today"
+ * preference forward to "components" via the persist migrate hook.
  *
- * Consumers should read the effective view via `useEffectiveRow4View(
- * role)` — that hook resolves null → role default. Callers that need
- * to mutate use `useRow4View` directly.
+ * Consumers read the effective view via `useEffectiveRow4View(role)`.
+ * Callers that need to mutate use `useRow4View` directly.
  */
 
 import { useMemo } from "react";
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 
-export type Row4View = "lists" | "today";
+export type Row4View = "lists" | "components";
 
 const C_LEVEL_ROLES = new Set(["CEO", "COO", "CFO"]);
 
@@ -35,8 +38,17 @@ export function isCLevel(role?: string | null): boolean {
   return !!role && C_LEVEL_ROLES.has(role);
 }
 
-export function getDefaultForRole(role?: string | null): Row4View {
-  return isCLevel(role) ? "lists" : "today";
+/**
+ * Default Row 4 variant for a given role.
+ *
+ * Today this is "components" for every role — the new three-card
+ * Row 4 is the canonical experience. The role param is kept on
+ * the surface so we can re-introduce per-role defaults later
+ * (e.g. if we want C-level to see lists by default again) without
+ * touching every callsite.
+ */
+export function getDefaultForRole(_role?: string | null): Row4View {
+  return "components";
 }
 
 interface Row4ViewState {
@@ -58,9 +70,28 @@ export const useRow4View = create<Row4ViewState>()(
       preference: null,
       setPreference: (v) => set({ preference: v }),
       toggleFrom: (currentEffective) =>
-        set({ preference: currentEffective === "today" ? "lists" : "today" }),
+        set({
+          preference:
+            currentEffective === "components" ? "lists" : "components",
+        }),
     }),
-    { name: "cwa:row4View" },
+    {
+      name: "cwa:row4View",
+      version: 2,
+      // v1 used "today" as the canonical alt-of-lists. The Row 4
+      // redesign replaced that content (and moved the agenda down
+      // to Row 5), so any persisted "today" preference becomes
+      // "components" going forward — the user keeps "I prefer
+      // the non-lists view" semantics without us silently
+      // resurrecting the old agenda layout.
+      migrate: (persisted: any, fromVersion) => {
+        if (!persisted) return persisted;
+        if (fromVersion < 2 && persisted.preference === "today") {
+          return { ...persisted, preference: "components" };
+        }
+        return persisted;
+      },
+    },
   ),
 );
 

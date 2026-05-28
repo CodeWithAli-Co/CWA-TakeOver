@@ -11,6 +11,9 @@ import { Row5Section } from "./Row5Section";
 import { TasksComponent } from "@/MyComponents/HomeDashboard/tasks";
 import Meetings from "@/MyComponents/HomeDashboard/meetings";
 import { useEffectiveRow4View } from "./row4ViewStore";
+import { AxonCheckinCard } from "./AxonCheckinCard";
+import { CareerGrowthCard } from "./CareerGrowthCard";
+import { TeamPulseCard } from "./TeamPulseCard";
 import UserView, { Role } from "@/MyComponents/Reusables/userView";
 import { useRolePreview } from "@/stores/store";
 import {
@@ -258,35 +261,46 @@ function TaskOverviewRow({
 /**
  * Row4Swapper — renders the active Row 4 variant per the row4ViewStore.
  *
- * No visible toggle button in either variant — the swap is intentionally
- * hidden. Power users flip via Cmd+Shift+D (Row4SwapShortcut at root)
- * or the Cmd+K palette ("switch row 4 view"). This keeps the UI calm
- * for everyday employees while leaving a backdoor for operators who
- * know about it.
+ * Canonical view ("components") is the Row 4 Redux: AxonCheckin (left
+ * 60%) + CareerGrowth (top-right) + TeamPulse (bottom-right). This is
+ * the default for every role.
+ *
+ * Power-user backdoor view ("lists") shows the original Tasks +
+ * Meetings widgets. Reachable via Cmd+Shift+D (Row4SwapShortcut at
+ * root) or the Cmd+K palette ("switch row 4 view"). Hidden — no
+ * visible toggle button.
  */
 function Row4Swapper() {
   const { data: meRows } = ActiveUser();
   const actualRole: string | undefined =
     (meRows?.[0] as any)?.role ?? undefined;
-  // Honor the role-preview overlay. When a CEO/COO previews as Member,
-  // we render the Member's role default (today agenda) — and we
-  // ignore the actual user's persisted preference so the preview is a
-  // faithful "what this role sees on a fresh dashboard".
+  // Honor the role-preview overlay. When a CEO/COO previews as
+  // another role we ignore the actual user's persisted preference
+  // so the preview is a faithful "what this role sees on a fresh
+  // dashboard". With the canonical default being "components" for
+  // everyone the preview will normally render the new three-card
+  // Row 4 — same as the actual user's first-load experience.
   const previewRole = useRolePreview((s) => s.previewRole);
   const effectiveRole = previewRole || actualRole;
   const row4View = useEffectiveRow4View(effectiveRole, !!previewRole);
 
-  if (row4View === "today") {
+  if (row4View === "components") {
+    // 60 / 40 split. Right column splits internally into two stacked
+    // cards (CareerGrowth on top, TeamPulse on bottom).
     return (
-      <div className="col-span-12">
-        <div className="grid grid-cols-12 gap-3">
-          <Row4Section />
+      <>
+        <div className="col-span-12 md:col-span-7">
+          <AxonCheckinCard />
         </div>
-      </div>
+        <div className="col-span-12 md:col-span-5 grid grid-rows-2 gap-3">
+          <CareerGrowthCard />
+          <TeamPulseCard />
+        </div>
+      </>
     );
   }
 
-  // "lists" — original Tasks + Meetings
+  // "lists" — original Tasks + Meetings (power-user backdoor)
   return (
     <>
       <div className="col-span-7">
@@ -490,20 +504,30 @@ function CWADashboardContent() {
         <Row3MemberSection />
       </UserView>
 
-      {/* ── Row 4: swappable views ──
-          Default "lists" mode shows the original Tasks (col-span-7)
-          + Meetings (col-span-5) widgets for triage. "today" mode
-          shows the unified Today Agenda + AddMeeting + guidance card.
-          Swap via the small ArrowLeftRight button in each variant's
-          chrome or the Cmd+K palette ("switch row 4 view"). */}
+      {/* ── Row 4: Row 4 Redux ──
+          Canonical "components" mode shows the three new cards:
+          AxonCheckin (left 60%, full row height) + CareerGrowth
+          (top right) + TeamPulse (bottom right). Power-user backdoor
+          "lists" mode shows the original Tasks + Meetings widgets
+          (toggle via Cmd+Shift+D or Cmd+K palette). */}
       <Row4Swapper />
 
-      {/* ── Row 5 (preview): Communication & Workspace ──
+      {/* ── Row 5: today-strip footer (demoted from Row 4) ──
+          The today-agenda content that used to live in Row 4. Day 3
+          of the Row 4 Redux build trims its vertical height and
+          drops the typography to make it read as a tertiary footer.
+          For now it sits at its old prominence. */}
+      <div className="col-span-12">
+        <div className="grid grid-cols-12 gap-3">
+          <Row4Section />
+        </div>
+      </div>
+
+      {/* ── Row 6 (preview): Communication & Workspace ──
           Engagement-focused — Communication & Presence (mentions,
           online users) + Workspace Deep Dive (co-edited docs +
-          recent feedback). Sits below Row 4 for now so we can
-          evaluate it visually before deciding whether to drop the
-          full Tasks/Meetings lists in favor of this engagement row. */}
+          recent feedback). Sits below the new Row 5 footer; an open
+          question whether this row continues to ship at all. */}
       <Row5Section />
     </div>
   );
