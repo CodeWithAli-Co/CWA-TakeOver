@@ -1,39 +1,45 @@
 /**
  * Row3MemberSection.tsx — Row 3 for non-leadership employees.
  *
- * Deliberately a different shape than the CEO/COO Strategic Intelligence
- * panel. This is not a watered-down exec view — it's purpose-built for
- * what an individual contributor actually needs at a glance:
+ *   · Team Activity (col-span-5) — backward-looking team feed.
+ *   · Up Next       (col-span-4) — forward-looking schedule.
+ *   · Goal & Focus  (col-span-3) — current goal + step + Axon coaching.
  *
- *   · Team Activity (col-span-8) — what teammates are shipping, editing,
- *                                  and meeting about. Real data merged
- *                                  from tasks (done), workspace edits,
- *                                  and recent meetings. Helps members
- *                                  stay connected without scrolling
- *                                  three separate surfaces.
+ * The Goal & Focus panel is the *cultural* component. Rather than
+ * surfacing more stats, it surfaces a single thing the employee
+ * should be doing right now within the context of a larger goal,
+ * paired with Axon's supportive nudge. Clicking opens a modal with
+ * the full step breakdown + timeline + Axon's longer coaching note.
  *
- *   · Quick Actions (col-span-4) — one-click access to the actions
- *                                  members take most often: clock in,
- *                                  open schedule, jump to chat, start
- *                                  a workspace doc, file a bug report.
+ * The point isn't productivity gamification — it's giving employees
+ * who lose focus or feel overwhelmed a calm, visible "next step" plus
+ * permission to pause. Axon's voice is intentionally supportive,
+ * not directive.
  *
- * No tabs. No mocked aspirational metrics. Just two focused panels.
+ * Status today: UI is real, data is mocked. The schema sketch lives
+ * in the GOALS_SCHEMA_NOTE constant. Once cwa_goals / cwa_goal_steps
+ * tables land, swap the mock for real queries; the layout doesn't
+ * need to change.
  */
 
-import { useMemo } from "react";
-import { motion } from "framer-motion";
+import { useEffect, useMemo, useState } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import { useNavigate } from "@tanstack/react-router";
 import {
   Activity,
-  Bug,
+  ArrowRight,
   CalendarClock,
-  CalendarPlus,
   CheckCircle2,
-  ChevronRight,
+  CheckCircle,
   Clock,
+  Coffee,
   FileEdit,
-  FilePlus2,
-  MessageSquare,
+  Flame,
+  Pause,
+  Sparkles,
+  Target,
+  X,
+  Zap,
 } from "lucide-react";
 import { BentoCard } from "./BentoCard";
 import { AllTodos, MeetingsQuery } from "@/stores/query";
@@ -48,6 +54,104 @@ const TONE_TEXT: Record<Tone, string> = {
   success: "text-success",
   neutral: "text-text-tertiary",
 };
+
+// ─────────────────────────────────────────────────────────────────
+// Schema sketch — the tables we'll need once this graduates from
+// mock data. Keep this comment in sync with the eventual migration.
+// ─────────────────────────────────────────────────────────────────
+/*
+  cwa_goals
+    id            uuid PK
+    user_id       uuid → auth.users.id
+    username      text          (denormalized for filter speed)
+    title         text not null
+    description   text
+    status        text          ('active' | 'paused' | 'completed' | 'abandoned')
+    priority      text          ('high' | 'medium' | 'low')
+    start_date    date          (when work began)
+    target_date   date          (deadline)
+    completed_at  timestamptz
+    archived      boolean default false
+    created_at    timestamptz default now()
+
+  cwa_goal_steps
+    id                 uuid PK
+    goal_id            uuid → cwa_goals.id on delete cascade
+    title              text not null
+    description        text
+    status             text          ('pending' | 'in_progress' | 'done' | 'skipped')
+    step_order         int not null
+    estimated_minutes  int
+    due_date           date
+    axon_generated     boolean default false   (was this step suggested by Axon?)
+    completed_at       timestamptz
+    created_at         timestamptz default now()
+
+  cwa_axon_nudges
+    id              uuid PK
+    goal_id         uuid → cwa_goals.id on delete cascade
+    type            text          ('encouragement' | 'refocus' | 'pace' | 'rest')
+    message         text not null
+    surfaced_at     timestamptz   (when we showed it to the user)
+    employee_reply  text          (if they responded)
+    created_at      timestamptz default now()
+*/
+
+// ─────────────────────────────────────────────────────────────────
+// MOCK: replace with useActiveGoal(username) once schema lands.
+// Hardcoded for now so the UX is visible and the panel is reviewable
+// without a migration. Step states will be mutated locally on click
+// just for the demo feel.
+// ─────────────────────────────────────────────────────────────────
+
+type GoalStepStatus = "pending" | "in_progress" | "done" | "skipped";
+interface GoalStep {
+  id: string;
+  title: string;
+  description?: string;
+  status: GoalStepStatus;
+  stepOrder: number;
+  estimatedMinutes?: number;
+  dueDate?: string;
+  axonGenerated?: boolean;
+}
+interface Goal {
+  id: string;
+  title: string;
+  description?: string;
+  status: "active" | "paused" | "completed";
+  startDate: string;
+  targetDate: string;
+  steps: GoalStep[];
+  axonNudge: { short: string; long: string };
+}
+
+const MOCK_GOAL: Goal = {
+  id: "g-1",
+  title: "Ship the enterprise tier",
+  description: "Get our first three enterprise pilots onto the new tier with self-serve provisioning.",
+  status: "active",
+  startDate: "2026-05-22",
+  targetDate: "2026-06-05",
+  steps: [
+    { id: "s1", title: "Research enterprise feature requests", status: "done", stepOrder: 1, dueDate: "2026-05-23" },
+    { id: "s2", title: "Define MVP feature set",              status: "done", stepOrder: 2, dueDate: "2026-05-25" },
+    { id: "s3", title: "Draft pricing model",                  status: "done", stepOrder: 3, dueDate: "2026-05-26" },
+    { id: "s4", title: "Write API spec doc",                   status: "in_progress", stepOrder: 4, dueDate: "2026-05-28", estimatedMinutes: 45, axonGenerated: true },
+    { id: "s5", title: "Build SDK scaffolding",                status: "pending", stepOrder: 5, dueDate: "2026-05-30", estimatedMinutes: 180, axonGenerated: true },
+    { id: "s6", title: "Set up sandbox environment",           status: "pending", stepOrder: 6, dueDate: "2026-06-01", estimatedMinutes: 120, axonGenerated: true },
+    { id: "s7", title: "Ship beta to 3 pilot accounts",        status: "pending", stepOrder: 7, dueDate: "2026-06-05" },
+  ],
+  axonNudge: {
+    short: "You're 2 days ahead on this. The spec is the keystone — once it lands, the SDK flows from it.",
+    long:
+      "You're moving fast on this one — three steps done in five days, and you're tracking two days ahead of pace. The API spec is the keystone step; once it's clear, the SDK and sandbox can move in parallel rather than sequentially, which gives you breathing room for the pilot conversations. I'd suggest blocking 90 minutes tomorrow morning for the spec draft — your calendar is light until 11. No pressure if you'd rather pause and come back to it Wednesday; this goal has slack.",
+  },
+};
+
+// ─────────────────────────────────────────────────────────────────
+// Shared utilities
+// ─────────────────────────────────────────────────────────────────
 
 function relTime(iso?: string | null): string {
   if (!iso) return "";
@@ -64,23 +168,53 @@ function relTime(iso?: string | null): string {
   return d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
 }
 
+function dayLabel(date: Date): string {
+  const now = new Date();
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const target = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+  const diffDays = Math.round(
+    (target.getTime() - today.getTime()) / (24 * 60 * 60 * 1000),
+  );
+  if (diffDays === 0) return "Today";
+  if (diffDays === 1) return "Tomorrow";
+  return date.toLocaleDateString("en-US", { weekday: "short" });
+}
+
+function formatTime(time?: string | null): string {
+  if (!time) return "";
+  const m = time.match(/^(\d{1,2}):(\d{2})/);
+  if (m) {
+    const h = parseInt(m[1]!, 10);
+    const min = m[2]!;
+    const period = h >= 12 ? "PM" : "AM";
+    const display = h === 0 ? 12 : h > 12 ? h - 12 : h;
+    return `${display}:${min} ${period}`;
+  }
+  return time;
+}
+
+function daysBetween(a: string, b: string): number {
+  return Math.round(
+    (new Date(b).getTime() - new Date(a).getTime()) / (24 * 60 * 60 * 1000),
+  );
+}
+
 // ─────────────────────────────────────────────────────────────────
-// Main export — renders the two member panels side-by-side as
-// direct grid children of the dashboard grid (col-span-8 + col-span-4).
+// Main export
 // ─────────────────────────────────────────────────────────────────
 
 export function Row3MemberSection() {
   return (
     <>
       <ActivityFeed />
-      <QuickActions />
+      <UpNext />
+      <GoalFocusPanel />
     </>
   );
 }
 
 // ─────────────────────────────────────────────────────────────────
-// Activity Feed — merges task ships, workspace edits, and recent
-// meetings into a single time-ordered stream.
+// Activity Feed
 // ─────────────────────────────────────────────────────────────────
 
 function ActivityFeed() {
@@ -103,7 +237,6 @@ function ActivityFeed() {
     const events: Event[] = [];
     const cutoff = Date.now() - 14 * 24 * 60 * 60 * 1000;
 
-    // Task completions in the last 14 days
     for (const t of all) {
       if (t.status === "done" && t.created_at) {
         const ts = new Date(t.created_at).getTime();
@@ -121,8 +254,6 @@ function ActivityFeed() {
         }
       }
     }
-
-    // Workspace edits in the last 14 days
     for (const r of items as any[]) {
       if (!r.updated_at) continue;
       const ts = new Date(r.updated_at).getTime();
@@ -139,8 +270,6 @@ function ActivityFeed() {
         });
       }
     }
-
-    // Meetings that happened in the last 14 days (past, not future)
     for (const m of (meetings ?? []) as any[]) {
       if (!m.date) continue;
       const ts = new Date(m.date).getTime();
@@ -157,42 +286,39 @@ function ActivityFeed() {
       }
     }
 
-    return events.sort((a, b) => b.ts - a.ts).slice(0, 8);
+    return events.sort((a, b) => b.ts - a.ts).slice(0, 7);
   }, [all, items, meetings, navigate]);
 
   return (
-    <BentoCard span="col-span-8" delay={0.35} noPadding>
-      <header className="flex items-center justify-between gap-3 px-4 pt-3 pb-2.5 border-b border-xs border-border-soft">
+    <BentoCard span="col-span-5" delay={0.35} noPadding>
+      <header className="flex items-center justify-between gap-2 px-4 pt-3 pb-2.5 border-b border-xs border-border-soft">
         <div className="flex items-center gap-2 min-w-0">
           <Activity className="h-3 w-3 text-primary" />
           <span className="text-[10px] font-semibold uppercase tracking-[0.15em] text-text-tertiary">
             Team Activity
           </span>
-          <span className="text-[10px] font-semibold tabular-nums text-text-tertiary/60">
-            last 14 days
-          </span>
         </div>
         <span className="text-[9.5px] uppercase tracking-[0.18em] text-text-tertiary/70">
-          {feed.length} {feed.length === 1 ? "event" : "events"}
+          last 14d
         </span>
       </header>
 
       <div className="p-3">
         {feed.length === 0 ? (
           <div className="text-[12px] text-text-tertiary italic py-8 text-center">
-            No activity in the last 14 days. The team's been quiet.
+            No activity in the last 14 days.
           </div>
         ) : (
-          <ul className="list-none p-0 m-0 space-y-0.5">
+          <ul className="list-none p-0 m-0 space-y-2">
             {feed.map((e) => (
               <li key={e.key} className="list-none">
                 <button
                   type="button"
                   onClick={e.onClick}
-                  className="group/row w-full text-left flex items-center gap-2.5 px-2 py-1.5 -mx-1 rounded-md hover:bg-foreground/[0.05] transition-colors"
+                  className="group/row w-full text-left flex items-center gap-2 px-2 py-2 -mx-1 rounded-md hover:bg-foreground/[0.05] transition-colors"
                 >
                   <e.icon className={`h-3 w-3 flex-shrink-0 ${TONE_TEXT[e.tone]}`} />
-                  <span className="text-[12px] text-foreground flex-1 truncate">
+                  <span className="text-[11.5px] text-foreground flex-1 truncate">
                     {e.actor ? (
                       <>
                         <span className="font-semibold">{e.actor}</span>{" "}
@@ -209,7 +335,6 @@ function ActivityFeed() {
                   <span className="text-[10px] uppercase tracking-wider tabular-nums text-text-tertiary flex-shrink-0">
                     {relTime(new Date(e.ts).toISOString())}
                   </span>
-                  <ChevronRight className="h-3 w-3 text-text-tertiary opacity-0 group-hover/row:opacity-100 transition-opacity flex-shrink-0" />
                 </button>
               </li>
             ))}
@@ -221,89 +346,581 @@ function ActivityFeed() {
 }
 
 // ─────────────────────────────────────────────────────────────────
-// Quick Actions — 2×3 grid of common one-click jumps.
+// Up Next
 // ─────────────────────────────────────────────────────────────────
 
-function QuickActions() {
+function UpNext() {
   const navigate = useNavigate();
+  const { data: meetings = [] } = MeetingsQuery();
 
-  // Six common actions. Tone is purely visual — each icon picks up
-  // the same semantic color it carries everywhere else in the app
-  // (Clock=success, Calendar=warning, Chat=primary, etc.).
-  const actions: {
-    label: string;
-    icon: typeof Activity;
-    tone: Tone;
-    onClick: () => void;
-  }[] = [
-    {
-      label: "Clock in/out",
-      icon: Clock,
-      tone: "success",
-      onClick: () => navigate({ to: "/timesheet" as any }),
-    },
-    {
-      label: "Schedule",
-      icon: CalendarPlus,
-      tone: "warning",
-      onClick: () => navigate({ to: "/schedule" as any }),
-    },
-    {
-      label: "New message",
-      icon: MessageSquare,
-      tone: "primary",
-      onClick: () => navigate({ to: "/chat" as any }),
-    },
-    {
-      label: "Workspace",
-      icon: FilePlus2,
-      tone: "primary",
-      onClick: () => navigate({ to: "/workspace" as any }),
-    },
-    {
-      label: "Report bug",
-      icon: Bug,
-      tone: "destructive",
-      onClick: () => navigate({ to: "/reports/submit" as any }),
-    },
-    {
-      label: "Tasks",
-      icon: CheckCircle2,
-      tone: "success",
-      onClick: () => navigate({ to: "/task" as any }),
-    },
-  ];
+  const upcoming = useMemo(() => {
+    const now = Date.now();
+    const weekEnd = now + 7 * 24 * 60 * 60 * 1000;
+    return ((meetings ?? []) as any[])
+      .filter((m) => {
+        if (!m.date) return false;
+        const ts = new Date(m.date).getTime();
+        return !Number.isNaN(ts) && ts >= now && ts < weekEnd;
+      })
+      .sort((a, b) => {
+        const da = new Date(a.date).getTime();
+        const db = new Date(b.date).getTime();
+        if (da !== db) return da - db;
+        return (a.time ?? "").localeCompare(b.time ?? "");
+      })
+      .slice(0, 5);
+  }, [meetings]);
 
   return (
     <BentoCard span="col-span-4" delay={0.4} noPadding>
-      <header className="flex items-center gap-2 px-4 pt-3 pb-2.5 border-b border-xs border-border-soft">
-        <span className="text-[10px] font-semibold uppercase tracking-[0.15em] text-text-tertiary">
-          Quick Actions
-        </span>
-        <span className="text-[9.5px] uppercase tracking-[0.18em] text-text-tertiary/70 ml-auto">
-          one click
+      <header className="flex items-center justify-between gap-2 px-4 pt-3 pb-2.5 border-b border-xs border-border-soft">
+        <div className="flex items-center gap-2 min-w-0">
+          <CalendarClock className="h-3 w-3 text-warning" />
+          <span className="text-[10px] font-semibold uppercase tracking-[0.15em] text-text-tertiary">
+            Up Next
+          </span>
+        </div>
+        <span className="text-[9.5px] uppercase tracking-[0.18em] text-text-tertiary/70">
+          this week
         </span>
       </header>
 
-      <div className="p-3 grid grid-cols-2 gap-2">
-        {actions.map((a) => (
-          <motion.button
-            key={a.label}
-            type="button"
-            onClick={a.onClick}
-            whileHover={{ y: -1 }}
-            whileTap={{ scale: 0.97 }}
-            className="group/qa flex flex-col items-center justify-center gap-1.5 rounded-lg bg-foreground/[0.025] border-xs border-border-soft px-2 py-3 hover:bg-foreground/[0.05] hover:border-foreground/15 transition-colors"
-          >
-            <a.icon
-              className={`h-4 w-4 ${TONE_TEXT[a.tone]} group-hover/qa:scale-110 transition-transform`}
-            />
-            <span className="text-[10.5px] text-foreground font-semibold text-center leading-tight">
-              {a.label}
-            </span>
-          </motion.button>
-        ))}
+      <div className="p-3">
+        {upcoming.length === 0 ? (
+          <div className="text-[12px] text-text-tertiary italic py-8 text-center">
+            Nothing scheduled this week.
+          </div>
+        ) : (
+          <ul className="list-none p-0 m-0 space-y-2">
+            {upcoming.map((m: any, i: number) => {
+              const date = new Date(m.date);
+              const isToday = dayLabel(date) === "Today";
+              return (
+                <li
+                  key={m.meeting_id ?? `${m.meeting_title}-${i}`}
+                  className="list-none"
+                >
+                  <button
+                    type="button"
+                    onClick={() => navigate({ to: "/schedule" as any })}
+                    className="group/up w-full text-left flex items-center gap-3 px-2 py-2.5 -mx-1 rounded-md hover:bg-foreground/[0.05] transition-colors"
+                  >
+                    <span
+                      className={`text-[9px] font-bold pr-20 uppercase tracking-wider tabular-nums w-12 text-center flex-shrink-0 rounded px-1 py-0.5 ${
+                        isToday
+                          ? "bg-warning/15 text-warning"
+                          : "text-text-tertiary"
+                      }`}
+                    >
+                      {dayLabel(date)}
+                    </span>
+                    <span className="text-[11.5px] text-foreground flex-1 truncate font-medium">
+                      {m.meeting_title ?? "Untitled meeting"}
+                    </span>
+                    {m.time && (
+                      <span className="text-[10px] tabular-nums text-text-tertiary flex-shrink-0">
+                        {formatTime(m.time)}
+                      </span>
+                    )}
+                  </button>
+                </li>
+              );
+            })}
+          </ul>
+        )}
       </div>
     </BentoCard>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────
+// Goal & Focus panel — the cultural component.
+// ─────────────────────────────────────────────────────────────────
+
+function GoalFocusPanel() {
+  // Local mutable copy of the mock goal so step completion feels real
+  // in the demo. Replace with mutation hook when schema is live.
+  const [goal, setGoal] = useState<Goal>(MOCK_GOAL);
+  const [modalOpen, setModalOpen] = useState(false);
+
+  const totalSteps = goal.steps.length;
+  const doneSteps = goal.steps.filter((s) => s.status === "done").length;
+  const progress = totalSteps > 0 ? Math.round((doneSteps / totalSteps) * 100) : 0;
+
+  // Days remaining toward the target
+  const today = new Date();
+  const target = new Date(goal.targetDate);
+  const daysLeft = Math.max(
+    0,
+    Math.ceil(
+      (target.getTime() -
+        new Date(today.getFullYear(), today.getMonth(), today.getDate()).getTime()) /
+        (24 * 60 * 60 * 1000),
+    ),
+  );
+
+  // The "DO NOW" step — first in_progress, else first pending.
+  const currentStep =
+    goal.steps.find((s) => s.status === "in_progress") ??
+    goal.steps.find((s) => s.status === "pending");
+
+  const markCurrentDone = () => {
+    if (!currentStep) return;
+    setGoal((g) => ({
+      ...g,
+      steps: g.steps.map((s, i, arr) => {
+        if (s.id === currentStep.id) return { ...s, status: "done" as const };
+        // Promote the next pending step to in_progress.
+        const isNextPending =
+          arr.findIndex((x) => x.id === currentStep.id) + 1 === i &&
+          s.status === "pending";
+        if (isNextPending) return { ...s, status: "in_progress" as const };
+        return s;
+      }),
+    }));
+  };
+
+  return (
+    <>
+      <BentoCard span="col-span-3" delay={0.45} noPadding>
+        {/* Soft gradient background tied to the panel's purpose —
+            subtle "focus zone" cue without overpowering the row. */}
+        <div className="relative h-full bg-gradient-to-br from-primary/[0.04] via-transparent to-success/[0.04]">
+          <header className="flex items-center justify-between gap-2 px-4 pt-3 pb-2.5 border-b border-xs border-border-soft">
+            <div className="flex items-center gap-2 min-w-0">
+              <Target className="h-3 w-3 text-primary" />
+              <span className="text-[10px] font-semibold uppercase tracking-[0.15em] text-text-tertiary">
+                Goal
+              </span>
+            </div>
+            <span className="text-[9.5px] uppercase tracking-[0.18em] text-success/80 font-semibold">
+              {goal.status}
+            </span>
+          </header>
+
+          <div className="p-3 space-y-3">
+            {/* Goal title + progress */}
+            <div>
+              <button
+                type="button"
+                onClick={() => setModalOpen(true)}
+                className="text-left w-full group/title"
+              >
+                <div className="text-[13px] font-bold text-foreground leading-snug group-hover/title:text-primary transition-colors">
+                  {goal.title}
+                </div>
+              </button>
+              <div className="mt-2 flex items-center gap-2">
+                <div className="flex-1 h-1.5 bg-foreground/[0.06] rounded-full overflow-hidden">
+                  <motion.div
+                    initial={{ width: 0 }}
+                    animate={{ width: `${progress}%` }}
+                    transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
+                    className="h-full bg-gradient-to-r from-success/70 to-success rounded-full"
+                  />
+                </div>
+                <span className="text-[10px] font-bold tabular-nums text-foreground">
+                  {progress}%
+                </span>
+              </div>
+              <div className="mt-1 text-[9.5px] uppercase tracking-wider text-text-tertiary">
+                {doneSteps}/{totalSteps} steps · {daysLeft}d left
+              </div>
+            </div>
+
+            {/* "DO NOW" — the single thing to focus on */}
+            <div>
+              <div className="flex items-center gap-1.5 mb-1.5 text-warning">
+                <Zap className="h-2.5 w-2.5" />
+                <span className="text-[9.5px] font-semibold uppercase tracking-[0.14em]">
+                  Do now
+                </span>
+              </div>
+              {currentStep ? (
+                <div className="rounded-md bg-popover/60 border-xs border-border-soft p-2.5">
+                  <div className="text-[12px] font-semibold text-foreground leading-snug">
+                    {currentStep.title}
+                  </div>
+                  <div className="mt-1 flex items-center gap-2 text-[10px] text-text-tertiary uppercase tracking-wider">
+                    {currentStep.estimatedMinutes && (
+                      <span className="inline-flex items-center gap-0.5">
+                        <Clock className="h-2.5 w-2.5" />
+                        ~{currentStep.estimatedMinutes}m
+                      </span>
+                    )}
+                    {currentStep.dueDate && (
+                      <span>
+                        Due {dayLabel(new Date(currentStep.dueDate))}
+                      </span>
+                    )}
+                  </div>
+                </div>
+              ) : (
+                <div className="rounded-md bg-success/[0.06] border-xs border-success/25 p-2.5 text-[11.5px] text-success/90 italic">
+                  All steps done — celebrate, then plan what's next.
+                </div>
+              )}
+            </div>
+
+            {/* Axon's nudge */}
+            <div className="rounded-md bg-foreground/[0.025] border-xs border-border-soft p-2.5">
+              <div className="flex items-center gap-1.5 mb-1 text-primary">
+                <Sparkles className="h-2.5 w-2.5" />
+                <span className="text-[9px] font-semibold uppercase tracking-[0.14em]">
+                  Axon
+                </span>
+              </div>
+              <p className="text-[11px] text-foreground/85 leading-snug italic">
+                &ldquo;{goal.axonNudge.short}&rdquo;
+              </p>
+            </div>
+
+            {/* Primary + secondary actions */}
+            <div className="space-y-1.5">
+              {currentStep && (
+                <motion.button
+                  type="button"
+                  onClick={markCurrentDone}
+                  whileHover={{ y: -1 }}
+                  whileTap={{ scale: 0.98 }}
+                  className="group/done w-full flex items-center justify-center gap-1.5 rounded-md bg-success/[0.12] border-xs border-success/30 hover:bg-success/[0.18] hover:border-success/50 px-3 py-2 transition-colors"
+                >
+                  <CheckCircle className="h-3 w-3 text-success" />
+                  <span className="text-[11px] font-bold uppercase tracking-wider text-success">
+                    Mark step done
+                  </span>
+                </motion.button>
+              )}
+              <button
+                type="button"
+                onClick={() => setModalOpen(true)}
+                className="group/view w-full flex items-center justify-center gap-1 px-2 py-1.5 text-[10px] uppercase tracking-wider font-semibold text-text-tertiary hover:text-foreground transition-colors"
+              >
+                View breakdown
+                <ArrowRight className="h-2.5 w-2.5 group-hover/view:translate-x-0.5 transition-transform" />
+              </button>
+            </div>
+          </div>
+        </div>
+      </BentoCard>
+
+      {/* Goal detail modal */}
+      <AnimatePresence>
+        {modalOpen && (
+          <GoalDetailModal
+            goal={goal}
+            progress={progress}
+            daysLeft={daysLeft}
+            onClose={() => setModalOpen(false)}
+            onMarkStepDone={(stepId) =>
+              setGoal((g) => ({
+                ...g,
+                steps: g.steps.map((s, i, arr) => {
+                  if (s.id === stepId) return { ...s, status: "done" as const };
+                  const idx = arr.findIndex((x) => x.id === stepId);
+                  if (i === idx + 1 && s.status === "pending")
+                    return { ...s, status: "in_progress" as const };
+                  return s;
+                }),
+              }))
+            }
+            onPauseGoal={() =>
+              setGoal((g) => ({
+                ...g,
+                status: g.status === "paused" ? "active" : "paused",
+              }))
+            }
+          />
+        )}
+      </AnimatePresence>
+    </>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────
+// Goal Detail modal — full breakdown, timeline, Axon coaching.
+// ─────────────────────────────────────────────────────────────────
+
+function GoalDetailModal({
+  goal,
+  progress,
+  daysLeft,
+  onClose,
+  onMarkStepDone,
+  onPauseGoal,
+}: {
+  goal: Goal;
+  progress: number;
+  daysLeft: number;
+  onClose: () => void;
+  onMarkStepDone: (stepId: string) => void;
+  onPauseGoal: () => void;
+}) {
+  const totalDays = daysBetween(goal.startDate, goal.targetDate);
+  const elapsedDays = Math.max(
+    0,
+    Math.min(totalDays, daysBetween(goal.startDate, new Date().toISOString().slice(0, 10))),
+  );
+  const segments = Math.max(1, totalDays);
+  const segmentsArr = Array.from({ length: segments }, (_, i) => i);
+
+  return (
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      transition={{ duration: 0.15 }}
+      className="fixed inset-0 z-50 flex items-center justify-center bg-background/70 backdrop-blur-sm"
+      onClick={onClose}
+    >
+      <motion.div
+        initial={{ opacity: 0, scale: 0.96, y: 8 }}
+        animate={{ opacity: 1, scale: 1, y: 0 }}
+        exit={{ opacity: 0, scale: 0.96, y: 8 }}
+        transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
+        className="w-[620px] max-w-[94vw] max-h-[88vh] bg-card border border-xs border-border-soft rounded-xl shadow-2xl overflow-hidden flex flex-col"
+        onClick={(e) => e.stopPropagation()}
+      >
+        {/* Header */}
+        <header className="flex items-start justify-between gap-3 px-5 py-3.5 border-b border-xs border-border-soft bg-gradient-to-br from-primary/[0.06] via-transparent to-success/[0.04]">
+          <div className="min-w-0 flex-1">
+            <div className="flex items-center gap-2 mb-1">
+              <Target className="h-3.5 w-3.5 text-primary" />
+              <span className="text-[9.5px] font-semibold uppercase tracking-[0.18em] text-text-tertiary">
+                Goal · {goal.status}
+              </span>
+            </div>
+            <h2 className="text-[16px] font-bold text-foreground leading-tight">
+              {goal.title}
+            </h2>
+            {goal.description && (
+              <p className="text-[11.5px] text-text-tertiary mt-1 leading-snug">
+                {goal.description}
+              </p>
+            )}
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            aria-label="Close"
+            className="p-1.5 rounded-md text-text-tertiary hover:text-foreground hover:bg-foreground/[0.06] transition-colors flex-shrink-0"
+          >
+            <X className="h-3.5 w-3.5" />
+          </button>
+        </header>
+
+        <div className="flex-1 min-h-0 overflow-y-auto">
+          {/* Progress + timeline */}
+          <section className="px-5 py-4 border-b border-xs border-border-soft">
+            <div className="flex items-baseline justify-between gap-3 mb-2">
+              <div className="flex items-center gap-2">
+                <span className="text-[20px] font-bold tabular-nums text-foreground">
+                  {progress}%
+                </span>
+                <span className="text-[10px] uppercase tracking-wider text-text-tertiary">
+                  complete
+                </span>
+              </div>
+              <div className="text-right">
+                <div className="text-[12px] font-semibold text-foreground tabular-nums">
+                  {daysLeft}d left
+                </div>
+                <div className="text-[9.5px] uppercase tracking-wider text-text-tertiary">
+                  by{" "}
+                  {new Date(goal.targetDate).toLocaleDateString("en-US", {
+                    month: "short",
+                    day: "numeric",
+                  })}
+                </div>
+              </div>
+            </div>
+
+            {/* Day-segment timeline */}
+            <div className="flex gap-0.5 mb-2">
+              {segmentsArr.map((i) => {
+                const isPast = i < elapsedDays;
+                const isToday = i === elapsedDays - 1;
+                return (
+                  <motion.div
+                    key={i}
+                    initial={{ opacity: 0, scaleY: 0.5 }}
+                    animate={{ opacity: 1, scaleY: 1 }}
+                    transition={{ duration: 0.25, delay: i * 0.015 }}
+                    className={`flex-1 h-2 rounded-sm ${
+                      isToday
+                        ? "bg-primary"
+                        : isPast
+                        ? "bg-success/70"
+                        : "bg-foreground/[0.08]"
+                    }`}
+                  />
+                );
+              })}
+            </div>
+            <div className="flex items-center justify-between text-[9.5px] uppercase tracking-wider text-text-tertiary tabular-nums">
+              <span>
+                Start ·{" "}
+                {new Date(goal.startDate).toLocaleDateString("en-US", {
+                  month: "short",
+                  day: "numeric",
+                })}
+              </span>
+              <span>
+                Day {elapsedDays} of {totalDays}
+              </span>
+              <span>
+                Target ·{" "}
+                {new Date(goal.targetDate).toLocaleDateString("en-US", {
+                  month: "short",
+                  day: "numeric",
+                })}
+              </span>
+            </div>
+          </section>
+
+          {/* Steps */}
+          <section className="px-5 py-4 border-b border-xs border-border-soft">
+            <div className="flex items-center justify-between mb-3">
+              <div className="text-[11px] font-bold uppercase tracking-[0.14em] text-foreground">
+                Breakdown
+              </div>
+              <span className="text-[9.5px] uppercase tracking-wider text-text-tertiary">
+                {goal.steps.filter((s) => s.axonGenerated).length} from Axon
+              </span>
+            </div>
+            <ul className="list-none p-0 m-0 space-y-1">
+              {goal.steps.map((s) => (
+                <li key={s.id} className="list-none">
+                  <StepRow step={s} onMarkDone={() => onMarkStepDone(s.id)} />
+                </li>
+              ))}
+            </ul>
+          </section>
+
+          {/* Axon's coaching */}
+          <section className="px-5 py-4 bg-gradient-to-br from-primary/[0.04] via-transparent to-transparent">
+            <div className="flex items-center gap-2 mb-2 text-primary">
+              <Sparkles className="h-3 w-3" />
+              <span className="text-[10px] font-bold uppercase tracking-[0.14em]">
+                Axon Coach
+              </span>
+            </div>
+            <p className="text-[12.5px] text-foreground/90 leading-relaxed italic">
+              &ldquo;{goal.axonNudge.long}&rdquo;
+            </p>
+          </section>
+        </div>
+
+        {/* Footer actions */}
+        <div className="px-5 py-3 border-t border-xs border-border-soft bg-popover/40 flex items-center justify-between gap-2">
+          <button
+            type="button"
+            onClick={onPauseGoal}
+            className="group/pause flex items-center gap-1.5 px-3 py-1.5 rounded-md text-text-tertiary hover:text-foreground hover:bg-foreground/[0.06] transition-colors"
+          >
+            {goal.status === "paused" ? (
+              <>
+                <Zap className="h-3 w-3" />
+                <span className="text-[10.5px] uppercase tracking-wider font-bold">
+                  Resume
+                </span>
+              </>
+            ) : (
+              <>
+                <Coffee className="h-3 w-3" />
+                <span className="text-[10.5px] uppercase tracking-wider font-bold">
+                  Pause — take a break
+                </span>
+              </>
+            )}
+          </button>
+          <button
+            type="button"
+            onClick={onClose}
+            className="text-[10.5px] uppercase tracking-wider font-bold text-primary hover:text-primary/80 transition-colors inline-flex items-center gap-1"
+          >
+            Back to dashboard
+            <ArrowRight className="h-3 w-3" />
+          </button>
+        </div>
+      </motion.div>
+    </motion.div>
+  );
+}
+
+function StepRow({
+  step,
+  onMarkDone,
+}: {
+  step: GoalStep;
+  onMarkDone: () => void;
+}) {
+  const isDone = step.status === "done";
+  const isCurrent = step.status === "in_progress";
+  const dueDateLabel = step.dueDate
+    ? dayLabel(new Date(step.dueDate))
+    : undefined;
+
+  return (
+    <div
+      className={`flex items-start gap-2.5 px-2.5 py-2 rounded-md transition-colors ${
+        isCurrent ? "bg-warning/[0.06] border-xs border-warning/25" : ""
+      }`}
+    >
+      {/* Step status icon */}
+      <button
+        type="button"
+        onClick={!isDone ? onMarkDone : undefined}
+        disabled={isDone}
+        className="flex-shrink-0 mt-0.5"
+        aria-label={isDone ? "Step done" : "Mark step done"}
+      >
+        {isDone ? (
+          <CheckCircle className="h-4 w-4 text-success" />
+        ) : isCurrent ? (
+          <div className="h-4 w-4 rounded-full border-2 border-warning relative flex items-center justify-center">
+            <span className="h-1.5 w-1.5 rounded-full bg-warning animate-pulse" />
+          </div>
+        ) : (
+          <div className="h-4 w-4 rounded-full border-2 border-foreground/15 hover:border-foreground/30 transition-colors" />
+        )}
+      </button>
+
+      <div className="flex-1 min-w-0">
+        <div
+          className={`text-[12.5px] font-medium ${
+            isDone
+              ? "text-text-tertiary line-through"
+              : isCurrent
+              ? "text-foreground"
+              : "text-foreground/85"
+          }`}
+        >
+          {step.title}
+          {step.axonGenerated && (
+            <span
+              title="Suggested by Axon"
+              className="ml-1.5 inline-flex items-center gap-0.5 text-[9px] text-primary/70 uppercase tracking-wider align-middle"
+            >
+              <Sparkles className="h-2 w-2" />
+            </span>
+          )}
+        </div>
+        <div className="flex items-center gap-2.5 mt-0.5 text-[10px] uppercase tracking-wider text-text-tertiary">
+          {step.estimatedMinutes && (
+            <span className="inline-flex items-center gap-0.5">
+              <Clock className="h-2.5 w-2.5" />~{step.estimatedMinutes}m
+            </span>
+          )}
+          {dueDateLabel && <span>{dueDateLabel}</span>}
+          {isCurrent && (
+            <span className="text-warning font-semibold inline-flex items-center gap-0.5">
+              <Flame className="h-2.5 w-2.5" />
+              Doing now
+            </span>
+          )}
+        </div>
+      </div>
+    </div>
   );
 }
