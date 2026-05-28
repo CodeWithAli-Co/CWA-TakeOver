@@ -44,6 +44,7 @@ import { useNavigate } from "@tanstack/react-router";
 import { BentoCard } from "./BentoCard";
 import { Todos, AllTodos, type TodosInterface } from "@/stores/query";
 import { colorForUser } from "@/lib/yjs/awareness";
+import UserView, { Role } from "@/MyComponents/Reusables/userView";
 
 interface Props {
   username: string;
@@ -203,7 +204,9 @@ export function TasksOverviewCard({ username }: Props) {
 
   return (
     <BentoCard span="col-span-4 row-span-2" delay={0.3} noPadding>
-      {/* Header */}
+      {/* Header — the You/Everyone toggle is gated to leadership only
+          (CEO, COO, Head of Growth) so non-leadership roles can't peek
+          at the whole team's task load. */}
       <header className="flex items-center justify-between gap-3 px-4 pt-3 pb-2.5 border-b border-xs border-border-soft">
         <div className="flex items-center gap-2 min-w-0">
           <span className="text-[10px] font-semibold uppercase tracking-[0.15em] text-text-tertiary">
@@ -213,7 +216,9 @@ export function TasksOverviewCard({ username }: Props) {
             {list.length}
           </span>
         </div>
-        <ScopeToggle scope={scope} onChange={setScope} />
+        <UserView userRole={[Role.CEO, Role.COO, Role.HeadOfGrowth]}>
+          <ScopeToggle scope={scope} onChange={setScope} />
+        </UserView>
       </header>
 
       <div className="p-4 space-y-4">

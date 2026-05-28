@@ -4,6 +4,9 @@
  */
 import { BentoCard, BentoValue } from "./BentoCard";
 import { TasksOverviewCard } from "./TasksOverviewCard";
+import { Row3Section } from "./Row3Section";
+import { Row3MemberSection } from "./Row3MemberSection";
+import UserView, { Role } from "@/MyComponents/Reusables/userView";
 import {
   AreaChart,
   Area,
@@ -15,11 +18,6 @@ import {
 } from "recharts";
 import {
   Users,
-  FolderGit2,
-  DollarSign,
-  TrendingUp,
-  Clock,
-  MessageSquare,
   ArrowUpRight,
   ArrowDownRight,
   CheckSquare,
@@ -28,7 +26,7 @@ import {
   UserPlus,
   ChevronRight,
 } from "lucide-react";
-import { ActiveUser, Employees, Todos, MeetingsQuery } from "@/stores/query";
+import { ActiveUser, Todos, MeetingsQuery } from "@/stores/query";
 import { Suspense, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
@@ -37,12 +35,9 @@ import { TasksComponent } from "@/MyComponents/HomeDashboard/tasks";
 import Meetings from "@/MyComponents/HomeDashboard/meetings";
 import {
   useDemoMode,
-  DEMO_STATS,
   DEMO_REVENUE_SERIES,
-  DEMO_PROJECTS,
 } from "@/stores/demoMode";
 import { useCandidates } from "@/MyComponents/Hiring/recruitingQueries";
-import { useWorkspaceResources } from "@/stores/workspace";
 
 // Real revenue series — kept in real units so a future financial-context
 // wiring slots in without us changing the y-axis logic.
@@ -57,27 +52,6 @@ const REAL_REVENUE_SERIES = [
   { month: "Apr", revenue: 850, expenses: 420 },
 ];
 
-// Short "now / 5m ago / 2h ago / 3d ago" formatter — used by the
-// Recent Workspace Activity tiles.
-function formatRelativeShort(iso: string): string {
-  const d = new Date(iso);
-  const ms = Date.now() - d.getTime();
-  const mins = Math.floor(ms / 60_000);
-  if (mins < 1) return "just now";
-  if (mins < 60) return `${mins}m`;
-  const hrs = Math.floor(mins / 60);
-  if (hrs < 24) return `${hrs}h`;
-  const days = Math.floor(hrs / 24);
-  if (days < 7) return `${days}d`;
-  return d.toLocaleDateString(undefined, { month: "short", day: "numeric" });
-}
-
-const REAL_PROJECTS = [
-  { name: "Simplicity",   status: "In Progress", progress: 72 },
-  { name: "CWA Invoicer", status: "Active",      progress: 85 },
-  { name: "Mario Hauling",status: "Active",      progress: 60 },
-  { name: "Registry Site",status: "Planning",    progress: 20 },
-];
 
 /**
  * StatCard — hero metric tile.
@@ -278,11 +252,9 @@ function TaskOverviewRow({
 }
 
 function CWADashboardContent() {
-  const navigate = useNavigate();
   const { data: meRows } = ActiveUser();
   const me = (meRows?.[0] as any) ?? null;
   const username: string = me?.username ?? "";
-  const { data: todos } = Todos("all");
   const { data: myTodos } = Todos(username);
   const { data: meetings } = MeetingsQuery();
   const { data: candidates } = useCandidates({ status: "applied", limit: 20 });
@@ -325,72 +297,6 @@ function CWADashboardContent() {
 
   const openBugList = bugReports ?? [];
   const newCandidates = candidates ?? [];
-
-  // Quick Stats — real data sources, drops the dummy Git Commits since
-  // there's no GitHub integration yet. Replaces with Workspace docs
-  // edited this week so the slot reflects actual team activity.
-  const sevenDaysAgo = useMemo(() => {
-    const d = new Date();
-    d.setDate(d.getDate() - 7);
-    return d.toISOString();
-  }, []);
-
-  const { data: chatMsgCount } = useQuery({
-    queryKey: ["dashboard", "chat-message-count"],
-    queryFn: async () => {
-      const [g, dm] = await Promise.all([
-        supabase.from("cwa_chat").select("msg_id", { count: "exact", head: true }),
-        supabase.from("cwa_dm_chat").select("msg_id", { count: "exact", head: true }),
-      ]);
-      return (g.count ?? 0) + (dm.count ?? 0);
-    },
-  });
-
-  const { data: hoursThisWeek } = useQuery({
-    queryKey: ["dashboard", "hours-this-week"],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("shifts")
-        .select("clock_in, clock_out, status")
-        .eq("status", "completed")
-        .gte("clock_in", sevenDaysAgo);
-      if (error) return 0;
-      const totalMs = (data ?? []).reduce((sum: number, s: any) => {
-        if (!s.clock_in || !s.clock_out) return sum;
-        return sum + (new Date(s.clock_out).getTime() - new Date(s.clock_in).getTime());
-      }, 0);
-      return Math.round((totalMs / (1000 * 60 * 60)) * 10) / 10;
-    },
-  });
-
-  const { data: workspaceEditsThisWeek } = useQuery({
-    queryKey: ["dashboard", "workspace-edits-this-week"],
-    queryFn: async () => {
-      const [docs, sheets] = await Promise.all([
-        supabase
-          .from("workspace_documents")
-          .select("id", { count: "exact", head: true })
-          .gte("updated_at", sevenDaysAgo)
-          .eq("archived", false),
-        supabase
-          .from("workspace_spreadsheets")
-          .select("id", { count: "exact", head: true })
-          .gte("updated_at", sevenDaysAgo)
-          .eq("archived", false),
-      ]);
-      return (docs.count ?? 0) + (sheets.count ?? 0);
-    },
-  });
-
-  // Recent Workspace Activity — replaces the previously-hardcoded
-  // "Active Projects" tiles with real, recently-edited docs + sheets.
-  // The /workspace product is where people actually do work; surfacing
-  // the latest edits is far more useful than a dummy progress bar.
-  const { data: workspaceItems = [] } = useWorkspaceResources();
-  const recentWorkspace = useMemo(
-    () => workspaceItems.slice(0, 4),
-    [workspaceItems],
-  );
 
   // Demo mode still feeds the chart for pitch rehearsals.
   const revenueData = demoMode ? DEMO_REVENUE_SERIES : REAL_REVENUE_SERIES;
@@ -523,86 +429,18 @@ function CWADashboardContent() {
 
       <TasksOverviewCard username={username} />
 
-      {/* ── Row 3: Quick Links ── */}
-      <BentoCard label="Activity (7d)" span="col-span-4" delay={0.35}>
-        {/* Real numbers, time-bounded. Drops the dummy "Git Commits"
-            since there's no GitHub integration yet — replaces with
-            workspace doc/sheet edits in the same period, which is
-            what the team actually does on this app. */}
-        <div className="space-y-2.5">
-          <div className="flex items-center justify-between py-1">
-            <div className="flex items-center gap-2">
-              <MessageSquare className="h-3.5 w-3.5 text-primary" />
-              <span className="text-sm text-foreground">Chat messages</span>
-            </div>
-            <span className="text-sm font-semibold text-foreground tabular-nums">
-              {(chatMsgCount ?? 0).toLocaleString()}
-            </span>
-          </div>
-          <div className="flex items-center justify-between py-1">
-            <div className="flex items-center gap-2">
-              <FolderGit2 className="h-3.5 w-3.5 text-primary" />
-              <span className="text-sm text-foreground">Workspace edits</span>
-            </div>
-            <span className="text-sm font-semibold text-foreground tabular-nums">
-              {workspaceEditsThisWeek ?? 0}
-            </span>
-          </div>
-          <div className="flex items-center justify-between py-1">
-            <div className="flex items-center gap-2">
-              <Clock className="h-3.5 w-3.5 text-primary" />
-              <span className="text-sm text-foreground">Hours tracked</span>
-            </div>
-            <span className="text-sm font-semibold text-foreground tabular-nums">
-              {hoursThisWeek != null ? `${hoursThisWeek}h` : "—"}
-            </span>
-          </div>
-        </div>
-      </BentoCard>
-
-      <BentoCard label="Recent Workspace Activity" span="col-span-8" delay={0.4}>
-        {recentWorkspace.length === 0 ? (
-          <div className="text-[12px] text-text-tertiary py-2">
-            Nothing edited yet. Open the Workspace to start a doc or sheet.
-          </div>
-        ) : (
-          <div className="grid grid-cols-4 gap-3">
-            {recentWorkspace.map((r) => (
-              <button
-                key={`${r.kind}-${r.id}`}
-                type="button"
-                onClick={() =>
-                  navigate({
-                    to:
-                      r.kind === "document"
-                        ? "/workspace/docs/$id"
-                        : "/workspace/sheets/$id",
-                    params: { id: r.id },
-                  } as any)
-                }
-                className="text-left p-3 rounded-lg border-xs border-border-soft bg-background/40 hover:bg-background/60 transition-colors min-w-0"
-              >
-                <div className="flex items-center gap-1.5 text-[9.5px] uppercase tracking-wider mb-1.5">
-                  <span
-                    className={`w-1 h-1 rounded-full ${
-                      r.kind === "document" ? "bg-primary" : "bg-success"
-                    }`}
-                  />
-                  <span className="text-text-tertiary">
-                    {r.kind === "document" ? "Doc" : "Sheet"}
-                  </span>
-                </div>
-                <p className="text-[12.5px] font-medium text-foreground truncate">
-                  {r.title || "Untitled"}
-                </p>
-                <p className="text-[10px] text-text-tertiary mt-1 truncate">
-                  {r.updated_by ?? r.owner} · {formatRelativeShort(r.updated_at)}
-                </p>
-              </button>
-            ))}
-          </div>
-        )}
-      </BentoCard>
+      {/* ── Row 3: role-split panels (two entirely different shapes) ──
+          CEO/COO get the experimental Strategic Intelligence panel
+          (Intelligence · Revenue · Mission Control · Daily Briefing).
+          Everyone else gets the Member section — Team Activity feed
+          + Quick Actions launcher. Two separate components, two
+          separate philosophies; the gating happens here. */}
+      <UserView userRole={[Role.CEO, Role.COO]}>
+        <Row3Section />
+      </UserView>
+      <UserView excludeRoles={[Role.CEO, Role.COO]}>
+        <Row3MemberSection />
+      </UserView>
 
       {/* ── Row 4: Full Tasks + Meetings widgets ── */}
       <div className="col-span-7">
