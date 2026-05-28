@@ -6,6 +6,7 @@ import { BentoCard, BentoValue } from "./BentoCard";
 import { TasksOverviewCard } from "./TasksOverviewCard";
 import { Row3Section } from "./Row3Section";
 import { Row3MemberSection } from "./Row3MemberSection";
+import { Row5Section } from "./Row5Section";
 import UserView, { Role } from "@/MyComponents/Reusables/userView";
 import {
   AreaChart,
@@ -449,6 +450,14 @@ function CWADashboardContent() {
       <div className="col-span-5">
         <Meetings />
       </div>
+
+      {/* ── Row 5 (preview): Communication & Workspace ──
+          Engagement-focused — Communication & Presence (mentions,
+          online users) + Workspace Deep Dive (co-edited docs +
+          recent feedback). Sits below Row 4 for now so we can
+          evaluate it visually before deciding whether to drop the
+          full Tasks/Meetings lists in favor of this engagement row. */}
+      <Row5Section />
     </div>
   );
 }
