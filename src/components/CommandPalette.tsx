@@ -20,6 +20,7 @@ import {
   Search, ArrowRight, Hash, GitPullRequest, AlertCircle, Code as CodeIcon,
   Inbox, Sparkles, Home, MessageCircle, ClipboardList, Users,
   UserCircle, CalendarDays, BarChart3, FileText, Bug, FolderKanban,
+  HandHeart, TrendingUp,
 } from "lucide-react";
 import { useNavigate } from "@tanstack/react-router";
 import {
@@ -27,8 +28,11 @@ import {
 } from "@/MyComponents/Code/mockData";
 import { useQuickCompose } from "@/MyComponents/Chat/quickComposeStore";
 import { useEffectiveRow4View, useRow4View } from "@/MyComponents/Dashboard/row4ViewStore";
+import { useSendKudosDialog } from "@/MyComponents/Dashboard/sendKudosStore";
+import { useCreateGrowthTrackDialog } from "@/MyComponents/Dashboard/createGrowthTrackStore";
 import { ActiveUser } from "@/stores/query";
 import { useRolePreview } from "@/stores/store";
+import { isCLevel } from "@/MyComponents/Dashboard/row4ViewStore";
 
 interface CommandItem {
   /** Stable key for selection state. */
@@ -54,6 +58,8 @@ export function CommandPalette() {
   const inputRef = useRef<HTMLInputElement>(null);
   const navigate = useNavigate();
   const openCompose = useQuickCompose((s) => s.openCompose);
+  const openSendKudos = useSendKudosDialog((s) => s.openDialog);
+  const openCreateGrowthTrack = useCreateGrowthTrackDialog((s) => s.openDialog);
   const toggleFromRow4 = useRow4View((s) => s.toggleFrom);
   // Resolve current effective Row 4 view so the toggle works even
   // when the user hasn't set an explicit preference yet (they're on
@@ -221,6 +227,28 @@ export function CommandPalette() {
           toggleFromRow4(row4Effective);
           close();
         } },
+      // Team Pulse composers. Send kudos is available to everyone;
+      // Create growth track is gated to C-level (CEO/COO/CFO) since
+      // they're acting as managers until manager_id wires up.
+      { id: "ax-kudos", label: "Send kudos", icon: HandHeart, hint: "Compose",
+        haystack: "kudos thank send appreciation shout-out praise team pulse",
+        onChoose: () => {
+          openSendKudos();
+          close();
+        } },
+      ...(isCLevel(row4ActualRole)
+        ? [{
+            id: "ax-growth-track",
+            label: "Create growth track",
+            icon: TrendingUp,
+            hint: "Compose",
+            haystack: "growth track milestone career arc manager approve employee",
+            onChoose: () => {
+              openCreateGrowthTrack();
+              close();
+            },
+          }]
+        : []),
     ];
 
     return [

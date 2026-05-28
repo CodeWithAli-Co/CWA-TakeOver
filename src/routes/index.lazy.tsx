@@ -8,9 +8,7 @@ import {
   File,
   CalendarSearch,
   Clock,
-  Sparkles,
 } from "lucide-react";
-import { useDemoMode } from "@/stores/demoMode";
 import { motion } from "framer-motion";
 import UserView, { Role } from "@/MyComponents/Reusables/userView";
 import Quotas from "@/MyComponents/HomeDashboard/qoutas";
@@ -38,8 +36,6 @@ const Index = () => {
   const { data: user } = ActiveUser();
   const username = user?.[0]?.username || "there";
   const { activeCompany } = useCompanyFilter();
-  const demoOn = useDemoMode((s) => s.enabled);
-  const toggleDemo = useDemoMode((s) => s.toggle);
 
   const currentDate = new Date().toLocaleDateString("en-US", {
     weekday: "short",
@@ -83,33 +79,6 @@ const Index = () => {
               {currentDate}
             </motion.p>
           </div>
-
-          {/* Quick nav */}
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ delay: 0.15 }}
-            className="flex items-center gap-1.5"
-          >
-            {/* Demo-mode toggle — purely a display layer. Real data is
-                never overwritten; flipping this back instantly restores
-                the live numbers. Persisted to localStorage so a pitch
-                rehearsal survives a dev restart. */}
-            <button
-              type="button"
-              onClick={toggleDemo}
-              title={demoOn ? "Switch back to real data" : "Show demo data"}
-              className={
-                "inline-flex items-center gap-1.5 h-7 px-2.5 rounded-lg border text-[10.5px] font-bold uppercase tracking-wider transition-colors " +
-                (demoOn
-                  ? "bg-success/15 border-success/30 text-success"
-                  : "bg-background/50 border-border-soft text-text-tertiary hover:text-foreground hover:border-foreground/15")
-              }
-            >
-              <Sparkles className="h-3 w-3" />
-              {demoOn ? "Demo on" : "Demo"}
-            </button>
-          </motion.div>
 
           {/* Quick nav */}
           <motion.div

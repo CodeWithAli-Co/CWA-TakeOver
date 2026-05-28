@@ -371,3 +371,189 @@ export const MeetingsQuery = () => {
     queryFn: () => fetchMeetings(activeCompany)
   });
 };
+
+// ────────────────────────────────────────────────────────────────
+// axon_checkins — private daily reflections between employee + Axon.
+// Owner-only RLS at the DB layer; clients don't need to filter by
+// user_id explicitly because the policy returns only the auth.uid()
+// owner's rows. Uses plain useQuery (not Suspense) so a missing
+// table degrades to empty rather than throwing into the boundary.
+// ────────────────────────────────────────────────────────────────
+export interface AxonCheckinRow {
+  id: string;
+  user_id: string;
+  prompt: string;
+  entry: string | null;
+  entry_voice_audio_url: string | null;
+  axon_acknowledgement: string | null;
+  time_of_day: "morning" | "midday" | "afternoon" | "evening";
+  skipped: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export const useMyAxonCheckins = (limit: number = 10) => {
+  return useQuery({
+    queryKey: ["axon_checkins", "mine", limit],
+    queryFn: async (): Promise<AxonCheckinRow[]> => {
+      const { data, error } = await supabase
+        .from("axon_checkins")
+        .select("*")
+        .order("created_at", { ascending: false })
+        .limit(limit);
+      if (error) {
+        // Table missing or RLS rejected — degrade to empty.
+        console.warn("[axon_checkins] query error:", error.message);
+        return [];
+      }
+      return (data ?? []) as AxonCheckinRow[];
+    },
+    // Reflections are personal + low-velocity. Cache for a minute
+    // so re-mounts don't re-fetch on every navigation.
+    staleTime: 60_000,
+  });
+};
+
+// ────────────────────────────────────────────────────────────────
+// growth_tracks — Axon-proposed, manager-approved career arc.
+// Each user has at most one manager_approved=true row at a time
+// (partial unique index enforces this in the DB).
+// ────────────────────────────────────────────────────────────────
+export interface GrowthMilestoneStep {
+  id: string;
+  label: string;
+  completed: boolean;
+  due_date: string | null;
+}
+export interface GrowthTrackRow {
+  id: string;
+  user_id: string;
+  /** Renamed from current_role to dodge the Postgres reserved keyword.
+   *  Semantically still the employee's current role/title in their arc. */
+  role_title: string;
+  next_milestone: string;
+  milestone_steps: GrowthMilestoneStep[];
+  axon_note: string | null;
+  pacing_status: "on_track" | "attention_needed" | "ahead";
+  manager_approved: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export const useMyGrowthTrack = () => {
+  return useQuery({
+    queryKey: ["growth_tracks", "mine", "current"],
+    queryFn: async (): Promise<GrowthTrackRow | null> => {
+      const { data, error } = await supabase
+        .from("growth_tracks")
+        .select("*")
+        .eq("manager_approved", true)
+        .order("updated_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      if (error) {
+        console.warn("[growth_tracks] query error:", error.message);
+        return null;
+      }
+      return (data as GrowthTrackRow | null) ?? null;
+    },
+    staleTime: 60_000,
+  });
+};
+
+/**
+ * Fetch a specific user's current approved growth track. Used by
+ * the manager create/edit modal to pre-fill an "edit existing"
+ * flow when the picked employee already has a track.
+ */
+export const useGrowthTrackForUser = (userId: string | null) => {
+  return useQuery({
+    queryKey: ["growth_tracks", "for-user", userId],
+    enabled: !!userId,
+    queryFn: async (): Promise<GrowthTrackRow | null> => {
+      if (!userId) return null;
+      const { data, error } = await supabase
+        .from("growth_tracks")
+        .select("*")
+        .eq("user_id", userId)
+        .eq("manager_approved", true)
+        .order("updated_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      if (error) {
+        console.warn("[growth_tracks/for-user] query error:", error.message);
+        return null;
+      }
+      return (data as GrowthTrackRow | null) ?? null;
+    },
+    staleTime: 30_000,
+  });
+};
+
+// ────────────────────────────────────────────────────────────────
+// team_activity — ambient feed of wins / status changes / kudos.
+// Whole-company scope for v1 (no company filter); RLS allows any
+// authenticated user to read.
+// ────────────────────────────────────────────────────────────────
+export interface TeamActivityRow {
+  id: string;
+  actor_id: string;
+  target_id: string | null;
+  activity_type: "win" | "status_change" | "kudos";
+  description: string;
+  metadata: Record<string, any>;
+  created_at: string;
+}
+
+export const useTeamActivity = (limit: number = 20) => {
+  return useQuery({
+    queryKey: ["team_activity", limit],
+    queryFn: async (): Promise<TeamActivityRow[]> => {
+      const { data, error } = await supabase
+        .from("team_activity")
+        .select("*")
+        .order("created_at", { ascending: false })
+        .limit(limit);
+      if (error) {
+        console.warn("[team_activity] query error:", error.message);
+        return [];
+      }
+      return (data ?? []) as TeamActivityRow[];
+    },
+    staleTime: 30_000,
+  });
+};
+
+// ────────────────────────────────────────────────────────────────
+// app_users (lightweight) — just supa_id + username + role for
+// dropdowns in the Send-kudos and Create-growth-track modals.
+// Excludes the current user from kudos targeting (no self-kudos).
+// ────────────────────────────────────────────────────────────────
+export interface EmployeeRow {
+  supa_id: string;
+  username: string;
+  role: string | null;
+}
+
+export const useAllEmployees = (excludeCurrentUser: boolean = false) => {
+  return useQuery({
+    queryKey: ["app_users", "all", excludeCurrentUser],
+    queryFn: async (): Promise<EmployeeRow[]> => {
+      const { data: auth } = await supabase.auth.getUser();
+      const myId = auth?.user?.id;
+      const { data, error } = await supabase
+        .from("app_users")
+        .select("supa_id, username, role")
+        .order("username", { ascending: true });
+      if (error) {
+        console.warn("[app_users] query error:", error.message);
+        return [];
+      }
+      const rows = (data ?? []) as EmployeeRow[];
+      return excludeCurrentUser && myId
+        ? rows.filter((r) => r.supa_id !== myId)
+        : rows;
+    },
+    staleTime: 5 * 60_000, // employees list changes rarely
+  });
+};

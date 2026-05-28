@@ -32,6 +32,8 @@ import { QuickComposeModal } from "@/MyComponents/Chat/QuickComposeModal";
 import { ScheduleStatsModal } from "@/MyComponents/Timesheet/ScheduleStatsModal";
 import { ScheduleStatsShortcut } from "@/MyComponents/Timesheet/ScheduleStatsShortcut";
 import { Row4SwapShortcut } from "@/MyComponents/Dashboard/Row4SwapShortcut";
+import { SendKudosDialog } from "@/MyComponents/Dashboard/SendKudosDialog";
+import { CreateGrowthTrackDialog } from "@/MyComponents/Dashboard/CreateGrowthTrackDialog";
 import { useQuickCompose } from "@/MyComponents/Chat/quickComposeStore";
 import { displayLabelForDM, isDMKey } from "@/MyComponents/Chat/displayName";
 import supabase from "@/MyComponents/supabase";
@@ -979,6 +981,11 @@ export const Route = createRootRoute({
              *  the UI; the swap button overlay was removed so
              *  employees don't see the toggle unless told. */}
             <Row4SwapShortcut />
+            {/* Row 4 Team Pulse composers. Opened via Cmd+K verbs
+             *  ("Send kudos", "Create growth track"). Both render
+             *  only when their respective zustand store has open=true. */}
+            <SendKudosDialog />
+            <CreateGrowthTrackDialog />
             {/* Chat-only message search — now bound to Cmd+Shift+F */}
             <Suspense fallback={null}>
               <GlobalSearch open={searchOpen} onOpenChange={setSearchOpen} />

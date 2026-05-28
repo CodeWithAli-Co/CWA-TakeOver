@@ -40,14 +40,12 @@ import { Suspense, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
 import supabase from "@/MyComponents/supabase";
-import {
-  useDemoMode,
-  DEMO_REVENUE_SERIES,
-} from "@/stores/demoMode";
 import { useCandidates } from "@/MyComponents/Hiring/recruitingQueries";
 
-// Real revenue series — kept in real units so a future financial-context
-// wiring slots in without us changing the y-axis logic.
+// TODO(revenue): placeholder series — no real revenue source exists
+// yet. When `cwa_revenue_snapshots` (or whatever ships) lands, swap
+// this constant for a query. Kept in real units so the y-axis logic
+// doesn't need to change at that point.
 const REAL_REVENUE_SERIES = [
   { month: "Sep", revenue: 320, expenses: 280 },
   { month: "Oct", revenue: 580, expenses: 310 },
@@ -320,7 +318,6 @@ function CWADashboardContent() {
   const { data: myTodos } = Todos(username);
   const { data: meetings } = MeetingsQuery();
   const { data: candidates } = useCandidates({ status: "applied", limit: 20 });
-  const demoMode = useDemoMode((s) => s.enabled);
 
   // Open bug reports — inline query, no shared hook exists yet.
   const { data: bugReports } = useQuery({
@@ -360,8 +357,7 @@ function CWADashboardContent() {
   const openBugList = bugReports ?? [];
   const newCandidates = candidates ?? [];
 
-  // Demo mode still feeds the chart for pitch rehearsals.
-  const revenueData = demoMode ? DEMO_REVENUE_SERIES : REAL_REVENUE_SERIES;
+  const revenueData = REAL_REVENUE_SERIES;
 
   return (
     <div className="grid grid-cols-12 gap-3">
