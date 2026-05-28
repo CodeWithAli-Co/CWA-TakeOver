@@ -18,7 +18,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import {
   Calendar, CheckCircle, ClipboardList, Clock,
   ChevronRight, LayoutGrid, X, Flag, Search,
-  Briefcase, Sparkles, Layers, Users,
+  Briefcase, Sparkles, Layers, Users, Edit3, Save, Trash2,
 } from "lucide-react";
 import { ActiveUser, AllTodos, Employees, Todos, TodosInterface } from "@/stores/query";
 import supabase from "@/MyComponents/supabase";
@@ -517,6 +517,7 @@ const InboxView: React.FC<{
   const [selectedId, setSelectedId] = useState<number | null>(
     () => focusTop[0]?.task.todo_id ?? openSorted[0]?.task.todo_id ?? doneTasks[0]?.task.todo_id ?? null,
   );
+  const [editingTask, setEditingTask] = useState<TodosInterface | null>(null);
 
   // Re-anchor selection if it falls outside the current filtered set
   useEffect(() => {
@@ -616,7 +617,12 @@ const InboxView: React.FC<{
       {/* ─────────── CENTER PANE: selected task detail ─────────── */}
       <main className="overflow-y-auto bg-background/30">
         {selected ? (
-          <TaskDetail scored={selected} onStatusChange={onStatusChange} showAssignee={showAssignee} />
+          <TaskDetail
+            scored={selected}
+            onStatusChange={onStatusChange}
+            onEditClick={() => setEditingTask(selected.task)}
+            showAssignee={showAssignee}
+          />
         ) : (
           <div className="h-full flex items-center justify-center px-8 py-16 text-center">
             <div className="max-w-sm">
@@ -661,9 +667,275 @@ const InboxView: React.FC<{
           </div>
         )}
       </aside>
+
+      {/* Edit drawer */}
+      <AnimatePresence>
+        {editingTask && (
+          <TaskEditDrawer
+            task={editingTask}
+            onClose={() => setEditingTask(null)}
+          />
+        )}
+      </AnimatePresence>
     </div>
   );
 };
+
+// ════════════════════════════════════════════════════════════════
+// TaskEditDrawer - slide-in edit form
+// ════════════════════════════════════════════════════════════════
+const TaskEditDrawer: React.FC<{
+  task: TodosInterface;
+  onClose: () => void;
+}> = ({ task, onClose }) => {
+  const [title, setTitle] = useState(task.title ?? "");
+  const [description, setDescription] = useState(task.description ?? "");
+  const [priority, setPriority] = useState<TaskPriority>((task.priority as TaskPriority) ?? "medium");
+  const [status, setStatus] = useState<TaskStatus>((task.status as TaskStatus) ?? "to-do");
+  const [deadline, setDeadline] = useState<string>(task.deadline ? task.deadline.slice(0, 10) : "");
+  const [label, setLabel] = useState(task.label ?? "");
+  const [assigneeText, setAssigneeText] = useState(
+    Array.isArray(task.assignee) ? task.assignee.join(", ") : "",
+  );
+  const [saving, setSaving] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState(false);
+
+  const dirty =
+    title !== (task.title ?? "") ||
+    description !== (task.description ?? "") ||
+    priority !== task.priority ||
+    status !== task.status ||
+    deadline !== (task.deadline ? task.deadline.slice(0, 10) : "") ||
+    label !== (task.label ?? "") ||
+    assigneeText !== (Array.isArray(task.assignee) ? task.assignee.join(", ") : "");
+
+  async function save() {
+    if (!title.trim()) return;
+    setSaving(true);
+    const priorityOrderMap = { low: 1, medium: 2, high: 3 };
+    const assignees = assigneeText
+      .split(",")
+      .map((s) => s.trim())
+      .filter(Boolean);
+    const patch = {
+      title: title.trim(),
+      description,
+      priority,
+      priorityOrder: priorityOrderMap[priority],
+      status,
+      deadline: deadline ? new Date(deadline + "T23:59:00").toISOString() : task.deadline,
+      label: label.trim(),
+      assignee: assignees,
+    };
+    const { error } = await supabase.from("cwa_todos").update(patch).eq("todo_id", task.todo_id);
+    setSaving(false);
+    if (error) {
+      await message(error.message, { title: "Error saving task", kind: "error" });
+      return;
+    }
+    onClose();
+  }
+
+  async function handleDelete() {
+    setDeleting(true);
+    const { error } = await supabase.from("cwa_todos").delete().eq("todo_id", task.todo_id);
+    setDeleting(false);
+    if (error) {
+      await message(error.message, { title: "Error deleting task", kind: "error" });
+      return;
+    }
+    onClose();
+  }
+
+  return (
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      className="fixed inset-0 z-50 flex items-stretch justify-end bg-black/50 backdrop-blur-sm"
+      onClick={onClose}
+    >
+      <motion.div
+        initial={{ x: "100%" }}
+        animate={{ x: 0 }}
+        exit={{ x: "100%" }}
+        transition={{ type: "spring", damping: 30, stiffness: 280 }}
+        onClick={(e) => e.stopPropagation()}
+        className="w-full max-w-lg bg-card border-l border-border overflow-y-auto flex flex-col"
+      >
+        <div className="sticky top-0 z-10 bg-card border-b border-border px-5 py-3 flex items-center justify-between">
+          <div>
+            <Tracker tone="muted" size="sm">EDIT TASK #{task.todo_id}</Tracker>
+            <h3 className="text-[14px] font-bold tracking-tight text-foreground mt-0.5 truncate max-w-[380px]">
+              {task.title}
+            </h3>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            className="p-1.5 rounded-sm text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors"
+            aria-label="Close edit drawer"
+          >
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+
+        <div className="p-5 space-y-4 flex-1">
+          <DrawerField label="Title">
+            <input
+              type="text"
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              className="w-full bg-background border border-border rounded-md px-3 py-2 text-[13px] text-foreground focus:outline-none focus:border-primary/60"
+              autoFocus
+            />
+          </DrawerField>
+
+          <DrawerField label="Description">
+            <textarea
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              rows={8}
+              placeholder="What needs to happen? Steps, context, links…"
+              className="w-full bg-background border border-border rounded-md px-3 py-2 text-[13px] text-foreground focus:outline-none focus:border-primary/60 resize-y leading-relaxed"
+            />
+            <Mono size="xs" tone="muted">{description.length} chars · whitespace preserved when saved</Mono>
+          </DrawerField>
+
+          <div className="grid grid-cols-2 gap-3">
+            <DrawerField label="Priority">
+              <div className="inline-flex items-stretch border border-border rounded-md overflow-hidden w-full">
+                {(["low", "medium", "high"] as TaskPriority[]).map((p) => {
+                  const meta = PRIORITY_META[p];
+                  const active = priority === p;
+                  return (
+                    <button
+                      key={p}
+                      type="button"
+                      onClick={() => setPriority(p)}
+                      className="flex-1 px-2 py-1.5 text-[11px] uppercase tracking-wider font-bold transition-colors"
+                      style={{
+                        background: active ? `${meta.accent}24` : "transparent",
+                        color: active ? meta.accent : "rgb(110,110,116)",
+                      }}
+                    >
+                      {meta.label}
+                    </button>
+                  );
+                })}
+              </div>
+            </DrawerField>
+            <DrawerField label="Status">
+              <select
+                value={status}
+                onChange={(e) => setStatus(e.target.value as TaskStatus)}
+                className="w-full bg-background border border-border rounded-md px-3 py-2 text-[12.5px] text-foreground focus:outline-none focus:border-primary/60"
+              >
+                <option value="to-do">To Do</option>
+                <option value="in-progress">In Progress</option>
+                <option value="done">Done</option>
+              </select>
+            </DrawerField>
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            <DrawerField label="Deadline">
+              <input
+                type="date"
+                value={deadline}
+                onChange={(e) => setDeadline(e.target.value)}
+                className="w-full bg-background border border-border rounded-md px-3 py-2 text-[12.5px] text-foreground focus:outline-none focus:border-primary/60"
+              />
+            </DrawerField>
+            <DrawerField label="Label">
+              <input
+                type="text"
+                value={label}
+                onChange={(e) => setLabel(e.target.value)}
+                placeholder="e.g. Bug, Feature"
+                className="w-full bg-background border border-border rounded-md px-3 py-2 text-[12.5px] text-foreground focus:outline-none focus:border-primary/60"
+              />
+            </DrawerField>
+          </div>
+
+          <DrawerField label="Assignees (comma-separated usernames)">
+            <input
+              type="text"
+              value={assigneeText}
+              onChange={(e) => setAssigneeText(e.target.value)}
+              placeholder="alice, bob"
+              className="w-full bg-background border border-border rounded-md px-3 py-2 text-[12.5px] text-foreground focus:outline-none focus:border-primary/60"
+            />
+          </DrawerField>
+
+          {task.assigned_by && (
+            <Mono size="xs" tone="muted">
+              originally assigned by <span className="text-violet-300 font-semibold">{task.assigned_by}</span>
+            </Mono>
+          )}
+        </div>
+
+        <div className="sticky bottom-0 bg-card border-t border-border px-5 py-3 flex items-center justify-between gap-2">
+          {confirmDelete ? (
+            <div className="inline-flex items-center gap-1.5">
+              <button
+                type="button"
+                onClick={handleDelete}
+                disabled={deleting}
+                className="inline-flex items-center gap-1.5 px-3 h-8 rounded-md border border-red-500/40 bg-red-500/15 text-[11px] uppercase tracking-[0.16em] font-bold text-red-200 hover:bg-red-500/25 disabled:opacity-50 transition-colors"
+              >
+                <Trash2 className="h-3 w-3" />
+                {deleting ? "Deleting…" : "Confirm delete"}
+              </button>
+              <button
+                type="button"
+                onClick={() => setConfirmDelete(false)}
+                className="px-2 h-8 text-[10.5px] uppercase tracking-[0.14em] font-semibold text-muted-foreground hover:text-foreground transition-colors"
+              >
+                Cancel
+              </button>
+            </div>
+          ) : (
+            <button
+              type="button"
+              onClick={() => setConfirmDelete(true)}
+              className="inline-flex items-center gap-1.5 px-3 h-8 rounded-md text-[11px] uppercase tracking-[0.16em] font-semibold text-muted-foreground hover:text-red-300 hover:bg-red-500/10 transition-colors"
+            >
+              <Trash2 className="h-3 w-3" />
+              Delete
+            </button>
+          )}
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={onClose}
+              className="px-3 h-8 rounded-md border border-border text-[11px] uppercase tracking-[0.16em] font-semibold text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors"
+            >
+              {dirty ? "Discard" : "Close"}
+            </button>
+            <button
+              type="button"
+              onClick={save}
+              disabled={!title.trim() || !dirty || saving}
+              className="inline-flex items-center gap-1.5 px-4 h-8 rounded-md bg-primary text-primary-foreground text-[11px] uppercase tracking-[0.16em] font-bold hover:bg-primary/90 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+            >
+              <Save className="h-3 w-3" />
+              {saving ? "Saving…" : "Save"}
+            </button>
+          </div>
+        </div>
+      </motion.div>
+    </motion.div>
+  );
+};
+
+const DrawerField: React.FC<{ label: string; children: React.ReactNode }> = ({ label, children }) => (
+  <div>
+    <Tracker tone="muted" size="sm" className="mb-1.5">{label}</Tracker>
+    {children}
+  </div>
+);
 
 // ════════════════════════════════════════════════════════════════
 // InboxListItem - compact row in the left pane
@@ -764,8 +1036,9 @@ const InboxListItem: React.FC<{
 const TaskDetail: React.FC<{
   scored: ScoredTask;
   onStatusChange: (id: number, status: TaskStatus) => void;
+  onEditClick: () => void;
   showAssignee: boolean;
-}> = ({ scored, onStatusChange, showAssignee }) => {
+}> = ({ scored, onStatusChange, onEditClick, showAssignee }) => {
   const { task, rationale, daysLeft } = scored;
   const priority = task.priority as TaskPriority | undefined;
   const pMeta = priority ? PRIORITY_META[priority] : null;
@@ -843,6 +1116,16 @@ const TaskDetail: React.FC<{
         {daysSinceCreated !== null && (
           <Mono size="xs" tone="muted">created {daysSinceCreated}d ago</Mono>
         )}
+        {task.assigned_by && (
+          <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded border border-violet-500/30 bg-violet-500/10">
+            <span className="w-3.5 h-3.5 rounded-full bg-violet-500/40 text-[8px] font-bold uppercase flex items-center justify-center text-violet-100">
+              {task.assigned_by.slice(0, 1)}
+            </span>
+            <Mono size="xs" tone="muted">
+              assigned by <span className="text-violet-200 font-semibold">{task.assigned_by}</span>
+            </Mono>
+          </span>
+        )}
         {task.label && (
           <span className="inline-flex items-center gap-1">
             <Briefcase size={10} />
@@ -852,8 +1135,8 @@ const TaskDetail: React.FC<{
       </div>
 
       {/* Quick action buttons */}
-      {nextStatus && (
-        <div className="flex items-center gap-2 mb-6">
+      <div className="flex items-center gap-2 mb-6">
+        {nextStatus && (
           <button
             type="button"
             onClick={() => onStatusChange(task.todo_id, nextStatus)}
@@ -871,17 +1154,25 @@ const TaskDetail: React.FC<{
             {nextStatus === "in-progress" ? "Start" : "Finish"}
             <ChevronRight className="h-3 w-3" strokeWidth={3} />
           </button>
-          {status === "in-progress" && (
-            <button
-              type="button"
-              onClick={() => onStatusChange(task.todo_id, "to-do")}
-              className="inline-flex items-center gap-1.5 rounded-md border border-border px-4 py-2 text-[12px] font-bold uppercase tracking-wider text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors"
-            >
-              Move back
-            </button>
-          )}
-        </div>
-      )}
+        )}
+        {status === "in-progress" && (
+          <button
+            type="button"
+            onClick={() => onStatusChange(task.todo_id, "to-do")}
+            className="inline-flex items-center gap-1.5 rounded-md border border-border px-4 py-2 text-[12px] font-bold uppercase tracking-wider text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors"
+          >
+            Move back
+          </button>
+        )}
+        <button
+          type="button"
+          onClick={onEditClick}
+          className="inline-flex items-center gap-1.5 rounded-md border border-border px-4 py-2 text-[12px] font-bold uppercase tracking-wider text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors ml-auto"
+        >
+          <Edit3 className="h-3 w-3" />
+          Edit
+        </button>
+      </div>
 
       {/* AXON verdict card */}
       <div
@@ -937,14 +1228,25 @@ const TaskDetail: React.FC<{
         />
       </div>
 
-      {/* Description */}
+      {/* Description — full-width prose card with preserved whitespace */}
       <div className="mb-6">
-        <Tracker tone="muted" size="sm" className="mb-2">DESCRIPTION</Tracker>
-        {task.description ? (
-          <p className="text-[13.5px] text-foreground/85 leading-relaxed">{task.description}</p>
-        ) : (
-          <p className="text-[12px] text-muted-foreground italic">No description on file.</p>
-        )}
+        <div className="flex items-center justify-between mb-2">
+          <Tracker tone="muted" size="sm">DESCRIPTION</Tracker>
+          {task.description && (
+            <Mono size="xs" tone="muted">
+              {task.description.length} chars
+            </Mono>
+          )}
+        </div>
+        <div className="rounded-lg border border-border bg-card/50 p-4">
+          {task.description ? (
+            <pre className="text-[13.5px] text-foreground/90 leading-relaxed whitespace-pre-wrap font-sans">
+              {task.description}
+            </pre>
+          ) : (
+            <p className="text-[12px] text-muted-foreground italic">No description on file. Click Edit to add one.</p>
+          )}
+        </div>
       </div>
     </div>
   );
