@@ -17,13 +17,13 @@ import { useEffect, useRef, useState } from "react";
 import { Clock, Lock, AlertCircle } from "lucide-react";
 import {
   SHIFT_TYPE_META,
-  SHIFT_STATUS_META,
   formatClock,
   shiftHours,
   isVirtualInstance,
   type Shift,
   type ShiftSegment,
 } from "@/stores/shiftTypes";
+import { isMeetingVirtualShift } from "@/stores/shifts";
 
 // ============================================================
 // Vertical block (hourly grid)
@@ -45,6 +45,12 @@ interface BlockProps {
    * date. Undefined when drag is disabled.
    */
   onUpdateTime?: (newStartIso: string, newEndIso: string) => void;
+  /**
+   * When true, render with extra horizontal inset and higher z-index
+   * so the block visually sits inside its parent shift card. Used for
+   * meetings that fall during a shift's [starts_at, ends_at] range.
+   */
+  nested?: boolean;
 }
 
 interface DragState {
@@ -60,6 +66,7 @@ export function ShiftBlock({
   visibleStartHour,
   onClick,
   onUpdateTime,
+  nested = false,
 }: BlockProps) {
   const seg = shift as ShiftSegment;
   const isSegment = "_segmentIndex" in shift && shift._segmentCount > 1;
@@ -77,7 +84,6 @@ export function ShiftBlock({
   const baseHeight = Math.max(20, ((endMins - startMins) / 60) * hourHeightPx - 2);
 
   const typeMeta = SHIFT_TYPE_META[shift.type];
-  const statusMeta = SHIFT_STATUS_META[shift.status];
   const accent = shift.color || typeMeta.accent;
 
   // Status modifiers
@@ -85,12 +91,30 @@ export function ShiftBlock({
   const isCompleted  = shift.status === "completed";
   const isNoShow     = shift.status === "no_show";
   const isCancelled  = shift.status === "cancelled";
+  const isMeeting    = isMeetingVirtualShift(shift);
 
+  // Filled-card treatment — three tiers of fill strength so the block
+  // reads as a solid colored chip rather than a faintly tinted ghost.
+  //   cancelled  → quiet neutral (~5%)
+  //   completed  → ~10% — desaturated, "in the past"
+  //   in_progress→ ~32% — strongest, demands attention
+  //   default    → ~22% — clearly visible at rest
   const bgTint = isCancelled
-    ? "rgba(110,110,116,0.06)"
+    ? "rgba(110,110,116,0.08)"
     : isCompleted
-      ? `${accent}10`
-      : `${accent}1f`;
+      ? `${accent}1a`
+      : isInProgress
+        ? `${accent}52`
+        : `${accent}38`;
+
+  // Border at full alpha for the active state, weaker for completed/cancelled.
+  const borderTint = isCancelled
+    ? "rgba(110,110,116,0.25)"
+    : isCompleted
+      ? `${accent}30`
+      : isInProgress
+        ? `${accent}cc`
+        : `${accent}66`;
 
   // ─── Drag / resize state ────────────────────────────────────
   // Disabled for virtual recurrence instances (must edit master),
@@ -178,11 +202,15 @@ export function ShiftBlock({
       role="button"
       tabIndex={0}
       className={[
-        "group/blk absolute left-1 right-1 z-10 rounded-md text-left overflow-hidden",
+        "group/blk absolute z-10 rounded-lg text-left overflow-hidden",
+        // Nested meetings (those that sit inside a shift's time range)
+        // get extra horizontal inset so they visually sit inside the
+        // parent shift card. Other blocks get the standard inset.
+        nested ? "left-3 right-3" : "left-1.5 right-1.5",
         isDragging ? "z-40 cursor-grabbing select-none" : (dragDisabled ? "cursor-pointer" : "cursor-grab"),
         isDragging ? "" : "transition-all hover:z-30",
         isInProgress
-          ? "shadow-[0_0_0_2px_rgba(34,197,94,0.6),0_4px_14px_-4px_rgba(34,197,94,0.4)]"
+          ? ""
           : "hover:shadow-[0_4px_14px_-4px_rgba(0,0,0,0.4)]",
         isCancelled ? "opacity-50 line-through" : "",
         isDragging ? "opacity-90 ring-2 ring-primary/60" : "",
@@ -191,9 +219,16 @@ export function ShiftBlock({
         top: displayTop,
         height: displayHeight,
         background: bgTint,
-        borderLeft: `3px solid ${accent}`,
+        // Full border — no more half-shade with a left rail. The
+        // background carries the color identity; the border defines
+        // the chip edge cleanly on all four sides.
+        border: `1px solid ${borderTint}`,
+        zIndex: nested ? 20 : 10,
         ...(isInProgress
-          ? { boxShadow: `0 0 0 2px rgba(34,197,94,0.6) inset, 0 4px 14px -4px ${accent}66` }
+          ? {
+              // Soft green emphasis — inset accent glow + outer halo.
+              boxShadow: `0 0 0 1px rgba(34,197,94,0.5) inset, 0 0 0 3px rgba(34,197,94,0.15), 0 6px 18px -6px ${accent}88`,
+            }
           : {}),
       }}
     >
@@ -226,16 +261,19 @@ export function ShiftBlock({
         </>
       )}
 
-      <div className="relative px-1.5 py-1 h-full flex flex-col pointer-events-none">
-        <div className="flex items-center gap-1">
+      <div className="relative px-2 py-1.5 h-full flex flex-col pointer-events-none">
+        <div className="flex items-center gap-1.5">
           <span
             className="w-1.5 h-1.5 rounded-full shrink-0"
             style={{ background: accent }}
           />
-          <span className="text-[10.5px] font-bold text-foreground truncate leading-tight">
+          <span className="text-[11.5px] font-semibold text-foreground truncate leading-tight">
             {shift.title || typeMeta.label}
           </span>
-          {isVirtual && (
+          {/* Lock means "recurring — edit the master to change". Meeting
+              virtual shifts also use a "::" id but represent a calendar
+              event, not a recurrence — they shouldn't get the lock. */}
+          {isVirtual && !isMeeting && (
             <Lock
               className="w-2.5 h-2.5 text-muted-foreground/60 shrink-0"
               aria-label="Recurring — edit master to change"
@@ -255,8 +293,8 @@ export function ShiftBlock({
           )}
         </div>
 
-        {displayHeight >= 36 && (
-          <div className="mt-0.5 flex items-center gap-1 text-[9.5px] text-muted-foreground font-mono tabular-nums">
+        {displayHeight >= 32 && (
+          <div className="mt-1 flex items-center gap-1 text-[9.5px] text-muted-foreground font-mono tabular-nums">
             <Clock className="w-2.5 h-2.5" />
             {formatClock(isSegment ? seg._segmentStart : shift.starts_at)}–
             {formatClock(isSegment ? seg._segmentEnd : shift.ends_at)}
@@ -268,15 +306,12 @@ export function ShiftBlock({
           </div>
         )}
 
-        {displayHeight >= 56 && shift.username && (
-          <p className="mt-0.5 text-[9.5px] text-muted-foreground/90 truncate font-medium">
-            {shift.username}
-          </p>
-        )}
-
-        {displayHeight >= 76 && (
-          <p className="mt-auto text-[9px] uppercase tracking-[0.1em] text-muted-foreground/70 font-bold">
-            {statusMeta.label}
+        {/* Location hint — surface the in-person place name or "Virtual"
+            for meeting blocks tall enough to fit it. Helps you scan the
+            day without opening every block. */}
+        {displayHeight >= 56 && isMeeting && shift.location && (
+          <p className="mt-1 text-[10px] text-muted-foreground/90 truncate">
+            {shift.location}
           </p>
         )}
       </div>

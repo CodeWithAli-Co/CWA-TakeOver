@@ -25,7 +25,8 @@
  */
 
 import { useMemo, useState, Suspense } from "react";
-import { Clock, Plus, Loader2, Users, User, ChevronDown, AlertCircle, Copy, CalendarDays, CalendarRange } from "lucide-react";
+import { BarChart3, Clock, Plus, Loader2, Users, User, ChevronDown, AlertCircle, Copy, CalendarDays, CalendarRange } from "lucide-react";
+import { useScheduleStats } from "./scheduleStatsStore";
 import {
   startOfWeekMonday,
   endOfWeekSunday,
@@ -93,6 +94,10 @@ function TimesheetContent() {
   const [view, setView] = useState<ViewMode>("me");
   const [range, setRange] = useState<RangeMode>("week");
   const [weekAnchor, setWeekAnchor] = useState<Date>(() => new Date());
+  // Stats modal is mounted globally at __root via ScheduleStatsModal +
+  // ScheduleStatsShortcut. The toolbar "Stats" button just publishes
+  // into the same store, so Cmd+Shift+S works from anywhere in the app.
+  const openStats = useScheduleStats((s) => s.openStats);
   const [personId, setPersonId] = useState<string | null>(null);
   const [editorOpen, setEditorOpen] = useState(false);
   const [editingShift, setEditingShift] = useState<Shift | null>(null);
@@ -203,7 +208,7 @@ function TimesheetContent() {
       <header className="border-b border-border px-6 lg:px-8 py-5 bg-card/30 backdrop-blur-sm sticky top-0 z-30">
         <Tracker tone="muted" size="sm" className="mb-2">
           <TrackerDot color="rgb(239,68,68)" />
-          TIMESHEET — {stats.total} SHIFT{stats.total === 1 ? "" : "S"} THIS WEEK
+          SCHEDULE — {stats.total} ENTR{stats.total === 1 ? "Y" : "IES"} THIS WEEK
           {stats.inProgress > 0 && (
             <>
               {" — "}
@@ -222,7 +227,7 @@ function TimesheetContent() {
                 letterSpacing: "-0.02em",
               }}
             >
-              Timesheet
+              Schedule
             </h1>
             {view === "person" && personName && (
               <span className="inline-flex items-center gap-2 rounded-md border border-border bg-card px-2.5 py-1 text-[11px] font-semibold text-muted-foreground">
@@ -325,6 +330,16 @@ function TimesheetContent() {
 
             <button
               type="button"
+              onClick={openStats}
+              className="inline-flex items-center gap-1.5 rounded-md border border-border bg-card px-3 h-8 text-[11.5px] font-bold uppercase tracking-wider text-muted-foreground hover:text-foreground hover:border-border-strong transition-colors"
+              title="View stats (Cmd+Shift+S)"
+            >
+              <BarChart3 className="w-3 h-3" />
+              Stats
+            </button>
+
+            <button
+              type="button"
               onClick={openNewShift}
               className="inline-flex items-center gap-1.5 rounded-md bg-primary text-primary-foreground px-3.5 h-8 text-[11.5px] font-bold uppercase tracking-wider hover:opacity-90 transition-opacity"
               style={{ boxShadow: "0 4px 12px -2px rgba(239,68,68,0.45)" }}
@@ -376,31 +391,9 @@ function TimesheetContent() {
       {/* (Hiring meetings now auto-mirror onto the grid via the
           candidate_meetings_sync_shift DB trigger — no widget needed.) */}
 
-      {/* ─────────────── STATS BAR ─────────────── */}
-      <div className="px-6 lg:px-8 pt-4 pb-2">
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-          <StatChip
-            label={range === "day" ? "Scheduled today" : "Scheduled"}
-            value={`${stats.scheduledHours.toFixed(1)}h`}
-            tone="default"
-          />
-          <StatChip
-            label="Logged"
-            value={`${stats.loggedHours.toFixed(1)}h`}
-            tone="brand"
-          />
-          <StatChip
-            label="Shifts"
-            value={String(stats.total)}
-            tone="default"
-          />
-          <StatChip
-            label="On the clock"
-            value={String(stats.inProgress)}
-            tone={stats.inProgress > 0 ? "emerald" : "default"}
-          />
-        </div>
-      </div>
+      {/* Stats panel — ScheduleStatsModal is mounted globally at
+          __root, opened by the toolbar "Stats" button (above) or
+          the Cmd+Shift+S keyboard shortcut from anywhere in the app. */}
 
       {/* ─────────────── PATTERN SUGGESTION + WARNINGS + OPEN ─────────────── */}
       {range === "week" && (

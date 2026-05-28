@@ -40,6 +40,7 @@ import {
   type Shift,
   type ShiftSegment,
 } from "@/stores/shiftTypes";
+import { isMeetingVirtualShift } from "@/stores/shifts";
 import { ShiftBlock, ShiftSwimlanePill } from "./ShiftBlock";
 
 interface Employee {
@@ -156,8 +157,8 @@ function HourlyGrid({
 
   return (
     <div className="rounded-xl border border-border bg-card overflow-hidden">
-      {/* Day header row */}
-      <div className="grid border-b border-border bg-secondary/30" style={{ gridTemplateColumns: "64px repeat(7, 1fr)" }}>
+      {/* Day header row — softer dividers so the grid recedes */}
+      <div className="grid border-b border-border/60 bg-secondary/20" style={{ gridTemplateColumns: "64px repeat(7, 1fr)" }}>
         <div />
         {days.map((d, i) => {
           const today = isSameDay(new Date().toISOString(), d);
@@ -165,7 +166,7 @@ function HourlyGrid({
             <div
               key={i}
               className={[
-                "px-3 py-2.5 border-l border-border first:border-l-0",
+                "px-3 py-2.5 border-l border-border/60 first:border-l-0",
                 today ? "bg-primary/10" : "",
               ].join(" ")}
             >
@@ -204,8 +205,8 @@ function HourlyGrid({
             height: HOURS.length * HOUR_HEIGHT_PX,
           }}
         >
-          {/* Time column */}
-          <div className="border-r border-border bg-secondary/20">
+          {/* Time column — match the softer divider treatment */}
+          <div className="border-r border-border/60 bg-secondary/15">
             {HOURS.map((h) => (
               <div
                 key={h}
@@ -225,11 +226,12 @@ function HourlyGrid({
               <div
                 key={dayIdx}
                 className={[
-                  "relative border-l border-border first:border-l-0",
-                  today ? "bg-primary/[0.025]" : "",
+                  "relative border-l border-border/60 first:border-l-0",
+                  today ? "bg-primary/[0.04]" : "",
                 ].join(" ")}
               >
-                {/* Hour grid lines + click-to-create */}
+                {/* Hour grid lines + click-to-create — lighter divider so
+                    the rule lines recede and blocks become the focus. */}
                 {HOURS.map((h) => (
                   <button
                     key={h}
@@ -240,7 +242,7 @@ function HourlyGrid({
                       onEmptyCellClick(d);
                     }}
                     aria-label={`Create shift at ${formatHourLabel(h)}`}
-                    className="group/cell absolute inset-x-0 border-b border-border/40 hover:bg-primary/[0.06] transition-colors"
+                    className="group/cell absolute inset-x-0 border-b border-border/20 hover:bg-primary/[0.06] transition-colors"
                     style={{
                       top: (h - VISIBLE_START_HOUR) * HOUR_HEIGHT_PX,
                       height: HOUR_HEIGHT_PX,
@@ -255,21 +257,44 @@ function HourlyGrid({
                   <NowLine now={now} />
                 )}
 
-                {/* Shift segments (1 per single-day shift, 2+ for overnight) */}
-                {daySegments.map((seg) => (
-                  <ShiftBlock
-                    key={`${seg.id}::${seg._segmentIndex}`}
-                    shift={seg}
-                    hourHeightPx={HOUR_HEIGHT_PX}
-                    visibleStartHour={VISIBLE_START_HOUR}
-                    onClick={() => onShiftClick(seg)}
-                    onUpdateTime={
-                      onShiftTimeChange && !isVirtualInstance(seg) && seg._segmentCount === 1
-                        ? (s, e) => onShiftTimeChange(seg.id, s, e)
-                        : undefined
-                    }
-                  />
-                ))}
+                {/* Shift segments (1 per single-day shift, 2+ for overnight).
+                    Detect "nesting": a meeting whose [starts_at, ends_at]
+                    falls inside a non-meeting shift's range renders inset
+                    + higher z-index so it visually sits inside the parent
+                    shift card. */}
+                {(() => {
+                  const nonMeetings = daySegments.filter(
+                    (s) => !isMeetingVirtualShift(s),
+                  );
+                  return daySegments.map((seg) => {
+                    const isNested =
+                      isMeetingVirtualShift(seg) &&
+                      nonMeetings.some((parent) => {
+                        const pStart = new Date(parent.starts_at).getTime();
+                        const pEnd = new Date(parent.ends_at).getTime();
+                        const cStart = new Date(seg.starts_at).getTime();
+                        const cEnd = new Date(seg.ends_at).getTime();
+                        return cStart >= pStart && cEnd <= pEnd;
+                      });
+                    return (
+                      <ShiftBlock
+                        key={`${seg.id}::${seg._segmentIndex}`}
+                        shift={seg}
+                        hourHeightPx={HOUR_HEIGHT_PX}
+                        visibleStartHour={VISIBLE_START_HOUR}
+                        nested={isNested}
+                        onClick={() => onShiftClick(seg)}
+                        onUpdateTime={
+                          onShiftTimeChange &&
+                          !isVirtualInstance(seg) &&
+                          seg._segmentCount === 1
+                            ? (s, e) => onShiftTimeChange(seg.id, s, e)
+                            : undefined
+                        }
+                      />
+                    );
+                  });
+                })()}
               </div>
             );
           })}
@@ -295,8 +320,8 @@ function NowLine({ now }: { now: Date }) {
       style={{ top }}
     >
       <div className="relative">
-        <div className="absolute -left-1 -top-1 w-2 h-2 rounded-full bg-primary shadow-[0_0_8px_rgba(239,68,68,0.6)]" />
-        <div className="h-px bg-primary/80 shadow-[0_0_4px_rgba(239,68,68,0.4)]" />
+        <div className="absolute -left-[3px] -top-[3px] w-1.5 h-1.5 rounded-full bg-primary shadow-[0_0_6px_rgba(239,68,68,0.5)]" />
+        <div className="h-px bg-primary/70" />
       </div>
     </div>
   );
@@ -421,10 +446,20 @@ function TeamSwimlaneGrid({
                   </div>
                 </div>
 
-                {/* Day cells */}
+                {/* Day cells — TEAM view stays strictly per-employee.
+                    Meetings (company-wide virtual shifts) are excluded
+                    here because rendering them on every row creates
+                    visual clutter and redundancy. Meetings still appear
+                    in ME and PERSON views (via HourlyGrid) where one
+                    person's daily plan is the focus. */}
                 {days.map((day, dayIdx) => {
                   const cellShifts = shifts
-                    .filter((s) => s.user_supa_id === e.supa_id && isSameDay(s.starts_at, day))
+                    .filter(
+                      (s) =>
+                        s.user_supa_id === e.supa_id &&
+                        !isMeetingVirtualShift(s) &&
+                        isSameDay(s.starts_at, day),
+                    )
                     .sort((a, b) => a.starts_at.localeCompare(b.starts_at));
 
                   return (

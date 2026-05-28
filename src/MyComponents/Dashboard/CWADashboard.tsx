@@ -6,7 +6,11 @@ import { BentoCard, BentoValue } from "./BentoCard";
 import { TasksOverviewCard } from "./TasksOverviewCard";
 import { Row3Section } from "./Row3Section";
 import { Row3MemberSection } from "./Row3MemberSection";
+import { Row4Section } from "./Row4Section";
 import { Row5Section } from "./Row5Section";
+import { TasksComponent } from "@/MyComponents/HomeDashboard/tasks";
+import Meetings from "@/MyComponents/HomeDashboard/meetings";
+import { useRow4View } from "./row4ViewStore";
 import UserView, { Role } from "@/MyComponents/Reusables/userView";
 import {
   AreaChart,
@@ -32,8 +36,6 @@ import { Suspense, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
 import supabase from "@/MyComponents/supabase";
-import { TasksComponent } from "@/MyComponents/HomeDashboard/tasks";
-import Meetings from "@/MyComponents/HomeDashboard/meetings";
 import {
   useDemoMode,
   DEMO_REVENUE_SERIES,
@@ -252,6 +254,41 @@ function TaskOverviewRow({
   );
 }
 
+/**
+ * Row4Swapper — renders the active Row 4 variant per the row4ViewStore.
+ *
+ * No visible toggle button in either variant — the swap is intentionally
+ * hidden. Power users flip via Cmd+Shift+D (Row4SwapShortcut at root)
+ * or the Cmd+K palette ("switch row 4 view"). This keeps the UI calm
+ * for everyday employees while leaving a backdoor for operators who
+ * know about it.
+ */
+function Row4Swapper() {
+  const row4View = useRow4View((s) => s.row4View);
+
+  if (row4View === "today") {
+    return (
+      <div className="col-span-12">
+        <div className="grid grid-cols-12 gap-3">
+          <Row4Section />
+        </div>
+      </div>
+    );
+  }
+
+  // "lists" — original Tasks + Meetings
+  return (
+    <>
+      <div className="col-span-7">
+        <TasksComponent />
+      </div>
+      <div className="col-span-5">
+        <Meetings />
+      </div>
+    </>
+  );
+}
+
 function CWADashboardContent() {
   const { data: meRows } = ActiveUser();
   const me = (meRows?.[0] as any) ?? null;
@@ -443,13 +480,13 @@ function CWADashboardContent() {
         <Row3MemberSection />
       </UserView>
 
-      {/* ── Row 4: Full Tasks + Meetings widgets ── */}
-      <div className="col-span-7">
-        <TasksComponent />
-      </div>
-      <div className="col-span-5">
-        <Meetings />
-      </div>
+      {/* ── Row 4: swappable views ──
+          Default "lists" mode shows the original Tasks (col-span-7)
+          + Meetings (col-span-5) widgets for triage. "today" mode
+          shows the unified Today Agenda + AddMeeting + guidance card.
+          Swap via the small ArrowLeftRight button in each variant's
+          chrome or the Cmd+K palette ("switch row 4 view"). */}
+      <Row4Swapper />
 
       {/* ── Row 5 (preview): Communication & Workspace ──
           Engagement-focused — Communication & Presence (mentions,

@@ -44,6 +44,7 @@ import {
 import { BentoCard } from "./BentoCard";
 import { AllTodos, MeetingsQuery } from "@/stores/query";
 import { useWorkspaceResources } from "@/stores/workspace";
+import { AddMeeting } from "@/MyComponents/subForms/MeetingForms/addMeeting";
 
 type Tone = "primary" | "warning" | "destructive" | "success" | "neutral";
 
@@ -349,27 +350,70 @@ function ActivityFeed() {
 // Up Next
 // ─────────────────────────────────────────────────────────────────
 
+// Up Next — meetings for the next 7 days grouped by day. Each day
+// section shows its label (TOMORROW / FRI / MON …) with a count badge,
+// then the meetings as rows with time + title + location pin or Join
+// link. The panel header includes the AddMeeting trigger so users
+// can create meetings without leaving the home dashboard.
+interface UpNextMeeting {
+  meeting_id?: number | string;
+  meeting_title?: string;
+  date?: string;
+  time?: string;
+  meeting_type?: "online" | "in-person" | "hybrid";
+  location?: string;
+  hybrid_location?: { address?: string; url?: string };
+}
+
 function UpNext() {
   const navigate = useNavigate();
   const { data: meetings = [] } = MeetingsQuery();
 
-  const upcoming = useMemo(() => {
-    const now = Date.now();
-    const weekEnd = now + 7 * 24 * 60 * 60 * 1000;
-    return ((meetings ?? []) as any[])
+  // Filter to meetings happening today through next 7 days (inclusive),
+  // then group by date string keyed yyyy-m-d local for stable buckets.
+  const grouped = useMemo(() => {
+    const now = new Date();
+    const todayStart = new Date(
+      now.getFullYear(),
+      now.getMonth(),
+      now.getDate(),
+    ).getTime();
+    const horizon = todayStart + 7 * 24 * 60 * 60 * 1000;
+
+    const upcoming = ((meetings ?? []) as UpNextMeeting[])
       .filter((m) => {
         if (!m.date) return false;
         const ts = new Date(m.date).getTime();
-        return !Number.isNaN(ts) && ts >= now && ts < weekEnd;
+        return !Number.isNaN(ts) && ts >= todayStart && ts < horizon;
       })
       .sort((a, b) => {
-        const da = new Date(a.date).getTime();
-        const db = new Date(b.date).getTime();
+        const da = new Date(a.date!).getTime();
+        const db = new Date(b.date!).getTime();
         if (da !== db) return da - db;
         return (a.time ?? "").localeCompare(b.time ?? "");
-      })
-      .slice(0, 5);
+      });
+
+    const groups: { date: Date; items: UpNextMeeting[] }[] = [];
+    for (const m of upcoming) {
+      const d = new Date(m.date!);
+      const key = `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
+      const last = groups[groups.length - 1];
+      const lastKey = last
+        ? `${last.date.getFullYear()}-${last.date.getMonth()}-${last.date.getDate()}`
+        : null;
+      if (last && lastKey === key) {
+        last.items.push(m);
+      } else {
+        groups.push({ date: d, items: [m] });
+      }
+    }
+    return groups;
   }, [meetings]);
+
+  const totalCount = useMemo(
+    () => grouped.reduce((sum, g) => sum + g.items.length, 0),
+    [grouped],
+  );
 
   return (
     <BentoCard span="col-span-4" delay={0.4} noPadding>
@@ -379,57 +423,149 @@ function UpNext() {
           <span className="text-[10px] font-semibold uppercase tracking-[0.15em] text-text-tertiary">
             Up Next
           </span>
+          <span className="text-[10px] font-semibold tabular-nums text-text-tertiary/60">
+            {totalCount}
+          </span>
         </div>
-        <span className="text-[9.5px] uppercase tracking-[0.18em] text-text-tertiary/70">
-          this week
-        </span>
+        {/* Inline meeting creation — self-contained Dialog + button */}
+        <AddMeeting />
       </header>
 
       <div className="p-3">
-        {upcoming.length === 0 ? (
+        {grouped.length === 0 ? (
           <div className="text-[12px] text-text-tertiary italic py-8 text-center">
-            Nothing scheduled this week.
+            Nothing scheduled in the next 7 days.
           </div>
         ) : (
-          <ul className="list-none p-0 m-0 space-y-2">
-            {upcoming.map((m: any, i: number) => {
-              const date = new Date(m.date);
-              const isToday = dayLabel(date) === "Today";
+          <div className="space-y-3">
+            {grouped.map((group, gi) => {
+              const dl = dayLabel(group.date);
+              const isToday = dl === "Today";
+              const isTomorrow = dl === "Tomorrow";
               return (
-                <li
-                  key={m.meeting_id ?? `${m.meeting_title}-${i}`}
-                  className="list-none"
-                >
-                  <button
-                    type="button"
-                    onClick={() => navigate({ to: "/schedule" as any })}
-                    className="group/up w-full text-left flex items-center gap-3 px-2 py-2.5 -mx-1 rounded-md hover:bg-foreground/[0.05] transition-colors"
-                  >
+                <section key={gi}>
+                  {/* Day header — just the relative label (TODAY /
+                      TOMORROW / FRI). Dropped the redundant date
+                      stamp and per-day count badge; total lives in
+                      the panel header instead. */}
+                  <div className="mb-1.5">
                     <span
-                      className={`text-[9px] font-bold pr-20 uppercase tracking-wider tabular-nums w-12 text-center flex-shrink-0 rounded px-1 py-0.5 ${
-                        isToday
-                          ? "bg-warning/15 text-warning"
+                      className={`text-[10px] font-bold uppercase tracking-[0.14em] ${
+                        isToday || isTomorrow
+                          ? "text-warning"
                           : "text-text-tertiary"
                       }`}
                     >
-                      {dayLabel(date)}
+                      {dl}
                     </span>
-                    <span className="text-[11.5px] text-foreground flex-1 truncate font-medium">
-                      {m.meeting_title ?? "Untitled meeting"}
-                    </span>
-                    {m.time && (
-                      <span className="text-[10px] tabular-nums text-text-tertiary flex-shrink-0">
-                        {formatTime(m.time)}
-                      </span>
-                    )}
-                  </button>
-                </li>
+                  </div>
+                  <ul className="list-none p-0 m-0 space-y-0.5">
+                    {group.items.slice(0, 4).map((m, i) => (
+                      <li
+                        key={m.meeting_id ?? `${m.meeting_title}-${i}`}
+                        className="list-none"
+                      >
+                        <UpNextMeetingRow
+                          meeting={m}
+                          onClick={() => navigate({ to: "/schedule" as any })}
+                        />
+                      </li>
+                    ))}
+                  </ul>
+                  {group.items.length > 4 && (
+                    <div className="text-[9.5px] text-text-tertiary italic mt-1 pl-1">
+                      + {group.items.length - 4} more
+                    </div>
+                  )}
+                </section>
               );
             })}
-          </ul>
+          </div>
         )}
       </div>
     </BentoCard>
+  );
+}
+
+// One row inside an Up Next day group — time + title + location/link.
+function UpNextMeetingRow({
+  meeting,
+  onClick,
+}: {
+  meeting: UpNextMeeting;
+  onClick: () => void;
+}) {
+  const isOnline = meeting.meeting_type === "online";
+  const isInPerson = meeting.meeting_type === "in-person";
+  const isHybrid = meeting.meeting_type === "hybrid";
+
+  // Treat empty / dash / whitespace as no location so a meeting with a
+  // missing pin doesn't render "○ -" debris next to its title.
+  const rawLoc =
+    typeof meeting.location === "string" ? meeting.location.trim() : "";
+  const hasLoc = rawLoc.length > 0 && rawLoc !== "-";
+
+  const onlineLink = isOnline && hasLoc ? rawLoc : undefined;
+  const inPersonLoc = isInPerson && hasLoc ? rawLoc : undefined;
+  const hybridAddr = isHybrid ? meeting.hybrid_location?.address : undefined;
+  const hybridLink = isHybrid ? meeting.hybrid_location?.url : undefined;
+
+  return (
+    <div className="group/r flex items-center gap-2 px-2 py-1.5 -mx-1 rounded-md hover:bg-foreground/[0.05] transition-colors">
+      <span className="text-[10px] font-bold tabular-nums text-foreground/80 w-14 flex-shrink-0">
+        {meeting.time ? formatTime(meeting.time) : "—"}
+      </span>
+      <button
+        type="button"
+        onClick={onClick}
+        className="text-left text-[11.5px] text-foreground font-medium flex-1 truncate hover:text-primary transition-colors"
+      >
+        {meeting.meeting_title ?? "Untitled"}
+      </button>
+      {/* Quiet location — neutral tertiary text, no icon. Only renders
+          when there's a real place name to show. */}
+      {inPersonLoc && (
+        <span
+          className="text-[10px] text-text-tertiary flex-shrink-0 max-w-[110px] truncate"
+          title={inPersonLoc}
+        >
+          {inPersonLoc}
+        </span>
+      )}
+      {hybridAddr && (
+        <span
+          className="text-[10px] text-text-tertiary flex-shrink-0 max-w-[110px] truncate"
+          title={hybridAddr}
+        >
+          {hybridAddr}
+        </span>
+      )}
+      {/* Join link — kept actionable so it retains its tone */}
+      {onlineLink && (
+        <a
+          href={onlineLink}
+          target="_blank"
+          rel="noopener noreferrer"
+          onClick={(e) => e.stopPropagation()}
+          title="Join virtual meeting"
+          className="text-[10px] text-primary hover:text-primary/80 font-semibold flex-shrink-0 transition-colors"
+        >
+          Join
+        </a>
+      )}
+      {isHybrid && hybridLink && (
+        <a
+          href={hybridLink}
+          target="_blank"
+          rel="noopener noreferrer"
+          onClick={(e) => e.stopPropagation()}
+          title="Join hybrid meeting"
+          className="text-[10px] text-success hover:text-success/80 font-semibold flex-shrink-0 transition-colors"
+        >
+          Join
+        </a>
+      )}
+    </div>
   );
 }
 

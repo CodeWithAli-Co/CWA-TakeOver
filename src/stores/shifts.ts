@@ -25,6 +25,156 @@ import {
 } from "./shiftTypes";
 
 const SHIFTS_TABLE = "shifts";
+const MEETINGS_TABLE = "cwa_meetings";
+
+// ============================================================
+// Meeting → virtual-shift bridge.
+//
+// TODO(schema): replace this client-side merge with the proper
+// AFTER INSERT/UPDATE/DELETE trigger on cwa_meetings that materializes
+// shift rows. Until that lands, useShiftsInRange merges meetings on
+// the fly so they render on the timesheet alongside real shifts.
+// Virtual meeting shifts get an id of the form `meeting::<meeting.id>`
+// so renderers can detect them and route clicks back to /schedule
+// instead of opening the shift editor.
+// ============================================================
+
+const MEETING_PREFIX = "meeting::";
+
+export function isMeetingVirtualShift(s: Pick<Shift, "id">): boolean {
+  return typeof s.id === "string" && s.id.startsWith(MEETING_PREFIX);
+}
+
+export function meetingIdFromVirtualShift(s: Pick<Shift, "id">): string | null {
+  if (!isMeetingVirtualShift(s)) return null;
+  return s.id.slice(MEETING_PREFIX.length);
+}
+
+// Parse "10:00AM - 11:30 PM" / "12:00 PM" / "14:00 - 15:30" into
+// { startMinutes, endMinutes } past midnight. Returns null on failure.
+function parseMeetingTimeRange(
+  time?: string | null,
+): { startMinutes: number; endMinutes: number } | null {
+  if (!time) return null;
+  const re = /(\d{1,2}):(\d{2})\s*(AM|PM)?/gi;
+  const matches = [...time.matchAll(re)];
+  if (matches.length === 0) return null;
+
+  const toMinutes = (h: number, m: number, period?: string) => {
+    let hh = h;
+    if (period) {
+      const p = period.toUpperCase();
+      if (p === "PM" && hh < 12) hh += 12;
+      if (p === "AM" && hh === 12) hh = 0;
+    }
+    return hh * 60 + m;
+  };
+
+  const a = matches[0]!;
+  const start = toMinutes(parseInt(a[1]!, 10), parseInt(a[2]!, 10), a[3]);
+  let end = start + 30; // default 30-minute meeting
+  if (matches.length > 1) {
+    const b = matches[1]!;
+    const candidate = toMinutes(parseInt(b[1]!, 10), parseInt(b[2]!, 10), b[3]);
+    if (candidate > start) end = candidate;
+  }
+  return { startMinutes: start, endMinutes: end };
+}
+
+// Shape of a row coming back from cwa_meetings (matches MeetingInterface
+// in stores/query.ts, kept loose so we don't need a cross-module import).
+interface MeetingRow {
+  id: number | string;
+  meeting_title?: string;
+  time?: string;
+  date?: string;
+  attendees?: number;
+  meeting_type?: "online" | "in-person" | "hybrid";
+  location?: string | null;
+  hybrid_location?: { address?: string; url?: string } | null;
+  company?: string | null;
+}
+
+// Convert a meeting row into a Shift-shaped object so the timesheet
+// renderer treats it like any other meeting-typed entry. Returns null
+// when the meeting's time can't be parsed (we'd rather drop it than
+// pin it to midnight).
+function meetingToVirtualShift(
+  m: MeetingRow,
+  filterUserSupaId?: string | null,
+): Shift | null {
+  if (!m.date) return null;
+  const parsed = parseMeetingTimeRange(m.time);
+  if (!parsed) return null;
+
+  // `meeting.date` is stored as free-text from a `type="text"` input
+  // ("May 29, 2026", "2026-05-29", "5/29/2026", etc.). Let JS Date parse
+  // it, then re-anchor to local midnight of that calendar day so the
+  // time-of-day from `meeting.time` lands cleanly.
+  const rawDate = new Date(String(m.date));
+  if (Number.isNaN(rawDate.getTime())) return null;
+  const dayBase = new Date(
+    rawDate.getFullYear(),
+    rawDate.getMonth(),
+    rawDate.getDate(),
+    0,
+    0,
+    0,
+    0,
+  );
+
+  const startMs = dayBase.getTime() + parsed.startMinutes * 60_000;
+  const endMs = dayBase.getTime() + parsed.endMinutes * 60_000;
+  const startsAt = new Date(startMs).toISOString();
+  const endsAt = new Date(endMs).toISOString();
+
+  const now = Date.now();
+  const status: Shift["status"] = endMs < now ? "completed" : "scheduled";
+
+  // Location: for online the URL lives on .location; for in-person it's
+  // a place name. Hybrid stores both. We pick the human-readable form
+  // here and stash the URL into notes so the renderer can surface it.
+  let location: string | null = null;
+  let notes: string | null = null;
+  if (m.meeting_type === "online" && typeof m.location === "string") {
+    location = "Virtual";
+    notes = m.location;
+  } else if (m.meeting_type === "in-person" && typeof m.location === "string") {
+    location = m.location;
+  } else if (m.meeting_type === "hybrid" && m.hybrid_location) {
+    location = m.hybrid_location.address ?? "Hybrid";
+    notes = m.hybrid_location.url ?? null;
+  } else if (typeof m.location === "string") {
+    location = m.location;
+  }
+
+  return {
+    id: `${MEETING_PREFIX}${m.id}`,
+    user_supa_id: filterUserSupaId ?? "",
+    username: "",
+    starts_at: startsAt,
+    ends_at: endsAt,
+    clock_in: null,
+    clock_out: null,
+    status,
+    type: "meeting",
+    title: m.meeting_title ?? "Meeting",
+    notes,
+    location,
+    color: null,
+    category: null,
+    is_billable: false,
+    company: m.company ?? "CodeWithAli",
+    recurrence: null,
+    recurrence_parent_id: null,
+    recurrence_until: null,
+    coverage_requested_at: null,
+    coverage_requested_by: null,
+    created_by: null,
+    created_at: startsAt,
+    updated_at: startsAt,
+  };
+}
 
 // ============================================================
 // Query keys — centralized so mutations can invalidate cleanly.
@@ -84,19 +234,34 @@ export function useShiftsInRange(
         .not("recurrence", "is", null)
         .lte("starts_at", toIso);
 
+      // Meeting bridge — fetch cwa_meetings and filter client-side.
+      // `cwa_meetings.date` is a free-text input ("May 29, 2026" style)
+      // so server-side lexicographic comparison against ISO dates
+      // would silently exclude valid rows. Pull all meetings (small
+      // table) and let new Date() parse them in JS, then filter to
+      // those whose virtual start/end overlaps [from, to].
+      const meetingsQuery = supabase.from(MEETINGS_TABLE).select("*");
+
       let oq = overlapQuery;
       let rq = recurringQuery;
+      let mq = meetingsQuery;
 
       if (opts.userSupaId) {
         oq = oq.eq("user_supa_id", opts.userSupaId);
         rq = rq.eq("user_supa_id", opts.userSupaId);
       }
       if (activeCompany !== "all") {
-        oq = oq.eq("company", activeCompanyLabel());
-        rq = rq.eq("company", activeCompanyLabel());
+        const label = activeCompanyLabel();
+        oq = oq.eq("company", label);
+        rq = rq.eq("company", label);
+        mq = mq.eq("company", label);
       }
 
-      const [overlapRes, recurringRes] = await Promise.all([oq, rq]);
+      const [overlapRes, recurringRes, meetingsRes] = await Promise.all([
+        oq,
+        rq,
+        mq,
+      ]);
 
       const handle = (res: typeof overlapRes) => {
         if (res.error) {
@@ -130,9 +295,31 @@ export function useShiftsInRange(
         }
       }
 
-      // Final list: concrete rows that overlap the window + virtual instances.
-      // Sort by start time so renderers can rely on order.
-      return [...concrete, ...expanded].sort((a, b) =>
+      // Meetings — converted to virtual shifts and merged in. Meetings
+      // failing to parse a time string are dropped (rather than pinned
+      // to midnight) so they don't render in surprising positions.
+      // Virtual meeting shifts are SHARED across the company — they have
+      // no organizer in cwa_meetings, so we leave user_supa_id empty
+      // and let the WeekGrid fan them out across every employee row
+      // in TEAM view (see isMeetingVirtualShift handling there).
+      const meetingRows = (meetingsRes.error ? [] : meetingsRes.data ?? []) as MeetingRow[];
+      const meetingShifts: Shift[] = [];
+      for (const m of meetingRows) {
+        const virt = meetingToVirtualShift(m, null);
+        if (!virt) continue;
+        // Range filter — only include if the virtual window actually
+        // overlaps [from, to]. Edge cases where the meeting's date is
+        // on the boundary day but its time falls outside the window.
+        const vs = new Date(virt.starts_at).getTime();
+        const ve = new Date(virt.ends_at).getTime();
+        if (ve >= from.getTime() && vs <= to.getTime()) {
+          meetingShifts.push(virt);
+        }
+      }
+
+      // Final list: concrete shifts + recurrence instances + virtual
+      // meeting shifts, sorted by start time.
+      return [...concrete, ...expanded, ...meetingShifts].sort((a, b) =>
         a.starts_at.localeCompare(b.starts_at),
       );
     },

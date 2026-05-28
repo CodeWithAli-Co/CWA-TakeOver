@@ -26,6 +26,7 @@ import {
   MOCK_REPOS, MOCK_PRS, MOCK_ISSUES,
 } from "@/MyComponents/Code/mockData";
 import { useQuickCompose } from "@/MyComponents/Chat/quickComposeStore";
+import { useRow4View } from "@/MyComponents/Dashboard/row4ViewStore";
 
 interface CommandItem {
   /** Stable key for selection state. */
@@ -51,6 +52,7 @@ export function CommandPalette() {
   const inputRef = useRef<HTMLInputElement>(null);
   const navigate = useNavigate();
   const openCompose = useQuickCompose((s) => s.openCompose);
+  const toggleRow4View = useRow4View((s) => s.toggleRow4View);
 
   // Global keyboard binding — Cmd+K (mac) / Ctrl+K (everyone else).
   useEffect(() => {
@@ -183,6 +185,14 @@ export function CommandPalette() {
           }
           close();
           openCompose({ target, body });
+        } },
+      // Row 4 home-dashboard variant swap. Toggles between the
+      // tasks + meetings lists (default) and the today-agenda view.
+      { id: "ax-row4-swap", label: "Switch row 4 view",   icon: Sparkles, hint: "Toggle",
+        haystack: "row 4 switch toggle today agenda tasks meetings lists dashboard variant",
+        onChoose: () => {
+          toggleRow4View();
+          close();
         } },
     ];
 

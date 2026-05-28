@@ -29,6 +29,9 @@ import { SidebarProvider } from "@/components/ui/shadcnComponents/sidebar";
 import { AppSidebar } from "@/components/app-sidebar";
 import { CommandPalette } from "@/components/CommandPalette";
 import { QuickComposeModal } from "@/MyComponents/Chat/QuickComposeModal";
+import { ScheduleStatsModal } from "@/MyComponents/Timesheet/ScheduleStatsModal";
+import { ScheduleStatsShortcut } from "@/MyComponents/Timesheet/ScheduleStatsShortcut";
+import { Row4SwapShortcut } from "@/MyComponents/Dashboard/Row4SwapShortcut";
 import { useQuickCompose } from "@/MyComponents/Chat/quickComposeStore";
 import { displayLabelForDM, isDMKey } from "@/MyComponents/Chat/displayName";
 import supabase from "@/MyComponents/supabase";
@@ -966,6 +969,16 @@ export const Route = createRootRoute({
              *  app without navigating to /chat. */}
             <QuickComposeModal />
             <QuickComposeShortcut />
+            {/* Cmd+Shift+S global Schedule stats modal — pops the
+             *  current-week stats from anywhere in the app. */}
+            <ScheduleStatsModal />
+            <ScheduleStatsShortcut />
+            {/* Hidden Cmd+Shift+D shortcut — toggles the home
+             *  dashboard's Row 4 between the tasks+meetings lists
+             *  view and the today-agenda view. Not advertised in
+             *  the UI; the swap button overlay was removed so
+             *  employees don't see the toggle unless told. */}
+            <Row4SwapShortcut />
             {/* Chat-only message search — now bound to Cmd+Shift+F */}
             <Suspense fallback={null}>
               <GlobalSearch open={searchOpen} onOpenChange={setSearchOpen} />
