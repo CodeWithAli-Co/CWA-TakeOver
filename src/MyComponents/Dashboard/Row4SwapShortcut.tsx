@@ -10,10 +10,23 @@
  */
 
 import { useEffect } from "react";
-import { useRow4View } from "./row4ViewStore";
+import { ActiveUser } from "@/stores/query";
+import { useRolePreview } from "@/stores/store";
+import { useEffectiveRow4View, useRow4View } from "./row4ViewStore";
 
 export function Row4SwapShortcut() {
-  const toggleRow4View = useRow4View((s) => s.toggleRow4View);
+  const toggleFrom = useRow4View((s) => s.toggleFrom);
+  const { data: meRows } = ActiveUser();
+  const actualRole: string | undefined =
+    (meRows?.[0] as any)?.role ?? undefined;
+  // Mirror Row4Swapper's resolution: preview role wins over the
+  // actual role, and we ignore the persisted preference while
+  // previewing so the chord toggles relative to what's on screen
+  // — not relative to a stale stored pick the preview is hiding.
+  const previewRole = useRolePreview((s) => s.previewRole);
+  const effectiveRole = previewRole || actualRole;
+  const isPreviewing = !!previewRole;
+  const effective = useEffectiveRow4View(effectiveRole, isPreviewing);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -28,12 +41,16 @@ export function Row4SwapShortcut() {
         if (editable) return;
 
         e.preventDefault();
-        toggleRow4View();
+        // While previewing another role we don't want the chord to
+        // write a persisted preference on the actual user's account.
+        // The preview is meant to show that role's default cleanly.
+        if (isPreviewing) return;
+        toggleFrom(effective);
       }
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [toggleRow4View]);
+  }, [toggleFrom, effective, isPreviewing]);
 
   return null;
 }

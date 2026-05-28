@@ -10,8 +10,9 @@ import { Row4Section } from "./Row4Section";
 import { Row5Section } from "./Row5Section";
 import { TasksComponent } from "@/MyComponents/HomeDashboard/tasks";
 import Meetings from "@/MyComponents/HomeDashboard/meetings";
-import { useRow4View } from "./row4ViewStore";
+import { useEffectiveRow4View } from "./row4ViewStore";
 import UserView, { Role } from "@/MyComponents/Reusables/userView";
+import { useRolePreview } from "@/stores/store";
 import {
   AreaChart,
   Area,
@@ -264,7 +265,16 @@ function TaskOverviewRow({
  * know about it.
  */
 function Row4Swapper() {
-  const row4View = useRow4View((s) => s.row4View);
+  const { data: meRows } = ActiveUser();
+  const actualRole: string | undefined =
+    (meRows?.[0] as any)?.role ?? undefined;
+  // Honor the role-preview overlay. When a CEO/COO previews as Member,
+  // we render the Member's role default (today agenda) — and we
+  // ignore the actual user's persisted preference so the preview is a
+  // faithful "what this role sees on a fresh dashboard".
+  const previewRole = useRolePreview((s) => s.previewRole);
+  const effectiveRole = previewRole || actualRole;
+  const row4View = useEffectiveRow4View(effectiveRole, !!previewRole);
 
   if (row4View === "today") {
     return (

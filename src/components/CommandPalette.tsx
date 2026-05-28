@@ -26,7 +26,9 @@ import {
   MOCK_REPOS, MOCK_PRS, MOCK_ISSUES,
 } from "@/MyComponents/Code/mockData";
 import { useQuickCompose } from "@/MyComponents/Chat/quickComposeStore";
-import { useRow4View } from "@/MyComponents/Dashboard/row4ViewStore";
+import { useEffectiveRow4View, useRow4View } from "@/MyComponents/Dashboard/row4ViewStore";
+import { ActiveUser } from "@/stores/query";
+import { useRolePreview } from "@/stores/store";
 
 interface CommandItem {
   /** Stable key for selection state. */
@@ -52,7 +54,23 @@ export function CommandPalette() {
   const inputRef = useRef<HTMLInputElement>(null);
   const navigate = useNavigate();
   const openCompose = useQuickCompose((s) => s.openCompose);
-  const toggleRow4View = useRow4View((s) => s.toggleRow4View);
+  const toggleFromRow4 = useRow4View((s) => s.toggleFrom);
+  // Resolve current effective Row 4 view so the toggle works even
+  // when the user hasn't set an explicit preference yet (they're on
+  // the role default). Mirror Row4Swapper's resolution: preview role
+  // wins over the actual role, and the persisted preference is
+  // ignored while previewing so the verb behaves against the view
+  // actually on screen.
+  const { data: row4MeRows } = ActiveUser();
+  const row4ActualRole: string | undefined =
+    (row4MeRows?.[0] as any)?.role ?? undefined;
+  const row4PreviewRole = useRolePreview((s) => s.previewRole);
+  const row4EffectiveRole = row4PreviewRole || row4ActualRole;
+  const row4IsPreviewing = !!row4PreviewRole;
+  const row4Effective = useEffectiveRow4View(
+    row4EffectiveRole,
+    row4IsPreviewing,
+  );
 
   // Global keyboard binding — Cmd+K (mac) / Ctrl+K (everyone else).
   useEffect(() => {
@@ -187,11 +205,20 @@ export function CommandPalette() {
           openCompose({ target, body });
         } },
       // Row 4 home-dashboard variant swap. Toggles between the
-      // tasks + meetings lists (default) and the today-agenda view.
+      // tasks + meetings lists and the today-agenda view, relative
+      // to whichever view is currently effective for the operator's
+      // role + persisted preference.
       { id: "ax-row4-swap", label: "Switch row 4 view",   icon: Sparkles, hint: "Toggle",
         haystack: "row 4 switch toggle today agenda tasks meetings lists dashboard variant",
         onChoose: () => {
-          toggleRow4View();
+          // No-op when previewing another role — the toggle writes to
+          // the actual user's preference and should only run against
+          // their own dashboard, not a role they're peeking at.
+          if (row4IsPreviewing) {
+            close();
+            return;
+          }
+          toggleFromRow4(row4Effective);
           close();
         } },
     ];
