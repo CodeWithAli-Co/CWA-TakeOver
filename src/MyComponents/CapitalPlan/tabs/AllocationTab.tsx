@@ -169,7 +169,7 @@ function RoundHeaderCard({
   const matches = Math.abs(variance) < 1; // float tolerance
 
   return (
-    <div className="border border-violet-500/30 border-l-[3px] border-l-violet-500 rounded-md bg-zinc-900/90 p-5 shadow-[0_4px_16px_rgba(167,139,250,0.08),0_2px_8px_rgba(0,0,0,0.4)]">
+    <div className="border border-violet-500/30 border-l-[3px] border-l-violet-500 rounded-md bg-card p-5 shadow-[0_4px_16px_rgba(167,139,250,0.08),0_2px_8px_rgba(0,0,0,0.4)]">
       <div className="flex items-start justify-between gap-4 flex-wrap">
         <div>
           <div className="text-[10.5px] uppercase tracking-[0.18em] text-violet-300/90 font-bold mb-1">
@@ -250,8 +250,8 @@ function BucketList({
     : null;
 
   return (
-    <div className="border border-zinc-800/80 rounded-md bg-zinc-900/90 overflow-hidden shadow-[0_4px_12px_rgba(0,0,0,0.35)]">
-      <div className="px-4 py-3 border-b border-zinc-800 bg-zinc-950/40 flex items-center justify-between">
+    <div className="border border-border rounded-md bg-card overflow-hidden shadow-[0_4px_12px_rgba(0,0,0,0.35)]">
+      <div className="px-4 py-3 border-b border-border bg-muted/30 flex items-center justify-between">
         <span className="text-[10.5px] uppercase tracking-[0.18em] text-violet-300/80 font-bold">
           Buckets ({allocations.length})
         </span>
@@ -792,8 +792,8 @@ function AllocationDonut({
   });
 
   return (
-    <div className="border border-zinc-800/80 rounded-md bg-zinc-900/90 overflow-hidden shadow-[0_4px_12px_rgba(0,0,0,0.35)]">
-      <div className="px-4 py-3 border-b border-zinc-800 bg-zinc-950/40">
+    <div className="border border-border rounded-md bg-card overflow-hidden shadow-[0_4px_12px_rgba(0,0,0,0.35)]">
+      <div className="px-4 py-3 border-b border-border bg-muted/30">
         <span className="text-[10.5px] uppercase tracking-[0.18em] text-foreground/70 font-bold">
           Distribution
         </span>
@@ -860,8 +860,8 @@ function CompareStrip({
   onSelect: (id: string) => void;
 }) {
   return (
-    <div className="border border-zinc-800/80 rounded-md bg-zinc-900/90 overflow-hidden shadow-[0_4px_12px_rgba(0,0,0,0.35)]">
-      <div className="px-4 py-3 border-b border-zinc-800 bg-zinc-950/40">
+    <div className="border border-border rounded-md bg-card overflow-hidden shadow-[0_4px_12px_rgba(0,0,0,0.35)]">
+      <div className="px-4 py-3 border-b border-border bg-muted/30">
         <span className="text-[10.5px] uppercase tracking-[0.18em] text-foreground/70 font-bold">
           Compare across rounds
         </span>

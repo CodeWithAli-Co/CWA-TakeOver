@@ -159,15 +159,15 @@ function RoundCard({
     : round.status === "closed" ? "border-l-emerald-500"
     : round.status === "on-hold" ? "border-l-zinc-500"
     : round.status === "skipped" ? "border-l-red-500"
-    : "border-l-zinc-700";
+    : "border-l-muted-foreground/40";
 
   return (
     <div
       onClick={onClick}
-      className={`group border border-zinc-800/80 border-l-[3px] ${statusAccent} rounded-md p-5 cursor-pointer transition-all bg-zinc-900/90 shadow-[0_4px_12px_rgba(0,0,0,0.35)] ${
+      className={`group border border-border border-l-[3px] ${statusAccent} rounded-md p-5 cursor-pointer transition-all bg-card shadow-[0_4px_12px_rgba(0,0,0,0.35)] ${
         isSelected
           ? "ring-2 ring-primary/40 border-primary/40 shadow-[0_8px_24px_rgba(132,204,22,0.15)]"
-          : "hover:bg-zinc-900 hover:border-zinc-700 hover:shadow-[0_6px_16px_rgba(0,0,0,0.45)]"
+          : "hover:bg-muted/30 hover:border-foreground/20 hover:shadow-[0_6px_16px_rgba(0,0,0,0.45)]"
       }`}
     >
       <div className="flex items-start justify-between mb-3">

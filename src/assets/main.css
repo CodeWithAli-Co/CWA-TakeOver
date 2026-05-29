@@ -284,6 +284,34 @@ html, body {
     --text-dim: 240 5% 50%;
     --text-muted: 240 5% 36%;
     --border-subtle: 240 6% 86%;
+
+    /* Opacity-based tokens — these are defined in the dark :root as
+     * WHITE-with-alpha (e.g. 0 0% 100% / 0.40). On a light surface
+     * white-on-white is invisible, which is why card header titles
+     * (text-text-tertiary) and hairline dividers (border-soft) vanished
+     * in light mode. Re-express them as near-BLACK-with-alpha so they
+     * read correctly on white cards. */
+    --text-tertiary: 240 10% 12% / 0.55;   /* quiet but legible label gray */
+    --border-soft: 240 10% 12% / 0.10;     /* subtle dark hairline */
+
+    /* Editorial tokens — light-mode values. Without these, the
+     * --ed-* variables fall back to their dark RGB definitions
+     * (white text on white surface, dark surfaces on light body).
+     * These mirror the shadcn light palette above so editorial
+     * routes (onboarding, brand rails, §NN heads) read correctly
+     * in light mode. Selector specificity (0,2,0) beats the
+     * editorial defaults' (0,1,0), so these win in light mode for
+     * BOTH company themes via the :root match. */
+    --ed-bg: 244 244 247;          /* off-white body, ~= --background */
+    --ed-surface: 255 255 255;     /* white card */
+    --ed-surface-2: 240 240 244;   /* slightly recessed inner surface */
+    --ed-fg: 23 23 28;             /* near-black primary text */
+    --ed-fg-2: 82 82 91;           /* secondary gray */
+    --ed-fg-muted: 113 113 122;    /* muted gray, AA on white */
+    --ed-border: 210 210 217;      /* visible light border, ~78% L */
+    --ed-border-strong: 178 178 186;
+    /* brand stays coral in both themes; subtle bg lightens for light mode */
+    --ed-brand-subtle: 254 242 242;
   }
 
   [data-theme="light"][data-company="simplicityFunds"] {

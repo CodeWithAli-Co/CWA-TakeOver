@@ -534,8 +534,7 @@ const InboxView: React.FC<{
     <div className="grid grid-cols-1 lg:grid-cols-[300px_1fr_320px] gap-0 bg-card overflow-hidden flex-1 min-h-0">
       {/* ─────────── LEFT PANE: list + AXON focus pinned ─────────── */}
       <aside
-        className="border-r border-border flex flex-col min-h-0"
-        style={{ background: "rgba(0,0,0,0.25)" }}
+        className="border-r border-border flex flex-col min-h-0 bg-muted/30"
       >
         <ScrollArea className="flex-1 min-h-0">
           {/* AXON Focus pinned */}
@@ -645,12 +644,8 @@ const InboxView: React.FC<{
 
       {/* ─────────── RIGHT PANE: AXON activity rail ─────────── */}
       <aside
-        className="border-l border-border overflow-y-auto px-4 py-5 space-y-6"
-        style={{
-          background:
-            "linear-gradient(180deg, rgba(40,40,48,0.4), rgba(28,28,32,0.5))",
-          backdropFilter: "blur(8px)",
-        }}
+        className="border-l border-border overflow-y-auto px-4 py-5 space-y-6 bg-muted/20"
+        style={{ backdropFilter: "blur(8px)" }}
       >
         {/* Fleet cockpit - always visible, holds completion + counts + filters */}
         <FleetCockpit stats={stats} filters={filters} />

@@ -148,7 +148,7 @@ const Index = () => {
         </div>
       </header>
 
-    <div className="min-h-screen bg-zinc-950 overflow-y-auto transition-colors duration-500">
+    <div className="min-h-screen bg-background overflow-y-auto transition-colors duration-500">
    
 
       {/* ── Main Content ── */}

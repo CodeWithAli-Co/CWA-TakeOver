@@ -98,9 +98,9 @@ export function AxonAdvisorRail({
   const tabSpecificChips = QUICK_CHIPS[activeTab] ?? QUICK_CHIPS.default;
 
   return (
-    <aside className="border-l border-teal-500/30 bg-gradient-to-b from-teal-950/30 via-zinc-900/95 to-zinc-900 min-h-[calc(100vh-64px)] flex flex-col shadow-[-4px_0_16px_rgba(0,0,0,0.3)]">
+    <aside className="border-l border-teal-500/30 bg-gradient-to-b from-teal-950/30 via-card to-card min-h-[calc(100vh-64px)] flex flex-col shadow-[-4px_0_16px_rgba(0,0,0,0.3)]">
       {/* Header */}
-      <div className="sticky top-0 bg-gradient-to-r from-teal-500/[0.15] to-zinc-900 backdrop-blur-sm border-b border-teal-500/30 px-4 py-3 flex items-center justify-between z-10">
+      <div className="sticky top-0 bg-gradient-to-r from-teal-500/[0.15] to-card backdrop-blur-sm border-b border-teal-500/30 px-4 py-3 flex items-center justify-between z-10">
         <div className="flex items-center gap-2">
           <div className="relative">
             <Sparkles className="h-4 w-4 text-teal-300" />

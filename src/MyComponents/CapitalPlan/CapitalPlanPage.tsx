@@ -123,7 +123,7 @@ export default function CapitalPlanPage() {
   const totalRaised = totalRaisedToDate(plan.rounds, plan.checks);
 
   return (
-    <div className="min-h-[calc(100vh-64px)] w-full bg-zinc-950 text-foreground">
+    <div className="min-h-[calc(100vh-64px)] w-full bg-background text-foreground">
       <HeaderStrip
         rounds={plan.rounds}
         activeRounds={activeRounds}
@@ -139,7 +139,7 @@ export default function CapitalPlanPage() {
         {/* ─── Main column ─── */}
         <div className="min-w-0">
           {/* Tab bar */}
-          <div className="border-b border-zinc-800 px-8 pt-1 bg-zinc-900/70">
+          <div className="border-b border-border px-8 pt-1 bg-card/70">
             <div className="inline-flex items-stretch">
               {TABS.map((t) => {
                 const isActive = activeTab === t.key;
@@ -223,7 +223,7 @@ function HeaderStrip({
   onToggleAxon: () => void;
 }) {
   return (
-    <div className="border-b border-zinc-800 bg-zinc-900 shadow-[0_1px_0_0_rgba(255,255,255,0.04)_inset]">
+    <div className="border-b border-border bg-card shadow-[0_1px_0_0_rgba(255,255,255,0.04)_inset]">
       <div className="px-8 py-4 flex items-center justify-between gap-6 flex-wrap">
         <div className="flex items-center gap-3">
           <div className="w-1 h-9 rounded-full bg-gradient-to-b from-emerald-400 via-violet-400 to-amber-400" />
