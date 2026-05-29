@@ -19,13 +19,21 @@ import {
   type ReactNode,
 } from "react";
 import { Extension, type Range, type Editor } from "@tiptap/core";
+import { PluginKey } from "@tiptap/pm/state";
 import Suggestion from "@tiptap/suggestion";
+
+// Distinct plugin key per suggestion extension so we don't collide
+// with PageLinkSuggestion (both wrap the suggestion plugin and would
+// otherwise both register under the default key "suggestion$").
+const slashCommandPluginKey = new PluginKey("slashCommandSuggestion");
 import { ReactRenderer } from "@tiptap/react";
 import tippy, { type Instance as TippyInstance } from "tippy.js";
 import {
   Heading1, Heading2, Heading3, Heading4,
-  List, ListOrdered, ListChecks, Quote, Code2,
+  ListOrdered, ListChecks, Quote, Code2,
   Minus, Image as ImageIcon, Table as TableIcon,
+  EyeOff, Info, AlertTriangle, CheckCircle2, Sparkles,
+  FileSymlink,
   type LucideIcon,
 } from "lucide-react";
 import { uploadWorkspaceImage } from "./imageUpload";
@@ -38,124 +46,133 @@ interface SlashItem {
   description: string;
   icon: LucideIcon;
   keywords?: string[];
+  /** Group label — drives the section divider above the first item
+   *  in each group. Items with the same `section` cluster together. */
+  section: "Headings" | "Lists" | "Block" | "Media" | "Embeds";
   /** Mutates editor state to insert the chosen block. */
   command: (ctx: { editor: Editor; range: Range }) => void;
 }
 
 const SLASH_ITEMS: SlashItem[] = [
+  // ── Headings ──────────────────────────────────────────────
   {
-    title: "Heading 1",
-    description: "Large section title",
-    icon: Heading1,
+    title: "Heading 1", description: "Large section title", icon: Heading1, section: "Headings",
     keywords: ["h1", "title"],
     command: ({ editor, range }) => {
       editor.chain().focus().deleteRange(range).toggleHeading({ level: 1 }).run();
     },
   },
   {
-    title: "Heading 2",
-    description: "Medium section heading",
-    icon: Heading2,
+    title: "Heading 2", description: "Medium section heading", icon: Heading2, section: "Headings",
     keywords: ["h2"],
     command: ({ editor, range }) => {
       editor.chain().focus().deleteRange(range).toggleHeading({ level: 2 }).run();
     },
   },
   {
-    title: "Heading 3",
-    description: "Small subsection heading",
-    icon: Heading3,
+    title: "Heading 3", description: "Small subsection heading", icon: Heading3, section: "Headings",
     keywords: ["h3"],
     command: ({ editor, range }) => {
       editor.chain().focus().deleteRange(range).toggleHeading({ level: 3 }).run();
     },
   },
   {
-    title: "Heading 4",
-    description: "Tiny subsection heading",
-    icon: Heading4,
+    title: "Heading 4", description: "Tiny subsection heading", icon: Heading4, section: "Headings",
     keywords: ["h4"],
     command: ({ editor, range }) => {
       editor.chain().focus().deleteRange(range).toggleHeading({ level: 4 }).run();
     },
   },
+  // ── Lists ─────────────────────────────────────────────────
   {
-    title: "Bullet list",
-    description: "Simple unordered list",
-    icon: List,
-    keywords: ["ul", "bullet", "unordered"],
-    command: ({ editor, range }) => {
-      editor.chain().focus().deleteRange(range).toggleBulletList().run();
-    },
-  },
-  {
-    title: "Numbered list",
-    description: "List with sequential numbers",
-    icon: ListOrdered,
+    title: "Numbered list", description: "List with sequential numbers", icon: ListOrdered, section: "Lists",
     keywords: ["ol", "ordered", "number"],
     command: ({ editor, range }) => {
       editor.chain().focus().deleteRange(range).toggleOrderedList().run();
     },
   },
   {
-    title: "Task list",
-    description: "Checkbox to-do list",
-    icon: ListChecks,
+    title: "Task list", description: "Checkbox to-do list", icon: ListChecks, section: "Lists",
     keywords: ["todo", "task", "checkbox"],
     command: ({ editor, range }) => {
       editor.chain().focus().deleteRange(range).toggleTaskList().run();
     },
   },
+  // ── Block ─────────────────────────────────────────────────
   {
-    title: "Quote",
-    description: "Pull quote / blockquote",
-    icon: Quote,
-    keywords: ["blockquote", "callout"],
+    title: "Quote", description: "Pull quote / blockquote", icon: Quote, section: "Block",
+    keywords: ["blockquote"],
     command: ({ editor, range }) => {
       editor.chain().focus().deleteRange(range).toggleBlockquote().run();
     },
   },
   {
-    title: "Code block",
-    description: "Fenced multi-line code",
-    icon: Code2,
+    title: "Code block", description: "Fenced multi-line code", icon: Code2, section: "Block",
     keywords: ["pre", "snippet"],
     command: ({ editor, range }) => {
       editor.chain().focus().deleteRange(range).toggleCodeBlock().run();
     },
   },
   {
-    title: "Divider",
-    description: "Horizontal rule between sections",
-    icon: Minus,
+    title: "Divider", description: "Horizontal rule between sections", icon: Minus, section: "Block",
     keywords: ["hr", "horizontal", "rule", "separator"],
     command: ({ editor, range }) => {
       editor.chain().focus().deleteRange(range).setHorizontalRule().run();
     },
   },
+  // ── Callouts (Obsidian-style) ─────────────────────────────
   {
-    title: "Table",
-    description: "3×3 table to start",
-    icon: TableIcon,
-    keywords: ["grid"],
+    title: "Info callout", description: "Tinted note for context", icon: Info, section: "Block",
+    keywords: ["callout", "admonition", "note"],
     command: ({ editor, range }) => {
-      editor
-        .chain()
-        .focus()
-        .deleteRange(range)
-        .insertTable({ rows: 3, cols: 3, withHeaderRow: true })
-        .run();
+      editor.chain().focus().deleteRange(range).setCallout("info").run();
     },
   },
   {
-    title: "Image",
-    description: "Upload + insert an image",
-    icon: ImageIcon,
+    title: "Warning callout", description: "Tinted caution box", icon: AlertTriangle, section: "Block",
+    keywords: ["callout", "caution", "warning"],
+    command: ({ editor, range }) => {
+      editor.chain().focus().deleteRange(range).setCallout("warning").run();
+    },
+  },
+  {
+    title: "Success callout", description: "Tinted success note", icon: CheckCircle2, section: "Block",
+    keywords: ["callout", "success", "tip"],
+    command: ({ editor, range }) => {
+      editor.chain().focus().deleteRange(range).setCallout("success").run();
+    },
+  },
+  {
+    title: "Axon callout", description: "Brand-accent note from Axon", icon: Sparkles, section: "Block",
+    keywords: ["callout", "axon", "ai", "insight"],
+    command: ({ editor, range }) => {
+      editor.chain().focus().deleteRange(range).setCallout("axon").run();
+    },
+  },
+  // ── Special inline ────────────────────────────────────────
+  {
+    title: "Spoiler", description: "Hidden text — click to reveal", icon: EyeOff, section: "Block",
+    keywords: ["hide", "blur", "discord"],
+    command: ({ editor, range }) => {
+      editor.chain().focus().deleteRange(range).insertContent({
+        type: "text",
+        text: "spoiler",
+        marks: [{ type: "spoiler" }],
+      }).run();
+    },
+  },
+  // ── Media ─────────────────────────────────────────────────
+  {
+    title: "Table", description: "3×3 table to start", icon: TableIcon, section: "Media",
+    keywords: ["grid"],
+    command: ({ editor, range }) => {
+      editor.chain().focus().deleteRange(range).insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run();
+    },
+  },
+  {
+    title: "Image", description: "Upload + insert an image", icon: ImageIcon, section: "Media",
     keywords: ["picture", "photo", "img"],
     command: ({ editor, range }) => {
-      // Delete the "/" trigger range BEFORE opening the file picker so
-      // the editor selection is in a sensible place when the picker
-      // closes and we insert the resulting image node.
       editor.chain().focus().deleteRange(range).run();
       const input = document.createElement("input");
       input.type = "file";
@@ -172,6 +189,16 @@ const SLASH_ITEMS: SlashItem[] = [
         }
       };
       input.click();
+    },
+  },
+  // ── Embeds ────────────────────────────────────────────────
+  {
+    title: "Page link", description: "Embed a link to another workspace page", icon: FileSymlink, section: "Embeds",
+    keywords: ["wikilink", "ref", "page", "doc", "sheet", "internal"],
+    command: ({ editor, range }) => {
+      // Delete the slash trigger and insert "[[" so the page-link
+      // suggestion picks up from there — the user just keeps typing.
+      editor.chain().focus().deleteRange(range).insertContent("[[").run();
     },
   },
 ];
@@ -225,17 +252,30 @@ export const SlashCommandList = forwardRef<ListRef, ListProps>(({ items, command
     );
   }
 
+  // Show section dividers when not actively filtering — the
+  // sections are about block category, which is less useful when
+  // the user has already narrowed by keyword. So if items <= full
+  // list we trust the section grouping; otherwise show flat.
+  const showSections = items === SLASH_ITEMS;
+
   return (
     <div
-      className="rounded-sm border border-border bg-popover shadow-xl overflow-hidden w-[280px] max-h-[320px] overflow-y-auto"
+      className="rounded-md border-xs border-border-soft bg-popover shadow-xl overflow-hidden w-[300px] max-h-[360px] overflow-y-auto"
       onMouseDown={(e) => e.preventDefault()}
     >
       <ul className="py-1">
         {items.map((item, idx) => {
           const Icon = item.icon;
           const selected = idx === selectedIndex;
+          const prevSection = idx > 0 ? items[idx - 1]?.section : null;
+          const showHeader = showSections && item.section !== prevSection;
           return (
             <li key={item.title}>
+              {showHeader && (
+                <div className="px-3 pt-2 pb-1 text-[9.5px] font-semibold uppercase tracking-[0.12em] text-text-tertiary">
+                  {item.section}
+                </div>
+              )}
               <button
                 type="button"
                 onClick={() => selectItem(idx)}
@@ -247,7 +287,7 @@ export const SlashCommandList = forwardRef<ListRef, ListProps>(({ items, command
               >
                 <span
                   className={
-                    "h-7 w-7 rounded-sm flex items-center justify-center flex-shrink-0 border " +
+                    "h-7 w-7 rounded-md flex items-center justify-center flex-shrink-0 border " +
                     (selected
                       ? "bg-primary/15 border-primary/30 text-primary"
                       : "bg-muted/30 border-border/60 text-foreground/65")
@@ -316,6 +356,7 @@ export const SlashCommand = Extension.create({
   addProseMirrorPlugins() {
     return [
       Suggestion({
+        pluginKey: slashCommandPluginKey,
         editor: this.editor,
         ...this.options.suggestion,
         items: ({ query }: { query: string }) => filterItems(query),

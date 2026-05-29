@@ -35,6 +35,13 @@ import TableRow from "@tiptap/extension-table-row";
 import TableHeader from "@tiptap/extension-table-header";
 import TableCell from "@tiptap/extension-table-cell";
 import { CommentMark } from "./CommentMark";
+import {
+  Callout,
+  Spoiler,
+  Subscript,
+  Superscript,
+} from "./markdownExtensions";
+import { PageLink } from "./PageLink";
 
 export interface BaseExtensionOpts {
   /** Whether to include History (false when Collaboration owns undo/redo). */
@@ -86,5 +93,11 @@ export function getBaseDocExtensions(opts: BaseExtensionOpts = {}) {
     TableHeader,
     TableCell,
     CommentMark,
+    // ── Markdown polish — Discord/Obsidian/.md parity ─────
+    Spoiler,
+    Subscript,
+    Superscript,
+    Callout,
+    PageLink,
   ];
 }

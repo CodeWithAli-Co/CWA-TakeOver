@@ -17,6 +17,7 @@
  */
 
 import { useEffect, useRef, useState } from "react";
+import { useNavigate } from "@tanstack/react-router";
 import { useEditor, EditorContent } from "@tiptap/react";
 import { Plugin, PluginKey } from "@tiptap/pm/state";
 import Collaboration from "@tiptap/extension-collaboration";
@@ -26,6 +27,7 @@ import * as Y from "yjs";
 
 import { getBaseDocExtensions } from "./docSchema";
 import { SlashCommand } from "./SlashCommand";
+import { PageLinkSuggestion } from "./PageLinkSuggestion";
 import { EditorBubbleMenu } from "./EditorBubbleMenu";
 import { uploadWorkspaceImage, extractImageFiles } from "./imageUpload";
 import type { SupabaseYProvider } from "@/lib/yjs/SupabaseYProvider";
@@ -98,6 +100,7 @@ export function DocEditor({
   ydoc, provider, user, field = "default",
   onLocalChange, onAddComment, onFocusComment,
 }: Props) {
+  const navigate = useNavigate();
   const [saving, setSaving] = useState(false);
   const [recentlySaved, setRecentlySaved] = useState(false);
   const [synced, setSynced] = useState<boolean>(provider?.synced ?? false);
@@ -132,6 +135,10 @@ export function DocEditor({
           ? [CollaborationCursor.configure({ provider, user })]
           : []),
         SlashCommand,
+        // [[Page Name]] inline references — autocompletes against
+        // workspace_documents + workspace_spreadsheets, inserts a
+        // PageLink atom. See PageLink.ts + PageLinkSuggestion.tsx.
+        PageLinkSuggestion,
       ],
       editorProps: {
         attributes: {
@@ -186,10 +193,46 @@ export function DocEditor({
         editor={editor}
         className="flex-1 min-h-0 overflow-y-auto workspace-prose"
         onClick={(e) => {
-          if (!onFocusComment) return;
           const target = e.target as HTMLElement | null;
-          // Walk up — clicks usually land on text nodes inside the span.
-          const span = target?.closest?.("[data-comment-id]") as HTMLElement | null;
+
+          // ── PageLink click → soft navigation ─────────────
+          // The PageLink node renders as <a data-page-link>. We
+          // intercept the click and route through tanstack-router
+          // so the SPA doesn't do a hard page load.
+          const link = target?.closest?.(
+            "a[data-page-link]",
+          ) as HTMLAnchorElement | null;
+          if (link) {
+            e.preventDefault();
+            const id = link.getAttribute("data-id");
+            const kind = link.getAttribute("data-kind");
+            if (id) {
+              navigate({
+                to:
+                  kind === "spreadsheet"
+                    ? "/workspace/sheets/$id"
+                    : "/workspace/docs/$id",
+                params: { id },
+              } as any);
+            }
+            return;
+          }
+
+          // ── Spoiler click → toggle revealed state ────────
+          const spoiler = target?.closest?.(
+            "span[data-spoiler]",
+          ) as HTMLElement | null;
+          if (spoiler) {
+            e.preventDefault();
+            spoiler.classList.toggle("ws-spoiler--revealed");
+            return;
+          }
+
+          // ── Comment click → open the sidebar to it ───────
+          if (!onFocusComment) return;
+          const span = target?.closest?.(
+            "[data-comment-id]",
+          ) as HTMLElement | null;
           const commentId = span?.getAttribute("data-comment-id");
           if (commentId) onFocusComment(commentId);
         }}

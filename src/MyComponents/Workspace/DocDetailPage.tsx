@@ -22,7 +22,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import {
   ArrowLeft, Lock, Globe, Trash2, Loader2, Share2, MessageSquare, History,
-  Plus, Pencil, X,
+  Plus, Pencil, X, BookOpen,
 } from "lucide-react";
 import { motion } from "framer-motion";
 import * as Y from "yjs";
@@ -33,6 +33,7 @@ import {
   useDocument,
   useUpdateDocument,
   useDeleteDocument,
+  useHardDeleteDocument,
   useCreateComment,
   useComments,
   useUpdateDocTabs,
@@ -47,6 +48,9 @@ import { PresenceBar } from "./PresenceBar";
 import { ShareDialog } from "./ShareDialog";
 import { CommentsSidebar } from "./CommentsSidebar";
 import { VersionHistoryPanel } from "./VersionHistoryPanel";
+import { MarkdownHelpPalette } from "./MarkdownHelpPalette";
+import { useMarkdownHelp } from "./markdownHelpStore";
+import { DeleteResourceDialog } from "./DeleteResourceDialog";
 import "./workspace.css";
 import "tippy.js/dist/tippy.css";
 
@@ -65,6 +69,8 @@ export function DocDetailPage({ id }: Props) {
   const { data: doc, isLoading } = useDocument(id);
   const updateMut = useUpdateDocument();
   const deleteMut = useDeleteDocument();
+  const hardDeleteMut = useHardDeleteDocument();
+  const [deleteOpen, setDeleteOpen] = useState(false);
 
   const [title, setTitle] = useState("");
   useEffect(() => {
@@ -84,6 +90,19 @@ export function DocDetailPage({ id }: Props) {
   const [focusedCommentId, setFocusedCommentId] = useState<string | null>(null);
   const createCommentMut = useCreateComment();
   const updateTabsMut = useUpdateDocTabs();
+
+  // ── Markdown cheatsheet palette (Cmd+/) ──────────────────────
+  const openMarkdownHelp = useMarkdownHelp((s) => s.openPalette);
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === "/") {
+        e.preventDefault();
+        openMarkdownHelp();
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [openMarkdownHelp]);
 
   // ── Doc tabs (multi-page within one document) ────────────────
   // Persisted in workspace_documents.tabs as a JSONB array. Empty
@@ -276,10 +295,18 @@ export function DocDetailPage({ id }: Props) {
     });
   };
 
-  const handleDelete = async () => {
+  // Soft + hard delete now happen inside DeleteResourceDialog. The
+  // trash button just opens the dialog; the dialog runs the chosen
+  // mutation and then we navigate back. Kept as a single handler
+  // that closes the dialog and bounces back to the workspace.
+  const handleArchive = async () => {
     if (!doc) return;
-    if (!window.confirm("Delete this document? This cannot be undone.")) return;
     await deleteMut.mutateAsync(doc.id);
+    navigate({ to: "/workspace" });
+  };
+  const handleHardDelete = async () => {
+    if (!doc) return;
+    await hardDeleteMut.mutateAsync(doc.id);
     navigate({ to: "/workspace" });
   };
 
@@ -314,6 +341,15 @@ export function DocDetailPage({ id }: Props) {
           </button>
           <div className="flex-1" />
           {provider && <PresenceBar provider={provider} self={username} />}
+          <button
+            type="button"
+            onClick={openMarkdownHelp}
+            className="inline-flex items-center gap-1.5 px-2 h-7 rounded-sm text-[10.5px] font-semibold uppercase tracking-wider bg-muted/40 border border-border text-foreground/65 hover:text-foreground transition-colors"
+            title="Markdown cheatsheet (Cmd+/)"
+          >
+            <BookOpen size={11} />
+            Markdown
+          </button>
           <button
             type="button"
             onClick={() => {
@@ -380,9 +416,10 @@ export function DocDetailPage({ id }: Props) {
           </button>
           <button
             type="button"
-            onClick={handleDelete}
-            disabled={deleteMut.isPending}
-            aria-label="Delete document"
+            onClick={() => setDeleteOpen(true)}
+            disabled={deleteMut.isPending || hardDeleteMut.isPending}
+            aria-label="Archive or delete document"
+            title="Archive document"
             className="rounded-sm p-1.5 text-foreground/50 hover:text-red-400 hover:bg-red-500/10 transition-colors disabled:opacity-40"
           >
             <Trash2 size={13} />
@@ -500,6 +537,24 @@ export function DocDetailPage({ id }: Props) {
         owner={doc.owner}
         currentUsername={username}
         visibility={doc.visibility}
+      />
+
+      {/* Markdown cheatsheet — opens via the Markdown button in the
+       *  header or Cmd+/ anywhere on the page. Renders only when
+       *  its zustand store has open=true. */}
+      <MarkdownHelpPalette />
+
+      {/* Delete / archive confirm dialog. Default action archives
+       *  (sets archived=true). C-level operators see an additional
+       *  "Delete permanently" option that bypasses the archive and
+       *  destroys the row. Replaces the previous window.confirm. */}
+      <DeleteResourceDialog
+        open={deleteOpen}
+        onClose={() => setDeleteOpen(false)}
+        kind="document"
+        title={doc.title}
+        onArchive={handleArchive}
+        onHardDelete={handleHardDelete}
       />
     </div>
   );

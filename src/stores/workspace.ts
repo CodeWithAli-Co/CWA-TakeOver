@@ -183,7 +183,55 @@ export function useUpdateDocument() {
   });
 }
 
+/**
+ * Soft-delete a document. The row is preserved with archived=true so
+ * a C-level operator can restore (or hard-delete) it later. This is
+ * the default delete path everyone sees from the doc detail trash
+ * icon — no row is actually destroyed.
+ */
 export function useDeleteDocument() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (id: string): Promise<void> => {
+      const { error } = await supabase
+        .from(DOC_TABLE)
+        .update({ archived: true })
+        .eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: workspaceKeys.resources });
+      qc.invalidateQueries({ queryKey: workspaceKeys.documents });
+    },
+  });
+}
+
+/** Restore an archived document — flips archived back to false. */
+export function useRestoreDocument() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (id: string): Promise<void> => {
+      const { error } = await supabase
+        .from(DOC_TABLE)
+        .update({ archived: false })
+        .eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: workspaceKeys.resources });
+      qc.invalidateQueries({ queryKey: workspaceKeys.documents });
+    },
+  });
+}
+
+/**
+ * Permanently destroy a document row. Only callable when the
+ * current user is C-level (CEO/COO/CFO/Admin) — the calling
+ * component is responsible for gating the UI; this hook trusts the
+ * caller, and the RLS policy in workspace_documents should be the
+ * authoritative server-side check (TODO: tighten).
+ */
+export function useHardDeleteDocument() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (id: string): Promise<void> => {
@@ -294,7 +342,44 @@ export function useUpdateSpreadsheet() {
   });
 }
 
+/** Soft-delete a spreadsheet — mirror of useDeleteDocument. */
 export function useDeleteSpreadsheet() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (id: string): Promise<void> => {
+      const { error } = await supabase
+        .from(SHEET_TABLE)
+        .update({ archived: true })
+        .eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: workspaceKeys.resources });
+      qc.invalidateQueries({ queryKey: workspaceKeys.spreadsheets });
+    },
+  });
+}
+
+/** Restore an archived spreadsheet — flips archived back to false. */
+export function useRestoreSpreadsheet() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (id: string): Promise<void> => {
+      const { error } = await supabase
+        .from(SHEET_TABLE)
+        .update({ archived: false })
+        .eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: workspaceKeys.resources });
+      qc.invalidateQueries({ queryKey: workspaceKeys.spreadsheets });
+    },
+  });
+}
+
+/** Permanently destroy a spreadsheet row — C-level only. */
+export function useHardDeleteSpreadsheet() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (id: string): Promise<void> => {

@@ -25,8 +25,10 @@ import {
   useSpreadsheet,
   useUpdateSpreadsheet,
   useDeleteSpreadsheet,
+  useHardDeleteSpreadsheet,
 } from "@/stores/workspace";
 import { ActiveUser } from "@/stores/query";
+import { DeleteResourceDialog } from "./DeleteResourceDialog";
 import { SheetEditor } from "./SheetEditor";
 import { PresenceBar } from "./PresenceBar";
 import { ShareDialog } from "./ShareDialog";
@@ -46,9 +48,11 @@ export function SheetDetailPage({ id }: Props) {
   const { data: sheet, isLoading } = useSpreadsheet(id);
   const updateMut = useUpdateSpreadsheet();
   const deleteMut = useDeleteSpreadsheet();
+  const hardDeleteMut = useHardDeleteSpreadsheet();
 
   const [title, setTitle] = useState("");
   const [shareOpen, setShareOpen] = useState(false);
+  const [deleteOpen, setDeleteOpen] = useState(false);
   const [historyOpen, setHistoryOpen] = useState(false);
   // The Univer API doesn't have a stable React-friendly way to expose
   // the live snapshot through props, so we let SheetEditor stash a
@@ -78,10 +82,15 @@ export function SheetDetailPage({ id }: Props) {
     });
   };
 
-  const handleDelete = async () => {
+  // Soft + hard delete handlers — invoked from DeleteResourceDialog.
+  const handleArchive = async () => {
     if (!sheet) return;
-    if (!window.confirm("Delete this spreadsheet? This cannot be undone.")) return;
     await deleteMut.mutateAsync(sheet.id);
+    navigate({ to: "/workspace" });
+  };
+  const handleHardDelete = async () => {
+    if (!sheet) return;
+    await hardDeleteMut.mutateAsync(sheet.id);
     navigate({ to: "/workspace" });
   };
 
@@ -172,9 +181,10 @@ export function SheetDetailPage({ id }: Props) {
           </button>
           <button
             type="button"
-            onClick={handleDelete}
-            disabled={deleteMut.isPending}
-            aria-label="Delete spreadsheet"
+            onClick={() => setDeleteOpen(true)}
+            disabled={deleteMut.isPending || hardDeleteMut.isPending}
+            aria-label="Archive or delete spreadsheet"
+            title="Archive spreadsheet"
             className="rounded-sm p-1.5 text-foreground/50 hover:text-red-400 hover:bg-red-500/10 transition-colors disabled:opacity-40"
           >
             <Trash2 size={13} />
@@ -219,6 +229,17 @@ export function SheetDetailPage({ id }: Props) {
         owner={sheet.owner}
         currentUsername={username}
         visibility={sheet.visibility}
+      />
+
+      {/* Archive / hard-delete confirm dialog. Same component the
+       *  doc detail page uses; pass the matching mutations. */}
+      <DeleteResourceDialog
+        open={deleteOpen}
+        onClose={() => setDeleteOpen(false)}
+        kind="spreadsheet"
+        title={sheet.title}
+        onArchive={handleArchive}
+        onHardDelete={handleHardDelete}
       />
     </div>
   );

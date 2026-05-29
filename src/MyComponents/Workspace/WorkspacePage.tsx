@@ -34,6 +34,10 @@ import {
   useDeleteFolder,
   useMoveFolder,
   useMoveResourceToFolder,
+  useRestoreDocument,
+  useRestoreSpreadsheet,
+  useHardDeleteDocument,
+  useHardDeleteSpreadsheet,
 } from "@/stores/workspace";
 import supabase from "@/MyComponents/supabase";
 import type {
@@ -46,7 +50,9 @@ import { ActivityFeed } from "./ActivityFeed";
 import { extractDocText, matchesQuery } from "./searchHelpers";
 import { useQuery } from "@tanstack/react-query";
 
-type TabId = "all" | "documents" | "spreadsheets";
+type TabId = "all" | "documents" | "spreadsheets" | "archived";
+
+const C_LEVEL_ROLES = new Set(["CEO", "COO", "CFO", "Admin"]);
 
 export function WorkspacePage() {
   const navigate = useNavigate();
@@ -56,7 +62,19 @@ export function WorkspacePage() {
 
   useWorkspaceRealtime();
 
-  const { data: resources = [], isLoading } = useWorkspaceResources();
+  const role: string | undefined = (meRows?.[0] as any)?.role ?? undefined;
+  const isCLevel = !!role && C_LEVEL_ROLES.has(role);
+  // Fetch with includeArchived so the Archive tab has something to
+  // render. Active tabs filter archived rows back out below.
+  const { data: resources = [], isLoading } = useWorkspaceResources({
+    includeArchived: true,
+  });
+
+  // Restore / hard-delete mutations for the Archive tab actions.
+  const restoreDocMut = useRestoreDocument();
+  const restoreSheetMut = useRestoreSpreadsheet();
+  const hardDeleteDocMut = useHardDeleteDocument();
+  const hardDeleteSheetMut = useHardDeleteSpreadsheet();
   const { data: folders = [] } = useFolders();
   const { data: folderCounts } = useFolderCounts();
   const createDoc = useCreateDocument();
@@ -103,16 +121,32 @@ export function WorkspacePage() {
     staleTime: 5_000,
   });
 
-  // Resource filter pipeline: folder → tab → search.
+  // Effective tab — if a non-C-level user somehow has tab="archived"
+  // in state (e.g. they were demoted), silently fall back to "all".
+  const effectiveTab: TabId = tab === "archived" && !isCLevel ? "all" : tab;
+
+  // Resource filter pipeline: archive bucket → folder → tab → search.
+  // The Archive tab ignores folder and shows the archive flat.
   const filtered = useMemo<WorkspaceResource[]>(() => {
-    const byFolder = resources.filter((r) =>
+    if (effectiveTab === "archived") {
+      // Archive view: every archived row, no folder filter (archives
+      // are flat — a folder might itself be deleted while a doc inside
+      // it lingers).
+      const archived = resources.filter((r) => (r as any).archived);
+      if (!trimmedQuery) return archived;
+      return archived.filter((r) => matchesQuery(r.title, trimmedQuery));
+    }
+
+    // Active tabs: drop archived rows.
+    const active = resources.filter((r) => !(r as any).archived);
+    const byFolder = active.filter((r) =>
       activeFolderId === null
         ? r.folder_id === null
         : r.folder_id === activeFolderId,
     );
     const byTab = byFolder.filter((r) => {
-      if (tab === "documents") return r.kind === "document";
-      if (tab === "spreadsheets") return r.kind === "spreadsheet";
+      if (effectiveTab === "documents") return r.kind === "document";
+      if (effectiveTab === "spreadsheets") return r.kind === "spreadsheet";
       return true;
     });
     if (!trimmedQuery) return byTab;
@@ -121,7 +155,13 @@ export function WorkspacePage() {
       if (r.kind === "document" && bodyHits?.has(r.id)) return true;
       return false;
     });
-  }, [resources, activeFolderId, tab, trimmedQuery, bodyHits]);
+  }, [resources, activeFolderId, effectiveTab, trimmedQuery, bodyHits]);
+
+  // Archived count for the tab chip.
+  const archivedCount = useMemo(
+    () => resources.filter((r) => (r as any).archived).length,
+    [resources],
+  );
 
   const counts = useMemo(() => {
     const scope = resources.filter((r) =>
@@ -361,6 +401,18 @@ export function WorkspacePage() {
             <Tab label="All" count={counts.all} active={tab === "all"} onClick={() => setTab("all")} />
             <Tab label="Documents" count={counts.documents} active={tab === "documents"} onClick={() => setTab("documents")} />
             <Tab label="Spreadsheets" count={counts.spreadsheets} active={tab === "spreadsheets"} onClick={() => setTab("spreadsheets")} />
+            {/* Archive tab is C-level only — non-managers can still
+             *  archive items via the delete dialog, but the archive
+             *  itself (restore + hard-delete affordances) is a
+             *  managerial surface. */}
+            {isCLevel && archivedCount > 0 && (
+              <Tab
+                label="Archive"
+                count={archivedCount}
+                active={tab === "archived"}
+                onClick={() => setTab("archived")}
+              />
+            )}
           </div>
 
           {/* Grid + Activity rail */}
@@ -371,14 +423,45 @@ export function WorkspacePage() {
                   <Loader2 size={14} className="animate-spin mr-2" /> Loading workspace…
                 </div>
               ) : filtered.length === 0 ? (
-                <EmptyState
-                  filtered={!!filter}
-                  inFolder={activeFolderId !== null}
-                  onNewDoc={handleNewDoc}
-                  onNewSheet={handleNewSheet}
-                />
+                effectiveTab === "archived" ? (
+                  <div className="py-16 text-center text-foreground/50 text-[13px]">
+                    Nothing archived. Items deleted from a document or
+                    spreadsheet detail page land here.
+                  </div>
+                ) : (
+                  <EmptyState
+                    filtered={!!filter}
+                    inFolder={activeFolderId !== null}
+                    onNewDoc={handleNewDoc}
+                    onNewSheet={handleNewSheet}
+                  />
+                )
+              ) : effectiveTab === "archived" ? (
+                <ul className="space-y-2 list-none p-0 m-0">
+                  {filtered.map((r) => (
+                    <ArchivedRow
+                      key={`${r.kind}-${r.id}`}
+                      resource={r}
+                      isCLevel={isCLevel}
+                      onRestore={async () => {
+                        if (r.kind === "document") {
+                          await restoreDocMut.mutateAsync(r.id);
+                        } else {
+                          await restoreSheetMut.mutateAsync(r.id);
+                        }
+                      }}
+                      onHardDelete={async () => {
+                        if (r.kind === "document") {
+                          await hardDeleteDocMut.mutateAsync(r.id);
+                        } else {
+                          await hardDeleteSheetMut.mutateAsync(r.id);
+                        }
+                      }}
+                    />
+                  ))}
+                </ul>
               ) : (
-                <ul className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <ul className="grid grid-cols-1 sm:grid-cols-2 gap-3 list-none p-0 m-0">
                   {filtered.map((r) => (
                     <ResourceCard
                       key={`${r.kind}-${r.id}`}
@@ -529,7 +612,7 @@ function FolderTree({
   }
 
   return (
-    <ul className="space-y-0.5">
+    <ul className="space-y-0.5 list-none p-0 m-0">
       {roots.map((f) => (
         <FolderNode
           key={f.id}
@@ -607,7 +690,7 @@ function FolderNode(props: FolderNodeProps) {
   }, [isCreatingSubfolder]);
 
   return (
-    <li>
+    <li className="list-none">
       <div
         draggable={!isRenaming}
         onDragStart={(e) => {
@@ -712,7 +795,7 @@ function FolderNode(props: FolderNodeProps) {
       )}
 
       {(expanded && (children.length > 0 || isCreatingSubfolder)) && (
-        <ul className="space-y-0.5">
+        <ul className="space-y-0.5 list-none p-0 m-0">
           {children.map((c) => (
             <FolderNode
               key={c.id}
@@ -722,7 +805,7 @@ function FolderNode(props: FolderNodeProps) {
             />
           ))}
           {isCreatingSubfolder && (
-            <li>
+            <li className="list-none">
               <InlineFolderInput
                 placeholder="Subfolder name…"
                 depth={depth + 1}
@@ -965,7 +1048,7 @@ function ResourceCard({
   const Icon = isDoc ? FileText : Sheet;
   const accent = isDoc ? "text-sky-400" : "text-emerald-400";
   return (
-    <li>
+    <li className="list-none">
       <div
         draggable
         onDragStart={(e) => {
@@ -1002,6 +1085,99 @@ function ResourceCard({
             {formatRelative(resource.updated_at)}
           </span>
         </div>
+      </div>
+    </li>
+  );
+}
+
+// ──────────────────────────────────────────────────────────────────
+// ArchivedRow — single archive entry with Restore + (C-level only)
+// Delete-forever actions. Rendered only inside the Archive tab,
+// which itself is gated to C-level users.
+// ──────────────────────────────────────────────────────────────────
+function ArchivedRow({
+  resource,
+  isCLevel,
+  onRestore,
+  onHardDelete,
+}: {
+  resource: WorkspaceResource;
+  isCLevel: boolean;
+  onRestore: () => Promise<void>;
+  onHardDelete: () => Promise<void>;
+}) {
+  const [busy, setBusy] = useState<"restore" | "delete" | null>(null);
+
+  async function doRestore() {
+    setBusy("restore");
+    try {
+      await onRestore();
+    } finally {
+      setBusy(null);
+    }
+  }
+  async function doHardDelete() {
+    if (
+      !window.confirm(
+        `Permanently delete "${resource.title || "Untitled"}"? This cannot be undone.`,
+      )
+    ) {
+      return;
+    }
+    setBusy("delete");
+    try {
+      await onHardDelete();
+    } finally {
+      setBusy(null);
+    }
+  }
+
+  const Icon = resource.kind === "document" ? FileText : Sheet;
+  return (
+    <li className="list-none">
+      <div className="flex items-center gap-3 rounded-sm border border-border/60 bg-muted/20 hover:bg-muted/30 px-3.5 py-2.5 transition-colors">
+        <Icon size={14} className="text-foreground/45 shrink-0" />
+        <div className="min-w-0 flex-1">
+          <div className="text-[12.5px] text-foreground/85 truncate">
+            {resource.title || "Untitled"}
+          </div>
+          <div className="text-[10.5px] text-foreground/40 flex items-center gap-2">
+            <span className="uppercase tracking-wider">{resource.kind}</span>
+            <span>·</span>
+            <span>{resource.owner}</span>
+            <span>·</span>
+            <span>archived {formatRelative(resource.updated_at)}</span>
+          </div>
+        </div>
+        <button
+          type="button"
+          onClick={doRestore}
+          disabled={!!busy}
+          className="inline-flex items-center gap-1.5 text-[10.5px] font-semibold uppercase tracking-wider text-emerald-300 bg-emerald-500/10 hover:bg-emerald-500/15 border border-emerald-500/30 rounded-sm px-2 py-1 disabled:opacity-50"
+        >
+          {busy === "restore" ? (
+            <Loader2 size={11} className="animate-spin" />
+          ) : (
+            <Check size={11} />
+          )}
+          Restore
+        </button>
+        {isCLevel && (
+          <button
+            type="button"
+            onClick={doHardDelete}
+            disabled={!!busy}
+            className="inline-flex items-center gap-1.5 text-[10.5px] font-semibold uppercase tracking-wider text-red-300 bg-red-500/10 hover:bg-red-500/15 border border-red-500/30 rounded-sm px-2 py-1 disabled:opacity-50"
+            title="Delete permanently"
+          >
+            {busy === "delete" ? (
+              <Loader2 size={11} className="animate-spin" />
+            ) : (
+              <Trash2 size={11} />
+            )}
+            Delete
+          </button>
+        )}
       </div>
     </li>
   );
