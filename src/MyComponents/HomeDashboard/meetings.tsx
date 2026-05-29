@@ -28,10 +28,10 @@ import {
 import UserView from "../Reusables/userView";
 import { EditMeeting } from "../subForms/MeetingForms/editMeeting";
 
-// ── Company tinting tokens ─────────────────────────────────────
+// ── Company tinting — small dot at the right end of the row ──
 const COMPANY_STYLE = {
-  CodeWithAli: { label: "CWA",   rail: "bg-primary" },
-  simplicity:  { label: "SIMPL", rail: "bg-teal-400" },
+  CodeWithAli: { label: "CWA",   dot: "bg-primary" },
+  simplicity:  { label: "SIMPL", dot: "bg-teal-400" },
 } as const;
 
 function companyStyle(co: string | undefined | null) {
@@ -42,12 +42,154 @@ function companyStyle(co: string | undefined | null) {
 // Meeting-type colors used as inline dot + label, no bordered pills.
 const TYPE_STYLE: Record<
   string,
-  { icon: typeof Video; text: string; dot: string }
+  { icon: typeof Video; text: string; dot: string; label: string }
 > = {
-  online:      { icon: Video,  text: "text-blue-300",     dot: "bg-blue-400" },
-  hybrid:      { icon: Video,  text: "text-purple-300",   dot: "bg-purple-400" },
-  "in-person": { icon: MapPin, text: "text-success",      dot: "bg-success" },
+  online:      { icon: Video,  text: "text-sky-300",     dot: "bg-sky-400",     label: "Online" },
+  hybrid:      { icon: Video,  text: "text-violet-300",  dot: "bg-violet-400",  label: "Hybrid" },
+  "in-person": { icon: MapPin, text: "text-success",     dot: "bg-success",     label: "In person" },
 };
+
+/**
+ * Group meetings by ISO date (YYYY-MM-DD). Returns an ordered array
+ * of { key, label, sublabel, isImminent, meetings } so the render
+ * loop can drop a section header in front of each group.
+ *
+ * Sort order: by ISO date ascending, so today comes before
+ * tomorrow comes before next week. Undated meetings sink to a
+ * single "No date" group at the bottom.
+ */
+interface MeetingGroup {
+  key: string;
+  label: string;       // "Today" / "Tomorrow" / "Thu" etc.
+  sublabel: string;    // "May 29" or "" when label is the full noun
+  isImminent: boolean; // today / tomorrow → accent tint
+  meetings: any[];
+}
+function groupMeetingsByDate(meetings: any[]): MeetingGroup[] {
+  const buckets = new Map<string, any[]>();
+  const undated: any[] = [];
+
+  for (const m of meetings) {
+    if (!m.date) { undated.push(m); continue; }
+    const d = new Date(m.date);
+    if (isNaN(d.getTime())) { undated.push(m); continue; }
+    const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+    if (!buckets.has(key)) buckets.set(key, []);
+    buckets.get(key)!.push(m);
+  }
+
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  const groups: MeetingGroup[] = Array.from(buckets.entries())
+    .sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0))
+    .map(([key, ms]) => {
+      const d = new Date(key + "T00:00:00");
+      const target = new Date(d);
+      target.setHours(0, 0, 0, 0);
+      const diff = Math.round((target.getTime() - today.getTime()) / 86_400_000);
+
+      let label: string;
+      let sublabel: string;
+      let isImminent = false;
+      if (diff === 0) {
+        label = "Today";
+        sublabel = d.toLocaleDateString(undefined, { weekday: "short", month: "short", day: "numeric" });
+        isImminent = true;
+      } else if (diff === 1) {
+        label = "Tomorrow";
+        sublabel = d.toLocaleDateString(undefined, { weekday: "short", month: "short", day: "numeric" });
+        isImminent = true;
+      } else if (diff > 1 && diff < 7) {
+        label = d.toLocaleDateString(undefined, { weekday: "long" });
+        sublabel = d.toLocaleDateString(undefined, { month: "short", day: "numeric" });
+      } else {
+        label = d.toLocaleDateString(undefined, { weekday: "short", month: "short", day: "numeric" });
+        sublabel = "";
+      }
+      return { key, label, sublabel, isImminent, meetings: ms };
+    });
+
+  if (undated.length > 0) {
+    groups.push({
+      key: "no-date",
+      label: "No date",
+      sublabel: "",
+      isImminent: false,
+      meetings: undated,
+    });
+  }
+  return groups;
+}
+
+/**
+ * Mini date stripe — left column on every meeting row. "TUE" over
+ * "AUG 5" (or "TODAY"/"TOMORROW" when applicable, big and small).
+ * Kept around for layout balance (date column still exists), but
+ * meetings now also pick up a group header above them when sorted
+ * by date.
+ */
+function MeetingDateStripe({ dateStr }: { dateStr: string }) {
+  if (!dateStr) {
+    return (
+      <div className="w-12 flex flex-col items-center justify-center text-text-tertiary">
+        <span className="text-[9px] font-bold uppercase tracking-wider">—</span>
+      </div>
+    );
+  }
+  const d = new Date(dateStr);
+  if (isNaN(d.getTime())) {
+    return (
+      <div className="w-12 flex flex-col items-center justify-center text-text-tertiary">
+        <span className="text-[9px] font-bold uppercase tracking-wider">—</span>
+      </div>
+    );
+  }
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const target = new Date(d);
+  target.setHours(0, 0, 0, 0);
+  const diff = Math.round((target.getTime() - today.getTime()) / (24 * 60 * 60 * 1000));
+
+  // Today + Tomorrow get an accent tint so the eye spots them fast.
+  const isImminent = diff === 0 || diff === 1;
+  const tintWeekday = isImminent ? "text-primary" : "text-text-tertiary";
+  const tintDay = isImminent ? "text-foreground" : "text-foreground/80";
+
+  if (diff === 0) {
+    return (
+      <div className="w-12 flex flex-col items-center justify-center leading-none">
+        <span className={`text-[9px] font-bold uppercase tracking-wider ${tintWeekday}`}>Today</span>
+        <span className={`text-[14px] font-bold tabular-nums mt-0.5 ${tintDay}`}>
+          {d.toLocaleDateString(undefined, { day: "numeric" })}
+        </span>
+      </div>
+    );
+  }
+  if (diff === 1) {
+    return (
+      <div className="w-12 flex flex-col items-center justify-center leading-none">
+        <span className={`text-[9px] font-bold uppercase tracking-wider ${tintWeekday}`}>Tom.</span>
+        <span className={`text-[14px] font-bold tabular-nums mt-0.5 ${tintDay}`}>
+          {d.toLocaleDateString(undefined, { day: "numeric" })}
+        </span>
+      </div>
+    );
+  }
+  return (
+    <div className="w-12 flex flex-col items-center justify-center leading-none">
+      <span className={`text-[9px] font-bold uppercase tracking-wider ${tintWeekday}`}>
+        {d.toLocaleDateString(undefined, { weekday: "short" })}
+      </span>
+      <span className={`text-[14px] font-bold tabular-nums mt-0.5 ${tintDay}`}>
+        {d.toLocaleDateString(undefined, { day: "numeric" })}
+      </span>
+      <span className="text-[8.5px] font-semibold uppercase tracking-wider text-text-tertiary mt-0.5">
+        {d.toLocaleDateString(undefined, { month: "short" })}
+      </span>
+    </div>
+  );
+}
 
 function formatDate(dateStr: string) {
   if (!dateStr) return "";
@@ -76,90 +218,89 @@ function MeetingRow({ meeting, onEdit, onDelete }: { meeting: any; onEdit: (id: 
       layout
       initial={{ opacity: 0, y: 4 }}
       animate={{ opacity: 1, y: 0 }}
-      className="group relative flex items-stretch rounded-lg bg-card border-xs border-border-soft overflow-hidden"
+      // Flush row, no per-row card. Date stripe sits as the left
+      // column; title + meta in the middle; time + actions on the
+      // right. Hairline separates siblings.
+      className="
+        group relative flex items-stretch
+        border-b border-xs border-border/20 last:border-b-0
+        hover:bg-foreground/[0.025] transition-colors
+      "
     >
-      {/* Company accent rail — solid, slim, no gradient */}
-      <div className={`w-[2px] ${co.rail} opacity-80`} />
+      {/* Time column — wider so a range like "5:00PM - 7:00PM"
+       *  fits on a single line. The group header above carries
+       *  the date so we only need the time here. */}
+      <div className="shrink-0 w-[96px] py-3 px-2 flex items-center justify-center border-r border-xs border-border/15">
+        <span className="text-[10.5px] tabular-nums font-semibold text-foreground/85 whitespace-nowrap text-center">
+          {meeting.time || "—"}
+        </span>
+      </div>
 
-      <div className="flex-1 min-w-0 py-3 pl-3.5 pr-3.5">
-        {/* Top line — title + time on right */}
-        <div className="flex items-start justify-between gap-2">
-          <h3 className="text-[13px] font-semibold text-foreground truncate leading-snug">
-            {meeting.meeting_title}
-          </h3>
-          {meeting.time && (
-            <span className="shrink-0 inline-flex items-center gap-1 text-[10.5px] tabular-nums font-semibold text-foreground/80">
-              <Clock className="h-2.5 w-2.5 text-text-tertiary" />
-              {meeting.time}
+      {/* Single-line body. Title leads, meta cluster pinned to the
+       *  right edge using ml-auto so the row uses the full width
+       *  instead of collapsing all weight onto the left. */}
+      <div className="flex-1 min-w-0 py-3 pl-4 pr-4 flex items-center gap-3">
+        <h3 className="flex-1 min-w-0 text-[13px] font-semibold text-foreground truncate leading-snug">
+          {meeting.meeting_title}
+        </h3>
+
+        <div className="flex items-center gap-2.5 text-[10.5px] text-text-tertiary shrink-0">
+          {typeInfo && meeting.meeting_type && (
+            <span className={`inline-flex items-center gap-1 ${typeInfo.text}`}>
+              <span className={`w-1.5 h-1.5 rounded-full ${typeInfo.dot}`} />
+              <span className="font-medium whitespace-nowrap">{typeInfo.label}</span>
             </span>
           )}
-        </div>
 
-        {/* Dot-separated metadata: date · attendees · type · company */}
-        <div className="mt-1 flex items-center gap-2 text-[10.5px] text-text-tertiary">
-          <span className="inline-flex items-center gap-1">
-            <Calendar className="h-2.5 w-2.5" />
-            {formatDate(meeting.date)}
-          </span>
-          <span className="text-text-tertiary/40">·</span>
-          <span className="inline-flex items-center gap-1">
+          <span className="inline-flex items-center gap-1 whitespace-nowrap">
             <Users className="h-2.5 w-2.5" />
             {meeting.attendees ?? 1}
           </span>
-          {typeInfo && meeting.meeting_type && (
-            <>
-              <span className="text-text-tertiary/40">·</span>
-              <span className={`inline-flex items-center gap-1 ${typeInfo.text}`}>
-                <span className={`w-1.5 h-1.5 rounded-full ${typeInfo.dot}`} />
-                <span className="uppercase tracking-wider font-medium">
-                  {meeting.meeting_type}
-                </span>
-              </span>
-            </>
-          )}
-          <span className="text-text-tertiary/40">·</span>
-          <span className="uppercase tracking-wider">{co.label}</span>
-        </div>
 
-        {/* Location / link — subtler, single line, truncating */}
-        {meeting.location && meeting.meeting_type && (
-          <div className="mt-1 text-[10.5px] text-text-tertiary truncate">
-            {meeting.meeting_type === "online" && typeof meeting.location === "string" && (
+          {/* Location / link. Each branch keeps its own truncating
+           *  text so a long address won't push the cluster off the
+           *  right edge. max-w cap keeps the meta tidy on a wide
+           *  meetings panel. */}
+          {meeting.location && meeting.meeting_type === "online" &&
+            typeof meeting.location === "string" && (
               <a
                 href={meeting.location}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex items-center gap-1 hover:text-primary transition-colors"
+                className="inline-flex items-center gap-1 hover:text-primary transition-colors whitespace-nowrap"
               >
-                <ExternalLink className="h-2.5 w-2.5" />
-                Join meeting
+                <ExternalLink className="h-2.5 w-2.5 shrink-0" />
+                Join
               </a>
             )}
-            {meeting.meeting_type === "in-person" && typeof meeting.location === "string" && (
-              <span className="inline-flex items-center gap-1">
-                <MapPin className="h-2.5 w-2.5" />
-                {meeting.location}
+          {meeting.location && meeting.meeting_type === "in-person" &&
+            typeof meeting.location === "string" && (
+              <span className="inline-flex items-center gap-1 max-w-[220px]">
+                <MapPin className="h-2.5 w-2.5 shrink-0" />
+                <span className="truncate">{meeting.location}</span>
               </span>
             )}
-            {meeting.meeting_type === "hybrid" && isHybridLoc(meeting.hybrid_location) && (
-              <span className="inline-flex items-center gap-2">
-                <span className="inline-flex items-center gap-1">
-                  <MapPin className="h-2.5 w-2.5" />
-                  {meeting.hybrid_location.address}
-                </span>
-                <a
-                  href={meeting.hybrid_location.url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center gap-1 hover:text-primary transition-colors"
-                >
-                  <ExternalLink className="h-2.5 w-2.5" />
-                  Join
-                </a>
+          {meeting.meeting_type === "hybrid" && isHybridLoc(meeting.hybrid_location) && (
+            <span className="inline-flex items-center gap-2 max-w-[260px]">
+              <span className="inline-flex items-center gap-1 max-w-[180px]">
+                <MapPin className="h-2.5 w-2.5 shrink-0" />
+                <span className="truncate">{meeting.hybrid_location.address}</span>
               </span>
-            )}
-          </div>
-        )}
+              <a
+                href={meeting.hybrid_location.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1 hover:text-primary transition-colors shrink-0"
+              >
+                <ExternalLink className="h-2.5 w-2.5" />
+                Join
+              </a>
+            </span>
+          )}
+
+          {/* Company dot — anchored to the far right. */}
+          <span className={`inline-block w-1.5 h-1.5 rounded-full ${co.dot} ml-1`} />
+        </div>
       </div>
 
       {/* Action menu */}
@@ -218,31 +359,34 @@ const Meetings = () => {
   };
 
   const Header = (
-    <div className="px-5 py-3 flex items-center justify-between gap-3 bg-popover/70 border-b border-xs border-border-soft">
-      <div className="flex items-center gap-3 min-w-0">
-        <div className="p-2 rounded-md bg-gradient-to-br from-primary/15 to-primary/[0.03] border border-primary/20">
-          <Calendar className="h-4 w-4 text-primary" />
-        </div>
-        <div className="min-w-0">
-          <div className="flex items-center gap-2">
-            <span className="text-[11px] text-muted-foreground/80 uppercase tracking-[0.18em] font-semibold">
-              Meetings
-            </span>
-            <span className="text-[10px] text-muted-foreground/60 tabular-nums">{list.length}</span>
-          </div>
-          <div className="flex items-center gap-2 mt-1">
-            <span className="inline-flex items-center gap-1 text-[9.5px] text-muted-foreground/60 uppercase tracking-wider">
-              <span className="w-1.5 h-1.5 rounded-full bg-red-500" />
-              CWA {cwaCount}
-            </span>
-            <span className="inline-flex items-center gap-1 text-[9.5px] text-muted-foreground/60 uppercase tracking-wider">
-              <span className="w-1.5 h-1.5 rounded-full bg-teal-400" />
-              Simpl {simpCount}
-            </span>
-          </div>
-        </div>
+    <div className="px-4 py-2.5 flex items-center gap-3 bg-popover/40 border-b border-xs border-border-soft">
+      {/* Left: title + total + company dots inline (mirrors Tasks header) */}
+      <div className="flex items-center gap-2 min-w-0 flex-shrink-0">
+        <span className="text-[11px] text-foreground uppercase tracking-[0.14em] font-bold">
+          Meetings
+        </span>
+        <span className="text-[11px] text-text-tertiary tabular-nums font-medium">
+          {list.length}
+        </span>
+        <span className="inline-flex items-center gap-1 ml-1">
+          <span
+            className="w-1.5 h-1.5 rounded-full bg-primary"
+            title={`CodeWithAli · ${cwaCount}`}
+          />
+          <span className="text-[10px] text-text-tertiary tabular-nums">{cwaCount}</span>
+        </span>
+        <span className="inline-flex items-center gap-1">
+          <span
+            className="w-1.5 h-1.5 rounded-full bg-teal-400"
+            title={`Simplicity · ${simpCount}`}
+          />
+          <span className="text-[10px] text-text-tertiary tabular-nums">{simpCount}</span>
+        </span>
       </div>
-      <div className="flex items-center gap-2 shrink-0">
+
+      <div className="flex-1" />
+
+      <div className="flex items-center gap-1.5 shrink-0">
         <UserView
           userRole={[
             "CEO", "COO", "ProjectManager", "Marketing",
@@ -287,9 +431,9 @@ const Meetings = () => {
         {Header}
         <div className="flex-1 flex items-center justify-center px-5 pb-5">
           <div className="text-center">
-            <Calendar className="h-8 w-8 text-white/[0.06] mx-auto mb-2" />
-            <p className="text-[13px] text-muted-foreground/50">No upcoming meetings</p>
-            <p className="text-[11px] text-muted-foreground/30 mt-1">
+            <Calendar className="h-7 w-7 text-foreground/10 mx-auto mb-2" />
+            <p className="text-[12.5px] text-text-tertiary">No upcoming meetings</p>
+            <p className="text-[10.5px] text-text-tertiary/60 mt-1">
               Say "AXON, schedule a meeting tomorrow at 3pm."
             </p>
           </div>
@@ -315,18 +459,46 @@ const Meetings = () => {
       <div className="relative bg-card border-xs border-border-soft rounded-xl h-full overflow-hidden flex flex-col">
         <div className="absolute inset-x-0 top-0 h-[1px] bg-gradient-to-r from-transparent via-primary/40 to-transparent pointer-events-none" />
         {Header}
-        <div className="px-5 pb-5 flex-1 min-h-0">
-          {/* *This is 60px bigger than Tasks ScrollArea fixed height */}
+        <div className="flex-1 min-h-0">
           <ScrollArea className="h-[400px]">
-            <div className="space-y-2">
-              {list.map((meeting: any, i: number) => (
+            <div>
+              {groupMeetingsByDate(list).map((group, gi) => (
                 <motion.div
-                  key={meeting.id ?? i}
+                  key={group.key}
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
-                  transition={{ delay: i * 0.03 }}
+                  transition={{ delay: gi * 0.04 }}
                 >
-                  <MeetingRow meeting={meeting} onEdit={editMeeting} onDelete={delMeeting} />
+                  {/* Section header for this date group. Today /
+                   *  Tomorrow get a primary-tinted label so they
+                   *  read as the active surface. */}
+                  <div className="sticky top-0 z-10 flex items-center gap-2 px-4 py-2 bg-popover/70 backdrop-blur-sm border-y border-xs border-border/15">
+                    <span
+                      className={
+                        "text-[10px] font-bold uppercase tracking-[0.14em] " +
+                        (group.isImminent ? "text-primary" : "text-foreground/80")
+                      }
+                    >
+                      {group.label}
+                    </span>
+                    {group.sublabel && (
+                      <span className="text-[10px] text-text-tertiary">
+                        · {group.sublabel}
+                      </span>
+                    )}
+                    <span className="ml-auto text-[10px] text-text-tertiary tabular-nums uppercase tracking-wider">
+                      {group.meetings.length}
+                    </span>
+                  </div>
+
+                  {group.meetings.map((meeting: any, i: number) => (
+                    <MeetingRow
+                      key={meeting.id ?? `${group.key}-${i}`}
+                      meeting={meeting}
+                      onEdit={editMeeting}
+                      onDelete={delMeeting}
+                    />
+                  ))}
                 </motion.div>
               ))}
             </div>

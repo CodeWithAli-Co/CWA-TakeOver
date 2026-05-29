@@ -24,10 +24,10 @@ import {
   TabsTrigger,
 } from "@/components/ui/shadcnComponents/tabs";
 
-// ── Company accent (left rail only — no second pill on the row) ──
+// ── Company accent (small dot on the right of the row) ──
 const COMPANY_STYLE = {
-  CodeWithAli: { label: "CWA",   rail: "bg-primary",      dot: "bg-primary" },
-  simplicity:  { label: "SIMPL", rail: "bg-teal-400",     dot: "bg-teal-400" },
+  CodeWithAli: { label: "CWA",   dot: "bg-primary" },
+  simplicity:  { label: "SIMPL", dot: "bg-teal-400" },
 } as const;
 
 type CompanyKey = keyof typeof COMPANY_STYLE;
@@ -36,16 +36,20 @@ function companyStyle(co: string | undefined | null) {
   return COMPANY_STYLE.CodeWithAli;
 }
 
-// ── Priority — colored dot + label, no bordered pill ───────────
+// ── Priority — left rail colour + foreground tint for the label. ──
+// Rail is solid 2px of colour at low alpha on the left edge of every
+// task row; the only big visual signal of priority. Avoids per-row
+// chips on every task.
 const PRIORITY_STYLE: Record<
   "high" | "medium" | "low",
-  { dot: string; label: string; text: string }
+  { rail: string; text: string; label: string }
 > = {
-  high:   { dot: "bg-destructive", label: "High",   text: "text-destructive" },
-  medium: { dot: "bg-warning",     label: "Medium", text: "text-warning" },
-  low:    { dot: "bg-success",     label: "Low",    text: "text-success" },
+  high:   { rail: "bg-destructive",        text: "text-destructive", label: "High" },
+  medium: { rail: "bg-warning",            text: "text-warning",     label: "Medium" },
+  low:    { rail: "bg-success",            text: "text-success",     label: "Low" },
 };
 
+// ── Status — small icon, sized to read at the start of the row ──
 const STATUS_STYLE: Record<
   string,
   { icon: typeof Circle; chip: string }
@@ -99,27 +103,36 @@ function TaskItem({ task }: { task: any }) {
       initial={{ opacity: 0, y: 4 }}
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, y: -4 }}
-      className="relative group flex items-stretch rounded-lg bg-card border-xs border-border-soft overflow-hidden"
+      // Flush row — no per-row card. Sits inside the parent panel
+      // and is separated from siblings by a hairline. Hover lifts a
+      // very faint surface so the row reads as a hit target without
+      // adding chrome.
+      className="
+        relative group flex items-stretch
+        border-b border-xs border-border/20 last:border-b-0
+        hover:bg-foreground/[0.025] transition-colors
+      "
     >
-      {/* Left rail — company color (the only company indicator on the row) */}
-      <div className={`w-[2px] ${co.rail} opacity-80`} />
+      {/* Priority rail — 2px solid colour on the left edge. This is
+       *  the one strong colour signal per row; the priority label
+       *  itself recedes into the meta line. */}
+      <div className={`w-[2px] ${prio.rail} opacity-90`} />
 
-      <div className="flex-1 min-w-0 flex items-center gap-3 py-3 pl-3.5 pr-3.5">
-        {/* Status icon */}
-        <Stat className={`h-4 w-4 shrink-0 ${STATUS_STYLE[task.status]?.chip ?? ""}`} />
+      <div className="flex-1 min-w-0 flex items-center gap-3 py-2.5 pl-3 pr-3">
+        {/* Status icon — small, recedes when not focal */}
+        <Stat className={`h-3.5 w-3.5 shrink-0 ${STATUS_STYLE[task.status]?.chip ?? ""}`} />
 
-        {/* Title + inline metadata */}
+        {/* Title + meta */}
         <div className="flex-1 min-w-0">
           <div className="text-[13px] font-medium text-foreground truncate leading-snug">
             {task.title}
           </div>
 
-          {/* Dot-separated metadata row — priority · deadline · company */}
-          <div className="flex items-center gap-2 mt-0.5 text-[10.5px] text-text-tertiary">
-            <span className={`inline-flex items-center gap-1 ${prio.text}`}>
-              <span className={`w-1.5 h-1.5 rounded-full ${prio.dot}`} />
-              <span className="font-medium uppercase tracking-wider">{prio.label}</span>
-            </span>
+          {/* Meta — only show genuinely-useful info; priority is on
+           *  the left rail already so it's just a quiet text label
+           *  here. Company is a small coloured dot at the end. */}
+          <div className="flex items-center gap-1.5 mt-0.5 text-[10.5px] text-text-tertiary">
+            <span className={`${prio.text} font-medium`}>{prio.label}</span>
 
             {task.deadline && (
               <>
@@ -136,38 +149,39 @@ function TaskItem({ task }: { task: any }) {
             )}
 
             <span className="text-text-tertiary/40">·</span>
-            <span className="uppercase tracking-wider">{co.label}</span>
+            <span className={`inline-block w-1.5 h-1.5 rounded-full ${co.dot}`} />
           </div>
         </div>
 
-        {/* Row actions — hover-reveal, slim, token-driven */}
+        {/* Row actions — hover-reveal, single-action cycle button.
+         *  Compact ghost button using neutral surface tokens. */}
         <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0">
           {task.status === "to-do" && (
-            <motion.button
-              whileTap={{ scale: 0.96 }}
-              className="text-[10px] px-2.5 h-6 rounded-md bg-background/60 hover:bg-warning/10 hover:text-warning border-xs border-border-soft text-text-tertiary uppercase tracking-wider font-semibold transition-colors"
+            <button
+              type="button"
+              className="text-[10px] px-2 h-6 rounded-md hover:bg-warning/10 hover:text-warning text-text-tertiary uppercase tracking-wider font-semibold transition-colors"
               onClick={() => setStatus("in-progress")}
             >
               Start
-            </motion.button>
+            </button>
           )}
           {task.status === "in-progress" && (
-            <motion.button
-              whileTap={{ scale: 0.96 }}
-              className="text-[10px] px-2.5 h-6 rounded-md bg-background/60 hover:bg-success/10 hover:text-success border-xs border-border-soft text-text-tertiary uppercase tracking-wider font-semibold transition-colors"
+            <button
+              type="button"
+              className="text-[10px] px-2 h-6 rounded-md hover:bg-success/10 hover:text-success text-text-tertiary uppercase tracking-wider font-semibold transition-colors"
               onClick={() => setStatus("done")}
             >
               Done
-            </motion.button>
+            </button>
           )}
           {task.status === "done" && (
-            <motion.button
-              whileTap={{ scale: 0.96 }}
-              className="text-[10px] px-2.5 h-6 rounded-md bg-background/60 hover:bg-popover border-xs border-border-soft text-text-tertiary hover:text-foreground uppercase tracking-wider font-semibold transition-colors"
+            <button
+              type="button"
+              className="text-[10px] px-2 h-6 rounded-md hover:bg-popover text-text-tertiary hover:text-foreground uppercase tracking-wider font-semibold transition-colors"
               onClick={() => setStatus("to-do")}
             >
               Reopen
-            </motion.button>
+            </button>
           )}
         </div>
       </div>
@@ -218,51 +232,54 @@ export const TasksComponent = () => {
 
   return (
     <div className="relative bg-card border-xs border-border-soft rounded-xl h-full overflow-hidden flex flex-col">
-      {/* Single-row header — title + counts + filter tabs + search + add,
-          all on one line so the body has more room for the actual task
-          list. Title block collapses CWA/Simpl badges inline so the
-          header doesn't get vertically tall. */}
-      <div className="px-5 py-3 flex items-center gap-4 bg-popover/70 border-b border-xs border-border-soft">
-        {/* Left: title + counts, inline */}
-        <div className="flex items-center gap-3 min-w-0 flex-shrink-0">
-          <div className="p-1.5 rounded-md bg-gradient-to-br from-primary/15 to-primary/[0.03] border border-primary/20">
-            <ListTodo className="h-3.5 w-3.5 text-primary" />
-          </div>
-          <div className="flex items-center gap-3 min-w-0">
-            <span className="text-[11px] text-foreground/90 uppercase tracking-[0.16em] font-semibold">
-              Tasks
-            </span>
-            <span className="text-[10.5px] text-text-tertiary tabular-nums">{totalTasks}</span>
-            <span className="text-text-tertiary/60">·</span>
-            <span className="inline-flex items-center gap-1 text-[9.5px] text-text-tertiary uppercase tracking-wider">
-              <span className="w-1 h-1 rounded-full bg-primary" />
-              CWA {cwaCount}
-            </span>
-            <span className="inline-flex items-center gap-1 text-[9.5px] text-text-tertiary uppercase tracking-wider">
-              <span className="w-1 h-1 rounded-full bg-teal-400" />
-              Simpl {simpCount}
-            </span>
-          </div>
+      {/* Single calm header — title + count + tiny company dots
+       *  inline, filter tabs in the middle, search/add on the right.
+       *  No icon chip, no second meta line, no bordered tabs cluster.
+       *  Sits on bg-popover/40 so it reads as the same surface as
+       *  the row body, just slightly elevated. */}
+      <div className="px-4 py-2.5 flex items-center gap-3 bg-popover/40 border-b border-xs border-border-soft">
+        {/* Left: title + total + company dots */}
+        <div className="flex items-center gap-2 min-w-0 flex-shrink-0">
+          <span className="text-[11px] text-foreground uppercase tracking-[0.14em] font-bold">
+            Tasks
+          </span>
+          <span className="text-[11px] text-text-tertiary tabular-nums font-medium">
+            {totalTasks}
+          </span>
+          <span className="inline-flex items-center gap-1 ml-1">
+            <span
+              className="w-1.5 h-1.5 rounded-full bg-primary"
+              title={`CodeWithAli · ${cwaCount}`}
+            />
+            <span className="text-[10px] text-text-tertiary tabular-nums">{cwaCount}</span>
+          </span>
+          <span className="inline-flex items-center gap-1">
+            <span
+              className="w-1.5 h-1.5 rounded-full bg-teal-400"
+              title={`Simplicity · ${simpCount}`}
+            />
+            <span className="text-[10px] text-text-tertiary tabular-nums">{simpCount}</span>
+          </span>
         </div>
 
-        {/* Middle: filter tabs (was below the header) */}
+        {/* Middle: filter tabs */}
         <Tabs value={selectedTab} onValueChange={(v) => setSelectedTab(v as any)}>
-          <TabsList className="bg-background/60 border-xs border-border-soft rounded-lg h-7 p-0.5">
+          <TabsList className="bg-transparent rounded-md h-7 p-0 gap-0.5">
             <TabsTrigger
               value="to-do"
-              className="data-[state=active]:bg-primary/15 data-[state=active]:text-primary text-text-tertiary rounded-md text-[10.5px] h-6 px-2.5 font-semibold uppercase tracking-wider"
+              className="data-[state=active]:bg-primary/12 data-[state=active]:text-primary text-text-tertiary rounded-md text-[10.5px] h-6 px-2 font-semibold uppercase tracking-wider"
             >
               Open · {todoCount}
             </TabsTrigger>
             <TabsTrigger
               value="in-progress"
-              className="data-[state=active]:bg-warning/15 data-[state=active]:text-warning text-text-tertiary rounded-md text-[10.5px] h-6 px-2.5 font-semibold uppercase tracking-wider"
+              className="data-[state=active]:bg-warning/12 data-[state=active]:text-warning text-text-tertiary rounded-md text-[10.5px] h-6 px-2 font-semibold uppercase tracking-wider"
             >
               Active · {inProgressCount}
             </TabsTrigger>
             <TabsTrigger
               value="done"
-              className="data-[state=active]:bg-success/15 data-[state=active]:text-success text-text-tertiary rounded-md text-[10.5px] h-6 px-2.5 font-semibold uppercase tracking-wider"
+              className="data-[state=active]:bg-success/12 data-[state=active]:text-success text-text-tertiary rounded-md text-[10.5px] h-6 px-2 font-semibold uppercase tracking-wider"
             >
               Done · {doneCount}
             </TabsTrigger>
@@ -271,29 +288,29 @@ export const TasksComponent = () => {
 
         <div className="flex-1" />
 
-        {/* Right: modern search input with icon + clean add button */}
-        <div className="flex items-center gap-2 shrink-0">
+        {/* Right: compact search + add button */}
+        <div className="flex items-center gap-1.5 shrink-0">
           <div className="relative">
             <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3 w-3 text-text-tertiary pointer-events-none" />
             <Input
-              placeholder="Search…"
+              placeholder="Search"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-[170px] h-7 pl-7 pr-2 text-[11px] bg-background/60 border-xs border-border-soft placeholder:text-text-tertiary text-foreground focus:border-foreground/20 focus-visible:ring-0 rounded-lg"
+              className="w-[150px] h-7 pl-7 pr-2 text-[11px] bg-background/40 border-xs border-border-soft placeholder:text-text-tertiary text-foreground focus:border-primary/30 focus-visible:ring-0 rounded-md"
             />
           </div>
           <AddTodo Users={AllEmployees || []} homeDash />
         </div>
       </div>
 
-      <div className="px-5 pb-5 flex-1 min-h-0">
+      <div className="flex-1 min-h-0">
         {filteredTasks.length === 0 ? (
           <div className="h-full flex flex-col items-center justify-center text-center py-8">
-            <ListTodo className="h-8 w-8 text-white/[0.06] mb-2" />
-            <p className="text-[12.5px] text-muted-foreground/50">
+            <ListTodo className="h-7 w-7 text-foreground/10 mb-2" />
+            <p className="text-[12.5px] text-text-tertiary">
               No {selectedTab === "to-do" ? "open" : selectedTab} tasks
             </p>
-            <p className="text-[10.5px] text-muted-foreground/30 mt-1">
+            <p className="text-[10.5px] text-text-tertiary/60 mt-1">
               {selectedTab === "to-do"
                 ? "You're clear — ask AXON to add one."
                 : "Nothing here."}
@@ -307,7 +324,6 @@ export const TasksComponent = () => {
                 initial={{ opacity: 0, y: 4 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -4 }}
-                className="space-y-1.5"
               >
                 {filteredTasks.map((task: any) => (
                   <TaskItem key={task.todo_id} task={task} />
