@@ -34,6 +34,7 @@ import {
   Network,
   Wallet,
   Coins,
+  Briefcase,
   type LucideIcon,
 } from "lucide-react";
 
@@ -85,6 +86,12 @@ export const internData = {
       url: "/workspace",
       isActive: false,
       icon: FileText,
+    },
+    {
+      title: "Projects",
+      url: "/projects",
+      isActive: false,
+      icon: Briefcase,
     },
     {
       title: "Task",
@@ -145,6 +152,12 @@ export const memberData = {
       url: "/workspace",
       isActive: false,
       icon: FileText,
+    },
+    {
+      title: "Projects",
+      url: "/projects",
+      isActive: false,
+      icon: Briefcase,
     },
     {
       title: "Task",
@@ -222,6 +235,12 @@ export const accountManagerData = {
       url: "/workspace",
       isActive: false,
       icon: FileText,
+    },
+    {
+      title: "Projects",
+      url: "/projects",
+      isActive: false,
+      icon: Briefcase,
     },
     {
       title: "Task",
@@ -313,6 +332,12 @@ export const marketingData = {
       url: "/workspace",
       isActive: false,
       icon: FileText,
+    },
+    {
+      title: "Projects",
+      url: "/projects",
+      isActive: false,
+      icon: Briefcase,
     },
     {
       title: "Task",
@@ -527,6 +552,13 @@ export const headOfInternalAffairsData = {
       url: "/workspace",
       isActive: false,
       icon: FileText,
+      company: "codeWithAli" as const,
+    },
+    {
+      title: "Projects",
+      url: "/projects",
+      isActive: false,
+      icon: Briefcase,
       company: "codeWithAli" as const,
     },
     {
@@ -814,6 +846,13 @@ export const headOfGrowthData = {
       company: "codeWithAli" as const,
     },
     {
+      title: "Projects",
+      url: "/projects",
+      isActive: false,
+      icon: Briefcase,
+      company: "codeWithAli" as const,
+    },
+    {
       title: "Task",
       url: "/task",
       isActive: false,
@@ -1066,6 +1105,12 @@ export const adminData = {
       icon: FileText,
     },
     {
+      title: "Projects",
+      url: "/projects",
+      isActive: false,
+      icon: Briefcase,
+    },
+    {
       title: "Task",
       url: "/task",
       isActive: false,
@@ -1179,6 +1224,12 @@ export const projectManagerData = {
       url: "/workspace",
       isActive: false,
       icon: FileText,
+    },
+    {
+      title: "Projects",
+      url: "/projects",
+      isActive: false,
+      icon: Briefcase,
     },
     {
       title: "Task",
@@ -1316,6 +1367,12 @@ export const securityEngineerData = {
       url: "/workspace",
       isActive: false,
       icon: FileText,
+    },
+    {
+      title: "Projects",
+      url: "/projects",
+      isActive: false,
+      icon: Briefcase,
     },
     {
       title: "Task",
@@ -1549,6 +1606,13 @@ export const cooData = {
       company: "codeWithAli" as const,
     },
     {
+      title: "Projects",
+      url: "/projects",
+      isActive: false,
+      icon: Briefcase,
+      company: "codeWithAli" as const,
+    },
+    {
       title: "Task",
       url: "/task",
       isActive: false,
@@ -1719,6 +1783,13 @@ export const ceoData = {
       url: "/workspace",
       isActive: false,
       icon: FileText,
+      company: "codeWithAli" as const,
+    },
+    {
+      title: "Projects",
+      url: "/projects",
+      isActive: false,
+      icon: Briefcase,
       company: "codeWithAli" as const,
     },
     {
@@ -2025,6 +2096,12 @@ export const cfoData = {
       url: "/workspace",
       isActive: false,
       icon: FileText,
+    },
+    {
+      title: "Projects",
+      url: "/projects",
+      isActive: false,
+      icon: Briefcase,
     },
     {
       title: "Task",
