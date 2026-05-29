@@ -1461,142 +1461,12 @@ export const cooData = {
     },
   ],
   navMain: [
+    // ── Standalones up top — the rest is grouped under collapsibles. ──
     {
       title: "Home",
       url: "/",
       isActive: false,
       icon: Home,
-    },
-    {
-      // Mixture-of-Operators control room. Surfaced for leadership
-      // roles so they have visibility into the agent swarm.
-      title: "Axon Swarm",
-      url: "/axonSwarm",
-      isActive: false,
-      icon: Network,
-    },
-    {
-      // Capital Plan — fundraising + budget + runway + AXON-advised
-      // scenario modeling. Gated to CEO/COO/CFO via is_finance_role().
-      title: "Capital Plan",
-      url: "/capitalPlan",
-      isActive: false,
-      icon: Coins,
-    },
-    {
-      title: "Roadmap",
-      url: "/roadmap",
-      isActive: false,
-      icon: Map,
-    },
-    {
-      title: "Analytics",
-      url: "/analytics",
-      isActive: false,
-      icon: BarChart3,
-    },
-    {
-      title: "Candidates",
-      url: "/hiring",
-      isActive: false,
-      icon: Inbox,
-    },
-    {
-      title: "Offer Letters",
-      url: "/offers",
-      isActive: false,
-      icon: FileText,
-    },
-    {
-      title: "Onboarding",
-      url: "/onboarding",
-      isActive: false,
-      icon: ClipboardCheck,
-    },
-    {
-      title: "Submit Report",
-      url: "/reports/submit",
-      isActive: false,
-      icon: Send,
-    },
-    {
-      title: "Reports",
-      url: "/reports",
-      isActive: false,
-      icon: Inbox,
-    },
-    {
-      // Code module — GitHub-lookalike repo dashboard. The
-      // `items` array makes the sidebar render it as a folder
-      // with collapsible children (Repositories / Pull Requests
-      // / Activity). The parent itself links to /code so a
-      // click on the folder name also opens the dashboard.
-      title: "Code",
-      url: "/code",
-      isActive: false,
-      icon: CodeIcon,
-      items: [
-        { title: "Repositories", url: "/code" },
-        { title: "Pull Requests", url: "/code" },
-        { title: "AI Activity", url: "/code" },
-      ],
-    },
-    {
-      title: "Components",
-      url: "/components",
-      isActive: false,
-      icon: Package,
-    },
-    // ── CWA-only items ──
-    {
-      title: "Personal Life",
-      url: "/personal",
-      isActive: false,
-      icon: User,
-      company: "codeWithAli" as const,
-    },
-    {
-      title: "Graduation Plan",
-      url: "/graduationPlan",
-      isActive: false,
-      icon: GraduationCap,
-      company: "codeWithAli" as const,
-    },
-    {
-      title: "Admin Permissions",
-      url: "/details",
-      icon: SquareTerminal,
-      isActive: false,
-      company: "codeWithAli" as const,
-      items: [
-        {
-          title: "Account Management",
-          url: "/details",
-        },
-        {
-          title: "Contract",
-          url: "/contractGenerator",
-        },
-        {
-          title: "Mod logs",
-          url: "/mod_logs",
-        },
-        {
-          title: "Bio",
-          url: "/bio",
-        },
-        {
-          title: "Cold Email Generator",
-          url: "/coldEmail",
-        },
-      ],
-    },
-    {
-      title: "Invoicer",
-      url: "/invoicer",
-      icon: File,
-      isActive: false,
-      company: "codeWithAli" as const,
     },
     {
       title: "Chat",
@@ -1612,67 +1482,100 @@ export const cooData = {
       icon: FileText,
       company: "codeWithAli" as const,
     },
+    // ── Hiring & people ──
     {
-      title: "Projects",
-      url: "/projects",
+      title: "Hiring",
+      url: "/hiring",
+      icon: ClipboardCheck,
       isActive: false,
-      icon: Briefcase,
       company: "codeWithAli" as const,
-    },
-    {
-      title: "Strategy",
-      url: "/strategy",
-      isActive: false,
-      icon: Compass,
-    },
-    {
-      title: "Task",
-      url: "/task",
-      isActive: false,
-      icon: ClipboardList,
-      company: "codeWithAli" as const,
-    },
-    {
-      title: "Weekly Quotas",
-      url: "/quota",
-      isActive: false,
-      icon: Target,
-      company: "codeWithAli" as const,
-    },
-    {
-      title: "Timesheet",
-      url: "/timesheet",
-      isActive: false,
-      icon: Clock,
-      company: "codeWithAli" as const,
-    },
-    // (Time Tracking has been merged into the Timesheet entry above.)
-    {
-      title: "Arabic Learning",
-      url: "/arabic",
-      isActive: false,
-      icon: Languages,
-      company: "codeWithAli" as const,
+      items: [
+        { title: "Candidates", url: "/hiring" },
+        { title: "Offer Letters", url: "/offers" },
+        { title: "Onboarding", url: "/onboarding" },
+        { title: "Users", url: "/employee" },
+        { title: "Training Plan", url: "/trainingplan" },
+        { title: "Contract", url: "/contractGenerator" },
+      ],
     },
 
-    // ── Shared items ──
+    // ── Finance ──
     {
-      title: "Users",
-      url: "/employee",
-      icon: Users,
-      isActive: false,
-    },
-    {
-      title: "Finance Dashboard",
+      title: "Finance",
       url: "/financialDashboard",
       icon: DollarSign,
       isActive: false,
+      company: "codeWithAli" as const,
+      items: [
+        { title: "Dashboard", url: "/financialDashboard" },
+        { title: "Invoicer", url: "/invoicer" },
+        { title: "Bookkeeping", url: "/bookkeeping" },
+      ],
     },
+
+    // ── Day-to-day operations ──
     {
-      title: "Bookkeeping",
-      url: "/bookkeeping",
-      icon: BookCopy,
+      title: "Operations",
+      url: "/task",
+      icon: ClipboardList,
       isActive: false,
+      company: "codeWithAli" as const,
+      items: [
+        { title: "Tasks", url: "/task" },
+        { title: "Projects", url: "/projects" },
+        { title: "Weekly Quotas", url: "/quota" },
+        { title: "Timesheet", url: "/timesheet" },
+      ],
+    },
+
+    // ── Insights, planning, building blocks ──
+    {
+      title: "Insights",
+      url: "/analytics",
+      icon: BarChart3,
+      isActive: false,
+      company: "codeWithAli" as const,
+      items: [
+        { title: "Analytics", url: "/analytics" },
+        { title: "Submit Report", url: "/reports/submit" },
+        { title: "Reports", url: "/reports" },
+        { title: "Code", url: "/code" },
+        { title: "Roadmap", url: "/roadmap" },
+        { title: "Components", url: "/components" },
+      ],
+    },
+
+    // ── Personal space ──
+    {
+      title: "Personal",
+      url: "/personal",
+      icon: User,
+      isActive: false,
+      company: "codeWithAli" as const,
+      items: [
+        { title: "Personal Life", url: "/personal" },
+        { title: "Graduation Plan", url: "/graduationPlan" },
+        { title: "Arabic Learning", url: "/arabic" },
+        { title: "Bio", url: "/bio" },
+        { title: "Cold Email", url: "/coldEmail" },
+      ],
+    },
+
+    // ── Admin / privileged controls ──
+    {
+      title: "Admin",
+      url: "/details",
+      icon: SquareTerminal,
+      isActive: false,
+      company: "codeWithAli" as const,
+      items: [
+        { title: "Account Management", url: "/details" },
+        { title: "Axon Swarm", url: "/axonSwarm" },
+        { title: "Strategy", url: "/strategy" },
+        { title: "Funding", url: "/funding" },
+        { title: "Mod Logs", url: "/mod_logs" },
+        { title: "Capital Plan", url: "/capitalPlan" },
+      ],
     },
 
     // ── Simplicity-only items ──
@@ -1768,23 +1671,6 @@ export const ceoData = {
       icon: Home,
     },
     {
-      // Mixture-of-Operators control room. Surfaced for leadership
-      // roles so they have visibility into the agent swarm.
-      title: "Axon Swarm",
-      url: "/axonSwarm",
-      isActive: false,
-      icon: Network,
-    },
-    {
-      // Funding strategy dashboard — multi-business cap table + raise
-      // plan with scenario toggles. Sits next to Axon Swarm because
-      // these two are the most leverage-dense executive surfaces.
-      title: "Funding",
-      url: "/funding",
-      isActive: false,
-      icon: Wallet,
-    },
-    {
       title: "Chat",
       url: "/chat",
       isActive: false,
@@ -1798,31 +1684,6 @@ export const ceoData = {
       icon: FileText,
       company: "codeWithAli" as const,
     },
-    {
-      title: "Projects",
-      url: "/projects",
-      isActive: false,
-      icon: Briefcase,
-      company: "codeWithAli" as const,
-    },
-    {
-      title: "Strategy",
-      url: "/strategy",
-      isActive: false,
-      icon: Compass,
-    },
-    {
-      // Top-level Candidates entry (NOT company-scoped so it's always
-      // visible regardless of activeCompany toggle). The nested
-      // Candidates inside the Hiring group below disappears when
-      // activeCompany === 'simplicityFunds' because the group itself
-      // is company:'codeWithAli'-scoped.
-      title: "Candidates",
-      url: "/hiring",
-      isActive: false,
-      icon: Inbox,
-    },
-
     // ── Hiring & people ──
     {
       title: "Hiring",
@@ -1863,6 +1724,7 @@ export const ceoData = {
       company: "codeWithAli" as const,
       items: [
         { title: "Tasks", url: "/task" },
+        { title: "Projects", url: "/projects" },
         { title: "Weekly Quotas", url: "/quota" },
         { title: "Timesheet", url: "/timesheet" },
       ],
@@ -1910,6 +1772,9 @@ export const ceoData = {
       company: "codeWithAli" as const,
       items: [
         { title: "Account Management", url: "/details" },
+        { title: "Axon Swarm", url: "/axonSwarm" },
+        { title: "Strategy", url: "/strategy" },
+        { title: "Funding", url: "/funding" },
         { title: "Mod Logs", url: "/mod_logs" },
         { title: "Capital Plan", url: "/capitalPlan" },
       ],
