@@ -1153,8 +1153,33 @@ export function AxonProvider({ children }: { children: React.ReactNode }) {
   // ── Proactive route observations ───────────────────────────────
   // On pathname change, emit ONE short line if we have something useful
   // to say, subject to a rate limit so rapid navigation doesn't spam.
+  //
+  // Dedupe is TOPIC-based, not path-based: the overdue-task nag appears
+  // on both "/" and "/task", and bouncing between pages used to make
+  // AXON repeat it endlessly. We now key each observation to a topic
+  // (e.g. all "N overdue task(s)" lines → topic "overdue") and suppress
+  // a topic if it was spoken within its cooldown. The overdue nag gets
+  // a long cooldown so AXON mentions it at most once every few hours.
   const lastObservationAtRef = useRef(0);
   const lastObservedPathRef = useRef<string | null>(null);
+  const spokenTopicsRef = useRef<Map<string, number>>(new Map());
+
+  // Cooldowns per topic (ms). Anything not listed uses DEFAULT.
+  const TOPIC_COOLDOWN_DEFAULT = 30 * 60 * 1000;   // 30 min for generic lines
+  const TOPIC_COOLDOWN_OVERDUE = Infinity;          // once per session — never repeats until restart
+
+  function topicOf(line: string): { key: string; cooldown: number } {
+    const lower = line.toLowerCase();
+    if (lower.includes("overdue task")) {
+      return { key: "overdue", cooldown: TOPIC_COOLDOWN_OVERDUE };
+    }
+    if (lower.includes("meeting") || lower.includes("calendar")) {
+      return { key: "calendar", cooldown: TOPIC_COOLDOWN_DEFAULT };
+    }
+    // Default: the exact line is its own topic.
+    return { key: `line:${line}`, cooldown: TOPIC_COOLDOWN_DEFAULT };
+  }
+
   useEffect(() => {
     if (!isAdmin || !settings.enabled || !settings.proactiveRouteObservations) return;
     const path = location.pathname;
@@ -1167,10 +1192,19 @@ export function AxonProvider({ children }: { children: React.ReactNode }) {
     if (voiceOutRef.current?.isSpeaking()) return;
 
     lastObservedPathRef.current = path;
-    lastObservationAtRef.current = now;
 
     observeRoute(path, activeCompanyRef.current).then((line) => {
       if (!line) return;
+
+      // Topic-level dedupe — suppress if we've said this topic recently.
+      const { key, cooldown } = topicOf(line);
+      const lastSaid = spokenTopicsRef.current.get(key) ?? 0;
+      if (Date.now() - lastSaid < cooldown) return;
+
+      // Commit timestamps only when we actually speak.
+      spokenTopicsRef.current.set(key, Date.now());
+      lastObservationAtRef.current = Date.now();
+
       appendTurn({
         id: newId("t"),
         role: "axon",
