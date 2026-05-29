@@ -137,15 +137,23 @@ export const AddMeeting = () => {
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        {/* Cleaned-up branded button — replaces the previous green
-            outline that didn't match the app's red/zinc language.
-            Same primary fill the AddTodo button uses, slim h-7 form
-            so it sits cleanly in the Meetings panel header. */}
+        {/* Dark inset, red outline, red text — the look the operator
+            specced. zinc-950 keeps the chip almost flush with the
+            canvas, with the primary border + label doing all the
+            colour work. Hover lifts the border slightly so the chip
+            still feels alive without growing in weight. */}
         <Button
           size="sm"
-          className="inline-flex items-center gap-1.5 h-7 px-3 rounded-md bg-primary/90 hover:bg-primary text-primary-foreground border border-primary/30 text-[11px] font-bold uppercase tracking-wider transition-colors"
+          className="
+            group inline-flex items-center gap-1.5 h-7 px-3 rounded-md
+            bg-zinc-900/20 hover:bg-zinc-900
+            border border-zinc-700/60 hover:border-primary/70
+            text-orange-500
+            text-[11px] font-bold uppercase tracking-wider
+            transition-colors
+          "
         >
-          <Plus className="h-3 w-3" />
+          <Plus className="h-3 w-3 transition-transform duration-200 group-hover:rotate-90" />
           Add Meeting
         </Button>
       </DialogTrigger>
@@ -427,7 +435,7 @@ export const AddMeeting = () => {
                 <Button
                   type="submit"
                   disabled={!canSubmit}
-                  className="bg-primary 
+                  className="bg-blue-500 
                   hover:bg-primary/80 
                   text-primary-foreground border border-primary/15 
                   disabled:opacity-50 disabled:cursor-not-allowed

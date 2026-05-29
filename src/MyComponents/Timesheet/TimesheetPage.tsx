@@ -24,9 +24,10 @@
  * redirect here.
  */
 
-import { useMemo, useState, Suspense } from "react";
+import { useEffect, useMemo, useState, Suspense } from "react";
 import { BarChart3, Clock, Plus, Loader2, Users, User, ChevronDown, AlertCircle, Copy, CalendarDays, CalendarRange } from "lucide-react";
 import { useScheduleStats } from "./scheduleStatsStore";
+import { useScheduleFocus } from "./scheduleFocusStore";
 import {
   startOfWeekMonday,
   endOfWeekSunday,
@@ -93,7 +94,36 @@ function TimesheetContent() {
   // -- View state --
   const [view, setView] = useState<ViewMode>("me");
   const [range, setRange] = useState<RangeMode>("week");
-  const [weekAnchor, setWeekAnchor] = useState<Date>(() => new Date());
+  // weekAnchor seeds from today, then a useEffect below consumes
+  // any pending focus date from useScheduleFocus and snaps to that
+  // day. This is how dashboard meeting clicks land the schedule on
+  // the right week.
+  const [weekAnchor, setWeekAnchor] = useState<Date>(() => {
+    const pending = useScheduleFocus.getState().focusDate;
+    return pending ?? new Date();
+  });
+
+  /**
+   * One-shot focus handoff. If a dashboard meeting row stored a
+   * date in useScheduleFocus before navigating, snap the schedule
+   * to that day and clear the store so future plain navigations
+   * (sidebar click, direct URL) still open on today. We listen for
+   * later changes too — if the user navigates from meetings → home
+   * → another meeting, the second visit also focuses correctly.
+   */
+  useEffect(() => {
+    const d = useScheduleFocus.getState().consume();
+    if (d) setWeekAnchor(d);
+    const unsub = useScheduleFocus.subscribe((state) => {
+      if (state.focusDate) {
+        setWeekAnchor(state.focusDate);
+        // consume the just-set focus
+        useScheduleFocus.setState({ focusDate: null });
+      }
+    });
+    return unsub;
+  }, []);
+
   // Stats modal is mounted globally at __root via ScheduleStatsModal +
   // ScheduleStatsShortcut. The toolbar "Stats" button just publishes
   // into the same store, so Cmd+Shift+S works from anywhere in the app.

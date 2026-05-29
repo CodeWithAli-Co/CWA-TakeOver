@@ -1,5 +1,7 @@
 import { ScrollArea } from "@/components/ui/shadcnComponents/scroll-area";
 import { motion } from "framer-motion";
+import { useNavigate } from "@tanstack/react-router";
+import { useScheduleFocus } from "@/MyComponents/Timesheet/scheduleFocusStore";
 import {
   Users,
   Video,
@@ -30,8 +32,8 @@ import { EditMeeting } from "../subForms/MeetingForms/editMeeting";
 
 // ── Company tinting — small dot at the right end of the row ──
 const COMPANY_STYLE = {
-  CodeWithAli: { label: "CWA",   dot: "bg-primary" },
-  simplicity:  { label: "SIMPL", dot: "bg-teal-400" },
+  CodeWithAli: { label: "CWA", dot: "bg-primary" },
+  simplicity: { label: "SIMPL", dot: "bg-teal-400" },
 } as const;
 
 function companyStyle(co: string | undefined | null) {
@@ -44,9 +46,24 @@ const TYPE_STYLE: Record<
   string,
   { icon: typeof Video; text: string; dot: string; label: string }
 > = {
-  online:      { icon: Video,  text: "text-sky-300",     dot: "bg-sky-400",     label: "Online" },
-  hybrid:      { icon: Video,  text: "text-violet-300",  dot: "bg-violet-400",  label: "Hybrid" },
-  "in-person": { icon: MapPin, text: "text-success",     dot: "bg-success",     label: "In person" },
+  online: {
+    icon: Video,
+    text: "text-sky-300",
+    dot: "bg-sky-400",
+    label: "Online",
+  },
+  hybrid: {
+    icon: Video,
+    text: "text-violet-300",
+    dot: "bg-violet-400",
+    label: "Hybrid",
+  },
+  "in-person": {
+    icon: MapPin,
+    text: "text-success",
+    dot: "bg-success",
+    label: "In person",
+  },
 };
 
 /**
@@ -60,8 +77,8 @@ const TYPE_STYLE: Record<
  */
 interface MeetingGroup {
   key: string;
-  label: string;       // "Today" / "Tomorrow" / "Thu" etc.
-  sublabel: string;    // "May 29" or "" when label is the full noun
+  label: string; // "Today" / "Tomorrow" / "Thu" etc.
+  sublabel: string; // "May 29" or "" when label is the full noun
   isImminent: boolean; // today / tomorrow → accent tint
   meetings: any[];
 }
@@ -70,9 +87,15 @@ function groupMeetingsByDate(meetings: any[]): MeetingGroup[] {
   const undated: any[] = [];
 
   for (const m of meetings) {
-    if (!m.date) { undated.push(m); continue; }
+    if (!m.date) {
+      undated.push(m);
+      continue;
+    }
     const d = new Date(m.date);
-    if (isNaN(d.getTime())) { undated.push(m); continue; }
+    if (isNaN(d.getTime())) {
+      undated.push(m);
+      continue;
+    }
     const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
     if (!buckets.has(key)) buckets.set(key, []);
     buckets.get(key)!.push(m);
@@ -87,24 +110,41 @@ function groupMeetingsByDate(meetings: any[]): MeetingGroup[] {
       const d = new Date(key + "T00:00:00");
       const target = new Date(d);
       target.setHours(0, 0, 0, 0);
-      const diff = Math.round((target.getTime() - today.getTime()) / 86_400_000);
+      const diff = Math.round(
+        (target.getTime() - today.getTime()) / 86_400_000,
+      );
 
       let label: string;
       let sublabel: string;
       let isImminent = false;
       if (diff === 0) {
         label = "Today";
-        sublabel = d.toLocaleDateString(undefined, { weekday: "short", month: "short", day: "numeric" });
+        sublabel = d.toLocaleDateString(undefined, {
+          weekday: "short",
+          month: "short",
+          day: "numeric",
+        });
         isImminent = true;
       } else if (diff === 1) {
         label = "Tomorrow";
-        sublabel = d.toLocaleDateString(undefined, { weekday: "short", month: "short", day: "numeric" });
+        sublabel = d.toLocaleDateString(undefined, {
+          weekday: "short",
+          month: "short",
+          day: "numeric",
+        });
         isImminent = true;
       } else if (diff > 1 && diff < 7) {
         label = d.toLocaleDateString(undefined, { weekday: "long" });
-        sublabel = d.toLocaleDateString(undefined, { month: "short", day: "numeric" });
+        sublabel = d.toLocaleDateString(undefined, {
+          month: "short",
+          day: "numeric",
+        });
       } else {
-        label = d.toLocaleDateString(undefined, { weekday: "short", month: "short", day: "numeric" });
+        label = d.toLocaleDateString(undefined, {
+          weekday: "short",
+          month: "short",
+          day: "numeric",
+        });
         sublabel = "";
       }
       return { key, label, sublabel, isImminent, meetings: ms };
@@ -149,7 +189,9 @@ function MeetingDateStripe({ dateStr }: { dateStr: string }) {
   today.setHours(0, 0, 0, 0);
   const target = new Date(d);
   target.setHours(0, 0, 0, 0);
-  const diff = Math.round((target.getTime() - today.getTime()) / (24 * 60 * 60 * 1000));
+  const diff = Math.round(
+    (target.getTime() - today.getTime()) / (24 * 60 * 60 * 1000),
+  );
 
   // Today + Tomorrow get an accent tint so the eye spots them fast.
   const isImminent = diff === 0 || diff === 1;
@@ -159,8 +201,14 @@ function MeetingDateStripe({ dateStr }: { dateStr: string }) {
   if (diff === 0) {
     return (
       <div className="w-12 flex flex-col items-center justify-center leading-none">
-        <span className={`text-[9px] font-bold uppercase tracking-wider ${tintWeekday}`}>Today</span>
-        <span className={`text-[14px] font-bold tabular-nums mt-0.5 ${tintDay}`}>
+        <span
+          className={`text-[9px] font-bold uppercase tracking-wider ${tintWeekday}`}
+        >
+          Today
+        </span>
+        <span
+          className={`text-[14px] font-bold tabular-nums mt-0.5 ${tintDay}`}
+        >
           {d.toLocaleDateString(undefined, { day: "numeric" })}
         </span>
       </div>
@@ -169,8 +217,14 @@ function MeetingDateStripe({ dateStr }: { dateStr: string }) {
   if (diff === 1) {
     return (
       <div className="w-12 flex flex-col items-center justify-center leading-none">
-        <span className={`text-[9px] font-bold uppercase tracking-wider ${tintWeekday}`}>Tom.</span>
-        <span className={`text-[14px] font-bold tabular-nums mt-0.5 ${tintDay}`}>
+        <span
+          className={`text-[9px] font-bold uppercase tracking-wider ${tintWeekday}`}
+        >
+          Tom.
+        </span>
+        <span
+          className={`text-[14px] font-bold tabular-nums mt-0.5 ${tintDay}`}
+        >
           {d.toLocaleDateString(undefined, { day: "numeric" })}
         </span>
       </div>
@@ -178,7 +232,9 @@ function MeetingDateStripe({ dateStr }: { dateStr: string }) {
   }
   return (
     <div className="w-12 flex flex-col items-center justify-center leading-none">
-      <span className={`text-[9px] font-bold uppercase tracking-wider ${tintWeekday}`}>
+      <span
+        className={`text-[9px] font-bold uppercase tracking-wider ${tintWeekday}`}
+      >
         {d.toLocaleDateString(undefined, { weekday: "short" })}
       </span>
       <span className={`text-[14px] font-bold tabular-nums mt-0.5 ${tintDay}`}>
@@ -199,32 +255,85 @@ function formatDate(dateStr: string) {
   today.setHours(0, 0, 0, 0);
   const target = new Date(d);
   target.setHours(0, 0, 0, 0);
-  const diff = Math.round((target.getTime() - today.getTime()) / (24 * 60 * 60 * 1000));
+  const diff = Math.round(
+    (target.getTime() - today.getTime()) / (24 * 60 * 60 * 1000),
+  );
   if (diff === 0) return "Today";
   if (diff === 1) return "Tomorrow";
-  if (diff < 7 && diff >= 0) return d.toLocaleDateString(undefined, { weekday: "long" });
-  return d.toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" });
+  if (diff < 7 && diff >= 0)
+    return d.toLocaleDateString(undefined, { weekday: "long" });
+  return d.toLocaleDateString(undefined, {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  });
 }
 
 // ── Meeting Row ────────────────────────────────────────────────
-function MeetingRow({ meeting, onEdit, onDelete }: { meeting: any; onEdit: (id: number) => void; onDelete: (id: number) => void }) {
+function MeetingRow({
+  meeting,
+  onEdit,
+  onDelete,
+}: {
+  meeting: any;
+  onEdit: (id: number) => void;
+  onDelete: (id: number) => void;
+}) {
   const co = companyStyle(meeting.company);
-  const typeInfo = meeting.meeting_type ? TYPE_STYLE[meeting.meeting_type] : null;
+  const typeInfo = meeting.meeting_type
+    ? TYPE_STYLE[meeting.meeting_type]
+    : null;
   const isHybridLoc = (loc: any): loc is { address: string; url: string } =>
     typeof loc === "object" && loc !== null && "address" in loc && "url" in loc;
+
+  const navigate = useNavigate();
+  const setFocusDate = useScheduleFocus((s) => s.setFocusDate);
+
+  /**
+   * Click anywhere on the row → /schedule, focused on the meeting's
+   * day. We park the date in the cross-component store and navigate;
+   * TimesheetPage consumes it on mount and snaps weekAnchor.
+   *
+   * Action menus (Join link, Edit, Delete) call stopPropagation so
+   * the row click doesn't intercept them.
+   */
+  function openOnSchedule(e: React.MouseEvent) {
+    // Ignore clicks that originated from an interactive child (links,
+    // the action menu trigger). Defense-in-depth on top of the
+    // stopPropagation that those children already do.
+    const target = e.target as HTMLElement;
+    if (target.closest("a, button, [role='menuitem']")) return;
+
+    if (meeting.date) {
+      const d = new Date(meeting.date);
+      if (!isNaN(d.getTime())) {
+        setFocusDate(d);
+      }
+    }
+    navigate({ to: "/schedule" as any });
+  }
 
   return (
     <motion.div
       layout
       initial={{ opacity: 0, y: 4 }}
       animate={{ opacity: 1, y: 0 }}
-      // Flush row, no per-row card. Date stripe sits as the left
-      // column; title + meta in the middle; time + actions on the
-      // right. Hairline separates siblings.
+      onClick={openOnSchedule}
+      role="button"
+      tabIndex={0}
+      onKeyDown={(e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          openOnSchedule(e as unknown as React.MouseEvent);
+        }
+      }}
+      // Flush row, no per-row card. Clicking the row jumps to
+      // /schedule on the meeting's day. Hairline separates siblings.
       className="
-        group relative flex items-stretch
+        group relative flex items-stretch cursor-pointer
         border-b border-xs border-border/20 last:border-b-0
-        hover:bg-foreground/[0.025] transition-colors
+        hover:bg-foreground/[0.04] transition-colors
+        focus-visible:outline-none focus-visible:bg-foreground/[0.05]
       "
     >
       {/* Time column — wider so a range like "5:00PM - 7:00PM"
@@ -248,7 +357,9 @@ function MeetingRow({ meeting, onEdit, onDelete }: { meeting: any; onEdit: (id: 
           {typeInfo && meeting.meeting_type && (
             <span className={`inline-flex items-center gap-1 ${typeInfo.text}`}>
               <span className={`w-1.5 h-1.5 rounded-full ${typeInfo.dot}`} />
-              <span className="font-medium whitespace-nowrap">{typeInfo.label}</span>
+              <span className="font-medium whitespace-nowrap">
+                {typeInfo.label}
+              </span>
             </span>
           )}
 
@@ -261,68 +372,90 @@ function MeetingRow({ meeting, onEdit, onDelete }: { meeting: any; onEdit: (id: 
            *  text so a long address won't push the cluster off the
            *  right edge. max-w cap keeps the meta tidy on a wide
            *  meetings panel. */}
-          {meeting.location && meeting.meeting_type === "online" &&
+          {meeting.location &&
+            meeting.meeting_type === "online" &&
             typeof meeting.location === "string" && (
               <a
                 href={meeting.location}
                 target="_blank"
                 rel="noopener noreferrer"
+                onClick={(e) => e.stopPropagation()}
                 className="inline-flex items-center gap-1 hover:text-primary transition-colors whitespace-nowrap"
               >
                 <ExternalLink className="h-2.5 w-2.5 shrink-0" />
                 Join
               </a>
             )}
-          {meeting.location && meeting.meeting_type === "in-person" &&
+          {meeting.location &&
+            meeting.meeting_type === "in-person" &&
             typeof meeting.location === "string" && (
               <span className="inline-flex items-center gap-1 max-w-[220px]">
                 <MapPin className="h-2.5 w-2.5 shrink-0" />
                 <span className="truncate">{meeting.location}</span>
               </span>
             )}
-          {meeting.meeting_type === "hybrid" && isHybridLoc(meeting.hybrid_location) && (
-            <span className="inline-flex items-center gap-2 max-w-[260px]">
-              <span className="inline-flex items-center gap-1 max-w-[180px]">
-                <MapPin className="h-2.5 w-2.5 shrink-0" />
-                <span className="truncate">{meeting.hybrid_location.address}</span>
+          {meeting.meeting_type === "hybrid" &&
+            isHybridLoc(meeting.hybrid_location) && (
+              <span className="inline-flex items-center gap-2 max-w-[260px]">
+                <span className="inline-flex items-center gap-1 max-w-[180px]">
+                  <MapPin className="h-2.5 w-2.5 shrink-0" />
+                  <span className="truncate">
+                    {meeting.hybrid_location.address}
+                  </span>
+                </span>
+                <a
+                  href={meeting.hybrid_location.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  onClick={(e) => e.stopPropagation()}
+                  className="inline-flex items-center gap-1 hover:text-primary transition-colors shrink-0"
+                >
+                  <ExternalLink className="h-2.5 w-2.5" />
+                  Join
+                </a>
               </span>
-              <a
-                href={meeting.hybrid_location.url}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex items-center gap-1 hover:text-primary transition-colors shrink-0"
-              >
-                <ExternalLink className="h-2.5 w-2.5" />
-                Join
-              </a>
-            </span>
-          )}
+            )}
 
           {/* Company dot — anchored to the far right. */}
-          <span className={`inline-block w-1.5 h-1.5 rounded-full ${co.dot} ml-1`} />
+          <span
+            className={`inline-block w-1.5 h-1.5 rounded-full ${co.dot} ml-1`}
+          />
         </div>
       </div>
 
-      {/* Action menu */}
+      {/* Action menu — stopPropagation everywhere so clicks here
+       *  don't bubble up and trigger the row-level navigate. */}
       <UserView userRole={["CEO", "COO"]}>
-        <div className="flex items-center pr-2 opacity-0 group-hover:opacity-100 transition-opacity">
+        <div
+          className="flex items-center pr-2 opacity-0 group-hover:opacity-100 transition-opacity"
+          onClick={(e) => e.stopPropagation()}
+        >
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <div className="text-muted-foreground/40 hover:text-muted-foreground/90 cursor-pointer p-1 rounded-sm hover:bg-muted/40 transition-all">
+              <div
+                className="text-muted-foreground/40 hover:text-muted-foreground/90 cursor-pointer p-1 rounded-sm hover:bg-muted/40 transition-all"
+                onClick={(e) => e.stopPropagation()}
+              >
                 <EllipsisVertical className="h-4 w-4" />
               </div>
             </DropdownMenuTrigger>
-            <DropdownMenuContent className="bg-[#0f0f0f] border border-border text-muted-foreground/80 rounded-md">
+            <DropdownMenuContent className="bg-popover border-xs border-border-soft text-text-secondary rounded-md">
               <DropdownMenuItem
-                onClick={() => onEdit(meeting.id)}
-                className="hover:bg-muted/50 hover:text-foreground cursor-pointer rounded-sm text-[12px]"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onEdit(meeting.id);
+                }}
+                className="hover:bg-foreground/[0.05] hover:text-foreground cursor-pointer rounded-sm text-[12px]"
               >
                 <Pencil className="h-3.5 w-3.5 mr-2" />
                 Edit
               </DropdownMenuItem>
               <DropdownMenuItem
-                onClick={() => onDelete(meeting.id)}
-                className="hover:bg-red-500/[0.08] hover:text-red-300 cursor-pointer text-red-400/60 rounded-sm text-[12px]"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onDelete(meeting.id);
+                }}
+                className="hover:bg-destructive/10 hover:text-destructive cursor-pointer text-destructive/70 rounded-sm text-[12px]"
               >
                 <Trash className="h-3.5 w-3.5 mr-2" />
                 Delete
@@ -344,12 +477,18 @@ const Meetings = () => {
   if (error) console.log("Error Fetching Meetings", error.message);
 
   const list = meetings ?? [];
-  const cwaCount = list.filter((m: any) => !m.company || m.company === "CodeWithAli").length;
+  const cwaCount = list.filter(
+    (m: any) => !m.company || m.company === "CodeWithAli",
+  ).length;
   const simpCount = list.filter((m: any) => m.company === "simplicity").length;
 
   const delMeeting = async (id: number) => {
     const { error } = await supabase.from("cwa_meetings").delete().eq("id", id);
-    if (error) await message(error.message, { title: "Error Deleting Meeting", kind: "error" });
+    if (error)
+      await message(error.message, {
+        title: "Error Deleting Meeting",
+        kind: "error",
+      });
     refetch();
   };
 
@@ -373,50 +512,64 @@ const Meetings = () => {
             className="w-1.5 h-1.5 rounded-full bg-primary"
             title={`CodeWithAli · ${cwaCount}`}
           />
-          <span className="text-[10px] text-text-tertiary tabular-nums">{cwaCount}</span>
+          <span className="text-[10px] text-text-tertiary tabular-nums">
+            {cwaCount}
+          </span>
         </span>
         <span className="inline-flex items-center gap-1">
           <span
             className="w-1.5 h-1.5 rounded-full bg-teal-400"
             title={`Simplicity · ${simpCount}`}
           />
-          <span className="text-[10px] text-text-tertiary tabular-nums">{simpCount}</span>
+          <span className="text-[10px] text-text-tertiary tabular-nums">
+            {simpCount}
+          </span>
         </span>
       </div>
 
       <div className="flex-1" />
 
       <div className="flex items-center gap-1.5 shrink-0">
+        {/* Both Add Meeting and Schedule are visible to the same set
+         *  of leadership / operator roles. Sharing the list here
+         *  keeps the gates from drifting apart over time. Both string
+         *  forms (display value + enum key form) are listed because
+         *  some surfaces store one and some the other. */}
         <UserView
           userRole={[
-            "CEO", "COO", "ProjectManager", "Marketing",
-            // Head of Growth + Head of Internal Affairs can also create
-            // meetings. Both string forms (display value used by the
-            // Role enum + the key form some surfaces store) are listed
-            // so this gates work regardless of which form app_users.role
-            // happens to carry.
-            "Head of Growth", "Head of Internal Affairs",
-            "HeadOfGrowth", "HeadOfInternalAffairs",
+            "CEO",
+            "COO",
+            "CFO",
+            "Admin",
+            "ProjectManager",
+            "Marketing",
+            "SoftwareDev",
+            "HeadOfGrowth",
+            "HeadOfGrowth",
+            "HeadOfInternalAffairs",
           ]}
         >
           <AddMeeting />
         </UserView>
-        <UserView
-          userRole={[
-            "CEO", "COO", "SoftwareDev",
-            "Head of Growth", "Head of Internal Affairs",
-            "HeadOfGrowth", "HeadOfInternalAffairs",
-          ]}
-        >
+
+        <UserView userRole={["COO"]}>
+          {/* Schedule — neutral ghost. Pairs with the new
+           *  primary-tinted Add Meeting (the eye-catcher). Calendar
+           *  icon slides a hair to the left on hover for the same
+           *  affordance moment the plus icon gets. */}
           <Button
             size="sm"
-            // Cleaned ghost button — matches Tasks search bar styling
-            // (bg-zinc-950 + border-zinc-800) so the Tasks and Meetings
-            // panels share one visual language.
-            className="inline-flex items-center gap-1.5 h-7 px-3 rounded-lg bg-background/60 hover:bg-popover border-xs border-border-soft hover:border-foreground/15 text-text-tertiary hover:text-foreground text-[11px] font-bold uppercase tracking-wider transition-colors"
+            className="
+              group inline-flex items-center gap-1.5 h-7 px-3 rounded-md
+              bg-transparent hover:bg-foreground/[0.04]
+              border border-border-soft hover:border-foreground/15
+              text-text-tertiary hover:text-foreground
+              text-[11px] font-bold uppercase tracking-wider
+              transition-colors
+            "
             onClick={() => setIsShowing(!isShowing)}
           >
-            <Calendar className="h-3 w-3" />
+            <Calendar className="h-3 w-3 transition-transform duration-200 group-hover:-translate-x-px" />
             Schedule
           </Button>
         </UserView>
@@ -432,7 +585,9 @@ const Meetings = () => {
         <div className="flex-1 flex items-center justify-center px-5 pb-5">
           <div className="text-center">
             <Calendar className="h-7 w-7 text-foreground/10 mx-auto mb-2" />
-            <p className="text-[12.5px] text-text-tertiary">No upcoming meetings</p>
+            <p className="text-[12.5px] text-text-tertiary">
+              No upcoming meetings
+            </p>
             <p className="text-[10.5px] text-text-tertiary/60 mt-1">
               Say "AXON, schedule a meeting tomorrow at 3pm."
             </p>
@@ -476,7 +631,9 @@ const Meetings = () => {
                     <span
                       className={
                         "text-[10px] font-bold uppercase tracking-[0.14em] " +
-                        (group.isImminent ? "text-primary" : "text-foreground/80")
+                        (group.isImminent
+                          ? "text-primary"
+                          : "text-foreground/80")
                       }
                     >
                       {group.label}

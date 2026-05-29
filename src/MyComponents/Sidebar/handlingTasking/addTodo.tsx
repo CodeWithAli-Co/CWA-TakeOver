@@ -122,14 +122,22 @@ export const AddTodo = (props: Users) => {
       <DialogTrigger asChild>
         {props.homeDash ? (
           // Compact icon-only toolbar variant for the dashboard header.
-          // Slim h-7 button matches the inline search input, no scale
-          // animation (too jumpy inside a header), simple primary fill.
+          // Was a solid filled red square — too loud against the rest
+          // of the calm header. Now a primary-outlined ghost: faint
+          // tinted bg, primary border at 20% alpha, primary plus icon
+          // that rotates 90° on hover. Reads as "add" without
+          // dominating the row.
           <Button
             size="icon"
-            className="h-7 w-7 p-0 bg-primary/90 hover:bg-primary text-primary-foreground border border-primary/30 rounded-md transition-colors"
+            className="
+              group h-7 w-7 p-0 rounded-md transition-colors
+              bg-primary/[0.08] hover:bg-primary/15
+              border border-primary/20 hover:border-primary/40
+              text-primary
+            "
             title="Create task"
           >
-            <PlusCircle className="h-3.5 w-3.5" />
+            <PlusCircle className="h-3.5 w-3.5 transition-transform duration-200 group-hover:rotate-90" />
           </Button>
         ) : (
           <Button

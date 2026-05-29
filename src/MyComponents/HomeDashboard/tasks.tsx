@@ -1,6 +1,6 @@
 import { message } from "@tauri-apps/plugin-dialog";
 import { AddTodo } from "@/MyComponents/Sidebar/handlingTasking/addTodo";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import supabase from "@/MyComponents/supabase";
 import { motion, AnimatePresence } from "framer-motion";
 import { ActiveUser, Employees, Todos } from "@/stores/query";
@@ -16,7 +16,6 @@ import {
   Building2,
   Search,
 } from "lucide-react";
-import { Input } from "@/components/ui/shadcnComponents/input";
 import { ScrollArea } from "@/components/ui/shadcnComponents/scroll-area";
 import {
   Tabs,
@@ -288,17 +287,13 @@ export const TasksComponent = () => {
 
         <div className="flex-1" />
 
-        {/* Right: compact search + add button */}
+        {/* Right: collapsible search + add button.
+         *  Search starts as an icon button (h-7 w-7). Click expands
+         *  it to a 180px input with a soft primary-tinted shimmer
+         *  trailing the expansion. Blur with empty value collapses.
+         *  Esc clears + collapses. */}
         <div className="flex items-center gap-1.5 shrink-0">
-          <div className="relative">
-            <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3 w-3 text-text-tertiary pointer-events-none" />
-            <Input
-              placeholder="Search"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-[150px] h-7 pl-7 pr-2 text-[11px] bg-background/40 border-xs border-border-soft placeholder:text-text-tertiary text-foreground focus:border-primary/30 focus-visible:ring-0 rounded-md"
-            />
-          </div>
+          <CollapsibleSearch value={searchQuery} onChange={setSearchQuery} />
           <AddTodo Users={AllEmployees || []} homeDash />
         </div>
       </div>
@@ -338,3 +333,145 @@ export const TasksComponent = () => {
 };
 
 export default TasksComponent;
+
+/**
+ * CollapsibleSearch — icon-button that expands into a 180px input
+ * on click. Smooth Apple-curve width animation, autofocus on open,
+ * blur-to-collapse when empty, Esc to clear + collapse.
+ *
+ * The "shimmer" is a one-shot effect during the expansion: a soft
+ * primary-tinted gradient sweeps horizontally across the bar (via
+ * background-position animation) for ~0.9s after open, then fades
+ * to invisible. Subtle — gives the reveal a premium feel without
+ * the loud "loading bar" vibe you'd get from a persistent animation.
+ */
+function CollapsibleSearch({
+  value,
+  onChange,
+}: {
+  value: string;
+  onChange: (v: string) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const [shimmering, setShimmering] = useState(false);
+  const inputRef = useRef<HTMLInputElement>(null);
+  const shimmerTimer = useRef<number | null>(null);
+
+  function expand() {
+    if (open) return;
+    setOpen(true);
+    // Kick off the shimmer for ~0.9s, then let it fade out.
+    setShimmering(true);
+    if (shimmerTimer.current) window.clearTimeout(shimmerTimer.current);
+    shimmerTimer.current = window.setTimeout(() => setShimmering(false), 900);
+    // Autofocus once the width animation begins so the cursor lands
+    // inside the now-visible input.
+    requestAnimationFrame(() => inputRef.current?.focus());
+  }
+
+  function maybeCollapse() {
+    // Don't collapse while the user is mid-search; only when the
+    // input is empty does losing focus make sense as "I'm done".
+    if (!value.trim()) setOpen(false);
+  }
+
+  useEffect(() => () => {
+    if (shimmerTimer.current) window.clearTimeout(shimmerTimer.current);
+  }, []);
+
+  return (
+    <motion.div
+      animate={{ width: open ? 180 : 28 }}
+      transition={{ duration: 0.28, ease: [0.22, 1, 0.36, 1] }}
+      className="relative h-7 flex-shrink-0"
+    >
+      {/* Shimmer halo — soft primary-tinted gradient that sweeps
+       *  horizontally during the expansion. position absolute so it
+       *  paints behind the input + button; pointer-events-none. The
+       *  bg-gradient + background-position keyframe lives below. */}
+      <AnimatePresence>
+        {shimmering && open && (
+          <motion.div
+            aria-hidden
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.18 }}
+            className="absolute inset-0 rounded-md pointer-events-none overflow-hidden"
+          >
+            {/* Inner shimmer gradient. background-size:200% so the
+             *  position animation actually slides. */}
+            <div
+              className="absolute inset-0 rounded-md"
+              style={{
+                background:
+                  "linear-gradient(90deg, transparent 0%, hsl(var(--primary) / 0.18) 50%, transparent 100%)",
+                backgroundSize: "200% 100%",
+                animation: "taskSearchShimmer 0.9s ease-out forwards",
+              }}
+            />
+            {/* Soft halo around the bar — a glow tint. */}
+            <div
+              className="absolute -inset-1 rounded-md"
+              style={{
+                boxShadow: "0 0 12px 2px hsl(var(--primary) / 0.18)",
+              }}
+            />
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {!open ? (
+        <button
+          type="button"
+          onClick={expand}
+          aria-label="Search tasks"
+          title="Search tasks"
+          className="
+            relative w-7 h-7 inline-flex items-center justify-center rounded-md
+            text-text-tertiary hover:text-foreground hover:bg-foreground/[0.05]
+            border-xs border-border-soft hover:border-border
+            transition-colors
+          "
+        >
+          <Search className="h-3.5 w-3.5" />
+        </button>
+      ) : (
+        <div className="relative w-full h-7">
+          <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3 w-3 text-text-tertiary pointer-events-none z-10" />
+          <input
+            ref={inputRef}
+            placeholder="Search"
+            value={value}
+            onChange={(e) => onChange(e.target.value)}
+            onBlur={maybeCollapse}
+            onKeyDown={(e) => {
+              if (e.key === "Escape") {
+                e.preventDefault();
+                onChange("");
+                setOpen(false);
+                inputRef.current?.blur();
+              }
+            }}
+            className="
+              relative w-full h-7 pl-7 pr-2 text-[11px] rounded-md
+              bg-background/40 text-foreground placeholder:text-text-tertiary
+              border-xs border-border/40 focus:border-primary/45
+              focus:outline-none focus-visible:ring-0
+            "
+          />
+        </div>
+      )}
+
+      {/* Keyframe for the shimmer slide. Inlined so the component
+       *  is self-contained — no need to touch main.css. */}
+      <style>{`
+        @keyframes taskSearchShimmer {
+          0%   { background-position: -100% 0; opacity: 0; }
+          30%  { opacity: 1; }
+          100% { background-position: 200% 0; opacity: 0; }
+        }
+      `}</style>
+    </motion.div>
+  );
+}
