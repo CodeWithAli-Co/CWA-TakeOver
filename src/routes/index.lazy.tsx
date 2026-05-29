@@ -50,8 +50,8 @@ const Index = () => {
   const showOverview = activeCompany === "all";
 
   return (
-    <div className="min-h-screen bg-background overflow-y-auto transition-colors duration-500">
-      {/* ── Page header — the masterpiece.
+    <main className="">
+   {/* ── Page header — the masterpiece.
        *
        *  Three structural beats, each beat is one column in a CSS
        *  grid so the centre pill anchors to true centre regardless
@@ -147,6 +147,9 @@ const Index = () => {
           </motion.div>
         </div>
       </header>
+
+    <div className="min-h-screen bg-zinc-950 overflow-y-auto transition-colors duration-500">
+   
 
       {/* ── Main Content ── */}
       <div className="px-8 pt-4 pb-10 space-y-4">
@@ -255,6 +258,7 @@ const Index = () => {
         )}
       </div>
     </div>
+    </main>
   );
 };
 

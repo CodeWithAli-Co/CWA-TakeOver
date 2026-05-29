@@ -59,19 +59,22 @@ html, body {
 @layer base {
   :root,
   [data-company="codeWithAli"] {
-    /* Elevation system — three surface layers, tuned for real visible
-     * separation rather than the washed-out feel of the first pass.
-     * ~6pt lightness steps + 10% saturation on the warm violet tint.
+    /* Elevation system — compressed contrast pass.
+     * Body lifted (4% → 7%) so the canvas reads as a lit room rather
+     * than a pitch-black void. Cards dropped (10% → 8%) so they sit
+     * just barely above the body — calm Linear/Notion-style elevation
+     * with only ~1pt of lightness between tiers. Popover stays at the
+     * highest tier (13%) for dropdowns + hover surfaces.
      *
-     *   canvas    --background  hsl(270 10% 4%)   ≈ #0B0A0D
-     *   surface   --card        hsl(280 9% 10%)   ≈ #1B181D   (cards)
-     *   elevated  --popover     hsl(270 9% 15%)   ≈ #2A2630   (hover/popovers)
+     *   canvas    --background  hsl(270 8% 7%)    ≈ #131214
+     *   surface   --card        hsl(280 7% 8%)    ≈ #151316   (cards)
+     *   elevated  --popover     hsl(270 8% 13%)   ≈ #211F23   (hover/popovers)
      */
-    --background: 270 10% 4%;
+    --background: 270 4% 4%;
     --foreground: 0 0% 98%;
-    --card: 280 9% 10%;
+    --card: 280 1% 6%;
     --card-foreground: 0 0% 98%;
-    --popover: 270 9% 15%;
+    --popover: 270 1% 6%;
     --popover-foreground: 0 0% 98%;
 
     /* Brand — reserved exclusively for brand moments (logo, the name
