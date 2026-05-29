@@ -47,7 +47,7 @@
     /* Single accent — refined coral-red. Cohabits with --primary,
      * which has been retuned to the same hue in main.css so both
      * tokens stay in lock-step. */
-    --cwa-accent:      7 67% 51%;       /* ≈ rgb(214 65 47) */
+    --cwa-accent:      0 72% 51%;       /* ≈ rgb(214 65 47) */
 
     /* Calm semantic states. -bg variants are the soft tint behind
      * a chip / pill; the bare token is the readable foreground. */
@@ -56,7 +56,7 @@
     --cwa-warning:     34 90% 44%;      /* ≈ rgb(213 130 12) */
     --cwa-warning-bg:  34 90% 44% / 0.12;
     --cwa-danger:      var(--cwa-accent);
-    --cwa-danger-bg:   7 67% 51% / 0.10;
+    --cwa-danger-bg:   0 72% 51% / 0.10;
   }
 
   /* ── Dark ─────────────────────────────────────────────────── */
@@ -74,14 +74,14 @@
 
     /* Dark accent is softer — the coral-red brand cleaner-lit
      * against the 4% canvas. */
-    --cwa-accent:      4 65% 65%;       /* ≈ rgb(224 114 106) */
+    --cwa-accent:      0 72% 51%;       /* ≈ rgb(224 114 106) */
 
     --cwa-success:     152 64% 54%;     /* ≈ rgb(61 214 140) */
     --cwa-success-bg:  152 64% 54% / 0.10;
     --cwa-warning:     38 92% 60%;      /* warmer amber on dark */
     --cwa-warning-bg:  38 92% 60% / 0.14;
     --cwa-danger:      var(--cwa-accent);
-    --cwa-danger-bg:   4 65% 65% / 0.12;
+    --cwa-danger-bg:   0 72% 51% / 0.12;
   }
 
 /* ── Type scale primitives ────────────────────────────────────

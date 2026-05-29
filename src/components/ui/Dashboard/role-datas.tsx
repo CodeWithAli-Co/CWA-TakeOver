@@ -35,6 +35,7 @@ import {
   Wallet,
   Coins,
   Briefcase,
+  Compass,
   type LucideIcon,
 } from "lucide-react";
 
@@ -1111,6 +1112,12 @@ export const adminData = {
       icon: Briefcase,
     },
     {
+      title: "Strategy",
+      url: "/strategy",
+      isActive: false,
+      icon: Compass,
+    },
+    {
       title: "Task",
       url: "/task",
       isActive: false,
@@ -1613,6 +1620,12 @@ export const cooData = {
       company: "codeWithAli" as const,
     },
     {
+      title: "Strategy",
+      url: "/strategy",
+      isActive: false,
+      icon: Compass,
+    },
+    {
       title: "Task",
       url: "/task",
       isActive: false,
@@ -1791,6 +1804,12 @@ export const ceoData = {
       isActive: false,
       icon: Briefcase,
       company: "codeWithAli" as const,
+    },
+    {
+      title: "Strategy",
+      url: "/strategy",
+      isActive: false,
+      icon: Compass,
     },
     {
       // Top-level Candidates entry (NOT company-scoped so it's always
@@ -2104,6 +2123,12 @@ export const cfoData = {
       icon: Briefcase,
     },
     {
+      title: "Strategy",
+      url: "/strategy",
+      isActive: false,
+      icon: Compass,
+    },
+    {
       title: "Task",
       url: "/task",
       isActive: false,
@@ -2152,43 +2177,44 @@ type CompanyScope = "codeWithAli" | "simplicityFunds" | "all";
  *   • activeCompany === "all"            → include everything
  *   • entry has no `company` field       → include (company-agnostic)
  *   • entry.company === activeCompany    → include
- *   • otherwise                          → exclude
+ *   • otherwise                          → drop
  *
- * Nested `items` arrays (collapsible group children) are filtered
- * with the same rules so company-scoped sub-items disappear when
- * the active company is the other brand.
+ * Recurses into `items` so groups with company-scoped children are
+ * filtered too. Generic over the entry shape so it works for both
+ * top-level NavItems and nested item shapes — only the optional
+ * `company` and `items` fields are touched.
  */
-export function filterNavByCompany(
-  items: NavItem[] | undefined,
-  activeCompany: CompanyScope,
-): NavItem[] {
-  if (!items) return [];
-  const passes = (c: NavItem["company"]) =>
-    activeCompany === "all" || !c || c === activeCompany;
-  return items
-    .filter((it) => passes(it.company))
-    .map((it) => {
-      if (!it.items) return it;
-      return {
-        ...it,
-        items: it.items.filter(
-          (sub) =>
-            activeCompany === "all" ||
-            !sub.company ||
-            sub.company === activeCompany,
-        ),
-      };
+export function filterNavByCompany<
+  T extends { company?: string; items?: T[] }
+>(navMain: T[], activeCompany: CompanyScope): T[] {
+  if (activeCompany === "all") return navMain;
+  return navMain
+    .filter(
+      (entry) =>
+        entry.company === undefined || entry.company === activeCompany,
+    )
+    .map((entry) => {
+      if (entry.items && entry.items.length > 0) {
+        return {
+          ...entry,
+          items: filterNavByCompany(entry.items, activeCompany),
+        };
+      }
+      return entry;
     });
 }
 
-/** Same logic as filterNavByCompany but for the ProjectItem shape. */
-export function filterProjectsByCompany(
-  items: ProjectItem[] | undefined,
-  activeCompany: CompanyScope,
-): ProjectItem[] {
-  if (!items) return [];
-  return items.filter(
-    (it) =>
-      activeCompany === "all" || !it.company || it.company === activeCompany,
+/**
+ * Filter a `projects` array (the sidebar's "PROJECTS" group, not the
+ * /projects page) by the active company. Same gating rules as
+ * filterNavByCompany — entries without a `company` field are
+ * company-agnostic and always pass through.
+ */
+export function filterProjectsByCompany<
+  T extends { company?: string }
+>(projects: T[], activeCompany: CompanyScope): T[] {
+  if (activeCompany === "all") return projects;
+  return projects.filter(
+    (p) => p.company === undefined || p.company === activeCompany,
   );
 }

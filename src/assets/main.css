@@ -82,7 +82,7 @@ html, body {
      * fire-engine red — to a softer dusty coral that reads premium on
      * the 4%-canvas dark theme. Light counterpart further down uses
      * the more saturated coral-red ≈ rgb(214 65 47). */
-    --primary: 4 65% 65%;                /* ≈ rgb(224 114 106) */
+    --primary: 0 72% 51%;                /* ≈ rgb(220 38 38) */
     --primary-foreground: 0 0% 100%;
     --secondary: 270 6% 14%;
     --secondary-foreground: 0 0% 97%;
@@ -109,7 +109,7 @@ html, body {
     --border: 240 5% 26%;
     --border-soft: 0 0% 100% / 0.08;
     --input: 270 7% 14%;
-    --ring: 4 65% 65%;
+    --ring: 0 72% 51%;
 
     /* Text hierarchy — tertiary tier (labels like "TEAM MEMBERS") at
      * ~40% alpha. Primary uses --foreground; secondary uses
@@ -129,17 +129,17 @@ html, body {
      * the brighter content canvas. */
     --sidebar-background: 240 6% 3%;
     --sidebar-foreground: 0 0% 100%;
-    --sidebar-primary: 4 65% 65%;
+    --sidebar-primary: 0 72% 51%;
     --sidebar-primary-foreground: 0 0% 100%;
     --sidebar-accent: 240 5% 12%;        /* hovered nav item */
     --sidebar-accent-foreground: 0 0% 100%;
     --sidebar-border: 240 5% 15%;
-    --sidebar-ring: 4 65% 65%;
+    --sidebar-ring: 0 72% 51%;
 
     /* Company-specific tokens — refined coral-red (was harsh fire red). */
-    --brand-accent: 4 65% 65%;     /* ≈ rgb(224 114 106) */
-    --brand-accent-rgb: 224, 114, 106;
-    --brand-glow: 4 65% 65%;
+    --brand-accent: 0 72% 51%;     /* ≈ rgb(220 38 38) */
+    --brand-accent-rgb: 220, 38, 38;
+    --brand-glow: 0 72% 51%;
     --surface-hover: 240 5% 14%;
     --surface-active: 240 5% 16%;
     --text-dim: 240 4% 50%;         /* was 28% — actually readable now */
@@ -242,7 +242,7 @@ html, body {
     --popover: 0 0% 100%;
     --popover-foreground: 240 10% 9%;
 
-    --primary: 7 67% 51%;               /* refined coral-red ≈ rgb(214 65 47) */
+    --primary: 0 72% 51%;               /* refined coral-red ≈ rgb(214 65 47) */
     --primary-foreground: 0 0% 100%;
     --secondary: 240 6% 92%;            /* deeper than muted, button-grade */
     --secondary-foreground: 240 10% 15%;
@@ -251,12 +251,12 @@ html, body {
     --muted-foreground: 240 5% 42%;
     --accent: 240 6% 93%;
     --accent-foreground: 240 10% 15%;
-    --destructive: 7 67% 51%;           /* aligned with brand coral */
+    --destructive: 0 72% 51%;           /* aligned with brand coral */
     --destructive-foreground: 0 0% 100%;
 
     --border: 240 6% 78%;               /* visible at a glance */
     --input: 240 6% 90%;
-    --ring: 7 67% 51%;
+    --ring: 0 72% 51%;
 
     /* Sidebar sits BRIGHTER than the body in light mode — the
      * inverse of dark mode (where it sits darker). Reads as a
@@ -266,16 +266,16 @@ html, body {
      * doesn't disappear. */
     --sidebar-background: 0 0% 100%;
     --sidebar-foreground: 240 10% 9%;
-    --sidebar-primary: 7 67% 51%;
+    --sidebar-primary: 0 72% 51%;
     --sidebar-primary-foreground: 0 0% 100%;
     --sidebar-accent: 240 6% 93%;       /* subtle hover, matches --muted */
     --sidebar-accent-foreground: 240 10% 9%;
     --sidebar-border: 240 6% 82%;
-    --sidebar-ring: 7 67% 51%;
+    --sidebar-ring: 0 72% 51%;
 
-    --brand-accent: 7 67% 51%;          /* refined coral-red light */
+    --brand-accent: 0 72% 51%;          /* refined coral-red light */
     --brand-accent-rgb: 214, 65, 47;
-    --brand-glow: 7 67% 51%;
+    --brand-glow: 0 72% 51%;
     --surface-hover: 240 6% 90%;
     --surface-active: 240 6% 86%;
     --text-dim: 240 5% 50%;

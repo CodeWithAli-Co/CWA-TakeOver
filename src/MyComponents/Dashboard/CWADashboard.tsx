@@ -4,7 +4,6 @@
  */
 import { BentoCard, BentoValue } from "./BentoCard";
 import { TasksOverviewCard } from "./TasksOverviewCard";
-import { Row3Section } from "./Row3Section";
 import { Row3MemberSection } from "./Row3MemberSection";
 import { Row5Section } from "./Row5Section";
 import { TasksComponent } from "@/MyComponents/HomeDashboard/tasks";
@@ -486,15 +485,14 @@ function CWADashboardContent() {
 
       <TasksOverviewCard username={username} />
 
-      {/* ── Row 3: role-split panels (two entirely different shapes) ──
-          CEO/COO get the experimental Strategic Intelligence panel
-          (Intelligence · Revenue · Mission Control · Daily Briefing).
-          Everyone else gets the Member section — Team Activity feed
-          + Quick Actions launcher. Two separate components, two
-          separate philosophies; the gating happens here. */}
-      <UserView userRole={[Role.CEO, Role.COO]}>
-        <Row3Section />
-      </UserView>
+      {/* ── Row 3: non-leadership only.
+          C-level used to get the Strategic Intelligence panel here.
+          That panel was 884 lines of mostly-mock data fighting four
+          different viz paradigms in one row — moved to its own
+          destination at /strategy so home stays focused on today's
+          execution surface. Non-C-level still see the Member section
+          (Team Activity + Quick Actions) since that's their primary
+          dashboard real estate. */}
       <UserView excludeRoles={[Role.CEO, Role.COO]}>
         <Row3MemberSection />
       </UserView>
