@@ -16,7 +16,7 @@ import {
   SidebarMenuSubButton,
   SidebarMenuSubItem,
 } from "@/components/ui/shadcnComponents/sidebar";
-import { Link, useNavigate } from "@tanstack/react-router";
+import { Link, useNavigate, useLocation } from "@tanstack/react-router";
 
 export function NavMain({
   items,
@@ -33,24 +33,44 @@ export function NavMain({
   }[];
 }) {
   const navigate = useNavigate();
+  const { pathname } = useLocation();
   const totalUnread = useChatStore((s) => Object.values(s.unreadCounts).reduce((sum, n) => sum + n, 0));
+
+  // Active when the current route matches the item exactly, or is a
+  // child of it (e.g. /workspace/docs/123 lights up "Workspace").
+  // Guard against "/" matching everything.
+  const isPathActive = (url: string) => {
+    if (!url || url === "#") return false;
+    if (url === "/") return pathname === "/";
+    return pathname === url || pathname.startsWith(url + "/");
+  };
+
+  // Shared active treatment — rounded-sm tinted pill, coral text +
+  // icon. No left accent bar (it fought the rounded corners).
+  const ACTIVE_CLS =
+    "data-[active=true]:bg-primary/15 data-[active=true]:text-primary data-[active=true]:font-semibold " +
+    "data-[active=true]:rounded-sm data-[active=true]:[&_svg]:text-primary";
   return (
     <SidebarGroup>
       <SidebarMenu className="space-y-0.5">
-        {items.map((item) =>
-          item.items && item.items.length > 0 ? (
+        {items.map((item) => {
+          const childActive = item.items?.some((s) => isPathActive(s.url)) ?? false;
+          const selfActive = isPathActive(item.url);
+          const groupActive = selfActive || childActive;
+          return item.items && item.items.length > 0 ? (
             <Collapsible
               key={item.title}
               asChild
-              defaultOpen={item.isActive}
+              defaultOpen={item.isActive || groupActive}
               className="group/collapsible"
             >
               <SidebarMenuItem>
                 <CollapsibleTrigger asChild>
                   <SidebarMenuButton
                     tooltip={item.title}
+                    isActive={groupActive}
                     onClick={() => navigate({ to: !item.isActive ? "#" : item.url })}
-                    className="hover:bg-muted/60 text-foreground/90 hover:text-foreground rounded-sm transition-colors data-[active=true]:bg-primary/[0.12] data-[active=true]:text-primary"
+                    className={`hover:bg-muted/60 text-foreground/90 hover:text-foreground rounded-sm transition-colors ${ACTIVE_CLS}`}
                   >
                     {item.icon && <item.icon className="h-4 w-4 text-muted-foreground" />}
                     <span className="text-[13px] font-medium">{item.title}</span>
@@ -61,7 +81,11 @@ export function NavMain({
                   <SidebarMenuSub className="border-l border-border ml-4">
                     {item.items?.map((subItem) => (
                       <SidebarMenuSubItem key={subItem.title}>
-                        <SidebarMenuSubButton asChild className="hover:bg-muted/60 text-foreground/80 hover:text-foreground rounded-sm">
+                        <SidebarMenuSubButton
+                          asChild
+                          isActive={isPathActive(subItem.url)}
+                          className="hover:bg-muted/60 text-foreground/80 hover:text-foreground rounded-sm data-[active=true]:bg-primary/15 data-[active=true]:text-primary data-[active=true]:font-semibold"
+                        >
                           <Link to={subItem.url}>
                             <span className="text-[12px] font-medium">{subItem.title}</span>
                           </Link>
@@ -76,8 +100,9 @@ export function NavMain({
             <SidebarMenuItem key={item.title}>
               <SidebarMenuButton
                 tooltip={item.title}
+                isActive={selfActive}
                 onClick={() => navigate({ to: item.url })}
-                className="hover:bg-muted/60 text-foreground/90 hover:text-foreground rounded-sm transition-colors data-[active=true]:bg-primary/[0.12] data-[active=true]:text-primary"
+                className={`hover:bg-muted/60 text-foreground/90 hover:text-foreground rounded-sm transition-colors ${ACTIVE_CLS}`}
               >
                 {item.icon && (
                   <span className="relative">
@@ -97,8 +122,8 @@ export function NavMain({
                 )}
               </SidebarMenuButton>
             </SidebarMenuItem>
-          )
-        )}
+          );
+        })}
       </SidebarMenu>
     </SidebarGroup>
   );

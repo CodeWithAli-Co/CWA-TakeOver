@@ -79,7 +79,7 @@ html, body {
      * Muted/secondary/accent sit higher still for inset chips + hovers. */
     --background: 270 6% 5%;
     --foreground: 0 0% 98%;
-    --card: 270 5% 9%;
+    --card: 270 5% 10%;
     --card-foreground: 0 0% 98%;
     --popover: 270 6% 12%;
     --popover-foreground: 0 0% 98%;
@@ -138,13 +138,17 @@ html, body {
      * Top rail (header) reuses this same token via bg-sidebar so
      * the left + top form a single darker chrome envelope around
      * the brighter content canvas. */
-    --sidebar-background: 240 6% 3%;
+    /* Dark-zinc rail — lifted from near-black (3%) to a neutral
+     * dark-zinc (~11%, ≈ zinc-900) so the sidebar reads as its own
+     * chrome surface above the 5% canvas instead of a black void.
+     * Hover/border tiers bumped to stay distinct above the new base. */
+    --sidebar-background: 240 5% 14%;
     --sidebar-foreground: 0 0% 100%;
     --sidebar-primary: 0 72% 51%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 240 5% 12%;        /* hovered nav item */
+    --sidebar-accent: 240 5% 21%;        /* hovered nav item */
     --sidebar-accent-foreground: 0 0% 100%;
-    --sidebar-border: 240 5% 15%;
+    --sidebar-border: 240 5% 23%;
     --sidebar-ring: 0 72% 51%;
 
     /* Company-specific tokens — refined coral-red (was harsh fire red). */
