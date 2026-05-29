@@ -70,11 +70,18 @@ html, body {
      *   surface   --card        hsl(280 7% 8%)    ≈ #151316   (cards)
      *   elevated  --popover     hsl(270 8% 13%)   ≈ #211F23   (hover/popovers)
      */
-    --background: 270 4% 4%;
+    /* Elevation tiers — widened so surfaces actually separate from the
+     * canvas. Previous values had card only ~2pt above background, so
+     * everything blended into one black sheet. Now:
+     *   canvas   --background  5%   ≈ #0c0b0e
+     *   surface  --card        9%   ≈ #161518  (+4pt — cards clearly lift)
+     *   elevated --popover    12%   ≈ #1e1c20  (dropdowns / hover)
+     * Muted/secondary/accent sit higher still for inset chips + hovers. */
+    --background: 270 6% 5%;
     --foreground: 0 0% 98%;
-    --card: 280 1% 6%;
+    --card: 270 5% 9%;
     --card-foreground: 0 0% 98%;
-    --popover: 270 1% 6%;
+    --popover: 270 6% 12%;
     --popover-foreground: 0 0% 98%;
 
     /* Brand — reserved exclusively for brand moments (logo, the name
@@ -87,13 +94,14 @@ html, body {
      * the more saturated coral-red ≈ rgb(214 65 47). */
     --primary: 0 72% 51%;                /* ≈ rgb(220 38 38) */
     --primary-foreground: 0 0% 100%;
-    --secondary: 270 6% 14%;
+    --secondary: 270 6% 16%;
     --secondary-foreground: 0 0% 97%;
 
-    /* Utility surfaces */
-    --muted: 270 6% 14%;
-    --muted-foreground: 0 0% 60%;       /* secondary text — rgba 0.60ish */
-    --accent: 270 6% 14%;
+    /* Utility surfaces — sit above card (9%) so hover/chip states read
+     * as a distinct layer rather than blending into the card. */
+    --muted: 270 6% 15%;
+    --muted-foreground: 0 0% 62%;       /* secondary text — rgba 0.62ish */
+    --accent: 270 6% 15%;
     --accent-foreground: 0 0% 97%;
     --destructive: 0 84% 60%;           /* alert red — more saturated than brand */
     --destructive-foreground: 0 0% 100%;
@@ -109,9 +117,9 @@ html, body {
      * the dashboard use `--border-soft` for the near-invisible hairline
      * look (white at ~6% alpha — defined with the slash syntax so
      * hsl(var(--border-soft)) resolves to a translucent stroke). */
-    --border: 240 5% 26%;
-    --border-soft: 0 0% 100% / 0.08;
-    --input: 270 7% 14%;
+    --border: 240 5% 24%;
+    --border-soft: 0 0% 100% / 0.10;   /* slightly brighter hairline so card edges show against the canvas */
+    --input: 270 7% 16%;
     --ring: 0 72% 51%;
 
     /* Text hierarchy — tertiary tier (labels like "TEAM MEMBERS") at
@@ -200,8 +208,8 @@ html, body {
     --brand-accent: 168 76% 42%;
     --brand-accent-rgb: 20, 184, 166;
     --brand-glow: 168 76% 42%;
-    --surface-hover: 240 4% 6%;
-    --surface-active: 240 4% 8%;
+    --surface-hover: 240 5% 13%;
+    --surface-active: 240 5% 16%;
     --text-dim: 215 15% 30%;
     --text-muted: 215 15% 50%;
     --border-subtle: 240 4% 7%;

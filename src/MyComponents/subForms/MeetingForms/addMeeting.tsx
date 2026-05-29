@@ -146,9 +146,9 @@ export const AddMeeting = () => {
           size="sm"
           className="
             group inline-flex items-center gap-1.5 h-7 px-3 rounded-md
-            bg-zinc-900/20 hover:bg-zinc-900
-            border border-zinc-700/60 hover:border-primary/70
-            text-orange-500
+            bg-primary/10 hover:bg-primary/20
+            border border-primary/30 hover:border-primary/60
+            text-primary
             text-[11px] font-bold uppercase tracking-wider
             transition-colors
           "
