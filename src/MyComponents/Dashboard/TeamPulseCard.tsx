@@ -70,29 +70,57 @@ function EmptyState() {
 
 export function TeamPulseCard() {
   const { data: items = [], isLoading } = useTeamActivity(20);
+  const openKudos = useSendKudosDialog((s) => s.openDialog);
 
-  // Limit visible to ~7 — list scrolls if more come in.
+  // Pull up to 20 so a scroll position has somewhere to go, but
+  // cap the visible scroll viewport height (see max-h on the
+  // overflow div below) so the card doesn't stretch the row.
   const visible = items.slice(0, 20);
   const hasItems = visible.length > 0;
 
   return (
-    <BentoCard label="TEAM PULSE" withHeaderBar className="h-full">
+    <BentoCard
+      label="TEAM PULSE"
+      withHeaderBar
+      className="h-full"
+      headerActions={
+        <button
+          type="button"
+          onClick={() => openKudos()}
+          aria-label="Send kudos"
+          title="Send kudos"
+          className="
+            inline-flex items-center gap-1 h-6 px-2 rounded-md
+            text-[10.5px] font-semibold
+            text-primary/85 hover:text-primary
+            bg-primary/[0.06] hover:bg-primary/[0.12]
+            border border-primary/20 hover:border-primary/35
+            transition-colors
+          "
+        >
+          <HandHeart className="h-3 w-3" />
+          Kudos
+        </button>
+      }
+    >
       <div className="flex flex-col h-full">
         {isLoading ? (
-          <div className="flex-1 min-h-0 flex items-center justify-center text-[11px] text-text-tertiary italic">
+          <div className="min-h-[120px] flex items-center justify-center text-[11px] text-text-tertiary italic">
             Loading…
           </div>
         ) : !hasItems ? (
           <EmptyState />
         ) : (
-          <div className="flex-1 min-h-0 overflow-y-auto -mx-1 px-1">
-            <ul className="space-y-0.5">
+          // Cap the scroll viewport so the card stays compact even
+          // when the feed has many rows — 240px ≈ 7 rows visible.
+          <div className="max-h-[240px] overflow-y-auto -mx-1 px-1">
+            <ul className="list-none p-0 m-0 space-y-0.5">
               {visible.map((item) => {
                 const { Icon, tone } = iconForType(item.activity_type);
                 return (
                   <li
                     key={item.id}
-                    className="flex items-start gap-2 py-1.5 border-b border-border-soft/40 last:border-b-0"
+                    className="list-none flex items-start gap-2 py-1.5 border-b border-border-soft/40 last:border-b-0"
                   >
                     <Icon
                       className={`h-3 w-3 mt-0.5 shrink-0 ${tone}`}

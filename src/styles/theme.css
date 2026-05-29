@@ -1,0 +1,118 @@
+/**
+ * theme.css — Dashboard token layer.
+ *
+ * This file does NOT replace the existing token system in main.css.
+ * It ADDS a clean semantic alias layer on top, so the modern dashboard
+ * (and any future surface that opts in) can speak in terms of:
+ *
+ *   bg-surface / bg-surface-2     — three layered surfaces (base + 2)
+ *   text-fg / text-fg-muted /
+ *     text-fg-subtle / text-fg-faint — four text levels
+ *   border-line / border-line-strong — hairline + anchored strokes
+ *   text-accent / bg-accent       — the single refined coral-red accent
+ *   text-success / bg-success-bg  — calm semantic states
+ *   text-warning / bg-warning-bg
+ *   text-danger  / bg-danger-bg
+ *
+ * Tokens here are space-separated HSL channels so Tailwind alpha
+ * modifiers (e.g. bg-surface-2/60) continue to work the way they
+ * already do for bg-card, bg-popover, etc.
+ *
+ * Theme switching is driven by `class="dark"` on <html>, same as the
+ * rest of the app — no separate mechanism.
+ */
+
+/* ── Light (default) ──────────────────────────────────────── */
+:root {
+    /* Layered surfaces — base, +1, +2. Mapped onto the existing
+     * background / card / popover so we don't fight the rest of
+     * the app's elevation calls. */
+    --cwa-surface:    var(--card);
+    --cwa-surface-2:  var(--popover);
+
+    /* Text levels.
+     *   fg       — primary  (titles, numbers)
+     *   fg-muted — secondary (body)
+     *   fg-subtle — meta / captions
+     *   fg-faint — labels above metrics (tracked / 11px) */
+    --cwa-fg:         var(--foreground);
+    --cwa-fg-muted:   var(--muted-foreground);
+    --cwa-fg-subtle:  var(--text-tertiary);
+    --cwa-fg-faint:   0 0% 0% / 0.32;
+
+    /* Hairline and anchored borders. */
+    --cwa-line:        var(--border-soft);
+    --cwa-line-strong: var(--border);
+
+    /* Single accent — refined coral-red. Cohabits with --primary,
+     * which has been retuned to the same hue in main.css so both
+     * tokens stay in lock-step. */
+    --cwa-accent:      7 67% 51%;       /* ≈ rgb(214 65 47) */
+
+    /* Calm semantic states. -bg variants are the soft tint behind
+     * a chip / pill; the bare token is the readable foreground. */
+    --cwa-success:     152 58% 38%;     /* ≈ rgb(40 156 95) */
+    --cwa-success-bg:  152 58% 38% / 0.10;
+    --cwa-warning:     34 90% 44%;      /* ≈ rgb(213 130 12) */
+    --cwa-warning-bg:  34 90% 44% / 0.12;
+    --cwa-danger:      var(--cwa-accent);
+    --cwa-danger-bg:   7 67% 51% / 0.10;
+  }
+
+  /* ── Dark ─────────────────────────────────────────────────── */
+  .dark {
+    --cwa-surface:    var(--card);
+    --cwa-surface-2:  var(--popover);
+
+    --cwa-fg:         var(--foreground);
+    --cwa-fg-muted:   var(--muted-foreground);
+    --cwa-fg-subtle:  var(--text-tertiary);
+    --cwa-fg-faint:   0 0% 100% / 0.32;
+
+    --cwa-line:        var(--border-soft);
+    --cwa-line-strong: var(--border);
+
+    /* Dark accent is softer — the coral-red brand cleaner-lit
+     * against the 4% canvas. */
+    --cwa-accent:      4 65% 65%;       /* ≈ rgb(224 114 106) */
+
+    --cwa-success:     152 64% 54%;     /* ≈ rgb(61 214 140) */
+    --cwa-success-bg:  152 64% 54% / 0.10;
+    --cwa-warning:     38 92% 60%;      /* warmer amber on dark */
+    --cwa-warning-bg:  38 92% 60% / 0.14;
+    --cwa-danger:      var(--cwa-accent);
+    --cwa-danger-bg:   4 65% 65% / 0.12;
+  }
+
+/* ── Type scale primitives ────────────────────────────────────
+ *  Plain CSS classes (not @layer-wrapped) so this file can be
+ *  imported without needing its own @tailwind directives. */
+.text-metric {
+  font-size: 38px;
+  font-weight: 600;
+  line-height: 1.05;
+  letter-spacing: -0.015em;
+  font-variant-numeric: tabular-nums;
+}
+.text-title {
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 1.3;
+}
+.text-label {
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.text-hint {
+  font-size: 12px;
+  font-weight: 400;
+  line-height: 1.45;
+}
+.text-body {
+  font-size: 13.5px;
+  font-weight: 400;
+  line-height: 1.5;
+}

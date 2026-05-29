@@ -1043,7 +1043,8 @@ export function AxonProvider({ children }: { children: React.ReactNode }) {
   ]);
 
   // ── Keyboard shortcuts ─────────────────────────────────────────
-  // Cmd/Ctrl+K     → toggle panel
+  // Cmd/Ctrl+J     → toggle panel  (was Cmd/Ctrl+K; collided with
+  //                  the global command palette which owns ⌘K)
   // Escape         → close panel
   // Forward slash  → focus composer (if panel open)
   // Ctrl+Space     → push-to-talk (configurable)
@@ -1056,8 +1057,10 @@ export function AxonProvider({ children }: { children: React.ReactNode }) {
         target?.tagName === "TEXTAREA" ||
         target?.isContentEditable;
 
-      // Cmd/Ctrl+K — toggle panel (works even while typing in inputs).
-      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") {
+      // Cmd/Ctrl+J — toggle panel (works even while typing in inputs).
+      // Moved off ⌘K to share the keyboard cleanly with the global
+      // CommandPalette: ⌘K opens "jump anywhere", ⌘J opens AXON.
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "j") {
         e.preventDefault();
         setPanelOpen((v) => !v);
         return;

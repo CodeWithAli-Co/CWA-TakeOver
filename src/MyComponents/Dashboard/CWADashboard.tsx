@@ -6,7 +6,6 @@ import { BentoCard, BentoValue } from "./BentoCard";
 import { TasksOverviewCard } from "./TasksOverviewCard";
 import { Row3Section } from "./Row3Section";
 import { Row3MemberSection } from "./Row3MemberSection";
-import { Row4Section } from "./Row4Section";
 import { Row5Section } from "./Row5Section";
 import { TasksComponent } from "@/MyComponents/HomeDashboard/tasks";
 import Meetings from "@/MyComponents/HomeDashboard/meetings";
@@ -507,17 +506,6 @@ function CWADashboardContent() {
           "lists" mode shows the original Tasks + Meetings widgets
           (toggle via Cmd+Shift+D or Cmd+K palette). */}
       <Row4Swapper />
-
-      {/* ── Row 5: today-strip footer (demoted from Row 4) ──
-          The today-agenda content that used to live in Row 4. Day 3
-          of the Row 4 Redux build trims its vertical height and
-          drops the typography to make it read as a tertiary footer.
-          For now it sits at its old prominence. */}
-      <div className="col-span-12">
-        <div className="grid grid-cols-12 gap-3">
-          <Row4Section />
-        </div>
-      </div>
 
       {/* ── Row 6 (preview): Communication & Workspace ──
           Engagement-focused — Communication & Presence (mentions,

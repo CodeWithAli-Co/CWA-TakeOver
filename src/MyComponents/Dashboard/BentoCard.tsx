@@ -10,6 +10,10 @@ interface BentoCardProps {
    *  cramped on small stat tiles). */
   label?: string;
   withHeaderBar?: boolean;
+  /** Right-side actions slot for the header strip. Only renders when
+   *  `withHeaderBar` is true. Used for icon buttons like "Send kudos",
+   *  "Settings", etc. — anything that should live next to the title. */
+  headerActions?: ReactNode;
   /** col-span and row-span classes */
   span?: string;
   delay?: number;
@@ -34,6 +38,7 @@ export function BentoCard({
   className = "",
   label,
   withHeaderBar = false,
+  headerActions,
   span = "",
   delay = 0,
   noPadding = false,
@@ -46,10 +51,15 @@ export function BentoCard({
       className={`bento-card rounded-xl border-xs border-border-soft bg-card overflow-hidden ${span} ${className}`}
     >
       {label && withHeaderBar && (
-        <header className="bg-popover/70 border-b border-xs border-border-soft px-4 py-2">
+        <header className="bg-popover/70 border-b border-xs border-border-soft px-4 py-2 flex items-center justify-between gap-2">
           <span className="text-[10px] font-semibold uppercase tracking-[0.15em] text-text-tertiary">
             {label}
           </span>
+          {headerActions && (
+            <div className="flex items-center gap-1 flex-shrink-0">
+              {headerActions}
+            </div>
+          )}
         </header>
       )}
       {/* `noPadding` cards (chart panels) still need the inline label to

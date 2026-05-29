@@ -346,14 +346,17 @@ export function CommandPalette() {
                       <p className="px-4 py-1.5 font-mono text-[9.5px] uppercase tracking-[0.22em] text-muted-foreground/80 bg-muted/20">
                         {section}
                       </p>
-                      <ul>
+                      {/* list-none + zero margin/padding kills the
+                       *  white bullet markers a global rule was
+                       *  leaking through tailwind's preflight. */}
+                      <ul className="list-none p-0 m-0">
                         {items.map((item) => {
                           const isActive = cursor === activeIdx;
                           const idx = cursor;
                           cursor++;
                           const Icon = item.icon;
                           return (
-                            <li key={item.id}>
+                            <li key={item.id} className="list-none">
                               <button
                                 type="button"
                                 onMouseEnter={() => setActiveIdx(idx)}

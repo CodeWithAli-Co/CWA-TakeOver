@@ -24,13 +24,31 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { HandHeart, Search, Send, X } from "lucide-react";
+import { HandHeart, Search, Send, Sparkles, X } from "lucide-react";
 import supabase from "../supabase";
 import { ActiveUser, useAllEmployees, type EmployeeRow } from "@/stores/query";
 import { useSendKudosDialog } from "./sendKudosStore";
 import { useQueryClient } from "@tanstack/react-query";
 
 const MAX_BODY_LEN = 280;
+
+/**
+ * Pre-designed compliments — short, specific, slightly varied. The
+ * operator can either pick one as-is or use it as a starting point.
+ * Clicking a preset REPLACES the current body (we surface that with
+ * a slight chip glow on hover so it doesn't feel destructive).
+ *
+ * Kept calm: no emojis, no exclamation soup. Each line reads like
+ * something a thoughtful coworker would actually type.
+ */
+const KUDOS_PRESETS: { label: string; body: string }[] = [
+  { label: "Shipped it",   body: "Great work shipping that — it landed clean and the team felt it." },
+  { label: "Saved the day", body: "Thanks for jumping in when we were stuck — really saved the day." },
+  { label: "Sharp call",   body: "That was a sharp call — clearer direction made the whole thing move faster." },
+  { label: "Quietly killing it", body: "Quietly killing it lately — wanted to make sure that doesn't go unnoticed." },
+  { label: "Great taste",  body: "The taste on this is excellent — it's exactly the bar we want." },
+  { label: "Steady hand",  body: "Appreciate the steady hand through that. You kept it calm and we got there." },
+];
 
 export function SendKudosDialog() {
   const { open, prefilledTargetId, closeDialog } = useSendKudosDialog();
@@ -237,9 +255,13 @@ export function SendKudosDialog() {
                     />
                   </div>
                   {candidates.length > 0 && (
-                    <ul className="mt-1.5 max-h-[200px] overflow-y-auto rounded-md border-xs border-border-soft bg-background/30">
+                    /* list-none + p-0 + m-0 to kill the white bullet
+                     *  markers the global CSS leaks into nested lists,
+                     *  and to drop the default left-padding that made
+                     *  the rows look indented. */
+                    <ul className="list-none p-0 m-0 mt-1.5 max-h-[200px] overflow-y-auto rounded-md border-xs border-border-soft bg-background/30">
                       {candidates.map((c, i) => (
-                        <li key={c.supa_id}>
+                        <li key={c.supa_id} className="list-none">
                           <button
                             type="button"
                             onClick={() => {
@@ -298,9 +320,47 @@ export function SendKudosDialog() {
 
               {/* Message */}
               <div>
-                <label className="text-[9.5px] font-semibold uppercase tracking-[0.14em] text-text-tertiary block mb-1.5">
-                  Message
-                </label>
+                <div className="flex items-center justify-between mb-1.5">
+                  <label className="text-[9.5px] font-semibold uppercase tracking-[0.14em] text-text-tertiary">
+                    Message
+                  </label>
+                  {chosen && (
+                    <span className="inline-flex items-center gap-1 text-[9.5px] font-semibold uppercase tracking-[0.14em] text-text-tertiary">
+                      <Sparkles className="h-2.5 w-2.5 text-primary/70" />
+                      Quick presets
+                    </span>
+                  )}
+                </div>
+
+                {/* Preset compliment chips — only after a recipient is
+                 *  picked, so the dialog leads with "who" not "what".
+                 *  Clicking a preset replaces the current draft. */}
+                {chosen && (
+                  <div className="flex flex-wrap gap-1 mb-2 list-none p-0 m-0">
+                    {KUDOS_PRESETS.map((p) => (
+                      <button
+                        key={p.label}
+                        type="button"
+                        onClick={() => {
+                          setBody(p.body.slice(0, MAX_BODY_LEN));
+                          requestAnimationFrame(() => bodyRef.current?.focus());
+                        }}
+                        className="
+                          inline-flex items-center text-[10.5px] font-medium
+                          px-2 py-1 rounded-md
+                          bg-foreground/[0.04] hover:bg-primary/[0.10]
+                          border-xs border-border-soft hover:border-primary/30
+                          text-foreground/75 hover:text-foreground
+                          transition-colors
+                        "
+                        title={p.body}
+                      >
+                        {p.label}
+                      </button>
+                    ))}
+                  </div>
+                )}
+
                 <textarea
                   ref={bodyRef}
                   value={body}

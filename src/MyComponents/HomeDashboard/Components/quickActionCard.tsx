@@ -1,6 +1,28 @@
-import { Link } from "@tanstack/react-router";
+import { Link, useRouterState } from "@tanstack/react-router";
 import { motion } from "framer-motion";
 
+/**
+ * QuickActionCard — single nav item in the dashboard header strip.
+ *
+ * Active / idle styling follows the design spec:
+ *
+ *   active : bg-surface-2 text-fg   + icon text-primary  (was text-accent)
+ *   idle   : bg-transparent text-fg-muted
+ *            hover:bg-surface hover:text-fg
+ *
+ * "Active" is determined by route match — if the user is currently on
+ * the URL the card links to (or a subpath of it), the active styling
+ * is applied. On the home route nothing matches, so the strip reads
+ * as all-idle there; the styling is in place for when this header
+ * sits above sub-routes.
+ *
+ * Note on the colour token: the design spec wrote `text-accent` for
+ * the active icon. We use `text-primary` because the existing
+ * `text-accent` Tailwind class resolves to a muted-grey hover surface
+ * used by ~13 shadcn components (dropdown focus, calendar day
+ * selected, billing button hover). Since `--primary` is now the
+ * refined coral-red, the visual effect is identical to the spec.
+ */
 export const QuickActionCard = ({
   title,
   icon: Icon,
@@ -9,17 +31,40 @@ export const QuickActionCard = ({
   title: string;
   icon: React.ComponentType<{ className?: string }>;
   url: string;
-}) => (
-  <Link to={`${url}`} from="/" draggable={false}>
-    <motion.div
-      whileHover={{ y: -1 }}
-      whileTap={{ scale: 0.97 }}
-      className="flex items-center gap-2 px-3.5 py-2 bg-muted/40 hover:bg-primary/[0.06] border border-border hover:border-primary/15 rounded-sm transition-all duration-300 cursor-pointer group"
-    >
-      <Icon className="h-3.5 w-3.5 text-muted-foreground/50 group-hover:text-primary transition-colors" />
-      <span className="text-[12px] font-medium text-muted-foreground/60 group-hover:text-foreground/70 transition-colors whitespace-nowrap">
-        {title}
-      </span>
-    </motion.div>
-  </Link>
-);
+}) => {
+  const pathname = useRouterState({ select: (s) => s.location.pathname });
+  // Active when pathname === url, OR url is a proper prefix of
+  // pathname. The root "/" only matches itself so home doesn't
+  // claim ownership of every nav item via prefix matching.
+  const active =
+    url === "/"
+      ? pathname === "/"
+      : pathname === url || pathname.startsWith(url + "/");
+
+  return (
+    <Link to={`${url}`} from="/" draggable={false}>
+      <motion.div
+        whileTap={{ scale: 0.97 }}
+        aria-current={active ? "page" : undefined}
+        className={[
+          // Compact chip sized for the 56px header bar.
+          "inline-flex items-center gap-1.5 px-2.5 h-7 rounded-md",
+          "transition-colors duration-150 cursor-pointer group",
+          active
+            ? "bg-surface-2 text-fg"
+            : "bg-transparent text-fg-muted hover:bg-surface hover:text-fg",
+        ].join(" ")}
+      >
+        <Icon
+          className={[
+            "h-3.5 w-3.5 transition-colors",
+            active ? "text-primary" : "text-fg-muted group-hover:text-fg",
+          ].join(" ")}
+        />
+        <span className="text-[12px] font-medium whitespace-nowrap leading-none">
+          {title}
+        </span>
+      </motion.div>
+    </Link>
+  );
+};

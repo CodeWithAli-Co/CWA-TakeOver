@@ -4,6 +4,10 @@ import { RouterProvider, createMemoryHistory, createRouter } from "@tanstack/rea
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { routeTree } from "./routeTree.gen";
 import "./assets/main.css";
+// theme.css adds the new dashboard token layer (surface / fg-muted /
+// line / accent / success-bg etc.) AFTER main.css so its tokens win
+// where they overlap. See src/styles/theme.css for the full map.
+import "./styles/theme.css";
 
 // ── Buffer polyfill ────────────────────────────────────────────
 // @react-pdf/renderer uses Node's Buffer internally for PDF
