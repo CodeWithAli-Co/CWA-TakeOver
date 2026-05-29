@@ -51,6 +51,7 @@ import { VersionHistoryPanel } from "./VersionHistoryPanel";
 import { MarkdownHelpPalette } from "./MarkdownHelpPalette";
 import { useMarkdownHelp } from "./markdownHelpStore";
 import { DeleteResourceDialog } from "./DeleteResourceDialog";
+import { CommentDraftDialog } from "./CommentDraftDialog";
 import "./workspace.css";
 import "tippy.js/dist/tippy.css";
 
@@ -71,6 +72,18 @@ export function DocDetailPage({ id }: Props) {
   const deleteMut = useDeleteDocument();
   const hardDeleteMut = useHardDeleteDocument();
   const [deleteOpen, setDeleteOpen] = useState(false);
+
+  // Pending comment draft state. The bubble menu's "Comment" action
+  // doesn't create a row anymore — it stashes the selected text +
+  // applyMark callback here and opens the CommentDraftDialog. The
+  // dialog's submit handler creates the row WITH the body already
+  // filled in, then applies the mark. Closes the previous footgun
+  // where users couldn't add their first message until after the
+  // empty thread was committed.
+  const [pendingComment, setPendingComment] = useState<{
+    selectedText: string;
+    applyMark: (commentId: string) => void;
+  } | null>(null);
 
   const [title, setTitle] = useState("");
   useEffect(() => {
@@ -481,17 +494,12 @@ export function DocDetailPage({ id }: Props) {
                 user={makeRemoteUser(username)}
                 field={activeField}
                 onLocalChange={handleLocalChange}
-                onAddComment={async (selectedText, applyMark) => {
-                  const created = await createCommentMut.mutateAsync({
-                    kind: "document",
-                    resourceId: doc.id,
-                    author: username,
-                    body: "",
-                    anchor: { kind: "doc-mark", selected_text: selectedText } as any,
-                  });
-                  applyMark(created.id);
-                  setCommentsOpen(true);
-                  setFocusedCommentId(created.id);
+                onAddComment={(selectedText, applyMark) => {
+                  // Defer creation — open the draft dialog and let
+                  // the user write the first message. The row is
+                  // created on submit, not here. See pendingComment
+                  // state + the <CommentDraftDialog /> below.
+                  setPendingComment({ selectedText, applyMark });
                 }}
                 onFocusComment={(id) => {
                   setCommentsOpen(true);
@@ -555,6 +563,33 @@ export function DocDetailPage({ id }: Props) {
         title={doc.title}
         onArchive={handleArchive}
         onHardDelete={handleHardDelete}
+      />
+
+      {/* New comment composer — opens when the bubble menu "Comment"
+       *  action fires. The thread row isn't created until the user
+       *  submits their first message; cancelling discards everything
+       *  including the mark application. */}
+      <CommentDraftDialog
+        open={!!pendingComment}
+        selectedText={pendingComment?.selectedText ?? ""}
+        onCancel={() => setPendingComment(null)}
+        onSubmit={async (body) => {
+          if (!pendingComment) return;
+          const created = await createCommentMut.mutateAsync({
+            kind: "document",
+            resourceId: doc.id,
+            author: username,
+            body,
+            anchor: {
+              kind: "doc-mark",
+              selected_text: pendingComment.selectedText,
+            } as any,
+          });
+          pendingComment.applyMark(created.id);
+          setCommentsOpen(true);
+          setFocusedCommentId(created.id);
+          setPendingComment(null);
+        }}
       />
     </div>
   );

@@ -46,7 +46,6 @@ import type {
   WorkspaceFolderCounts,
 } from "@/stores/workspaceTypes";
 import { ActiveUser } from "@/stores/query";
-import { ActivityFeed } from "./ActivityFeed";
 import { extractDocText, matchesQuery } from "./searchHelpers";
 import { useQuery } from "@tanstack/react-query";
 
@@ -415,8 +414,10 @@ export function WorkspacePage() {
             )}
           </div>
 
-          {/* Grid + Activity rail */}
-          <div className="grid grid-cols-1 lg:grid-cols-[1fr_260px] gap-6">
+          {/* Single full-width column. Recent Activity rail removed
+           *  — it duplicated the resource updated-at and didn't drive
+           *  any action. */}
+          <div className="w-full">
             <div>
               {isLoading ? (
                 <div className="py-16 flex items-center justify-center text-foreground/40 text-[13px]">
@@ -461,7 +462,7 @@ export function WorkspacePage() {
                   ))}
                 </ul>
               ) : (
-                <ul className="grid grid-cols-1 sm:grid-cols-2 gap-3 list-none p-0 m-0">
+                <ul className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 list-none p-0 m-0">
                   {filtered.map((r) => (
                     <ResourceCard
                       key={`${r.kind}-${r.id}`}
@@ -479,9 +480,6 @@ export function WorkspacePage() {
               )}
             </div>
 
-            <div className="lg:sticky lg:top-6 lg:self-start">
-              <ActivityFeed />
-            </div>
           </div>
         </main>
       </div>
