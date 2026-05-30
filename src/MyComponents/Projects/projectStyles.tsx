@@ -9,10 +9,13 @@
  * (bg-card, text-foreground, etc.) elsewhere.
  */
 
+import { useMemo } from "react";
 import {
   CircleDot, Activity, Eye, CheckCircle2, Pause,
   type LucideIcon,
 } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
+import supabase from "@/MyComponents/supabase";
 import type { ProjectStatus, ProjectPriority } from "@/stores/projects";
 
 export const STATUS_META: Record<
@@ -112,6 +115,42 @@ export function initialsOf(name: string | null | undefined): string {
   return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
 }
 
+/**
+ * Hook: returns a Map<username, avatarURL> built from the cached
+ * Employees query. Shares the same `["employees"]` queryKey as the
+ * Suspense-based `Employees()` hook in stores/query.ts so data is
+ * cached once and reused across components. Supports both legacy
+ * storage-bucket filenames (rewritten via supabase.storage public
+ * URL) and full-URL avatars (DiceBear, Direct Hire).
+ */
+function useAvatarsByName(): Map<string, string> {
+  const { data: employees } = useQuery({
+    queryKey: ["employees"],
+    queryFn: async () => {
+      const { data } = await supabase.from("app_users").select("*");
+      return data ?? [];
+    },
+    staleTime: 60_000,
+  });
+  return useMemo(() => {
+    const map = new Map<string, string>();
+    for (const e of (employees as any[] | undefined) ?? []) {
+      if (!e?.username) continue;
+      let url: string | undefined;
+      if (typeof e.avatar === "string" && e.avatar.startsWith("http")) {
+        url = e.avatar;
+      } else if (e.avatar) {
+        const { data } = supabase.storage
+          .from("avatars")
+          .getPublicUrl(e.avatar);
+        url = data?.publicUrl;
+      }
+      if (url) map.set(e.username, url);
+    }
+    return map;
+  }, [employees]);
+}
+
 export function Avatar({
   username,
   size = 24,
@@ -121,13 +160,26 @@ export function Avatar({
   size?: number;
   title?: string;
 }) {
+  const avatarsByName = useAvatarsByName();
+  const url = username ? avatarsByName.get(username) : undefined;
   return (
     <span
-      className="inline-flex items-center justify-center rounded-full bg-primary/10 text-primary font-bold tracking-tight border border-primary/20"
+      className="relative inline-flex items-center justify-center rounded-full bg-primary/10 text-primary font-bold tracking-tight border border-primary/20 overflow-hidden"
       style={{ width: size, height: size, fontSize: Math.max(9, size * 0.4) }}
       title={title ?? username ?? ""}
     >
-      {initialsOf(username)}
+      {url ? (
+        <img
+          src={url}
+          alt={username ?? ""}
+          className="absolute inset-0 w-full h-full object-cover"
+          onError={(e) => {
+            (e.currentTarget as HTMLImageElement).style.display = "none";
+          }}
+        />
+      ) : (
+        initialsOf(username)
+      )}
     </span>
   );
 }

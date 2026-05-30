@@ -1,15 +1,17 @@
-import TaskSettings from '@/MyComponents/Sidebar/handlingTasking/tasks'
-import { createLazyFileRoute } from '@tanstack/react-router'
+/**
+ * /task — Legacy route, redirects into /operations?tab=tasks.
+ *
+ * Kept around so existing bookmarks and the (transient) sidebar
+ * entries still work while we migrate every consumer to point at
+ * /operations directly.
+ */
 
+import { createLazyFileRoute, Navigate } from "@tanstack/react-router";
 
-function tasking() {
-  return (
-    <>
-      <TaskSettings />
-    </>
-  )
+function TaskRedirect() {
+  return <Navigate to={"/operations" as any} search={{ tab: "tasks" }} replace />;
 }
 
-export const Route = createLazyFileRoute('/task')({
-  component: tasking,
-})
+export const Route = createLazyFileRoute("/task")({
+  component: TaskRedirect,
+});

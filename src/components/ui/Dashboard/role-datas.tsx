@@ -89,22 +89,10 @@ export const internData = {
       icon: FileText,
     },
     {
-      title: "Projects",
-      url: "/projects",
+      title: "Operations",
+      url: "/operations",
       isActive: false,
       icon: Briefcase,
-    },
-    {
-      title: "Task",
-      url: "/task",
-      isActive: false,
-      icon: ClipboardList,
-    },
-    {
-      title: "Weekly Quotas",
-      url: "/quota",
-      isActive: false,
-      icon: Target,
     },
     {
       title: "Submit Report",
@@ -155,22 +143,10 @@ export const memberData = {
       icon: FileText,
     },
     {
-      title: "Projects",
-      url: "/projects",
+      title: "Operations",
+      url: "/operations",
       isActive: false,
       icon: Briefcase,
-    },
-    {
-      title: "Task",
-      url: "/task",
-      isActive: false,
-      icon: ClipboardList,
-    },
-    {
-      title: "Weekly Quotas",
-      url: "/quota",
-      isActive: false,
-      icon: Target,
     },
     {
       title: "Submit Report",
@@ -238,22 +214,10 @@ export const accountManagerData = {
       icon: FileText,
     },
     {
-      title: "Projects",
-      url: "/projects",
+      title: "Operations",
+      url: "/operations",
       isActive: false,
       icon: Briefcase,
-    },
-    {
-      title: "Task",
-      url: "/task",
-      isActive: false,
-      icon: ClipboardList,
-    },
-    {
-      title: "Weekly Quotas",
-      url: "/quota",
-      isActive: false,
-      icon: Target,
     },
     {
       title: "Timesheet",
@@ -335,22 +299,10 @@ export const marketingData = {
       icon: FileText,
     },
     {
-      title: "Projects",
-      url: "/projects",
+      title: "Operations",
+      url: "/operations",
       isActive: false,
       icon: Briefcase,
-    },
-    {
-      title: "Task",
-      url: "/task",
-      isActive: false,
-      icon: ClipboardList,
-    },
-    {
-      title: "Weekly Quotas",
-      url: "/quota",
-      isActive: false,
-      icon: Target,
     },
     {
       title: "Timesheet",
@@ -556,24 +508,10 @@ export const headOfInternalAffairsData = {
       company: "codeWithAli" as const,
     },
     {
-      title: "Projects",
-      url: "/projects",
+      title: "Operations",
+      url: "/operations",
       isActive: false,
       icon: Briefcase,
-      company: "codeWithAli" as const,
-    },
-    {
-      title: "Task",
-      url: "/task",
-      isActive: false,
-      icon: ClipboardList,
-      company: "codeWithAli" as const,
-    },
-    {
-      title: "Weekly Quotas",
-      url: "/quota",
-      isActive: false,
-      icon: Target,
       company: "codeWithAli" as const,
     },
     {
@@ -847,24 +785,10 @@ export const headOfGrowthData = {
       company: "codeWithAli" as const,
     },
     {
-      title: "Projects",
-      url: "/projects",
+      title: "Operations",
+      url: "/operations",
       isActive: false,
       icon: Briefcase,
-      company: "codeWithAli" as const,
-    },
-    {
-      title: "Task",
-      url: "/task",
-      isActive: false,
-      icon: ClipboardList,
-      company: "codeWithAli" as const,
-    },
-    {
-      title: "Weekly Quotas",
-      url: "/quota",
-      isActive: false,
-      icon: Target,
       company: "codeWithAli" as const,
     },
     {
@@ -1106,8 +1030,8 @@ export const adminData = {
       icon: FileText,
     },
     {
-      title: "Projects",
-      url: "/projects",
+      title: "Operations",
+      url: "/operations",
       isActive: false,
       icon: Briefcase,
     },
@@ -1116,18 +1040,6 @@ export const adminData = {
       url: "/strategy",
       isActive: false,
       icon: Compass,
-    },
-    {
-      title: "Task",
-      url: "/task",
-      isActive: false,
-      icon: ClipboardList,
-    },
-    {
-      title: "Weekly Quotas",
-      url: "/quota",
-      isActive: false,
-      icon: Target,
     },
     {
       title: "Timesheet",
@@ -1233,22 +1145,10 @@ export const projectManagerData = {
       icon: FileText,
     },
     {
-      title: "Projects",
-      url: "/projects",
+      title: "Operations",
+      url: "/operations",
       isActive: false,
       icon: Briefcase,
-    },
-    {
-      title: "Task",
-      url: "/task",
-      isActive: false,
-      icon: ClipboardList,
-    },
-    {
-      title: "Weekly Quotas",
-      url: "/quota",
-      isActive: false,
-      icon: Target,
     },
     {
       title: "Timesheet",
@@ -1376,22 +1276,10 @@ export const securityEngineerData = {
       icon: FileText,
     },
     {
-      title: "Projects",
-      url: "/projects",
+      title: "Operations",
+      url: "/operations",
       isActive: false,
       icon: Briefcase,
-    },
-    {
-      title: "Task",
-      url: "/task",
-      isActive: false,
-      icon: ClipboardList,
-    },
-    {
-      title: "Weekly Quotas",
-      url: "/quota",
-      isActive: false,
-      icon: Target,
     },
     {
       title: "Timesheet",
@@ -1516,16 +1404,17 @@ export const cooData = {
     // ── Day-to-day operations ──
     {
       title: "Operations",
-      url: "/task",
+      url: "/operations",
       icon: ClipboardList,
       isActive: false,
       company: "codeWithAli" as const,
-      items: [
-        { title: "Tasks", url: "/task" },
-        { title: "Projects", url: "/projects" },
-        { title: "Weekly Quotas", url: "/quota" },
-        { title: "Timesheet", url: "/timesheet" },
-      ],
+    },
+    {
+      title: "Timesheet",
+      url: "/timesheet",
+      icon: Clock,
+      isActive: false,
+      company: "codeWithAli" as const,
     },
 
     // ── Insights, planning, building blocks ──
@@ -1718,16 +1607,17 @@ export const ceoData = {
     // ── Day-to-day operations ──
     {
       title: "Operations",
-      url: "/task",
+      url: "/operations",
       icon: ClipboardList,
       isActive: false,
       company: "codeWithAli" as const,
-      items: [
-        { title: "Tasks", url: "/task" },
-        { title: "Projects", url: "/projects" },
-        { title: "Weekly Quotas", url: "/quota" },
-        { title: "Timesheet", url: "/timesheet" },
-      ],
+    },
+    {
+      title: "Timesheet",
+      url: "/timesheet",
+      icon: Clock,
+      isActive: false,
+      company: "codeWithAli" as const,
     },
 
     // ── Insights, planning, building blocks ──
@@ -1982,8 +1872,8 @@ export const cfoData = {
       icon: FileText,
     },
     {
-      title: "Projects",
-      url: "/projects",
+      title: "Operations",
+      url: "/operations",
       isActive: false,
       icon: Briefcase,
     },
@@ -1992,18 +1882,6 @@ export const cfoData = {
       url: "/strategy",
       isActive: false,
       icon: Compass,
-    },
-    {
-      title: "Task",
-      url: "/task",
-      isActive: false,
-      icon: ClipboardList,
-    },
-    {
-      title: "Weekly Quotas",
-      url: "/quota",
-      isActive: false,
-      icon: Target,
     },
     {
       title: "Timesheet",

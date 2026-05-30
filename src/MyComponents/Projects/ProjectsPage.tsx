@@ -31,8 +31,6 @@ import { ProjectDetailDrawer } from "./ProjectDetailDrawer";
 import { CreateProjectDialog } from "./CreateProjectDialog";
 import { STATUS_META, PRIORITY_META, daysUntil, fmtDate, AvatarStack } from "./projectStyles";
 
-const C_LEVEL_ROLES = new Set(["CEO", "COO", "CFO", "Admin"]);
-
 const STATUS_FILTERS: { id: "all" | ProjectStatus; label: string }[] = [
   { id: "all",          label: "All" },
   { id: "to_do",        label: "To do" },
@@ -42,15 +40,25 @@ const STATUS_FILTERS: { id: "all" | ProjectStatus; label: string }[] = [
   { id: "on_hold",      label: "On hold" },
 ];
 
-const COLUMN_ORDER: ProjectStatus[] = [
-  "to_do", "in_progress", "review", "completed", "on_hold",
-];
+/**
+ * Projects page.
+ *
+ * `embedded` (from OperationsHub) hides the big page header. The
+ * toolbar with search / status / priority / view-toggle / "New
+ * project" stays so the controls are reachable from the hub.
+ */
+interface ProjectsPageProps {
+  embedded?: boolean;
+}
 
-export function ProjectsPage() {
+export function ProjectsPage({ embedded = false }: ProjectsPageProps = {}) {
   const { data: meRows } = ActiveUser();
   const me = (meRows?.[0] as any) ?? null;
-  const role: string | undefined = me?.role ?? undefined;
-  const isCLevel = !!role && C_LEVEL_ROLES.has(role);
+  // Gating removed — everyone can view, create, and edit projects.
+  // `isCLevel` is hardcoded true so existing call sites that read
+  // it keep working without further plumbing. RLS still enforces
+  // write permissions at the database layer if needed.
+  const isCLevel = true;
 
   useProjectsRealtime();
 
@@ -78,14 +86,6 @@ export function ProjectsPage() {
     });
   }, [projects, query, statusFilter, priorityFilter]);
 
-  const grouped = useMemo(() => {
-    const buckets: Record<ProjectStatus, Project[]> = {
-      to_do: [], in_progress: [], review: [], completed: [], on_hold: [],
-    };
-    for (const p of filtered) buckets[p.status].push(p);
-    return buckets;
-  }, [filtered]);
-
   // Esc closes whatever's open (drawer first, then create modal).
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -98,25 +98,78 @@ export function ProjectsPage() {
   }, [createOpen, activeId]);
 
   return (
-    <div className="min-h-[100dvh] w-full bg-background text-foreground">
-      {/* ── Page header ────────────────────────────────────────── */}
-      <header className="border-b border-xs border-border-soft bg-background">
-        <div className="mx-auto w-full max-w-[1600px] px-6 py-6">
-          <div className="flex items-start justify-between gap-6 flex-wrap">
-            <div className="min-w-0">
-              <p className="text-[10.5px] font-bold uppercase tracking-wider text-text-tertiary mb-2">
-                {isCLevel ? "C-level workspace" : "Member workspace"} · Projects
-              </p>
-              <h1 className="text-[26px] font-bold text-foreground leading-tight">
-                Projects
-              </h1>
-              <p className="text-[13px] text-text-secondary mt-1 max-w-2xl">
-                Every project across the org in one editorial grid. Owners can
-                update their own status &amp; progress; creating, assigning,
-                and deleting is C-level only.
-              </p>
-            </div>
-            {isCLevel && (
+    <div
+      className={
+        embedded
+          ? "h-full w-full bg-background text-foreground overflow-y-auto"
+          : "min-h-[100dvh] w-full bg-background text-foreground"
+      }
+    >
+      {/* ── Page header — full hero when standalone, quiet stat strip
+       *  when embedded inside OperationsHub. */}
+      {embedded ? (
+        <div className="px-6 py-3 border-b border-xs border-border/15 bg-background/95 flex items-center justify-between gap-4 flex-wrap">
+          <div className="flex items-center gap-4 min-w-0 text-[11.5px]">
+            {/* Role chip removed — projects are open to everyone. */}
+            <span className="inline-flex items-baseline gap-1.5">
+              <span className="font-bold text-foreground tabular-nums text-[14px]">
+                {projects.length}
+              </span>
+              <span className="text-text-tertiary">
+                project{projects.length === 1 ? "" : "s"}
+              </span>
+            </span>
+            {(() => {
+              const inFlight = projects.filter(
+                (p) => p.status === "in_progress" || p.status === "review",
+              ).length;
+              const done = projects.filter((p) => p.status === "completed").length;
+              return (
+                <>
+                  <span className="h-3 w-px bg-border-soft" />
+                  <span className="inline-flex items-baseline gap-1.5">
+                    <span className="font-bold text-warning tabular-nums text-[14px]">
+                      {inFlight}
+                    </span>
+                    <span className="text-text-tertiary">in flight</span>
+                  </span>
+                  <span className="h-3 w-px bg-border-soft" />
+                  <span className="inline-flex items-baseline gap-1.5">
+                    <span className="font-bold text-success tabular-nums text-[14px]">
+                      {done}
+                    </span>
+                    <span className="text-text-tertiary">done</span>
+                  </span>
+                </>
+              );
+            })()}
+          </div>
+          <button
+            type="button"
+            onClick={() => setCreateOpen(true)}
+            className="inline-flex items-center gap-1.5 bg-primary text-primary-foreground text-[11.5px] font-bold px-3 py-1.5 rounded-md hover:opacity-90 transition-opacity"
+          >
+            <Plus size={13} strokeWidth={2.6} />
+            New project
+          </button>
+        </div>
+      ) : (
+        <header className="border-b border-xs border-border-soft bg-background">
+          <div className="mx-auto w-full max-w-[1600px] px-6 py-6">
+            <div className="flex items-start justify-between gap-6 flex-wrap">
+              <div className="min-w-0">
+                <p className="text-[10.5px] font-bold uppercase tracking-wider text-text-tertiary mb-2">
+                  Workspace · Projects
+                </p>
+                <h1 className="text-[26px] font-bold text-foreground leading-tight">
+                  Projects
+                </h1>
+                <p className="text-[13px] text-text-secondary mt-1 max-w-2xl">
+                  Every project across the org in one editorial grid. Open to
+                  the whole team — anyone can create, update status, and track
+                  progress.
+                </p>
+              </div>
               <button
                 type="button"
                 onClick={() => setCreateOpen(true)}
@@ -125,15 +178,17 @@ export function ProjectsPage() {
                 <Plus size={13} strokeWidth={2.6} />
                 New project
               </button>
-            )}
+            </div>
           </div>
-        </div>
-      </header>
+        </header>
+      )}
 
-      {/* ── Toolbar ────────────────────────────────────────────── */}
-      <div className="mx-auto w-full max-w-[1600px] px-6 pt-4">
-        <div className="rounded-xl border-xs border-border-soft bg-card overflow-hidden">
-          <div className="px-4 py-3 border-b border-xs border-border-soft flex flex-wrap items-center gap-3">
+      {/* ── Toolbar — editorial: hairline border, quiet bg.
+       *  Full width: no max-w cap so the toolbar + grid extend
+       *  edge-to-edge of the page. */}
+      <div className="w-full px-6 pt-4">
+        <div className="rounded-xl border-xs border-border/15 bg-foreground/[0.02] overflow-hidden">
+          <div className="px-4 py-3 border-b border-xs border-border/15 flex flex-wrap items-center gap-3">
             <div className="relative flex-1 min-w-[200px] max-w-[420px]">
               <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-text-tertiary" />
               <input
@@ -237,7 +292,7 @@ export function ProjectsPage() {
               onCreate={() => setCreateOpen(true)}
             />
           ) : view === "board" ? (
-            <BoardView grouped={grouped} onOpen={(id) => setActiveId(id)} />
+            <BoardView projects={filtered} onOpen={(id) => setActiveId(id)} />
           ) : (
             <ListView projects={filtered} onOpen={(id) => setActiveId(id)} />
           )}
@@ -270,43 +325,28 @@ export function ProjectsPage() {
 // Sub-views
 // ────────────────────────────────────────────────────────────────────
 
+/**
+ * BoardView — uniform 3-column grid of large project cards.
+ *
+ * Replaces the old 5-column-by-status kanban. The status filter
+ * pills at the top of the page filter which cards render here;
+ * status is now shown as a chip on each card, not as a column
+ * header. Modeled on the saasfactor.co reference: title + days
+ * remaining on the left, status pill on the right, visual content
+ * area in the middle, owner avatars + a stat at the bottom.
+ */
 function BoardView({
-  grouped,
+  projects,
   onOpen,
 }: {
-  grouped: Record<ProjectStatus, Project[]>;
+  projects: Project[];
   onOpen: (id: string) => void;
 }) {
   return (
-    <div className="p-4 grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
-      {COLUMN_ORDER.map((status) => {
-        const meta = STATUS_META[status];
-        const items = grouped[status];
-        return (
-          <div key={status} className="flex flex-col min-h-[120px]">
-            <div className="flex items-center justify-between mb-3 px-1">
-              <div className="inline-flex items-center gap-2">
-                <span className={`w-1.5 h-1.5 rounded-full ${meta.dot}`} />
-                <span className="text-[11px] font-bold uppercase tracking-wider text-text-secondary">
-                  {meta.label}
-                </span>
-                <span className="text-[11px] text-text-tertiary">{items.length}</span>
-              </div>
-            </div>
-            <div className="flex-1 space-y-2.5 list-none p-0 m-0">
-              {items.length === 0 ? (
-                <div className="rounded-lg border border-dashed border-border-soft py-6 text-center text-[11.5px] text-text-tertiary">
-                  Nothing here.
-                </div>
-              ) : (
-                items.map((p) => (
-                  <ProjectCard key={p.id} project={p} onOpen={() => onOpen(p.id)} />
-                ))
-              )}
-            </div>
-          </div>
-        );
-      })}
+    <div className="p-5 grid gap-5 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4">
+      {projects.map((p) => (
+        <ProjectCard key={p.id} project={p} onOpen={() => onOpen(p.id)} />
+      ))}
     </div>
   );
 }
@@ -319,8 +359,9 @@ function ListView({
   onOpen: (id: string) => void;
 }) {
   return (
-    <div className="divide-y divide-border-soft">
-      <div className="hidden md:grid grid-cols-12 gap-3 px-5 py-2 text-[10.5px] font-bold uppercase tracking-wider text-text-tertiary bg-popover/40">
+    <div className="divide-y divide-border/15">
+      {/* Header strip — editorial caps + tracking, hairline bg. */}
+      <div className="hidden md:grid grid-cols-12 gap-3 px-5 py-2.5 text-[10.5px] font-bold uppercase tracking-[0.14em] text-text-tertiary bg-foreground/[0.03] border-b border-xs border-border/15">
         <div className="col-span-5">Project</div>
         <div className="col-span-2">Status</div>
         <div className="col-span-1">Priority</div>
@@ -337,7 +378,7 @@ function ListView({
             key={p.id}
             type="button"
             onClick={() => onOpen(p.id)}
-            className="w-full grid grid-cols-12 gap-3 px-5 py-3.5 hover:bg-popover/50 transition-colors text-left"
+            className="w-full grid grid-cols-12 gap-3 px-5 py-3.5 hover:bg-foreground/[0.04] transition-colors text-left"
           >
             <div className="col-span-12 md:col-span-5 min-w-0">
               <div className="text-[13.5px] font-semibold text-foreground truncate">{p.title}</div>
@@ -385,62 +426,135 @@ function ListView({
   );
 }
 
+/**
+ * ProjectCard — large grid tile modeled on the saasfactor.co
+ * reference design.
+ *
+ * Layout (top to bottom):
+ *   · Title + "Nd Remaining" subtitle on the left, status pill on
+ *     the right.
+ *   · Visual content area in the middle — shows the description
+ *     (truncated) plus a progress bar with a percentage, plus a
+ *     small breakdown of tasks done vs. tasks total. Acts like the
+ *     "screenshot preview" slot in the reference, but filled with
+ *     real project signal instead of a fake mockup.
+ *   · Owner avatar stack on the left, headline stat (tasks ratio or
+ *     overdue chip) on the right.
+ *
+ * Rounded corners + hairline border + restrained hover lift to
+ * match the reference's premium card feel.
+ */
 function ProjectCard({ project, onOpen }: { project: Project; onOpen: () => void }) {
   const sm = STATUS_META[project.status];
-  const pm = PRIORITY_META[project.priority];
   const days = project.due ? daysUntil(project.due) : null;
-  const dueTone =
+  const remainingLabel =
+    project.due === null
+      ? "No deadline"
+      : days !== null && days < 0
+        ? `${Math.abs(days)} Days Overdue`
+        : days === 0
+          ? "Due today"
+          : `${days} Days Remaining`;
+  const remainingTone =
     days === null
       ? "text-text-tertiary"
       : days < 0
-      ? "text-red-500"
-      : days <= 7
-      ? "text-orange-500"
-      : "text-text-tertiary";
+        ? "text-destructive"
+        : days <= 7
+          ? "text-warning"
+          : "text-text-tertiary";
+
+  // Progress fill color tracks status — green when shipped, primary
+  // tone otherwise. Track stays neutral so the fill reads cleanly.
+  const progressFill =
+    project.status === "completed"
+      ? "bg-success"
+      : project.status === "review"
+        ? "bg-violet-500"
+        : "bg-primary";
 
   return (
     <button
       type="button"
       onClick={onOpen}
-      className="group block w-full text-left rounded-lg border-xs border-border-soft bg-background/60 hover:border-primary/40 hover:shadow-[0_8px_24px_-12px_rgba(0,0,0,0.25)] transition-all p-3"
+      className="group relative block w-full text-left rounded-2xl border-xs border-border-soft bg-foreground/[0.03] hover:bg-foreground/[0.05] hover:border-border/30 transition-colors p-5 flex flex-col gap-4 min-h-[240px]"
     >
-      <div className="flex items-start justify-between gap-2 mb-1.5">
-        <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[9.5px] font-bold uppercase tracking-wider ${pm.chip}`}>
-          <Flag size={8} strokeWidth={3} />
-          {pm.label}
-        </span>
-        <ChevronRight size={12} className="text-text-tertiary opacity-0 group-hover:opacity-100 transition-opacity" />
-      </div>
-      <div className="text-[13px] font-bold text-foreground leading-snug mb-1.5 line-clamp-2">
-        {project.title}
-      </div>
-      <div className="text-[11.5px] text-text-secondary leading-snug line-clamp-2 mb-3">
-        {project.description || <span className="text-text-tertiary italic">No description.</span>}
-      </div>
-
-      <div className="flex items-center gap-1.5 mb-2.5">
-        <div className="flex-1 h-1 rounded-full bg-foreground/[0.07] overflow-hidden">
-          <div
-            className={`h-full transition-all ${project.status === "completed" ? "bg-emerald-500" : "bg-primary"}`}
-            style={{ width: `${project.progress}%` }}
-          />
+      {/* Top row: title + remaining + status pill */}
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0 flex-1">
+          <h3 className="text-[14.5px] font-bold text-foreground leading-[1.25] line-clamp-2">
+            {project.title}
+          </h3>
+          <p className={`text-[12px] mt-1 font-medium ${remainingTone}`}>
+            {remainingLabel}
+          </p>
         </div>
-        <span className="text-[9.5px] font-bold tabular-nums text-text-tertiary">
-          {project.tasks_done}/{project.tasks_total}
+        {/* Status pill — pulled from STATUS_META for consistent tone. */}
+        <span
+          className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full border text-[10.5px] font-bold whitespace-nowrap ${sm.chip}`}
+        >
+          <sm.Icon size={11} strokeWidth={2.5} />
+          {sm.label}
         </span>
       </div>
 
+      {/* Visual content area — replaces the "screenshot" slot in the
+       *  reference. Uses real project signal: description + progress
+       *  + sub-status breakdown. Nested surface (inset) so it reads
+       *  as a content "panel" inside the card. */}
+      <div className="flex-1 rounded-xl bg-foreground/[0.025] border-xs border-border-soft p-4 flex flex-col gap-3">
+        {/* Description — 2 lines max. */}
+        <p className="text-[12.5px] text-text-secondary leading-relaxed line-clamp-2 min-h-[36px]">
+          {project.description || (
+            <span className="text-text-tertiary italic">No description on file.</span>
+          )}
+        </p>
+
+        {/* Progress + percentage */}
+        <div>
+          <div className="flex items-center justify-between text-[10.5px] font-bold uppercase tracking-[0.14em] text-text-tertiary mb-1.5">
+            <span>Progress</span>
+            <span className="tabular-nums text-foreground/80">
+              {project.progress}%
+            </span>
+          </div>
+          <div className="h-1.5 rounded-full bg-foreground/[0.07] overflow-hidden">
+            <div
+              className={`h-full rounded-full transition-all ${progressFill}`}
+              style={{ width: `${project.progress}%` }}
+            />
+          </div>
+        </div>
+
+        {/* Task breakdown — tiny stat row */}
+        <div className="flex items-center gap-3 text-[10.5px] text-text-tertiary mt-auto">
+          <span className="inline-flex items-baseline gap-1">
+            <span className="font-bold tabular-nums text-foreground/85 text-[12px]">
+              {project.tasks_done}
+            </span>
+            <span>done</span>
+          </span>
+          <span className="opacity-40">·</span>
+          <span className="inline-flex items-baseline gap-1">
+            <span className="font-bold tabular-nums text-foreground/85 text-[12px]">
+              {Math.max(0, project.tasks_total - project.tasks_done)}
+            </span>
+            <span>open</span>
+          </span>
+        </div>
+      </div>
+
+      {/* Bottom row: avatars + stat (tasks ratio) */}
       <div className="flex items-center justify-between gap-2">
-        <AvatarStack usernames={project.owner_username ? [project.owner_username] : []} max={3} />
-        <span className={`inline-flex items-center gap-1 text-[10.5px] font-semibold ${dueTone}`}>
-          <Calendar size={10} strokeWidth={2.5} />
-          {project.due === null
-            ? "No due"
-            : days !== null && days < 0
-            ? `${Math.abs(days)}d over`
-            : days === 0
-            ? "Due today"
-            : `${days}d`}
+        <AvatarStack
+          usernames={project.owner_username ? [project.owner_username] : []}
+          max={3}
+        />
+        <span className="inline-flex items-baseline gap-1 text-[12.5px] tabular-nums">
+          <span className="font-bold text-foreground">
+            {project.tasks_done}/{project.tasks_total}
+          </span>
+          <span className="text-text-tertiary text-[11px]">tasks</span>
         </span>
       </div>
     </button>
