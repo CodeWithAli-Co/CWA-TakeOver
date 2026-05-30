@@ -139,6 +139,73 @@ export async function githubListPRs(
   );
 }
 
+/**
+ * Constant-time exact repo count + most-recently-pushed repo.
+ *
+ * GitHub's REST API doesn't expose a "total repo count" field,
+ * but `/user/repos?per_page=1&sort=pushed` returns:
+ *   · One row in the body — the most-recently-pushed repo
+ *   · A `Link` header whose `rel="last"` URL has `page=N` where
+ *     N equals the total page count, which because per_page=1
+ *     equals the total repo count.
+ *
+ * One network call, no pagination, accurate even at 500+ repos.
+ * Falls back to the body length if no Link header (which means
+ * the user has ≤1 repo and no pagination is needed).
+ */
+export async function githubRepoSummary(
+  token: string,
+): Promise<{ totalCount: number; mostRecent: GitHubRepo | null }> {
+  const url = new URL(`${BASE_URL}/user/repos`);
+  url.searchParams.set("per_page", "1");
+  url.searchParams.set("sort", "pushed");
+  url.searchParams.set("direction", "desc");
+
+  const res = await fetch(url.toString(), {
+    headers: {
+      Authorization: `Bearer ${token}`,
+      Accept: "application/vnd.github+json",
+      "X-GitHub-Api-Version": "2022-11-28",
+    },
+  });
+  if (!res.ok) {
+    let msg = `GitHub ${res.status} ${res.statusText}`;
+    try {
+      const body = await res.json();
+      if (body?.message) msg = `GitHub: ${body.message}`;
+    } catch {
+      // ignore
+    }
+    throw new Error(msg);
+  }
+
+  const repos = (await res.json()) as GitHubRepo[];
+  const mostRecent = repos[0] ?? null;
+
+  // Parse the Link header — format is:
+  //   <url>; rel="next", <url>; rel="last"
+  // We only need rel="last".
+  let totalCount = repos.length;
+  const linkHeader = res.headers.get("Link");
+  if (linkHeader) {
+    const m = linkHeader.match(/<([^>]+)>;\s*rel="last"/);
+    if (m && m[1]) {
+      try {
+        const lastUrl = new URL(m[1]);
+        const lastPage = lastUrl.searchParams.get("page");
+        if (lastPage) {
+          const n = parseInt(lastPage, 10);
+          if (Number.isFinite(n) && n > 0) totalCount = n;
+        }
+      } catch {
+        // malformed URL, keep the fallback count
+      }
+    }
+  }
+
+  return { totalCount, mostRecent };
+}
+
 /** List issues for a specific repo. GitHub's /issues endpoint
  *  ALSO returns PRs — we filter them out so the caller gets
  *  pure issues. */

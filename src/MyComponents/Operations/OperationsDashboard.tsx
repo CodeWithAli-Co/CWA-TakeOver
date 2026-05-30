@@ -54,6 +54,7 @@ import {
   draftOperationsBrief,
   type OperationsSnapshot,
 } from "@/Axon/engine/draftOperationsBrief";
+import { ConnectorsStrip } from "./ConnectorsStrip";
 import { format, startOfWeek, endOfWeek } from "date-fns";
 import {
   ActiveUser,
@@ -203,6 +204,12 @@ export function OperationsDashboard() {
           aux={aux}
           username={username}
         />
+
+        {/* Connectors strip — horizontal cards showing live data
+         *  from each connected SaaS. Auto-hides when no
+         *  connectors are wired up, so fresh installs don't see
+         *  a stub. */}
+        <ConnectorsStrip />
 
         {/* Unified bento — single 3-col grid. Activity removed
          *  per ops feedback (low signal); Quotas now spans the

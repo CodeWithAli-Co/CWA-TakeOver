@@ -22,209 +22,27 @@
 
 import { useMemo, useState } from "react";
 import { motion } from "framer-motion";
-import { Plug, Search, X, CheckCircle2, Loader2 } from "lucide-react";
+import { Plug, Search, X, CheckCircle2, Loader2, AlertTriangle } from "lucide-react";
 import {
   useConnectors,
   useDeleteConnector,
   type Connector as PersistedConnector,
 } from "@/stores/connectors";
 import { ConnectorCredentialDialog } from "./ConnectorCredentialDialog";
+import {
+  CONNECTORS,
+  Monogram,
+  tierStyle,
+  type CatalogEntry,
+  type ConnectorTier,
+} from "./connectorCatalog";
+import { useConnectorSummary } from "./connectorSummary";
 
-type Tier = "Easy" | "Medium" | "Hard";
-
-interface Connector {
-  /** Stable id for state + future persistence. */
-  id: string;
-  /** Display name. */
-  name: string;
-  /** Single-letter monogram shown in the card avatar. */
-  monogram: string;
-  /** Rough brand-tinted background for the monogram badge. Hex
-   *  so we don't depend on Tailwind arbitrary value support. */
-  brand: string;
-  /** Short tagline — what the connector unlocks. */
-  tagline: string;
-  /** Category label shown in the corner of each card. */
-  category: string;
-  /** Setup difficulty — orders the catalog and tints the badge. */
-  tier: Tier;
-}
-
-/**
- * The 15 catalog entries, in the exact order they should appear.
- * Sorted from "paste an API key" at the top down to "regulated
- * multi-step flow" at the bottom. Stripe (#4), Google Docs (#13),
- * and Plaid (#15) are present per spec.
- */
-const CONNECTORS: Connector[] = [
-  // ── Easy: single API key ───────────────────────────────────
-  {
-    id: "openai",
-    name: "OpenAI",
-    monogram: "O",
-    brand: "#10A37F",
-    tagline: "Drop in a key — GPT models, embeddings, function calls.",
-    category: "AI",
-    tier: "Easy",
-  },
-  {
-    id: "sendgrid",
-    name: "SendGrid",
-    monogram: "S",
-    brand: "#1A82E2",
-    tagline: "Transactional email via a single SMTP / API key.",
-    category: "Email",
-    tier: "Easy",
-  },
-  {
-    id: "resend",
-    name: "Resend",
-    monogram: "R",
-    brand: "#000000",
-    tagline: "Modern email API — drop a key, send a message.",
-    category: "Email",
-    tier: "Easy",
-  },
-  {
-    id: "stripe",
-    name: "Stripe",
-    monogram: "S",
-    brand: "#635BFF",
-    tagline: "Payments, subscriptions, invoices — publishable + secret key.",
-    category: "Payments",
-    tier: "Easy",
-  },
-  {
-    id: "airtable",
-    name: "Airtable",
-    monogram: "A",
-    brand: "#FCB400",
-    tagline: "Personal access token + base id, read / write bases.",
-    category: "Database",
-    tier: "Easy",
-  },
-
-  // ── Medium: standard OAuth 2.0 ─────────────────────────────
-  {
-    id: "github",
-    name: "GitHub",
-    monogram: "G",
-    brand: "#24292F",
-    tagline: "OAuth — repos, PRs, issues, commit activity.",
-    category: "Code",
-    tier: "Medium",
-  },
-  {
-    id: "slack",
-    name: "Slack",
-    monogram: "S",
-    brand: "#4A154B",
-    tagline: "OAuth + workspace pick — channels, messages, presence.",
-    category: "Messaging",
-    tier: "Medium",
-  },
-  {
-    id: "linear",
-    name: "Linear",
-    monogram: "L",
-    brand: "#5E6AD2",
-    tagline: "OAuth — issues, cycles, projects, custom views.",
-    category: "Project mgmt",
-    tier: "Medium",
-  },
-  {
-    id: "notion",
-    name: "Notion",
-    monogram: "N",
-    brand: "#000000",
-    tagline: "OAuth — pages, databases, blocks. Bot must be invited.",
-    category: "Docs",
-    tier: "Medium",
-  },
-  {
-    id: "asana",
-    name: "Asana",
-    monogram: "A",
-    brand: "#F06A6A",
-    tagline: "OAuth + workspace selector — tasks, projects, portfolios.",
-    category: "Project mgmt",
-    tier: "Medium",
-  },
-
-  // ── Hard: OAuth + scopes / webhooks / portal selection ─────
-  {
-    id: "hubspot",
-    name: "HubSpot",
-    monogram: "H",
-    brand: "#FF7A59",
-    tagline: "OAuth + portal id + granular scopes. Contacts, deals, pipelines.",
-    category: "CRM",
-    tier: "Hard",
-  },
-  {
-    id: "calendly",
-    name: "Calendly",
-    monogram: "C",
-    brand: "#006BFF",
-    tagline: "OAuth + event types + webhook signing keys for scheduling.",
-    category: "Scheduling",
-    tier: "Hard",
-  },
-  {
-    id: "google-docs",
-    name: "Google Docs",
-    monogram: "G",
-    brand: "#4285F4",
-    tagline: "OAuth2 — Drive scopes, refresh tokens, per-doc permissions.",
-    category: "Docs",
-    tier: "Hard",
-  },
-  {
-    id: "mailchimp",
-    name: "Mailchimp",
-    monogram: "M",
-    brand: "#FFE01B",
-    tagline: "OAuth + audience selection + double-opt-in considerations.",
-    category: "Marketing",
-    tier: "Hard",
-  },
-
-  // ── Hardest: regulated multi-step flow ─────────────────────
-  {
-    id: "plaid",
-    name: "Plaid",
-    monogram: "P",
-    brand: "#000000",
-    tagline: "Institution linking, public→access token exchange, KYC.",
-    category: "Banking",
-    tier: "Hard",
-  },
-];
-
-// Difficulty tone for the badge.
-function tierStyle(tier: Tier): {
-  text: string;
-  bg: string;
-  border: string;
-} {
-  if (tier === "Easy")
-    return {
-      text: "text-success",
-      bg: "bg-success/12",
-      border: "border-success/30",
-    };
-  if (tier === "Medium")
-    return {
-      text: "text-warning",
-      bg: "bg-warning/12",
-      border: "border-warning/30",
-    };
-  return {
-    text: "text-destructive",
-    bg: "bg-destructive/12",
-    border: "border-destructive/30",
-  };
-}
+// Aliases so the rest of the file (and the JSX) reads with the
+// shorter names. CONNECTORS / Monogram / tierStyle now live in
+// `connectorCatalog.tsx`.
+type Tier = ConnectorTier;
+type Connector = CatalogEntry;
 
 // ─────────────────────────────────────────────────────────────────
 // Page export
@@ -349,10 +167,9 @@ export const ConnectorsSettings = () => {
               <ConnectorCard
                 key={c.id}
                 connector={c}
-                connected={!!row}
+                persistedRow={row}
                 onConnect={() => setOpenKind(c.id)}
                 onDisconnect={() => handleDisconnect(c.id)}
-                lastSyncedAt={row?.last_synced_at ?? null}
                 delay={Math.min(i, 8) * 0.03}
               />
             );
@@ -430,20 +247,23 @@ function TierChip({
 
 function ConnectorCard({
   connector,
-  connected,
+  persistedRow,
   onConnect,
   onDisconnect,
-  lastSyncedAt,
   delay,
 }: {
   connector: Connector;
-  connected: boolean;
+  /** The Supabase row if connected, otherwise null. */
+  persistedRow: PersistedConnector | null;
   onConnect: () => void;
   onDisconnect: () => void;
-  lastSyncedAt: string | null;
   delay: number;
 }) {
   const t = tierStyle(connector.tier);
+  const connected = !!persistedRow;
+  const lastSyncedAt = persistedRow?.last_synced_at ?? null;
+  // Live summary fetch — runs only when there's a persisted row.
+  const summary = useConnectorSummary(persistedRow);
 
   return (
     <motion.div
@@ -483,15 +303,61 @@ function ConnectorCard({
           </span>
         </div>
 
-        {/* Tagline */}
-        <p className="text-[11.5px] text-text-secondary leading-relaxed line-clamp-2">
-          {connector.tagline}
-        </p>
+        {/* Tagline — only when NOT connected. Once connected we
+         *  reuse the row for live data, which is more useful. */}
+        {!connected && (
+          <p className="text-[11.5px] text-text-secondary leading-relaxed line-clamp-2">
+            {connector.tagline}
+          </p>
+        )}
 
-        {/* Last-sync timestamp when connected */}
+        {/* Live summary — replaces the tagline once connected.
+         *  Shows loading / success / error states explicitly so
+         *  the user knows the connector is actually doing
+         *  something (and immediately sees when it isn't). */}
+        {connected && (
+          <div className="space-y-1 min-h-[28px]">
+            {summary.isLoading && (
+              <p className="text-[11px] text-text-tertiary flex items-center gap-1.5">
+                <Loader2 className="h-2.5 w-2.5 animate-spin" />
+                Pinging service…
+              </p>
+            )}
+            {!summary.isLoading && summary.data?.ok && (
+              <>
+                <p className="text-[11.5px] font-semibold text-foreground/85">
+                  {summary.data.text}
+                </p>
+                {summary.data.detail && (
+                  <p className="text-[10.5px] text-text-tertiary truncate">
+                    {summary.data.detail}
+                  </p>
+                )}
+              </>
+            )}
+            {!summary.isLoading &&
+              summary.data &&
+              !summary.data.ok && (
+                <p className="text-[11px] text-destructive flex items-start gap-1">
+                  <AlertTriangle className="h-2.5 w-2.5 mt-0.5 shrink-0" />
+                  <span className="truncate">
+                    {summary.data.error ?? "Connection failed"}
+                  </span>
+                </p>
+              )}
+            {!summary.isLoading && summary.error && (
+              <p className="text-[11px] text-destructive flex items-start gap-1">
+                <AlertTriangle className="h-2.5 w-2.5 mt-0.5 shrink-0" />
+                <span className="truncate">Connection failed</span>
+              </p>
+            )}
+          </div>
+        )}
+
+        {/* Last-sync timestamp — small caption under the summary. */}
         {connected && lastSyncedAt && (
-          <p className="text-[10px] text-text-tertiary tabular-nums">
-            Last synced {new Date(lastSyncedAt).toLocaleString()}
+          <p className="text-[10px] text-text-tertiary/70 tabular-nums">
+            Last verified {new Date(lastSyncedAt).toLocaleString()}
           </p>
         )}
       </div>
@@ -531,50 +397,5 @@ function ConnectorCard({
   );
 }
 
-// ─────────────────────────────────────────────────────────────────
-// Monogram — colored badge with the brand's first letter
-// ─────────────────────────────────────────────────────────────────
-
-function Monogram({ letter, color }: { letter: string; color: string }) {
-  // Convert the hex brand color into rgba with low alpha for the
-  // tile background, full alpha for the letter color. That way
-  // every monogram looks "branded" without us having to ship 15
-  // SVG logos.
-  const bg = hexToRgba(color, 0.16);
-  const ring = hexToRgba(color, 0.35);
-
-  return (
-    <div
-      className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0 border"
-      style={{
-        backgroundColor: bg,
-        borderColor: ring,
-        color: color,
-      }}
-    >
-      <span
-        className="text-[14px] font-bold leading-none"
-        style={{
-          fontFamily: "var(--ed-font-display, Inter), system-ui, sans-serif",
-        }}
-      >
-        {letter}
-      </span>
-    </div>
-  );
-}
-
-function hexToRgba(hex: string, alpha: number): string {
-  const m = hex.replace("#", "");
-  const full =
-    m.length === 3
-      ? m
-          .split("")
-          .map((c) => c + c)
-          .join("")
-      : m;
-  const r = parseInt(full.slice(0, 2), 16);
-  const g = parseInt(full.slice(2, 4), 16);
-  const b = parseInt(full.slice(4, 6), 16);
-  return `rgba(${r}, ${g}, ${b}, ${alpha})`;
-}
+// Monogram + hexToRgba moved to ./connectorCatalog so both this
+// page and the Operations dashboard strip can share them.
