@@ -677,6 +677,88 @@ export const useTeamActivity = (limit: number = 20) => {
 };
 
 // ────────────────────────────────────────────────────────────────
+// useStrategicFocus — current quarter's strategic priority for the
+// active company. Returns the most recently updated row; the
+// dashboard card surfaces it on days when the CEO has no meetings,
+// turning a "Free today" empty state into a strategic prompt.
+//
+// Schema: migrations/strategic_focus.sql (cwa_strategic_focus).
+// ────────────────────────────────────────────────────────────────
+export interface StrategicFocusRow {
+  id: string;
+  company: string;
+  headline: string;
+  latest_note: string | null;
+  updated_by: string | null;
+  updated_at: string;
+  created_at: string;
+}
+
+export const useStrategicFocus = (company: string | null | undefined) => {
+  return useQuery({
+    queryKey: ["strategic_focus", company],
+    queryFn: async (): Promise<StrategicFocusRow | null> => {
+      if (!company) return null;
+      const { data, error } = await supabase
+        .from("cwa_strategic_focus")
+        .select("*")
+        .eq("company", company)
+        .order("updated_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      if (error) {
+        // Don't blow up the dashboard if the table doesn't exist
+        // yet (operator hasn't run the migration). Just return null
+        // so the card shows its "Set up a focus" empty state.
+        if (
+          /relation .* does not exist|cwa_strategic_focus/i.test(
+            error.message ?? "",
+          )
+        ) {
+          return null;
+        }
+        console.warn("[strategic_focus] query error:", error.message);
+        return null;
+      }
+      return (data as StrategicFocusRow | null) ?? null;
+    },
+    enabled: !!company,
+    staleTime: 60_000,
+  });
+};
+
+// ────────────────────────────────────────────────────────────────
+// useKudosReceived — recognition feed for the current user.
+//
+// Filters team_activity to rows where activity_type === "kudos" AND
+// target_id === the active employee's supa_id. Used by the employee
+// top-strip card to show the most recent kudos + a count of how many
+// they've received in the trailing 7 days.
+// ────────────────────────────────────────────────────────────────
+export const useKudosReceived = (targetSupaId: string | null | undefined, limit: number = 10) => {
+  return useQuery({
+    queryKey: ["kudos_received", targetSupaId, limit],
+    queryFn: async (): Promise<TeamActivityRow[]> => {
+      if (!targetSupaId) return [];
+      const { data, error } = await supabase
+        .from("team_activity")
+        .select("*")
+        .eq("activity_type", "kudos")
+        .eq("target_id", targetSupaId)
+        .order("created_at", { ascending: false })
+        .limit(limit);
+      if (error) {
+        console.warn("[kudos_received] query error:", error.message);
+        return [];
+      }
+      return (data ?? []) as TeamActivityRow[];
+    },
+    enabled: !!targetSupaId,
+    staleTime: 30_000,
+  });
+};
+
+// ────────────────────────────────────────────────────────────────
 // app_users (lightweight) — just supa_id + username + role for
 // dropdowns in the Send-kudos and Create-growth-track modals.
 // Excludes the current user from kudos targeting (no self-kudos).
