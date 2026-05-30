@@ -22,7 +22,13 @@
 
 import { useMemo, useState } from "react";
 import { motion } from "framer-motion";
-import { Plug, Search, X, CheckCircle2 } from "lucide-react";
+import { Plug, Search, X, CheckCircle2, Loader2 } from "lucide-react";
+import {
+  useConnectors,
+  useDeleteConnector,
+  type Connector as PersistedConnector,
+} from "@/stores/connectors";
+import { ConnectorCredentialDialog } from "./ConnectorCredentialDialog";
 
 type Tier = "Easy" | "Medium" | "Hard";
 
@@ -228,21 +234,23 @@ export const ConnectorsSettings = () => {
   const [query, setQuery] = useState("");
   const [tierFilter, setTierFilter] = useState<Tier | "All">("All");
 
-  // No persistence yet — keep "connected" state in-component so
-  // the user can preview the connected vs not-connected state.
-  // Replace with a `connectors` table lookup when the backend
-  // exists.
-  const [connectedIds, setConnectedIds] = useState<Set<string>>(
-    () => new Set(),
-  );
+  // Real persistence — read from the `connectors` table.
+  const { data: persisted = [], isLoading } = useConnectors();
+  const deleteMut = useDeleteConnector();
 
-  const toggleConnected = (id: string) => {
-    setConnectedIds((prev) => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
-      return next;
-    });
+  // Map kind → persisted row for O(1) lookups in the catalog.
+  const connectedByKind = useMemo(() => {
+    const m = new Map<string, PersistedConnector>();
+    for (const row of persisted) m.set(row.kind, row);
+    return m;
+  }, [persisted]);
+
+  // Which connector's credential modal is open. `null` = closed.
+  const [openKind, setOpenKind] = useState<string | null>(null);
+
+  const handleDisconnect = (kind: string) => {
+    const row = connectedByKind.get(kind);
+    if (row) deleteMut.mutate(row.id);
   };
 
   const filtered = useMemo(() => {
@@ -322,7 +330,12 @@ export const ConnectorsSettings = () => {
       </div>
 
       {/* Grid */}
-      {filtered.length === 0 ? (
+      {isLoading ? (
+        <div className="flex items-center justify-center py-12 text-text-tertiary">
+          <Loader2 className="h-4 w-4 animate-spin mr-2" />
+          <span className="text-[12px]">Loading catalog…</span>
+        </div>
+      ) : filtered.length === 0 ? (
         <div className="text-center py-12 border border-dashed border-border-soft rounded-2xl">
           <p className="text-[12px] text-text-tertiary italic">
             No connectors match that filter.
@@ -330,23 +343,41 @@ export const ConnectorsSettings = () => {
         </div>
       ) : (
         <div className="grid gap-3 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
-          {filtered.map((c, i) => (
-            <ConnectorCard
-              key={c.id}
-              connector={c}
-              connected={connectedIds.has(c.id)}
-              onToggle={() => toggleConnected(c.id)}
-              delay={Math.min(i, 8) * 0.03}
-            />
-          ))}
+          {filtered.map((c, i) => {
+            const row = connectedByKind.get(c.id) ?? null;
+            return (
+              <ConnectorCard
+                key={c.id}
+                connector={c}
+                connected={!!row}
+                onConnect={() => setOpenKind(c.id)}
+                onDisconnect={() => handleDisconnect(c.id)}
+                lastSyncedAt={row?.last_synced_at ?? null}
+                delay={Math.min(i, 8) * 0.03}
+              />
+            );
+          })}
         </div>
       )}
 
       {/* Footnote */}
       <p className="text-[11px] text-text-tertiary/80 italic text-center pt-2">
-        Connector wiring is in preview — toggling here is local only until the
-        backend handshake is implemented.
+        Credentials are stored in Supabase with row-level security. Axon reads
+        from the same table — connect a service here and it appears in Axon's
+        toolbox.
       </p>
+
+      {/* Credential modal — opens for whichever kind was clicked. */}
+      {openKind && (
+        <ConnectorCredentialDialog
+          kind={openKind}
+          name={
+            CONNECTORS.find((c) => c.id === openKind)?.name ?? openKind
+          }
+          existing={connectedByKind.get(openKind) ?? null}
+          onClose={() => setOpenKind(null)}
+        />
+      )}
     </div>
   );
 };
@@ -400,12 +431,16 @@ function TierChip({
 function ConnectorCard({
   connector,
   connected,
-  onToggle,
+  onConnect,
+  onDisconnect,
+  lastSyncedAt,
   delay,
 }: {
   connector: Connector;
   connected: boolean;
-  onToggle: () => void;
+  onConnect: () => void;
+  onDisconnect: () => void;
+  lastSyncedAt: string | null;
   delay: number;
 }) {
   const t = tierStyle(connector.tier);
@@ -452,31 +487,45 @@ function ConnectorCard({
         <p className="text-[11.5px] text-text-secondary leading-relaxed line-clamp-2">
           {connector.tagline}
         </p>
+
+        {/* Last-sync timestamp when connected */}
+        {connected && lastSyncedAt && (
+          <p className="text-[10px] text-text-tertiary tabular-nums">
+            Last synced {new Date(lastSyncedAt).toLocaleString()}
+          </p>
+        )}
       </div>
 
-      {/* Footer — connect button */}
-      <div className="px-4 pb-4 pt-1">
-        <button
-          type="button"
-          onClick={onToggle}
-          className={`w-full inline-flex items-center justify-center gap-1.5 h-8 px-4 rounded-full text-[11.5px] font-semibold transition-colors ${
-            connected
-              ? "bg-success/[0.08] text-success border border-success/30 hover:bg-success/[0.12]"
-              : "bg-foreground/[0.04] text-foreground/85 border border-border-soft hover:border-foreground/30 hover:bg-foreground/[0.06]"
-          }`}
-        >
-          {connected ? (
-            <>
+      {/* Footer — connect / manage buttons */}
+      <div className="px-4 pb-4 pt-1 flex items-center gap-2">
+        {connected ? (
+          <>
+            <button
+              type="button"
+              onClick={onConnect}
+              className="flex-1 inline-flex items-center justify-center gap-1.5 h-8 px-3 rounded-full text-[11px] font-semibold bg-success/[0.08] text-success border border-success/30 hover:bg-success/[0.12] transition-colors"
+            >
               <CheckCircle2 size={11} strokeWidth={2.4} />
-              Connected
-            </>
-          ) : (
-            <>
-              <Plug size={11} strokeWidth={2.4} />
-              Connect
-            </>
-          )}
-        </button>
+              Manage
+            </button>
+            <button
+              type="button"
+              onClick={onDisconnect}
+              className="inline-flex items-center justify-center h-8 px-3 rounded-full text-[10.5px] font-semibold text-text-tertiary border border-border-soft hover:border-destructive/40 hover:text-destructive hover:bg-destructive/[0.05] transition-colors"
+            >
+              Disconnect
+            </button>
+          </>
+        ) : (
+          <button
+            type="button"
+            onClick={onConnect}
+            className="w-full inline-flex items-center justify-center gap-1.5 h-8 px-4 rounded-full text-[11.5px] font-semibold bg-foreground/[0.04] text-foreground/85 border border-border-soft hover:border-foreground/30 hover:bg-foreground/[0.06] transition-colors"
+          >
+            <Plug size={11} strokeWidth={2.4} />
+            Connect
+          </button>
+        )}
       </div>
     </motion.div>
   );

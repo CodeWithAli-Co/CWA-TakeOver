@@ -36,6 +36,7 @@ import { registerThemeActions } from "./theme";
 import { registerShiftActions } from "./shifts";
 import { registerWorkspaceActions } from "./workspace";
 import { registerCapitalPlanActions } from "./capital_plan";
+import { registerConnectorActions } from "./connectors";
 
 let registered = false;
 
@@ -78,4 +79,5 @@ export function registerAllActions() {
   registerShiftActions();
   registerWorkspaceActions();
   registerCapitalPlanActions();
+  registerConnectorActions();
 }
