@@ -33,7 +33,7 @@ import {
 } from "lucide-react";
 import { ActiveUser } from "@/stores/query";
 import { DeveloperResourceHub } from "@/MyComponents/HomeDashboard/ResourceHub";
-import { IntegrationsSettings } from "@/MyComponents/SettingNavComponents/integrations";
+import { ConnectorsSettings } from "@/MyComponents/SettingNavComponents/connectors";
 import { NotificationSetting } from "@/MyComponents/SettingNavComponents/notification";
 import { CompanySettings } from "@/MyComponents/SettingNavComponents/company";
 import ReportSettings from "../SettingNavComponents/reports";
@@ -91,9 +91,10 @@ const TABS: TabDef[] = [
     elevatedOnly: true,
   },
   {
-    value: "integrations",
-    label: "Integrations",
-    description: "Third-party services connected to Takeover.",
+    value: "connectors",
+    label: "Connectors",
+    description:
+      "Wire up the SaaS tools your team already uses — Stripe, Plaid, Google Docs, and more.",
     icon: Plug,
     elevatedOnly: true,
   },
@@ -324,9 +325,9 @@ function TabContent({
                 <DeveloperResourceHub />
               </SectionCard>
             )}
-            {activeTab === "integrations" && (
+            {activeTab === "connectors" && (
               <SectionCard>
-                <IntegrationsSettings />
+                <ConnectorsSettings />
               </SectionCard>
             )}
           </UserView>
