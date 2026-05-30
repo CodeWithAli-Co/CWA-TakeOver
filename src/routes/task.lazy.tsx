@@ -1,15 +1,15 @@
 /**
- * /task — Legacy route, redirects into /operations?tab=tasks.
+ * /task — Legacy URL, redirects to the unified /operations dashboard.
  *
- * Kept around so existing bookmarks and the (transient) sidebar
- * entries still work while we migrate every consumer to point at
- * /operations directly.
+ * Tasks live inside the Operations dashboard now — there is no
+ * standalone tasks page. Bookmarks and existing in-app links still
+ * resolve via this redirect.
  */
 
 import { createLazyFileRoute, Navigate } from "@tanstack/react-router";
 
 function TaskRedirect() {
-  return <Navigate to={"/operations" as any} search={{ tab: "tasks" }} replace />;
+  return <Navigate to={"/operations" as any} replace />;
 }
 
 export const Route = createLazyFileRoute("/task")({

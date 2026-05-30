@@ -93,6 +93,10 @@ export const AddTodo = (props: Users) => {
           deadline: value.deadline,
           company: getActiveCompanyLabel(),
           assigned_by: assignerUsername,
+          // Rare case — task created already in "done" state. Stamp
+          // completed_at so it shows up in this week's Velocity.
+          completed_at:
+            value.status === "done" ? new Date().toISOString() : null,
         });
 
         if (error) {
@@ -141,11 +145,10 @@ export const AddTodo = (props: Users) => {
           </Button>
         ) : (
           <Button
-            className="group relative overflow-hidden bg-primary mb-2 hover:bg-primary/80 text-primary-foreground border border-primary/15 shadow-md shadow-red-950/20 transition-all duration-300 hover:scale-[1.02] active:scale-[0.98]"
+            className="group inline-flex items-center gap-2 h-8 px-4 rounded-full bg-primary hover:bg-primary/90 text-primary-foreground text-[12px] font-semibold border-0 shadow-none transition-colors"
           >
-            <span className="absolute inset-0 bg-red-700/10 opacity-0 group-hover:opacity-20 transition-opacity"></span>
-            <PlusCircle className="h-4 w-4 mr-2 transition-transform group-hover:rotate-90" />
-            <span>Create Task</span>
+            <PlusCircle className="h-3.5 w-3.5 transition-transform group-hover:rotate-90" strokeWidth={2.4} />
+            <span>Create task</span>
           </Button>
         )}
       </DialogTrigger>

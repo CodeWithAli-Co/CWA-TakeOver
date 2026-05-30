@@ -328,9 +328,14 @@ const TaskSettings: React.FC<TaskSettingsProps> = ({ embedded = false }) => {
   const completionPct = allCount > 0 ? (doneCount / allCount) * 100 : 0;
 
   const handleStatusChange = async (id: number, status: TaskStatus) => {
+    // Stamp completed_at when transitioning to done; null it when
+    // moving out of done. Keeps the Velocity widget honest.
     const { error } = await supabase
       .from("cwa_todos")
-      .update({ status })
+      .update({
+        status,
+        completed_at: status === "done" ? new Date().toISOString() : null,
+      })
       .eq("todo_id", id);
     if (error) {
       await message(error.message, { title: "Error updating task", kind: "error" });
@@ -926,7 +931,7 @@ const InboxView: React.FC<{
 // ════════════════════════════════════════════════════════════════
 // TaskEditDrawer - slide-in edit form
 // ════════════════════════════════════════════════════════════════
-const TaskEditDrawer: React.FC<{
+export const TaskEditDrawer: React.FC<{
   task: TodosInterface;
   onClose: () => void;
 }> = ({ task, onClose }) => {
@@ -960,6 +965,10 @@ const TaskEditDrawer: React.FC<{
       .split(",")
       .map((s) => s.trim())
       .filter(Boolean);
+    // Only touch completed_at when the status field actually changed
+    // — editing a title or label on an already-done task shouldn't
+    // re-stamp its completion time.
+    const statusChanged = status !== task.status;
     const patch = {
       title: title.trim(),
       description,
@@ -969,6 +978,9 @@ const TaskEditDrawer: React.FC<{
       deadline: deadline ? new Date(deadline + "T23:59:00").toISOString() : task.deadline,
       label: label.trim(),
       assignee: assignees,
+      ...(statusChanged && {
+        completed_at: status === "done" ? new Date().toISOString() : null,
+      }),
     };
     const { error } = await supabase.from("cwa_todos").update(patch).eq("todo_id", task.todo_id);
     setSaving(false);

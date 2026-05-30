@@ -35,9 +35,16 @@ registerUndoHandler<{
   title: string;
   previousStatus: string;
 }>("task.restore-status", async ({ todoId, title, previousStatus }) => {
+  // Mirror the completed_at behavior of all other status writes —
+  // restoring to a non-done state nulls it; restoring to done
+  // re-stamps it to now (we don't have the original timestamp here).
   const { error } = await supabase
     .from("cwa_todos")
-    .update({ status: previousStatus })
+    .update({
+      status: previousStatus,
+      completed_at:
+        previousStatus === "done" ? new Date().toISOString() : null,
+    })
     .eq("todo_id", todoId);
   if (error) throw new Error(error.message);
   return `Reverted "${title}" back to ${previousStatus}.`;
@@ -384,9 +391,14 @@ export const updateTaskStatusAction: AxonAction<
       };
     }
 
+    // Stamp completed_at on the status transition so the Velocity
+    // widget on /operations can count completions per week.
     const { error } = await supabase
       .from("cwa_todos")
-      .update({ status })
+      .update({
+        status,
+        completed_at: status === "done" ? new Date().toISOString() : null,
+      })
       .eq("todo_id", targetId);
 
     if (error) return { summary: `Update failed: ${error.message}`, data: { matched: null } };

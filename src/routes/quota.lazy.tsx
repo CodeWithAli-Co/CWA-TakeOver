@@ -1,16 +1,15 @@
 /**
- * /quota — Legacy route, redirects into /operations?tab=quotas.
+ * /quota — Legacy URL, redirects to the unified /operations dashboard.
  *
- * Kept so existing bookmarks + sidebar entries still work while we
- * migrate consumers to /operations directly.
+ * Weekly quotas live inside the Operations dashboard now — there is
+ * no standalone quotas page. Bookmarks and existing in-app links
+ * still resolve via this redirect.
  */
 
 import { createLazyFileRoute, Navigate } from "@tanstack/react-router";
 
 function QuotaRedirect() {
-  return (
-    <Navigate to={"/operations" as any} search={{ tab: "quotas" }} replace />
-  );
+  return <Navigate to={"/operations" as any} replace />;
 }
 
 export const Route = createLazyFileRoute("/quota")({

@@ -178,9 +178,13 @@ export function TaskDetailModal({
   }, [assigner, task?.assignee]);
 
   async function setStatus(next: string) {
+    // Stamp completed_at on transition to done; clear on reopen.
     const { error } = await supabase
       .from("cwa_todos")
-      .update({ status: next })
+      .update({
+        status: next,
+        completed_at: next === "done" ? new Date().toISOString() : null,
+      })
       .eq("todo_id", task.todo_id);
     if (error) {
       await message(error.message, {
