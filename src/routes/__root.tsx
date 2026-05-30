@@ -54,6 +54,7 @@ import LoginPage from "@/MyComponents/Beginning/login";
 import { GuidedTourOverlay } from "@/MyComponents/Onboarding/GuidedTourOverlay";
 import { FirstSignInTour } from "@/MyComponents/Onboarding/FirstSignInTour";
 import "@/MyComponents/Onboarding/guidedTour.css";
+import { useOnboardingRedirect } from "@/stores/onboarding";
 import { SignUpPage } from "@/MyComponents/Beginning/signup";
 import { ActiveUser, DMGroups, Messages } from "@/stores/query";
 import UserView from "@/MyComponents/Reusables/userView";
@@ -129,6 +130,10 @@ export const Route = createRootRoute({
   component: () => {
     const { pinCheck, isLoggedIn, GroupName } = useAppStore();
     const { data: user, error: userError } = ActiveUser();
+    // First-run onboarding gate. No-ops if user is already
+    // onboarded, unauthenticated, or already on /welcome —
+    // otherwise bounces them to the welcome wizard.
+    useOnboardingRedirect();
     if (userError) {
       sendNotification({
         title: "Error with Active User",

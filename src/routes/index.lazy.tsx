@@ -9,6 +9,7 @@ import {
   File,
   CalendarSearch,
   Sparkles,
+  RotateCcw,
 } from "lucide-react";
 import { motion } from "framer-motion";
 import UserView, { Role } from "@/MyComponents/Reusables/userView";
@@ -17,6 +18,9 @@ import CompanyStats from "@/MyComponents/HomeDashboard/companyStats";
 import Meetings from "@/MyComponents/HomeDashboard/meetings";
 import { SchedImgStore, useCompanyFilter, type CompanyFilter } from "@/stores/store";
 import { QuickActionCard } from "@/MyComponents/HomeDashboard/Components/quickActionCard";
+import { useNavigate } from "@tanstack/react-router";
+import { useQueryClient } from "@tanstack/react-query";
+import supabase from "@/MyComponents/supabase";
 import { TasksComponent } from "@/MyComponents/HomeDashboard/tasks";
 import { ActiveUser } from "@/stores/query";
 import { CompanyCard } from "@/MyComponents/HomeDashboard/Components/companyCard";
@@ -143,6 +147,9 @@ const Index = () => {
             <UserView userRole={[Role.CEO, Role.COO]}>
               <QuickActionCard title="Employees" icon={Users} url="/employee" />
             </UserView>
+            {/* TEMP — debug entry into the welcome wizard. Remove
+             *  once auto-redirect verified in production. */}
+            <OnboardingDebugPill />
 
           </motion.div>
         </div>
@@ -394,3 +401,70 @@ function CommandKPill() {
   );
 }
 
+/* ════════════════════════════════════════════════════════════════
+ * OnboardingDebugPill — TEMPORARY header chip for testing the
+ * /welcome wizard. Two clicks:
+ *   · Click "Welcome" → navigate to /welcome with no state change.
+ *   · Click the small reset icon → clear onboarded_at + role +
+ *     onboarding_state so the auto-redirect fires from scratch.
+ *
+ * Remove this component + its imports + the `<OnboardingDebugPill />`
+ * usage in the header before shipping.
+ * ════════════════════════════════════════════════════════════════ */
+function OnboardingDebugPill() {
+  const navigate = useNavigate();
+  const qc = useQueryClient();
+  const { data: user } = ActiveUser();
+  const supaId = (user?.[0] as any)?.supa_id;
+
+  // `debug=1` tells OnboardingPage to show the wizard even when
+  // the user is already onboarded. Without this param, the page
+  // immediately redirects to / for onboarded users.
+  const go = () =>
+    navigate({ to: "/welcome" as any, search: { debug: "1" } as any });
+
+  const reset = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!supaId) {
+      alert("No supa_id — can't reset.");
+      return;
+    }
+    const { error } = await supabase
+      .from("app_users")
+      .update({
+        onboarded_at: null,
+        role: null,
+        onboarding_state: null,
+      })
+      .eq("supa_id", supaId);
+    if (error) {
+      alert(`Reset failed: ${error.message}`);
+      return;
+    }
+    qc.invalidateQueries({ queryKey: ["onboarding-state"] });
+    navigate({ to: "/welcome" as any });
+  };
+
+  return (
+    <div className="inline-flex items-center gap-1 h-7 pl-2 pr-1 rounded-full bg-warning/15 border border-warning/40 text-warning ml-1">
+      <button
+        type="button"
+        onClick={go}
+        className="inline-flex items-center gap-1 text-[10.5px] font-bold uppercase tracking-[0.14em] hover:text-warning/80 transition-colors"
+        title="Open /welcome"
+      >
+        <Sparkles size={11} strokeWidth={2.4} />
+        Welcome
+      </button>
+      <span className="w-px h-3 bg-warning/30" aria-hidden />
+      <button
+        type="button"
+        onClick={reset}
+        className="p-1 rounded-full hover:bg-warning/20 transition-colors"
+        title="Reset onboarded_at + role, then open /welcome"
+      >
+        <RotateCcw size={10} strokeWidth={2.4} />
+      </button>
+    </div>
+  );
+}

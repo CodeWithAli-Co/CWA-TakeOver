@@ -13,6 +13,7 @@ import { createFileRoute } from '@tanstack/react-router'
 import { Route as rootRouteImport } from './routes/__root'
 
 const WorkspaceLazyRouteImport = createFileRoute('/workspace')()
+const WelcomeLazyRouteImport = createFileRoute('/welcome')()
 const TrainingplanLazyRouteImport = createFileRoute('/trainingplan')()
 const TimetrackingLazyRouteImport = createFileRoute('/timetracking')()
 const TimesheetLazyRouteImport = createFileRoute('/timesheet')()
@@ -78,6 +79,11 @@ const WorkspaceLazyRoute = WorkspaceLazyRouteImport.update({
   path: '/workspace',
   getParentRoute: () => rootRouteImport,
 } as any).lazy(() => import('./routes/workspace.lazy').then((d) => d.Route))
+const WelcomeLazyRoute = WelcomeLazyRouteImport.update({
+  id: '/welcome',
+  path: '/welcome',
+  getParentRoute: () => rootRouteImport,
+} as any).lazy(() => import('./routes/welcome.lazy').then((d) => d.Route))
 const TrainingplanLazyRoute = TrainingplanLazyRouteImport.update({
   id: '/trainingplan',
   path: '/trainingplan',
@@ -408,6 +414,7 @@ export interface FileRoutesByFullPath {
   '/timesheet': typeof TimesheetLazyRoute
   '/timetracking': typeof TimetrackingLazyRoute
   '/trainingplan': typeof TrainingplanLazyRoute
+  '/welcome': typeof WelcomeLazyRoute
   '/workspace': typeof WorkspaceLazyRouteWithChildren
   '/reports/submit': typeof ReportsSubmitLazyRoute
   '/client/': typeof ClientIndexLazyRoute
@@ -464,6 +471,7 @@ export interface FileRoutesByTo {
   '/timesheet': typeof TimesheetLazyRoute
   '/timetracking': typeof TimetrackingLazyRoute
   '/trainingplan': typeof TrainingplanLazyRoute
+  '/welcome': typeof WelcomeLazyRoute
   '/reports/submit': typeof ReportsSubmitLazyRoute
   '/client': typeof ClientIndexLazyRoute
   '/workspace': typeof WorkspaceIndexLazyRoute
@@ -520,6 +528,7 @@ export interface FileRoutesById {
   '/timesheet': typeof TimesheetLazyRoute
   '/timetracking': typeof TimetrackingLazyRoute
   '/trainingplan': typeof TrainingplanLazyRoute
+  '/welcome': typeof WelcomeLazyRoute
   '/workspace': typeof WorkspaceLazyRouteWithChildren
   '/reports/submit': typeof ReportsSubmitLazyRoute
   '/client/': typeof ClientIndexLazyRoute
@@ -578,6 +587,7 @@ export interface FileRouteTypes {
     | '/timesheet'
     | '/timetracking'
     | '/trainingplan'
+    | '/welcome'
     | '/workspace'
     | '/reports/submit'
     | '/client/'
@@ -634,6 +644,7 @@ export interface FileRouteTypes {
     | '/timesheet'
     | '/timetracking'
     | '/trainingplan'
+    | '/welcome'
     | '/reports/submit'
     | '/client'
     | '/workspace'
@@ -689,6 +700,7 @@ export interface FileRouteTypes {
     | '/timesheet'
     | '/timetracking'
     | '/trainingplan'
+    | '/welcome'
     | '/workspace'
     | '/reports/submit'
     | '/client/'
@@ -746,6 +758,7 @@ export interface RootRouteChildren {
   TimesheetLazyRoute: typeof TimesheetLazyRoute
   TimetrackingLazyRoute: typeof TimetrackingLazyRoute
   TrainingplanLazyRoute: typeof TrainingplanLazyRoute
+  WelcomeLazyRoute: typeof WelcomeLazyRoute
   WorkspaceLazyRoute: typeof WorkspaceLazyRouteWithChildren
   ClientIndexLazyRoute: typeof ClientIndexLazyRoute
   OfferAcceptTokenLazyRoute: typeof OfferAcceptTokenLazyRoute
@@ -758,6 +771,13 @@ declare module '@tanstack/react-router' {
       path: '/workspace'
       fullPath: '/workspace'
       preLoaderRoute: typeof WorkspaceLazyRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/welcome': {
+      id: '/welcome'
+      path: '/welcome'
+      fullPath: '/welcome'
+      preLoaderRoute: typeof WelcomeLazyRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/trainingplan': {
@@ -1210,6 +1230,7 @@ const rootRouteChildren: RootRouteChildren = {
   TimesheetLazyRoute: TimesheetLazyRoute,
   TimetrackingLazyRoute: TimetrackingLazyRoute,
   TrainingplanLazyRoute: TrainingplanLazyRoute,
+  WelcomeLazyRoute: WelcomeLazyRoute,
   WorkspaceLazyRoute: WorkspaceLazyRouteWithChildren,
   ClientIndexLazyRoute: ClientIndexLazyRoute,
   OfferAcceptTokenLazyRoute: OfferAcceptTokenLazyRoute,
