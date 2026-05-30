@@ -1,9 +1,9 @@
 import { ScrollArea } from "@/components/ui/shadcnComponents/scroll-area";
 import { motion } from "framer-motion";
 import { useNavigate } from "@tanstack/react-router";
+import { useMemo } from "react";
 import { useScheduleFocus } from "@/MyComponents/Timesheet/scheduleFocusStore";
 import {
-  Users,
   Video,
   MapPin,
   ExternalLink,
@@ -11,8 +11,6 @@ import {
   Trash,
   EllipsisVertical,
   Pencil,
-  Building2,
-  Clock,
 } from "lucide-react";
 import { SchedImgStore } from "@/stores/store";
 import { Button } from "@/components/ui/button";
@@ -30,7 +28,9 @@ import {
 import UserView from "../Reusables/userView";
 import { EditMeeting } from "../subForms/MeetingForms/editMeeting";
 
-// ── Company tinting — small dot at the right end of the row ──
+// ── Company tinting — small dot used in header counts and as a
+//    top-right marker on each card. The card-level dot is the only
+//    surviving piece of the old row-style company indicator.
 const COMPANY_STYLE = {
   CodeWithAli: { label: "CWA", dot: "bg-primary" },
   simplicity: { label: "SIMPL", dot: "bg-teal-400" },
@@ -41,45 +41,66 @@ function companyStyle(co: string | undefined | null) {
   return COMPANY_STYLE.CodeWithAli;
 }
 
-// Meeting-type colors used as inline dot + label, no bordered pills.
-const TYPE_STYLE: Record<
-  string,
-  { icon: typeof Video; text: string; dot: string; label: string }
-> = {
-  online: {
-    icon: Video,
-    text: "text-sky-300",
-    dot: "bg-sky-400",
-    label: "Online",
-  },
-  hybrid: {
-    icon: Video,
-    text: "text-violet-300",
-    dot: "bg-violet-400",
-    label: "Hybrid",
-  },
-  "in-person": {
-    icon: MapPin,
-    text: "text-success",
-    dot: "bg-success",
-    label: "In person",
-  },
+// ── Meeting type → category label.
+// The reference design uses bold colored category labels at the top
+// of each card ("Talent Acquisition", "Employee Development", etc.).
+// We don't have a separate `category` column on cwa_meetings yet, so
+// for now we map the existing `meeting_type` enum to a label + color
+// triplet. The mapping is keyed by the label visually so each kind of
+// meeting reads as its own swimlane.
+//
+// When we eventually add a `category` column (Hiring / Growth / Ops /
+// etc.) we can swap this map for a categoryStyle(category) lookup and
+// keep the rest of the card identical.
+type CategoryStyle = {
+  label: string;
+  // text-* class for the label color. Uses semantic tokens where
+  // possible so the same value reads correctly in light + dark.
+  text: string;
+  // dot color for the inline category dot we render next to the label
+  // (very subtle, matches the label hue).
+  dot: string;
 };
 
-/**
- * Group meetings by ISO date (YYYY-MM-DD). Returns an ordered array
- * of { key, label, sublabel, isImminent, meetings } so the render
- * loop can drop a section header in front of each group.
- *
- * Sort order: by ISO date ascending, so today comes before
- * tomorrow comes before next week. Undated meetings sink to a
- * single "No date" group at the bottom.
- */
+const CATEGORY_STYLE: Record<string, CategoryStyle> = {
+  "in-person": {
+    label: "In Person",
+    text: "text-emerald-500 dark:text-emerald-400",
+    dot: "bg-emerald-500 dark:bg-emerald-400",
+  },
+  online: {
+    label: "Online",
+    text: "text-sky-500 dark:text-sky-400",
+    dot: "bg-sky-500 dark:bg-sky-400",
+  },
+  hybrid: {
+    label: "Hybrid",
+    text: "text-violet-500 dark:text-violet-400",
+    dot: "bg-violet-500 dark:bg-violet-400",
+  },
+};
+const DEFAULT_CATEGORY: CategoryStyle = {
+  label: "Meeting",
+  text: "text-text-tertiary",
+  dot: "bg-foreground/40",
+};
+
+function categoryFor(meeting: any): CategoryStyle {
+  if (meeting.meeting_type && CATEGORY_STYLE[meeting.meeting_type]) {
+    return CATEGORY_STYLE[meeting.meeting_type];
+  }
+  return DEFAULT_CATEGORY;
+}
+
+// ── Group meetings by ISO date (YYYY-MM-DD). Same logic as before,
+//    just kept in this file so the card grid can still render date
+//    bands above each chunk of cards. Today/Tomorrow get an accent
+//    tint so the eye lands on the imminent ones first.
 interface MeetingGroup {
   key: string;
-  label: string; // "Today" / "Tomorrow" / "Thu" etc.
-  sublabel: string; // "May 29" or "" when label is the full noun
-  isImminent: boolean; // today / tomorrow → accent tint
+  label: string;
+  sublabel: string;
+  isImminent: boolean;
   meetings: any[];
 }
 function groupMeetingsByDate(meetings: any[]): MeetingGroup[] {
@@ -162,115 +183,112 @@ function groupMeetingsByDate(meetings: any[]): MeetingGroup[] {
   return groups;
 }
 
-/**
- * Mini date stripe — left column on every meeting row. "TUE" over
- * "AUG 5" (or "TODAY"/"TOMORROW" when applicable, big and small).
- * Kept around for layout balance (date column still exists), but
- * meetings now also pick up a group header above them when sorted
- * by date.
- */
-function MeetingDateStripe({ dateStr }: { dateStr: string }) {
-  if (!dateStr) {
-    return (
-      <div className="w-12 flex flex-col items-center justify-center text-text-tertiary">
-        <span className="text-[9px] font-bold uppercase tracking-wider">—</span>
-      </div>
-    );
-  }
-  const d = new Date(dateStr);
-  if (isNaN(d.getTime())) {
-    return (
-      <div className="w-12 flex flex-col items-center justify-center text-text-tertiary">
-        <span className="text-[9px] font-bold uppercase tracking-wider">—</span>
-      </div>
-    );
-  }
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  const target = new Date(d);
-  target.setHours(0, 0, 0, 0);
-  const diff = Math.round(
-    (target.getTime() - today.getTime()) / (24 * 60 * 60 * 1000),
-  );
+// ── Location helpers.
+// The `location` field shape depends on `meeting_type`:
+//   - online    → URL string
+//   - in-person → plain address string
+//   - hybrid    → { address, url } object on `hybrid_location`
+//
+// For the card pill we always want a SHORT human-readable label
+// (room name, building, or "Online"). The URL still gets a hover/
+// click affordance via the Join link inside the pill when relevant.
+type HybridLoc = { address: string; url: string };
+function isHybridLoc(loc: any): loc is HybridLoc {
+  return typeof loc === "object" && loc !== null && "address" in loc && "url" in loc;
+}
 
-  // Today + Tomorrow get an accent tint so the eye spots them fast.
-  const isImminent = diff === 0 || diff === 1;
-  const tintWeekday = isImminent ? "text-primary" : "text-text-tertiary";
-  const tintDay = isImminent ? "text-foreground" : "text-foreground/80";
+function locationLabel(meeting: any): string {
+  if (meeting.meeting_type === "online") return "Online";
+  if (meeting.meeting_type === "hybrid" && isHybridLoc(meeting.hybrid_location)) {
+    return meeting.hybrid_location.address || "Hybrid";
+  }
+  if (meeting.meeting_type === "in-person" && typeof meeting.location === "string") {
+    return meeting.location;
+  }
+  return "TBD";
+}
 
-  if (diff === 0) {
-    return (
-      <div className="w-12 flex flex-col items-center justify-center leading-none">
-        <span
-          className={`text-[9px] font-bold uppercase tracking-wider ${tintWeekday}`}
-        >
-          Today
-        </span>
-        <span
-          className={`text-[14px] font-bold tabular-nums mt-0.5 ${tintDay}`}
-        >
-          {d.toLocaleDateString(undefined, { day: "numeric" })}
-        </span>
-      </div>
-    );
+function joinUrl(meeting: any): string | null {
+  if (meeting.meeting_type === "online" && typeof meeting.location === "string") {
+    return meeting.location;
   }
-  if (diff === 1) {
-    return (
-      <div className="w-12 flex flex-col items-center justify-center leading-none">
-        <span
-          className={`text-[9px] font-bold uppercase tracking-wider ${tintWeekday}`}
-        >
-          Tom.
-        </span>
-        <span
-          className={`text-[14px] font-bold tabular-nums mt-0.5 ${tintDay}`}
-        >
-          {d.toLocaleDateString(undefined, { day: "numeric" })}
-        </span>
-      </div>
-    );
+  if (meeting.meeting_type === "hybrid" && isHybridLoc(meeting.hybrid_location)) {
+    return meeting.hybrid_location.url || null;
   }
+  return null;
+}
+
+// ── Avatar stack.
+// The reference design shows three overlapping gradient circles + a
+// "+N" overflow chip. We don't yet have per-attendee user lookups for
+// meetings (the `attendees` column on cwa_meetings is a count, 1–5),
+// so we render deterministic gradient circles seeded by the meeting
+// title. Same title = same colors every render, which keeps the
+// avatars stable as users scroll/refetch.
+//
+// When attendee → user_id wiring lands we can swap the seeded
+// gradients for real user avatars without changing the layout.
+function hashSeed(s: string): number {
+  let h = 0;
+  for (let i = 0; i < s.length; i++) {
+    h = (h << 5) - h + s.charCodeAt(i);
+    h |= 0;
+  }
+  return Math.abs(h);
+}
+
+function gradientForSeed(seed: string): string {
+  const h = hashSeed(seed);
+  const h1 = h % 360;
+  const h2 = (h1 + 35) % 360;
+  // Saturation + lightness tuned to read well on both light and dark
+  // card backgrounds without going neon. Tested visually against
+  // the workspace canvas in both themes.
+  return `linear-gradient(135deg, hsl(${h1} 65% 62%), hsl(${h2} 72% 48%))`;
+}
+
+function AvatarStack({
+  count,
+  seed,
+}: {
+  count: number | string | undefined | null;
+  seed: string;
+}) {
+  // `attendees` arrives as a string from the form ("1".."5"), or
+  // undefined for legacy rows. Default to 1 so we always render at
+  // least one circle — empty avatar columns look broken.
+  const n = useMemo(() => {
+    const parsed = typeof count === "string" ? parseInt(count, 10) : count ?? 1;
+    if (!parsed || isNaN(parsed) || parsed < 1) return 1;
+    return parsed;
+  }, [count]);
+
+  const visible = Math.min(n, 3);
+  const overflow = n - visible;
+
   return (
-    <div className="w-12 flex flex-col items-center justify-center leading-none">
-      <span
-        className={`text-[9px] font-bold uppercase tracking-wider ${tintWeekday}`}
-      >
-        {d.toLocaleDateString(undefined, { weekday: "short" })}
-      </span>
-      <span className={`text-[14px] font-bold tabular-nums mt-0.5 ${tintDay}`}>
-        {d.toLocaleDateString(undefined, { day: "numeric" })}
-      </span>
-      <span className="text-[8.5px] font-semibold uppercase tracking-wider text-text-tertiary mt-0.5">
-        {d.toLocaleDateString(undefined, { month: "short" })}
-      </span>
+    <div className="flex -space-x-2 shrink-0">
+      {Array.from({ length: visible }).map((_, i) => (
+        <div
+          key={i}
+          style={{ background: gradientForSeed(`${seed}-${i}`) }}
+          // ring uses the card background color so the avatars look
+          // "punched out" of the card surface in both themes.
+          className="w-6 h-6 rounded-full ring-2 ring-card"
+          aria-hidden
+        />
+      ))}
+      {overflow > 0 && (
+        <div className="w-6 h-6 rounded-full ring-2 ring-card bg-foreground/15 text-foreground/80 flex items-center justify-center text-[9.5px] font-bold tabular-nums">
+          +{overflow}
+        </div>
+      )}
     </div>
   );
 }
 
-function formatDate(dateStr: string) {
-  if (!dateStr) return "";
-  const d = new Date(dateStr);
-  if (isNaN(d.getTime())) return dateStr;
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  const target = new Date(d);
-  target.setHours(0, 0, 0, 0);
-  const diff = Math.round(
-    (target.getTime() - today.getTime()) / (24 * 60 * 60 * 1000),
-  );
-  if (diff === 0) return "Today";
-  if (diff === 1) return "Tomorrow";
-  if (diff < 7 && diff >= 0)
-    return d.toLocaleDateString(undefined, { weekday: "long" });
-  return d.toLocaleDateString(undefined, {
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-  });
-}
-
-// ── Meeting Row ────────────────────────────────────────────────
-function MeetingRow({
+// ── Meeting Card ──────────────────────────────────────────────
+function MeetingCard({
   meeting,
   onEdit,
   onDelete,
@@ -280,27 +298,19 @@ function MeetingRow({
   onDelete: (id: number) => void;
 }) {
   const co = companyStyle(meeting.company);
-  const typeInfo = meeting.meeting_type
-    ? TYPE_STYLE[meeting.meeting_type]
-    : null;
-  const isHybridLoc = (loc: any): loc is { address: string; url: string } =>
-    typeof loc === "object" && loc !== null && "address" in loc && "url" in loc;
+  const cat = categoryFor(meeting);
+  const join = joinUrl(meeting);
+  const locLabel = locationLabel(meeting);
 
   const navigate = useNavigate();
   const setFocusDate = useScheduleFocus((s) => s.setFocusDate);
 
   /**
-   * Click anywhere on the row → /schedule, focused on the meeting's
-   * day. We park the date in the cross-component store and navigate;
-   * TimesheetPage consumes it on mount and snaps weekAnchor.
-   *
-   * Action menus (Join link, Edit, Delete) call stopPropagation so
-   * the row click doesn't intercept them.
+   * Click anywhere on the card → /schedule, focused on the meeting's
+   * day. Interactive children (Join link, action menu) stopPropagate
+   * so the card-level click doesn't intercept them.
    */
   function openOnSchedule(e: React.MouseEvent) {
-    // Ignore clicks that originated from an interactive child (links,
-    // the action menu trigger). Defense-in-depth on top of the
-    // stopPropagation that those children already do.
     const target = e.target as HTMLElement;
     if (target.closest("a, button, [role='menuitem']")) return;
 
@@ -327,143 +337,162 @@ function MeetingRow({
           openOnSchedule(e as unknown as React.MouseEvent);
         }
       }}
-      // Flush row, no per-row card. Clicking the row jumps to
-      // /schedule on the meeting's day. Hairline separates siblings.
+      // Card surface — a hair lighter than the parent widget's
+      // bg-card so the cards visually float. Using foreground at
+      // very low alpha works in both themes: on dark bg it's a
+      // subtle light tint, on light bg it's a subtle gray. Hover
+      // deepens the border for clickable affordance.
       className="
-        group relative flex items-stretch cursor-pointer
-        border-b border-xs border-border/20 last:border-b-0
-        hover:bg-foreground/[0.04] transition-colors
-        focus-visible:outline-none focus-visible:bg-foreground/[0.05]
+        group relative cursor-pointer
+        bg-foreground/[0.03] hover:bg-foreground/[0.05]
+        border border-xs border-border-soft hover:border-border
+        rounded-lg p-3.5
+        transition-colors
+        focus-visible:outline-none focus-visible:border-primary/40
       "
     >
-      {/* Time column — wider so a range like "5:00PM - 7:00PM"
-       *  fits on a single line. The group header above carries
-       *  the date so we only need the time here. */}
-      <div className="shrink-0 w-[96px] py-3 px-2 flex items-center justify-center border-r border-xs border-border/15">
-        <span className="text-[10.5px] tabular-nums font-semibold text-foreground/85 whitespace-nowrap text-center">
-          {meeting.time || "—"}
+      {/* Company dot — tiny corner indicator. Hidden by default in
+       *  single-company installs (still rendered so the layout
+       *  doesn't shift; just very subtle). */}
+      <span
+        className={`absolute top-3 right-3 w-1.5 h-1.5 rounded-full ${co.dot} opacity-60`}
+        title={meeting.company === "simplicity" ? "Simplicity" : "CodeWithAli"}
+      />
+
+      {/* Category label — small caps, colored by meeting type. The
+       *  inline dot reinforces the color so it reads as a category
+       *  marker even at a glance. */}
+      <div className="flex items-center gap-1.5 mb-1">
+        <span
+          className={`text-[10.5px] font-semibold tracking-wide ${cat.text}`}
+        >
+          {cat.label}
         </span>
       </div>
 
-      {/* Single-line body. Title leads, meta cluster pinned to the
-       *  right edge using ml-auto so the row uses the full width
-       *  instead of collapsing all weight onto the left. */}
-      <div className="flex-1 min-w-0 py-3 pl-4 pr-4 flex items-center gap-3">
-        <h3 className="flex-1 min-w-0 text-[13px] font-semibold text-foreground truncate leading-snug">
-          {meeting.meeting_title}
-        </h3>
+      {/* Title — the main thing your eye should land on. Slightly
+       *  larger than the row version, weight bumped to bold. Two
+       *  lines max so a long title doesn't blow out the card. */}
+      <h3 className="text-[13.5px] font-bold text-foreground leading-snug line-clamp-2 pr-5">
+        {meeting.meeting_title}
+      </h3>
 
-        <div className="flex items-center gap-2.5 text-[10.5px] text-text-tertiary shrink-0">
-          {typeInfo && meeting.meeting_type && (
-            <span className={`inline-flex items-center gap-1 ${typeInfo.text}`}>
-              <span className={`w-1.5 h-1.5 rounded-full ${typeInfo.dot}`} />
-              <span className="font-medium whitespace-nowrap">
-                {typeInfo.label}
-              </span>
-            </span>
-          )}
-
-          <span className="inline-flex items-center gap-1 whitespace-nowrap">
-            <Users className="h-2.5 w-2.5" />
-            {meeting.attendees ?? 1}
-          </span>
-
-          {/* Location / link. Each branch keeps its own truncating
-           *  text so a long address won't push the cluster off the
-           *  right edge. max-w cap keeps the meta tidy on a wide
-           *  meetings panel. */}
-          {meeting.location &&
-            meeting.meeting_type === "online" &&
-            typeof meeting.location === "string" && (
-              <a
-                href={meeting.location}
-                target="_blank"
-                rel="noopener noreferrer"
-                onClick={(e) => e.stopPropagation()}
-                className="inline-flex items-center gap-1 hover:text-primary transition-colors whitespace-nowrap"
-              >
-                <ExternalLink className="h-2.5 w-2.5 shrink-0" />
-                Join
-              </a>
-            )}
-          {meeting.location &&
-            meeting.meeting_type === "in-person" &&
-            typeof meeting.location === "string" && (
-              <span className="inline-flex items-center gap-1 max-w-[220px]">
-                <MapPin className="h-2.5 w-2.5 shrink-0" />
-                <span className="truncate">{meeting.location}</span>
-              </span>
-            )}
-          {meeting.meeting_type === "hybrid" &&
-            isHybridLoc(meeting.hybrid_location) && (
-              <span className="inline-flex items-center gap-2 max-w-[260px]">
-                <span className="inline-flex items-center gap-1 max-w-[180px]">
-                  <MapPin className="h-2.5 w-2.5 shrink-0" />
-                  <span className="truncate">
-                    {meeting.hybrid_location.address}
-                  </span>
-                </span>
-                <a
-                  href={meeting.hybrid_location.url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  onClick={(e) => e.stopPropagation()}
-                  className="inline-flex items-center gap-1 hover:text-primary transition-colors shrink-0"
-                >
-                  <ExternalLink className="h-2.5 w-2.5" />
-                  Join
-                </a>
-              </span>
-            )}
-
-          {/* Company dot — anchored to the far right. */}
+      {/* Bottom row — location pill + time on the left, avatar
+       *  stack on the right. mt-3 gives the title room to breathe.
+       *  Avatar stack lives at the far right with ml-auto so a
+       *  long location label can't push it off the card. */}
+      <div className="flex items-center gap-2 mt-3">
+        {/* Location pill. For online meetings the pill itself is
+         *  a Join link; for in-person + hybrid it shows the room
+         *  name with an optional Join link beside it. */}
+        {meeting.meeting_type === "online" && join ? (
+          <a
+            href={join}
+            target="_blank"
+            rel="noopener noreferrer"
+            onClick={(e) => e.stopPropagation()}
+            className="
+              inline-flex items-center gap-1 max-w-[180px]
+              bg-foreground/[0.06] hover:bg-foreground/[0.10]
+              border border-xs border-border-soft
+              rounded-md px-2 py-0.5
+              text-[10.5px] font-medium text-foreground/80 hover:text-primary
+              transition-colors
+            "
+          >
+            <Video className="h-2.5 w-2.5 shrink-0" />
+            <span className="truncate">{locLabel}</span>
+          </a>
+        ) : (
           <span
-            className={`inline-block w-1.5 h-1.5 rounded-full ${co.dot} ml-1`}
+            className="
+              inline-flex items-center gap-1 max-w-[200px]
+              bg-foreground/[0.06]
+              border border-xs border-border-soft
+              rounded-md px-2 py-0.5
+              text-[10.5px] font-medium text-foreground/80
+            "
+          >
+            <MapPin className="h-2.5 w-2.5 shrink-0" />
+            <span className="truncate">{locLabel}</span>
+          </span>
+        )}
+
+        {/* Time — tabular numbers so 9:00 AM and 12:30 PM align
+         *  visually across stacked cards. Truncates if a range is
+         *  unusually long. */}
+        <span className="text-[10.5px] tabular-nums font-semibold text-foreground/85 whitespace-nowrap">
+          {meeting.time || "—"}
+        </span>
+
+        {/* Inline Join link for hybrid (when there's both a physical
+         *  room and a URL). Online meetings already use the pill as
+         *  the join target, so they don't need a second link here. */}
+        {meeting.meeting_type === "hybrid" && join && (
+          <a
+            href={join}
+            target="_blank"
+            rel="noopener noreferrer"
+            onClick={(e) => e.stopPropagation()}
+            className="inline-flex items-center gap-1 text-[10.5px] text-text-tertiary hover:text-primary transition-colors whitespace-nowrap"
+          >
+            <ExternalLink className="h-2.5 w-2.5" />
+            Join
+          </a>
+        )}
+
+        <div className="ml-auto flex items-center gap-2">
+          <AvatarStack
+            count={meeting.attendees}
+            seed={String(meeting.id ?? meeting.meeting_title ?? "x")}
           />
+
+          {/* Action menu — visible on hover only so the card stays
+           *  visually clean at rest. Stops propagation so the card's
+           *  navigate-to-schedule click doesn't fire. */}
+          <UserView userRole={["CEO", "COO"]}>
+            <div
+              className="opacity-0 group-hover:opacity-100 transition-opacity"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <button
+                    type="button"
+                    className="text-muted-foreground/50 hover:text-muted-foreground p-1 rounded-sm hover:bg-foreground/[0.06] transition-all"
+                    onClick={(e) => e.stopPropagation()}
+                    aria-label="Meeting actions"
+                  >
+                    <EllipsisVertical className="h-3.5 w-3.5" />
+                  </button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent className="bg-popover border-xs border-border-soft text-text-secondary rounded-md">
+                  <DropdownMenuItem
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onEdit(meeting.id);
+                    }}
+                    className="hover:bg-foreground/[0.05] hover:text-foreground cursor-pointer rounded-sm text-[12px]"
+                  >
+                    <Pencil className="h-3.5 w-3.5 mr-2" />
+                    Edit
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onDelete(meeting.id);
+                    }}
+                    className="hover:bg-destructive/10 hover:text-destructive cursor-pointer text-destructive/70 rounded-sm text-[12px]"
+                  >
+                    <Trash className="h-3.5 w-3.5 mr-2" />
+                    Delete
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
+          </UserView>
         </div>
       </div>
-
-      {/* Action menu — stopPropagation everywhere so clicks here
-       *  don't bubble up and trigger the row-level navigate. */}
-      <UserView userRole={["CEO", "COO"]}>
-        <div
-          className="flex items-center pr-2 opacity-0 group-hover:opacity-100 transition-opacity"
-          onClick={(e) => e.stopPropagation()}
-        >
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <div
-                className="text-muted-foreground/40 hover:text-muted-foreground/90 cursor-pointer p-1 rounded-sm hover:bg-muted/40 transition-all"
-                onClick={(e) => e.stopPropagation()}
-              >
-                <EllipsisVertical className="h-4 w-4" />
-              </div>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent className="bg-popover border-xs border-border-soft text-text-secondary rounded-md">
-              <DropdownMenuItem
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onEdit(meeting.id);
-                }}
-                className="hover:bg-foreground/[0.05] hover:text-foreground cursor-pointer rounded-sm text-[12px]"
-              >
-                <Pencil className="h-3.5 w-3.5 mr-2" />
-                Edit
-              </DropdownMenuItem>
-              <DropdownMenuItem
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onDelete(meeting.id);
-                }}
-                className="hover:bg-destructive/10 hover:text-destructive cursor-pointer text-destructive/70 rounded-sm text-[12px]"
-              >
-                <Trash className="h-3.5 w-3.5 mr-2" />
-                Delete
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-        </div>
-      </UserView>
     </motion.div>
   );
 }
@@ -499,7 +528,6 @@ const Meetings = () => {
 
   const Header = (
     <div className="px-4 py-2.5 flex items-center gap-3 bg-popover/40 border-b border-xs border-border-soft">
-      {/* Left: title + total + company dots inline (mirrors Tasks header) */}
       <div className="flex items-center gap-2 min-w-0 flex-shrink-0">
         <span className="text-[11px] text-foreground uppercase tracking-[0.14em] font-bold">
           Meetings
@@ -530,11 +558,6 @@ const Meetings = () => {
       <div className="flex-1" />
 
       <div className="flex items-center gap-1.5 shrink-0">
-        {/* Both Add Meeting and Schedule are visible to the same set
-         *  of leadership / operator roles. Sharing the list here
-         *  keeps the gates from drifting apart over time. Both string
-         *  forms (display value + enum key form) are listed because
-         *  some surfaces store one and some the other. */}
         <UserView
           userRole={[
             "CEO",
@@ -553,10 +576,6 @@ const Meetings = () => {
         </UserView>
 
         <UserView userRole={["COO"]}>
-          {/* Schedule — neutral ghost. Pairs with the new
-           *  primary-tinted Add Meeting (the eye-catcher). Calendar
-           *  icon slides a hair to the left on hover for the same
-           *  affordance moment the plus icon gets. */}
           <Button
             size="sm"
             className="
@@ -616,24 +635,28 @@ const Meetings = () => {
         {Header}
         <div className="flex-1 min-h-0">
           <ScrollArea className="h-[400px]">
-            <div>
+            {/* Outer padding gives the card grid breathing room
+             *  against the parent widget chrome. */}
+            <div className="px-3 py-3 space-y-4">
               {groupMeetingsByDate(list).map((group, gi) => (
-                <motion.div
+                <motion.section
                   key={group.key}
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
                   transition={{ delay: gi * 0.04 }}
+                  className="space-y-2"
                 >
-                  {/* Section header for this date group. Today /
-                   *  Tomorrow get a primary-tinted label so they
-                   *  read as the active surface. */}
-                  <div className="sticky top-0 z-10 flex items-center gap-2 px-4 py-2 bg-popover/70 backdrop-blur-sm border-y border-xs border-border/15">
+                  {/* Softer date label — sits above the card group,
+                   *  no heavy bg or sticky behavior. Today/Tomorrow
+                   *  pick up the primary color so they read as the
+                   *  active day at a glance. */}
+                  <div className="flex items-center gap-1.5 px-1">
                     <span
                       className={
                         "text-[10px] font-bold uppercase tracking-[0.14em] " +
                         (group.isImminent
                           ? "text-primary"
-                          : "text-foreground/80")
+                          : "text-foreground/70")
                       }
                     >
                       {group.label}
@@ -643,20 +666,25 @@ const Meetings = () => {
                         · {group.sublabel}
                       </span>
                     )}
-                    <span className="ml-auto text-[10px] text-text-tertiary tabular-nums uppercase tracking-wider">
+                    <span className="ml-auto text-[10px] text-text-tertiary tabular-nums">
                       {group.meetings.length}
                     </span>
                   </div>
 
-                  {group.meetings.map((meeting: any, i: number) => (
-                    <MeetingRow
-                      key={meeting.id ?? `${group.key}-${i}`}
-                      meeting={meeting}
-                      onEdit={editMeeting}
-                      onDelete={delMeeting}
-                    />
-                  ))}
-                </motion.div>
+                  {/* Stack of cards for the day. gap-2 is the
+                   *  reference spacing — tight enough to feel
+                   *  like a group, loose enough to read as cards. */}
+                  <div className="space-y-2">
+                    {group.meetings.map((meeting: any, i: number) => (
+                      <MeetingCard
+                        key={meeting.id ?? `${group.key}-${i}`}
+                        meeting={meeting}
+                        onEdit={editMeeting}
+                        onDelete={delMeeting}
+                      />
+                    ))}
+                  </div>
+                </motion.section>
               ))}
             </div>
           </ScrollArea>
