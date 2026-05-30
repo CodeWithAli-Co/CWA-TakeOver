@@ -151,6 +151,98 @@
   font-size: inherit;
 }
 
+/* ─── Code block syntax highlighting ──────────────────────────
+   Hooked up via @tiptap/extension-code-block-lowlight in
+   docSchema.ts. lowlight emits standard hljs-* class names on
+   <span>s inside <code>, so we just style those.
+
+   Colors map to a muted, workspace-native palette — keywords red
+   (our brand), strings amber, comments dim, numbers/literals
+   cyan. Tunes per-token without requiring a hljs theme stylesheet
+   import, which keeps the bundle smaller and avoids the import
+   fighting workspace tokens.
+
+   Class names follow the hljs convention exactly — don't rename. */
+
+.workspace-prose pre.hljs,
+.workspace-prose .workspace-code-block {
+  /* Slightly more saturated than the default pre to make the
+     highlighting tokens read against it. Keeps theme parity via
+     CSS variables — light mode auto-inverts. */
+  background: hsl(var(--muted) / 0.55);
+  border-color: hsl(var(--border) / 0.7);
+}
+
+.workspace-prose .hljs-comment,
+.workspace-prose .hljs-quote {
+  color: hsl(var(--muted-foreground) / 0.65);
+  font-style: italic;
+}
+
+.workspace-prose .hljs-keyword,
+.workspace-prose .hljs-selector-tag,
+.workspace-prose .hljs-literal,
+.workspace-prose .hljs-section,
+.workspace-prose .hljs-link {
+  color: hsl(var(--primary));
+  font-weight: 600;
+}
+
+.workspace-prose .hljs-function,
+.workspace-prose .hljs-title,
+.workspace-prose .hljs-title.function_,
+.workspace-prose .hljs-name {
+  color: #c4b5fd; /* soft violet — function names */
+}
+
+.workspace-prose .hljs-string,
+.workspace-prose .hljs-attr,
+.workspace-prose .hljs-symbol,
+.workspace-prose .hljs-bullet,
+.workspace-prose .hljs-addition {
+  color: #fcd34d; /* amber — strings */
+}
+
+.workspace-prose .hljs-number,
+.workspace-prose .hljs-built_in,
+.workspace-prose .hljs-builtin-name {
+  color: #7dd3fc; /* sky — numbers, builtins */
+}
+
+.workspace-prose .hljs-type,
+.workspace-prose .hljs-class .hljs-title,
+.workspace-prose .hljs-params {
+  color: #86efac; /* mint — types */
+}
+
+.workspace-prose .hljs-tag,
+.workspace-prose .hljs-attribute,
+.workspace-prose .hljs-property {
+  color: #93c5fd; /* sky-blue — html/jsx attrs */
+}
+
+.workspace-prose .hljs-variable,
+.workspace-prose .hljs-template-variable {
+  color: hsl(var(--foreground) / 0.92);
+}
+
+.workspace-prose .hljs-meta,
+.workspace-prose .hljs-meta-keyword,
+.workspace-prose .hljs-meta-string {
+  color: hsl(var(--muted-foreground) / 0.85);
+}
+
+.workspace-prose .hljs-deletion {
+  color: #fca5a5;
+}
+
+.workspace-prose .hljs-emphasis {
+  font-style: italic;
+}
+.workspace-prose .hljs-strong {
+  font-weight: 700;
+}
+
 .workspace-prose hr {
   border: 0;
   border-top: 1px solid hsl(var(--border) / 0.6);
