@@ -21,6 +21,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { AnimatePresence } from "framer-motion";
+import { invoke } from "@tauri-apps/api/core";
 import {
   Building2,
   Building,
@@ -34,6 +35,10 @@ import {
   X,
   Check,
   Copy,
+  Loader2,
+  AlertTriangle,
+  User,
+  Briefcase,
   type LucideIcon,
 } from "lucide-react";
 import supabase from "@/MyComponents/supabase";
@@ -42,6 +47,7 @@ import {
   useUpdateOnboardingState,
 } from "@/stores/onboarding";
 import {
+  FieldGroup,
   FormField,
   OptionTile,
   PillPicker,
@@ -143,31 +149,118 @@ export function FounderFlow({
     setStep(STEPS[stepIndex - 1]!);
   };
 
-  // Commit on Done — UPDATE app_users with picked role, mark
-  // onboarded. Company name + modules go into onboarding_state
-  // for now (no companies table yet).
+  // Company id, cached after the first ensureCompanyExists()
+  // call. Lives in component state because both InviteStep
+  // (creates pending_invites rows tied to a company_id) and the
+  // Done commit need to reference the same id.
+  const [companyId, setCompanyId] = useState<number | null>(null);
+
+  /**
+   * Idempotent — creates the takeover_companies row on first
+   * call, returns the cached id on subsequent calls. Returns
+   * null in debug mode or when company data isn't filled yet.
+   */
+  const ensureCompanyExists = async (): Promise<number | null> => {
+    if (!supaId) return null;
+    if (companyId) return companyId;
+    if (!data.company?.name) return null;
+
+    const { data: authData } = await supabase.auth.getUser();
+    const founderEmail = authData?.user?.email ?? null;
+
+    const { data: row, error } = await supabase
+      .from("takeover_companies")
+      .insert({
+        company_name: data.company.name,
+        founder_name: data.profile?.displayName ?? null,
+        founder_email: founderEmail,
+        // `components` is a Postgres TEXT[] — array of module ids.
+        components: data.modules ?? [],
+      })
+      .select("id")
+      .single();
+
+    if (error) {
+      console.error("[onboarding] company insert failed", error);
+      return null;
+    }
+    const id = (row as { id: number } | null)?.id ?? null;
+    if (id) setCompanyId(id);
+    return id;
+  };
+
+  /**
+   * Per-email invite token issuer. Called by InviteStep for each
+   * pasted address. Ensures the company exists (lazy create on
+   * first call), generates a UUID token, inserts a pending_invites
+   * row, returns the token + the full join URL the email link
+   * points at. Returns null on any failure so the caller can
+   * surface the error per-row.
+   */
+  const createInviteToken = async (
+    email: string,
+  ): Promise<{ token: string; joinUrl: string } | null> => {
+    if (!supaId) return null;
+    const cid = await ensureCompanyExists();
+    if (!cid) return null;
+
+    // crypto.randomUUID() is 128 bits of entropy — plenty for an
+    // invite link. Don't substitute Math.random() here.
+    const token = crypto.randomUUID();
+
+    const { error } = await supabase.from("pending_invites").insert({
+      token,
+      email,
+      company_id: cid,
+      // Default to "Member" since we don't ask per-invitee role
+      // in this iteration. Easy to extend to per-row role pills.
+      role: "Member",
+      inviter_supa_id: supaId,
+    });
+    if (error) {
+      console.error("[onboarding] pending_invites insert failed", error);
+      return null;
+    }
+
+    // Where the recipient lands. Pulled from VITE_TAKEOVER_SITE_URL
+    // so dev / staging / prod all work. Fallback is the prod URL.
+    const base =
+      (import.meta as any).env?.VITE_TAKEOVER_SITE_URL ??
+      "https://takeover.app";
+    const joinUrl = `${base.replace(/\/$/, "")}/join?token=${token}`;
+    return { token, joinUrl };
+  };
+
+  /**
+   * Done-step commit. Ensures the company row exists (idempotent
+   * — may already have been created by the Invite step), patches
+   * app_users with role + username, drops companyId into
+   * onboarding_state, and stamps onboarded_at = now().
+   */
   const commit = async () => {
     if (!supaId) {
-      // New-user branch with no app_users row — we'd INSERT here.
-      // Punt for now; the next iteration of signup flow creates
-      // the row before onboarding even starts.
+      // Debug mode — skip all writes so previewing doesn't touch
+      // real data.
       onComplete();
       return;
     }
-    const { error } = await supabase
+
+    const finalCompanyId = await ensureCompanyExists();
+
+    const onboardingStatePayload = { ...data, companyId: finalCompanyId };
+    const { error: userErr } = await supabase
       .from("app_users")
       .update({
         role: data.profile?.roleTitle ?? null,
         username: data.profile?.displayName ?? undefined,
-        onboarding_state: data,
+        onboarding_state: onboardingStatePayload,
         onboarded_at: new Date().toISOString(),
       })
       .eq("supa_id", supaId);
-    if (error) {
-      console.error("[onboarding] commit failed", error);
-      // Still call onComplete so the user isn't stuck on the
-      // Done screen forever — they can re-onboard if needed.
+    if (userErr) {
+      console.error("[onboarding] user update failed", userErr);
     }
+
     markOnboarded.mutate(supaId);
     onComplete();
   };
@@ -222,6 +315,7 @@ export function FounderFlow({
             data={data}
             onBack={goBack}
             onNext={goNext}
+            createInviteToken={createInviteToken}
           />
         )}
         {step === "done" && (
@@ -255,11 +349,11 @@ function ScopeStep({ data, onBack, onNext, isFirst }: StepProps) {
   return (
     <>
       <StepHeader
-        eyebrow="About you"
+        eyebrow="Step 1 of 7"
         title="How many companies do you run?"
         subtitle="Just curious — you can add more later from Settings."
       />
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
         <OptionTile
           icon={Building2}
           label="Just one"
@@ -314,36 +408,54 @@ function CompanyStep({ data, onBack, onNext }: StepProps) {
 
   const canSubmit = name.trim().length >= 2;
 
+  // Layout intent:
+  //   1. Hero card for "Identity" (company name) — single
+  //      required field, gets its own card so it reads as the
+  //      headline action.
+  //   2. "Details" card groups the two optional pill pickers.
+  //      Their grouping makes it obvious they're a pair and
+  //      both feed module suggestions.
   return (
     <>
       <StepHeader
-        eyebrow="Step 2"
+        eyebrow="Step 2 of 7"
         title="Tell us about your company."
         subtitle="The basics — name and a couple of details so modules can suggest themselves."
       />
-      <div className="space-y-5">
-        <FormField label="Company name" required>
-          <TextInput
-            value={name}
-            onChange={setName}
-            placeholder="Acme Corp"
-            autoFocus
-          />
-        </FormField>
-        <FormField label="Industry" hint="Optional — helps us pre-pick modules.">
-          <PillPicker
-            options={INDUSTRIES}
-            value={industry}
-            onChange={setIndustry}
-          />
-        </FormField>
-        <FormField label="Team size" hint="Optional — drives default modules.">
-          <PillPicker
-            options={TEAM_SIZES}
-            value={teamSize}
-            onChange={setTeamSize}
-          />
-        </FormField>
+      <div className="space-y-3.5">
+        <FieldGroup title="Identity" icon={Building2}>
+          <FormField label="Company name" required>
+            <TextInput
+              value={name}
+              onChange={setName}
+              placeholder="Acme Corp"
+              autoFocus
+            />
+          </FormField>
+        </FieldGroup>
+
+        <FieldGroup title="Details" icon={Sparkles}>
+          <FormField
+            label="Industry"
+            hint="Optional — helps us pre-pick modules."
+          >
+            <PillPicker
+              options={INDUSTRIES}
+              value={industry}
+              onChange={setIndustry}
+            />
+          </FormField>
+          <FormField
+            label="Team size"
+            hint="Optional — drives default modules."
+          >
+            <PillPicker
+              options={TEAM_SIZES}
+              value={teamSize}
+              onChange={setTeamSize}
+            />
+          </FormField>
+        </FieldGroup>
       </div>
       <StepActions
         onBack={onBack}
@@ -381,30 +493,35 @@ function ProfileStep({ data, onBack, onNext }: StepProps) {
   return (
     <>
       <StepHeader
-        eyebrow="Step 3"
+        eyebrow="Step 3 of 7"
         title="Set up your profile."
         subtitle="How you show up to your team."
       />
-      <div className="space-y-5">
-        <FormField label="Display name" required>
-          <TextInput
-            value={displayName}
-            onChange={setDisplayName}
-            placeholder="Ali Alibrahimi"
-            autoFocus
-          />
-        </FormField>
-        <FormField
-          label="Your role"
-          required
-          hint="Drives what you can see and do across the app."
-        >
-          <PillPicker
-            options={ROLE_OPTIONS}
-            value={roleTitle}
-            onChange={setRoleTitle}
-          />
-        </FormField>
+      <div className="space-y-3.5">
+        <FieldGroup title="You" icon={User}>
+          <FormField label="Display name" required>
+            <TextInput
+              value={displayName}
+              onChange={setDisplayName}
+              placeholder="Ali Alibrahimi"
+              autoFocus
+            />
+          </FormField>
+        </FieldGroup>
+
+        <FieldGroup title="Role" icon={Briefcase}>
+          <FormField
+            label="Your role"
+            required
+            hint="Drives what you can see and do across the app."
+          >
+            <PillPicker
+              options={ROLE_OPTIONS}
+              value={roleTitle}
+              onChange={setRoleTitle}
+            />
+          </FormField>
+        </FieldGroup>
       </div>
       <StepActions
         onBack={onBack}
@@ -579,15 +696,33 @@ function ConnectorsStep({ onBack, onNext }: StepProps) {
 // Step 6 — Invite team
 // ═════════════════════════════════════════════════════════════════
 
-function InviteStep({ data, onBack, onNext }: StepProps) {
+function InviteStep({
+  data,
+  onBack,
+  onNext,
+  createInviteToken,
+}: StepProps & {
+  /** Issued by the parent — generates a real pending_invites row
+   *  per address and returns the join URL embedded with the
+   *  token. Returns null in debug mode or on failure. */
+  createInviteToken: (
+    email: string,
+  ) => Promise<{ token: string; joinUrl: string } | null>;
+}) {
   const [input, setInput] = useState("");
   const [emails, setEmails] = useState<string[]>(data.invitedEmails ?? []);
+  const [sending, setSending] = useState(false);
+  // Per-email result so the UI can show ✓ / × tags after a send.
+  const [sendResults, setSendResults] = useState<
+    Record<string, "ok" | "error">
+  >({});
+  const [sendError, setSendError] = useState<string | null>(null);
+  // Shareable link is generated on demand (Copy button). Uses a
+  // separate generic invite token (recipient unknown) — the join
+  // page on takeover-B2B prompts for email at the other end.
+  const [shareLink, setShareLink] = useState<string | null>(null);
   const [linkCopied, setLinkCopied] = useState(false);
-
-  // Placeholder for the share link — the real one is generated
-  // by the invite system once company id is known. For now we
-  // show a representative format.
-  const inviteLink = "https://takeover.app/join/your-company";
+  const [generatingLink, setGeneratingLink] = useState(false);
 
   const addEmail = () => {
     const list = input
@@ -603,12 +738,81 @@ function InviteStep({ data, onBack, onNext }: StepProps) {
     setEmails((cur) => cur.filter((x) => x !== e));
 
   const copyLink = async () => {
+    // Lazy: only mint a share token the first time the user
+    // clicks Copy. Recipient is recorded as "share-link" so we
+    // can tell email-driven vs link-driven invites apart later.
+    setGeneratingLink(true);
+    let link = shareLink;
+    if (!link) {
+      const minted = await createInviteToken("share-link@takeover.app");
+      if (minted) {
+        link = minted.joinUrl;
+        setShareLink(link);
+      }
+    }
+    setGeneratingLink(false);
+    if (!link) return;
     try {
-      await navigator.clipboard.writeText(inviteLink);
+      await navigator.clipboard.writeText(link);
       setLinkCopied(true);
       setTimeout(() => setLinkCopied(false), 2000);
     } catch {
       // ignore — clipboard blocked
+    }
+  };
+
+  // Fire one Tauri Resend call per email. Sequential rather
+  // than parallel so we don't hit Resend's 2 req/sec free-tier
+  // limit. Each email gets its own pending_invites token + URL,
+  // so we can revoke / track per recipient later.
+  const sendAndContinue = async () => {
+    if (emails.length === 0) {
+      onNext({ invitedEmails: [] });
+      return;
+    }
+    setSending(true);
+    setSendError(null);
+    const results: Record<string, "ok" | "error"> = {};
+    const founderName = data.profile?.displayName ?? "your teammate";
+    const companyName = data.company?.name ?? "the team";
+    const subject = `${founderName} invited you to ${companyName} on Takeover`;
+
+    for (const email of emails) {
+      try {
+        const minted = await createInviteToken(email);
+        if (!minted) {
+          throw new Error("Failed to mint invite token");
+        }
+        const html = renderInviteHtml({
+          founderName,
+          companyName,
+          inviteLink: minted.joinUrl,
+        });
+        await invoke("send_invite", {
+          toEmail: email,
+          subjectMsg: subject,
+          html,
+        });
+        results[email] = "ok";
+      } catch (e: any) {
+        console.error("[onboarding] send_invite failed", email, e);
+        results[email] = "error";
+        setSendError(
+          typeof e === "string" ? e : (e?.message ?? "Send failed"),
+        );
+      }
+      setSendResults({ ...results });
+    }
+    setSending(false);
+
+    const okCount = Object.values(results).filter((r) => r === "ok").length;
+    // Only advance if we got at least one through. If everything
+    // bounced, leave the user on the step so they can fix and
+    // retry — don't auto-skip past a failure.
+    if (okCount > 0) {
+      onNext({
+        invitedEmails: emails.filter((e) => results[e] === "ok"),
+      });
     }
   };
 
@@ -645,24 +849,46 @@ function InviteStep({ data, onBack, onNext }: StepProps) {
 
       {emails.length > 0 && (
         <div className="mt-2 flex flex-wrap gap-1.5">
-          {emails.map((e) => (
-            <span
-              key={e}
-              className="inline-flex items-center gap-1.5 pl-2.5 pr-1 h-6 rounded-full bg-foreground/[0.06] border border-border-soft text-[11px] text-foreground"
-            >
-              <Mail size={10} className="text-text-tertiary" />
-              {e}
-              <button
-                type="button"
-                onClick={() => removeEmail(e)}
-                className="w-4 h-4 rounded-full flex items-center justify-center hover:bg-foreground/10 text-text-tertiary"
-                aria-label={`Remove ${e}`}
+          {emails.map((e) => {
+            const r = sendResults[e];
+            const tone =
+              r === "ok"
+                ? "bg-success/15 border-success/40 text-success"
+                : r === "error"
+                  ? "bg-destructive/12 border-destructive/40 text-destructive"
+                  : "bg-foreground/[0.06] border-border-soft text-foreground";
+            return (
+              <span
+                key={e}
+                className={`inline-flex items-center gap-1.5 pl-2.5 pr-1 h-6 rounded-full border text-[11px] ${tone}`}
               >
-                <X size={10} />
-              </button>
-            </span>
-          ))}
+                {r === "ok" ? (
+                  <Check size={10} strokeWidth={2.8} />
+                ) : r === "error" ? (
+                  <AlertTriangle size={10} strokeWidth={2.8} />
+                ) : (
+                  <Mail size={10} className="text-text-tertiary" />
+                )}
+                {e}
+                <button
+                  type="button"
+                  onClick={() => removeEmail(e)}
+                  disabled={sending}
+                  className="w-4 h-4 rounded-full flex items-center justify-center hover:bg-foreground/10 disabled:opacity-30"
+                  aria-label={`Remove ${e}`}
+                >
+                  <X size={10} />
+                </button>
+              </span>
+            );
+          })}
         </div>
+      )}
+
+      {sendError && (
+        <p className="text-[11px] text-destructive mt-2">
+          {sendError} — fix the failing rows or skip for now.
+        </p>
       )}
 
       {/* OR divider */}
@@ -677,7 +903,7 @@ function InviteStep({ data, onBack, onNext }: StepProps) {
       {/* Share link block */}
       <FormField
         label="Share link"
-        hint="Anyone with the link can request to join — admin approves."
+        hint="Anyone with the link can claim a seat in this company. Token is minted on first copy."
       >
         <div className="flex items-center gap-2">
           <div className="flex-1 px-3 h-9 flex items-center bg-foreground/[0.03] border border-border-soft rounded-lg text-[12px] text-foreground/80 font-mono truncate">
@@ -685,14 +911,22 @@ function InviteStep({ data, onBack, onNext }: StepProps) {
               size={11}
               className="text-text-tertiary mr-2 shrink-0"
             />
-            {inviteLink}
+            <span className="truncate">
+              {shareLink ?? "Click Copy to generate a shareable invite link"}
+            </span>
           </div>
           <button
             type="button"
             onClick={copyLink}
-            className="inline-flex items-center gap-1.5 h-9 px-3 rounded-full text-[11.5px] font-semibold bg-foreground/[0.05] text-foreground/85 border border-border-soft hover:border-foreground/30 hover:bg-foreground/[0.08] transition-colors"
+            disabled={generatingLink}
+            className="inline-flex items-center gap-1.5 h-9 px-3 rounded-full text-[11.5px] font-semibold bg-foreground/[0.05] text-foreground/85 border border-border-soft hover:border-foreground/30 hover:bg-foreground/[0.08] transition-colors disabled:opacity-50"
           >
-            {linkCopied ? (
+            {generatingLink ? (
+              <>
+                <Loader2 size={11} className="animate-spin" />
+                Minting…
+              </>
+            ) : linkCopied ? (
               <>
                 <Check size={11} className="text-success" />
                 Copied
@@ -700,7 +934,7 @@ function InviteStep({ data, onBack, onNext }: StepProps) {
             ) : (
               <>
                 <Copy size={11} />
-                Copy
+                {shareLink ? "Copy again" : "Copy"}
               </>
             )}
           </button>
@@ -709,12 +943,80 @@ function InviteStep({ data, onBack, onNext }: StepProps) {
 
       <StepActions
         onBack={onBack}
-        onNext={() => onNext({ invitedEmails: emails })}
+        onNext={sendAndContinue}
         onSkip={() => onNext({ invitedEmails: [] })}
-        nextLabel={emails.length > 0 ? `Send ${emails.length} invite${emails.length === 1 ? "" : "s"}` : "Continue"}
+        nextLabel={
+          sending
+            ? "Sending…"
+            : emails.length > 0
+              ? `Send ${emails.length} invite${emails.length === 1 ? "" : "s"}`
+              : "Continue"
+        }
+        nextDisabled={sending}
+        loading={sending}
       />
     </>
   );
+}
+
+/** Render the invite email HTML. Inline styles only — most
+ *  email clients strip <style> blocks. Kept narrow + readable.
+ *  When the takeover-B2B invite-link backend exists we'll
+ *  encode company id + role into the URL; for now the link is
+ *  a stub the recipient can click to land on the welcome screen
+ *  and sign up. */
+function renderInviteHtml(args: {
+  founderName: string;
+  companyName: string;
+  inviteLink: string;
+}): string {
+  const safeFounder = escapeHtml(args.founderName);
+  const safeCompany = escapeHtml(args.companyName);
+  return `<!doctype html>
+<html>
+  <body style="margin:0;padding:0;background:#0a0a0a;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;color:#e5e5e5;">
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#0a0a0a;padding:40px 16px;">
+      <tr>
+        <td align="center">
+          <table role="presentation" width="100%" style="max-width:480px;background:#141414;border:1px solid #2a2a2a;border-radius:16px;overflow:hidden;">
+            <tr>
+              <td style="padding:32px 32px 24px;">
+                <p style="margin:0 0 6px;font-size:11px;letter-spacing:0.22em;color:#888;text-transform:uppercase;font-weight:700;">You're invited</p>
+                <h1 style="margin:0 0 16px;font-size:22px;line-height:1.2;color:#fff;letter-spacing:-0.02em;">
+                  Join ${safeCompany} on Takeover<span style="color:hsl(0,72%,51%);">.</span>
+                </h1>
+                <p style="margin:0 0 24px;font-size:14px;line-height:1.55;color:#bbb;">
+                  ${safeFounder} added you to <strong style="color:#fff;">${safeCompany}</strong>'s workspace. Takeover is the single dashboard where your team runs tasks, projects, schedules, and the SaaS tools you already use.
+                </p>
+                <a href="${args.inviteLink}" style="display:inline-block;padding:12px 22px;background:hsl(0,72%,51%);color:#fff;text-decoration:none;border-radius:999px;font-size:13px;font-weight:600;letter-spacing:0.01em;">
+                  Accept invite
+                </a>
+                <p style="margin:24px 0 0;font-size:11px;color:#777;line-height:1.5;">
+                  If the button doesn't work, paste this URL into your browser:<br/>
+                  <span style="color:#999;">${args.inviteLink}</span>
+                </p>
+              </td>
+            </tr>
+            <tr>
+              <td style="padding:14px 32px;background:#0e0e0e;border-top:1px solid #2a2a2a;font-size:11px;color:#666;">
+                Sent by ${safeFounder} via Takeover · <span style="color:#888;">If you weren't expecting this, you can safely ignore it.</span>
+              </td>
+            </tr>
+          </table>
+        </td>
+      </tr>
+    </table>
+  </body>
+</html>`;
+}
+
+function escapeHtml(s: string): string {
+  return s
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
 }
 
 // ═════════════════════════════════════════════════════════════════

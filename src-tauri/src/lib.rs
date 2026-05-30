@@ -173,6 +173,31 @@ async fn update(app: tauri::AppHandle) -> tauri_plugin_updater::Result<()> {
     Ok(())
 }
 
+/// Plain transactional email — no attachment. Used by the
+/// onboarding wizard's Invite step to send team invitations.
+/// Caller passes the rendered HTML body; this just hands it to
+/// Resend with the standard CodeWithAli "from" address.
+#[tauri::command(async)]
+async fn send_invite(
+    to_email: &str,
+    subject_msg: &str,
+    html: &str,
+) -> Result<String, String> {
+    let _env = dotenv().unwrap();
+
+    let resend = Resend::default();
+
+    let from = "CodeWithAli <mailer@codewithali.com>";
+    let to = [to_email];
+    let subject = subject_msg;
+
+    let email = CreateEmailBaseOptions::new(from, to, subject).with_html(html);
+
+    let _email = resend.emails.send(email).await.map_err(|e| e.to_string())?;
+
+    Ok(to_email.to_string())
+}
+
 #[tauri::command(async)]
 async fn send_invoice(
     client_email: &str,
@@ -357,6 +382,7 @@ pub fn run() {
             edit_contact,
             del_contact,
             send_invoice,
+            send_invite,
             quit_app,
             focus_window,
             // GitHub webhook commands

@@ -66,17 +66,17 @@ export function StepHeader({
   subtitle?: string;
 }) {
   return (
-    <header className="text-center mb-8">
+    <header className="text-center mb-7">
       {eyebrow && (
-        <span className="text-[10px] font-bold uppercase tracking-[0.22em] text-text-tertiary block mb-2.5">
+        <span className="text-[10px] font-bold uppercase tracking-[0.22em] text-text-tertiary/85 block mb-3">
           {eyebrow}
         </span>
       )}
       <h1
-        className="font-bold text-foreground leading-[1.05] tracking-[-0.02em] mb-2"
+        className="font-bold text-foreground leading-[1.05] tracking-[-0.025em] mb-2.5"
         style={{
           fontFamily: "var(--ed-font-display, Inter), system-ui, sans-serif",
-          fontSize: "clamp(22px, 2vw, 28px)",
+          fontSize: "clamp(26px, 2.4vw, 32px)",
         }}
       >
         {title}
@@ -112,8 +112,11 @@ export function StepActions({
   loading?: boolean;
   hideBack?: boolean;
 }) {
+  // No top border / divider — the buttons sit naturally below
+  // the form content. The divider was making the row look like
+  // an orphaned footer detached from the form.
   return (
-    <div className="flex items-center justify-between gap-3 mt-8 pt-5 border-t border-xs border-border/15">
+    <div className="flex items-center justify-between gap-3 mt-7">
       {hideBack ? (
         <span />
       ) : (
@@ -121,19 +124,19 @@ export function StepActions({
           type="button"
           onClick={onBack}
           disabled={loading}
-          className="inline-flex items-center gap-1.5 h-9 px-3 rounded-full text-[12px] font-semibold text-text-tertiary hover:text-foreground transition-colors disabled:opacity-50"
+          className="inline-flex items-center gap-1.5 h-10 px-3.5 rounded-full text-[12px] font-semibold text-text-tertiary hover:text-foreground transition-colors disabled:opacity-50"
         >
-          <ArrowLeft size={12} />
+          <ArrowLeft size={13} />
           Back
         </button>
       )}
-      <div className="flex items-center gap-2">
+      <div className="flex items-center gap-1.5">
         {onSkip && (
           <button
             type="button"
             onClick={onSkip}
             disabled={loading}
-            className="h-9 px-4 rounded-full text-[12px] font-semibold text-text-tertiary hover:text-foreground transition-colors disabled:opacity-50"
+            className="h-10 px-4 rounded-full text-[12px] font-semibold text-text-tertiary hover:text-foreground transition-colors disabled:opacity-50"
           >
             Skip for now
           </button>
@@ -142,13 +145,13 @@ export function StepActions({
           type="button"
           onClick={onNext}
           disabled={nextDisabled || loading}
-          className="inline-flex items-center gap-2 h-9 px-5 rounded-full text-[12px] font-semibold bg-primary text-primary-foreground hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          className="inline-flex items-center gap-2 h-10 px-5 rounded-full text-[12.5px] font-semibold bg-primary text-primary-foreground hover:bg-primary/90 shadow-[0_2px_12px_-2px_hsl(var(--primary)/0.45)] transition-all disabled:opacity-40 disabled:cursor-not-allowed disabled:shadow-none"
         >
           {loading ? (
-            <Loader2 size={12} className="animate-spin" />
+            <Loader2 size={13} className="animate-spin" />
           ) : null}
           {nextLabel}
-          {!loading && <ArrowRight size={12} />}
+          {!loading && <ArrowRight size={13} />}
         </button>
       </div>
     </div>
@@ -191,7 +194,13 @@ export function FormField({
   );
 }
 
-/** Standard text input. Use inside `<FormField>`. */
+/** Standard text input. Use inside `<FormField>`.
+ *
+ *  Focus state: kept very gentle. The old version used
+ *  `focus:border-primary/40` which produced a harsh red ring on
+ *  autoFocus (especially against the dark canvas — looked like
+ *  a validation error). Replaced with a soft inset ring +
+ *  subtle bg tint that reads as "active" without alarming. */
 export function TextInput({
   value,
   onChange,
@@ -212,8 +221,48 @@ export function TextInput({
       onChange={(e) => onChange(e.target.value)}
       placeholder={placeholder}
       autoFocus={autoFocus}
-      className="w-full px-3 py-2 bg-foreground/[0.03] border border-border-soft rounded-lg text-[13px] text-foreground placeholder:text-text-tertiary outline-none focus:border-primary/40 transition-colors"
+      spellCheck={false}
+      className="w-full px-3.5 py-2.5 bg-foreground/[0.04] border border-border-soft rounded-xl text-[13.5px] text-foreground placeholder:text-text-tertiary/60 outline-none focus:border-foreground/20 focus:bg-foreground/[0.06] transition-colors"
     />
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────
+// FieldGroup — card wrapper that groups related FormFields
+// ─────────────────────────────────────────────────────────────────
+// Used in CompanyStep + ProfileStep to give the form a visible
+// "card" shape rather than fields floating in space. Optional
+// section heading sits at the top with a faint icon to anchor it.
+
+export function FieldGroup({
+  title,
+  icon: Icon,
+  children,
+  className = "",
+}: {
+  title?: string;
+  icon?: LucideIcon;
+  children: React.ReactNode;
+  className?: string;
+}) {
+  return (
+    <section
+      className={`rounded-2xl border border-border-soft bg-foreground/[0.02] p-5 ${className}`}
+    >
+      {title && (
+        <div className="flex items-center gap-2 mb-4">
+          {Icon && (
+            <div className="w-6 h-6 rounded-md bg-foreground/[0.05] border border-border-soft flex items-center justify-center">
+              <Icon className="h-3 w-3 text-text-tertiary" strokeWidth={2.3} />
+            </div>
+          )}
+          <h3 className="text-[11px] font-bold uppercase tracking-[0.16em] text-text-tertiary">
+            {title}
+          </h3>
+        </div>
+      )}
+      <div className="space-y-4">{children}</div>
+    </section>
   );
 }
 
@@ -301,7 +350,7 @@ export function PillPicker<T extends string>({
           type="button"
           onClick={() => onChange(opt.value)}
           data-active={value === opt.value}
-          className="px-3 h-8 rounded-full text-[11.5px] font-semibold border transition-colors text-text-secondary border-border-soft hover:border-foreground/30 data-[active=true]:bg-foreground data-[active=true]:text-background data-[active=true]:border-foreground"
+          className="px-3.5 h-9 rounded-full text-[12px] font-semibold border transition-all text-text-secondary bg-foreground/[0.03] border-border-soft hover:border-foreground/25 hover:bg-foreground/[0.06] data-[active=true]:bg-primary data-[active=true]:text-primary-foreground data-[active=true]:border-primary data-[active=true]:shadow-[0_2px_10px_-2px_hsl(var(--primary)/0.4)]"
         >
           {opt.label}
         </button>
