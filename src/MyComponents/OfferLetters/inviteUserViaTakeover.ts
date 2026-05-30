@@ -29,6 +29,14 @@ export interface InviteResult {
   ok: boolean;
   userId?: string;
   email?: string;
+  /** Optional set-password / accept-invite link returned by the
+   *  takeover server. Used by the Direct Hire flow to show a
+   *  copy-able URL alongside the auto-sent invite email so the
+   *  operator can also share via Slack / DM / SMS. The server
+   *  exposes this from supabase admin.generateLink (recovery type).
+   *  Will be undefined if the server hasn't been updated to surface
+   *  it — UI should fall back to "invite email sent" messaging. */
+  actionLink?: string;
   /** True when the user already had a Supabase auth account — the
    *  caller can use this to skip the invite step next time but
    *  still link to the existing user id (returned as undefined in
@@ -165,5 +173,10 @@ export async function inviteUserViaTakeover(
     ok: true,
     userId: json.userId,
     email: json.email,
+    // action_link / actionLink: snake_case from the GoTrue admin
+    // response, camelCase if the server normalized it. Either way
+    // we surface it as actionLink. Undefined when the server hasn't
+    // been updated to expose it.
+    actionLink: json.actionLink ?? json.action_link ?? undefined,
   };
 }

@@ -22,8 +22,10 @@ import { motion, AnimatePresence } from "framer-motion";
 import {
   AlertCircle, ArrowRight, Briefcase, Calendar, CheckCircle2,
   ChevronRight, Eye, FileText, Github, Globe, Inbox, Linkedin,
-  Loader2, Mail, MapPin, Phone, RefreshCw, Sparkles, Star, X,
+  Loader2, Mail, MapPin, Phone, RefreshCw, Sparkles, Star, UserPlus, X,
 } from "lucide-react";
+import { DirectHireDialog } from "./DirectHireDialog";
+import { ActiveUser } from "@/stores/query";
 import {
   useCandidates,
   useCandidate,
@@ -57,9 +59,26 @@ const STATUS_OPTIONS: Array<{ value: CandidateStatus | "all"; label: string }> =
   { value: "withdrawn",  label: "Withdrawn" },
 ];
 
+// Direct Hire is gated to C-level only. Brings someone into
+// takeover without going through candidates/offer letters — that's
+// a privileged action, not a recruiter chore.
+const DIRECT_HIRE_ROLES = new Set([
+  "CEO",
+  "COO",
+  "CFO",
+  "Admin",
+]);
+
 export function HiringDashboard() {
   const [filters, setFilters] = useState<CandidateListFilters>({ sortBy: "fit_score" });
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [directHireOpen, setDirectHireOpen] = useState(false);
+
+  const { data: activeUser } = ActiveUser();
+  const operatorRole = (activeUser?.[0] as any)?.role ?? null;
+  const canDirectHire = operatorRole
+    ? DIRECT_HIRE_ROLES.has(operatorRole)
+    : false;
 
   const candidatesQ = useCandidates(filters);
   const postingsQ = useJobPostings();
@@ -152,6 +171,25 @@ export function HiringDashboard() {
             Rank with Axon {unscoredCount > 0 && <span>· {unscoredCount}</span>}
           </button>
 
+          {/* Direct Hire — skip the application pipeline for known
+              hires / internal referrals. C-level only. The button
+              gets a tinted-primary treatment so it stands out from
+              the batch-Axon buttons but doesn't shout. */}
+          {canDirectHire && (
+            <>
+              <div className="w-px h-5 bg-muted/60 mx-1" />
+              <button
+                type="button"
+                onClick={() => setDirectHireOpen(true)}
+                title="Skip the offer letter — invite someone directly into takeover"
+                className="text-[11.5px] font-semibold px-3 py-1.5 rounded-sm bg-primary/[0.10] border border-primary/30 text-primary hover:bg-primary/[0.15] hover:border-primary/45 inline-flex items-center gap-1.5"
+              >
+                <UserPlus size={11} />
+                Direct Hire
+              </button>
+            </>
+          )}
+
           <button
             type="button"
             onClick={() => candidatesQ.refetch()}
@@ -162,6 +200,21 @@ export function HiringDashboard() {
           </button>
         </div>
       </header>
+
+      {/* Direct Hire dialog — controlled here so refetch can trigger
+          on success to surface the new employee in any downstream
+          list (Hiring dashboard itself doesn't show employees, but
+          the Employees page does — and the candidate list won't
+          flicker since direct hires never create a candidates row). */}
+      <DirectHireDialog
+        open={directHireOpen}
+        onOpenChange={setDirectHireOpen}
+        onCreated={() => {
+          // No-op for now — direct hires don't appear in candidates,
+          // so there's nothing on this page to refresh. Hook is kept
+          // for future use (analytics ping, toast, etc.).
+        }}
+      />
 
       {/* Body */}
       <div
