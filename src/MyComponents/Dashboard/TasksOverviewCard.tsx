@@ -42,9 +42,15 @@ import {
 } from "lucide-react";
 import { useNavigate } from "@tanstack/react-router";
 import { BentoCard } from "./BentoCard";
-import { Todos, AllTodos, type TodosInterface } from "@/stores/query";
+import {
+  Todos,
+  AllTodos,
+  Employees,
+  type TodosInterface,
+} from "@/stores/query";
 import { colorForUser } from "@/lib/yjs/awareness";
 import UserView, { Role } from "@/MyComponents/Reusables/userView";
+import supabase from "@/MyComponents/supabase";
 
 interface Props {
   username: string;
@@ -105,6 +111,29 @@ export function TasksOverviewCard({ username }: Props) {
 
   const { data: mineRaw } = Todos(username || "__none__");
   const { data: allRaw } = AllTodos();
+  const { data: employees } = Employees();
+
+  // Resolve username → avatar URL for the "Most loaded" rows.
+  // Supports both legacy bucket-filename avatars and full URL
+  // avatars (DiceBear, Direct Hire flow). Built once per employee
+  // list change; the LoadRow does a Map.get for O(1) lookup.
+  const avatarsByName = useMemo(() => {
+    const map = new Map<string, string>();
+    for (const e of (employees as any[] | undefined) ?? []) {
+      if (!e?.username) continue;
+      let url: string | undefined;
+      if (typeof e.avatar === "string" && e.avatar.startsWith("http")) {
+        url = e.avatar;
+      } else if (e.avatar) {
+        const { data } = supabase.storage
+          .from("avatars")
+          .getPublicUrl(e.avatar);
+        url = data?.publicUrl;
+      }
+      if (url) map.set(e.username, url);
+    }
+    return map;
+  }, [employees]);
 
   const list: TodosInterface[] = useMemo(
     () => (scope === "me" ? mineRaw : allRaw) ?? [],
@@ -224,7 +253,10 @@ export function TasksOverviewCard({ username }: Props) {
         </UserView>
       </header>
 
-      <div className="p-4 space-y-4">
+      {/* Body padding tightened to space-y-3 — the donut, callout
+       *  grid, drill area, and most-loaded sections felt too padded
+       *  apart at space-y-4 inside the narrower col-span-4 card. */}
+      <div className="p-4 space-y-3">
         {/* Donut */}
         <Donut
           slices={slices}
@@ -294,6 +326,7 @@ export function TasksOverviewCard({ username }: Props) {
                 tasks={drillTasks}
                 totalCount={buckets[selectedBucket].length}
                 showAssignees={scope === "everyone"}
+                avatarsByName={avatarsByName}
                 onTaskClick={() => navigate({ to: "/task" })}
                 onClose={() => setSelectedBucket(null)}
               />
@@ -328,13 +361,17 @@ export function TasksOverviewCard({ username }: Props) {
         {scope === "everyone" && topAssignees.length > 0 && (
           <section>
             <SectionLabel>Most loaded</SectionLabel>
-            <ul className="space-y-1">
+            {/* list-none + p-0 + m-0 kills the browser default
+             *  list-item bullets that were showing as white dots
+             *  next to the avatars. */}
+            <ul className="list-none p-0 m-0 space-y-1">
               {topAssignees.map((a) => (
                 <LoadRow
                   key={a.user}
                   user={a.user}
                   count={a.count}
                   maxLoad={maxLoad}
+                  avatarUrl={avatarsByName.get(a.user)}
                   onClick={() => setFocusUser(a.user)}
                 />
               ))}
@@ -367,6 +404,27 @@ export function TasksOverviewCard({ username }: Props) {
 // Donut
 // ──────────────────────────────────────────────────────────────────
 
+/**
+ * Donut — refined circular donut chart with a hero center stat and
+ * a sidebar legend whose rows have per-status mini progress bars.
+ *
+ * Design choices vs the previous attempt:
+ *   · Bigger canvas (156 vs 140) so the donut reads as the visual
+ *     anchor of the row rather than a decorative element.
+ *   · Thicker stroke (14 vs 10) — more presence, more "premium"
+ *     feel, less spindly.
+ *   · Rounded caps with a small inter-segment gap so the slices
+ *     read as capsule pills rather than colliding bands.
+ *   · SVG glow filter applied to the focused segment on hover so it
+ *     lifts off the canvas without a heavy drop shadow.
+ *   · Center stack: big % (38px) → small "DONE" caps subtitle →
+ *     "X of Y" tabular line. Three tiers of typography in <60px of
+ *     vertical space so it reads as a refined infographic, not a
+ *     stat block.
+ *   · Sidebar legend with per-row mini progress bars — each row
+ *     shows the status' share of the total via a thin filled bar
+ *     under the count. Linear-analytics style.
+ */
 function Donut({
   slices,
   total,
@@ -380,17 +438,24 @@ function Donut({
   progressCount: number;
   doneCount: number;
 }) {
-  const size = 132;
-  const stroke = 11;
+  // Sizing — bigger and thicker than the prior pass for a more
+  // substantial, premium feel in the col-span-4 card.
+  const size = 156;
+  const stroke = 14;
   const radius = (size - stroke) / 2;
   const c = 2 * Math.PI * radius;
+  // Small inter-segment gap — combined with rounded caps this gives
+  // each slice clean capsule ends without colliding into neighbours.
+  // 1% of circumference is enough at this stroke weight.
+  const gapLen = c * 0.01;
 
   const [hover, setHover] = useState<string | null>(null);
 
   let cumulative = 0;
+  const pctDone = total > 0 ? Math.round((doneCount / total) * 100) : 0;
 
   return (
-    <div className="flex items-center gap-4">
+    <div className="flex items-center gap-5">
       <div className="relative flex-shrink-0" style={{ width: size, height: size }}>
         <svg
           width={size}
@@ -398,21 +463,45 @@ function Donut({
           className="-rotate-90"
           style={{ overflow: "visible" }}
         >
+          {/* SVG filter for the focused-segment glow. Soft, refined,
+           *  no heavy drop shadow — just a subtle bloom so the hovered
+           *  slice lifts off the canvas. */}
+          <defs>
+            <filter id="cwa-donut-glow" x="-50%" y="-50%" width="200%" height="200%">
+              <feGaussianBlur stdDeviation="3" result="blur" />
+              <feMerge>
+                <feMergeNode in="blur" />
+                <feMergeNode in="SourceGraphic" />
+              </feMerge>
+            </filter>
+          </defs>
+
+          {/* Track — quiet ring grounding the segments. Slightly
+           *  more visible (9% alpha) than before so a dominant
+           *  single-slice state still feels like a "container." */}
           <circle
             cx={size / 2}
             cy={size / 2}
             r={radius}
-            stroke="hsl(var(--foreground) / 0.06)"
+            stroke="hsl(var(--foreground) / 0.07)"
             strokeWidth={stroke}
             fill="none"
           />
+
+          {/* Slices — each is a circle with a strokeDasharray + offset
+           *  trick to paint just its arc. Visible length is shortened
+           *  by gapLen so rounded caps land inside the segment's
+           *  claimed arc, not over the next one. Sequential delay
+           *  (0.08s × index) gives a refined cascading entrance. */}
           {total > 0 &&
-            slices.map((slice) => {
+            slices.map((slice, i) => {
               const fraction = slice.count / total;
-              const length = c * fraction;
-              const offset = c * (cumulative / total);
+              const arcLen = c * fraction;
+              const visible = Math.max(0, arcLen - gapLen);
+              const offset = c * (cumulative / total) + gapLen / 2;
               cumulative += slice.count;
               const dim = hover !== null && hover !== slice.key;
+              const focused = hover === slice.key;
               return (
                 <motion.circle
                   key={slice.key}
@@ -420,39 +509,144 @@ function Donut({
                   cy={size / 2}
                   r={radius}
                   stroke={slice.color}
-                  strokeWidth={stroke}
+                  strokeWidth={focused ? stroke + 1.5 : stroke}
                   fill="none"
-                  strokeLinecap="butt"
+                  strokeLinecap="round"
+                  filter={focused ? "url(#cwa-donut-glow)" : undefined}
                   initial={{ strokeDasharray: `0 ${c}`, opacity: 1 }}
                   animate={{
-                    strokeDasharray: `${length} ${c - length}`,
+                    strokeDasharray: `${visible} ${c - visible}`,
                     strokeDashoffset: -offset,
-                    opacity: dim ? 0.18 : 1,
+                    opacity: dim ? 0.2 : 1,
                   }}
-                  transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
+                  transition={{
+                    duration: 0.55,
+                    ease: [0.16, 1, 0.3, 1],
+                    delay: 0.08 * i,
+                  }}
                 />
               );
             })}
         </svg>
+
+        {/* Center stack — three tiers of typography, tightly spaced.
+         *  Hero % at the top, "DONE" subtitle in success green (mood
+         *  cue when high-completion), "X of Y" tabular line at the
+         *  bottom. */}
         <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
           <motion.div
-            initial={{ scale: 0.6, opacity: 0 }}
+            initial={{ scale: 0.75, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
-            transition={{ duration: 0.45, ease: [0.16, 1, 0.3, 1], delay: 0.1 }}
-            className="text-[26px] font-bold tabular-nums text-foreground leading-none"
+            transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1], delay: 0.2 }}
+            className="flex items-baseline gap-0.5"
           >
-            <AnimatedNumber value={total} />
+            <span className="text-[38px] font-bold tabular-nums text-foreground leading-none">
+              <AnimatedNumber value={pctDone} />
+            </span>
+            <span className="text-[18px] font-semibold text-foreground/50 leading-none">
+              %
+            </span>
           </motion.div>
-          <div className="text-[8.5px] font-semibold uppercase tracking-[0.18em] text-text-tertiary mt-1.5">
-            Total
+          <div className="text-[8.5px] font-bold uppercase tracking-[0.22em] text-success mt-1.5">
+            Done
+          </div>
+          <div className="text-[10px] tabular-nums text-text-tertiary mt-1 font-medium">
+            <AnimatedNumber value={doneCount} /> of {total}
           </div>
         </div>
       </div>
 
-      <div className="flex flex-col gap-2 min-w-0 flex-1">
-        <LegendItem sliceKey="open" color="hsl(var(--primary))" label="Open" count={openCount} total={total} onHover={setHover} />
-        <LegendItem sliceKey="progress" color="hsl(var(--warning))" label="Active" count={progressCount} total={total} onHover={setHover} />
-        <LegendItem sliceKey="done" color="hsl(var(--success))" label="Done" count={doneCount} total={total} onHover={setHover} />
+      {/* Legend — Linear-analytics-style rows: dot + label + count
+       *  on the top line, a thin proportional progress bar below. */}
+      <div className="flex flex-col gap-2.5 min-w-0 flex-1">
+        <LegendBar
+          sliceKey="open"
+          color="bg-primary"
+          label="Open"
+          count={openCount}
+          total={total}
+          dim={hover !== null && hover !== "open"}
+          onHover={setHover}
+        />
+        <LegendBar
+          sliceKey="progress"
+          color="bg-warning"
+          label="Active"
+          count={progressCount}
+          total={total}
+          dim={hover !== null && hover !== "progress"}
+          onHover={setHover}
+        />
+        <LegendBar
+          sliceKey="done"
+          color="bg-success"
+          label="Done"
+          count={doneCount}
+          total={total}
+          dim={hover !== null && hover !== "done"}
+          onHover={setHover}
+        />
+      </div>
+    </div>
+  );
+}
+
+/**
+ * LegendBar — sidebar legend row for the Donut. Top line shows the
+ * colored dot, the status label, and the count + percentage; bottom
+ * line is a thin proportional bar showing the slice's share of the
+ * total. Hover the row to highlight the matching donut segment.
+ *
+ * This is the "Linear analytics" style legend treatment — each row
+ * tells you the count AND visually echoes the donut's proportion via
+ * the bar fill, so the eye can match a slice to a row instantly.
+ */
+function LegendBar({
+  sliceKey,
+  color,
+  label,
+  count,
+  total,
+  dim,
+  onHover,
+}: {
+  sliceKey: string;
+  color: string;
+  label: string;
+  count: number;
+  total: number;
+  dim: boolean;
+  onHover: (key: string | null) => void;
+}) {
+  const pct = total > 0 ? Math.round((count / total) * 100) : 0;
+  return (
+    <div
+      onMouseEnter={() => onHover(sliceKey)}
+      onMouseLeave={() => onHover(null)}
+      className="cursor-default transition-opacity"
+      style={{ opacity: dim ? 0.4 : 1 }}
+    >
+      <div className="flex items-center gap-2 min-w-0">
+        <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${color}`} />
+        <span className="text-[11px] text-foreground/80 font-medium flex-1 truncate">
+          {label}
+        </span>
+        <span className="text-[11.5px] tabular-nums text-foreground font-bold">
+          <AnimatedNumber value={count} />
+        </span>
+        <span className="text-[10px] tabular-nums text-text-tertiary font-medium w-8 text-right">
+          <AnimatedNumber value={pct} />%
+        </span>
+      </div>
+      {/* Mini proportion bar — thin track + filled portion. Matches
+       *  the slice color so the row visually echoes the donut. */}
+      <div className="mt-1 h-[3px] rounded-full bg-foreground/[0.06] overflow-hidden">
+        <motion.div
+          className={`h-full rounded-full ${color}`}
+          initial={{ width: 0 }}
+          animate={{ width: `${pct}%` }}
+          transition={{ duration: 0.55, ease: [0.16, 1, 0.3, 1] }}
+        />
       </div>
     </div>
   );
@@ -527,10 +721,10 @@ function Callout({
   }[tone];
 
   const selectedBorderCls = {
-    destructive: "border-destructive/40 bg-destructive/[0.06]",
-    warning: "border-warning/40 bg-warning/[0.06]",
-    primary: "border-primary/40 bg-primary/[0.06]",
-    success: "border-success/40 bg-success/[0.06]",
+    destructive: "border-destructive/40 bg-destructive/[0.05]",
+    warning: "border-warning/40 bg-warning/[0.05]",
+    primary: "border-primary/40 bg-primary/[0.05]",
+    success: "border-success/40 bg-success/[0.05]",
   }[tone];
 
   const isActive = count > 0;
@@ -546,14 +740,16 @@ function Callout({
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.3, ease: [0.16, 1, 0.3, 1], delay }}
       aria-pressed={selected}
-      className={`relative block w-full text-left rounded-lg border-xs px-2.5 py-2 transition-colors cursor-pointer ${
+      // Padding bumped px-2.5→px-3 / py-2→py-2.5 so the bigger count
+      // and refined type have room to breathe.
+      className={`relative block w-full text-left rounded-lg border-xs px-3 py-2.5 transition-colors cursor-pointer ${
         selected
           ? selectedBorderCls
-          : "bg-foreground/[0.025] border-border-soft hover:bg-foreground/[0.05] hover:border-foreground/15"
+          : "bg-foreground/[0.03] border-border-soft hover:bg-foreground/[0.05] hover:border-foreground/15"
       }`}
     >
       <div
-        className={`flex items-center justify-between gap-1.5 ${
+        className={`flex items-center justify-between gap-2 ${
           isActive ? toneCls : "text-text-tertiary"
         }`}
       >
@@ -572,20 +768,32 @@ function Callout({
               />
             </span>
           )}
-          <Icon className="h-2.5 w-2.5 flex-shrink-0" />
-          <span className="text-[9.5px] font-semibold uppercase tracking-[0.12em] truncate">
+          {/* Icon nudged larger (h-3) so it reads at the same
+           *  weight as the bumped label type. */}
+          <Icon className="h-3 w-3 flex-shrink-0" />
+          {/* Label: 10px / font-bold / 0.14em tracking. Slightly
+           *  bolder + more spaced than the previous 9.5px setting
+           *  for a more "editorial header" feel. */}
+          <span className="text-[10px] font-bold uppercase tracking-[0.14em] truncate">
             {label}
           </span>
         </div>
+        {/* Hero count number — bumped 15px → 20px so it carries the
+         *  card's stat weight on its own without help from the icon
+         *  or label sizing. */}
         <span
-          className={`text-[15px] font-bold tabular-nums leading-none ${
-            isActive ? toneCls : "text-text-tertiary/50"
+          className={`text-[20px] font-bold tabular-nums leading-none ${
+            isActive ? toneCls : "text-text-tertiary/40"
           }`}
         >
           <AnimatedNumber value={count} />
         </span>
       </div>
-      <div className="mt-1.5 text-[10.5px] truncate text-text-tertiary">
+      {/* Hint line: slightly softer color (text-tertiary/85) so the
+       *  number and label own the visual hierarchy. The empty space
+       *  is preserved when no hint is supplied so all four cards
+       *  align to the same height. */}
+      <div className="mt-1.5 text-[10.5px] truncate text-text-tertiary/85">
         {hint || " "}
       </div>
     </motion.button>
@@ -611,6 +819,7 @@ function DrillDownList({
   tasks,
   totalCount,
   showAssignees,
+  avatarsByName,
   onTaskClick,
   onClose,
 }: {
@@ -618,6 +827,9 @@ function DrillDownList({
   tasks: TodosInterface[];
   totalCount: number;
   showAssignees: boolean;
+  /** username → avatar URL. Threaded down so DrillRow can show
+   *  real avatars instead of colored initials. */
+  avatarsByName?: Map<string, string>;
   onTaskClick: (task: TodosInterface) => void;
   onClose: () => void;
 }) {
@@ -629,26 +841,44 @@ function DrillDownList({
     success: "text-success",
   }[meta.tone];
 
-  // Tone-matched panel border ties it visually back to the selected tile
-  // above (no more floating chevron pip needed).
-  const borderTone = {
-    destructive: "border-destructive/30 bg-destructive/[0.03]",
-    warning: "border-warning/30 bg-warning/[0.03]",
-    primary: "border-primary/30 bg-primary/[0.03]",
-    success: "border-success/30 bg-success/[0.03]",
+  // Tone-colored left rail — replaces the washed-out tinted
+  // background. The rail is bold and saturated so the tone reads
+  // clearly without the surface feeling "tinted but faded."
+  const railBgCls = {
+    destructive: "bg-destructive",
+    warning: "bg-warning",
+    primary: "bg-primary",
+    success: "bg-success",
   }[meta.tone];
 
   const showingSubset = tasks.length < totalCount;
 
   return (
-    <div className={`rounded-lg border-xs overflow-hidden ${borderTone}`}>
-      {/* Tiny header strip */}
-      <div className="flex items-center justify-between gap-2 px-3 pt-2 pb-1.5 border-b border-xs border-border-soft">
-        <div className={`flex items-center gap-1.5 ${toneCls}`}>
-          <span className="text-[9px] font-semibold uppercase tracking-[0.14em]">
+    // Clean editorial surface — same bg-foreground/[0.03] as the
+    // task/meeting cards on the home dashboard. The tone now lives
+    // entirely in the left rail + the label text, not in a low-alpha
+    // background tint that made the whole panel feel washed out.
+    <div className="relative rounded-lg border-xs border-border-soft bg-foreground/[0.03] overflow-hidden">
+      {/* Left tone rail — full panel height. Read as "this drill is
+       *  scoped to <tone>" without painting the whole surface. */}
+      <span
+        aria-hidden
+        className={`absolute left-0 top-0 bottom-0 w-[3px] ${railBgCls}`}
+      />
+
+      {/* Header strip — crisper than before. Label bumped to bold +
+       *  11px from 9px so it's actually legible; "X of Y" promoted
+       *  from 60% opacity to a clean text-foreground/65 so it reads
+       *  but doesn't compete. Divider uses the same border/15 we use
+       *  on the dashboard headers. */}
+      <div className="flex items-center justify-between gap-2 pl-4 pr-2 py-2 border-b border-xs border-border/15">
+        <div className="flex items-center gap-2 min-w-0">
+          <span
+            className={`text-[10.5px] font-bold uppercase tracking-[0.14em] ${toneCls}`}
+          >
             {meta.label}
           </span>
-          <span className="text-[9px] font-semibold tabular-nums opacity-60">
+          <span className="text-[10.5px] font-semibold tabular-nums text-foreground/65">
             {showingSubset ? `${tasks.length} of ${totalCount}` : totalCount}
           </span>
         </div>
@@ -656,14 +886,14 @@ function DrillDownList({
           type="button"
           onClick={onClose}
           aria-label="Close drill-down"
-          className="p-0.5 rounded text-text-tertiary hover:text-foreground hover:bg-foreground/[0.06] transition-colors"
+          className="p-1 rounded text-text-tertiary hover:text-foreground hover:bg-foreground/[0.08] transition-colors"
         >
           <X className="h-3 w-3" />
         </button>
       </div>
 
       {tasks.length === 0 ? (
-        <div className="px-3 py-3 text-[11px] text-text-tertiary italic">
+        <div className="pl-4 pr-3 py-3 text-[11.5px] text-foreground/60 italic">
           {meta.emptyMessage}
         </div>
       ) : (
@@ -673,6 +903,7 @@ function DrillDownList({
               key={t.todo_id}
               task={t}
               showAssignee={showAssignees}
+              avatarsByName={avatarsByName}
               onClick={() => onTaskClick(t)}
             />
           ))}
@@ -685,10 +916,12 @@ function DrillDownList({
 function DrillRow({
   task,
   showAssignee,
+  avatarsByName,
   onClick,
 }: {
   task: TodosInterface;
   showAssignee: boolean;
+  avatarsByName?: Map<string, string>;
   onClick: () => void;
 }) {
   const PriorityIcon =
@@ -705,25 +938,43 @@ function DrillRow({
     task.status !== "done" &&
     new Date(task.deadline).getTime() < Date.now();
 
+  // Resolve real avatar for the first assignee. Falls back to the
+  // colored-initials circle when no URL is set (legacy users / no
+  // avatar uploaded).
+  const firstAssignee = task.assignee?.[0];
+  const avatarUrl =
+    firstAssignee && avatarsByName ? avatarsByName.get(firstAssignee) : undefined;
+
   return (
     <li className="list-none">
       <button
         type="button"
         onClick={onClick}
-        className="group/d w-full text-left flex items-center gap-2.5 px-3 py-1.5 hover:bg-foreground/[0.04] transition-colors"
+        className="group/d w-full text-left flex items-center gap-2.5 pl-4 pr-3 py-1.5 hover:bg-foreground/[0.05] transition-colors"
       >
         <PriorityIcon className={`h-3 w-3 flex-shrink-0 ${priorityCls}`} />
         <span className="text-[12px] text-foreground flex-1 truncate">
           {task.title}
         </span>
-        {showAssignee && task.assignee?.[0] && (
-          <span
-            className="h-4 w-4 rounded-full flex items-center justify-center text-[8px] font-bold text-white flex-shrink-0"
-            style={{ backgroundColor: colorForUser(task.assignee[0]) }}
-            title={task.assignee[0]}
+        {showAssignee && firstAssignee && (
+          <div
+            className="relative h-4 w-4 rounded-full flex items-center justify-center text-[8px] font-bold text-white flex-shrink-0 overflow-hidden"
+            style={{ backgroundColor: colorForUser(firstAssignee) }}
+            title={firstAssignee}
           >
-            {task.assignee[0].slice(0, 2).toUpperCase()}
-          </span>
+            {avatarUrl ? (
+              <img
+                src={avatarUrl}
+                alt={firstAssignee}
+                className="absolute inset-0 w-full h-full object-cover"
+                onError={(e) => {
+                  (e.currentTarget as HTMLImageElement).style.display = "none";
+                }}
+              />
+            ) : (
+              firstAssignee.slice(0, 2).toUpperCase()
+            )}
+          </div>
         )}
         {task.deadline && (
           <span
@@ -859,26 +1110,52 @@ function LoadRow({
   user,
   count,
   maxLoad,
+  avatarUrl,
   onClick,
 }: {
   user: string;
   count: number;
   maxLoad: number;
+  /** Optional real avatar URL. When present, renders an <img>;
+   *  otherwise falls back to the colored-initials circle so legacy
+   *  users (no avatar set) still get a recognizable marker. */
+  avatarUrl?: string;
   onClick: () => void;
 }) {
   const pct = maxLoad > 0 ? (count / maxLoad) * 100 : 0;
   return (
-    <li>
+    // list-none kills any inherited list-item bullet from the parent
+    // ul. Belt-and-suspenders alongside the parent's list-none class.
+    <li className="list-none">
       <button
         type="button"
         onClick={onClick}
         className="w-full flex items-center gap-2.5 py-1.5 px-2 -mx-2 rounded-md hover:bg-foreground/[0.04] transition-colors group/load"
       >
+        {/* Avatar with two-step degradation:
+         *  1. If avatarUrl is set → render real <img>, underlay with
+         *     a colored circle so a slow/broken image still shows
+         *     something.
+         *  2. If no avatarUrl → render just the colored circle with
+         *     initials (the legacy behavior).
+         *  An onError handler hides a broken image so the underlay
+         *  shows through cleanly instead of a cracked-glyph icon. */}
         <div
-          className="h-5 w-5 rounded-full flex items-center justify-center text-[9px] font-bold text-white flex-shrink-0"
+          className="relative h-5 w-5 rounded-full flex items-center justify-center text-[9px] font-bold text-white flex-shrink-0 overflow-hidden"
           style={{ backgroundColor: colorForUser(user) }}
         >
-          {user.slice(0, 2).toUpperCase()}
+          {avatarUrl ? (
+            <img
+              src={avatarUrl}
+              alt={user}
+              className="absolute inset-0 w-full h-full object-cover"
+              onError={(e) => {
+                (e.currentTarget as HTMLImageElement).style.display = "none";
+              }}
+            />
+          ) : (
+            user.slice(0, 2).toUpperCase()
+          )}
         </div>
         <span className="text-[12px] text-foreground flex-1 truncate text-left">{user}</span>
         <div className="w-16 h-1 bg-foreground/[0.06] rounded-full overflow-hidden flex-shrink-0">
