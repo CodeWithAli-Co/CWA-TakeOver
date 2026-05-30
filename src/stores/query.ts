@@ -282,6 +282,11 @@ const fetchTodos = async (user: string, company: string) => {
     assignee: task.assignee,
     deadline: task.deadline || '',
     company: task.company || 'CodeWithAli',
+    // Carry assigned_by through so TaskDetailModal can show who
+    // created the task. `select('*')` returns it from the DB; the
+    // mapper just needs to forward it. Without this, every task
+    // landed in the UI with assigned_by stripped → "Unknown".
+    assigned_by: (task as any).assigned_by ?? null,
   }))
 }
 export const Todos = (user: string) => {
@@ -333,6 +338,11 @@ const fetchAllTodos = async (company: string) => {
     assignee: task.assignee,
     deadline: task.deadline || '',
     company: task.company || 'CodeWithAli',
+    // Carry assigned_by through — same fix as fetchTodos above. The
+    // C-level "Everyone" scope queries this fetcher; without this
+    // line the modal showed "Unknown" for every task even when the
+    // DB had a valid assigner.
+    assigned_by: (task as any).assigned_by ?? null,
   }));
 };
 

@@ -22,20 +22,70 @@ import {
   Calendar,
   Clock,
   Link,
-  Map,
+  // Aliased to avoid shadowing the built-in Map constructor. Other
+  // meeting-form files do the same; keep them in sync.
+  Map as MapIcon,
   PersonStanding,
   Plus,
   Tags,
 } from "lucide-react";
 import { motion } from "framer-motion";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import supabase from "@/MyComponents/supabase";
 import { message } from "@tauri-apps/plugin-dialog";
 import { MeetingsQuery, getActiveCompanyLabel } from "@/stores/query";
+import {
+  MultiSelectField,
+  type Option,
+} from "@/MyComponents/Reusables/multiselectField";
 
-export const AddMeeting = () => {
+/**
+ * Shape of the user objects passed in from the parent. Loosely
+ * typed because different upstream queries return slightly
+ * different row shapes — we accept anything with the fields we
+ * actually use.
+ */
+export interface MeetingAttendeeOption {
+  supa_id?: string | null;
+  username?: string | null;
+  role?: string | null;
+  avatarUrl?: string | null;
+}
+
+interface AddMeetingProps {
+  /** Roster passed in from the parent — used to populate the
+   *  attendee multi-select. Optional so legacy callers that don't
+   *  yet pass users still render the form (the multi-select just
+   *  shows "no employees available" in that case). */
+  users?: MeetingAttendeeOption[];
+}
+
+export const AddMeeting = ({ users = [] }: AddMeetingProps = {}) => {
   const [open, setOpen] = useState(false);
   const { refetch } = MeetingsQuery();
+
+  // Build the option list once per render of the user roster.
+  // Skips any row missing a supa_id (the value we ultimately store
+  // on cwa_meetings.attendee_ids).
+  const attendeeOptions: Option[] = useMemo(
+    () =>
+      users
+        .filter((u): u is MeetingAttendeeOption & { supa_id: string } =>
+          Boolean(u.supa_id),
+        )
+        .map((u) => ({
+          value: u.supa_id,
+          // "username · Role" — role is optional, drop the dot when missing.
+          label: u.role ? `${u.username ?? u.supa_id} · ${u.role}` : (u.username ?? u.supa_id),
+          ...(u.avatarUrl ? { avatarUrl: u.avatarUrl } : {}),
+        })),
+    [users],
+  );
+
+  // Local controlled state for the multi-select — kept in this
+  // component instead of the shared multi-select zustand store so
+  // the AddTodo modal (which uses the same store) doesn't interfere.
+  const [selectedAttendees, setSelectedAttendees] = useState<Option[]>([]);
 
   const form = useForm({
     defaultValues: {
@@ -48,83 +98,88 @@ export const AddMeeting = () => {
       url_location: "",
     },
     onSubmit: async ({ value }) => {
+      // Derive both columns from the multi-select. attendee_ids is
+      // the source of truth going forward; attendees (count string)
+      // is written too so legacy reads / callers that haven't been
+      // updated still see a sensible number.
+      const attendeeIds = selectedAttendees.map((a) => a.value);
+      const attendeeCount =
+        attendeeIds.length > 0 ? String(attendeeIds.length) : value.attendees;
+
+      // Helper — base insert payload shared across meeting types.
+      // Type-specific location handling layered on top below.
+      const baseInsert = {
+        meeting_title: value.meetingTitle,
+        time: value.time,
+        date: value.date,
+        attendees: attendeeCount,
+        attendee_ids: attendeeIds,
+        meeting_type: value.meetingType,
+        company: getActiveCompanyLabel(),
+      };
+
+      // Try the full insert. If the DB doesn't have the new
+      // attendee_ids column yet (migration not run), Supabase
+      // returns a schema-cache error — retry once without it so
+      // the meeting still gets created. The operator sees a tiny
+      // hint in console; meetings UI degrades to placeholder
+      // avatars for this row.
+      const insertWithFallback = async (payload: Record<string, any>) => {
+        let res = await supabase.from("cwa_meetings").insert(payload);
+        if (
+          res.error &&
+          /attendee_ids/i.test(res.error.message ?? "") &&
+          /column|schema|cache/i.test(res.error.message ?? "")
+        ) {
+          console.warn(
+            "cwa_meetings.attendee_ids not found — retrying without it. Run migrations/meeting_attendees.sql in Supabase.",
+          );
+          const { attendee_ids: _drop, ...rest } = payload;
+          res = await supabase.from("cwa_meetings").insert(rest);
+        }
+        return res;
+      };
+
       try {
+        let res;
         switch (value.meetingType) {
           case "in-person":
-            const { error } = await supabase.from("cwa_meetings").insert({
-              meeting_title: value.meetingTitle,
-              time: value.time,
-              date: value.date,
-              attendees: value.attendees,
-              meeting_type: value.meetingType,
+            res = await insertWithFallback({
+              ...baseInsert,
               location: value.location,
-              company: getActiveCompanyLabel(),
             });
-
-            if (error) {
-              await message(error.message, {
-                title: "Error Adding Meeting",
-                kind: "error",
-              });
-            } else {
-              refetch();
-              setOpen(false);
-              form.reset();
-            }
-            return;
-
+            break;
           case "online":
-            const { error: onlineError } = await supabase
-              .from("cwa_meetings")
-              .insert({
-                meeting_title: value.meetingTitle,
-                time: value.time,
-                date: value.date,
-                attendees: value.attendees,
-                meeting_type: value.meetingType,
-                location: value.url_location,
-                company: getActiveCompanyLabel(),
-              });
-
-            if (onlineError) {
-              await message(onlineError.message, {
-                title: "Error Adding Meeting",
-                kind: "error",
-              });
-            } else {
-              refetch();
-              setOpen(false);
-              form.reset();
-            }
-            return;
-
+            res = await insertWithFallback({
+              ...baseInsert,
+              location: value.url_location,
+            });
+            break;
           case "hybrid":
-            const { error: hybridError } = await supabase
-              .from("cwa_meetings")
-              .insert({
-                meeting_title: value.meetingTitle,
-                time: value.time,
-                date: value.date,
-                attendees: value.attendees,
-                meeting_type: value.meetingType,
-                hybrid_location: {
-                  address: value.location,
-                  url: value.url_location,
-                },
-                company: getActiveCompanyLabel(),
-              });
-
-            if (hybridError) {
-              await message(hybridError.message, {
-                title: "Error Adding Meeting",
-                kind: "error",
-              });
-            } else {
-              refetch();
-              setOpen(false);
-              form.reset();
-            }
+            res = await insertWithFallback({
+              ...baseInsert,
+              hybrid_location: {
+                address: value.location,
+                url: value.url_location,
+              },
+            });
+            break;
+          default:
+            return;
         }
+
+        if (res.error) {
+          await message(res.error.message, {
+            title: "Error Adding Meeting",
+            kind: "error",
+          });
+          return;
+        }
+
+        refetch();
+        setOpen(false);
+        form.reset();
+        setSelectedAttendees([]);
       } catch (err) {
         await message("An unexpected error occurred", {
           title: "Error",
@@ -219,8 +274,8 @@ export const AddMeeting = () => {
                     type="text"
                     autoComplete="off"
                     placeholder="Enter Time ( e.g. 11:00AM - 2:00PM )"
-                    className="bg-background/40 inline border-border text-foreground/70 
-                  focus:border-primary/30 focus:ring-2 focus:ring-primary/20 
+                    className="bg-background/40 inline border-border text-foreground/70
+                  focus:border-primary/30 focus:ring-2 focus:ring-primary/20
                   transition-all duration-300"
                     value={field.state.value}
                     onChange={(e) => field.handleChange(e.target.value)}
@@ -228,6 +283,29 @@ export const AddMeeting = () => {
                 </div>
               )}
             />
+
+            {/* Attendees — full-width multi-select. Picked people
+             *  get stamped into cwa_meetings.attendee_ids on submit.
+             *  The MeetingCard later resolves those IDs back to
+             *  avatars so the meeting tile shows real faces. */}
+            <div className="grid gap-2">
+              <Label className="text-foreground/70 flex items-center gap-2">
+                <PersonStanding className="w-4 h-4 text-primary" />
+                Attendees
+              </Label>
+              <MultiSelectField
+                name="Attendees"
+                hideLabel
+                options={attendeeOptions}
+                value={selectedAttendees}
+                onChange={setSelectedAttendees}
+                placeholder={
+                  attendeeOptions.length === 0
+                    ? "No employees available"
+                    : "Pick who's attending…"
+                }
+              />
+            </div>
 
             <div className="grid md:grid-cols-2 gap-4">
               {/* Date */}
@@ -250,51 +328,6 @@ export const AddMeeting = () => {
                       value={field.state.value}
                       onChange={(e) => field.handleChange(e.target.value)}
                     />
-                  </div>
-                )}
-              />
-
-              {/* Attendees */}
-              <form.Field
-                name="attendees"
-                children={(field) => (
-                  <div className="grid gap-2">
-                    <Label
-                      htmlFor={field.name}
-                      className="text-foreground/70 flex items-center gap-2"
-                    >
-                      <PersonStanding className="w-4 h-4 text-primary" />
-                      Attendees
-                    </Label>
-                    <Select
-                      value={field.state.value}
-                      required
-                      onValueChange={(value) => field.handleChange(value)}
-                    >
-                      <SelectTrigger
-                        className="bg-background/40 border-border 
-                        text-foreground/70 focus:border-primary/30 
-                        focus:ring-2 focus:ring-primary/20"
-                      >
-                        <SelectValue placeholder="Select Number of Attendees" />
-                      </SelectTrigger>
-                      <SelectContent
-                        className="bg-background border-border 
-                        text-foreground/70"
-                      >
-                        {["1", "2", "3", "4", "5"].map((attendees) => (
-                          <SelectItem
-                            key={attendees}
-                            value={attendees}
-                            className="text-primary-foreground/70 
-                            hover:bg-primary/[0.12] focus:bg-primary/[0.15]"
-                          >
-                            {attendees.charAt(0).toUpperCase() +
-                              attendees.slice(1)}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
                   </div>
                 )}
               />
@@ -353,7 +386,7 @@ export const AddMeeting = () => {
                           htmlFor={field.name}
                           className="text-foreground/70 flex items-center gap-2"
                         >
-                          <Map className="w-4 h-4 text-primary" />
+                          <MapIcon className="w-4 h-4 text-primary" />
                           Location
                         </Label>
                         <Input

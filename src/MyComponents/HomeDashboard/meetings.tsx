@@ -14,11 +14,15 @@ import {
 } from "lucide-react";
 import { SchedImgStore } from "@/stores/store";
 import { Button } from "@/components/ui/button";
-import { MeetingsQuery } from "@/stores/query";
-import { AddMeeting } from "../subForms/MeetingForms/addMeeting";
+import { Employees, MeetingsQuery } from "@/stores/query";
+import { AddMeeting, type MeetingAttendeeOption } from "../subForms/MeetingForms/addMeeting";
 import supabase from "../supabase";
 import { message } from "@tauri-apps/plugin-dialog";
 import { useState } from "react";
+import {
+  AvatarStack,
+  type AvatarUser,
+} from "@/MyComponents/Reusables/AvatarStack";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -218,89 +222,43 @@ function joinUrl(meeting: any): string | null {
   return null;
 }
 
-// ── Avatar stack.
-// The reference design shows three overlapping gradient circles + a
-// "+N" overflow chip. We don't yet have per-attendee user lookups for
-// meetings (the `attendees` column on cwa_meetings is a count, 1–5),
-// so we render deterministic gradient circles seeded by the meeting
-// title. Same title = same colors every render, which keeps the
-// avatars stable as users scroll/refetch.
-//
-// When attendee → user_id wiring lands we can swap the seeded
-// gradients for real user avatars without changing the layout.
-function hashSeed(s: string): number {
-  let h = 0;
-  for (let i = 0; i < s.length; i++) {
-    h = (h << 5) - h + s.charCodeAt(i);
-    h |= 0;
-  }
-  return Math.abs(h);
-}
-
-function gradientForSeed(seed: string): string {
-  const h = hashSeed(seed);
-  const h1 = h % 360;
-  const h2 = (h1 + 35) % 360;
-  // Saturation + lightness tuned to read well on both light and dark
-  // card backgrounds without going neon. Tested visually against
-  // the workspace canvas in both themes.
-  return `linear-gradient(135deg, hsl(${h1} 65% 62%), hsl(${h2} 72% 48%))`;
-}
-
-function AvatarStack({
-  count,
-  seed,
-}: {
-  count: number | string | undefined | null;
-  seed: string;
-}) {
-  // `attendees` arrives as a string from the form ("1".."5"), or
-  // undefined for legacy rows. Default to 1 so we always render at
-  // least one circle — empty avatar columns look broken.
-  const n = useMemo(() => {
-    const parsed = typeof count === "string" ? parseInt(count, 10) : count ?? 1;
-    if (!parsed || isNaN(parsed) || parsed < 1) return 1;
-    return parsed;
-  }, [count]);
-
-  const visible = Math.min(n, 3);
-  const overflow = n - visible;
-
-  return (
-    <div className="flex -space-x-2 shrink-0">
-      {Array.from({ length: visible }).map((_, i) => (
-        <div
-          key={i}
-          style={{ background: gradientForSeed(`${seed}-${i}`) }}
-          // ring uses the card background color so the avatars look
-          // "punched out" of the card surface in both themes.
-          className="w-6 h-6 rounded-full ring-2 ring-card"
-          aria-hidden
-        />
-      ))}
-      {overflow > 0 && (
-        <div className="w-6 h-6 rounded-full ring-2 ring-card bg-foreground/15 text-foreground/80 flex items-center justify-center text-[9.5px] font-bold tabular-nums">
-          +{overflow}
-        </div>
-      )}
-    </div>
-  );
-}
+// AvatarStack + gradientForSeed have been extracted to
+// `src/MyComponents/Reusables/AvatarStack.tsx` so the Tasks widget
+// (and any future card-style widget) can render the same avatar
+// treatment without duplicating the implementation. See imports
+// above.
 
 // ── Meeting Card ──────────────────────────────────────────────
 function MeetingCard({
   meeting,
   onEdit,
   onDelete,
+  usersById,
 }: {
   meeting: any;
   onEdit: (id: number) => void;
   onDelete: (id: number) => void;
+  /** supa_id → AvatarUser. Built once in the parent so all cards
+   *  share the same lookup map instead of each rebuilding it. */
+  usersById: Map<string, AvatarUser>;
 }) {
   const co = companyStyle(meeting.company);
   const cat = categoryFor(meeting);
   const join = joinUrl(meeting);
   const locLabel = locationLabel(meeting);
+
+  // Resolve attendee_ids → user objects. IDs that don't resolve
+  // (deleted users) are dropped silently rather than rendered as
+  // ghost avatars. Memoised per meeting so we don't re-scan on
+  // every parent re-render.
+  const resolvedAttendees = useMemo<AvatarUser[]>(() => {
+    const ids: string[] = Array.isArray(meeting?.attendee_ids)
+      ? meeting.attendee_ids
+      : [];
+    return ids
+      .map((id) => usersById.get(id))
+      .filter((u): u is AvatarUser => Boolean(u));
+  }, [meeting?.attendee_ids, usersById]);
 
   const navigate = useNavigate();
   const setFocusDate = useScheduleFocus((s) => s.setFocusDate);
@@ -445,6 +403,7 @@ function MeetingCard({
           <AvatarStack
             count={meeting.attendees}
             seed={String(meeting.id ?? meeting.meeting_title ?? "x")}
+            users={resolvedAttendees}
           />
 
           {/* Action menu — visible on hover only so the card stays
@@ -503,7 +462,42 @@ const Meetings = () => {
   const [showEditDialog, setShowEditDialog] = useState(false);
   const { setIsShowing, isShowing } = SchedImgStore();
   const { data: meetings, error, refetch } = MeetingsQuery();
+  const { data: employees } = Employees();
   if (error) console.log("Error Fetching Meetings", error.message);
+
+  // Resolve every employee's avatar URL once and stash by supa_id.
+  // The map drives both the attendee picker (passed into AddMeeting
+  // and EditMeeting) and the AvatarStack on each card. Values match
+  // the shared AvatarUser shape ({ id, name, avatarUrl }) so the
+  // extracted AvatarStack component consumes them directly.
+  const { usersById, attendeeOptions } = useMemo(() => {
+    const map = new Map<string, AvatarUser>();
+    const opts: MeetingAttendeeOption[] = [];
+
+    for (const e of (employees as any[] | undefined) ?? []) {
+      if (!e?.supa_id) continue;
+      // Resolve avatar — supports both filename-in-bucket (legacy)
+      // and full URL (Direct Hire flow uses DiceBear URLs directly).
+      let avatarUrl: string | undefined;
+      if (typeof e.avatar === "string" && e.avatar.startsWith("http")) {
+        avatarUrl = e.avatar;
+      } else if (e.avatar) {
+        const { data } = supabase.storage
+          .from("avatars")
+          .getPublicUrl(e.avatar);
+        avatarUrl = data?.publicUrl;
+      }
+      const username = e.username ?? "Unknown";
+      map.set(e.supa_id, { id: e.supa_id, name: username, avatarUrl });
+      opts.push({
+        supa_id: e.supa_id,
+        username,
+        role: e.role ?? null,
+        avatarUrl,
+      });
+    }
+    return { usersById: map, attendeeOptions: opts };
+  }, [employees]);
 
   const list = meetings ?? [];
   const cwaCount = list.filter(
@@ -527,31 +521,17 @@ const Meetings = () => {
   };
 
   const Header = (
-    <div className="px-4 py-2.5 flex items-center gap-3 bg-popover/40 border-b border-xs border-border-soft">
+    <div className="px-5 py-3.5 flex items-center gap-3 border-b border-xs border-border/15">
+      {/* Title + total only — the company breakdown dots+counts
+       *  were visual noise. Each meeting card already shows its
+       *  org via the small corner dot, which is where that info
+       *  actually helps the operator. */}
       <div className="flex items-center gap-2 min-w-0 flex-shrink-0">
         <span className="text-[11px] text-foreground uppercase tracking-[0.14em] font-bold">
           Meetings
         </span>
         <span className="text-[11px] text-text-tertiary tabular-nums font-medium">
           {list.length}
-        </span>
-        <span className="inline-flex items-center gap-1 ml-1">
-          <span
-            className="w-1.5 h-1.5 rounded-full bg-primary"
-            title={`CodeWithAli · ${cwaCount}`}
-          />
-          <span className="text-[10px] text-text-tertiary tabular-nums">
-            {cwaCount}
-          </span>
-        </span>
-        <span className="inline-flex items-center gap-1">
-          <span
-            className="w-1.5 h-1.5 rounded-full bg-teal-400"
-            title={`Simplicity · ${simpCount}`}
-          />
-          <span className="text-[10px] text-text-tertiary tabular-nums">
-            {simpCount}
-          </span>
         </span>
       </div>
 
@@ -572,7 +552,7 @@ const Meetings = () => {
             "HeadOfInternalAffairs",
           ]}
         >
-          <AddMeeting />
+          <AddMeeting users={attendeeOptions} />
         </UserView>
 
         <UserView userRole={["COO"]}>
@@ -598,8 +578,7 @@ const Meetings = () => {
 
   if (list.length === 0) {
     return (
-      <div className="relative bg-card border-xs border-border-soft rounded-xl overflow-hidden h-full flex flex-col">
-        <div className="absolute inset-x-0 top-0 h-[1px] bg-gradient-to-r from-transparent via-primary/40 to-transparent pointer-events-none" />
+      <div className="bg-card border-xs border-border-soft rounded-xl overflow-hidden h-full flex flex-col">
         {Header}
         <div className="flex-1 flex items-center justify-center px-5 pb-5">
           <div className="text-center">
@@ -623,6 +602,7 @@ const Meetings = () => {
           meetingID={editingMeetingId}
           open={showEditDialog}
           setOpen={setShowEditDialog}
+          users={attendeeOptions}
           onComplete={() => {
             setEditingMeetingId(null);
             refetch();
@@ -630,11 +610,10 @@ const Meetings = () => {
         />
       )}
 
-      <div className="relative bg-card border-xs border-border-soft rounded-xl h-full overflow-hidden flex flex-col">
-        <div className="absolute inset-x-0 top-0 h-[1px] bg-gradient-to-r from-transparent via-primary/40 to-transparent pointer-events-none" />
+      <div className="bg-card border-xs border-border-soft rounded-xl h-full overflow-hidden flex flex-col">
         {Header}
         <div className="flex-1 min-h-0">
-          <ScrollArea className="h-[400px]">
+          <ScrollArea className="h-[540px]">
             {/* Outer padding gives the card grid breathing room
              *  against the parent widget chrome. */}
             <div className="px-3 py-3 space-y-4">
@@ -681,6 +660,7 @@ const Meetings = () => {
                         meeting={meeting}
                         onEdit={editMeeting}
                         onDelete={delMeeting}
+                        usersById={usersById}
                       />
                     ))}
                   </div>

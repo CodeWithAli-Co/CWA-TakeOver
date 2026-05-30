@@ -22,34 +22,80 @@ import {
   Calendar,
   Clock,
   Link,
-  Map,
+  // Aliased to avoid shadowing the built-in Map constructor — we
+  // use `new Map()` below to build the attendee-lookup index.
+  Map as MapIcon,
   PersonStanding,
   Plus,
   Tags,
 } from "lucide-react";
 import { motion } from "framer-motion";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import supabase from "@/MyComponents/supabase";
 import { message } from "@tauri-apps/plugin-dialog";
 import { MeetingsQuery } from "@/stores/query";
 import { FetchMeetingQuery } from "@/stores/MeetingStore";
+import {
+  MultiSelectField,
+  type Option,
+} from "@/MyComponents/Reusables/multiselectField";
+import type { MeetingAttendeeOption } from "./addMeeting";
 
-// I don't knoww if you had this elsewhere but im making aa prop for noww, you can delete later
 interface EditMeetingProps {
   meetingID: number;
   open: boolean;
   setOpen : (open : boolean) => void;
   onComplete : () => void;
+  /** Roster passed in from the parent — drives the attendee
+   *  multi-select. Optional so legacy callers don't break. */
+  users?: MeetingAttendeeOption[];
 }
 
 
-export const EditMeeting = ({ meetingID, open, setOpen, onComplete }: EditMeetingProps) => {
+export const EditMeeting = ({ meetingID, open, setOpen, onComplete, users = [] }: EditMeetingProps) => {
   // const [open, setOpen] = useState(false);
   // const { refetch } = MeetingsQuery();
 
   const { data, error, isLoading } = FetchMeetingQuery(meetingID);
   console.log({ meetingID });
-  
+
+  // Build the option list from the parent-provided roster.
+  // Skip rows missing supa_id (the value we store on attendee_ids).
+  const attendeeOptions: Option[] = useMemo(
+    () =>
+      users
+        .filter((u): u is MeetingAttendeeOption & { supa_id: string } =>
+          Boolean(u.supa_id),
+        )
+        .map((u) => ({
+          value: u.supa_id,
+          label: u.role ? `${u.username ?? u.supa_id} · ${u.role}` : (u.username ?? u.supa_id),
+          ...(u.avatarUrl ? { avatarUrl: u.avatarUrl } : {}),
+        })),
+    [users],
+  );
+
+  // Local controlled state for the multi-select — kept here so the
+  // EditTodo modal (which uses the shared zustand multi-select
+  // store) doesn't stomp our selections.
+  const [selectedAttendees, setSelectedAttendees] = useState<Option[]>([]);
+
+  // When the meeting data arrives, hydrate the multi-select from
+  // attendee_ids. Look each ID up in the option list so the chip
+  // gets the correct label + avatar; IDs that don't resolve are
+  // skipped (defensive — handles deleted users gracefully).
+  useEffect(() => {
+    if (!data) return;
+    const ids: string[] = Array.isArray((data as any).attendee_ids)
+      ? (data as any).attendee_ids
+      : [];
+    const optionsById = new Map(attendeeOptions.map((o) => [o.value, o]));
+    const preselected = ids
+      .map((id) => optionsById.get(id))
+      .filter((o): o is Option => Boolean(o));
+    setSelectedAttendees(preselected);
+  }, [data, attendeeOptions]);
+
   // creaating a state for the form default values to handle async loading
   const [defaultValues, setDefaultValues] = useState({
     meetingTitle: "",
@@ -109,96 +155,90 @@ export const EditMeeting = ({ meetingID, open, setOpen, onComplete }: EditMeetin
     //   url_location: data.location || data.hybrid_location?.url,
     // },
     onSubmit: async ({ value }) => {
-      try {
-        switch (value.meetingType) {
-          case "in-person":
-            const { error } = await supabase
-              .from("cwa_meetings")
-              .update({
-                meeting_title: value.meetingTitle,
-                time: value.time,
-                date: value.date,
-                attendees: value.attendees,
-                meeting_type: value.meetingType,
-                location: value.location,
+      // attendee_ids = source of truth; legacy attendees count is
+      // derived from the picked array length on every save so the
+      // two columns can't drift apart.
+      const attendeeIds = selectedAttendees.map((a) => a.value);
+      const attendeeCount =
+        attendeeIds.length > 0 ? String(attendeeIds.length) : value.attendees;
 
-                // clear hybrid location when switching to in-person
-                hybrid_location: null
-              })
-              .eq("id", meetingID);
+      // Per-type location handling. Switching type clears the
+      // other branch's fields so a hybrid->online switch doesn't
+      // leave a stale `hybrid_location` object behind.
+      type Patch = Record<string, any>;
+      let typeSpecific: Patch;
+      switch (value.meetingType) {
+        case "in-person":
+          typeSpecific = {
+            location: value.location,
+            hybrid_location: null,
+          };
+          break;
+        case "online":
+          typeSpecific = {
+            location: value.url_location,
+            hybrid_location: null,
+          };
+          break;
+        case "hybrid":
+          typeSpecific = {
+            location: null,
+            hybrid_location: {
+              address: value.location,
+              url: value.url_location,
+            },
+          };
+          break;
+        default:
+          return;
+      }
 
-            if (error) {
-              await message(error.message, {
-                title: "Error Adding Meeting",
-                kind: "error",
-              });
-            } else {
-              // refetch();
-              onComplete(); // we can just call on the onComplete rather than refetching
-              setOpen(false);
-              // form.reset();  // I  think this has been causing a few issues you can test this if youd like im just gonnaa not deal with it
-              // actually im just gonna put it in a useEffect
-            }
-            return;
+      const basePatch: Patch = {
+        meeting_title: value.meetingTitle,
+        time: value.time,
+        date: value.date,
+        attendees: attendeeCount,
+        attendee_ids: attendeeIds,
+        meeting_type: value.meetingType,
+        ...typeSpecific,
+      };
 
-          case "online":
-            const { error: onlineError } = await supabase
-              .from("cwa_meetings")
-              .update({
-                meeting_title: value.meetingTitle,
-                time: value.time,
-                date: value.date,
-                attendees: value.attendees,
-                meeting_type: value.meetingType,
-                location: value.url_location,
-                // clear hybrid 
-                hybrid_locatiion: null
-              })
-              .eq("id", meetingID);
-
-            if (onlineError) {
-              await message(onlineError.message, {
-                title: "Error Adding Meeting",
-                kind: "error",
-              });
-            } else {
-              // refetch();
-              onComplete();
-              setOpen(false);
-              // form.reset();
-            }
-            return;
-
-          case "hybrid":
-            const { error: hybridError } = await supabase
-              .from("cwa_meetings")
-              .update({
-                meeting_title: value.meetingTitle,
-                time: value.time,
-                date: value.date,
-                attendees: value.attendees,
-                meeting_type: value.meetingType,
-                // clear regular locaation when switching to a hybridd
-                location: null,
-                hybrid_location: {
-                  address: value.location,
-                  url: value.url_location,
-                },
-              })
-              .eq("id", meetingID);
-
-            if (hybridError) {
-              await message(hybridError.message, {
-                title: "Error Adding Meeting",
-                kind: "error",
-              });
-            } else {
-              // refetch();
-              onComplete();
-              setOpen(false);
-              // form.reset();
-            }
+      // Same fallback dance as AddMeeting — if the schema doesn't
+      // have attendee_ids yet, retry without it so the update
+      // still succeeds. Logs a hint to run the migration.
+      const updateWithFallback = async (patch: Patch) => {
+        let res = await supabase
+          .from("cwa_meetings")
+          .update(patch)
+          .eq("id", meetingID);
+        if (
+          res.error &&
+          /attendee_ids/i.test(res.error.message ?? "") &&
+          /column|schema|cache/i.test(res.error.message ?? "")
+        ) {
+          console.warn(
+            "cwa_meetings.attendee_ids not found — retrying without it. Run migrations/meeting_attendees.sql in Supabase.",
+          );
+          const { attendee_ids: _drop, ...rest } = patch;
+          res = await supabase
+            .from("cwa_meetings")
+            .update(rest)
+            .eq("id", meetingID);
         }
+        return res;
+      };
+
+      try {
+        const res = await updateWithFallback(basePatch);
+        if (res.error) {
+          await message(res.error.message, {
+            title: "Error Updating Meeting",
+            kind: "error",
+          });
+          return;
+        }
+        onComplete();
+        setOpen(false);
       } catch (err) {
         await message("An unexpected error occurred", {
           title: "Error",
@@ -301,6 +341,27 @@ export const EditMeeting = ({ meetingID, open, setOpen, onComplete }: EditMeetin
               )}
             />
 
+            {/* Attendees — full-width multi-select hydrated from
+             *  attendee_ids in the useEffect above. */}
+            <div className="grid gap-2">
+              <Label className="text-foreground/70 flex items-center gap-2">
+                <PersonStanding className="w-4 h-4 text-primary" />
+                Attendees
+              </Label>
+              <MultiSelectField
+                name="Attendees"
+                hideLabel
+                options={attendeeOptions}
+                value={selectedAttendees}
+                onChange={setSelectedAttendees}
+                placeholder={
+                  attendeeOptions.length === 0
+                    ? "No employees available"
+                    : "Pick who's attending…"
+                }
+              />
+            </div>
+
             <div className="grid md:grid-cols-2 gap-4">
               {/* Date */}
               <form.Field
@@ -316,57 +377,12 @@ export const EditMeeting = ({ meetingID, open, setOpen, onComplete }: EditMeetin
                       autoComplete="off"
                       required
                       placeholder="Enter Date ( e.g. May, 11 2025 )"
-                      className="bg-background/40 inline border-border text-foreground/70 
-                  focus:border-primary/30 focus:ring-2 focus:ring-primary/20 
+                      className="bg-background/40 inline border-border text-foreground/70
+                  focus:border-primary/30 focus:ring-2 focus:ring-primary/20
                   transition-all duration-300"
                       value={field.state.value}
                       onChange={(e) => field.handleChange(e.target.value)}
                     />
-                  </div>
-                )}
-              />
-
-              {/* Attendees */}
-              <form.Field
-                name="attendees"
-                children={(field) => (
-                  <div className="grid gap-2">
-                    <Label
-                      htmlFor={field.name}
-                      className="text-foreground/70 flex items-center gap-2"
-                    >
-                      <PersonStanding className="w-4 h-4 text-primary" />
-                      Attendees
-                    </Label>
-                    <Select
-                      value={field.state.value}
-                      required
-                      onValueChange={(value) => field.handleChange(value)}
-                    >
-                      <SelectTrigger
-                        className="bg-background/40 border-border 
-                        text-foreground/70 focus:border-primary/30 
-                        focus:ring-2 focus:ring-primary/20"
-                      >
-                        <SelectValue placeholder="Select Number of Attendees" />
-                      </SelectTrigger>
-                      <SelectContent
-                        className="bg-background border-border 
-                        text-foreground/70"
-                      >
-                        {["1", "2", "3", "4", "5"].map((attendees) => (
-                          <SelectItem
-                            key={attendees}
-                            value={attendees}
-                            className="text-primary-foreground/70 
-                            hover:bg-primary/[0.12] focus:bg-primary/[0.15]"
-                          >
-                            {attendees.charAt(0).toUpperCase() +
-                              attendees.slice(1)}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
                   </div>
                 )}
               />
@@ -425,7 +441,7 @@ export const EditMeeting = ({ meetingID, open, setOpen, onComplete }: EditMeetin
                           htmlFor={field.name}
                           className="text-foreground/70 flex items-center gap-2"
                         >
-                          <Map className="w-4 h-4 text-primary" />
+                          <MapIcon className="w-4 h-4 text-primary" />
                           Location
                         </Label>
                         <Input

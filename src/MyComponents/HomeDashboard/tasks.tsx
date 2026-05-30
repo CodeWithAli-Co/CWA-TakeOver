@@ -1,19 +1,15 @@
 import { message } from "@tauri-apps/plugin-dialog";
 import { AddTodo } from "@/MyComponents/Sidebar/handlingTasking/addTodo";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import supabase from "@/MyComponents/supabase";
 import { motion, AnimatePresence } from "framer-motion";
 import { ActiveUser, Employees, Todos } from "@/stores/query";
 import {
   ListTodo,
-  Flame,
-  Zap,
-  Leaf,
   Circle,
   PlayCircle,
   CheckCircle2,
   CalendarClock,
-  Building2,
   Search,
 } from "lucide-react";
 import { ScrollArea } from "@/components/ui/shadcnComponents/scroll-area";
@@ -22,6 +18,11 @@ import {
   TabsList,
   TabsTrigger,
 } from "@/components/ui/shadcnComponents/tabs";
+import {
+  AvatarStack,
+  type AvatarUser,
+} from "@/MyComponents/Reusables/AvatarStack";
+import { TaskDetailModal } from "./TaskDetailModal";
 
 // ── Company accent (small dot on the right of the row) ──
 const COMPANY_STYLE = {
@@ -35,36 +36,64 @@ function companyStyle(co: string | undefined | null) {
   return COMPANY_STYLE.CodeWithAli;
 }
 
-// ── Priority — left rail colour + foreground tint for the label. ──
-// Rail is solid 2px of colour at low alpha on the left edge of every
-// task row; the only big visual signal of priority. Avoids per-row
-// chips on every task.
+// ── Priority — takes the "category" slot on each card.
+// Same role + same visual weight as the meeting-type label on a
+// MeetingCard: tiny coloured text at the top-left of the card.
+// One accent per row, picked by priority. The text colour does
+// all the work — no rails, no chips, no shouting.
 const PRIORITY_STYLE: Record<
   "high" | "medium" | "low",
-  { rail: string; text: string; label: string }
+  { text: string; label: string }
 > = {
-  high:   { rail: "bg-destructive",        text: "text-destructive", label: "High" },
-  medium: { rail: "bg-warning",            text: "text-warning",     label: "Medium" },
-  low:    { rail: "bg-success",            text: "text-success",     label: "Low" },
+  high:   { text: "text-destructive",                       label: "High" },
+  medium: { text: "text-warning",                           label: "Medium" },
+  low:    { text: "text-success",                           label: "Low" },
 };
 
-// ── Status — small icon, sized to read at the start of the row ──
+// ── Status — pill at the bottom-left of the card (mirrors the
+// location pill on a MeetingCard). Background + text colour tuned
+// per status; same hairline border as the meeting pill so the two
+// widgets feel like siblings.
 const STATUS_STYLE: Record<
   string,
-  { icon: typeof Circle; chip: string }
+  { icon: typeof Circle; label: string; pill: string }
 > = {
-  "to-do":       { icon: Circle,       chip: "text-text-tertiary" },
-  "in-progress": { icon: PlayCircle,   chip: "text-warning" },
-  "done":        { icon: CheckCircle2, chip: "text-success" },
+  "to-do": {
+    icon: Circle,
+    label: "To Do",
+    pill: "text-foreground/80",
+  },
+  "in-progress": {
+    icon: PlayCircle,
+    label: "In Progress",
+    pill: "text-warning",
+  },
+  "done": {
+    icon: CheckCircle2,
+    label: "Done",
+    pill: "text-success",
+  },
 };
 
 // ── Deadline helper ────────────────────────────────────────────
+// Implausibility guard: AddTodo currently accepts free text for
+// deadlines ("3 days", "Tomorrow", etc) — when that ends up in the
+// DB, `new Date()` either gives Invalid Date (fine, we return the
+// raw string) OR latches onto a leading digit like "3" and parses
+// it as the year 3 AD. That's where the "Overdue by 25 years" bug
+// came from. We treat anything more than 5 years off the current
+// date as bad data and return the raw input so the user at least
+// sees what they typed instead of nonsense.
+const PLAUSIBLE_DEADLINE_MS = 5 * 365 * 24 * 60 * 60 * 1000;
+
 function formatDeadline(iso: string) {
   if (!iso) return null;
   const d = new Date(iso);
   if (isNaN(d.getTime())) return iso;
   const now = new Date();
   const diffMs = d.getTime() - now.getTime();
+  // Bad data — show raw input rather than a misleading day count.
+  if (Math.abs(diffMs) > PLAUSIBLE_DEADLINE_MS) return iso;
   const dayMs = 24 * 60 * 60 * 1000;
   const diffDays = Math.round(diffMs / dayMs);
   if (diffDays < -1) return `Overdue · ${Math.abs(diffDays)}d`;
@@ -75,16 +104,56 @@ function formatDeadline(iso: string) {
   return d.toLocaleDateString(undefined, { month: "short", day: "numeric" });
 }
 
-// ── Single task row ────────────────────────────────────────────
-function TaskItem({ task }: { task: any }) {
+/** Returns true only when the deadline is in the past AND parses to
+ *  a plausible date — implausible parses (year 3 AD, year 2999) get
+ *  treated as "not overdue" so a bad input string doesn't flag every
+ *  task red. */
+function isOverdue(deadline: string | null | undefined, status: string): boolean {
+  if (!deadline || status === "done") return false;
+  const d = new Date(deadline);
+  if (isNaN(d.getTime())) return false;
+  const diffMs = d.getTime() - Date.now();
+  if (Math.abs(diffMs) > PLAUSIBLE_DEADLINE_MS) return false;
+  return d.getTime() < Date.now();
+}
+
+// ── Single task card ────────────────────────────────────────────
+// Editorial-card pattern, identical bones to MeetingCard:
+//   • subtle elevated surface (foreground/[0.03])
+//   • hairline border (border-soft → border on hover)
+//   • category label at top (priority — colored text-only, no chip)
+//   • bold title underneath
+//   • bottom row: status pill + deadline + (hover) action + avatars
+//   • company dot in the top-right corner as a quiet marker
+function TaskItem({
+  task,
+  usersByName,
+  onOpen,
+}: {
+  task: any;
+  /** username → AvatarUser. Used to render assignee avatars from
+   *  the task.assignee array (which stores usernames, not supa_ids). */
+  usersByName: Map<string, AvatarUser>;
+  /** Called when the card is clicked (outside an interactive child)
+   *  so the parent can open the TaskDetailModal. */
+  onOpen: (task: any) => void;
+}) {
   const co = companyStyle(task.company);
   const prio = PRIORITY_STYLE[(task.priority as keyof typeof PRIORITY_STYLE) ?? "low"] ?? PRIORITY_STYLE.low;
-  const Stat = STATUS_STYLE[task.status]?.icon ?? Circle;
+  const stat = STATUS_STYLE[task.status] ?? STATUS_STYLE["to-do"];
+  const StatIcon = stat.icon;
 
-  const overdue =
-    task.deadline &&
-    task.status !== "done" &&
-    new Date(task.deadline).getTime() < Date.now();
+  const overdue = isOverdue(task.deadline, task.status);
+
+  // Resolve task.assignee usernames → AvatarUser objects. Names
+  // that don't match an employee row (legacy / typo) are dropped
+  // silently rather than rendered as ghost avatars.
+  const resolvedAssignees = useMemo<AvatarUser[]>(() => {
+    const names: string[] = Array.isArray(task?.assignee) ? task.assignee : [];
+    return names
+      .map((n) => usersByName.get(n))
+      .filter((u): u is AvatarUser => Boolean(u));
+  }, [task?.assignee, usersByName]);
 
   async function setStatus(next: string) {
     const { error } = await supabase
@@ -96,92 +165,154 @@ function TaskItem({ task }: { task: any }) {
     }
   }
 
+  /**
+   * Card click → open detail modal. Ignores clicks that originated
+   * from interactive children (action buttons, future link icons)
+   * so they don't accidentally pop the modal open.
+   */
+  function handleCardClick(e: React.MouseEvent) {
+    const target = e.target as HTMLElement;
+    if (target.closest("a, button, [role='menuitem']")) return;
+    onOpen(task);
+  }
+
   return (
     <motion.div
       layout
       initial={{ opacity: 0, y: 4 }}
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, y: -4 }}
-      // Flush row — no per-row card. Sits inside the parent panel
-      // and is separated from siblings by a hairline. Hover lifts a
-      // very faint surface so the row reads as a hit target without
-      // adding chrome.
+      onClick={handleCardClick}
+      role="button"
+      tabIndex={0}
+      onKeyDown={(e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          onOpen(task);
+        }
+      }}
+      // Same surface as MeetingCard so the two widgets read as
+      // siblings on the dashboard. Vertical padding is one notch
+      // tighter than meeting cards (py-4 vs py-5) because the task
+      // card has an extra description line — matching py-5 here
+      // would make tasks look noticeably taller than meetings.
       className="
-        relative group flex items-stretch
-        border-b border-xs border-border/20 last:border-b-0
-        hover:bg-foreground/[0.025] transition-colors
+        group relative cursor-pointer
+        bg-foreground/[0.03] hover:bg-foreground/[0.05]
+        border border-xs border-border-soft hover:border-border
+        rounded-lg px-4 py-4
+        transition-colors
+        focus-visible:outline-none focus-visible:border-primary/40
       "
     >
-      {/* Priority rail — 2px solid colour on the left edge. This is
-       *  the one strong colour signal per row; the priority label
-       *  itself recedes into the meta line. */}
-      <div className={`w-[2px] ${prio.rail} opacity-90`} />
+      {/* Company dot — tiny corner indicator, mirrors MeetingCard. */}
+      <span
+        className={`absolute top-3 right-3 w-1.5 h-1.5 rounded-full ${co.dot} opacity-60`}
+        title={task.company === "simplicity" ? "Simplicity" : "CodeWithAli"}
+      />
 
-      <div className="flex-1 min-w-0 flex items-center gap-3 py-2.5 pl-3 pr-3">
-        {/* Status icon — small, recedes when not focal */}
-        <Stat className={`h-3.5 w-3.5 shrink-0 ${STATUS_STYLE[task.status]?.chip ?? ""}`} />
+      {/* Category — the priority label takes this slot. Coloured
+       *  text-only; no chip, no rail. The one accent on the card. */}
+      <div className="flex items-center gap-1.5 mb-1">
+        <span className={`text-[10.5px] font-semibold tracking-wide ${prio.text}`}>
+          {prio.label}
+        </span>
+      </div>
 
-        {/* Title + meta */}
-        <div className="flex-1 min-w-0">
-          <div className="text-[13px] font-medium text-foreground truncate leading-snug">
-            {task.title}
-          </div>
+      {/* Title — same size + weight as MeetingCard. Two-line clamp
+       *  so long titles don't blow out the card. */}
+      <h3 className="text-[13.5px] font-bold text-foreground leading-snug line-clamp-2 pr-5">
+        {task.title}
+      </h3>
 
-          {/* Meta — only show genuinely-useful info; priority is on
-           *  the left rail already so it's just a quiet text label
-           *  here. Company is a small coloured dot at the end. */}
-          <div className="flex items-center gap-1.5 mt-0.5 text-[10.5px] text-text-tertiary">
-            <span className={`${prio.text} font-medium`}>{prio.label}</span>
+      {/* Description — fills the visual gap that made the cards
+       *  feel airy. Single-line clamp keeps card height predictable;
+       *  the full text shows in the detail modal when clicked. Only
+       *  renders when present so tasks without descriptions don't
+       *  show a weird empty row. mt-1 sits close to the title so
+       *  the two read as one stacked block. */}
+      {task.description && (
+        <p className="mt-1 text-[11.5px] text-text-tertiary leading-snug line-clamp-1 pr-5">
+          {task.description}
+        </p>
+      )}
 
-            {task.deadline && (
-              <>
-                <span className="text-text-tertiary/40">·</span>
-                <span
-                  className={`inline-flex items-center gap-1 ${
-                    overdue ? "text-destructive font-medium" : ""
-                  }`}
-                >
-                  <CalendarClock className="h-2.5 w-2.5" />
-                  {formatDeadline(task.deadline)}
-                </span>
-              </>
+      {/* Bottom row — status pill on the left, deadline inline,
+       *  hover-reveal action between deadline and avatars,
+       *  avatar stack pinned right via ml-auto. mt-2.5 instead of
+       *  mt-3 trims a few px so the card height tracks meeting
+       *  cards more closely. */}
+      <div className="flex items-center gap-2 mt-2.5">
+        {/* Status pill — mirrors MeetingCard's location pill. */}
+        <span
+          className={`
+            inline-flex items-center gap-1
+            bg-foreground/[0.06]
+            border border-xs border-border-soft
+            rounded-md px-2 py-0.5
+            text-[10.5px] font-medium ${stat.pill}
+          `}
+        >
+          <StatIcon className="h-2.5 w-2.5 shrink-0" />
+          <span>{stat.label}</span>
+        </span>
+
+        {/* Deadline — tabular-nums so dates align across cards.
+         *  Overdue escalates to destructive + bold + icon. */}
+        {task.deadline && (
+          <span
+            className={`
+              inline-flex items-center gap-1 text-[10.5px] tabular-nums whitespace-nowrap
+              ${overdue ? "text-destructive font-semibold" : "text-foreground/85 font-semibold"}
+            `}
+          >
+            <CalendarClock className="h-2.5 w-2.5" />
+            {formatDeadline(task.deadline)}
+          </span>
+        )}
+
+        <div className="ml-auto flex items-center gap-2">
+          {/* Hover-revealed cycle action. Compact, no fill, lights
+           *  up its target colour on hover so the click affordance
+           *  reads at a glance. */}
+          <div className="opacity-0 group-hover:opacity-100 transition-opacity">
+            {task.status === "to-do" && (
+              <button
+                type="button"
+                className="text-[10px] px-2 h-6 rounded-md hover:bg-warning/10 hover:text-warning text-text-tertiary uppercase tracking-wider font-semibold transition-colors"
+                onClick={() => setStatus("in-progress")}
+              >
+                Start
+              </button>
             )}
-
-            <span className="text-text-tertiary/40">·</span>
-            <span className={`inline-block w-1.5 h-1.5 rounded-full ${co.dot}`} />
+            {task.status === "in-progress" && (
+              <button
+                type="button"
+                className="text-[10px] px-2 h-6 rounded-md hover:bg-success/10 hover:text-success text-text-tertiary uppercase tracking-wider font-semibold transition-colors"
+                onClick={() => setStatus("done")}
+              >
+                Done
+              </button>
+            )}
+            {task.status === "done" && (
+              <button
+                type="button"
+                className="text-[10px] px-2 h-6 rounded-md hover:bg-foreground/[0.06] text-text-tertiary hover:text-foreground uppercase tracking-wider font-semibold transition-colors"
+                onClick={() => setStatus("to-do")}
+              >
+                Reopen
+              </button>
+            )}
           </div>
-        </div>
 
-        {/* Row actions — hover-reveal, single-action cycle button.
-         *  Compact ghost button using neutral surface tokens. */}
-        <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0">
-          {task.status === "to-do" && (
-            <button
-              type="button"
-              className="text-[10px] px-2 h-6 rounded-md hover:bg-warning/10 hover:text-warning text-text-tertiary uppercase tracking-wider font-semibold transition-colors"
-              onClick={() => setStatus("in-progress")}
-            >
-              Start
-            </button>
-          )}
-          {task.status === "in-progress" && (
-            <button
-              type="button"
-              className="text-[10px] px-2 h-6 rounded-md hover:bg-success/10 hover:text-success text-text-tertiary uppercase tracking-wider font-semibold transition-colors"
-              onClick={() => setStatus("done")}
-            >
-              Done
-            </button>
-          )}
-          {task.status === "done" && (
-            <button
-              type="button"
-              className="text-[10px] px-2 h-6 rounded-md hover:bg-popover text-text-tertiary hover:text-foreground uppercase tracking-wider font-semibold transition-colors"
-              onClick={() => setStatus("to-do")}
-            >
-              Reopen
-            </button>
-          )}
+          {/* Assignee stack. Falls back to a single placeholder
+           *  circle when the row has no assignees (matches the
+           *  meeting-card behavior for an empty roster). */}
+          <AvatarStack
+            users={resolvedAssignees}
+            count={resolvedAssignees.length || 1}
+            seed={String(task.todo_id ?? task.title ?? "x")}
+          />
         </div>
       </div>
     </motion.div>
@@ -192,9 +323,41 @@ function TaskItem({ task }: { task: any }) {
 export const TasksComponent = () => {
   const [selectedTab, setSelectedTab] = useState<"to-do" | "in-progress" | "done">("to-do");
   const [searchQuery, setSearchQuery] = useState("");
+  // Held task drives the detail modal. null = modal closed. Holding
+  // a snapshot of the task (rather than just an id) lets the modal
+  // render even after the row was filtered out of the visible list.
+  const [openTask, setOpenTask] = useState<any | null>(null);
 
   const { data: AllEmployees } = Employees();
   const { data: user } = ActiveUser();
+
+  // Resolve avatar URLs once and stash by username. Tasks store
+  // assignees as usernames (not supa_ids), so the card-level
+  // resolution lookup keys off `username`. Same avatar-URL logic
+  // as the meetings widget — supports both bucket filenames and
+  // full URLs (e.g. DiceBear from Direct Hire).
+  const usersByName = useMemo(() => {
+    const map = new Map<string, AvatarUser>();
+    for (const e of (AllEmployees as any[] | undefined) ?? []) {
+      if (!e?.username) continue;
+      let avatarUrl: string | undefined;
+      if (typeof e.avatar === "string" && e.avatar.startsWith("http")) {
+        avatarUrl = e.avatar;
+      } else if (e.avatar) {
+        const { data } = supabase.storage
+          .from("avatars")
+          .getPublicUrl(e.avatar);
+        avatarUrl = data?.publicUrl;
+      }
+      map.set(e.username, {
+        id: e.supa_id ?? e.username,
+        name: e.username,
+        avatarUrl,
+      });
+    }
+    return map;
+  }, [AllEmployees]);
+
   const {
     data: todos,
     refetch: refetchTodos,
@@ -230,34 +393,23 @@ export const TasksComponent = () => {
   const simpCount = todos?.filter((t: any) => t.company === "simplicity").length ?? 0;
 
   return (
-    <div className="relative bg-card border-xs border-border-soft rounded-xl h-full overflow-hidden flex flex-col">
-      {/* Single calm header — title + count + tiny company dots
-       *  inline, filter tabs in the middle, search/add on the right.
-       *  No icon chip, no second meta line, no bordered tabs cluster.
-       *  Sits on bg-popover/40 so it reads as the same surface as
-       *  the row body, just slightly elevated. */}
-      <div className="px-4 py-2.5 flex items-center gap-3 bg-popover/40 border-b border-xs border-border-soft">
-        {/* Left: title + total + company dots */}
+    <div className="bg-card border-xs border-border-soft rounded-xl h-full overflow-hidden flex flex-col">
+      {/* Editorial-style header — same surface as the body, separated
+       *  only by a whisper-thin hairline. Decorative top gradient
+       *  removed; the chrome it added fought the calmer card design.
+       *  Padding bumped to py-3.5 so the title has breathing room
+       *  without making the header feel like its own region. */}
+      <div className="px-5 py-3.5 flex items-center gap-3 border-b border-xs border-border/15">
+        {/* Left: title + total. Company breakdown dots removed —
+         *  the per-card company indicator already conveys which
+         *  org each task belongs to. Surfacing both was visual
+         *  noise without adding info the operator could act on. */}
         <div className="flex items-center gap-2 min-w-0 flex-shrink-0">
           <span className="text-[11px] text-foreground uppercase tracking-[0.14em] font-bold">
             Tasks
           </span>
           <span className="text-[11px] text-text-tertiary tabular-nums font-medium">
             {totalTasks}
-          </span>
-          <span className="inline-flex items-center gap-1 ml-1">
-            <span
-              className="w-1.5 h-1.5 rounded-full bg-primary"
-              title={`CodeWithAli · ${cwaCount}`}
-            />
-            <span className="text-[10px] text-text-tertiary tabular-nums">{cwaCount}</span>
-          </span>
-          <span className="inline-flex items-center gap-1">
-            <span
-              className="w-1.5 h-1.5 rounded-full bg-teal-400"
-              title={`Simplicity · ${simpCount}`}
-            />
-            <span className="text-[10px] text-text-tertiary tabular-nums">{simpCount}</span>
           </span>
         </div>
 
@@ -312,22 +464,52 @@ export const TasksComponent = () => {
             </p>
           </div>
         ) : (
-          <ScrollArea className="h-[340px]">
-            <AnimatePresence mode="popLayout">
-              <motion.div
-                key={selectedTab}
-                initial={{ opacity: 0, y: 4 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -4 }}
-              >
-                {filteredTasks.map((task: any) => (
-                  <TaskItem key={task.todo_id} task={task} />
-                ))}
-              </motion.div>
-            </AnimatePresence>
+          <ScrollArea className="h-[540px]">
+            {/* Same padding + spacing as the meetings card grid so
+             *  the two widgets read with identical rhythm. */}
+            <div className="px-3 py-3 space-y-2">
+              <AnimatePresence mode="popLayout">
+                <motion.div
+                  key={selectedTab}
+                  initial={{ opacity: 0, y: 4 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -4 }}
+                  className="space-y-2"
+                >
+                  {filteredTasks.map((task: any) => (
+                    <TaskItem
+                      key={task.todo_id}
+                      task={task}
+                      usersByName={usersByName}
+                      onOpen={setOpenTask}
+                    />
+                  ))}
+                </motion.div>
+              </AnimatePresence>
+            </div>
           </ScrollArea>
         )}
       </div>
+
+      {/* Detail modal — controlled at the widget level so a card
+       *  click can open it for any task. Held as a snapshot so the
+       *  modal stays mounted even if the underlying row vanishes
+       *  from the visible filter (e.g. status changes done). */}
+      {openTask && (
+        <TaskDetailModal
+          open={!!openTask}
+          onOpenChange={(o) => !o && setOpenTask(null)}
+          task={openTask}
+          usersByName={usersByName}
+          onDeleted={() => {
+            setOpenTask(null);
+            refetchTodos();
+          }}
+          onChanged={() => {
+            refetchTodos();
+          }}
+        />
+      )}
     </div>
   );
 };

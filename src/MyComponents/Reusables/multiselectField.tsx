@@ -1,7 +1,15 @@
 import { useMultiSelectStore } from "@/stores/store";
-import Select from "react-select";
+import Select, { type MultiValue } from "react-select";
 
-export type Option = { value: string; label: string };
+export type Option = {
+  value: string;
+  label: string;
+  /** Optional URL — when provided, the field renders the avatar
+   *  next to the label in both the dropdown and the selected
+   *  chip. Used by meeting/task forms to show real employee
+   *  faces instead of just usernames. */
+  avatarUrl?: string;
+};
 
 /**
  * MultiSelectField — react-select wrapped with the app's semantic
@@ -57,10 +65,19 @@ const customSelectStyles = {
   }),
   /* Portal the menu through document.body so it can sit above the
    *  dialog's overflow-hidden clip + footer chrome. zIndex puts it
-   *  above any modal at z-200. */
+   *  above any modal at z-200.
+   *
+   *  pointerEvents: 'auto' is CRITICAL — Radix Dialog (which shadcn
+   *  wraps) sets pointer-events: none on every element outside the
+   *  dialog content when modal={true} (default). Since the menu is
+   *  portalled to <body>, it inherits that block — the dropdown
+   *  visually opens and hover styles work, but clicks register on
+   *  nothing because the entire portal subtree has pointer-events
+   *  disabled. Forcing 'auto' here punches a hole through that. */
   menuPortal: (provided: any) => ({
     ...provided,
     zIndex: 9999,
+    pointerEvents: "auto",
   }),
   option: (provided: any, state: any) => ({
     ...provided,
@@ -134,27 +151,88 @@ const customSelectStyles = {
   }),
 };
 
+/**
+ * Renders an option row with optional avatar + name. Used for
+ * formatOptionLabel so the same shape is used in the dropdown
+ * menu AND in the selected chip — keeps both consistent without
+ * doubling the label markup.
+ */
+function OptionLabel({ opt }: { opt: Option }) {
+  if (!opt.avatarUrl) {
+    return <span>{opt.label}</span>;
+  }
+  return (
+    <span className="inline-flex items-center gap-2">
+      <img
+        src={opt.avatarUrl}
+        alt=""
+        className="w-5 h-5 rounded-full object-cover ring-1 ring-border/40"
+        onError={(e) => {
+          // Hide broken avatars rather than show the cracked-image
+          // glyph; the username still reads fine on its own.
+          (e.currentTarget as HTMLImageElement).style.display = "none";
+        }}
+      />
+      <span>{opt.label}</span>
+    </span>
+  );
+}
+
 export const MultiSelectField = ({
   name,
   options,
+  /** Optional controlled value — pass when you want to manage state
+   *  outside the shared zustand store (e.g. so two open modals don't
+   *  collide on the same global state). */
+  value,
+  /** Optional controlled change handler — pairs with `value`. */
+  onChange,
+  /** Optional placeholder override. */
+  placeholder,
+  /** Hide the built-in label and let the parent label this field
+   *  itself. Useful inside forms that already have their own
+   *  matching Label component. */
+  hideLabel = false,
 }: {
   name: string;
   options: Option[];
+  value?: Option[];
+  onChange?: (value: Option[]) => void;
+  placeholder?: string;
+  hideLabel?: boolean;
 }) => {
   const { setOptionsValue } = useMultiSelectStore();
+  // Controlled mode flag — when the caller supplied either prop we
+  // wire react-select to those instead of the shared zustand store.
+  // This lets the meeting and task modals coexist without leaking
+  // selections between them.
+  const isControlled = value !== undefined || onChange !== undefined;
+
+  const handleChange = (next: MultiValue<Option>) => {
+    if (isControlled) {
+      onChange?.(next as Option[]);
+    } else {
+      setOptionsValue(next);
+    }
+  };
+
   return (
     <div className="w-full">
-      <label className="text-[12px] font-medium text-foreground block mb-1.5">
-        {name}
-      </label>
+      {!hideLabel && (
+        <label className="text-[12px] font-medium text-foreground block mb-1.5">
+          {name}
+        </label>
+      )}
       <Select
         isMulti
         options={options}
         name={name}
-        onChange={(value) => setOptionsValue(value)}
+        {...(isControlled ? { value } : {})}
+        onChange={handleChange}
         styles={customSelectStyles}
-        placeholder="Select people…"
+        placeholder={placeholder ?? "Select people…"}
         noOptionsMessage={() => "No matches"}
+        formatOptionLabel={(opt) => <OptionLabel opt={opt as Option} />}
         /* Render the menu in a portal at <body> so it can pierce
          *  the parent dialog's overflow-hidden + footer chrome.
          *  Without this the dropdown gets clipped at the dialog
