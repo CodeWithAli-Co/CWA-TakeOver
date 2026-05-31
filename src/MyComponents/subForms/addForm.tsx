@@ -43,7 +43,7 @@ export const AddData = () => {
         plaintext: value.Password,
       });
       encPassword.then(async (res) => {
-        const { error } = await supabase.from("cwa_creds").insert({
+        const { error } = await takeOversupabase.from("cwa_creds").insert({
           platform_name: value.platformName,
           acc_username: value.Username,
           acc_email: value.Email,

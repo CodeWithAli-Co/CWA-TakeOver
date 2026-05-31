@@ -17,7 +17,7 @@
 import { useState } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import { Loader2, Sparkles, RotateCcw, ChevronUp, X } from "lucide-react";
-import supabase from "@/MyComponents/supabase";
+import { takeOversupabase } from "@/MyComponents/supabase";
 import { useQueryClient } from "@tanstack/react-query";
 import { ActiveUser } from "@/stores/query";
 
@@ -40,8 +40,8 @@ export function OnboardingDebugButton() {
 
   const resetAndOpen = async () => {
     setResetting(true);
-    const { error } = await supabase
-      .from("app_users")
+    const { error } = await takeOversupabase
+.from("app_users")
       .update({
         onboarded_at: null,
         role: null,

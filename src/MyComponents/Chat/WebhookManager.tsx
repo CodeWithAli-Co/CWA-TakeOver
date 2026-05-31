@@ -9,7 +9,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { Check, Copy, Hash, Loader2, MessageSquare, Plus, Trash2, Webhook, X } from "lucide-react";
-import supabase from "@/MyComponents/supabase";
+import { takeOversupabase } from "@/MyComponents/supabase";
 import {
   Select,
   SelectContent,
@@ -62,8 +62,8 @@ export function WebhookManager({ open, onOpenChange, groups, currentUsername }: 
 
   const refresh = useCallback(async () => {
     setLoading(true);
-    const { data, error } = await supabase
-      .from("chat_webhooks")
+    const { data, error } = await takeOversupabase
+.from("chat_webhooks")
       .select("*")
       .order("created_at", { ascending: false });
     if (error) {
@@ -85,7 +85,7 @@ export function WebhookManager({ open, onOpenChange, groups, currentUsername }: 
     try {
       const isGeneral = group === "General";
       const token = randomToken();
-      const { error } = await supabase.from("chat_webhooks").insert({
+      const { error } = await takeOversupabase.from("chat_webhooks").insert({
         token,
         group_name: group,
         table_name: isGeneral ? "cwa_chat" : "cwa_dm_chat",
@@ -107,7 +107,7 @@ export function WebhookManager({ open, onOpenChange, groups, currentUsername }: 
 
   const revoke = async (id: string) => {
     if (!window.confirm("Revoke this webhook? External services using this token will stop posting.")) return;
-    const { error } = await supabase.from("chat_webhooks").delete().eq("id", id);
+    const { error } = await takeOversupabase.from("chat_webhooks").delete().eq("id", id);
     if (error) {
       alert(`Failed: ${error.message}`);
       return;

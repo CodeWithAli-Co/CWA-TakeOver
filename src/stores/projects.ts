@@ -22,7 +22,7 @@ import {
   useMutation,
   useQueryClient,
 } from "@tanstack/react-query";
-import supabase from "@/MyComponents/supabase";
+import { takeOversupabase } from "@/MyComponents/supabase";
 
 // ============================================================
 // Tables
@@ -115,7 +115,7 @@ export function useProjects(opts: { includeArchived?: boolean } = {}) {
   return useQuery({
     queryKey: projectsKeys.list(opts),
     queryFn: async (): Promise<Project[]> => {
-      let q = supabase
+      let q = takeOversupabase
         .from(PROJECTS_TABLE)
         .select("*")
         .order("updated_at", { ascending: false });
@@ -135,8 +135,8 @@ export function useProject(id: string | undefined) {
     queryKey: projectsKeys.one(id ?? ""),
     enabled: !!id,
     queryFn: async (): Promise<Project | null> => {
-      const { data, error } = await supabase
-        .from(PROJECTS_TABLE)
+      const { data, error } = await takeOversupabase
+  .from(PROJECTS_TABLE)
         .select("*")
         .eq("id", id)
         .maybeSingle();
@@ -154,8 +154,8 @@ export function useProjectMembers(projectId: string | undefined) {
     queryKey: projectsKeys.members(projectId ?? ""),
     enabled: !!projectId,
     queryFn: async (): Promise<ProjectMember[]> => {
-      const { data, error } = await supabase
-        .from(MEMBERS_TABLE)
+      const { data, error } = await takeOversupabase
+  .from(MEMBERS_TABLE)
         .select("*")
         .eq("project_id", projectId)
         .order("added_at", { ascending: true });
@@ -173,8 +173,8 @@ export function useProjectActivity(projectId: string | undefined) {
     queryKey: projectsKeys.activity(projectId ?? ""),
     enabled: !!projectId,
     queryFn: async (): Promise<ProjectActivity[]> => {
-      const { data, error } = await supabase
-        .from(ACTIVITY_TABLE)
+      const { data, error } = await takeOversupabase
+  .from(ACTIVITY_TABLE)
         .select("*")
         .eq("project_id", projectId)
         .order("created_at", { ascending: false })
@@ -219,8 +219,8 @@ export function useCreateProject() {
         created_by: input.created_by ?? null,
         updated_by: input.created_by ?? null,
       };
-      const { data, error } = await supabase
-        .from(PROJECTS_TABLE)
+      const { data, error } = await takeOversupabase
+  .from(PROJECTS_TABLE)
         .insert(insert)
         .select()
         .single();
@@ -228,7 +228,7 @@ export function useCreateProject() {
       // Owner is auto-added as a member by the trigger — we still
       // append a "project created" activity row so the drawer has
       // something to show on first open.
-      await supabase.from(ACTIVITY_TABLE).insert({
+      await takeOversupabase.from(ACTIVITY_TABLE).insert({
         project_id: data.id,
         kind: "system",
         actor_supa_id: input.owner_supa_id,
@@ -269,8 +269,8 @@ export function useUpdateProject() {
       patch: UpdateProjectPatch;
       updatedBy?: string | null;
     }) => {
-      const { data, error } = await supabase
-        .from(PROJECTS_TABLE)
+      const { data, error } = await takeOversupabase
+  .from(PROJECTS_TABLE)
         .update({ ...args.patch, updated_by: args.updatedBy ?? null })
         .eq("id", args.id)
         .select()
@@ -294,8 +294,8 @@ export function useArchiveProject() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (id: string) => {
-      const { data, error } = await supabase
-        .from(PROJECTS_TABLE)
+      const { data, error } = await takeOversupabase
+  .from(PROJECTS_TABLE)
         .update({ archived: true, archived_at: new Date().toISOString() })
         .eq("id", id)
         .select()
@@ -313,8 +313,8 @@ export function useRestoreProject() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (id: string) => {
-      const { data, error } = await supabase
-        .from(PROJECTS_TABLE)
+      const { data, error } = await takeOversupabase
+  .from(PROJECTS_TABLE)
         .update({ archived: false, archived_at: null })
         .eq("id", id)
         .select()
@@ -336,8 +336,8 @@ export function useHardDeleteProject() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await supabase
-        .from(PROJECTS_TABLE)
+      const { error } = await takeOversupabase
+  .from(PROJECTS_TABLE)
         .delete()
         .eq("id", id);
       if (error) throw error;
@@ -361,8 +361,8 @@ export function useAddProjectMember() {
       role?: ProjectMemberRole;
       added_by?: string | null;
     }) => {
-      const { data, error } = await supabase
-        .from(MEMBERS_TABLE)
+      const { data, error } = await takeOversupabase
+  .from(MEMBERS_TABLE)
         .insert({
           project_id: args.project_id,
           user_supa_id: args.user_supa_id,
@@ -374,7 +374,7 @@ export function useAddProjectMember() {
         .single();
       if (error) throw error;
       // Activity row so the drawer reflects the addition.
-      await supabase.from(ACTIVITY_TABLE).insert({
+      await takeOversupabase.from(ACTIVITY_TABLE).insert({
         project_id: args.project_id,
         kind: "member",
         actor_supa_id: args.added_by ?? null,
@@ -401,12 +401,12 @@ export function useRemoveProjectMember() {
       removed_username?: string | null;
       removed_by?: string | null;
     }) => {
-      const { error } = await supabase
-        .from(MEMBERS_TABLE)
+      const { error } = await takeOversupabase
+  .from(MEMBERS_TABLE)
         .delete()
         .eq("id", args.member_id);
       if (error) throw error;
-      await supabase.from(ACTIVITY_TABLE).insert({
+      await takeOversupabase.from(ACTIVITY_TABLE).insert({
         project_id: args.project_id,
         kind: "member",
         actor_supa_id: args.removed_by ?? null,
@@ -434,8 +434,8 @@ export function useAppendProjectActivity() {
       actor_username?: string | null;
       meta?: Record<string, unknown>;
     }) => {
-      const { data, error } = await supabase
-        .from(ACTIVITY_TABLE)
+      const { data, error } = await takeOversupabase
+  .from(ACTIVITY_TABLE)
         .insert({
           project_id: args.project_id,
           kind: args.kind ?? "comment",
@@ -463,7 +463,7 @@ export function useAppendProjectActivity() {
 export function useProjectsRealtime() {
   const qc = useQueryClient();
   useEffect(() => {
-    const ch = supabase
+    const ch = takeOversupabase
       .channel("projects-realtime")
       .on(
         "postgres_changes",
@@ -496,7 +496,7 @@ export function useProjectsRealtime() {
       )
       .subscribe();
     return () => {
-      void supabase.removeChannel(ch);
+      void takeOversupabase.removeChannel(ch);
     };
   }, [qc]);
 }

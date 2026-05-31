@@ -69,8 +69,8 @@ const GitHubWebhookComponent: React.FC<GitHubWebhookComponentProps> = ({
   // Function to fetch stored webhooks from Supabase
   const fetchStoredWebhooks = async () => {
     try {
-      const { data, error } = await supabase
-        .from('github_webhooks')
+      const { data, error } = await takeOversupabase
+  .from('github_webhooks')
         .select('*')
         .order('timestamp', { ascending: false })
         .limit(maxStoredEvents);
@@ -93,8 +93,8 @@ const GitHubWebhookComponent: React.FC<GitHubWebhookComponentProps> = ({
     try {
       if (webhooks.length === 0) return;
 
-      const { data, error } = await supabase
-        .from('github_webhooks')
+      const { data, error } = await takeOversupabase
+  .from('github_webhooks')
         .upsert(webhooks, { 
           onConflict: 'id',
           ignoreDuplicates: true
@@ -207,8 +207,8 @@ const GitHubWebhookComponent: React.FC<GitHubWebhookComponentProps> = ({
     if (window.confirm('Are you sure you want to clear the webhook history?')) {
       try {
         // Delete all records from Supabase
-        const { error } = await supabase
-          .from('github_webhooks')
+        const { error } = await takeOversupabase
+    .from('github_webhooks')
           .delete()
           .not('id', 'is', null); // Safety check to avoid deleting all rows if something goes wrong
         

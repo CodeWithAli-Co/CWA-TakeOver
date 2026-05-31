@@ -79,7 +79,7 @@ export default function GraduationPlan() {
 
   // Realtime sync — both Ali and Hanif see edits live.
   useEffect(() => {
-    const ch = supabase
+    const ch = takeOversupabase
       .channel("graduation-plan-realtime")
       .on(
         "postgres_changes",

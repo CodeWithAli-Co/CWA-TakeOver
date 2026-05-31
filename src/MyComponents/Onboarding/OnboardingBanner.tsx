@@ -11,7 +11,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { ClipboardCheck, ArrowRight, X, PartyPopper, Sparkles } from "lucide-react";
 import { useNavigate } from "@tanstack/react-router";
-import supabase from "@/MyComponents/supabase";
+import { takeOversupabase } from "@/MyComponents/supabase";
 import { ActiveUser } from "@/stores/query";
 import { useTourStore } from "./tourStore";
 import { DEFAULT_TOUR_STOPS } from "./tourSteps";
@@ -46,8 +46,8 @@ export function OnboardingBanner() {
 
   // ── Load instance + items ────────────────────────────────────
   const refetchItems = async (instanceId: string) => {
-    const all = await supabase
-      .from("onboarding_items")
+    const all = await takeOversupabase
+.from("onboarding_items")
       .select("id, status, owner")
       .eq("instance_id", instanceId);
     if (!all.error && all.data) {
@@ -60,8 +60,8 @@ export function OnboardingBanner() {
     let cancelled = false;
 
     (async () => {
-      const inst = await supabase
-        .from("onboarding_instances")
+      const inst = await takeOversupabase
+  .from("onboarding_instances")
         .select("id, status")
         .eq("employee_user_id", mySupaId)
         .eq("status", "active")
@@ -86,7 +86,7 @@ export function OnboardingBanner() {
   // ── Realtime — refetch on any change to this instance\'s items ─
   useEffect(() => {
     if (!instance?.id) return;
-    const ch = supabase
+    const ch = takeOversupabase
       .channel(`onboarding-items-${instance.id}`)
       .on(
         "postgres_changes",

@@ -16,7 +16,7 @@
 //   list_upcoming_hiring_meetings              feeds the /schedule widget
 // ───────────────────────────────────────────────────────────────────
 
-import supabase from "@/MyComponents/supabase";
+import { takeOversupabase } from "@/MyComponents/supabase";
 import type { AxonAction } from "../types";
 import { registerAction } from "./registry";
 import {
@@ -137,8 +137,8 @@ export const generateOnboardingPlanAction: AxonAction<
   handler: async ({ candidate_id, force }, ctx) => {
     if (!ANTHROPIC_API_KEY) return { summary: "No Anthropic API key configured." };
 
-    const { data: c, error } = await supabase
-      .from("candidates")
+    const { data: c, error } = await takeOversupabase
+.from("candidates")
       .select("*")
       .eq("id", candidate_id)
       .maybeSingle();
@@ -156,16 +156,16 @@ export const generateOnboardingPlanAction: AxonAction<
     // Pull the role.
     let posting: JobPostingLite | null = null;
     if (cand.job_posting_id) {
-      const { data } = await supabase
-        .from("job_postings")
+      const { data } = await takeOversupabase
+  .from("job_postings")
         .select("id, slug, title, team, summary, responsibilities, qualifications")
         .eq("id", cand.job_posting_id)
         .maybeSingle();
       posting = (data ?? null) as JobPostingLite | null;
     }
     if (!posting && cand.role_slug) {
-      const { data } = await supabase
-        .from("job_postings")
+      const { data } = await takeOversupabase
+  .from("job_postings")
         .select("id, slug, title, team, summary, responsibilities, qualifications")
         .eq("slug", cand.role_slug)
         .maybeSingle();
@@ -228,8 +228,8 @@ export const generateOnboardingPlanAction: AxonAction<
       return { summary: `Could not parse Claude's plan: ${msg}` };
     }
 
-    const { error: updErr } = await supabase
-      .from("candidates")
+    const { error: updErr } = await takeOversupabase
+.from("candidates")
       .update({
         onboarding_plan: plan,
         onboarding_plan_at: new Date().toISOString(),
@@ -272,8 +272,8 @@ export const sendWelcomeMessageAction: AxonAction<
   mutating: true,
   requiresConfirmation: false,
   handler: async ({ candidate_id, channel = "General", confirm }, ctx) => {
-    const { data: c, error } = await supabase
-      .from("candidates")
+    const { data: c, error } = await takeOversupabase
+.from("candidates")
       .select("*")
       .eq("id", candidate_id)
       .maybeSingle();
@@ -373,8 +373,8 @@ export const sendWelcomeMessageAction: AxonAction<
       sent_by: "AXON",
     };
 
-    const { data: inserted, error: insertErr } = await supabase
-      .from("cwa_chat")
+    const { data: inserted, error: insertErr } = await takeOversupabase
+.from("cwa_chat")
       .insert(insertPayload)
       .select("msg_id")
       .maybeSingle();
@@ -384,8 +384,8 @@ export const sendWelcomeMessageAction: AxonAction<
     }
 
     const msgId = (inserted as { msg_id?: number } | null)?.msg_id ?? 0;
-    await supabase
-      .from("candidates")
+    await takeOversupabase
+.from("candidates")
       .update({
         welcome_sent_at: new Date().toISOString(),
         welcome_message_id: msgId || null,
@@ -445,8 +445,8 @@ export const scheduleOnboardingSessionAction: AxonAction<
     { candidate_id, when, kind = "onboarding_kickoff", duration_min = 30, title, description, attendees },
     ctx,
   ) => {
-    const { data: c, error } = await supabase
-      .from("candidates")
+    const { data: c, error } = await takeOversupabase
+.from("candidates")
       .select("id, full_name, email, role_slug")
       .eq("id", candidate_id)
       .maybeSingle();
@@ -462,8 +462,8 @@ export const scheduleOnboardingSessionAction: AxonAction<
     // up with 3 identical entries cluttering the timeline.
     // Training meetings ARE allowed to stack (multiple sessions).
     if (kind !== "training" && kind !== "other") {
-      const { data: existing } = await supabase
-        .from("candidate_meetings")
+      const { data: existing } = await takeOversupabase
+  .from("candidate_meetings")
         .select("id, scheduled_at, calendly_event_url")
         .eq("candidate_id", candidate_id)
         .eq("kind", kind)
@@ -534,8 +534,8 @@ export const scheduleOnboardingSessionAction: AxonAction<
       created_by: ctx.operator?.username ?? null,
     };
 
-    const { data: created, error: insertErr } = await supabase
-      .from("candidate_meetings")
+    const { data: created, error: insertErr } = await takeOversupabase
+.from("candidate_meetings")
       .insert(row)
       .select("id")
       .maybeSingle();
@@ -547,8 +547,8 @@ export const scheduleOnboardingSessionAction: AxonAction<
     // interview-stage convention. Onboarding kickoff doesn't need
     // this — the meeting row is the source of truth.
     if (kind === "interview") {
-      await supabase
-        .from("candidates")
+      await takeOversupabase
+  .from("candidates")
         .update({
           scheduled_interview_at: scheduledAt.toISOString(),
           calendly_event_url: calendlyUrl,
@@ -601,8 +601,8 @@ export const startFullOnboardingAction: AxonAction<
   mutating: true,
   handler: async ({ candidate_id, kickoff_when }, ctx) => {
     // 1. Mark hired (don't fail if already hired)
-    await supabase
-      .from("candidates")
+    await takeOversupabase
+.from("candidates")
       .update({ status: "hired", onboarding_started_at: new Date().toISOString() })
       .eq("id", candidate_id);
 
@@ -681,7 +681,7 @@ export const listUpcomingHiringMeetingsAction: AxonAction<
     const horizon = new Date();
     horizon.setDate(horizon.getDate() + within_days);
 
-    let q = supabase
+    let q = takeOversupabase
       .from("candidate_meetings")
       .select("id, candidate_id, kind, title, scheduled_at, duration_min, status, calendly_event_url, attendees, candidates ( full_name, role_slug, email )")
       .gte("scheduled_at", now.toISOString())

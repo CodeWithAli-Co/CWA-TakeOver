@@ -12,7 +12,7 @@ import { Plus, Search, Users, X, Mail, User } from "lucide-react";
 import { useForm } from "@tanstack/react-form";
 import { Clients as fetchClients } from "@/stores/invoiceQuery";
 import { useClientStore } from "@/stores/invoiceStore";
-import supabase from "@/MyComponents/supabase";
+import { takeOversupabase } from "@/MyComponents/supabase";
 import Capitalize from "@/MyComponents/Reusables/capitalize";
 
 export const ClientSidebar = () => {
@@ -29,7 +29,7 @@ export const ClientSidebar = () => {
   const form = useForm({
     defaultValues: { clientName: "", clientEmail: "" },
     onSubmit: async ({ value }) => {
-      await supabase.from("clients").insert({
+      await takeOversupabase.from("clients").insert({
         name: value.clientName,
         email: value.clientEmail,
       });

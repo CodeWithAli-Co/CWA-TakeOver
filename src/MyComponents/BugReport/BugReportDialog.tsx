@@ -19,7 +19,7 @@ import { AnimatePresence, motion } from "framer-motion";
 import {
   Bug, Loader2, X, Image as ImageIcon, Check, AlertTriangle,
 } from "lucide-react";
-import supabase from "@/MyComponents/supabase";
+import { takeOversupabase } from "@/MyComponents/supabase";
 import { ActiveUser, getActiveCompanyLabel } from "@/stores/query";
 import {
   snapshotDiagnostics,
@@ -132,7 +132,7 @@ export function BugReportDialog({ open, onOpenChange }: Props) {
       if (screenshot) {
         const safeName = screenshot.name.replace(/[^a-z0-9._-]/gi, "_");
         const path = `${username}/${Date.now()}-${safeName}`;
-        const up = await supabase.storage
+        const up = await takeOversupabase.storage
           .from("bug-screenshots")
           .upload(path, screenshot, {
             cacheControl: "3600",
@@ -142,7 +142,7 @@ export function BugReportDialog({ open, onOpenChange }: Props) {
         if (up.error) {
           console.warn("[bug-report] screenshot upload failed:", up.error.message);
         } else {
-          const { data } = supabase.storage
+          const { data } = takeOversupabase.storage
             .from("bug-screenshots")
             .getPublicUrl(path);
           screenshotUrl = data?.publicUrl ?? null;
@@ -157,8 +157,8 @@ export function BugReportDialog({ open, onOpenChange }: Props) {
         typeof window !== "undefined" ? window.location.href : null;
 
       // 3. Insert the report.
-      const { data, error: insertErr } = await supabase
-        .from("bug_reports")
+      const { data, error: insertErr } = await takeOversupabase
+  .from("bug_reports")
         .insert({
           reporter_username: username,
           reporter_role: role || null,

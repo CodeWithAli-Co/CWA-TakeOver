@@ -20,7 +20,7 @@
 
 import type { AxonAction } from "../types";
 import { registerAction } from "./registry";
-import supabase from "@/MyComponents/supabase";
+import { takeOversupabase } from "@/MyComponents/supabase";
 
 const TABLE = "shifts";
 
@@ -51,23 +51,21 @@ async function resolveUser(
   }
   // UUID?
   if (/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(q)) {
-    const { data } = await supabase
-      .from("app_users")
+    const { data } = await takeOversupabase
+.from("app_users")
       .select("supa_id, username")
       .eq("supa_id", q)
       .maybeSingle();
     if (data) return { supa_id: data.supa_id, username: data.username };
   }
   // Username (case-insensitive, exact match first)
-  const { data: exact } = await supabase
-    .from("app_users")
+  const { data: exact } = await takeOversupabase    .from("app_users")
     .select("supa_id, username")
     .ilike("username", q)
     .maybeSingle();
   if (exact) return { supa_id: exact.supa_id, username: exact.username };
   // Fuzzy fallback — first prefix match.
-  const { data: prefix } = await supabase
-    .from("app_users")
+  const { data: prefix } = await takeOversupabase    .from("app_users")
     .select("supa_id, username")
     .ilike("username", `${q}%`)
     .limit(1);
@@ -196,8 +194,8 @@ export const createShiftAction: AxonAction<
     const ends_at = combineLocal(input.date, input.end_time);
     const company = companyLabelFor(String(ctx.activeCompany));
 
-    const { data, error } = await supabase
-      .from(TABLE)
+    const { data, error } = await takeOversupabase
+.from(TABLE)
       .insert({
         user_supa_id: target.supa_id,
         username: target.username,
@@ -234,7 +232,7 @@ export const createShiftAction: AxonAction<
     ctx.pushUndo({
       label: `Undo: scheduled ${target.username}`,
       undo: async () => {
-        await supabase.from(TABLE).delete().eq("id", data!.id);
+        await takeOversupabase.from(TABLE).delete().eq("id", data!.id);
       },
     } as any);
     return { summary, data: { shift_id: data!.id, username: target.username } };
@@ -290,7 +288,7 @@ export const listShiftsAction: AxonAction<
     })();
     const toIso = toDate.toISOString();
 
-    let q = supabase
+    let q = takeOversupabase
       .from(TABLE)
       .select("id, username, starts_at, ends_at, status, title, type")
       .lte("starts_at", toIso)
@@ -342,8 +340,8 @@ export const clockInAction: AxonAction<
     const now = new Date();
     const winStart = new Date(now.getTime() - 60 * 60_000).toISOString();
     const winEnd   = new Date(now.getTime() + 60 * 60_000).toISOString();
-    const { data: candidates } = await supabase
-      .from(TABLE)
+    const { data: candidates } = await takeOversupabase
+.from(TABLE)
       .select("id")
       .eq("user_supa_id", userId)
       .eq("status", "scheduled")
@@ -354,8 +352,8 @@ export const clockInAction: AxonAction<
     const target = candidates?.[0];
 
     if (target) {
-      const { error } = await supabase
-        .from(TABLE)
+      const { error } = await takeOversupabase
+  .from(TABLE)
         .update({ clock_in: now.toISOString() })
         .eq("id", target.id);
       if (error) return { summary: `Couldn't clock in — ${error.message}` };
@@ -366,8 +364,8 @@ export const clockInAction: AxonAction<
 
     // No scheduled shift → create ad-hoc.
     const plannedEnd = new Date(Date.now() + 4 * 3600_000).toISOString();
-    const { data, error } = await supabase
-      .from(TABLE)
+    const { data, error } = await takeOversupabase
+.from(TABLE)
       .insert({
         user_supa_id: userId,
         username,
@@ -401,8 +399,8 @@ export const clockOutAction: AxonAction<
   handler: async (_input, ctx) => {
     if (ctx.dryRun) return { summary: `Dry-run: would clock you out.` };
     const userId = ctx.operator.supa_id;
-    const { data: active } = await supabase
-      .from(TABLE)
+    const { data: active } = await takeOversupabase
+.from(TABLE)
       .select("id")
       .eq("user_supa_id", userId)
       .eq("status", "in_progress")
@@ -413,8 +411,8 @@ export const clockOutAction: AxonAction<
       return { summary: "You're not clocked in to anything right now." };
     }
     const now = new Date().toISOString();
-    const { error } = await supabase
-      .from(TABLE)
+    const { error } = await takeOversupabase
+.from(TABLE)
       .update({ clock_out: now, ends_at: now })
       .eq("id", target.id);
     if (error) return { summary: `Couldn't clock out — ${error.message}` };
@@ -452,8 +450,8 @@ export const requestCoverageAction: AxonAction<
     if (ctx.dryRun) return { summary: `Dry-run: would mark your shift as needing cover.` };
     let shiftId = input.shift_id;
     if (!shiftId) {
-      const { data } = await supabase
-        .from(TABLE)
+      const { data } = await takeOversupabase
+  .from(TABLE)
         .select("id")
         .eq("user_supa_id", ctx.operator.supa_id)
         .eq("status", "scheduled")
@@ -463,8 +461,8 @@ export const requestCoverageAction: AxonAction<
       shiftId = data?.[0]?.id;
       if (!shiftId) return { summary: "You don't have any upcoming shifts to request coverage on." };
     }
-    const { error } = await supabase
-      .from(TABLE)
+    const { error } = await takeOversupabase
+.from(TABLE)
       .update({
         coverage_requested_at: new Date().toISOString(),
         coverage_requested_by: ctx.operator.supa_id,
@@ -503,8 +501,8 @@ export const claimOpenShiftAction: AxonAction<
   requiresConfirmation: false,
   handler: async ({ shift_id }, ctx) => {
     if (ctx.dryRun) return { summary: `Dry-run: would claim shift ${shift_id}.` };
-    const { error } = await supabase
-      .from(TABLE)
+    const { error } = await takeOversupabase
+.from(TABLE)
       .update({
         user_supa_id: ctx.operator.supa_id,
         username: ctx.operator.username,
@@ -556,8 +554,8 @@ export const suggestPatternsAction: AxonAction<
 
     const since = new Date();
     since.setDate(since.getDate() - lookback * 7);
-    const { data, error } = await supabase
-      .from(TABLE)
+    const { data, error } = await takeOversupabase
+.from(TABLE)
       .select("starts_at, ends_at, user_supa_id, type, status")
       .eq("user_supa_id", target.supa_id)
       .gte("starts_at", since.toISOString())
@@ -664,7 +662,7 @@ export const applyPatternAction: AxonAction<
         created_by: ctx.operator.supa_id,
       };
     });
-    const { error, data } = await supabase.from(TABLE).insert(rows).select("id");
+    const { error, data } = await takeOversupabase.from(TABLE).insert(rows).select("id");
     if (error) return { summary: `Couldn't apply the pattern — ${error.message}` };
     const created = data?.length ?? rows.length;
     ctx.speak(`Filled in ${created} shifts.`);

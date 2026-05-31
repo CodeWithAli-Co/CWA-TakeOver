@@ -9,7 +9,7 @@
  * call invalidate to refetch — no manual cache splicing.
  */
 
-import supabase from "@/MyComponents/supabase";
+import { takeOversupabase } from "@/MyComponents/supabase";
 import {
   useMutation,
   useQuery,
@@ -123,8 +123,8 @@ export function useUpdateCourseStatus() {
   const invalidate = useInvalidate();
   return useMutation({
     mutationFn: async (input: { id: number; status: CourseStatus }) => {
-      const { error } = await supabase
-        .from("graduation_plan_courses")
+      const { error } = await takeOversupabase
+  .from("graduation_plan_courses")
         .update({ status: input.status })
         .eq("id", input.id);
       if (error) throw error;
@@ -147,8 +147,8 @@ export function useMoveCourse() {
         term_id: input.term_id,
       };
       if (input.position !== undefined) update.position = input.position;
-      const { error } = await supabase
-        .from("graduation_plan_courses")
+      const { error } = await takeOversupabase
+  .from("graduation_plan_courses")
         .update(update)
         .eq("id", input.id);
       if (error) throw error;
@@ -170,16 +170,16 @@ export function useAddCourse() {
       critical?: boolean;
     }) => {
       // Bottom-of-term position = (max position in term) + 1
-      const { data: existing } = await supabase
-        .from("graduation_plan_courses")
+      const { data: existing } = await takeOversupabase
+  .from("graduation_plan_courses")
         .select("position")
         .eq("term_id", input.term_id)
         .order("position", { ascending: false })
         .limit(1);
       const nextPos = (existing?.[0]?.position ?? 0) + 1;
 
-      const { error } = await supabase
-        .from("graduation_plan_courses")
+      const { error } = await takeOversupabase
+  .from("graduation_plan_courses")
         .insert({
           term_id: input.term_id,
           code: input.code,
@@ -206,8 +206,8 @@ export function useEditCourse() {
         Pick<Course, "code" | "name" | "units" | "category" | "critical" | "notes">
       >;
     }) => {
-      const { error } = await supabase
-        .from("graduation_plan_courses")
+      const { error } = await takeOversupabase
+  .from("graduation_plan_courses")
         .update(input.patch)
         .eq("id", input.id);
       if (error) throw error;
@@ -221,8 +221,8 @@ export function useDeleteCourse() {
   const invalidate = useInvalidate();
   return useMutation({
     mutationFn: async (id: number) => {
-      const { error } = await supabase
-        .from("graduation_plan_courses")
+      const { error } = await takeOversupabase
+  .from("graduation_plan_courses")
         .delete()
         .eq("id", id);
       if (error) throw error;
@@ -250,8 +250,8 @@ export function useUpdateMeta() {
         >
       >,
     ) => {
-      const { error } = await supabase
-        .from("graduation_plan_meta")
+      const { error } = await takeOversupabase
+  .from("graduation_plan_meta")
         .update(patch)
         .eq("id", 1);
       if (error) throw error;

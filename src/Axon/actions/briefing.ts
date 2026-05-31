@@ -3,7 +3,7 @@
 // Composes several other actions for a single spoken summary.
 // ───────────────────────────────────────────────────────────────────
 
-import supabase from "@/MyComponents/supabase";
+import { takeOversupabase } from "@/MyComponents/supabase";
 import type { AxonAction } from "../types";
 import { registerAction } from "./registry";
 
@@ -26,21 +26,21 @@ export const briefingAction: AxonAction<
     const weekAhead = new Date();
     weekAhead.setDate(weekAhead.getDate() + 7);
 
-    const overdueQ = supabase
+    const overdueQ = takeOversupabase
       .from("cwa_todos")
       .select("todo_id,title,deadline,status,company")
       .neq("status", "done")
       .lt("deadline", now.toISOString())
       .gt("deadline", "");
 
-    const thisWeekQ = supabase
+    const thisWeekQ = takeOversupabase
       .from("cwa_todos")
       .select("todo_id,title,deadline,status,company")
       .neq("status", "done")
       .gte("deadline", now.toISOString())
       .lte("deadline", weekAhead.toISOString());
 
-    const meetingsQ = supabase
+    const meetingsQ = takeOversupabase
       .from("cwa_meetings")
       .select("meeting_title,date,company")
       .gte("date", now.toISOString().slice(0, 10))
@@ -48,7 +48,7 @@ export const briefingAction: AxonAction<
 
     const signupsSince = new Date();
     signupsSince.setDate(signupsSince.getDate() - 1);
-    const signupsQ = supabase
+    const signupsQ = takeOversupabase
       .from("app_users")
       .select("username,role,created_at")
       .gte("created_at", signupsSince.toISOString());

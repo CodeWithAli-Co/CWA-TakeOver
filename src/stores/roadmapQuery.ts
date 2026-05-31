@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import supabase from "@/MyComponents/supabase";
+import { takeOversupabase } from "@/MyComponents/supabase";
 import {
   SEED_CHECKPOINTS,
   SEED_DEPENDENCIES,
@@ -29,8 +29,8 @@ const HAS_SUPABASE_ENV = !!(
 async function fetchRoadmapProfiles(): Promise<RoadmapProfile[]> {
   if (!HAS_SUPABASE_ENV) return SEED_PROFILES;
   try {
-    const { data, error } = await supabase
-      .from("roadmap_profiles")
+    const { data, error } = await takeOversupabase
+.from("roadmap_profiles")
       .select("*");
     if (error || !data || data.length === 0) return SEED_PROFILES;
     return data.map((r: any) => ({
@@ -60,8 +60,8 @@ export function useRoadmapProfiles() {
 async function fetchRoadmapLanes(): Promise<Lane[]> {
   if (!HAS_SUPABASE_ENV) return LANES;
   try {
-    const { data, error } = await supabase
-      .from("roadmap_lanes")
+    const { data, error } = await takeOversupabase
+.from("roadmap_lanes")
       .select("*")
       .order("sort_order", { ascending: true });
     if (error || !data || data.length === 0) return LANES;
@@ -89,8 +89,8 @@ export function useRoadmapLanes() {
 async function fetchRoadmapCheckpoints(): Promise<Checkpoint[]> {
   if (!HAS_SUPABASE_ENV) return SEED_CHECKPOINTS;
   try {
-    const { data, error } = await supabase
-      .from("roadmap_checkpoints")
+    const { data, error } = await takeOversupabase
+.from("roadmap_checkpoints")
       .select("*");
     if (error || !data || data.length === 0) return SEED_CHECKPOINTS;
     return data.map((r: any) => ({
@@ -130,8 +130,8 @@ export function useRoadmapCheckpoints() {
 async function fetchRoadmapDependencies(): Promise<Dependency[]> {
   if (!HAS_SUPABASE_ENV) return SEED_DEPENDENCIES;
   try {
-    const { data, error } = await supabase
-      .from("roadmap_dependencies")
+    const { data, error } = await takeOversupabase
+.from("roadmap_dependencies")
       .select("*");
     if (error || !data || data.length === 0) return SEED_DEPENDENCIES;
     return data.map((r: any) => ({

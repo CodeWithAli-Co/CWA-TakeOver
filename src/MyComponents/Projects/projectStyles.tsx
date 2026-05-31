@@ -15,7 +15,7 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
-import supabase from "@/MyComponents/supabase";
+import { takeOversupabase } from "@/MyComponents/supabase";
 import type { ProjectStatus, ProjectPriority } from "@/stores/projects";
 
 export const STATUS_META: Record<
@@ -120,14 +120,14 @@ export function initialsOf(name: string | null | undefined): string {
  * Employees query. Shares the same `["employees"]` queryKey as the
  * Suspense-based `Employees()` hook in stores/query.ts so data is
  * cached once and reused across components. Supports both legacy
- * storage-bucket filenames (rewritten via supabase.storage public
+ * storage-bucket filenames (rewritten via takeOversupabase.storage public
  * URL) and full-URL avatars (DiceBear, Direct Hire).
  */
 function useAvatarsByName(): Map<string, string> {
   const { data: employees } = useQuery({
     queryKey: ["employees"],
     queryFn: async () => {
-      const { data } = await supabase.from("app_users").select("*");
+      const { data } = await takeOversupabase.from("app_users").select("*");
       return data ?? [];
     },
     staleTime: 60_000,
@@ -140,7 +140,7 @@ function useAvatarsByName(): Map<string, string> {
       if (typeof e.avatar === "string" && e.avatar.startsWith("http")) {
         url = e.avatar;
       } else if (e.avatar) {
-        const { data } = supabase.storage
+        const { data } = takeOversupabase.storage
           .from("avatars")
           .getPublicUrl(e.avatar);
         url = data?.publicUrl;

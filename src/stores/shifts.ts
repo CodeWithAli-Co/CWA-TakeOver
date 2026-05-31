@@ -12,7 +12,7 @@
 
 import { useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import supabase from "@/MyComponents/supabase";
+import { takeOversupabase } from "@/MyComponents/supabase";
 import { useCompanyFilter } from "./store";
 import {
   expandRecurrence,
@@ -221,14 +221,14 @@ export function useShiftsInRange(
       //   2. Recurrence masters that *could* generate instances inside the
       //      window — i.e. their anchor is <= to AND (recurrence_until is
       //      NULL OR >= from). We then expand them client-side.
-      const overlapQuery = supabase
+      const overlapQuery = takeOversupabase
         .from(SHIFTS_TABLE)
         .select("*")
         .lte("starts_at", toIso)
         .gte("ends_at", fromIso)
         .is("recurrence", null);
 
-      const recurringQuery = supabase
+      const recurringQuery = takeOversupabase
         .from(SHIFTS_TABLE)
         .select("*")
         .not("recurrence", "is", null)
@@ -240,7 +240,7 @@ export function useShiftsInRange(
       // would silently exclude valid rows. Pull all meetings (small
       // table) and let new Date() parse them in JS, then filter to
       // those whose virtual start/end overlaps [from, to].
-      const meetingsQuery = supabase.from(MEETINGS_TABLE).select("*");
+      const meetingsQuery = takeOversupabase.from(MEETINGS_TABLE).select("*");
 
       let oq = overlapQuery;
       let rq = recurringQuery;
@@ -333,8 +333,8 @@ export function useActiveShift(userSupaId: string | null | undefined) {
     enabled: !!userSupaId,
     refetchInterval: 30_000,
     queryFn: async (): Promise<Shift | null> => {
-      const { data, error } = await supabase
-        .from(SHIFTS_TABLE)
+      const { data, error } = await takeOversupabase
+  .from(SHIFTS_TABLE)
         .select("*")
         .eq("user_supa_id", userSupaId!)
         .eq("status", "in_progress")
@@ -357,8 +357,8 @@ export function useNextShift(userSupaId: string | null | undefined) {
     refetchInterval: 60_000,
     queryFn: async (): Promise<Shift | null> => {
       const nowIso = new Date().toISOString();
-      const { data, error } = await supabase
-        .from(SHIFTS_TABLE)
+      const { data, error } = await takeOversupabase
+  .from(SHIFTS_TABLE)
         .select("*")
         .eq("user_supa_id", userSupaId!)
         .eq("status", "scheduled")
@@ -380,7 +380,7 @@ export function useCreateShift() {
   return useMutation({
     mutationFn: async (payload: ShiftCreate): Promise<Shift> => {
       const company = payload.company ?? activeCompanyLabel();
-      const { data: auth } = await supabase.auth.getUser();
+      const { data: auth } = await takeOversupabase.auth.getUser();
       const insert = {
         ...payload,
         company,
@@ -388,8 +388,8 @@ export function useCreateShift() {
         is_billable: payload.is_billable ?? true,
         created_by: auth.user?.id ?? null,
       };
-      const { data, error } = await supabase
-        .from(SHIFTS_TABLE)
+      const { data, error } = await takeOversupabase
+  .from(SHIFTS_TABLE)
         .insert(insert)
         .select()
         .single();
@@ -406,8 +406,8 @@ export function useUpdateShift() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async ({ id, ...patch }: ShiftUpdate): Promise<Shift> => {
-      const { data, error } = await supabase
-        .from(SHIFTS_TABLE)
+      const { data, error } = await takeOversupabase
+  .from(SHIFTS_TABLE)
         .update(patch)
         .eq("id", id)
         .select()
@@ -425,8 +425,8 @@ export function useDeleteShift() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (id: string): Promise<void> => {
-      const { error } = await supabase
-        .from(SHIFTS_TABLE)
+      const { error } = await takeOversupabase
+  .from(SHIFTS_TABLE)
         .delete()
         .eq("id", id);
       if (error) throw error;
@@ -452,8 +452,8 @@ export function useClockIn() {
       const now = new Date().toISOString();
 
       if (args.shiftId) {
-        const { data, error } = await supabase
-          .from(SHIFTS_TABLE)
+        const { data, error } = await takeOversupabase
+    .from(SHIFTS_TABLE)
           .update({ clock_in: now })
           .eq("id", args.shiftId)
           .select()
@@ -464,9 +464,9 @@ export function useClockIn() {
 
       // No scheduled shift → create an ad-hoc one (4-hour default window).
       const plannedEnd = new Date(Date.now() + 4 * 3600_000).toISOString();
-      const { data: auth } = await supabase.auth.getUser();
-      const { data, error } = await supabase
-        .from(SHIFTS_TABLE)
+      const { data: auth } = await takeOversupabase.auth.getUser();
+      const { data, error } = await takeOversupabase
+  .from(SHIFTS_TABLE)
         .insert({
           user_supa_id: args.userSupaId,
           username: args.username,
@@ -495,8 +495,8 @@ export function useClockOut() {
   return useMutation({
     mutationFn: async (shiftId: string): Promise<Shift> => {
       const now = new Date().toISOString();
-      const { data, error } = await supabase
-        .from(SHIFTS_TABLE)
+      const { data, error } = await takeOversupabase
+  .from(SHIFTS_TABLE)
         .update({ clock_out: now, ends_at: now })
         .eq("id", shiftId)
         .select()
@@ -522,7 +522,7 @@ export function useClockOut() {
 export function useShiftsRealtime() {
   const qc = useQueryClient();
   useEffect(() => {
-    const channel = supabase
+    const channel = takeOversupabase
       .channel("shifts_realtime")
       .on(
         "postgres_changes",
@@ -582,7 +582,7 @@ export function useCopyWeek() {
 
       // Pull only concrete rows for the source week — recurring masters
       // are excluded because they already paint forward on their own.
-      let q = supabase
+      let q = takeOversupabase
         .from(SHIFTS_TABLE)
         .select("*")
         .gte("starts_at", sourceWeekStart.toISOString())
@@ -595,7 +595,7 @@ export function useCopyWeek() {
       if (srcErr) throw srcErr;
       if (!source || source.length === 0) return 0;
 
-      const { data: auth } = await supabase.auth.getUser();
+      const { data: auth } = await takeOversupabase.auth.getUser();
 
       const inserts = (source as Shift[]).map((s) => ({
         user_supa_id: s.user_supa_id,
@@ -614,8 +614,8 @@ export function useCopyWeek() {
         created_by: auth.user?.id ?? null,
       }));
 
-      const { error: insErr, data: inserted } = await supabase
-        .from(SHIFTS_TABLE)
+      const { error: insErr, data: inserted } = await takeOversupabase
+  .from(SHIFTS_TABLE)
         .insert(inserts)
         .select("id");
       if (insErr) throw insErr;
@@ -635,9 +635,9 @@ export function useRequestCoverage() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (shiftId: string): Promise<Shift> => {
-      const { data: auth } = await supabase.auth.getUser();
-      const { data, error } = await supabase
-        .from(SHIFTS_TABLE)
+      const { data: auth } = await takeOversupabase.auth.getUser();
+      const { data, error } = await takeOversupabase
+  .from(SHIFTS_TABLE)
         .update({
           coverage_requested_at: new Date().toISOString(),
           coverage_requested_by: auth.user?.id ?? null,
@@ -659,8 +659,8 @@ export function useCancelCoverageRequest() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (shiftId: string): Promise<Shift> => {
-      const { data, error } = await supabase
-        .from(SHIFTS_TABLE)
+      const { data, error } = await takeOversupabase
+  .from(SHIFTS_TABLE)
         .update({
           coverage_requested_at: null,
           coverage_requested_by: null,
@@ -690,8 +690,8 @@ export function useClaimShift() {
       claimerSupaId: string;
       claimerUsername: string;
     }): Promise<Shift> => {
-      const { data, error } = await supabase
-        .from(SHIFTS_TABLE)
+      const { data, error } = await takeOversupabase
+  .from(SHIFTS_TABLE)
         .update({
           user_supa_id: args.claimerSupaId,
           username: args.claimerUsername,
@@ -717,7 +717,7 @@ export function useOpenShifts() {
     queryKey: ["shifts", "open", activeCompany],
     refetchInterval: 30_000,
     queryFn: async (): Promise<Shift[]> => {
-      let q = supabase
+      let q = takeOversupabase
         .from(SHIFTS_TABLE)
         .select("*")
         .not("coverage_requested_at", "is", null)

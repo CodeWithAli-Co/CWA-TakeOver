@@ -22,7 +22,7 @@
 // predictability — exactly what the operator asked for.
 // ───────────────────────────────────────────────────────────────────
 
-import supabase from "@/MyComponents/supabase";
+import { takeOversupabase } from "@/MyComponents/supabase";
 import type { AxonAction } from "../types";
 import { registerAction } from "./registry";
 import { registerUndoHandler } from "../engine/undoStack";
@@ -143,7 +143,7 @@ function assertNotCurrentlyOpenStrict(docId: string, action: string): void {
 registerUndoHandler<{ docId: string; title: string }>(
   "workspace.delete-created-doc",
   async ({ docId, title }) => {
-    const { error } = await supabase.from(DOC_TABLE).delete().eq("id", docId);
+    const { error } = await takeOversupabase.from(DOC_TABLE).delete().eq("id", docId);
     if (error) throw new Error(error.message);
     return `Reverted — deleted doc "${title}".`;
   },
@@ -152,8 +152,8 @@ registerUndoHandler<{ docId: string; title: string }>(
 registerUndoHandler<{ docId: string; previousContent: JSONContent; previousYState: string | null }>(
   "workspace.restore-content",
   async ({ docId, previousContent, previousYState }) => {
-    const { error } = await supabase
-      .from(DOC_TABLE)
+    const { error } = await takeOversupabase
+.from(DOC_TABLE)
       .update({ content: previousContent, y_state: previousYState })
       .eq("id", docId);
     if (error) throw new Error(error.message);
@@ -302,11 +302,11 @@ export const workspaceOverviewAction: AxonAction<
   handler: async (input) => {
     const cap = Math.max(1, Math.min(500, input.maxDocs ?? 200));
     const [foldersRes, docsRes, sheetsRes] = await Promise.all([
-      supabase.from(FOLDER_TABLE).select("id, name, parent_folder_id").order("position", { ascending: true }),
-      supabase.from(DOC_TABLE)
+      takeOversupabase.from(FOLDER_TABLE).select("id, name, parent_folder_id").order("position", { ascending: true }),
+      takeOversupabase.from(DOC_TABLE)
         .select("id, title, folder_id, updated_at, archived, content")
         .order("updated_at", { ascending: false }),
-      supabase.from(SHEET_TABLE)
+      takeOversupabase.from(SHEET_TABLE)
         .select("id, title, folder_id, updated_at, archived")
         .order("updated_at", { ascending: false }),
     ]);
@@ -368,8 +368,8 @@ export const workspaceCurrentDocAction: AxonAction<
         data: { docId: null, title: null },
       };
     }
-    const { data, error } = await supabase
-      .from(DOC_TABLE).select("title").eq("id", docId).maybeSingle();
+    const { data, error } = await takeOversupabase
+.from(DOC_TABLE).select("title").eq("id", docId).maybeSingle();
     if (error) throw new Error(error.message);
     return {
       summary: data ? `Currently viewing "${data.title}".` : "On a doc page but couldn't read the title.",
@@ -393,8 +393,8 @@ export const workspaceReadDocAction: AxonAction<
   },
   handler: async (input) => {
     const docId = assertId(input?.docId, "docId", "workspace_read_doc");
-    const { data, error } = await supabase
-      .from(DOC_TABLE)
+    const { data, error } = await takeOversupabase
+.from(DOC_TABLE)
       .select("id, title, updated_at, folder_id, content")
       .eq("id", docId)
       .maybeSingle();
@@ -436,8 +436,8 @@ export const workspaceSearchAction: AxonAction<
     if (terms.length === 0) {
       return { summary: "Empty search query.", data: { matches: [] } };
     }
-    const { data, error } = await supabase
-      .from(DOC_TABLE).select("id, title, content, archived");
+    const { data, error } = await takeOversupabase
+.from(DOC_TABLE).select("id, title, content, archived");
     if (error) throw new Error(error.message);
 
     const ranked = ((data ?? []) as any[])
@@ -530,8 +530,8 @@ export const workspaceCreateDocAction: AxonAction<
       { type: "doc", content: [] },
       paragraphs.map((p) => ({ text: p })),
     );
-    const { data, error } = await supabase
-      .from(DOC_TABLE)
+    const { data, error } = await takeOversupabase
+.from(DOC_TABLE)
       .insert({
         title,
         content,
@@ -588,8 +588,8 @@ export const workspaceAppendAction: AxonAction<
       ? input.heading.trim() : undefined;
 
     // Read current state for undo + append.
-    const { data: current, error: readErr } = await supabase
-      .from(DOC_TABLE).select("title, content, y_state").eq("id", docId).single();
+    const { data: current, error: readErr } = await takeOversupabase
+.from(DOC_TABLE).select("title, content, y_state").eq("id", docId).single();
     if (readErr) throw new Error(readErr.message);
 
     const blocks: { text: string; heading?: 1 | 2 | 3 }[] = [];
@@ -598,8 +598,8 @@ export const workspaceAppendAction: AxonAction<
 
     const nextContent = appendParagraphs(current.content as JSONContent, blocks);
 
-    const { error: writeErr } = await supabase
-      .from(DOC_TABLE)
+    const { error: writeErr } = await takeOversupabase
+.from(DOC_TABLE)
       .update({
         content: nextContent,
         // Null out y_state so any open editor session re-initializes from
@@ -653,8 +653,8 @@ export const workspaceFillAction: AxonAction<
     const docId = assertId(input?.docId, "docId", "workspace_fill_placeholders");
     const openWarning = describeOpenConflict(docId);
     const values = assertObject(input?.values, "values", "workspace_fill_placeholders");
-    const { data: current, error: readErr } = await supabase
-      .from(DOC_TABLE).select("title, content, y_state").eq("id", docId).single();
+    const { data: current, error: readErr } = await takeOversupabase
+.from(DOC_TABLE).select("title, content, y_state").eq("id", docId).single();
     if (readErr) throw new Error(readErr.message);
 
     const { content: nextContent, replacedCount, hintsSeen } =
@@ -670,8 +670,8 @@ export const workspaceFillAction: AxonAction<
       };
     }
 
-    const { error: writeErr } = await supabase
-      .from(DOC_TABLE)
+    const { error: writeErr } = await takeOversupabase
+.from(DOC_TABLE)
       .update({ content: nextContent, y_state: null, updated_by: ctx.operator.supa_id })
       .eq("id", docId);
     if (writeErr) throw new Error(writeErr.message);
@@ -732,14 +732,14 @@ export const workspaceReplaceAction: AxonAction<
       throw new Error("workspace_replace_doc_content: paragraphs must contain at least one string.");
     }
 
-    const { data: current, error: readErr } = await supabase
-      .from(DOC_TABLE).select("title, content, y_state").eq("id", docId).single();
+    const { data: current, error: readErr } = await takeOversupabase
+.from(DOC_TABLE).select("title, content, y_state").eq("id", docId).single();
     if (readErr) throw new Error(readErr.message);
 
     const nextContent = appendParagraphs({ type: "doc", content: [] }, paragraphs.map((p) => ({ text: p })));
 
-    const { error: writeErr } = await supabase
-      .from(DOC_TABLE)
+    const { error: writeErr } = await takeOversupabase
+.from(DOC_TABLE)
       .update({ content: nextContent, y_state: null, updated_by: ctx.operator.supa_id })
       .eq("id", docId);
     if (writeErr) throw new Error(writeErr.message);
@@ -779,10 +779,10 @@ export const workspaceDeleteAction: AxonAction<
       refuseDestructive("workspace_delete_doc", "archiving (set the archived flag on the doc instead)");
     }
     const docId = assertId(input?.docId, "docId", "workspace_delete_doc");
-    const { data: current, error: readErr } = await supabase
-      .from(DOC_TABLE).select("title").eq("id", docId).single();
+    const { data: current, error: readErr } = await takeOversupabase
+.from(DOC_TABLE).select("title").eq("id", docId).single();
     if (readErr) throw new Error(readErr.message);
-    const { error } = await supabase.from(DOC_TABLE).delete().eq("id", docId);
+    const { error } = await takeOversupabase.from(DOC_TABLE).delete().eq("id", docId);
     if (error) throw new Error(error.message);
     return {
       summary: `Deleted doc "${current.title}".`,

@@ -28,7 +28,7 @@ import {
   ClipboardCheck, MessageSquare, User, X, ArrowRight, Sparkles,
 } from "lucide-react";
 import { useNavigate } from "@tanstack/react-router";
-import supabase from "@/MyComponents/supabase";
+import { takeOversupabase } from "@/MyComponents/supabase";
 import { ActiveUser } from "@/stores/query";
 import { whyWelcomeGated } from "./onboardingDebug";
 
@@ -75,8 +75,8 @@ export function WelcomeModal() {
       // Primary gate: does this user have an ACTIVE onboarding
       // instance? RLS narrows the query to the caller's own rows.
       // If yes, they're clearly a hire in progress — welcome them.
-      const { data: inst, error } = await supabase
-        .from("onboarding_instances")
+      const { data: inst, error } = await takeOversupabase
+  .from("onboarding_instances")
         .select("id")
         .eq("employee_user_id", me.supa_id)
         .eq("status", "active")

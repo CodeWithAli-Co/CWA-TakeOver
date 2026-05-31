@@ -39,7 +39,7 @@ import {
   useHardDeleteDocument,
   useHardDeleteSpreadsheet,
 } from "@/stores/workspace";
-import supabase from "@/MyComponents/supabase";
+import { takeOversupabase } from "@/MyComponents/supabase";
 import type {
   WorkspaceResource,
   WorkspaceFolder,
@@ -105,8 +105,8 @@ export function WorkspacePage() {
     queryKey: ["workspace", "search", "bodies", trimmedQuery],
     enabled: trimmedQuery.length >= 2,
     queryFn: async (): Promise<Set<string>> => {
-      const { data, error } = await supabase
-        .from("workspace_documents")
+      const { data, error } = await takeOversupabase
+  .from("workspace_documents")
         .select("id, content")
         .eq("archived", false);
       if (error) throw error;

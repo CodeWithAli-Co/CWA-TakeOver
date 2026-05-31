@@ -35,7 +35,7 @@ import {
 import { useAppStore } from "@/stores/store";
 import { useChatStore } from "@/stores/chatStore";
 import { ActiveUser } from "@/stores/query";
-import supabase from "@/MyComponents/supabase";
+import { takeOversupabase } from "@/MyComponents/supabase";
 import { UnreadBadge } from "./UnreadBadge";
 import { AddDMGroup } from "@/MyComponents/subForms/addDMGroup";
 import { CategoryDialog } from "./CategoryDialog";
@@ -92,7 +92,7 @@ export const ChatSidebar: React.FC<Props> = ({ groups, employees, onCreateChanne
       const name = u?.username;
       const file = u?.avatar ?? u?.userAvatar; // tolerate either field
       if (!name || !file) continue;
-      const { data } = supabase.storage.from("avatars").getPublicUrl(file);
+      const { data } = takeOversupabase.storage.from("avatars").getPublicUrl(file);
       if (data?.publicUrl) map.set(name, data.publicUrl);
     }
     return map;

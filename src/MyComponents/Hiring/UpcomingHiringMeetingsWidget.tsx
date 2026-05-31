@@ -14,7 +14,7 @@
 import { useState } from "react";
 import { Loader2, ChevronRight, Clock, ExternalLink, Calendar, CalendarPlus, Check } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
-import supabase from "@/MyComponents/supabase";
+import { takeOversupabase } from "@/MyComponents/supabase";
 import { ActiveUser } from "@/stores/query";
 import { shiftKeys } from "@/stores/shifts";
 import { useCompanyFilter } from "@/stores/store";
@@ -109,7 +109,7 @@ function MeetingRow({ m }: { m: CandidateMeeting }) {
       const starts = new Date(m.scheduled_at);
       const ends = new Date(starts.getTime() + m.duration_min * 60_000);
       const company = activeCompany === "simplicityFunds" ? "simplicity" : "CodeWithAli";
-      const { error: insErr } = await supabase.from("shifts").insert({
+      const { error: insErr } = await takeOversupabase.from("shifts").insert({
         user_supa_id: me.supa_id,
         username: me.username,
         starts_at: starts.toISOString(),

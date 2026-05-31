@@ -7,7 +7,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Star, StarOff } from "lucide-react";
 import { ScrollArea } from "@/components/ui/shadcnComponents/scroll-area";
-import supabase from "@/MyComponents/supabase";
+import { takeOversupabase } from "@/MyComponents/supabase";
 import { useChatStore } from "@/stores/chatStore";
 import { useAppStore } from "@/stores/store";
 import type { MessageInterface } from "@/stores/query";
@@ -32,8 +32,8 @@ export function StarredView({ currentUsername, onReact }: Props) {
       const results: (MessageInterface & { _group: string })[] = [];
       await Promise.all(
         starredMessages.map(async (s) => {
-          const { data } = await supabase
-            .from(s.table)
+          const { data } = await takeOversupabase
+      .from(s.table)
             .select("*")
             .eq("msg_id", s.msgId)
             .single();

@@ -21,7 +21,7 @@ import {
 } from "@tanstack/react-query";
 import { useEffect } from "react";
 import { useLocation, useNavigate } from "@tanstack/react-router";
-import supabase from "@/MyComponents/supabase";
+import { takeOversupabase } from "@/MyComponents/supabase";
 
 const KEY = ["onboarding-state"] as const;
 
@@ -58,12 +58,11 @@ interface AppUserRow {
 }
 
 async function fetchOnboardingBranch(): Promise<OnboardingBranch> {
-  const { data: authData } = await supabase.auth.getUser();
+  const { data: authData } = await takeOversupabase.auth.getUser();
   const user = authData?.user;
   if (!user) return { kind: "not-authenticated" };
 
-  const { data, error } = await supabase
-    .from("app_users")
+  const { data, error } = await takeOversupabase    .from("app_users")
     .select("*")
     .eq("supa_id", user.id)
     .limit(1);
@@ -114,8 +113,8 @@ export function useUpdateOnboardingState() {
       supaId: string;
       patch: Record<string, unknown>;
     }) => {
-      const { error } = await supabase
-        .from("app_users")
+      const { error } = await takeOversupabase
+  .from("app_users")
         .update({ onboarding_state: args.patch })
         .eq("supa_id", args.supaId);
       if (error) throw error;
@@ -130,8 +129,8 @@ export function useMarkOnboarded() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (supaId: string) => {
-      const { error } = await supabase
-        .from("app_users")
+      const { error } = await takeOversupabase
+  .from("app_users")
         .update({ onboarded_at: new Date().toISOString() })
         .eq("supa_id", supaId);
       if (error) throw error;

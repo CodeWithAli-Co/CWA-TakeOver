@@ -59,7 +59,7 @@ SUPABASE_SERVICE_ROLE=<service role key>
 
 # Already set for the offer-letter send route:
 RESEND_API_KEY=<resend key>
-VITE_TAKEOVER_SITE_URL=<e.g. https://takeover.codewithali.com>
+VITE_TAKEOVER_SITE_URL=<e.g. https://takeover.systems>
 
 # Optional tuning:
 REMINDER_DELAY_DAYS=2        # default 2

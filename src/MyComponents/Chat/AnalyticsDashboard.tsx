@@ -21,7 +21,7 @@ import {
   Loader2, Users, Clock,
 } from "lucide-react";
 import { ScrollArea } from "@/components/ui/shadcnComponents/scroll-area";
-import supabase from "@/MyComponents/supabase";
+import { takeOversupabase } from "@/MyComponents/supabase";
 import { format, startOfDay, subDays } from "date-fns";
 import {
   Area, AreaChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis,

@@ -22,7 +22,7 @@ import { MessageBubble } from "./MessageBubble";
 import { ThreadInline } from "./ThreadInline";
 import { TypingIndicator } from "./TypingIndicator";
 import { MessageInterface } from "@/stores/query";
-import supabase from "@/MyComponents/supabase";
+import { takeOversupabase } from "@/MyComponents/supabase";
 import { useChatStore, type ThreadStyle } from "@/stores/chatStore";
 import { displayLabelForDM, isDMKey } from "./displayName";
 import { format, isToday, isYesterday } from "date-fns";
@@ -168,7 +168,7 @@ export const MessageList: React.FC<Props> = ({
     }
   }, [messages, group, markRead, atBottom]);
 
-  // Mark messages as read in Supabase. Skip entirely if we've already
+  // Mark messages as read in takeOversupabase.Skip entirely if we've already
   // discovered the column is missing — prevents an N-per-message flood
   // of 400s in the browser console.
   useEffect(() => {
@@ -193,8 +193,8 @@ export const MessageList: React.FC<Props> = ({
         if (cancelled) return;
         if (isMissingColumn(table, "read_by")) return;
         const newReadBy = [...(msg.read_by || []), currentUsername];
-        const { error } = await supabase
-          .from(table)
+        const { error } = await takeOversupabase
+    .from(table)
           .update({ read_by: newReadBy })
           .eq("msg_id", msg.msg_id);
         if (!error) continue;
@@ -248,7 +248,7 @@ export const MessageList: React.FC<Props> = ({
     } else {
       reactions[emoji] = [...users, currentUsername];
     }
-    await supabase.from(table).update({ reactions }).eq("msg_id", msgId);
+    await takeOversupabase.from(table).update({ reactions }).eq("msg_id", msgId);
   };
 
   const handleReply = (msg: MessageInterface) => {

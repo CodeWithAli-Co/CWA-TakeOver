@@ -37,6 +37,8 @@ tauri-plugin-dialog = "2"
 tauri-plugin-fs = "2"
 tauri-plugin-process = "2"
 tauri-plugin-shell = "2"
+tauri-plugin-stronghold = "2"
+rust-argon2 = "3.0.0"
 
 # ── Windows-only deps ───────────────────────────────────────────────
 # `windows` crate gives us SetCurrentProcessExplicitAppUserModelID,

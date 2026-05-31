@@ -21,7 +21,7 @@ import {
 } from "@/components/ui/shadcnComponents/dialog";
 import { useClientStore } from "@/stores/invoiceStore";
 import { InvoiceType, LineItem } from "@/stores/invoiceQuery";
-import supabase from "@/MyComponents/supabase";
+import { takeOversupabase } from "@/MyComponents/supabase";
 import { getActiveCompanyLabel } from "@/stores/query";
 
 interface Props {
@@ -121,7 +121,7 @@ export const InvoiceFormDialog: React.FC<Props> = ({ open, onOpenChange, onCreat
       company: getActiveCompanyLabel(),
     } as Omit<InvoiceType, "invoice_id">;
 
-    const { error } = await supabase.from("invoices").insert(payload);
+    const { error } = await takeOversupabase.from("invoices").insert(payload);
     setSubmitting(false);
 
     if (error) {

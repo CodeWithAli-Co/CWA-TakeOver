@@ -37,7 +37,7 @@ import {
 } from "lucide-react";
 import { AvatarStack, type AvatarUser } from "@/MyComponents/Reusables/AvatarStack";
 import { useMemo } from "react";
-import supabase from "@/MyComponents/supabase";
+import { takeOversupabase } from "@/MyComponents/supabase";
 import { message } from "@tauri-apps/plugin-dialog";
 
 // Mirror the same priority/status maps used by the card so the
@@ -179,8 +179,8 @@ export function TaskDetailModal({
 
   async function setStatus(next: string) {
     // Stamp completed_at on transition to done; clear on reopen.
-    const { error } = await supabase
-      .from("cwa_todos")
+    const { error } = await takeOversupabase
+.from("cwa_todos")
       .update({
         status: next,
         completed_at: next === "done" ? new Date().toISOString() : null,
@@ -197,8 +197,8 @@ export function TaskDetailModal({
   }
 
   async function deleteTask() {
-    const { error } = await supabase
-      .from("cwa_todos")
+    const { error } = await takeOversupabase
+.from("cwa_todos")
       .delete()
       .eq("todo_id", task.todo_id);
     if (error) {

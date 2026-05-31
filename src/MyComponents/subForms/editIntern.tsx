@@ -29,16 +29,16 @@ export const EditIntern = (props: Props) => {
       console.log(value);
 
       if (value.Username !== "") {
-        const { error } = await supabase
-          .from("interns")
+        const { error } = await takeOversupabase
+    .from("interns")
           .update({ username: value.Username })
           .eq("id", props.rowID);
         if (error) return console.log("Username Error:", error.message);
       }
 
       if (value.Email !== "") {
-        const { error } = await supabase
-          .from("interns")
+        const { error } = await takeOversupabase
+    .from("interns")
           .update({ email: value.Email })
           .eq("id", props.rowID);
         if (error) return console.log("Email Error:", error.message);

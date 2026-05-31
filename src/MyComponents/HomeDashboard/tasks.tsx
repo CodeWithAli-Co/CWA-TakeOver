@@ -1,7 +1,7 @@
 import { message } from "@tauri-apps/plugin-dialog";
 import { AddTodo } from "@/MyComponents/Sidebar/handlingTasking/addTodo";
 import { useEffect, useMemo, useRef, useState } from "react";
-import supabase from "@/MyComponents/supabase";
+import { takeOversupabase } from "@/MyComponents/supabase";
 import { motion, AnimatePresence } from "framer-motion";
 import { ActiveUser, Employees, Todos } from "@/stores/query";
 import {
@@ -157,8 +157,8 @@ function TaskItem({
 
   async function setStatus(next: string) {
     // Stamp completed_at on transition to done; clear on reopen.
-    const { error } = await supabase
-      .from("cwa_todos")
+    const { error } = await takeOversupabase
+.from("cwa_todos")
       .update({
         status: next,
         completed_at: next === "done" ? new Date().toISOString() : null,
@@ -348,7 +348,7 @@ export const TasksComponent = () => {
       if (typeof e.avatar === "string" && e.avatar.startsWith("http")) {
         avatarUrl = e.avatar;
       } else if (e.avatar) {
-        const { data } = supabase.storage
+        const { data } = takeOversupabase.storage
           .from("avatars")
           .getPublicUrl(e.avatar);
         avatarUrl = data?.publicUrl;
@@ -368,7 +368,7 @@ export const TasksComponent = () => {
   } = Todos(user?.[0]?.username);
 
   useEffect(() => {
-    const subscription = supabase
+    const subscription = takeOversupabase
       .channel("all-todos")
       .on("postgres_changes", { event: "*", schema: "public", table: "cwa_todos" }, () => refetchTodos())
       .subscribe();

@@ -142,8 +142,8 @@ export const AddDMGroup = (props: Subscribers) => {
   const form = useForm({
     defaultValues: { groupName: "" },
     onSubmit: async ({ value }) => {
-      const { error } = await supabase
-        .from("dm_groups")
+      const { error } = await takeOversupabase
+  .from("dm_groups")
         .insert({ name: value.groupName, subscribers: newOption, company: getActiveCompanyLabel() });
       if (error) console.log("Error adding DM Group:", error.message);
     },

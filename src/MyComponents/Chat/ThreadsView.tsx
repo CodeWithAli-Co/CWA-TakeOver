@@ -15,7 +15,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { MessageSquare, ChevronRight, Hash, Loader2 } from "lucide-react";
 import { ScrollArea } from "@/components/ui/shadcnComponents/scroll-area";
-import supabase from "@/MyComponents/supabase";
+import { takeOversupabase } from "@/MyComponents/supabase";
 import { useAppStore } from "@/stores/store";
 import { useChatStore } from "@/stores/chatStore";
 import { formatDistanceToNow } from "date-fns";
@@ -109,8 +109,8 @@ export function ThreadsView({ currentUsername }: Props) {
           async (table) => {
             const ids = rootIdsByTable[table];
             if (ids.length === 0) return;
-            const { data } = await supabase
-              .from(table)
+            const { data } = await takeOversupabase
+        .from(table)
               .select("msg_id, sent_by, message, created_at")
               .in("msg_id", ids.slice(0, 200));
             for (const r of data ?? []) {

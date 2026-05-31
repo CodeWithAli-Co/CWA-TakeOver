@@ -31,7 +31,7 @@ import {
 } from "lucide-react";
 import { motion } from "framer-motion";
 import { useMemo, useState } from "react";
-import supabase from "@/MyComponents/supabase";
+import { takeOversupabase } from "@/MyComponents/supabase";
 import { message } from "@tauri-apps/plugin-dialog";
 import { MeetingsQuery, getActiveCompanyLabel } from "@/stores/query";
 import {
@@ -125,7 +125,7 @@ export const AddMeeting = ({ users = [] }: AddMeetingProps = {}) => {
       // hint in console; meetings UI degrades to placeholder
       // avatars for this row.
       const insertWithFallback = async (payload: Record<string, any>) => {
-        let res = await supabase.from("cwa_meetings").insert(payload);
+        let res = await takeOversupabase.from("cwa_meetings").insert(payload);
         if (
           res.error &&
           /attendee_ids/i.test(res.error.message ?? "") &&
@@ -135,7 +135,7 @@ export const AddMeeting = ({ users = [] }: AddMeetingProps = {}) => {
             "cwa_meetings.attendee_ids not found — retrying without it. Run migrations/meeting_attendees.sql in Supabase.",
           );
           const { attendee_ids: _drop, ...rest } = payload;
-          res = await supabase.from("cwa_meetings").insert(rest);
+          res = await takeOversupabase.from("cwa_meetings").insert(rest);
         }
         return res;
       };

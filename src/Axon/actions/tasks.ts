@@ -4,7 +4,7 @@
 // already targets (src/stores/query.ts).
 // ───────────────────────────────────────────────────────────────────
 
-import supabase from "@/MyComponents/supabase";
+import { takeOversupabase } from "@/MyComponents/supabase";
 import type { AxonAction } from "../types";
 import { registerAction } from "./registry";
 import { registerUndoHandler } from "../engine/undoStack";
@@ -21,8 +21,8 @@ function companyLabel(active: string): "CodeWithAli" | "simplicity" {
 registerUndoHandler<{ todoId: number; title: string }>(
   "task.delete-created",
   async ({ todoId, title }) => {
-    const { error } = await supabase
-      .from("cwa_todos")
+    const { error } = await takeOversupabase
+.from("cwa_todos")
       .delete()
       .eq("todo_id", todoId);
     if (error) throw new Error(error.message);
@@ -38,8 +38,7 @@ registerUndoHandler<{
   // Mirror the completed_at behavior of all other status writes —
   // restoring to a non-done state nulls it; restoring to done
   // re-stamps it to now (we don't have the original timestamp here).
-  const { error } = await supabase
-    .from("cwa_todos")
+  const { error } = await takeOversupabase    .from("cwa_todos")
     .update({
       status: previousStatus,
       completed_at:
@@ -54,7 +53,7 @@ registerUndoHandler<{
   snapshot: Record<string, unknown>;
   title: string;
 }>("task.restore-deleted", async ({ snapshot, title }) => {
-  const { error } = await supabase.from("cwa_todos").insert(snapshot);
+  const { error } = await takeOversupabase.from("cwa_todos").insert(snapshot);
   if (error) throw new Error(error.message);
   return `Restored "${title}".`;
 });
@@ -207,8 +206,8 @@ export const createTaskAction: AxonAction<
       };
     }
 
-    const { data, error } = await supabase
-      .from("cwa_todos")
+    const { data, error } = await takeOversupabase
+.from("cwa_todos")
       .insert(row)
       .select()
       .single();
@@ -279,7 +278,7 @@ export const listTasksAction: AxonAction<
     // Clamp to sane bounds so a bad prompt can't request 10k rows.
     const limit = Math.max(1, Math.min(input.limit ?? 25, 200));
     const offset = Math.max(0, input.offset ?? 0);
-    let q = supabase
+    let q = takeOversupabase
       .from("cwa_todos")
       .select("*")
       .order("priorityOrder", { ascending: false })
@@ -363,16 +362,16 @@ export const updateTaskStatusAction: AxonAction<
 
     if (!Number.isNaN(asNum) && Number.isInteger(asNum)) {
       targetId = asNum;
-      const { data: row } = await supabase
-        .from("cwa_todos")
+      const { data: row } = await takeOversupabase
+  .from("cwa_todos")
         .select("status,title")
         .eq("todo_id", targetId)
         .single();
       previousStatus = row?.status ?? null;
       taskTitle = row?.title ?? `task #${targetId}`;
     } else {
-      const { data } = await supabase
-        .from("cwa_todos")
+      const { data } = await takeOversupabase
+  .from("cwa_todos")
         .select("todo_id,title,status")
         .ilike("title", `%${titleOrId}%`)
         .limit(1);
@@ -393,8 +392,8 @@ export const updateTaskStatusAction: AxonAction<
 
     // Stamp completed_at on the status transition so the Velocity
     // widget on /operations can count completions per week.
-    const { error } = await supabase
-      .from("cwa_todos")
+    const { error } = await takeOversupabase
+.from("cwa_todos")
       .update({
         status,
         completed_at: status === "done" ? new Date().toISOString() : null,
@@ -455,16 +454,16 @@ export const deleteTaskAction: AxonAction<
 
     if (!Number.isNaN(asNum) && Number.isInteger(asNum)) {
       targetId = asNum;
-      const { data: row } = await supabase
-        .from("cwa_todos")
+      const { data: row } = await takeOversupabase
+  .from("cwa_todos")
         .select("*")
         .eq("todo_id", targetId)
         .single();
       snapshot = row ?? null;
       title = (row?.title as string | undefined) ?? title;
     } else {
-      const { data } = await supabase
-        .from("cwa_todos")
+      const { data } = await takeOversupabase
+  .from("cwa_todos")
         .select("*")
         .ilike("title", `%${titleOrId}%`)
         .limit(1);
@@ -488,7 +487,7 @@ export const deleteTaskAction: AxonAction<
     );
     if (!confirmed) return { summary: "Deletion cancelled.", data: { deleted: null } };
 
-    const { error } = await supabase.from("cwa_todos").delete().eq("todo_id", targetId);
+    const { error } = await takeOversupabase.from("cwa_todos").delete().eq("todo_id", targetId);
     if (error) return { summary: `Delete failed: ${error.message}` };
 
     // Register undo — reinsert the full snapshot (persists across reload).

@@ -23,7 +23,7 @@ import {
   Shield, KeyRound, Monitor, LogOut, Check, AlertCircle, Loader2,
   Mail, Fingerprint, Clock,
 } from "lucide-react";
-import supabase from "@/MyComponents/supabase";
+import { takeOversupabase } from "@/MyComponents/supabase";
 
 type ResetState = "idle" | "sending" | "sent" | "error";
 type SignoutState = "idle" | "signing" | "error";
@@ -40,8 +40,8 @@ export function SecuritySettings() {
     let cancelled = false;
     (async () => {
       const [u, s] = await Promise.all([
-        supabase.auth.getUser(),
-        supabase.auth.getSession(),
+        takeOversupabase.auth.getUser(),
+        takeOversupabase.auth.getSession(),
       ]);
       if (cancelled) return;
       setAuthUser(u.data.user);
@@ -70,7 +70,7 @@ export function SecuritySettings() {
     const siteUrl =
       (import.meta.env.VITE_TAKEOVER_SITE_URL as string | undefined)?.replace(/\/+$/, "") ?? "";
     const redirectTo = siteUrl ? `${siteUrl}/auth/set-password` : undefined;
-    const { error } = await supabase.auth.resetPasswordForEmail(
+    const { error } = await takeOversupabase.auth.resetPasswordForEmail(
       email,
       redirectTo ? { redirectTo } : undefined,
     );
@@ -89,7 +89,7 @@ export function SecuritySettings() {
     )) return;
     setSignoutState("signing");
     setSignoutError(null);
-    const { error } = await supabase.auth.signOut({ scope: "global" });
+    const { error } = await takeOversupabase.auth.signOut({ scope: "global" });
     if (error) {
       setSignoutError(error.message);
       setSignoutState("error");

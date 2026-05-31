@@ -5,7 +5,7 @@
  * admin tools to reset the localStorage welcome flag.
  */
 
-import supabase from "@/MyComponents/supabase";
+import { takeOversupabase } from "@/MyComponents/supabase";
 
 export interface WelcomeGateReport {
   supaId: string;
@@ -46,8 +46,8 @@ export async function whyWelcomeGated(args: {
 
   // onboarding_instances probe
   try {
-    const { data, error } = await supabase
-      .from("onboarding_instances")
+    const { data, error } = await takeOversupabase
+.from("onboarding_instances")
       .select("id")
       .eq("employee_user_id", supaId)
       .eq("status", "active")

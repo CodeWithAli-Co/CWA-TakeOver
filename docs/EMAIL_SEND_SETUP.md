@@ -68,10 +68,10 @@ latest deployment → ⋮ → Redeploy.
 Verify the route:
 
 ```bash
-curl -i https://takeover.codewithali.com/api/email/offer-letter
+curl -i https://takeover.systems/api/email/offer-letter
 # 405 Method Not Allowed (GET not supported)  ← route is live
 
-curl -i -X POST https://takeover.codewithali.com/api/email/offer-letter \
+curl -i -X POST https://takeover.systems/api/email/offer-letter \
   -H "Authorization: Bearer 0000000000000000000000000000000000000000000000000000000000000000" \
   -H "timestamp: 2026-04-20T21:00:00.000Z" \
   -H "Content-Type: application/json" \
@@ -84,7 +84,7 @@ curl -i -X POST https://takeover.codewithali.com/api/email/offer-letter \
 Add to `CWA-Manager/.env`:
 
 ```bash
-VITE_TAKEOVER_SITE_URL="https://takeover.codewithali.com"
+VITE_TAKEOVER_SITE_URL="https://takeover.systems"
 VITE_EMAIL_HMAC_SECRET="<paste the same 64-char hex from step 1>"
 ```
 

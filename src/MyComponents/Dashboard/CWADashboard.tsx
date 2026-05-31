@@ -49,7 +49,7 @@ import { useShiftsInRange } from "@/stores/shifts";
 import { Suspense, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
-import supabase from "@/MyComponents/supabase";
+import { takeOversupabase } from "@/MyComponents/supabase";
 import { useCandidates } from "@/MyComponents/Hiring/recruitingQueries";
 
 // TODO(revenue): placeholder series — no real revenue source exists
@@ -566,8 +566,8 @@ function EmployeeKudosCard() {
   const { data: employees } = useQuery({
     queryKey: ["app_users_lookup_for_kudos"],
     queryFn: async () => {
-      const { data } = await supabase
-        .from("app_users")
+      const { data } = await takeOversupabase
+  .from("app_users")
         .select("supa_id, username");
       return (data ?? []) as Array<{ supa_id: string; username: string }>;
     },
@@ -775,8 +775,8 @@ function CWADashboardContent() {
   const { data: bugReports } = useQuery({
     queryKey: ["dashboard", "open-bug-reports"],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("bug_reports")
+      const { data, error } = await takeOversupabase
+  .from("bug_reports")
         .select("id, title, severity, created_at")
         .eq("status", "open")
         .order("created_at", { ascending: false })

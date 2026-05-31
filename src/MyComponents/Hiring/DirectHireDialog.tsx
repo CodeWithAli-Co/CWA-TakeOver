@@ -57,7 +57,7 @@ import {
   Link2,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
-import supabase from "@/MyComponents/supabase";
+import { takeOversupabase } from "@/MyComponents/supabase";
 import { inviteUserViaTakeover } from "@/MyComponents/OfferLetters/inviteUserViaTakeover";
 import { ensureOnboardingFor } from "@/MyComponents/Onboarding/ensureOnboarding";
 import { ActiveUser } from "@/stores/query";
@@ -199,8 +199,8 @@ export function DirectHireDialog({
     let username = baseUsername;
     let suffix = 2;
     while (true) {
-      const probe = await supabase
-        .from("app_users")
+      const probe = await takeOversupabase
+  .from("app_users")
         .select("id")
         .eq("username", username)
         .maybeSingle();
@@ -235,8 +235,8 @@ export function DirectHireDialog({
     };
 
     // Attempt 1: full payload.
-    let userRes = await supabase
-      .from("app_users")
+    let userRes = await takeOversupabase
+.from("app_users")
       .insert(fullPayload)
       .select()
       .single();
@@ -248,8 +248,8 @@ export function DirectHireDialog({
       const noNewCols = { ...fullPayload };
       delete noNewCols.hire_source;
       delete noNewCols.referred_by;
-      userRes = await supabase
-        .from("app_users")
+      userRes = await takeOversupabase
+  .from("app_users")
         .insert(noNewCols)
         .select()
         .single();
@@ -266,8 +266,8 @@ export function DirectHireDialog({
         email: trimmedEmail,
         ...(authUserId ? { supa_id: authUserId } : {}),
       };
-      userRes = await supabase
-        .from("app_users")
+      userRes = await takeOversupabase
+  .from("app_users")
         .insert(minimal)
         .select()
         .single();

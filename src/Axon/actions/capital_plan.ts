@@ -9,7 +9,7 @@
 // capital_log_actual).
 // ───────────────────────────────────────────────────────────────────
 
-import supabase from "@/MyComponents/supabase";
+import { takeOversupabase } from "@/MyComponents/supabase";
 import type { AxonAction } from "../types";
 import { registerAction } from "./registry";
 import {
@@ -23,13 +23,13 @@ const CASH_KEY = "cwa-capital-plan-cash-on-hand";
 /** Read the full capital state from Supabase + cash from localStorage. */
 async function loadAdvisorInput(): Promise<AdvisorInput> {
   const [r, c, t, a, l, ac, s] = await Promise.all([
-    supabase.from("capital_rounds").select("*").order("position"),
-    supabase.from("capital_checks").select("*").order("position"),
-    supabase.from("capital_check_touchpoints").select("*").order("occurred_at", { ascending: false }),
-    supabase.from("capital_allocations").select("*").order("position"),
-    supabase.from("capital_line_items").select("*").order("position"),
-    supabase.from("capital_actuals").select("*").order("occurred_on", { ascending: false }),
-    supabase.from("capital_scenarios").select("*").order("created_at", { ascending: false }),
+    takeOversupabase.from("capital_rounds").select("*").order("position"),
+    takeOversupabase.from("capital_checks").select("*").order("position"),
+    takeOversupabase.from("capital_check_touchpoints").select("*").order("occurred_at", { ascending: false }),
+    takeOversupabase.from("capital_allocations").select("*").order("position"),
+    takeOversupabase.from("capital_line_items").select("*").order("position"),
+    takeOversupabase.from("capital_actuals").select("*").order("occurred_on", { ascending: false }),
+    takeOversupabase.from("capital_scenarios").select("*").order("created_at", { ascending: false }),
   ]);
 
   for (const res of [r, c, t, a, l, ac, s]) {

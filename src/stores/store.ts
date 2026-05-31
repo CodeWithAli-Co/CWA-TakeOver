@@ -2,6 +2,8 @@ import { create } from "zustand";
 import { persist } from "zustand/middleware";
 
 interface AppState {
+  initial_launch: boolean;
+  completeInitialLaunch: () => void;
   broadcastID: string;
   setBroadcastID: (broadcastID: string) => void;
   resetBroadcastID: () => void;
@@ -21,7 +23,11 @@ interface AppState {
   setDBSize: (DBUsed: number) => void;
 }
 
-export const useAppStore = create<AppState>()((set) => ({
+export const useAppStore = create<AppState>()(persist((set) => ({
+  // First App Launch
+  initial_launch: true,
+  completeInitialLaunch: () => set({ initial_launch: false }),
+
   // Broadcast state
   broadcastID: "",
   setBroadcastID: (broadcastID: string) => set({ broadcastID }),
@@ -47,6 +53,10 @@ export const useAppStore = create<AppState>()((set) => ({
   // DBUsed
   DBUsed: 0,
   setDBSize: (DBUsed: number) => set({ DBUsed }),
+}),
+{
+  name: "persistent-app-store",
+  partialize: (state) => ({ initial_launch: state.initial_launch })
 }));
 
 // Chat Store

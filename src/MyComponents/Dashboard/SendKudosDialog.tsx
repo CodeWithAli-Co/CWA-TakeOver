@@ -11,7 +11,7 @@
  * from the recipient list).
  *
  * Send path:
- *   supabase.from("team_activity").insert({
+ *   takeOversupabase.from("team_activity").insert({
  *     actor_id: auth.uid(),     // RLS enforces this
  *     target_id: chosen.supa_id,
  *     activity_type: "kudos",
@@ -169,14 +169,14 @@ export function SendKudosDialog() {
 
     const description = `${myName || "Someone"} → ${chosen.username}: ${trimmed}`;
 
-    const { error: err } = await supabase.from("team_activity").insert({
+    const { error: err } = await takeOversupabase.from("team_activity").insert({
       target_id: chosen.supa_id,
       activity_type: "kudos",
       description,
       metadata: { message: trimmed },
       // actor_id is set by RLS WITH CHECK — we still pass auth.uid
       // explicitly because the column is NOT NULL.
-      actor_id: (await supabase.auth.getUser()).data.user?.id,
+      actor_id: (await takeOversupabase.auth.getUser()).data.user?.id,
     });
 
     if (err) {

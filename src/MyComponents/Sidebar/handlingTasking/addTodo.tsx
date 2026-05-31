@@ -23,7 +23,7 @@ import {
   MultiSelectField,
   Option,
 } from "@/MyComponents/Reusables/multiselectField";
-import supabase from "@/MyComponents/supabase";
+import { takeOversupabase } from "@/MyComponents/supabase";
 import { useMultiSelectStore } from "@/stores/store";
 import { getActiveCompanyLabel, ActiveUser } from "@/stores/query";
 import { useForm } from "@tanstack/react-form";
@@ -81,7 +81,7 @@ export const AddTodo = (props: Users) => {
       };
 
       try {
-        const { error } = await supabase.from("cwa_todos").insert({
+        const { error } = await takeOversupabase.from("cwa_todos").insert({
           title: value.title,
           description: value.description,
           label: value.label,

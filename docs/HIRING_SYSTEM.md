@@ -569,7 +569,7 @@ stamp is skipped so the next run retries.
 ### Takeover desktop (`.env.local`)
 
 ```env
-VITE_TAKEOVER_SITE_URL=https://takeover.codewithali.com
+VITE_TAKEOVER_SITE_URL=https://takeover.systems
 VITE_EMAIL_HMAC_SECRET=<64+ char hex>
 VITE_SUPABASE_URL=<takeover project url>
 VITE_SUPABASE_ANON_KEY=<takeover anon key>

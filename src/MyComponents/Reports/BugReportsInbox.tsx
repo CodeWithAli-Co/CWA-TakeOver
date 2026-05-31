@@ -25,7 +25,7 @@ import {
   Clock, Image as ImageIcon, ChevronDown, Globe, Wifi, Terminal,
   Save, ArrowUp, ArrowDown,
 } from "lucide-react";
-import supabase from "@/MyComponents/supabase";
+import { takeOversupabase } from "@/MyComponents/supabase";
 import { ActiveUser } from "@/stores/query";
 import { SlideOver } from "./shared/SlideOver";
 import { InboxToolbar, type Density } from "./shared/InboxToolbar";
@@ -164,8 +164,8 @@ export function BugReportsInbox({ refreshToken }: Props = {}) {
     setRefreshing(true);
     setError(null);
 
-    const { data, error: err } = await supabase
-      .from("bug_reports")
+    const { data, error: err } = await takeOversupabase
+.from("bug_reports")
       .select("*")
       .order("created_at", { ascending: false })
       .limit(500);
@@ -286,8 +286,8 @@ export function BugReportsInbox({ refreshToken }: Props = {}) {
       triaged_by: username || null,
       triaged_at: new Date().toISOString(),
     };
-    const { error: err } = await supabase
-      .from("bug_reports")
+    const { error: err } = await takeOversupabase
+.from("bug_reports")
       .update(patch)
       .in("id", ids);
     if (err) {
@@ -721,8 +721,8 @@ function BugDetailBody({
       triaged_by: currentUsername || null,
       triaged_at: new Date().toISOString(),
     };
-    const { error } = await supabase
-      .from("bug_reports")
+    const { error } = await takeOversupabase
+.from("bug_reports")
       .update(patch)
       .eq("id", report.id);
     setSaving(false);

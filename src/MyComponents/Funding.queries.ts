@@ -7,7 +7,7 @@
  * realtime subscription drop in cleanly.
  */
 
-import supabase from "@/MyComponents/supabase";
+import { takeOversupabase } from "@/MyComponents/supabase";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 // ─── Types (mirror Postgres enums + columns) ──────────────────────
@@ -70,9 +70,9 @@ export interface FundingData {
 // ─── Combined fetcher ─────────────────────────────────────────────
 async function fetchFunding(): Promise<FundingData> {
   const [companiesRes, roundsRes, holdersRes] = await Promise.all([
-    supabase.from("funding_companies").select("*").order("position", { ascending: true }),
-    supabase.from("funding_rounds").select("*").order("position", { ascending: true }),
-    supabase.from("equity_holders").select("*").order("position", { ascending: true }),
+    takeOversupabase.from("funding_companies").select("*").order("position", { ascending: true }),
+    takeOversupabase.from("funding_rounds").select("*").order("position", { ascending: true }),
+    takeOversupabase.from("equity_holders").select("*").order("position", { ascending: true }),
   ]);
 
   if (companiesRes.error) throw companiesRes.error;
@@ -113,13 +113,13 @@ export function useAddCompany() {
       founded_at?: string;
       notes?: string;
     }) => {
-      const { data: existing } = await supabase
-        .from("funding_companies")
+      const { data: existing } = await takeOversupabase
+  .from("funding_companies")
         .select("position")
         .order("position", { ascending: false })
         .limit(1);
       const nextPos = (existing?.[0]?.position ?? 0) + 1;
-      const { error } = await supabase.from("funding_companies").insert({
+      const { error } = await takeOversupabase.from("funding_companies").insert({
         name: input.name,
         parent_company_id: input.parent_company_id ?? null,
         color: input.color ?? "#3b82f6",
@@ -137,8 +137,8 @@ export function useUpdateCompany() {
   const invalidate = useInvalidate();
   return useMutation({
     mutationFn: async (input: { id: string; patch: Partial<Omit<FundingCompany, "id">> }) => {
-      const { error } = await supabase
-        .from("funding_companies")
+      const { error } = await takeOversupabase
+  .from("funding_companies")
         .update(input.patch)
         .eq("id", input.id);
       if (error) throw error;
@@ -151,7 +151,7 @@ export function useDeleteCompany() {
   const invalidate = useInvalidate();
   return useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await supabase.from("funding_companies").delete().eq("id", id);
+      const { error } = await takeOversupabase.from("funding_companies").delete().eq("id", id);
       if (error) throw error;
     },
     onSuccess: invalidate,
@@ -175,15 +175,15 @@ export function useAddRound() {
       lead_investor?: string;
       notes?: string;
     }) => {
-      const { data: existing } = await supabase
-        .from("funding_rounds")
+      const { data: existing } = await takeOversupabase
+  .from("funding_rounds")
         .select("position")
         .eq("company_id", input.company_id)
         .order("position", { ascending: false })
         .limit(1);
       const nextPos = (existing?.[0]?.position ?? 0) + 1;
 
-      const { error } = await supabase.from("funding_rounds").insert({
+      const { error } = await takeOversupabase.from("funding_rounds").insert({
         company_id: input.company_id,
         round_type: input.round_type,
         instrument: input.instrument,
@@ -207,8 +207,8 @@ export function useUpdateRound() {
   const invalidate = useInvalidate();
   return useMutation({
     mutationFn: async (input: { id: string; patch: Partial<Omit<FundingRound, "id">> }) => {
-      const { error } = await supabase
-        .from("funding_rounds")
+      const { error } = await takeOversupabase
+  .from("funding_rounds")
         .update(input.patch)
         .eq("id", input.id);
       if (error) throw error;
@@ -221,7 +221,7 @@ export function useDeleteRound() {
   const invalidate = useInvalidate();
   return useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await supabase.from("funding_rounds").delete().eq("id", id);
+      const { error } = await takeOversupabase.from("funding_rounds").delete().eq("id", id);
       if (error) throw error;
     },
     onSuccess: invalidate,
@@ -241,14 +241,14 @@ export function useAddHolder() {
       granted_at?: string;
       notes?: string;
     }) => {
-      const { data: existing } = await supabase
-        .from("equity_holders")
+      const { data: existing } = await takeOversupabase
+  .from("equity_holders")
         .select("position")
         .eq("company_id", input.company_id)
         .order("position", { ascending: false })
         .limit(1);
       const nextPos = (existing?.[0]?.position ?? 0) + 1;
-      const { error } = await supabase.from("equity_holders").insert({
+      const { error } = await takeOversupabase.from("equity_holders").insert({
         company_id: input.company_id,
         holder_type: input.holder_type,
         holder_name: input.holder_name,
@@ -268,8 +268,8 @@ export function useUpdateHolder() {
   const invalidate = useInvalidate();
   return useMutation({
     mutationFn: async (input: { id: string; patch: Partial<Omit<EquityHolder, "id">> }) => {
-      const { error } = await supabase
-        .from("equity_holders")
+      const { error } = await takeOversupabase
+  .from("equity_holders")
         .update(input.patch)
         .eq("id", input.id);
       if (error) throw error;
@@ -282,7 +282,7 @@ export function useDeleteHolder() {
   const invalidate = useInvalidate();
   return useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await supabase.from("equity_holders").delete().eq("id", id);
+      const { error } = await takeOversupabase.from("equity_holders").delete().eq("id", id);
       if (error) throw error;
     },
     onSuccess: invalidate,

@@ -10,7 +10,7 @@
 //   · Otherwise looks up dm_groups by name (case-insensitive).
 // ───────────────────────────────────────────────────────────────────
 
-import supabase from "@/MyComponents/supabase";
+import { takeOversupabase } from "@/MyComponents/supabase";
 import type { AxonAction } from "../types";
 import { registerAction } from "./registry";
 
@@ -27,8 +27,7 @@ async function resolveChannel(name: string): Promise<ResolvedChannel | null> {
   }
   // Strip leading '#' if the user said "#foo"
   const bare = n.replace(/^#/, "");
-  const { data, error } = await supabase
-    .from("dm_groups")
+  const { data, error } = await takeOversupabase    .from("dm_groups")
     .select("name")
     .ilike("name", `%${bare}%`)
     .limit(5);
@@ -95,7 +94,7 @@ export const sendChatMessageAction: AxonAction<
     };
     if (resolved.table === "cwa_dm_chat") payload.dm_group = resolved.group;
 
-    const { error } = await supabase.from(resolved.table).insert(payload);
+    const { error } = await takeOversupabase.from(resolved.table).insert(payload);
     if (error) {
       ctx.logActivity({
         actionName: "send_chat_message",

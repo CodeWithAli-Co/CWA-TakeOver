@@ -17,7 +17,7 @@
 
 import { useEffect, useState } from "react";
 import { Loader2, Sparkles, X } from "lucide-react";
-import supabase from "@/MyComponents/supabase";
+import { takeOversupabase } from "@/MyComponents/supabase";
 
 interface UserRow {
   supa_id: string;
@@ -58,16 +58,16 @@ export function ProvisionOnboarding({ onClose }: { onClose: () => void }) {
       setError(null);
       try {
         // All users
-        const usersRes = await supabase
-          .from("app_users")
+        const usersRes = await takeOversupabase
+    .from("app_users")
           .select("supa_id, username, role, email")
           .order("username", { ascending: true });
         if (cancelled) return;
         if (usersRes.error) throw usersRes.error;
 
         // Active instances — to filter out users who already have one
-        const instRes = await supabase
-          .from("onboarding_instances")
+        const instRes = await takeOversupabase
+    .from("onboarding_instances")
           .select("employee_user_id")
           .eq("status", "active");
         if (cancelled) return;
@@ -83,8 +83,8 @@ export function ProvisionOnboarding({ onClose }: { onClose: () => void }) {
         setUsers(eligible as UserRow[]);
 
         // Templates
-        const tplRes = await supabase
-          .from("onboarding_templates")
+        const tplRes = await takeOversupabase
+    .from("onboarding_templates")
           .select("id, name, brand, employment_type, item_list")
           .order("name", { ascending: true });
         if (cancelled) return;
@@ -110,8 +110,8 @@ export function ProvisionOnboarding({ onClose }: { onClose: () => void }) {
       const tpl = templates.find((t) => t.id === selectedTemplate);
       if (!tpl) throw new Error("Template not found.");
 
-      const inst = await supabase
-        .from("onboarding_instances")
+      const inst = await takeOversupabase
+  .from("onboarding_instances")
         .insert({
           offer_letter_id: null,
           employee_user_id: selectedUser,
@@ -131,8 +131,8 @@ export function ProvisionOnboarding({ onClose }: { onClose: () => void }) {
         status: "pending",
       }));
       if (items.length > 0) {
-        const itemsRes = await supabase
-          .from("onboarding_items")
+        const itemsRes = await takeOversupabase
+    .from("onboarding_items")
           .insert(items);
         if (itemsRes.error) throw itemsRes.error;
       }

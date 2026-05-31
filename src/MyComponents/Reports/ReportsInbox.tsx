@@ -18,7 +18,7 @@ import {
   Eye, FileText, FolderKanban, ClipboardList, AlertTriangle,
   MessageSquare, Save, Building2, ArrowUp, ArrowDown,
 } from "lucide-react";
-import supabase from "@/MyComponents/supabase";
+import { takeOversupabase } from "@/MyComponents/supabase";
 import { SlideOver } from "./shared/SlideOver";
 import { InboxToolbar, type Density } from "./shared/InboxToolbar";
 
@@ -147,7 +147,7 @@ export function ReportsInbox({ refreshToken }: Props = {}) {
         .from("app_users")
         .select("supa_id, username, role, avatarURL")
         .not("supa_id", "is", null),
-      supabase.from("projects").select("id, name"),
+      takeOversupabase.from("projects").select("id, name"),
     ]);
 
     if (r.error) {
@@ -273,7 +273,7 @@ export function ReportsInbox({ refreshToken }: Props = {}) {
   const bulkSetStatus = async (next: ReportStatus) => {
     if (selectedIds.size === 0) return;
     const ids = [...selectedIds];
-    const { data: { user: authUser } } = await supabase.auth.getUser();
+    const { data: { user: authUser } } = await takeOversupabase.auth.getUser();
     const patch: any = { status: next };
     if (next === "reviewed") {
       patch.reviewer_user_id = authUser?.id ?? null;
@@ -283,8 +283,8 @@ export function ReportsInbox({ refreshToken }: Props = {}) {
       patch.reviewer_user_id = null;
       patch.reviewed_at = null;
     }
-    const { error: err } = await supabase
-      .from("reports")
+    const { error: err } = await takeOversupabase
+.from("reports")
       .update(patch)
       .in("id", ids);
     if (err) { setError(err.message); return; }
@@ -712,9 +712,9 @@ function ReportDetailBody({
 
   const markReviewed = async () => {
     setSaving(true); setErr(null);
-    const { data: { user: authUser } } = await supabase.auth.getUser();
-    const { error } = await supabase
-      .from("reports")
+    const { data: { user: authUser } } = await takeOversupabase.auth.getUser();
+    const { error } = await takeOversupabase
+.from("reports")
       .update({
         status: "reviewed",
         review_notes: notes.trim() || null,
@@ -730,8 +730,8 @@ function ReportDetailBody({
 
   const saveNotesOnly = async () => {
     setSaving(true); setErr(null);
-    const { error } = await supabase
-      .from("reports")
+    const { error } = await takeOversupabase
+.from("reports")
       .update({ review_notes: notes.trim() || null })
       .eq("id", report.id);
     setSaving(false);
@@ -742,8 +742,8 @@ function ReportDetailBody({
   const archive = async () => {
     if (!confirm("Archive this report?")) return;
     setSaving(true); setErr(null);
-    const { error } = await supabase
-      .from("reports")
+    const { error } = await takeOversupabase
+.from("reports")
       .update({ status: "archived" })
       .eq("id", report.id);
     setSaving(false);
@@ -754,8 +754,8 @@ function ReportDetailBody({
 
   const unreview = async () => {
     setSaving(true); setErr(null);
-    const { error } = await supabase
-      .from("reports")
+    const { error } = await takeOversupabase
+.from("reports")
       .update({
         status: "submitted",
         reviewed_at: null,

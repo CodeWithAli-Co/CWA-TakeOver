@@ -22,7 +22,7 @@ import {
 } from "lucide-react";
 import { motion } from "framer-motion";
 import { ScrollArea } from "@/components/ui/shadcnComponents/scroll-area";
-import supabase from "@/MyComponents/supabase";
+import { takeOversupabase } from "@/MyComponents/supabase";
 import { ActiveUser } from "@/stores/query";
 import { draftOfferLetter, type OfferInput } from "./draftOffer";
 import { OfferLetterPDF } from "./OfferLetterPDF";
@@ -142,8 +142,8 @@ export function OfferLettersDashboard() {
     let cancelled = false;
     (async () => {
       setLoadingPast(true);
-      const { data, error } = await supabase
-        .from("offer_letters")
+      const { data, error } = await takeOversupabase
+  .from("offer_letters")
         .select("*")
         .order("created_at", { ascending: false })
         .limit(30);
@@ -241,9 +241,9 @@ export function OfferLettersDashboard() {
     };
     let res;
     if (currentId) {
-      res = await supabase.from("offer_letters").update(payload).eq("id", currentId).select().single();
+      res = await takeOversupabase.from("offer_letters").update(payload).eq("id", currentId).select().single();
     } else {
-      res = await supabase.from("offer_letters").insert(payload).select().single();
+      res = await takeOversupabase.from("offer_letters").insert(payload).select().single();
     }
     setSaving(false);
     if (res.error) {
@@ -255,7 +255,7 @@ export function OfferLettersDashboard() {
       ) {
         setTableMissing(true);
         setGenerateError(
-          "Can't save — the offer_letters table doesn't exist yet. Run migrations/offer_letters_init.sql in Supabase.",
+          "Can't save — the offer_letters table doesn't exist yet. Run migrations/offer_letters_init.sql in takeOversupabase.",
         );
       } else {
         setGenerateError(`Save failed: ${res.error.message}`);

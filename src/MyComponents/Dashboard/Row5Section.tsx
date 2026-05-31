@@ -32,7 +32,7 @@ import {
 } from "lucide-react";
 import { BentoCard } from "./BentoCard";
 import { colorForUser } from "@/lib/yjs/awareness";
-import supabase from "@/MyComponents/supabase";
+import { takeOversupabase } from "@/MyComponents/supabase";
 import { ActiveUser, Employees } from "@/stores/query";
 import { useChatStore } from "@/stores/chatStore";
 
@@ -106,7 +106,7 @@ function useAvatarsByName(): Map<string, string> {
       if (typeof e.avatar === "string" && e.avatar.startsWith("http")) {
         url = e.avatar;
       } else if (e.avatar) {
-        const { data } = supabase.storage
+        const { data } = takeOversupabase.storage
           .from("avatars")
           .getPublicUrl(e.avatar);
         url = data?.publicUrl;
@@ -232,8 +232,8 @@ function useCoEditedResources(currentUsername: string) {
     enabled: !!currentUsername,
     staleTime: 60_000,
     queryFn: async (): Promise<CoEditedDoc[]> => {
-      const { data: collabRows } = await supabase
-        .from("workspace_collaborators")
+      const { data: collabRows } = await takeOversupabase
+  .from("workspace_collaborators")
         .select("resource_type, resource_id")
         .eq("username", currentUsername);
       const docIds = (collabRows ?? [])
@@ -327,8 +327,8 @@ function useRecentFeedback(currentUsername: string) {
     enabled: !!currentUsername,
     staleTime: 60_000,
     queryFn: async (): Promise<FeedbackComment[]> => {
-      const { data: collabRows } = await supabase
-        .from("workspace_collaborators")
+      const { data: collabRows } = await takeOversupabase
+  .from("workspace_collaborators")
         .select("resource_type, resource_id")
         .eq("username", currentUsername);
       const docIds = (collabRows ?? [])

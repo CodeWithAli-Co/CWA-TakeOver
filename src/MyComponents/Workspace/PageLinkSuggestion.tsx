@@ -30,7 +30,7 @@ const pageLinkPluginKey = new PluginKey("pageLinkSuggestion");
 import { ReactRenderer } from "@tiptap/react";
 import tippy, { type Instance as TippyInstance } from "tippy.js";
 import { FileText, Table as TableIcon } from "lucide-react";
-import supabase from "@/MyComponents/supabase";
+import { takeOversupabase } from "@/MyComponents/supabase";
 
 interface PageRef {
   id: string;

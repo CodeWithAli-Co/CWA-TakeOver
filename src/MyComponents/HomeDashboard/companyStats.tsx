@@ -58,13 +58,13 @@ const CompanyStats = () => {
   useEffect(() => {
     async function fetchStats() {
       try {
-        const { data: meeting } = await supabase.from("cwa_meetings").select("id");
-        const { data: credentials } = await supabase.from("cwa_creds").select("id, folder");
-        const { data: allTask } = await supabase.from("cwa_todos").select("todo_id, label, status").eq("label", userRole);
-        const { data: expense } = await supabase.from("cwa_expenses").select("amount");
-        const { data: revenue } = await supabase.from("cwa_calculatorProps").select("initialCapital").single();
-        const { data: userCount } = await supabase.from("app_users").select("id");
-        const { data: subscriptions } = await supabase.from("cwa_revenues").select("amount").eq("revenueType", "subscription");
+        const { data: meeting } = await takeOversupabase.from("cwa_meetings").select("id");
+        const { data: credentials } = await takeOversupabase.from("cwa_creds").select("id, folder");
+        const { data: allTask } = await takeOversupabase.from("cwa_todos").select("todo_id, label, status").eq("label", userRole);
+        const { data: expense } = await takeOversupabase.from("cwa_expenses").select("amount");
+        const { data: revenue } = await takeOversupabase.from("cwa_calculatorProps").select("initialCapital").single();
+        const { data: userCount } = await takeOversupabase.from("app_users").select("id");
+        const { data: subscriptions } = await takeOversupabase.from("cwa_revenues").select("amount").eq("revenueType", "subscription");
 
         let totalExpense = 0;
         if (expense?.length) totalExpense = expense.reduce((total, e) => total - (e.amount || 0), 0);

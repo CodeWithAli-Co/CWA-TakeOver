@@ -40,24 +40,24 @@ export const EditData = (props: Props) => {
     onSubmit: async ({ value }) => {
       console.log(value);
       if (value.platformName !== "") {
-        const { error } = await supabase
-          .from("cwa_creds")
+        const { error } = await takeOversupabase
+    .from("cwa_creds")
           .update({ platform_name: value.platformName })
           .eq("id", props.rowID);
         if (error) return console.log("PlatformName Error:", error.message);
       }
 
       if (value.Username !== "") {
-        const { error } = await supabase
-          .from("cwa_creds")
+        const { error } = await takeOversupabase
+    .from("cwa_creds")
           .update({ acc_username: value.Username })
           .eq("id", props.rowID);
         if (error) return console.log("Username Error:", error.message);
       }
 
       if (value.Email !== "") {
-        const { error } = await supabase
-          .from("cwa_creds")
+        const { error } = await takeOversupabase
+    .from("cwa_creds")
           .update({ acc_email: value.Email })
           .eq("id", props.rowID);
         if (error) return console.log("Email Error:", error.message);
@@ -70,8 +70,8 @@ export const EditData = (props: Props) => {
           plaintext: value.Password,
         });
         encPassword.then(async (res) => {
-          const { error } = await supabase
-            .from("cwa_creds")
+          const { error } = await takeOversupabase
+      .from("cwa_creds")
             .update({
               acc_enc_password: res,
             })
@@ -81,16 +81,16 @@ export const EditData = (props: Props) => {
       }
 
       if (value.AddInfo !== "") {
-        const { error } = await supabase
-          .from("cwa_creds")
+        const { error } = await takeOversupabase
+    .from("cwa_creds")
           .update({ acc_addinfo: value.AddInfo })
           .eq("id", props.rowID);
         if (error) return console.log("AddInfo Error:", error.message);
       }
 
       if (value.Active !== "") {
-        const { error } = await supabase
-          .from("cwa_creds")
+        const { error } = await takeOversupabase
+    .from("cwa_creds")
           .update({ active: JSON.parse(value.Active) })
           .eq("id", props.rowID);
         if (error) return console.log("Active Status Error:", error.message);

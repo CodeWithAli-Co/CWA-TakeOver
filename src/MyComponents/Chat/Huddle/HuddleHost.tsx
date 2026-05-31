@@ -18,7 +18,7 @@ import { HuddleBar } from "./HuddleBar";
 import { useHuddleStore } from "@/stores/huddleStore";
 import { useLiveHuddlesStore } from "@/stores/liveHuddlesStore";
 import { ActiveUser } from "@/stores/query";
-import supabase from "@/MyComponents/supabase";
+import { takeOversupabase } from "@/MyComponents/supabase";
 
 export function HuddleHost() {
   const { group, muted, camera, leaveHuddle, toggleMute, toggleCamera, pttActive, quality } =
@@ -80,13 +80,13 @@ export function HuddleHost() {
   // into liveHuddlesStore SYNCHRONOUSLY on every group change. The
   // presence broadcast is still propagated to remote peers so their
   // sidebars update too — but our local UI never depends on it.
-  const lobbyRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
+  const lobbyRef = useRef<ReturnType<typeof takeOversupabase.channel> | null>(null);
   const subscribedRef = useRef<boolean>(false);
 
   useEffect(() => {
     if (!username) return;
 
-    const channel = supabase.channel("huddle-lobby", {
+    const channel = takeOversupabase.channel("huddle-lobby", {
       config: { presence: { key: username } },
     });
     lobbyRef.current = channel;

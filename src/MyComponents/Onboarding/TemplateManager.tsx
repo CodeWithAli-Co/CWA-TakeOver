@@ -23,7 +23,7 @@ import {
   ClipboardList, Building2, GraduationCap, AlertTriangle,
   Sparkles, FileText, Users, Briefcase,
 } from "lucide-react";
-import supabase from "@/MyComponents/supabase";
+import { takeOversupabase } from "@/MyComponents/supabase";
 
 // ── Constants ─────────────────────────────────────────
 
@@ -97,15 +97,15 @@ export function TemplateManager() {
     setLoading(true);
     setLoadError(null);
     try {
-      const tplRes = await supabase
-        .from("onboarding_templates")
+      const tplRes = await takeOversupabase
+  .from("onboarding_templates")
         .select("id, name, brand, employment_type, item_list, created_at")
         .order("name", { ascending: true });
       if (tplRes.error) throw tplRes.error;
       setTemplates((tplRes.data ?? []) as TemplateRow[]);
 
-      const instRes = await supabase
-        .from("onboarding_instances")
+      const instRes = await takeOversupabase
+  .from("onboarding_instances")
         .select("template_id, status");
       if (!instRes.error && instRes.data) {
         const u: UsageCounts = {};
@@ -196,14 +196,14 @@ export function TemplateManager() {
         item_list: cleanItems,
       };
       if (draft.id) {
-        const upd = await supabase
-          .from("onboarding_templates")
+        const upd = await takeOversupabase
+    .from("onboarding_templates")
           .update(payload)
           .eq("id", draft.id);
         if (upd.error) throw upd.error;
       } else {
-        const ins = await supabase
-          .from("onboarding_templates")
+        const ins = await takeOversupabase
+    .from("onboarding_templates")
           .insert(payload)
           .select("id")
           .single();
@@ -230,7 +230,7 @@ export function TemplateManager() {
           ? `${total} historical instance${total === 1 ? "" : "s"} reference this template. Delete?`
           : `Delete “${t.name}”?`;
     if (!window.confirm(warning)) return;
-    const del = await supabase.from("onboarding_templates").delete().eq("id", t.id);
+    const del = await takeOversupabase.from("onboarding_templates").delete().eq("id", t.id);
     if (del.error) {
       alert(`Delete failed: ${del.error.message}`);
       return;

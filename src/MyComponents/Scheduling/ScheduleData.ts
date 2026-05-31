@@ -8,8 +8,7 @@ import {
   } from "./ScheduleComponents";
   
 
-  const { data : events, error: eventsError } = await supabase
-    .schema("schedule")
+  const { data : events, error: eventsError } = await takeOversupabase    .schema("schedule")
     .from("event")
     .select("*")
 

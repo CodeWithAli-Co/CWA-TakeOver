@@ -36,7 +36,7 @@ import {
   removeAwarenessStates,
 } from "y-protocols/awareness";
 import type { RealtimeChannel } from "@supabase/supabase-js";
-import supabase from "@/MyComponents/supabase";
+import { takeOversupabase } from "@/MyComponents/supabase";
 
 type Listener = () => void;
 
@@ -59,7 +59,7 @@ export class SupabaseYProvider {
     this.awareness = new Awareness(doc);
     this.channelName = `workspace-yjs:${channelName}`;
 
-    this.channel = supabase.channel(this.channelName, {
+    this.channel = takeOversupabase.channel(this.channelName, {
       config: {
         broadcast: {
           // We don't want our own broadcasts echoed back — Y.js already

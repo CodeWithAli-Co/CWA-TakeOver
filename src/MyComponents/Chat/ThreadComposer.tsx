@@ -8,7 +8,7 @@
 
 import { useRef, useState } from "react";
 import { Send } from "lucide-react";
-import supabase from "@/MyComponents/supabase";
+import { takeOversupabase } from "@/MyComponents/supabase";
 import { getActiveCompanyLabel } from "@/stores/query";
 
 interface Props {
@@ -47,7 +47,7 @@ export function ThreadComposer({
       payload.dm_group = group;
     }
 
-    const { error } = await supabase.from(table).insert(payload);
+    const { error } = await takeOversupabase.from(table).insert(payload);
     if (error) {
       console.error("[thread reply] insert failed:", error.message);
       setText(msg); // restore so user doesn't lose their draft

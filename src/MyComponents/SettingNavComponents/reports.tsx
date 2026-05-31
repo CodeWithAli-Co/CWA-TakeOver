@@ -22,7 +22,7 @@ import {
   Send, Loader2, AlertCircle, Clock, Eye, FileText, FolderKanban,
   ClipboardList, AlertTriangle, MessageSquare,
 } from "lucide-react";
-import supabase from "@/MyComponents/supabase";
+import { takeOversupabase } from "@/MyComponents/supabase";
 import { ActiveUser } from "@/stores/query";
 import {
   REPORT_TEMPLATES,
@@ -152,7 +152,7 @@ export default function ReportSettings() {
   const reload = async () => {
     setLoadingReports(true);
     const [p, r] = await Promise.all([
-      supabase.from("projects").select("id, name, company").order("name"),
+      takeOversupabase.from("projects").select("id, name, company").order("name"),
       mySupaId
         ? supabase
             .from("reports")
@@ -204,7 +204,7 @@ export default function ReportSettings() {
     // with nothing under the heading.
     const cleanedBody = stripEmptyScaffoldHeadings(body).trim();
 
-    const { error } = await supabase.from("reports").insert({
+    const { error } = await takeOversupabase.from("reports").insert({
       title: title.trim(),
       body: cleanedBody || null,
       type,

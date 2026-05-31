@@ -22,7 +22,7 @@ import { useEffect } from "react";
 import {
   useQuery, useMutation, useQueryClient, type UseQueryOptions,
 } from "@tanstack/react-query";
-import supabase from "@/MyComponents/supabase";
+import { takeOversupabase } from "@/MyComponents/supabase";
 import type {
   WorkspaceDocument,
   WorkspaceSpreadsheet,
@@ -116,8 +116,8 @@ export function useDocument(
     queryKey: workspaceKeys.document(id ?? ""),
     enabled: !!id && (options.enabled ?? true),
     queryFn: async (): Promise<WorkspaceDocument | null> => {
-      const { data, error } = await supabase
-        .from(DOC_TABLE)
+      const { data, error } = await takeOversupabase
+  .from(DOC_TABLE)
         .select("*")
         .eq("id", id!)
         .maybeSingle();
@@ -137,8 +137,8 @@ export function useCreateDocument() {
       content?: JSONContent;
       visibility?: WorkspaceVisibility;
     }): Promise<WorkspaceDocument> => {
-      const { data, error } = await supabase
-        .from(DOC_TABLE)
+      const { data, error } = await takeOversupabase
+  .from(DOC_TABLE)
         .insert({
           owner: vars.owner,
           title: vars.title ?? "Untitled",
@@ -167,8 +167,8 @@ export function useUpdateDocument() {
       patch: Partial<Pick<WorkspaceDocument, "title" | "content" | "visibility" | "icon" | "archived">>;
       updatedBy: string;
     }): Promise<WorkspaceDocument> => {
-      const { data, error } = await supabase
-        .from(DOC_TABLE)
+      const { data, error } = await takeOversupabase
+  .from(DOC_TABLE)
         .update({ ...vars.patch, updated_by: vars.updatedBy })
         .eq("id", vars.id)
         .select("*")
@@ -193,8 +193,8 @@ export function useDeleteDocument() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (id: string): Promise<void> => {
-      const { error } = await supabase
-        .from(DOC_TABLE)
+      const { error } = await takeOversupabase
+  .from(DOC_TABLE)
         .update({ archived: true })
         .eq("id", id);
       if (error) throw error;
@@ -211,8 +211,8 @@ export function useRestoreDocument() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (id: string): Promise<void> => {
-      const { error } = await supabase
-        .from(DOC_TABLE)
+      const { error } = await takeOversupabase
+  .from(DOC_TABLE)
         .update({ archived: false })
         .eq("id", id);
       if (error) throw error;
@@ -235,7 +235,7 @@ export function useHardDeleteDocument() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (id: string): Promise<void> => {
-      const { error } = await supabase.from(DOC_TABLE).delete().eq("id", id);
+      const { error } = await takeOversupabase.from(DOC_TABLE).delete().eq("id", id);
       if (error) throw error;
     },
     onSuccess: () => {
@@ -253,8 +253,8 @@ export function useUpdateDocTabs() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (input: { id: string; tabs: import("./workspaceTypes").WorkspaceDocTab[] }) => {
-      const { data, error } = await supabase
-        .from(DOC_TABLE)
+      const { data, error } = await takeOversupabase
+  .from(DOC_TABLE)
         .update({ tabs: input.tabs })
         .eq("id", input.id)
         .select()
@@ -277,8 +277,8 @@ export function useSpreadsheet(id: string | null | undefined) {
     queryKey: workspaceKeys.spreadsheet(id ?? ""),
     enabled: !!id,
     queryFn: async (): Promise<WorkspaceSpreadsheet | null> => {
-      const { data, error } = await supabase
-        .from(SHEET_TABLE)
+      const { data, error } = await takeOversupabase
+  .from(SHEET_TABLE)
         .select("*")
         .eq("id", id!)
         .maybeSingle();
@@ -296,8 +296,8 @@ export function useCreateSpreadsheet() {
       title?: string;
       visibility?: WorkspaceVisibility;
     }): Promise<WorkspaceSpreadsheet> => {
-      const { data, error } = await supabase
-        .from(SHEET_TABLE)
+      const { data, error } = await takeOversupabase
+  .from(SHEET_TABLE)
         .insert({
           owner: vars.owner,
           title: vars.title ?? "Untitled",
@@ -326,8 +326,8 @@ export function useUpdateSpreadsheet() {
       patch: Partial<Pick<WorkspaceSpreadsheet, "title" | "snapshot" | "visibility" | "icon" | "archived">>;
       updatedBy: string;
     }): Promise<WorkspaceSpreadsheet> => {
-      const { data, error } = await supabase
-        .from(SHEET_TABLE)
+      const { data, error } = await takeOversupabase
+  .from(SHEET_TABLE)
         .update({ ...vars.patch, updated_by: vars.updatedBy })
         .eq("id", vars.id)
         .select("*")
@@ -347,8 +347,8 @@ export function useDeleteSpreadsheet() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (id: string): Promise<void> => {
-      const { error } = await supabase
-        .from(SHEET_TABLE)
+      const { error } = await takeOversupabase
+  .from(SHEET_TABLE)
         .update({ archived: true })
         .eq("id", id);
       if (error) throw error;
@@ -365,8 +365,8 @@ export function useRestoreSpreadsheet() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (id: string): Promise<void> => {
-      const { error } = await supabase
-        .from(SHEET_TABLE)
+      const { error } = await takeOversupabase
+  .from(SHEET_TABLE)
         .update({ archived: false })
         .eq("id", id);
       if (error) throw error;
@@ -383,7 +383,7 @@ export function useHardDeleteSpreadsheet() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (id: string): Promise<void> => {
-      const { error } = await supabase.from(SHEET_TABLE).delete().eq("id", id);
+      const { error } = await takeOversupabase.from(SHEET_TABLE).delete().eq("id", id);
       if (error) throw error;
     },
     onSuccess: () => {
@@ -404,8 +404,8 @@ export function useCollaborators(
     queryKey: workspaceKeys.collaborators(kind, resourceId ?? ""),
     enabled: !!resourceId,
     queryFn: async (): Promise<WorkspaceCollaborator[]> => {
-      const { data, error } = await supabase
-        .from(COLLAB_TABLE)
+      const { data, error } = await takeOversupabase
+  .from(COLLAB_TABLE)
         .select("*")
         .eq("resource_type", kind)
         .eq("resource_id", resourceId!)
@@ -426,8 +426,8 @@ export function useAddCollaborator() {
       role: WorkspaceRole;
       addedBy: string;
     }): Promise<WorkspaceCollaborator> => {
-      const { data, error } = await supabase
-        .from(COLLAB_TABLE)
+      const { data, error } = await takeOversupabase
+  .from(COLLAB_TABLE)
         .insert({
           resource_type: vars.kind,
           resource_id: vars.resourceId,
@@ -457,8 +457,8 @@ export function useUpdateCollaboratorRole() {
       resourceId: string;
       role: WorkspaceRole;
     }): Promise<WorkspaceCollaborator> => {
-      const { data, error } = await supabase
-        .from(COLLAB_TABLE)
+      const { data, error } = await takeOversupabase
+  .from(COLLAB_TABLE)
         .update({ role: vars.role })
         .eq("id", vars.id)
         .select("*")
@@ -482,7 +482,7 @@ export function useRemoveCollaborator() {
       kind: WorkspaceResourceKind;
       resourceId: string;
     }): Promise<void> => {
-      const { error } = await supabase.from(COLLAB_TABLE).delete().eq("id", vars.id);
+      const { error } = await takeOversupabase.from(COLLAB_TABLE).delete().eq("id", vars.id);
       if (error) throw error;
     },
     onSuccess: (_void, vars) => {
@@ -504,8 +504,8 @@ export function useComments(
     queryKey: workspaceKeys.comments(kind, resourceId ?? ""),
     enabled: !!resourceId,
     queryFn: async (): Promise<WorkspaceComment[]> => {
-      const { data, error } = await supabase
-        .from(COMMENT_TABLE)
+      const { data, error } = await takeOversupabase
+  .from(COMMENT_TABLE)
         .select("*")
         .eq("resource_type", kind)
         .eq("resource_id", resourceId!)
@@ -528,8 +528,8 @@ export function useCreateComment() {
       parentId?: string | null;
       commentKind?: "comment" | "suggestion";
     }): Promise<WorkspaceComment> => {
-      const { data, error } = await supabase
-        .from(COMMENT_TABLE)
+      const { data, error } = await takeOversupabase
+  .from(COMMENT_TABLE)
         .insert({
           resource_type: vars.kind,
           resource_id: vars.resourceId,
@@ -565,8 +565,8 @@ export function useUpdateComment() {
       const patch: any = {};
       if (vars.body !== undefined) patch.body = vars.body;
       if (vars.status !== undefined) patch.status = vars.status;
-      const { data, error } = await supabase
-        .from(COMMENT_TABLE)
+      const { data, error } = await takeOversupabase
+  .from(COMMENT_TABLE)
         .update(patch)
         .eq("id", vars.id)
         .select("*")
@@ -590,7 +590,7 @@ export function useDeleteComment() {
       kind: WorkspaceResourceKind;
       resourceId: string;
     }): Promise<void> => {
-      const { error } = await supabase.from(COMMENT_TABLE).delete().eq("id", vars.id);
+      const { error } = await takeOversupabase.from(COMMENT_TABLE).delete().eq("id", vars.id);
       if (error) throw error;
     },
     onSuccess: (_void, vars) => {
@@ -612,8 +612,8 @@ export function useVersions(
     queryKey: workspaceKeys.versions(kind, resourceId ?? ""),
     enabled: !!resourceId,
     queryFn: async (): Promise<WorkspaceVersion[]> => {
-      const { data, error } = await supabase
-        .from(VERSION_TABLE)
+      const { data, error } = await takeOversupabase
+  .from(VERSION_TABLE)
         .select("*")
         .eq("resource_type", kind)
         .eq("resource_id", resourceId!)
@@ -634,8 +634,8 @@ export function useCreateVersion() {
       createdBy: string;
       label?: string | null;
     }): Promise<WorkspaceVersion> => {
-      const { data, error } = await supabase
-        .from(VERSION_TABLE)
+      const { data, error } = await takeOversupabase
+  .from(VERSION_TABLE)
         .insert({
           resource_type: vars.kind,
           resource_id: vars.resourceId,
@@ -671,8 +671,8 @@ export function useRestoreDocumentVersion() {
       snapshot: unknown;
       restoredBy: string;
     }): Promise<WorkspaceDocument> => {
-      const { data, error } = await supabase
-        .from(DOC_TABLE)
+      const { data, error } = await takeOversupabase
+  .from(DOC_TABLE)
         .update({
           content: vars.snapshot,
           y_state: null,
@@ -699,8 +699,8 @@ export function useRestoreSpreadsheetVersion() {
       snapshot: unknown;
       restoredBy: string;
     }): Promise<WorkspaceSpreadsheet> => {
-      const { data, error } = await supabase
-        .from(SHEET_TABLE)
+      const { data, error } = await takeOversupabase
+  .from(SHEET_TABLE)
         .update({
           snapshot: vars.snapshot,
           updated_by: vars.restoredBy,
@@ -761,7 +761,7 @@ export function useRecentActivity(limit = 12) {
 export function useWorkspaceRealtime() {
   const qc = useQueryClient();
   useEffect(() => {
-    const ch = supabase
+    const ch = takeOversupabase
       .channel("workspace-realtime")
       .on(
         "postgres_changes",
@@ -844,8 +844,8 @@ export function useFolders() {
   return useQuery({
     queryKey: workspaceKeys.folders,
     queryFn: async (): Promise<WorkspaceFolder[]> => {
-      const { data, error } = await supabase
-        .from(FOLDER_TABLE)
+      const { data, error } = await takeOversupabase
+  .from(FOLDER_TABLE)
         .select("*")
         .order("position", { ascending: true })
         .order("created_at", { ascending: true });
@@ -863,8 +863,8 @@ export function useFolderCounts() {
   return useQuery({
     queryKey: workspaceKeys.folderCounts,
     queryFn: async (): Promise<Map<string, WorkspaceFolderCounts>> => {
-      const { data, error } = await supabase
-        .from(FOLDER_COUNTS_VIEW)
+      const { data, error } = await takeOversupabase
+  .from(FOLDER_COUNTS_VIEW)
         .select("*");
       if (error) throw error;
       const m = new Map<string, WorkspaceFolderCounts>();
@@ -897,16 +897,16 @@ export function useCreateFolder() {
       color?: string | null;
     }) => {
       // Sibling position = max(position) + 1 among siblings.
-      const { data: siblings } = await supabase
-        .from(FOLDER_TABLE)
+      const { data: siblings } = await takeOversupabase
+  .from(FOLDER_TABLE)
         .select("position")
         .eq("parent_folder_id", input.parent_folder_id ?? null)
         .order("position", { ascending: false })
         .limit(1);
       const nextPos = (siblings?.[0]?.position ?? 0) + 1;
 
-      const { data, error } = await supabase
-        .from(FOLDER_TABLE)
+      const { data, error } = await takeOversupabase
+  .from(FOLDER_TABLE)
         .insert({
           name: input.name,
           owner: input.owner,
@@ -928,8 +928,8 @@ export function useRenameFolder() {
   const invalidate = useFolderInvalidate();
   return useMutation({
     mutationFn: async (input: { id: string; name: string }) => {
-      const { error } = await supabase
-        .from(FOLDER_TABLE)
+      const { error } = await takeOversupabase
+  .from(FOLDER_TABLE)
         .update({ name: input.name })
         .eq("id", input.id);
       if (error) throw error;
@@ -959,8 +959,8 @@ export function useMoveFolder() {
           throw new Error("Can't move a folder into its own descendant.");
         }
       }
-      const { error } = await supabase
-        .from(FOLDER_TABLE)
+      const { error } = await takeOversupabase
+  .from(FOLDER_TABLE)
         .update({ parent_folder_id: input.newParentId })
         .eq("id", input.id);
       if (error) throw error;
@@ -977,8 +977,8 @@ export function useDeleteFolder() {
       // ON DELETE SET NULL on workspace_documents.folder_id /
       // workspace_spreadsheets.folder_id falls the contained resources
       // back to the workspace root instead of vaporizing them.
-      const { error } = await supabase
-        .from(FOLDER_TABLE)
+      const { error } = await takeOversupabase
+  .from(FOLDER_TABLE)
         .delete()
         .eq("id", id);
       if (error) throw error;
@@ -998,8 +998,8 @@ export function useMoveResourceToFolder() {
       folder_id: string | null;
     }) => {
       const table = input.kind === "document" ? DOC_TABLE : SHEET_TABLE;
-      const { error } = await supabase
-        .from(table)
+      const { error } = await takeOversupabase
+  .from(table)
         .update({ folder_id: input.folder_id })
         .eq("id", input.id);
       if (error) throw error;

@@ -22,16 +22,16 @@ export const EditEmployee = (props: Props) => {
     },
     onSubmit: async ({ value }) => {
       if (value.Username !== "") {
-        const { error } = await supabase
-          .from("app_users")
+        const { error } = await takeOversupabase
+    .from("app_users")
           .update({ username: value.Username })
           .eq("id", props.rowID);
         if (error) return console.log("Username Error:", error.message);
       }
 
       if (value.Email !== "") {
-        const { error } = await supabase
-          .from("app_users")
+        const { error } = await takeOversupabase
+    .from("app_users")
           .update({ email: value.Email })
           .eq("id", props.rowID);
         if (error) return console.log("Email Error:", error.message);

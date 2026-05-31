@@ -171,13 +171,13 @@ export function CreateGrowthTrackDialog() {
       due_date: s.due_date || null,
     }));
 
-    const { data: auth } = await supabase.auth.getUser();
+    const { data: auth } = await takeOversupabase.auth.getUser();
     const authoredBy = auth?.user?.id;
 
     let upsertError: string | null = null;
     if (existingTrack) {
-      const { error: err } = await supabase
-        .from("growth_tracks")
+      const { error: err } = await takeOversupabase
+  .from("growth_tracks")
         .update({
           role_title: trimmedRole,
           next_milestone: trimmedMilestone,
@@ -190,7 +190,7 @@ export function CreateGrowthTrackDialog() {
         .eq("id", existingTrack.id);
       if (err) upsertError = err.message;
     } else {
-      const { error: err } = await supabase.from("growth_tracks").insert({
+      const { error: err } = await takeOversupabase.from("growth_tracks").insert({
         user_id: chosenUserId,
         role_title: trimmedRole,
         next_milestone: trimmedMilestone,

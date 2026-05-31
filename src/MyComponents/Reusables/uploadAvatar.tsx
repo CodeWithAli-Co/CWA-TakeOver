@@ -14,7 +14,7 @@ function UploadAvatar(style: Styles) {
 
   async function RemoveOldAvatar() {
     // Remove Avatar from Storage
-    const { error: DeleteError } = await supabase.storage
+    const { error: DeleteError } = await takeOversupabase.storage
       .from("avatars")
       .remove([user[0].avatarURL]);
     if (DeleteError) {
@@ -25,8 +25,8 @@ function UploadAvatar(style: Styles) {
     }
 
     // Reset User avatar
-    const { error: updateError } = await supabase
-      .from("app_users")
+    const { error: updateError } = await takeOversupabase
+.from("app_users")
       .update({ avatar: "default_avatar.png" })
       .eq("supa_id", user[0].supa_id);
     if (updateError) {
@@ -63,7 +63,7 @@ function UploadAvatar(style: Styles) {
     const fileName = user[0].username + "Avatar";
 
     // Upload file to Supabase Storage
-    const { error } = await supabase.storage
+    const { error } = await takeOversupabase.storage
       .from("avatars")
       .upload(`${fileName}.png`, blob, {
         cacheControl: '1',
@@ -77,8 +77,8 @@ function UploadAvatar(style: Styles) {
       });
     } else {
       // Write file name to user's avatar row
-      const { error: updateError } = await supabase
-        .from("app_users")
+      const { error: updateError } = await takeOversupabase
+  .from("app_users")
         .update({ avatar: `${fileName}.png` })
         .eq("supa_id", user[0].supa_id);
       if (updateError) {
@@ -89,8 +89,8 @@ function UploadAvatar(style: Styles) {
       }
 
       // Write file name to DM user's avatar row
-      // const { error: DMUpdateError } = await supabase
-      //   .from("cwa_dm_chat")
+      // const { error: DMUpdateError } = await takeOversupabase
+//   .from("cwa_dm_chat")
       //   .update({ userAvatar: `${fileName}.png` })
       //   .eq("sent_by", user[0].username);
       // if (DMUpdateError) {

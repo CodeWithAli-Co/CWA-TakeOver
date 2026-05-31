@@ -40,7 +40,7 @@ export const LoginPage = () => {
       setAuthError(null);
       setSubmitting(true);
       try {
-        const { data, error } = await supabase.auth.signInWithPassword({
+        const { data, error } = await takeOversupabase.auth.signInWithPassword({
           email: value.email.trim(),
           password: value.password,
         });
@@ -61,7 +61,7 @@ export const LoginPage = () => {
         // Double-check the identity is email-verified before flipping
         // the store flag. Keeps the "user half-signed-up and stuck"
         // edge case from landing them in a broken state.
-        const { data: verify } = await supabase.auth.getUserIdentities();
+        const { data: verify } = await takeOversupabase.auth.getUserIdentities();
         const verified = verify?.identities?.[0]?.identity_data?.email_verified;
         if (data.user?.role === "authenticated" && verified) {
           setIsLoggedIn("true");
@@ -160,7 +160,7 @@ export const LoginPage = () => {
                         const redirectTo = siteUrl
                           ? `${siteUrl}/auth/set-password`
                           : undefined;
-                        const { error } = await supabase.auth.resetPasswordForEmail(
+                        const { error } = await takeOversupabase.auth.resetPasswordForEmail(
                           email,
                           redirectTo ? { redirectTo } : undefined,
                         );

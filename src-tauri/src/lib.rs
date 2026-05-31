@@ -178,11 +178,7 @@ async fn update(app: tauri::AppHandle) -> tauri_plugin_updater::Result<()> {
 /// Caller passes the rendered HTML body; this just hands it to
 /// Resend with the standard CodeWithAli "from" address.
 #[tauri::command(async)]
-async fn send_invite(
-    to_email: &str,
-    subject_msg: &str,
-    html: &str,
-) -> Result<String, String> {
+async fn send_invite(to_email: &str, subject_msg: &str, html: &str) -> Result<String, String> {
     let _env = dotenv().unwrap();
 
     let resend = Resend::default();
@@ -273,6 +269,15 @@ pub fn run() {
         .plugin(tauri_plugin_sql::Builder::new().build())
         .plugin(tauri_plugin_opener::init())
         .setup(|app| {
+            // Build & Read from Stronhold Vault
+            let salt_path = app
+                .path()
+                .app_local_data_dir()
+                .expect("could not resolve app local data path")
+                .join("salt.txt");
+            app.handle()
+                .plugin(tauri_plugin_stronghold::Builder::with_argon2(&salt_path).build())?;
+
             // ── Windows: register the AppUserModelID at runtime ──
             // Without this, OS toasts dispatched from a `tauri dev`
             // binary silently disappear because Windows doesn't
@@ -284,12 +289,10 @@ pub fn run() {
             // works as before.
             #[cfg(windows)]
             {
-                use windows::core::PCWSTR;
                 use windows::Win32::UI::Shell::SetCurrentProcessExplicitAppUserModelID;
+                use windows::core::PCWSTR;
                 // Must match `bundle.identifier` in tauri.conf.json.
-                let aumid: Vec<u16> = "com.cwa-takeover.app\0"
-                    .encode_utf16()
-                    .collect();
+                let aumid: Vec<u16> = "com.cwa-takeover.app\0".encode_utf16().collect();
                 unsafe {
                     let _ = SetCurrentProcessExplicitAppUserModelID(PCWSTR(aumid.as_ptr()));
                 }

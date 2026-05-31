@@ -79,7 +79,7 @@ export default function FundingPage() {
 
   // Realtime sync — multi-operator (Ali + Hanif both planning)
   useEffect(() => {
-    const ch = supabase
+    const ch = takeOversupabase
       .channel("funding-realtime")
       .on("postgres_changes", { event: "*", schema: "public", table: "funding_companies" },
         () => qc.invalidateQueries({ queryKey: FUNDING_QUERY_KEY }))

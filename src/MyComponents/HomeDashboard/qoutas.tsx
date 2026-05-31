@@ -22,7 +22,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/shadcnComponents/select";
-import supabase from "@/MyComponents/supabase";
+import { takeOversupabase } from "@/MyComponents/supabase";
 import { getActiveCompanyLabel } from "@/stores/query";
 import { useCompanyFilter } from "@/stores/store";
 import { format, startOfWeek, endOfWeek, addWeeks, subWeeks } from "date-fns";
@@ -223,7 +223,7 @@ export default function Quotas() {
   useEffect(() => {
     const loadQuotas = async () => {
       if (!currentUser) return;
-      let query = supabase
+      let query = takeOversupabase
         .from("weekly_quotas")
         .select("*")
         .gte("week_start", format(startDate, "yyyy-MM-dd"))
@@ -239,7 +239,7 @@ export default function Quotas() {
     };
     loadQuotas();
 
-    const subscription = supabase
+    const subscription = takeOversupabase
       .channel("weekly_quotas_changes")
       .on("postgres_changes", { event: "*", schema: "public", table: "weekly_quotas" }, () => loadQuotas())
       .subscribe();
@@ -256,12 +256,12 @@ export default function Quotas() {
     const week_end = format(endDate, "yyyy-MM-dd");
 
     if (quotaData.id) {
-      await supabase
-        .from("weekly_quotas")
+      await takeOversupabase
+  .from("weekly_quotas")
         .update({ title: quotaData.title, description: quotaData.description, status: quotaData.status, deadline: quotaData.deadline, updated_at: new Date().toISOString() })
         .eq("id", quotaData.id);
     } else {
-      await supabase.from("weekly_quotas").insert({
+      await takeOversupabase.from("weekly_quotas").insert({
         title: quotaData.title, description: quotaData.description, status: quotaData.status,
         deadline: quotaData.deadline, user_id: currentUser.supa_id, week_start, week_end,
         created_at: new Date().toISOString(), updated_at: new Date().toISOString(),
@@ -271,11 +271,11 @@ export default function Quotas() {
   };
 
   const handleStatusChange = async (id: any, newStatus: any) => {
-    await supabase.from("weekly_quotas").update({ status: newStatus, updated_at: new Date().toISOString() }).eq("id", id);
+    await takeOversupabase.from("weekly_quotas").update({ status: newStatus, updated_at: new Date().toISOString() }).eq("id", id);
   };
 
   const handleDeleteQuota = async (id: any) => {
-    await supabase.from("weekly_quotas").delete().eq("id", id);
+    await takeOversupabase.from("weekly_quotas").delete().eq("id", id);
   };
 
   const handleEditQuota = (quota: any) => { setEditingQuota(quota); setDialogOpen(true); };

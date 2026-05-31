@@ -2,7 +2,7 @@
 // Supabase data access layer for time tracking system
 
 import { useSuspenseQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import supabase from "@/MyComponents/supabase";
+import { takeOversupabase } from "@/MyComponents/supabase";
 import { getActiveCompanyLabel } from "./query";
 import type {
   TimeEntry,
@@ -28,8 +28,8 @@ export function useCompanies() {
   return useSuspenseQuery({
     queryKey: ["time-companies"],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("time_companies")
+      const { data, error } = await takeOversupabase
+  .from("time_companies")
         .select("*")
         .order("name");
 
@@ -47,7 +47,7 @@ export function useProjects(companyId?: string) {
   return useSuspenseQuery({
     queryKey: ["time-projects", companyId],
     queryFn: async () => {
-      let query = supabase
+      let query = takeOversupabase
         .from("time_projects")
         .select("*")
         .eq("is_active", true)
@@ -84,7 +84,7 @@ export function useTimeEntries(filters?: TimeEntryFilters) {
   return useSuspenseQuery({
     queryKey: ["time-entries", filters],
     queryFn: async () => {
-      let query = supabase
+      let query = takeOversupabase
         .from("time_entries")
         .select(ENTRY_SELECT_WITH_RELATIONS)
         .order("date", { ascending: false })
@@ -123,8 +123,8 @@ export function useTimeEntriesByDate(date: string) {
   return useSuspenseQuery({
     queryKey: ["time-entries-date", date],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("time_entries")
+      const { data, error } = await takeOversupabase
+  .from("time_entries")
         .select(ENTRY_SELECT_WITH_RELATIONS)
         .eq("date", date)
         .order("start_time", { ascending: true });
@@ -139,8 +139,8 @@ export function useTimeEntriesByDateRange(startDate: string, endDate: string) {
   return useSuspenseQuery({
     queryKey: ["time-entries-range", startDate, endDate],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("time_entries")
+      const { data, error } = await takeOversupabase
+  .from("time_entries")
         .select(ENTRY_SELECT_WITH_RELATIONS)
         .gte("date", startDate)
         .lte("date", endDate)
@@ -171,8 +171,8 @@ export function useTimeStats() {
       const yearEnd = format(endOfYear(today), "yyyy-MM-dd");
 
       // Fetch all entries for the year (for streak calculation)
-      const { data: yearEntries, error: yearError } = await supabase
-        .from("time_entries")
+      const { data: yearEntries, error: yearError } = await takeOversupabase
+  .from("time_entries")
         .select("date, duration_minutes, is_billable")
         .gte("date", yearStart)
         .lte("date", yearEnd);
@@ -248,8 +248,8 @@ export function useWeeklyStats(weekOffset: number = 0) {
       const weekEndStr = format(weekEnd, "yyyy-MM-dd");
 
       // Fetch entries without joins
-      const { data: entries, error } = await supabase
-        .from("time_entries")
+      const { data: entries, error } = await takeOversupabase
+  .from("time_entries")
         .select("*")
         .gte("date", weekStartStr)
         .lte("date", weekEndStr)
@@ -258,8 +258,8 @@ export function useWeeklyStats(weekOffset: number = 0) {
       if (error) throw error;
 
       // Fetch companies separately
-      const { data: companies, error: companyError } = await supabase
-        .from("time_companies")
+      const { data: companies, error: companyError } = await takeOversupabase
+  .from("time_companies")
         .select("*");
       if (companyError) throw companyError;
 
@@ -342,11 +342,11 @@ export function useCreateTimeEntry() {
 
   return useMutation({
     mutationFn: async (entry: TimeEntryCreateData) => {
-      const { data: user } = await supabase.auth.getUser();
+      const { data: user } = await takeOversupabase.auth.getUser();
       if (!user.user) throw new Error("Not authenticated");
 
-      const { data, error } = await supabase
-        .from("time_entries")
+      const { data, error } = await takeOversupabase
+  .from("time_entries")
         .insert({
           ...entry,
           user_id: user.user.id,
@@ -371,8 +371,8 @@ export function useUpdateTimeEntry() {
 
   return useMutation({
     mutationFn: async ({ id, ...updates }: TimeEntryUpdateData) => {
-      const { data, error } = await supabase
-        .from("time_entries")
+      const { data, error } = await takeOversupabase
+  .from("time_entries")
         .update(updates)
         .eq("id", id)
         .select()
@@ -394,7 +394,7 @@ export function useDeleteTimeEntry() {
 
   return useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await supabase.from("time_entries").delete().eq("id", id);
+      const { error } = await takeOversupabase.from("time_entries").delete().eq("id", id);
       if (error) throw error;
     },
     onSuccess: () => {
@@ -413,16 +413,16 @@ export function useTimeTemplates() {
   return useSuspenseQuery({
     queryKey: ["time-templates"],
     queryFn: async () => {
-      const { data: templates, error } = await supabase
-        .from("time_entry_templates")
+      const { data: templates, error } = await takeOversupabase
+  .from("time_entry_templates")
         .select("*")
         .order("name");
 
       if (error) throw error;
 
       // Fetch companies and projects separately
-      const { data: companies } = await supabase.from("time_companies").select("*");
-      const { data: projects } = await supabase.from("time_projects").select("*");
+      const { data: companies } = await takeOversupabase.from("time_companies").select("*");
+      const { data: projects } = await takeOversupabase.from("time_projects").select("*");
 
       const companyMap = new Map((companies || []).map((c) => [c.id, c]));
       const projectMap = new Map((projects || []).map((p) => [p.id, p]));
@@ -441,11 +441,11 @@ export function useCreateTemplate() {
 
   return useMutation({
     mutationFn: async (template: Omit<TimeEntryTemplate, "id" | "user_id" | "created_at">) => {
-      const { data: user } = await supabase.auth.getUser();
+      const { data: user } = await takeOversupabase.auth.getUser();
       if (!user.user) throw new Error("Not authenticated");
 
-      const { data, error } = await supabase
-        .from("time_entry_templates")
+      const { data, error } = await takeOversupabase
+  .from("time_entry_templates")
         .insert({
           ...template,
           user_id: user.user.id,
@@ -471,8 +471,8 @@ export function useTimeGoals() {
   return useSuspenseQuery({
     queryKey: ["time-goals"],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("time_goals")
+      const { data, error } = await takeOversupabase
+  .from("time_goals")
         .select("*")
         .eq("is_active", true)
         .order("type");

@@ -7,7 +7,7 @@
 // Adding more is: append an entry to MONITORS.
 // ───────────────────────────────────────────────────────────────────
 
-import supabase from "@/MyComponents/supabase";
+import { takeOversupabase } from "@/MyComponents/supabase";
 import type { Monitor } from "../types";
 
 function companyLabel(active: string): "CodeWithAli" | "simplicity" {
@@ -59,7 +59,7 @@ export const MONITORS: Monitor[] = [
 
       return async (ctx) => {
         const now = new Date().toISOString();
-        let q = supabase
+        let q = takeOversupabase
           .from("cwa_todos")
           .select("todo_id", { count: "exact", head: true })
           .neq("status", "done")
@@ -126,7 +126,7 @@ export const MONITORS: Monitor[] = [
         const fiveDaysAgo = new Date(today);
         fiveDaysAgo.setDate(fiveDaysAgo.getDate() - 5);
 
-        let mq = supabase
+        let mq = takeOversupabase
           .from("cwa_meetings")
           .select("id, meeting_title, date")
           .lte("date", twoDaysAgo.toISOString().slice(0, 10))
@@ -143,8 +143,8 @@ export const MONITORS: Monitor[] = [
           const title = ((m as any).meeting_title as string | undefined)?.trim();
           if (!title || title.length < 4) continue;
           const safeTitle = title.replace(/[%_]/g, "").slice(0, 40);
-          const { count: matches } = await supabase
-            .from("cwa_todos")
+          const { count: matches } = await takeOversupabase
+      .from("cwa_todos")
             .select("todo_id", { count: "exact", head: true })
             .ilike("title", `%${safeTitle}%`);
           if ((matches ?? 0) === 0) {
@@ -171,7 +171,7 @@ export const MONITORS: Monitor[] = [
         const cutoff14 = new Date(now);
         cutoff14.setDate(cutoff14.getDate() - 14);
 
-        let q = supabase
+        let q = takeOversupabase
           .from("cwa_invoices")
           .select("outcome, creation_date")
           .gte("creation_date", cutoff14.toISOString())
@@ -211,8 +211,8 @@ export const MONITORS: Monitor[] = [
     check: (() => {
       let baseline: number | null = null;
       return async (_ctx) => {
-        const { count, error } = await supabase
-          .from("app_users")
+        const { count, error } = await takeOversupabase
+    .from("app_users")
           .select("supa_id", { count: "exact", head: true });
         if (error) return null;
         const now = count ?? 0;

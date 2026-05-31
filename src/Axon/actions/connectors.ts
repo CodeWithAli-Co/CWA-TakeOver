@@ -36,7 +36,7 @@ import {
   notionTitleOf,
   type NotionPage,
 } from "@/lib/notion";
-import supabase from "@/MyComponents/supabase";
+import { takeOversupabase } from "@/MyComponents/supabase";
 
 // ─── list_connectors ───────────────────────────────────────────────
 
@@ -52,8 +52,8 @@ export const listConnectorsAction: AxonAction<
     "List every connector the team has wired up. Returns the kind (e.g. 'airtable', 'stripe'), display name, and last sync time for each. Use this BEFORE other connector actions to confirm a kind is actually connected.",
   input_schema: { type: "object", properties: {} },
   handler: async (_input, ctx) => {
-    const { data, error } = await supabase
-      .from("connectors")
+    const { data, error } = await takeOversupabase
+.from("connectors")
       .select("kind, display_name, last_synced_at, status")
       .eq("status", "connected")
       .order("connected_at", { ascending: false });

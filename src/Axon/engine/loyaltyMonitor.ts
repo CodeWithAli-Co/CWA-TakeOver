@@ -12,7 +12,7 @@
  * directed at Ali/the CEO.
  */
 
-import supabase from "@/MyComponents/supabase";
+import { takeOversupabase } from "@/MyComponents/supabase";
 import { sendNotification } from "@tauri-apps/plugin-notification";
 
 // CEO's identity strings. Match is case-insensitive.
@@ -306,7 +306,7 @@ export async function handleDirectDisrespect(
     void (async () => {
       try {
         const ceoDmName = `dm::${[axonDisplayName, ceoUsername].sort().join("::")}`;
-        await supabase.from("dm_groups").upsert(
+        await takeOversupabase.from("dm_groups").upsert(
           { name: ceoDmName, subscribers: [axonDisplayName, ceoUsername] },
           { onConflict: "name", ignoreDuplicates: true } as any,
         );
@@ -341,7 +341,7 @@ async function typeAndPost(
   table: "cwa_chat" | "cwa_dm_chat",
   message: string,
 ): Promise<void> {
-  const typingCh = supabase.channel(`typing-${group}`, {
+  const typingCh = takeOversupabase.channel(`typing-${group}`, {
     config: { presence: { key: displayName } },
   });
   // Subscribe + broadcast typing. Supabase presence `.track` is only
@@ -366,7 +366,7 @@ async function typeAndPost(
     message,
   };
   if (table === "cwa_dm_chat") payload.dm_group = group;
-  await supabase.from(table).insert(payload);
+  await takeOversupabase.from(table).insert(payload);
 
   // Stop showing the typing indicator.
   try {
@@ -403,7 +403,7 @@ export async function respondToSlander(
   // Same typing-indicator pattern — the CEO sees Axon "typing" and
   // then the alert lands.
   const ceoDmName = `dm::${[axonDisplayName, ceoUsername].sort().join("::")}`;
-  await supabase.from("dm_groups").upsert(
+  await takeOversupabase.from("dm_groups").upsert(
     {
       name: ceoDmName,
       subscribers: [axonDisplayName, ceoUsername],

@@ -7,8 +7,8 @@
  * when they pressed the shortcut.
  *
  * Send path:
- *   - "#General"          → supabase.from("cwa_chat").insert(...)
- *   - "@user" / dm name   → supabase.from("cwa_dm_chat").insert(...)
+ *   - "#General"          → takeOversupabase.from("cwa_chat").insert(...)
+ *   - "@user" / dm name   → takeOversupabase.from("cwa_dm_chat").insert(...)
  *
  * Wire-up: mounted once in __root.tsx. Subscribes to the
  * useQuickCompose zustand store; rendered only when open=true.
@@ -181,14 +181,14 @@ export function QuickComposeModal() {
     setError(null);
     try {
       if (chosen.kind === "channel") {
-        const { error: insertErr } = await supabase.from("cwa_chat").insert({
+        const { error: insertErr } = await takeOversupabase.from("cwa_chat").insert({
           sent_by: user.username,
           message: body.trim(),
           userAvatar: user.avatarURL,
         });
         if (insertErr) throw insertErr;
       } else {
-        const { error: insertErr } = await supabase.from("cwa_dm_chat").insert({
+        const { error: insertErr } = await takeOversupabase.from("cwa_dm_chat").insert({
           dm_group: chosen.id,
           sent_by: user.username,
           message: body.trim(),

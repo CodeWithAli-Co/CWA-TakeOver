@@ -46,7 +46,7 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/shadcnComponents/label";
 import { Employees, ActiveUser } from "@/stores/query";
-import supabase from "@/MyComponents/supabase";
+import { takeOversupabase } from "@/MyComponents/supabase";
 import { useCompanyFilter } from "@/stores/store";
 import { Tracker, TrackerDot } from "@/components/editorial/Tracker";
 import { Mono } from "@/components/editorial/Mono";
@@ -155,7 +155,7 @@ function EmployeeScheduleContent() {
   useEffect(() => {
     let cancelled = false;
     (async () => {
-      let q = supabase.from("schedule_events").select("*");
+      let q = takeOversupabase.from("schedule_events").select("*");
       if (activeCompany !== "all") q = q.eq("company", companyLabel);
       const { data, error } = await q.order("date", { ascending: true });
       if (cancelled) return;
@@ -178,7 +178,7 @@ function EmployeeScheduleContent() {
 
   // Realtime subscription - keeps every open client in sync
   useEffect(() => {
-    const channel = supabase
+    const channel = takeOversupabase
       .channel("schedule_events_realtime")
       .on(
         "postgres_changes",
@@ -276,7 +276,7 @@ function EmployeeScheduleContent() {
   const remove = async (id: string) => {
     // Optimistic
     setEvents((arr) => arr.filter((e) => e.id !== id));
-    const { error } = await supabase.from("schedule_events").delete().eq("id", id);
+    const { error } = await takeOversupabase.from("schedule_events").delete().eq("id", id);
     if (error) {
       setLoadError(`Delete failed: ${error.message}`);
     }
@@ -398,8 +398,8 @@ function EmployeeScheduleContent() {
 
           if (editingEvent) {
             // Update existing row
-            const { data, error } = await supabase
-              .from("schedule_events")
+            const { data, error } = await takeOversupabase
+        .from("schedule_events")
               .update(payload)
               .eq("id", editingEvent.id)
               .select()
@@ -414,8 +414,8 @@ function EmployeeScheduleContent() {
             }
           } else {
             // Insert new row
-            const { data, error } = await supabase
-              .from("schedule_events")
+            const { data, error } = await takeOversupabase
+        .from("schedule_events")
               .insert(payload)
               .select()
               .maybeSingle();

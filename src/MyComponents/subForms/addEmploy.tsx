@@ -13,7 +13,7 @@ export const AddEmployee = () => {
     },
     onSubmit: async ({ value }) => {
       console.log(value);
-      const { error } = await supabase.from("app_users").insert({
+      const { error } = await takeOversupabase.from("app_users").insert({
         username: value.Username,
         email: value.Email,
         role: value.Role,

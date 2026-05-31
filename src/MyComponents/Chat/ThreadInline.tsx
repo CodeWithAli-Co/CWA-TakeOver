@@ -8,7 +8,7 @@
 import { useEffect, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { ChevronDown, ChevronRight } from "lucide-react";
-import supabase from "@/MyComponents/supabase";
+import { takeOversupabase } from "@/MyComponents/supabase";
 import { fetchThreadReplies } from "@/stores/query";
 import type { MessageInterface } from "@/stores/query";
 import { MessageBubble } from "./MessageBubble";
@@ -51,7 +51,7 @@ export function ThreadInline({
 
   useEffect(() => {
     if (!open) return;
-    const channel = supabase
+    const channel = takeOversupabase
       .channel(`thread-inline-${table}-${rootMsg.msg_id}`)
       .on(
         "postgres_changes",

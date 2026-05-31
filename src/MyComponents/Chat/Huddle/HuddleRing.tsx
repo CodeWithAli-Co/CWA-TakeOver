@@ -17,7 +17,7 @@ import { useEffect, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { Phone, X, Volume2 } from "lucide-react";
 import { useNavigate } from "@tanstack/react-router";
-import supabase from "@/MyComponents/supabase";
+import { takeOversupabase } from "@/MyComponents/supabase";
 import { useAppStore } from "@/stores/store";
 import { displayLabelForDM, isDMKey } from "../displayName";
 
@@ -37,11 +37,11 @@ interface Props {
 
 /** Module-level singleton so `announceHuddleStart` and `HuddleRing`
  *  share one channel instance. Prevents double-delivery. */
-let ringChannel: ReturnType<typeof supabase.channel> | null = null;
+let ringChannel: ReturnType<typeof takeOversupabase.channel> | null = null;
 let ringChannelSubscribing = false;
 function getRingChannel() {
   if (!ringChannel) {
-    ringChannel = supabase.channel("huddle-ring", {
+    ringChannel = takeOversupabase.channel("huddle-ring", {
       // Explicitly opt out of self-delivery so the sender never sees
       // their own broadcast. Fixes the ring-on-starter-side bug.
       config: { broadcast: { self: false, ack: false } },

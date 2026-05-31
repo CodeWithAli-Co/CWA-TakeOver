@@ -17,7 +17,7 @@
  *   capital_scenarios           · saved what-if models
  */
 
-import supabase from "@/MyComponents/supabase";
+import { takeOversupabase } from "@/MyComponents/supabase";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect } from "react";
 
@@ -179,13 +179,13 @@ async function fetchCapitalPlan(): Promise<CapitalPlanData> {
   const [
     roundsRes, checksRes, touchpointsRes, allocsRes, lineItemsRes, actualsRes, scenariosRes,
   ] = await Promise.all([
-    supabase.from("capital_rounds").select("*").order("position", { ascending: true }),
-    supabase.from("capital_checks").select("*").order("position", { ascending: true }),
-    supabase.from("capital_check_touchpoints").select("*").order("occurred_at", { ascending: false }),
-    supabase.from("capital_allocations").select("*").order("position", { ascending: true }),
-    supabase.from("capital_line_items").select("*").order("position", { ascending: true }),
-    supabase.from("capital_actuals").select("*").order("occurred_on", { ascending: false }),
-    supabase.from("capital_scenarios").select("*").order("created_at", { ascending: false }),
+    takeOversupabase.from("capital_rounds").select("*").order("position", { ascending: true }),
+    takeOversupabase.from("capital_checks").select("*").order("position", { ascending: true }),
+    takeOversupabase.from("capital_check_touchpoints").select("*").order("occurred_at", { ascending: false }),
+    takeOversupabase.from("capital_allocations").select("*").order("position", { ascending: true }),
+    takeOversupabase.from("capital_line_items").select("*").order("position", { ascending: true }),
+    takeOversupabase.from("capital_actuals").select("*").order("occurred_on", { ascending: false }),
+    takeOversupabase.from("capital_scenarios").select("*").order("created_at", { ascending: false }),
   ]);
 
   if (roundsRes.error) throw roundsRes.error;
@@ -225,7 +225,7 @@ export function useCapitalPlan() {
 export function useCapitalPlanRealtime() {
   const qc = useQueryClient();
   useEffect(() => {
-    const channel = supabase
+    const channel = takeOversupabase
       .channel("capital-plan-realtime")
       .on("postgres_changes", { event: "*", schema: "public", table: "capital_rounds" },
         () => qc.invalidateQueries({ queryKey: CAPITAL_PLAN_QUERY_KEY }))
@@ -242,7 +242,7 @@ export function useCapitalPlanRealtime() {
       .on("postgres_changes", { event: "*", schema: "public", table: "capital_scenarios" },
         () => qc.invalidateQueries({ queryKey: CAPITAL_PLAN_QUERY_KEY }))
       .subscribe();
-    return () => { supabase.removeChannel(channel); };
+    return () => { takeOversupabase.removeChannel(channel); };
   }, [qc]);
 }
 
@@ -258,7 +258,7 @@ export function useUpsertRound() {
   const invalidate = useInvalidate();
   return useMutation({
     mutationFn: async (row: Partial<CapitalRound> & { name: string; round_type: CapitalRoundType }) => {
-      const { data, error } = await supabase.from("capital_rounds").upsert(row).select().single();
+      const { data, error } = await takeOversupabase.from("capital_rounds").upsert(row).select().single();
       if (error) throw error;
       return data as CapitalRound;
     },
@@ -269,7 +269,7 @@ export function useDeleteRound() {
   const invalidate = useInvalidate();
   return useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await supabase.from("capital_rounds").delete().eq("id", id);
+      const { error } = await takeOversupabase.from("capital_rounds").delete().eq("id", id);
       if (error) throw error;
     },
     onSuccess: invalidate,
@@ -281,7 +281,7 @@ export function useUpsertCheck() {
   const invalidate = useInvalidate();
   return useMutation({
     mutationFn: async (row: Partial<CapitalCheck> & { round_id: string; investor_name: string }) => {
-      const { data, error } = await supabase.from("capital_checks").upsert(row).select().single();
+      const { data, error } = await takeOversupabase.from("capital_checks").upsert(row).select().single();
       if (error) throw error;
       return data as CapitalCheck;
     },
@@ -292,7 +292,7 @@ export function useDeleteCheck() {
   const invalidate = useInvalidate();
   return useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await supabase.from("capital_checks").delete().eq("id", id);
+      const { error } = await takeOversupabase.from("capital_checks").delete().eq("id", id);
       if (error) throw error;
     },
     onSuccess: invalidate,
@@ -303,7 +303,7 @@ export function useMoveCheckStatus() {
   return useMutation({
     mutationFn: async ({ id, status }: { id: string; status: CapitalCheckStatus }) => {
       const patch: Partial<CapitalCheck> = { status, last_touch_at: new Date().toISOString() };
-      const { data, error } = await supabase.from("capital_checks").update(patch).eq("id", id).select().single();
+      const { data, error } = await takeOversupabase.from("capital_checks").update(patch).eq("id", id).select().single();
       if (error) throw error;
       return data as CapitalCheck;
     },
@@ -316,10 +316,10 @@ export function useAddTouchpoint() {
   const invalidate = useInvalidate();
   return useMutation({
     mutationFn: async (row: Partial<CapitalCheckTouchpoint> & { check_id: string; summary: string }) => {
-      const { data, error } = await supabase.from("capital_check_touchpoints").insert(row).select().single();
+      const { data, error } = await takeOversupabase.from("capital_check_touchpoints").insert(row).select().single();
       if (error) throw error;
       // Also bump the check's last_touch_at
-      await supabase.from("capital_checks").update({ last_touch_at: row.occurred_at ?? new Date().toISOString() }).eq("id", row.check_id);
+      await takeOversupabase.from("capital_checks").update({ last_touch_at: row.occurred_at ?? new Date().toISOString() }).eq("id", row.check_id);
       return data as CapitalCheckTouchpoint;
     },
     onSuccess: invalidate,
@@ -329,7 +329,7 @@ export function useDeleteTouchpoint() {
   const invalidate = useInvalidate();
   return useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await supabase.from("capital_check_touchpoints").delete().eq("id", id);
+      const { error } = await takeOversupabase.from("capital_check_touchpoints").delete().eq("id", id);
       if (error) throw error;
     },
     onSuccess: invalidate,
@@ -341,7 +341,7 @@ export function useUpsertAllocation() {
   const invalidate = useInvalidate();
   return useMutation({
     mutationFn: async (row: Partial<CapitalAllocation> & { round_id: string; bucket_name: string; category: CapitalCategory }) => {
-      const { data, error } = await supabase.from("capital_allocations").upsert(row).select().single();
+      const { data, error } = await takeOversupabase.from("capital_allocations").upsert(row).select().single();
       if (error) throw error;
       return data as CapitalAllocation;
     },
@@ -352,7 +352,7 @@ export function useDeleteAllocation() {
   const invalidate = useInvalidate();
   return useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await supabase.from("capital_allocations").delete().eq("id", id);
+      const { error } = await takeOversupabase.from("capital_allocations").delete().eq("id", id);
       if (error) throw error;
     },
     onSuccess: invalidate,
@@ -364,7 +364,7 @@ export function useUpsertLineItem() {
   const invalidate = useInvalidate();
   return useMutation({
     mutationFn: async (row: Partial<CapitalLineItem> & { allocation_id: string; label: string }) => {
-      const { data, error } = await supabase.from("capital_line_items").upsert(row).select().single();
+      const { data, error } = await takeOversupabase.from("capital_line_items").upsert(row).select().single();
       if (error) throw error;
       return data as CapitalLineItem;
     },
@@ -375,7 +375,7 @@ export function useDeleteLineItem() {
   const invalidate = useInvalidate();
   return useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await supabase.from("capital_line_items").delete().eq("id", id);
+      const { error } = await takeOversupabase.from("capital_line_items").delete().eq("id", id);
       if (error) throw error;
     },
     onSuccess: invalidate,
@@ -387,7 +387,7 @@ export function useUpsertActual() {
   const invalidate = useInvalidate();
   return useMutation({
     mutationFn: async (row: Partial<CapitalActual> & { amount: number }) => {
-      const { data, error } = await supabase.from("capital_actuals").upsert(row).select().single();
+      const { data, error } = await takeOversupabase.from("capital_actuals").upsert(row).select().single();
       if (error) throw error;
       return data as CapitalActual;
     },
@@ -398,7 +398,7 @@ export function useDeleteActual() {
   const invalidate = useInvalidate();
   return useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await supabase.from("capital_actuals").delete().eq("id", id);
+      const { error } = await takeOversupabase.from("capital_actuals").delete().eq("id", id);
       if (error) throw error;
     },
     onSuccess: invalidate,
@@ -410,7 +410,7 @@ export function useUpsertScenario() {
   const invalidate = useInvalidate();
   return useMutation({
     mutationFn: async (row: Partial<CapitalScenario> & { name: string }) => {
-      const { data, error } = await supabase.from("capital_scenarios").upsert(row).select().single();
+      const { data, error } = await takeOversupabase.from("capital_scenarios").upsert(row).select().single();
       if (error) throw error;
       return data as CapitalScenario;
     },
@@ -421,7 +421,7 @@ export function useDeleteScenario() {
   const invalidate = useInvalidate();
   return useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await supabase.from("capital_scenarios").delete().eq("id", id);
+      const { error } = await takeOversupabase.from("capital_scenarios").delete().eq("id", id);
       if (error) throw error;
     },
     onSuccess: invalidate,

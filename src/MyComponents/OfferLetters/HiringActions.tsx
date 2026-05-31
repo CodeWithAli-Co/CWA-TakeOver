@@ -15,7 +15,7 @@ import {
   PenLine, Receipt, ExternalLink,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
-import supabase from "@/MyComponents/supabase";
+import { takeOversupabase } from "@/MyComponents/supabase";
 import { pdf } from "@react-pdf/renderer";
 import { OfferLetterPDF } from "./OfferLetterPDF";
 import {
@@ -129,7 +129,7 @@ function buildAcceptUrl(token: string): string {
   // Takeover installed — they click the email link in their own
   // browser, which needs to resolve to a real URL.
   //
-  // Reads VITE_TAKEOVER_SITE_URL (e.g., https://takeover.codewithali.com)
+  // Reads VITE_TAKEOVER_SITE_URL (e.g., https://takeover.systems)
   // — same env var used by sendEmailViaTakeover. Falls back to
   // window.location.origin in dev if the env isn't set, so the
   // "copy accept link" button still gives a usable in-app URL.
@@ -263,8 +263,8 @@ function SendEmailRow({
       }
 
       // 5. Update the offer row to record emailed_at + candidate_email.
-      await supabase
-        .from("offer_letters")
+      await takeOversupabase
+  .from("offer_letters")
         .update({
           candidate_email: email,
           emailed_at: new Date().toISOString(),
@@ -359,8 +359,8 @@ function CompanionDocsRow({
     let cancelled = false;
     (async () => {
       setLoading(true);
-      const { data } = await supabase
-        .from("hire_documents")
+      const { data } = await takeOversupabase
+  .from("hire_documents")
         .select("id, doc_type, body, created_at")
         .eq("offer_letter_id", current.id)
         .order("created_at", { ascending: true });
@@ -386,7 +386,7 @@ function CompanionDocsRow({
       setGenerating(null);
       return;
     }
-    const { error } = await supabase.from("hire_documents").insert({
+    const { error } = await takeOversupabase.from("hire_documents").insert({
       offer_letter_id: current.id,
       created_by: form.employerSignerName || "system",
       doc_type: doc,
@@ -469,7 +469,7 @@ function DocPreviewModal({
 
   const saveEdit = async () => {
     setSaving(true);
-    await supabase.from("hire_documents").update({ body }).eq("id", doc.id);
+    await takeOversupabase.from("hire_documents").update({ body }).eq("id", doc.id);
     setSaving(false);
   };
 
@@ -572,8 +572,8 @@ async function spawnOnboarding(
     const dbBrand = form.brand === "simplicity" ? "simplicityFunds" : "codeWithAli";
 
     // Pick the template matching this hire's (brand, employment_type).
-    const tpl = await supabase
-      .from("onboarding_templates")
+    const tpl = await takeOversupabase
+.from("onboarding_templates")
       .select("id, item_list")
       .eq("brand", dbBrand)
       .eq("employment_type", form.employmentType)
@@ -598,8 +598,8 @@ async function spawnOnboarding(
     }
 
     // Create the instance.
-    const instanceRes = await supabase
-      .from("onboarding_instances")
+    const instanceRes = await takeOversupabase
+.from("onboarding_instances")
       .insert({
         offer_letter_id: offerId,
         employee_user_id: employeeUserId,
@@ -620,7 +620,7 @@ async function spawnOnboarding(
       position?: number;
     }>;
     if (Array.isArray(itemList) && itemList.length > 0) {
-      const itemsRes = await supabase.from("onboarding_items").insert(
+      const itemsRes = await takeOversupabase.from("onboarding_items").insert(
         itemList.map((it, i) => ({
           instance_id: (instanceRes.data as any).id,
           title: it.title,
@@ -686,8 +686,8 @@ function ConvertRow({
     //    the same candidate (or one who already had an account) would
     //    otherwise crash with `app_users_username_key`. If we find a
     //    match, we just relink the offer to the existing user.
-    const existing = await supabase
-      .from("app_users")
+    const existing = await takeOversupabase
+.from("app_users")
       .select("id, supa_id, username")
       .eq("username", baseUsername)
       .maybeSingle();
@@ -706,8 +706,8 @@ function ConvertRow({
         setConverting(false);
         return;
       }
-      const upd = await supabase
-        .from("offer_letters")
+      const upd = await takeOversupabase
+  .from("offer_letters")
         .update({ converted_to_user_id: existingId })
         .eq("id", current.id);
       if (upd.error) {
@@ -739,8 +739,8 @@ function ConvertRow({
     // already cleared the most common case.
     // eslint-disable-next-line no-constant-condition
     while (true) {
-      const probe = await supabase
-        .from("app_users")
+      const probe = await takeOversupabase
+  .from("app_users")
         .select("id")
         .eq("username", username)
         .maybeSingle();
@@ -805,12 +805,12 @@ function ConvertRow({
       ? { ...payload, supa_id: authUserId }
       : payload;
 
-    let res = await supabase.from("app_users").insert(fullPayload).select().single();
+    let res = await takeOversupabase.from("app_users").insert(fullPayload).select().single();
     if (res.error) {
       // Fallback: minimal payload — still include supa_id + unique
       // avatar so the constraint doesn't bite on the retry either.
-      res = await supabase
-        .from("app_users")
+      res = await takeOversupabase
+  .from("app_users")
         .insert({
           username: payload.username,
           role,
@@ -831,8 +831,8 @@ function ConvertRow({
     const freshRow = res.data as any;
     const userId = authUserId ?? freshRow?.supa_id ?? null;
     if (userId) {
-      const upd = await supabase
-        .from("offer_letters")
+      const upd = await takeOversupabase
+  .from("offer_letters")
         .update({ converted_to_user_id: userId })
         .eq("id", current.id);
       if (upd.error) {
@@ -940,8 +940,8 @@ function EmployerSignRow({
       }
       // Count companion docs that exist but aren't stamped with the
       // employer sig yet — means we signed, then generated more docs.
-      const { count } = await supabase
-        .from("hire_documents")
+      const { count } = await takeOversupabase
+  .from("hire_documents")
         .select("id", { count: "exact", head: true })
         .eq("offer_letter_id", current.id)
         .is("employer_signature_at", null);
@@ -963,8 +963,8 @@ function EmployerSignRow({
 
     try {
       // 1. Stamp the offer row.
-      const offerUpd = await supabase
-        .from("offer_letters")
+      const offerUpd = await takeOversupabase
+  .from("offer_letters")
         .update({
           employer_signature_name: sigName,
           employer_signature_at: now,
@@ -976,8 +976,8 @@ function EmployerSignRow({
       //    We overwrite — if they're re-signing to pick up new docs,
       //    re-stamping the old ones with today's timestamp is the
       //    right move (single consistent signature event).
-      const docsUpd = await supabase
-        .from("hire_documents")
+      const docsUpd = await takeOversupabase
+  .from("hire_documents")
         .update({
           employer_signature_name: sigName,
           employer_signature_at: now,
@@ -1007,15 +1007,15 @@ function EmployerSignRow({
     if (!confirm("Clear the counter-signature on the offer and all companion docs? You'll need to sign again before sending.")) return;
     setSigning(true);
     try {
-      await supabase
-        .from("offer_letters")
+      await takeOversupabase
+  .from("offer_letters")
         .update({
           employer_signature_name: null,
           employer_signature_at: null,
         })
         .eq("id", current.id);
-      await supabase
-        .from("hire_documents")
+      await takeOversupabase
+  .from("hire_documents")
         .update({
           employer_signature_name: null,
           employer_signature_at: null,
@@ -1161,15 +1161,15 @@ function SignatureRecordRow({ current }: { current: CurrentOffer }) {
     (async () => {
       setLoading(true);
       // Best-effort: if the signature columns don't exist yet, fall back.
-      const primary = await supabase
-        .from("hire_documents")
+      const primary = await takeOversupabase
+  .from("hire_documents")
         .select("id, doc_type, status, signed_name, signed_at, sign_order")
         .eq("offer_letter_id", current.id)
         .order("sign_order", { ascending: true });
       if (cancelled) return;
       if (primary.error) {
-        const basic = await supabase
-          .from("hire_documents")
+        const basic = await takeOversupabase
+    .from("hire_documents")
           .select("id, doc_type")
           .eq("offer_letter_id", current.id);
         setDocs(

@@ -48,8 +48,8 @@ function DisplayEmployees() {
 
   // Delete Employee
   const DelEmployee = async (rowID: number) => {
-    const { data: result, error } = await supabase
-      .from("app_users")
+    const { data: result, error } = await takeOversupabase
+.from("app_users")
       .delete()
       .eq("id", rowID)
       .select();

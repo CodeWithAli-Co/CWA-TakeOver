@@ -9,7 +9,7 @@
 import { useMemo, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { Forward, Hash, MessageSquare, X } from "lucide-react";
-import supabase from "@/MyComponents/supabase";
+import { takeOversupabase } from "@/MyComponents/supabase";
 import { getActiveCompanyLabel } from "@/stores/query";
 import type { MessageInterface } from "@/stores/query";
 
@@ -67,7 +67,7 @@ export function ForwardDialog({
       };
       if (table === "cwa_dm_chat") payload.dm_group = destGroup.name;
 
-      const { error } = await supabase.from(table).insert(payload);
+      const { error } = await takeOversupabase.from(table).insert(payload);
       if (error) {
         console.error("[forward] failed:", error.message);
       }

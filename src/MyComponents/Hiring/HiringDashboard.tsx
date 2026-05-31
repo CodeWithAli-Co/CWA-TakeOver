@@ -360,7 +360,7 @@ function EmptyState({ filters }: { filters: CandidateListFilters }) {
       <p className="text-[12.5px] text-foreground/40 max-w-sm leading-relaxed">
         {filtered
           ? "Clear the filters above to see everything, or try a different role."
-          : "When someone applies via takeover.codewithali.com/careers, they'll appear here. Axon will parse their resume and rank them against the role automatically."}
+          : "When someone applies via takeover.systems/careers, they'll appear here. Axon will parse their resume and rank them against the role automatically."}
       </p>
     </div>
   );

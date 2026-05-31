@@ -21,7 +21,7 @@
 //   - update_candidate_status({ candidate_id, status, reason? })
 // ───────────────────────────────────────────────────────────────────
 
-import supabase from "@/MyComponents/supabase";
+import { takeOversupabase } from "@/MyComponents/supabase";
 import type { AxonAction } from "../types";
 import { registerAction } from "./registry";
 import {
@@ -146,7 +146,7 @@ async function downloadResumeAsBase64(
   storagePath: string,
   contentType: string,
 ): Promise<{ base64: string; mediaType: string }> {
-  const { data, error } = await supabase.storage
+  const { data, error } = await takeOversupabase.storage
     .from("resumes")
     .createSignedUrl(storagePath, 60); // 60s — plenty for one fetch
   if (error || !data?.signedUrl) {
@@ -275,8 +275,8 @@ export const parseResumeAction: AxonAction<
     // Find candidates to parse.
     let targets: CandidateRow[] = [];
     if (candidate_id) {
-      const { data, error } = await supabase
-        .from("candidates")
+      const { data, error } = await takeOversupabase
+  .from("candidates")
         .select("*")
         .eq("id", candidate_id)
         .maybeSingle();
@@ -284,8 +284,8 @@ export const parseResumeAction: AxonAction<
       if (!data) return { summary: `No candidate with id ${candidate_id}.` };
       targets = [data as CandidateRow];
     } else {
-      const { data, error } = await supabase
-        .from("candidates")
+      const { data, error } = await takeOversupabase
+  .from("candidates")
         .select("*")
         .eq("parse_status", "pending")
         .order("created_at", { ascending: true })
@@ -305,8 +305,8 @@ export const parseResumeAction: AxonAction<
 
     for (const c of targets) {
       // Mark in-flight so concurrent operators don't double-parse.
-      await supabase
-        .from("candidates")
+      await takeOversupabase
+  .from("candidates")
         .update({ parse_status: "processing", parse_error: null })
         .eq("id", c.id);
 
@@ -376,8 +376,8 @@ export const parseResumeAction: AxonAction<
 
         const parsed = parseClaudeJson<ParsedResume>(text);
 
-        await supabase
-          .from("candidates")
+        await takeOversupabase
+    .from("candidates")
           .update({
             parsed_resume: parsed,
             parse_status: "done",
@@ -396,8 +396,8 @@ export const parseResumeAction: AxonAction<
       } catch (err) {
         const message = err instanceof Error ? err.message : String(err);
         failed.push({ id: c.id, name: c.full_name, err: message });
-        await supabase
-          .from("candidates")
+        await takeOversupabase
+    .from("candidates")
           .update({
             parse_status: "failed",
             parse_error: message.slice(0, 1000),
@@ -453,8 +453,8 @@ export const rateCandidateAction: AxonAction<
       return { summary: "Cannot rate: no Anthropic API key configured." };
     }
 
-    const { data: candidate, error: cErr } = await supabase
-      .from("candidates")
+    const { data: candidate, error: cErr } = await takeOversupabase
+.from("candidates")
       .select("*")
       .eq("id", candidate_id)
       .maybeSingle();
@@ -476,16 +476,16 @@ export const rateCandidateAction: AxonAction<
     // Fetch the role.
     let posting: JobPostingRow | null = null;
     if (c.job_posting_id) {
-      const { data } = await supabase
-        .from("job_postings")
+      const { data } = await takeOversupabase
+  .from("job_postings")
         .select("*")
         .eq("id", c.job_posting_id)
         .maybeSingle();
       posting = (data ?? null) as JobPostingRow | null;
     }
     if (!posting && c.role_slug) {
-      const { data } = await supabase
-        .from("job_postings")
+      const { data } = await takeOversupabase
+  .from("job_postings")
         .select("*")
         .eq("slug", c.role_slug)
         .maybeSingle();
@@ -586,8 +586,8 @@ export const rateCandidateAction: AxonAction<
       recommended_next_step: result.recommended_next_step ?? "",
     };
 
-    const { error: updateErr } = await supabase
-      .from("candidates")
+    const { error: updateErr } = await takeOversupabase
+.from("candidates")
       .update({
         fit_score: score,
         verdict_tier: tier,
@@ -641,7 +641,7 @@ export const rateAllPendingAction: AxonAction<
   },
   mutating: true,
   handler: async ({ role_slug, max_to_rate = 20 }, ctx) => {
-    let q = supabase
+    let q = takeOversupabase
       .from("candidates")
       .select("id, full_name")
       .eq("parse_status", "done")
@@ -716,7 +716,7 @@ export const listCandidatesAction: AxonAction<
   },
   handler: async ({ role_slug, status, min_score, sort_by = "fit_score", limit = 25, offset = 0 }, ctx) => {
     const cappedLimit = Math.max(1, Math.min(limit, 100));
-    let q = supabase
+    let q = takeOversupabase
       .from("candidates")
       .select("id, full_name, role_slug, fit_score, verdict_tier, status, created_at", { count: "exact" })
       .range(offset, offset + cappedLimit - 1);
@@ -778,8 +778,8 @@ export const candidateDetailAction: AxonAction<
     required: ["candidate_id"],
   },
   handler: async ({ candidate_id }, ctx) => {
-    const { data, error } = await supabase
-      .from("candidates")
+    const { data, error } = await takeOversupabase
+.from("candidates")
       .select("*")
       .eq("id", candidate_id)
       .maybeSingle();
@@ -821,14 +821,14 @@ export const updateCandidateStatusAction: AxonAction<
   requiresConfirmation: false, // status moves are cheap + undoable
   handler: async ({ candidate_id, status, reason }, ctx) => {
     // Snapshot previous status so undo can revert.
-    const { data: prev } = await supabase
-      .from("candidates")
+    const { data: prev } = await takeOversupabase
+.from("candidates")
       .select("status, full_name")
       .eq("id", candidate_id)
       .maybeSingle();
 
-    const { error } = await supabase
-      .from("candidates")
+    const { error } = await takeOversupabase
+.from("candidates")
       .update({ status, status_reason: reason ?? null })
       .eq("id", candidate_id);
     if (error) return { summary: `Update failed: ${error.message}` };

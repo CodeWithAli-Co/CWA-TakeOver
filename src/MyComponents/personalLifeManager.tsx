@@ -118,8 +118,8 @@ const PersonalLifeManager: React.FC = () => {
 
   const loadActivities = async () => {
     try {
-      const { data, error } = await supabase
-        .schema("personal")
+      const { data, error } = await takeOversupabase
+  .schema("personal")
         .from("activities")
         .select("*")
         .order("time", { ascending: true });
@@ -150,8 +150,8 @@ const PersonalLifeManager: React.FC = () => {
 
   const loadRestaurants = async () => {
     try {
-      const { data, error } = await supabase
-        .schema("personal")
+      const { data, error } = await takeOversupabase
+  .schema("personal")
         .from("restaurants")
         .select("*")
         .order("name", { ascending: true });
@@ -169,8 +169,8 @@ const PersonalLifeManager: React.FC = () => {
 
   const saveActivity = async (activity: PersonalActivity) => {
     try {
-      const { error } = await supabase
-        .schema("personal")
+      const { error } = await takeOversupabase
+  .schema("personal")
         .from("activities")
         .upsert(activity);
 
@@ -182,8 +182,8 @@ const PersonalLifeManager: React.FC = () => {
 
   const saveRestaurant = async (restaurant: HalalRestaurant) => {
     try {
-      const { error } = await supabase
-        .schema("personal")
+      const { error } = await takeOversupabase
+  .schema("personal")
         .from("restaurants")
         .upsert(restaurant);
 
@@ -195,8 +195,8 @@ const PersonalLifeManager: React.FC = () => {
 
   const deleteActivity = async (id: string) => {
     try {
-      const { error } = await supabase
-        .schema("personal")
+      const { error } = await takeOversupabase
+  .schema("personal")
         .from("activities")
         .delete()
         .eq("id", id);
@@ -210,8 +210,8 @@ const PersonalLifeManager: React.FC = () => {
 
   const deleteRestaurant = async (id: string) => {
     try {
-      const { error } = await supabase
-        .schema("personal")
+      const { error } = await takeOversupabase
+  .schema("personal")
         .from("restaurants")
         .delete()
         .eq("id", id);

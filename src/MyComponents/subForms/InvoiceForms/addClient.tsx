@@ -2,7 +2,7 @@ import { Button } from "@/components/ui/button";
 import { useForm } from "@tanstack/react-form";
 import { Loader2, Mail, Send, User } from "lucide-react";
 import Capitalize from "@/MyComponents/Reusables/capitalize";
-import supabase from "@/MyComponents/supabase";
+import { takeOversupabase } from "@/MyComponents/supabase";
 import { getActiveCompanyLabel } from "@/stores/query";
 
 export const AddClient = () => {
@@ -12,7 +12,7 @@ export const AddClient = () => {
       clientEmail: "",
     },
     onSubmit: async ({ value }) => {
-      await supabase.from("clients").insert({
+      await takeOversupabase.from("clients").insert({
         name: value.clientName,
         email: value.clientEmail,
         company: getActiveCompanyLabel(),

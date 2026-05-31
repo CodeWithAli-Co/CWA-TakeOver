@@ -18,7 +18,7 @@ export const ChatInputBox = (props: Props) => {
     },
     onSubmit: async ({ value }) => {
       if (props.Group === "General") {
-        const { error } = await supabase.from("cwa_chat").insert({
+        const { error } = await takeOversupabase.from("cwa_chat").insert({
           sent_by: props.activeUser,
           message: value.Message,
           userAvatar: props.UserAvatar,
@@ -29,7 +29,7 @@ export const ChatInputBox = (props: Props) => {
           });
         }
       } else {
-        const { error } = await supabase.from(props.table).insert({
+        const { error } = await takeOversupabase.from(props.table).insert({
           dm_group: props.Group,
           sent_by: props.activeUser,
           message: value.Message,

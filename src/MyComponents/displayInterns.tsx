@@ -43,8 +43,8 @@ function DisplayInterns() {
 
   // Delete Intern
   const DelIntern = async (rowID: number) => {
-    const { data: result, error } = await supabase
-      .from("interns")
+    const { data: result, error } = await takeOversupabase
+.from("interns")
       .delete()
       .eq("id", rowID)
       .select();

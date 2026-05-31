@@ -52,7 +52,7 @@ function getSiteUrl(): string {
   const url = import.meta.env.VITE_TAKEOVER_SITE_URL as string | undefined;
   if (!url) {
     throw new Error(
-      "VITE_TAKEOVER_SITE_URL is required (e.g. https://takeover.codewithali.com).",
+      "VITE_TAKEOVER_SITE_URL is required (e.g. https://takeover.systems).",
     );
   }
   return url.replace(/\/+$/, "");

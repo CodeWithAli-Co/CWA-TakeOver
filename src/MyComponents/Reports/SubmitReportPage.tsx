@@ -22,7 +22,7 @@ import {
   CalendarDays, Sparkles, ArrowRight, Inbox,
 } from "lucide-react";
 import { useNavigate } from "@tanstack/react-router";
-import supabase from "@/MyComponents/supabase";
+import { takeOversupabase } from "@/MyComponents/supabase";
 import { ActiveUser } from "@/stores/query";
 import {
   REPORT_TEMPLATES,
@@ -140,7 +140,7 @@ export function SubmitReportPage() {
   const reload = async () => {
     setLoading(true);
     const [p, r, a] = await Promise.all([
-      supabase.from("projects").select("id, name, company").order("name"),
+      takeOversupabase.from("projects").select("id, name, company").order("name"),
       mySupaId
         ? supabase
             .from("reports")
@@ -237,8 +237,8 @@ export function SubmitReportPage() {
 
     const cleanedBody = stripEmptyScaffoldHeadings(body).trim();
 
-    const { data: inserted, error } = await supabase
-      .from("reports")
+    const { data: inserted, error } = await takeOversupabase
+.from("reports")
       .insert({
         title: title.trim(),
         body: cleanedBody || null,
@@ -269,8 +269,8 @@ export function SubmitReportPage() {
     if (fulfilingAssignmentId && inserted?.id) {
       const a = assignments.find((x) => x.id === fulfilingAssignmentId);
       const now = new Date().toISOString();
-      await supabase
-        .from("report_assignments")
+      await takeOversupabase
+  .from("report_assignments")
         .update({
           status: "submitted",
           submitted_report_id: inserted.id,
@@ -286,8 +286,8 @@ export function SubmitReportPage() {
                    : a.recurrence === "biweekly" ? 14
                    : 30;
         next.setDate(next.getDate() + days);
-        await supabase
-          .from("report_assignments")
+        await takeOversupabase
+    .from("report_assignments")
           .insert({
             assignee_username: a.assignee_username,
             type: a.type,

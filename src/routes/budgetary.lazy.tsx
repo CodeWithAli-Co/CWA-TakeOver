@@ -63,8 +63,7 @@ interface Decision {
   outcome?: string
 }
 
-// CodePattern interface removed — patterns now live in Supabase.
-// See src/MyComponents/Simplicity/simplicityQueries.ts for the new Pattern type.
+// CodePattern interface removed — patterns now live in takeOversupabase// See src/MyComponents/Simplicity/simplicityQueries.ts for the new Pattern type.
 
 interface SystemStatus {
   name: string

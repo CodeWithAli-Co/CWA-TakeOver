@@ -47,7 +47,7 @@ interface SingleMeeting {
   hybrid_location?: { address: string, url: string };
 }
 const fetchMeeting = async (id: number) => {
-  const { data, error } = await supabase.from('cwa_meetings').select('*').eq('id', id).single()
+  const { data, error } = await takeOversupabase.from('cwa_meetings').select('*').eq('id', id).single()
   if (error) {
     console.log('Error fetching Single Meeting from DB', error.message)
   };

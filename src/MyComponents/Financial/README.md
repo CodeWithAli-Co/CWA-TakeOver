@@ -246,10 +246,10 @@ None of `cwa_expenses`, `cwa_revenues`, or `invoices` currently has a `company_i
 
 ### Example: "Save changes back to Supabase"
 
-Currently the modeler reads from but does not write to Supabase. To add write-back:
+Currently the modeler reads from but does not write to takeOversupabase.To add write-back:
 
 1. Open `FinancialContext.tsx`
-2. In each setter (e.g. `setInitialCapital`), add an `await supabase.from('cwa_calculatorProps').upsert({ ... })` call
+2. In each setter (e.g. `setInitialCapital`), add an `await takeOversupabase.from('cwa_calculatorProps').upsert({ ... })` call
 3. For `addExpense`/`updateExpense`/`deleteExpense`, do the same for `cwa_expenses`
 4. Consider debouncing rapid input changes (e.g. for sliders)
 

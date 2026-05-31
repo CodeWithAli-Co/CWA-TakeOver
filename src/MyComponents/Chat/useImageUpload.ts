@@ -10,7 +10,7 @@
  */
 
 import { useCallback, useState } from "react";
-import supabase from "@/MyComponents/supabase";
+import { takeOversupabase } from "@/MyComponents/supabase";
 
 export interface PendingUpload {
   id: string;
@@ -71,7 +71,7 @@ export function useImageUpload(groupName: string, currentUsername: string) {
         .slice(0, 80);
       const key = `${safeGroup}/${safeUser}-${Date.now()}-${Math.floor(Math.random() * 1e4)}-${safeName}`;
 
-      const { error } = await supabase.storage
+      const { error } = await takeOversupabase.storage
         .from(CHAT_BUCKET)
         .upload(key, file, {
           cacheControl: "3600",
@@ -83,7 +83,7 @@ export function useImageUpload(groupName: string, currentUsername: string) {
         console.error("[chat-upload] upload failed:", error.message);
         return null;
       }
-      const { data } = supabase.storage.from(CHAT_BUCKET).getPublicUrl(key);
+      const { data } = takeOversupabase.storage.from(CHAT_BUCKET).getPublicUrl(key);
       return data.publicUrl;
     },
     [groupName, currentUsername],

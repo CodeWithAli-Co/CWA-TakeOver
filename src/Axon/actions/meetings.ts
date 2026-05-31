@@ -6,7 +6,7 @@
 // modifying the schema, capped at MAX_OCCURRENCES as a safety valve.
 // ───────────────────────────────────────────────────────────────────
 
-import supabase from "@/MyComponents/supabase";
+import { takeOversupabase } from "@/MyComponents/supabase";
 import type { AxonAction } from "../types";
 import { registerAction } from "./registry";
 import { registerUndoHandler } from "../engine/undoStack";
@@ -69,8 +69,8 @@ registerUndoHandler<{ ids: number[]; title: string }>(
   "meeting.delete-batch",
   async ({ ids, title }) => {
     if (!ids.length) return `No meetings to cancel.`;
-    const { error } = await supabase
-      .from("cwa_meetings")
+    const { error } = await takeOversupabase
+.from("cwa_meetings")
       .delete()
       .in("id", ids);
     if (error) throw new Error(error.message);
@@ -235,8 +235,8 @@ export const createMeetingAction: AxonAction<
       };
     }
 
-    const { data, error } = await supabase
-      .from("cwa_meetings")
+    const { data, error } = await takeOversupabase
+.from("cwa_meetings")
       .insert(rows)
       .select();
     if (error) {

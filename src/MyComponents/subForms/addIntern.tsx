@@ -10,7 +10,7 @@ export const AddIntern = () => {
     },
     onSubmit: async ({ value }) => {
       console.log(value);
-      const { error } = await supabase.from("interns").insert({
+      const { error } = await takeOversupabase.from("interns").insert({
         username: value.Username,
         email: value.Email,
         role: value.Role,

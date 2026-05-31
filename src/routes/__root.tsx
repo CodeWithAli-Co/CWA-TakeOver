@@ -36,7 +36,7 @@ import { SendKudosDialog } from "@/MyComponents/Dashboard/SendKudosDialog";
 import { CreateGrowthTrackDialog } from "@/MyComponents/Dashboard/CreateGrowthTrackDialog";
 import { useQuickCompose } from "@/MyComponents/Chat/quickComposeStore";
 import { displayLabelForDM, isDMKey } from "@/MyComponents/Chat/displayName";
-import supabase from "@/MyComponents/supabase";
+import { takeOversupabase } from "@/MyComponents/supabase";
 import { useEffect, useState, lazy, Suspense } from "react";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import LoginPage from "@/MyComponents/Beginning/login";
@@ -114,6 +114,7 @@ const _LegacyOnboardingBanner = lazy(() =>
 // Route-aware skeleton fallback picks a loader shape that roughly
 // matches the destination page, so the transition feels seamless.
 import { PageSkeleton, ChatSkeleton, RoadmapSkeleton, SplitSkeleton, TableSkeleton, FormSkeleton } from "@/MyComponents/Reusables/PageSkeletons";
+import InitialOnboarding from "@/MyComponents/Beginning/initialOnboarding";
 
 function RouteFallback() {
   const loc = useLocation();
@@ -128,7 +129,7 @@ function RouteFallback() {
 
 export const Route = createRootRoute({
   component: () => {
-    const { pinCheck, isLoggedIn, GroupName } = useAppStore();
+    const { pinCheck, isLoggedIn, GroupName, initial_launch, completeInitialLaunch } = useAppStore();
     const { data: user, error: userError } = ActiveUser();
     // First-run onboarding gate. No-ops if user is already
     // onboarded, unauthenticated, or already on /welcome —
@@ -155,7 +156,7 @@ export const Route = createRootRoute({
 
     // Keep DMGroups in sync across the app (channel is idempotent for same name)
     useEffect(() => {
-      const channel = supabase
+      const channel = takeOversupabase
         .channel("dm-groups-sync")
         .on(
           "postgres_changes",
@@ -171,7 +172,7 @@ export const Route = createRootRoute({
     // other teammates' changes also flow through automatically.
     const queryClient = useQueryClient();
     useEffect(() => {
-      const meetingsCh = supabase
+      const meetingsCh = takeOversupabase
         .channel("meetings-sync")
         .on(
           "postgres_changes",
@@ -181,7 +182,7 @@ export const Route = createRootRoute({
           },
         )
         .subscribe();
-      const todosCh = supabase
+      const todosCh = takeOversupabase
         .channel("todos-sync")
         .on(
           "postgres_changes",
@@ -415,7 +416,7 @@ export const Route = createRootRoute({
         return status === "online";
       };
 
-      const unreadChannel = supabase
+      const unreadChannel = takeOversupabase
         .channel("unread-tracker")
         .on(
           "postgres_changes",
@@ -793,8 +794,8 @@ export const Route = createRootRoute({
           for (const item of due) {
             // Only the author's client fires. Prevents dupes across devices.
             if (item.createdBy !== uname) continue;
-            const { error } = await supabase
-              .from(item.table)
+            const { error } = await takeOversupabase
+        .from(item.table)
               .insert(item.payload);
             if (!error) {
               console.log("[scheduled] sent", item.preview);
@@ -821,7 +822,7 @@ export const Route = createRootRoute({
     useEffect(() => {
       const uname = user?.[0]?.username;
       if (!uname) return;
-      const channel = supabase.channel("chat-presence", {
+      const channel = takeOversupabase.channel("chat-presence", {
         config: { presence: { key: uname } },
       });
 
@@ -913,6 +914,11 @@ export const Route = createRootRoute({
           <Outlet />
         </Suspense>
       );
+    }
+
+    // Initial Onboarding Process
+    if (initial_launch && isLoggedIn !== "true") {
+      return <InitialOnboarding completeInitialLaunch={completeInitialLaunch} />;
     }
 
     return (

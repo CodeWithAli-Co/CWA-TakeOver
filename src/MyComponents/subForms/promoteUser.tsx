@@ -20,8 +20,7 @@ import {
 import { Shield, X } from "lucide-react";
 
 const fetchEmployeeName = async (id: number) => {
-  const { data } = await supabase
-    .from("app_users")
+  const { data } = await takeOversupabase    .from("app_users")
     .select("*")
     .eq("id", id)
     .single();
@@ -56,8 +55,8 @@ export const PromoteUser = (props: PromoteInterface) => {
     },
     onSubmit: async ({ value }) => {
       const rank = getRoleRank(value.Role);
-      const { error } = await supabase
-        .from("app_users")
+      const { error } = await takeOversupabase
+  .from("app_users")
         .update({ role: value.Role, role_rank: rank })
         .eq("id", props.userID);
       if (error) {

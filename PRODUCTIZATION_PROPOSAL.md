@@ -322,7 +322,7 @@ I can do all four of these as the next batch. They're independent enough to para
 These I can't decide without your input, but they're not blocking for Phase 0-1:
 
 1. **Free tier or paid only?** (Affects whether shared-DB tier exists)
-2. **Control plane domain** — `app.codewithali.com`? Subdomain of takeover.codewithali.com? Something new?
+2. **Control plane domain** — `app.codewithali.com`? Subdomain of takeover.systems? Something new?
 3. **Tier names + module mapping** — I sketched Starter/Pro/Enterprise above; you may want different names and different module/tier boundaries
 4. **Trial length** — 14 days, 30 days, none?
 5. **Self-serve org slug claims** — first-come-first-serve, or claim verification (email domain matches)?

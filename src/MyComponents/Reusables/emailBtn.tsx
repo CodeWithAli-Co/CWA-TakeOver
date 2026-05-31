@@ -5,7 +5,7 @@ import { downloadDir } from "@tauri-apps/api/path";
 import { remove, BaseDirectory } from "@tauri-apps/plugin-fs";
 import { sendNotification } from "@tauri-apps/plugin-notification";
 import { downloadInvoice } from "../invoice";
-import supabase from "@/MyComponents/supabase";
+import { takeOversupabase } from "@/MyComponents/supabase";
 import { InvoiceType } from "@/stores/invoiceQuery";
 
 type Props = {
@@ -212,8 +212,8 @@ const EmailBtn = (props: Props) => {
 
   const sendEmail = async (email: string, subject: string = "New Invoice") => {
     // Fetch invoice directly (no more /middle navigation hack)
-    const { data, error } = await supabase
-      .from("invoices")
+    const { data, error } = await takeOversupabase
+.from("invoices")
       .select("*")
       .eq("invoice_id", props.invoiceID)
       .single();

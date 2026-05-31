@@ -6,7 +6,7 @@
 // call on every navigation).
 // ───────────────────────────────────────────────────────────────────
 
-import supabase from "@/MyComponents/supabase";
+import { takeOversupabase } from "@/MyComponents/supabase";
 import type { CompanyFilter } from "@/stores/store";
 
 function companyLabel(active: string): "CodeWithAli" | "simplicity" {
@@ -15,7 +15,7 @@ function companyLabel(active: string): "CodeWithAli" | "simplicity" {
 
 async function overdueCount(active: CompanyFilter): Promise<number> {
   const now = new Date().toISOString();
-  let q = supabase
+  let q = takeOversupabase
     .from("cwa_todos")
     .select("todo_id", { count: "exact", head: true })
     .neq("status", "done")
@@ -30,7 +30,7 @@ async function upcomingMeetingCount(active: CompanyFilter): Promise<number> {
   const today = new Date().toISOString().slice(0, 10);
   const in7 = new Date();
   in7.setDate(in7.getDate() + 7);
-  let q = supabase
+  let q = takeOversupabase
     .from("cwa_meetings")
     .select("id", { count: "exact", head: true })
     .gte("date", today)

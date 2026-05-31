@@ -9,7 +9,7 @@ import {
   Calendar,
   AlertCircle,
 } from "lucide-react";
-import supabase from "@/MyComponents/supabase";
+import { takeOversupabase } from "@/MyComponents/supabase";
 import { useCompanyFilter } from "@/stores/store";
 
 interface ActivityItem {
@@ -54,21 +54,21 @@ export const ActivityFeed = () => {
 
   useEffect(() => {
     async function loadActivity() {
-      const { data: doneTasks } = await supabase
-        .from("cwa_todos")
+      const { data: doneTasks } = await takeOversupabase
+  .from("cwa_todos")
         .select("todo_id, title, created_at")
         .eq("status", "done")
         .order("created_at", { ascending: false })
         .limit(3);
 
-      const { data: meetings } = await supabase
-        .from("cwa_meetings")
+      const { data: meetings } = await takeOversupabase
+  .from("cwa_meetings")
         .select("id, meeting_title, date")
         .order("id", { ascending: false })
         .limit(2);
 
-      const { data: quotas } = await supabase
-        .from("weekly_quotas")
+      const { data: quotas } = await takeOversupabase
+  .from("weekly_quotas")
         .select("id, title, updated_at")
         .eq("status", "completed")
         .order("updated_at", { ascending: false })

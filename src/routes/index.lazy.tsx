@@ -20,7 +20,7 @@ import { SchedImgStore, useCompanyFilter, type CompanyFilter } from "@/stores/st
 import { QuickActionCard } from "@/MyComponents/HomeDashboard/Components/quickActionCard";
 import { useNavigate } from "@tanstack/react-router";
 import { useQueryClient } from "@tanstack/react-query";
-import supabase from "@/MyComponents/supabase";
+import { takeOversupabase } from "@/MyComponents/supabase";
 import { TasksComponent } from "@/MyComponents/HomeDashboard/tasks";
 import { ActiveUser } from "@/stores/query";
 import { CompanyCard } from "@/MyComponents/HomeDashboard/Components/companyCard";
@@ -429,7 +429,7 @@ function OnboardingDebugPill() {
       alert("No supa_id — can't reset.");
       return;
     }
-    const { error } = await supabase
+    const { error } = await takeOversupabase
       .from("app_users")
       .update({
         onboarded_at: null,

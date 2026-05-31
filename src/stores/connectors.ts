@@ -22,7 +22,7 @@ import {
   useQuery,
   useQueryClient,
 } from "@tanstack/react-query";
-import supabase from "@/MyComponents/supabase";
+import { takeOversupabase } from "@/MyComponents/supabase";
 
 const CONNECTORS_TABLE = "connectors";
 const CONNECTORS_KEY = ["connectors"] as const;
@@ -47,8 +47,8 @@ export function useConnectors() {
   return useQuery({
     queryKey: CONNECTORS_KEY,
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from(CONNECTORS_TABLE)
+      const { data, error } = await takeOversupabase
+  .from(CONNECTORS_TABLE)
         .select("*")
         .order("connected_at", { ascending: false });
       if (error) throw error;
@@ -78,7 +78,7 @@ export function useUpsertConnector() {
       // upsert because PostgREST's `on_conflict` doesn't support
       // index predicates.
       const company = args.company ?? null;
-      const existingQ = supabase
+      const existingQ = takeOversupabase
         .from(CONNECTORS_TABLE)
         .select("id")
         .eq("kind", args.kind);
@@ -106,8 +106,8 @@ export function useUpsertConnector() {
       };
 
       if (existingId !== undefined) {
-        const { data, error } = await supabase
-          .from(CONNECTORS_TABLE)
+        const { data, error } = await takeOversupabase
+    .from(CONNECTORS_TABLE)
           .update(payload)
           .eq("id", existingId)
           .select()
@@ -115,8 +115,8 @@ export function useUpsertConnector() {
         if (error) throw error;
         return data as Connector;
       } else {
-        const { data, error } = await supabase
-          .from(CONNECTORS_TABLE)
+        const { data, error } = await takeOversupabase
+    .from(CONNECTORS_TABLE)
           .insert(payload)
           .select()
           .single();
@@ -133,8 +133,8 @@ export function useDeleteConnector() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (id: number) => {
-      const { error } = await supabase
-        .from(CONNECTORS_TABLE)
+      const { error } = await takeOversupabase
+  .from(CONNECTORS_TABLE)
         .delete()
         .eq("id", id);
       if (error) throw error;
@@ -164,8 +164,8 @@ export function useMarkConnectorSync() {
             status: "error" as ConnectorStatus,
             last_error: args.error ?? "Unknown sync error.",
           };
-      const { error } = await supabase
-        .from(CONNECTORS_TABLE)
+      const { error } = await takeOversupabase
+  .from(CONNECTORS_TABLE)
         .update(patch)
         .eq("id", args.id);
       if (error) throw error;
@@ -181,7 +181,7 @@ export async function fetchConnectorByKind(
   kind: string,
   company?: string | null,
 ): Promise<Connector | null> {
-  const q = supabase
+  const q = takeOversupabase
     .from(CONNECTORS_TABLE)
     .select("*")
     .eq("kind", kind)

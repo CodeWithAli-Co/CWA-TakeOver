@@ -24,6 +24,10 @@
     "autostart:default",
     "fs:default",
     "shell:default",
+    "stronghold:default",
+    "stronghold:allow-remove-secret",
+    "stronghold:allow-remove-store-record",
+    "stronghold:allow-destroy",
     {
       "identifier": "shell:allow-execute",
       "allow": [

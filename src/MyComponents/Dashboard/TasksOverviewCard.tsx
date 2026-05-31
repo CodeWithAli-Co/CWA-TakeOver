@@ -50,7 +50,7 @@ import {
 } from "@/stores/query";
 import { colorForUser } from "@/lib/yjs/awareness";
 import UserView, { Role } from "@/MyComponents/Reusables/userView";
-import supabase from "@/MyComponents/supabase";
+import { takeOversupabase } from "@/MyComponents/supabase";
 
 interface Props {
   username: string;
@@ -125,7 +125,7 @@ export function TasksOverviewCard({ username }: Props) {
       if (typeof e.avatar === "string" && e.avatar.startsWith("http")) {
         url = e.avatar;
       } else if (e.avatar) {
-        const { data } = supabase.storage
+        const { data } = takeOversupabase.storage
           .from("avatars")
           .getPublicUrl(e.avatar);
         url = data?.publicUrl;

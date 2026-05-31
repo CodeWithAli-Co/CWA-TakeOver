@@ -22,7 +22,7 @@
 import { useMemo, useState } from "react";
 import { Sparkles, Check, X, Loader2 } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import supabase from "@/MyComponents/supabase";
+import { takeOversupabase } from "@/MyComponents/supabase";
 import {
   detectPatterns,
   groupPatternsByUser,
@@ -75,7 +75,7 @@ export function SuggestPatternsBanner({ weekStart, visibleShifts, scopeUserId, s
     queryKey: ["shifts", "pattern-history", scopeUserId ?? "all", activeCompany, historyFrom.toISOString(), weekStart.toISOString()],
     enabled: shouldFetchHistory,
     queryFn: async (): Promise<Shift[]> => {
-      let q = supabase
+      let q = takeOversupabase
         .from("shifts")
         .select("*")
         .gte("starts_at", historyFrom.toISOString())
@@ -103,7 +103,7 @@ export function SuggestPatternsBanner({ weekStart, visibleShifts, scopeUserId, s
   const applyMut = useMutation({
     mutationFn: async (): Promise<number> => {
       const company = activeCompany === "simplicityFunds" ? "simplicity" : "CodeWithAli";
-      const { data: auth } = await supabase.auth.getUser();
+      const { data: auth } = await takeOversupabase.auth.getUser();
       const rows = patternsToShifts(patterns, weekStart, visibleShifts, { company });
       if (rows.length === 0) return 0;
       const payload = rows.map((r) => ({
@@ -112,7 +112,7 @@ export function SuggestPatternsBanner({ weekStart, visibleShifts, scopeUserId, s
         is_billable: true,
         created_by: auth.user?.id ?? null,
       }));
-      const { error, data } = await supabase.from("shifts").insert(payload).select("id");
+      const { error, data } = await takeOversupabase.from("shifts").insert(payload).select("id");
       if (error) throw error;
       return data?.length ?? rows.length;
     },

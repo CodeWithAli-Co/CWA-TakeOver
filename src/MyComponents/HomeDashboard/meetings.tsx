@@ -482,7 +482,7 @@ const Meetings = () => {
       if (typeof e.avatar === "string" && e.avatar.startsWith("http")) {
         avatarUrl = e.avatar;
       } else if (e.avatar) {
-        const { data } = supabase.storage
+        const { data } = takeOversupabase.storage
           .from("avatars")
           .getPublicUrl(e.avatar);
         avatarUrl = data?.publicUrl;
@@ -506,7 +506,7 @@ const Meetings = () => {
   const simpCount = list.filter((m: any) => m.company === "simplicity").length;
 
   const delMeeting = async (id: number) => {
-    const { error } = await supabase.from("cwa_meetings").delete().eq("id", id);
+    const { error } = await takeOversupabase.from("cwa_meetings").delete().eq("id", id);
     if (error)
       await message(error.message, {
         title: "Error Deleting Meeting",

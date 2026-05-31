@@ -21,7 +21,7 @@ import {
   ChevronRight, Eye, EyeOff, Folder, Trash2, Search, Copy, Check,
   Users, Lock,
 } from "lucide-react";
-import supabase from "@/MyComponents/supabase";
+import { takeOversupabase } from "@/MyComponents/supabase";
 import { AddData } from "@/MyComponents/subForms/addForm";
 import { EditData } from "@/MyComponents/subForms/editForm";
 import {
@@ -57,8 +57,8 @@ const CredentialCard: React.FC<{
 
   const revealPassword = async () => {
     try {
-      const { data } = await supabase
-        .from("cwa_creds")
+      const { data } = await takeOversupabase
+  .from("cwa_creds")
         .select("acc_enc_password")
         .eq("id", cred.id)
         .single();
@@ -244,7 +244,7 @@ export const CompanyCreds = ({
   // Proper realtime subscription — wrapped in useEffect with cleanup.
   // (Fixes the old bug where a new channel was subscribed on every render.)
   useEffect(() => {
-    const channel = supabase
+    const channel = takeOversupabase
       .channel("creds-realtime")
       .on(
         "postgres_changes",
@@ -256,7 +256,7 @@ export const CompanyCreds = ({
   }, [refetch]);
 
   const delCred = async (id: number) => {
-    const { error } = await supabase.from("cwa_creds").delete().eq("id", id);
+    const { error } = await takeOversupabase.from("cwa_creds").delete().eq("id", id);
     if (error) console.error("Delete error:", error.message);
   };
 

@@ -15,7 +15,7 @@
 // ───────────────────────────────────────────────────────────────────
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import supabase from "@/MyComponents/supabase";
+import { takeOversupabase } from "@/MyComponents/supabase";
 import type { CompanyFilter } from "@/stores/store";
 import {
   parseResumeAction,
@@ -158,7 +158,7 @@ export function useCandidates(filters: CandidateListFilters = {}) {
   return useQuery({
     queryKey: [...CANDIDATES_KEY, "list", { roleSlug, status, minScore, sortBy, limit }],
     queryFn: async () => {
-      let q = supabase.from("candidates").select("*").limit(limit);
+      let q = takeOversupabase.from("candidates").select("*").limit(limit);
 
       if (roleSlug) q = q.eq("role_slug", roleSlug);
       if (status !== "all") q = q.eq("status", status);
@@ -184,8 +184,8 @@ export function useCandidate(id: string | null) {
     enabled: !!id,
     queryFn: async () => {
       if (!id) return null;
-      const { data, error } = await supabase
-        .from("candidates")
+      const { data, error } = await takeOversupabase
+  .from("candidates")
         .select("*")
         .eq("id", id)
         .maybeSingle();
@@ -199,8 +199,8 @@ export function useJobPostings() {
   return useQuery({
     queryKey: ["job_postings"],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("job_postings")
+      const { data, error } = await takeOversupabase
+  .from("job_postings")
         .select("id, slug, title, team, status")
         .order("title", { ascending: true });
       if (error) throw error;
@@ -214,7 +214,7 @@ export function useJobPostings() {
  *  viewer can render it. The bucket is private (per RLS) so we
  *  re-sign every time the drawer opens — 5min is plenty. */
 export async function getResumeSignedUrl(storagePath: string): Promise<string | null> {
-  const { data, error } = await supabase.storage
+  const { data, error } = await takeOversupabase.storage
     .from("resumes")
     .createSignedUrl(storagePath, 300);
   if (error) return null;

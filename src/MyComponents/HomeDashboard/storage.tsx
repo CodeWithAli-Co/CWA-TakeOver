@@ -12,7 +12,7 @@ export const StorageUsageChart = () => {
 
   useEffect(() => {
     async function getDBUsage() {
-      const { data, error } = await supabase.rpc("get_dbsize");
+      const { data, error } = await takeOversupabase.rpc("get_dbsize");
       if (error) { console.log("Error getting DB Size:", error.message); return; }
       let size: string = data.toString();
       if (size.includes(" MB")) size = size.replace(" MB", "").trim();

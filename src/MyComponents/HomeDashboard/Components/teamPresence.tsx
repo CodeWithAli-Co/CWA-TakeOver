@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
-import supabase from "@/MyComponents/supabase";
+import { takeOversupabase } from "@/MyComponents/supabase";
 import { useCompanyFilter } from "@/stores/store";
 
 interface TeamMember {
@@ -31,14 +31,14 @@ export const TeamPresence = () => {
 
   useEffect(() => {
     async function loadTeam() {
-      const { data, error } = await supabase
-        .from("app_users")
+      const { data, error } = await takeOversupabase
+  .from("app_users")
         .select("supa_id, username, role, avatar");
 
       if (error || !data) return;
 
       const mapped: TeamMember[] = data.map((m) => {
-        const { data: avatarData } = supabase.storage
+        const { data: avatarData } = takeOversupabase.storage
           .from("avatars")
           .getPublicUrl(m.avatar || "default_avatar.png");
         return {
