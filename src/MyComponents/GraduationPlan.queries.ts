@@ -75,16 +75,16 @@ export interface PlanData {
 // flicker on first render.
 async function fetchPlan(): Promise<PlanData> {
   const [metaRes, termsRes, coursesRes] = await Promise.all([
-    supabase
+    takeOversupabase
       .from("graduation_plan_meta")
       .select("*")
       .eq("id", 1)
       .single(),
-    supabase
+    takeOversupabase
       .from("graduation_plan_terms")
       .select("*")
       .order("position", { ascending: true }),
-    supabase
+    takeOversupabase
       .from("graduation_plan_courses")
       .select("*")
       .order("position", { ascending: true }),

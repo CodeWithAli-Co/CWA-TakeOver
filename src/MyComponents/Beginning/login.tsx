@@ -20,7 +20,7 @@
 import { useForm } from "@tanstack/react-form";
 import { useState } from "react";
 import { useAppStore } from "@/stores/store";
-import supabase from "../supabase";
+import { takeOversupabase } from "../supabase";
 import { Loader2, Mail, Lock, Eye, EyeOff, AlertCircle, Sparkles, Users, ShieldCheck } from "lucide-react";
 
 export const LoginPage = () => {

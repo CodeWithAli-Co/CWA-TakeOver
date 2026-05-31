@@ -55,7 +55,7 @@ import {
   useUpdateMeta,
   PLAN_QUERY_KEY,
 } from "./GraduationPlan.queries";
-import supabase from "./supabase";
+import { takeOversupabase } from "./supabase";
 import { useQueryClient } from "@tanstack/react-query";
 import CourseDrawer from "./CourseDrawer";
 import { RiskTermView, BufferView } from "./ScenarioViews";

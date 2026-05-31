@@ -38,7 +38,7 @@ import {
 } from "lucide-react";
 import FundingCalculator from "./FundingCalculator";
 
-import supabase from "./supabase";
+import { takeOversupabase } from "./supabase";
 import {
   FUNDING_QUERY_KEY,
   FundingCompany,

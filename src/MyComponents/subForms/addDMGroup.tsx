@@ -10,7 +10,7 @@ import { useForm } from "@tanstack/react-form";
 import Capitalize from "../Reusables/capitalize";
 import Select from "react-select";
 import { useChatStore } from "@/stores/store";
-import supabase from "../supabase";
+import { takeOversupabase } from "../supabase";
 import { getActiveCompanyLabel } from "@/stores/query";
 
 type Option = { value: string; label: string };

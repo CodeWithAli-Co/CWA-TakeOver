@@ -60,7 +60,7 @@ import {
   SelectValue,
 } from "@/components/ui/shadcnComponents/select";
 
-import supabase from "./supabase";
+import { takeOversupabase } from "./supabase";
 import {
   PersonalActivity,
   HalalRestaurant,

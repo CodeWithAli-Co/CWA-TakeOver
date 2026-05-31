@@ -18,9 +18,23 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import {
-  FileText, Sheet, Plus, Search, Lock, Globe, Loader2, Archive,
-  FolderPlus, ChevronRight, Folder, FolderOpen, Pencil, Trash2,
-  Home, Check, X,
+  FileText,
+  Sheet,
+  Plus,
+  Search,
+  Lock,
+  Globe,
+  Loader2,
+  Archive,
+  FolderPlus,
+  ChevronRight,
+  Folder,
+  FolderOpen,
+  Pencil,
+  Trash2,
+  Home,
+  Check,
+  X,
 } from "lucide-react";
 import {
   useWorkspaceResources,
@@ -95,7 +109,9 @@ export function WorkspacePage() {
   //     When set, an inline text input renders in that scope.
   //   renamingId: id of the folder currently being renamed (input replaces label)
   //   pendingDeleteId: id of the folder showing the inline confirm row
-  const [creatingUnder, setCreatingUnder] = useState<"root" | string | null>(null);
+  const [creatingUnder, setCreatingUnder] = useState<"root" | string | null>(
+    null,
+  );
   const [renamingId, setRenamingId] = useState<string | null>(null);
   const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
 
@@ -106,7 +122,7 @@ export function WorkspacePage() {
     enabled: trimmedQuery.length >= 2,
     queryFn: async (): Promise<Set<string>> => {
       const { data, error } = await takeOversupabase
-  .from("workspace_documents")
+        .from("workspace_documents")
         .select("id, content")
         .eq("archived", false);
       if (error) throw error;
@@ -370,7 +386,11 @@ export function WorkspacePage() {
                 disabled={createDoc.isPending || !username}
                 className="inline-flex items-center gap-2 px-3.5 h-9 rounded-sm bg-primary text-primary-foreground text-[12px] font-bold uppercase tracking-wider hover:opacity-90 transition-opacity disabled:opacity-40"
               >
-                {createDoc.isPending ? <Loader2 size={13} className="animate-spin" /> : <FileText size={13} />}
+                {createDoc.isPending ? (
+                  <Loader2 size={13} className="animate-spin" />
+                ) : (
+                  <FileText size={13} />
+                )}
                 New document
               </button>
               <button
@@ -379,12 +399,19 @@ export function WorkspacePage() {
                 disabled={createSheet.isPending || !username}
                 className="inline-flex items-center gap-2 px-3.5 h-9 rounded-sm border border-border bg-secondary text-foreground text-[12px] font-bold uppercase tracking-wider hover:bg-muted transition-colors disabled:opacity-40"
               >
-                {createSheet.isPending ? <Loader2 size={13} className="animate-spin" /> : <Sheet size={13} />}
+                {createSheet.isPending ? (
+                  <Loader2 size={13} className="animate-spin" />
+                ) : (
+                  <Sheet size={13} />
+                )}
                 New spreadsheet
               </button>
 
               <div className="relative ml-auto w-full sm:w-[260px]">
-                <Search size={13} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-foreground/35" />
+                <Search
+                  size={13}
+                  className="absolute left-2.5 top-1/2 -translate-y-1/2 text-foreground/35"
+                />
                 <input
                   value={filter}
                   onChange={(e) => setFilter(e.target.value)}
@@ -397,9 +424,24 @@ export function WorkspacePage() {
 
           {/* Tab strip */}
           <div className="flex items-center gap-1 border-b border-border/60 mb-6">
-            <Tab label="All" count={counts.all} active={tab === "all"} onClick={() => setTab("all")} />
-            <Tab label="Documents" count={counts.documents} active={tab === "documents"} onClick={() => setTab("documents")} />
-            <Tab label="Spreadsheets" count={counts.spreadsheets} active={tab === "spreadsheets"} onClick={() => setTab("spreadsheets")} />
+            <Tab
+              label="All"
+              count={counts.all}
+              active={tab === "all"}
+              onClick={() => setTab("all")}
+            />
+            <Tab
+              label="Documents"
+              count={counts.documents}
+              active={tab === "documents"}
+              onClick={() => setTab("documents")}
+            />
+            <Tab
+              label="Spreadsheets"
+              count={counts.spreadsheets}
+              active={tab === "spreadsheets"}
+              onClick={() => setTab("spreadsheets")}
+            />
             {/* Archive tab is C-level only — non-managers can still
              *  archive items via the delete dialog, but the archive
              *  itself (restore + hard-delete affordances) is a
@@ -421,7 +463,8 @@ export function WorkspacePage() {
             <div>
               {isLoading ? (
                 <div className="py-16 flex items-center justify-center text-foreground/40 text-[13px]">
-                  <Loader2 size={14} className="animate-spin mr-2" /> Loading workspace…
+                  <Loader2 size={14} className="animate-spin mr-2" /> Loading
+                  workspace…
                 </div>
               ) : filtered.length === 0 ? (
                 effectiveTab === "archived" ? (
@@ -469,9 +512,15 @@ export function WorkspacePage() {
                       resource={r}
                       onOpen={() => {
                         if (r.kind === "document") {
-                          navigate({ to: "/workspace/docs/$id", params: { id: r.id } });
+                          navigate({
+                            to: "/workspace/docs/$id",
+                            params: { id: r.id },
+                          });
                         } else {
-                          navigate({ to: "/workspace/sheets/$id", params: { id: r.id } });
+                          navigate({
+                            to: "/workspace/sheets/$id",
+                            params: { id: r.id },
+                          });
                         }
                       }}
                     />
@@ -479,7 +528,6 @@ export function WorkspacePage() {
                 </ul>
               )}
             </div>
-
           </div>
         </main>
       </div>
@@ -502,7 +550,11 @@ function encodeDrag(p: DragPayload): string {
 }
 function decodeDrag(s: string | null): DragPayload | null {
   if (!s) return null;
-  try { return JSON.parse(s) as DragPayload; } catch { return null; }
+  try {
+    return JSON.parse(s) as DragPayload;
+  } catch {
+    return null;
+  }
 }
 
 // ──────────────────────────────────────────────────────────────────
@@ -523,7 +575,10 @@ function RootPill({
     <button
       type="button"
       onClick={onClick}
-      onDragOver={(e) => { e.preventDefault(); setOver(true); }}
+      onDragOver={(e) => {
+        e.preventDefault();
+        setOver(true);
+      }}
       onDragLeave={() => setOver(false)}
       onDrop={(e) => {
         e.preventDefault();
@@ -663,12 +718,24 @@ type FolderNodeProps = {
 
 function FolderNode(props: FolderNodeProps) {
   const {
-    folder, byParent, counts, depth,
-    activeFolderId, renamingId, creatingUnder, pendingDeleteId,
-    onSelect, onNewSub, onRename, onDelete,
-    onCommitNew, onCancelNew,
-    onCommitRename, onCancelRename,
-    onCommitDelete, onCancelDelete,
+    folder,
+    byParent,
+    counts,
+    depth,
+    activeFolderId,
+    renamingId,
+    creatingUnder,
+    pendingDeleteId,
+    onSelect,
+    onNewSub,
+    onRename,
+    onDelete,
+    onCommitNew,
+    onCancelNew,
+    onCommitRename,
+    onCancelRename,
+    onCommitDelete,
+    onCancelDelete,
     onDropResource,
   } = props;
 
@@ -692,10 +759,16 @@ function FolderNode(props: FolderNodeProps) {
       <div
         draggable={!isRenaming}
         onDragStart={(e) => {
-          e.dataTransfer.setData(DT_TYPE, encodeDrag({ kind: "folder", id: folder.id }));
+          e.dataTransfer.setData(
+            DT_TYPE,
+            encodeDrag({ kind: "folder", id: folder.id }),
+          );
           e.dataTransfer.effectAllowed = "move";
         }}
-        onDragOver={(e) => { e.preventDefault(); setOver(true); }}
+        onDragOver={(e) => {
+          e.preventDefault();
+          setOver(true);
+        }}
         onDragLeave={() => setOver(false)}
         onDrop={(e) => {
           e.preventDefault();
@@ -722,19 +795,28 @@ function FolderNode(props: FolderNodeProps) {
           <button
             type="button"
             data-no-select
-            onClick={(e) => { e.stopPropagation(); setExpanded((v) => !v); }}
+            onClick={(e) => {
+              e.stopPropagation();
+              setExpanded((v) => !v);
+            }}
             className="text-foreground/45 hover:text-foreground/70 transition-colors"
           >
             <ChevronRight
               size={12}
-              className={"transition-transform " + (expanded ? "rotate-90" : "")}
+              className={
+                "transition-transform " + (expanded ? "rotate-90" : "")
+              }
             />
           </button>
         ) : (
           <span className="w-3" />
         )}
 
-        {expanded ? <FolderOpen size={12} className="text-foreground/50 shrink-0" /> : <Folder size={12} className="text-foreground/50 shrink-0" />}
+        {expanded ? (
+          <FolderOpen size={12} className="text-foreground/50 shrink-0" />
+        ) : (
+          <Folder size={12} className="text-foreground/50 shrink-0" />
+        )}
 
         {isRenaming ? (
           <InlineNameInput
@@ -743,7 +825,9 @@ function FolderNode(props: FolderNodeProps) {
             onCancel={onCancelRename}
           />
         ) : (
-          <span className="flex-1 text-[12.5px] font-medium truncate">{folder.name}</span>
+          <span className="flex-1 text-[12.5px] font-medium truncate">
+            {folder.name}
+          </span>
         )}
 
         {!isRenaming && count > 0 && (
@@ -753,10 +837,16 @@ function FolderNode(props: FolderNodeProps) {
         )}
 
         {!isRenaming && (
-          <div className="hidden group-hover:flex items-center gap-0.5 shrink-0" data-no-select>
+          <div
+            className="hidden group-hover:flex items-center gap-0.5 shrink-0"
+            data-no-select
+          >
             <button
               type="button"
-              onClick={(e) => { e.stopPropagation(); onNewSub(folder.id); }}
+              onClick={(e) => {
+                e.stopPropagation();
+                onNewSub(folder.id);
+              }}
               title="New subfolder"
               className="p-0.5 text-foreground/40 hover:text-foreground transition-colors"
             >
@@ -764,7 +854,10 @@ function FolderNode(props: FolderNodeProps) {
             </button>
             <button
               type="button"
-              onClick={(e) => { e.stopPropagation(); onRename(folder); }}
+              onClick={(e) => {
+                e.stopPropagation();
+                onRename(folder);
+              }}
               title="Rename"
               className="p-0.5 text-foreground/40 hover:text-foreground transition-colors"
             >
@@ -772,7 +865,10 @@ function FolderNode(props: FolderNodeProps) {
             </button>
             <button
               type="button"
-              onClick={(e) => { e.stopPropagation(); onDelete(folder); }}
+              onClick={(e) => {
+                e.stopPropagation();
+                onDelete(folder);
+              }}
               title="Delete"
               className="p-0.5 text-foreground/40 hover:text-red-400 transition-colors"
             >
@@ -792,15 +888,10 @@ function FolderNode(props: FolderNodeProps) {
         />
       )}
 
-      {(expanded && (children.length > 0 || isCreatingSubfolder)) && (
+      {expanded && (children.length > 0 || isCreatingSubfolder) && (
         <ul className="space-y-0.5 list-none p-0 m-0">
           {children.map((c) => (
-            <FolderNode
-              key={c.id}
-              {...props}
-              folder={c}
-              depth={depth + 1}
-            />
+            <FolderNode key={c.id} {...props} folder={c} depth={depth + 1} />
           ))}
           {isCreatingSubfolder && (
             <li className="list-none">
@@ -836,7 +927,9 @@ function InlineFolderInput({
 }) {
   const [value, setValue] = useState("");
   const ref = useRef<HTMLInputElement>(null);
-  useEffect(() => { ref.current?.focus(); }, []);
+  useEffect(() => {
+    ref.current?.focus();
+  }, []);
   return (
     <div
       className="flex items-center gap-1.5 px-1.5 py-1.5 rounded-sm bg-primary/[0.04] border border-primary/20"
@@ -865,7 +958,10 @@ function InlineFolderInput({
       />
       <button
         type="button"
-        onMouseDown={(e) => { e.preventDefault(); onCommit(value); }}
+        onMouseDown={(e) => {
+          e.preventDefault();
+          onCommit(value);
+        }}
         className="p-0.5 text-emerald-300 hover:bg-emerald-500/[0.08] rounded-sm"
         title="Create"
       >
@@ -873,7 +969,10 @@ function InlineFolderInput({
       </button>
       <button
         type="button"
-        onMouseDown={(e) => { e.preventDefault(); onCancel(); }}
+        onMouseDown={(e) => {
+          e.preventDefault();
+          onCancel();
+        }}
         className="p-0.5 text-foreground/40 hover:text-foreground hover:bg-muted rounded-sm"
         title="Cancel"
       >
@@ -1012,22 +1111,39 @@ function Breadcrumb({
 // Tab — editorial pill with count badge.
 // ──────────────────────────────────────────────────────────────────
 function Tab({
-  label, count, active, onClick,
-}: { label: string; count: number; active: boolean; onClick: () => void }) {
+  label,
+  count,
+  active,
+  onClick,
+}: {
+  label: string;
+  count: number;
+  active: boolean;
+  onClick: () => void;
+}) {
   return (
     <button
       type="button"
       onClick={onClick}
       className={
         "relative px-4 h-9 text-[12px] font-bold uppercase tracking-wider transition-colors inline-flex items-center gap-2 " +
-        (active ? "text-foreground" : "text-foreground/45 hover:text-foreground/70")
+        (active
+          ? "text-foreground"
+          : "text-foreground/45 hover:text-foreground/70")
       }
     >
       {label}
-      <span className={"font-mono tabular-nums text-[10.5px] " + (active ? "text-foreground/55" : "text-foreground/30")}>
+      <span
+        className={
+          "font-mono tabular-nums text-[10.5px] " +
+          (active ? "text-foreground/55" : "text-foreground/30")
+        }
+      >
         {count}
       </span>
-      {active && <span className="absolute left-0 right-0 bottom-[-1px] h-[2px] bg-primary" />}
+      {active && (
+        <span className="absolute left-0 right-0 bottom-[-1px] h-[2px] bg-primary" />
+      )}
     </button>
   );
 }

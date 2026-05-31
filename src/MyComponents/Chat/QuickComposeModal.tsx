@@ -19,7 +19,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { Hash, AtSign, Send, X, ChevronUp, ChevronDown, Clock } from "lucide-react";
-import supabase from "../supabase";
+import { takeOversupabase } from "../supabase";
 import { ActiveUser, DMGroups } from "@/stores/query";
 import {
   useQuickCompose,

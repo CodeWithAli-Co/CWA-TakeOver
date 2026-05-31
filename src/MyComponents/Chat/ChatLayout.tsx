@@ -76,7 +76,7 @@ export const ChatLayout = () => {
     const channelName = `messages-${GroupName}`;
     const channel =
       GroupName === "General"
-        ? supabase
+        ? takeOversupabase
             .channel(channelName)
             .on(
               "postgres_changes",
@@ -84,7 +84,7 @@ export const ChatLayout = () => {
               () => refetchMessages(),
             )
             .subscribe()
-        : supabase
+        : takeOversupabase
             .channel(channelName)
             .on(
               "postgres_changes",

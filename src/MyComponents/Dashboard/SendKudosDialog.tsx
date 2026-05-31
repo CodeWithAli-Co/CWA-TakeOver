@@ -25,7 +25,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { HandHeart, Search, Send, Sparkles, X } from "lucide-react";
-import supabase from "../supabase";
+import { takeOversupabase } from "../supabase";
 import { ActiveUser, useAllEmployees, type EmployeeRow } from "@/stores/query";
 import { useSendKudosDialog } from "./sendKudosStore";
 import { useQueryClient } from "@tanstack/react-query";

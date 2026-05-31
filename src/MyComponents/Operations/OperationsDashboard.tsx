@@ -1020,17 +1020,17 @@ function ActivityFeed() {
     let alive = true;
     const load = async () => {
       const [tasksRes, quotasRes, projectsRes] = await Promise.all([
-        supabase
+        takeOversupabase
           .from("cwa_todos")
           .select("todo_id, title, created_at, status")
           .order("created_at", { ascending: false })
           .limit(8),
-        supabase
+        takeOversupabase
           .from("weekly_quotas")
           .select("id, title, created_at, status")
           .order("created_at", { ascending: false })
           .limit(8),
-        supabase
+        takeOversupabase
           .from("cwa_projects")
           .select("id, title, created_at, status")
           .order("created_at", { ascending: false })
@@ -1411,19 +1411,19 @@ function useOpsAggregate(
 
     (async () => {
       const [quotasRes, doneRes, stuckRes] = await Promise.all([
-        supabase
+        takeOversupabase
           .from("weekly_quotas")
           .select("id", { count: "exact", head: true })
           .eq("status", "pending")
           .gte("week_start", format(ws, "yyyy-MM-dd"))
           .lte("week_end", format(we, "yyyy-MM-dd")),
-        supabase
+        takeOversupabase
           .from("cwa_todos")
           .select("todo_id", { count: "exact", head: true })
           .eq("status", "done")
           .not("completed_at", "is", null)
           .gte("completed_at", ws.toISOString()),
-        supabase
+        takeOversupabase
           .from("cwa_todos")
           .select("todo_id", { count: "exact", head: true })
           .neq("status", "done")
@@ -1902,14 +1902,14 @@ function StuckItems() {
       // `cwa_todos` has no `updated_at` column; use `created_at`.
       // `cwa_projects` does have `updated_at` so keep that.
       const [tasksRes, projectsRes] = await Promise.all([
-        supabase
+        takeOversupabase
           .from("cwa_todos")
           .select("todo_id, title, status, created_at")
           .neq("status", "done")
           .lt("created_at", sevenDaysAgo)
           .order("created_at", { ascending: true })
           .limit(8),
-        supabase
+        takeOversupabase
           .from("cwa_projects")
           .select("id, title, status, updated_at")
           .neq("status", "completed")

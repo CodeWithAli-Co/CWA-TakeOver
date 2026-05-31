@@ -142,7 +142,7 @@ export function SubmitReportPage() {
     const [p, r, a] = await Promise.all([
       takeOversupabase.from("projects").select("id, name, company").order("name"),
       mySupaId
-        ? supabase
+        ? takeOversupabase
             .from("reports")
             .select(
               "id, title, body, type, priority, project_id, status, review_notes, submitted_at, reviewed_at",
@@ -152,7 +152,7 @@ export function SubmitReportPage() {
             .limit(15)
         : Promise.resolve({ data: [], error: null } as any),
       username
-        ? supabase
+        ? takeOversupabase
             .from("report_assignments")
             .select("*")
             .eq("assignee_username", username)

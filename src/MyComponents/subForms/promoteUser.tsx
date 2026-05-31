@@ -1,6 +1,6 @@
 import { useForm } from "@tanstack/react-form";
 import { useSubMenuStore } from "@/stores/store";
-import supabase from "../supabase";
+import { takeOversupabase } from "../supabase";
 import { message } from "@tauri-apps/plugin-dialog";
 import {
   Select,

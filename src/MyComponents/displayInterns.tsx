@@ -2,7 +2,7 @@ import { useAppStore } from "@/stores/store";
 import "./compAssets/dispInterns.css";
 import { useEffect, useRef } from "react";
 import { Interns } from "@/stores/query";
-import supabase from "./supabase";
+import { takeOversupabase } from "./supabase";
 import { AddIntern } from "./subForms/addIntern";
 import { EditIntern } from "./subForms/editIntern";
 

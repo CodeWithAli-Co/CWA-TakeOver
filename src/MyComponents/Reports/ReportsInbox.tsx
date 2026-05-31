@@ -135,7 +135,7 @@ export function ReportsInbox({ refreshToken }: Props = {}) {
     setError(null);
 
     const [r, u, p] = await Promise.all([
-      supabase
+      takeOversupabase
         .from("reports")
         .select(
           "id, title, body, type, priority, company, project_id, sender_user_id, status, review_notes, reviewer_user_id, created_at, submitted_at, reviewed_at",
@@ -143,7 +143,7 @@ export function ReportsInbox({ refreshToken }: Props = {}) {
         .order("submitted_at", { ascending: false, nullsFirst: false })
         .order("created_at", { ascending: false })
         .limit(500),
-      supabase
+      takeOversupabase
         .from("app_users")
         .select("supa_id, username, role, avatarURL")
         .not("supa_id", "is", null),

@@ -1,5 +1,5 @@
 // ScheduleData.ts - Consistent data for schedule
-import supabase from "../supabase";
+import { takeOversupabase } from "../supabase";
 import { 
     ScheduleDataType, 
     EventType, 

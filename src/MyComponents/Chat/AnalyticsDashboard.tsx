@@ -45,11 +45,11 @@ export function AnalyticsDashboard() {
       setLoading(true);
       const fourteenDaysAgo = subDays(new Date(), 14).toISOString();
       const [g, d] = await Promise.all([
-        supabase
+        takeOversupabase
           .from("cwa_chat")
           .select("sent_by, created_at, msg_id, thread_root_id")
           .gte("created_at", fourteenDaysAgo),
-        supabase
+        takeOversupabase
           .from("cwa_dm_chat")
           .select("sent_by, created_at, msg_id, thread_root_id, dm_group")
           .gte("created_at", fourteenDaysAgo),

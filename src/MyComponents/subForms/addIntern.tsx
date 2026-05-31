@@ -1,5 +1,5 @@
 import { useForm } from "@tanstack/react-form";
-import supabase from "../supabase";
+import { takeOversupabase } from "../supabase";
 
 export const AddIntern = () => {
   const form = useForm({

@@ -9,7 +9,7 @@ import {
   FolderCode,
   Video,
 } from "lucide-react";
-import supabase from "../supabase";
+import { takeOversupabase } from "../supabase";
 import UserView, { Role } from "../Reusables/userView";
 import { ActiveUser } from "@/stores/query";
 

@@ -1,5 +1,5 @@
 import { useForm } from "@tanstack/react-form";
-import supabase from "../supabase";
+import { takeOversupabase } from "../supabase";
 import { UserPlus } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/shadcnComponents/card";
 import { message } from "@tauri-apps/plugin-dialog";

@@ -23,7 +23,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { Plus, Save, Sparkles, Trash2, X } from "lucide-react";
-import supabase from "../supabase";
+import { takeOversupabase } from "../supabase";
 import {
   useAllEmployees,
   useGrowthTrackForUser,

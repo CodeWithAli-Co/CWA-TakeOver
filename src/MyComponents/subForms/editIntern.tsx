@@ -1,5 +1,5 @@
 import { useForm } from "@tanstack/react-form";
-import supabase from "../supabase";
+import { takeOversupabase } from "../supabase";
 import { useAppStore } from "@/stores/store";
 import {
   Card,

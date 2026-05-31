@@ -16,7 +16,7 @@ import { SchedImgStore } from "@/stores/store";
 import { Button } from "@/components/ui/button";
 import { Employees, MeetingsQuery } from "@/stores/query";
 import { AddMeeting, type MeetingAttendeeOption } from "../subForms/MeetingForms/addMeeting";
-import supabase from "../supabase";
+import { takeOversupabase } from "../supabase";
 import { message } from "@tauri-apps/plugin-dialog";
 import { useState } from "react";
 import {

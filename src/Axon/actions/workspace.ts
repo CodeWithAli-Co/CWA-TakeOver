@@ -54,7 +54,7 @@ function isSafeModeOn(): boolean {
 function refuseDestructive(actionName: string, alternative: string): never {
   throw new Error(
     `Refused: safe-mode is on and ${actionName} is destructive. ` +
-    `Try ${alternative} instead, or disable Workspace Safe Mode in AXON settings.`
+      `Try ${alternative} instead, or disable Workspace Safe Mode in AXON settings.`,
   );
 }
 
@@ -67,33 +67,47 @@ function refuseDestructive(actionName: string, alternative: string): never {
 // "invalid input syntax for type uuid: \"undefined\"") and throw
 // actionable messages the brain can self-correct from.
 
-const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+const UUID_RE =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 function assertId(value: unknown, fieldName: string, action: string): string {
-  if (typeof value !== "string" || !value.trim() || value === "undefined" || value === "null") {
+  if (
+    typeof value !== "string" ||
+    !value.trim() ||
+    value === "undefined" ||
+    value === "null"
+  ) {
     throw new Error(
-      `${action} needs a real ${fieldName}. Call workspace_overview first to get doc ids, then pass one here.`
+      `${action} needs a real ${fieldName}. Call workspace_overview first to get doc ids, then pass one here.`,
     );
   }
   if (!UUID_RE.test(value)) {
     throw new Error(
       `${action} got ${fieldName}=${JSON.stringify(value)} which is not a UUID. ` +
-      `Call workspace_overview to get a valid doc id.`
+        `Call workspace_overview to get a valid doc id.`,
     );
   }
   return value;
 }
 
-function assertNonEmptyArray<T>(value: unknown, fieldName: string, action: string): T[] {
+function assertNonEmptyArray<T>(
+  value: unknown,
+  fieldName: string,
+  action: string,
+): T[] {
   if (!Array.isArray(value) || value.length === 0) {
     throw new Error(
-      `${action} needs a non-empty ${fieldName} array. Pass at least one item.`
+      `${action} needs a non-empty ${fieldName} array. Pass at least one item.`,
     );
   }
   return value as T[];
 }
 
-function assertObject(value: unknown, fieldName: string, action: string): Record<string, string> {
+function assertObject(
+  value: unknown,
+  fieldName: string,
+  action: string,
+): Record<string, string> {
   if (!value || typeof value !== "object" || Array.isArray(value)) {
     throw new Error(`${action} needs ${fieldName} to be a key/value object.`);
   }
@@ -103,9 +117,13 @@ function assertObject(value: unknown, fieldName: string, action: string): Record
 /** Read the doc id from the current URL (if on a /workspace/docs/<id> page). */
 function currentDocIdFromUrl(): string | null {
   try {
-    const m = window.location.pathname.match(/\/workspace\/docs\/([0-9a-f-]{36})/i);
+    const m = window.location.pathname.match(
+      /\/workspace\/docs\/([0-9a-f-]{36})/i,
+    );
     return m ? m[1] : null;
-  } catch { return null; }
+  } catch {
+    return null;
+  }
 }
 
 /** Reports whether the doc we're about to write is the one the user
@@ -132,8 +150,8 @@ function assertNotCurrentlyOpenStrict(docId: string, action: string): void {
   if (open && open === docId) {
     throw new Error(
       `${action} refused: you have this doc open right now. ` +
-      `Navigate away (or close the tab) first — otherwise your live editor will overwrite my changes on the next keystroke. ` +
-      `This is a destructive operation; the safer path is to navigate away then re-run.`
+        `Navigate away (or close the tab) first — otherwise your live editor will overwrite my changes on the next keystroke. ` +
+        `This is a destructive operation; the safer path is to navigate away then re-run.`,
     );
   }
 }
@@ -143,17 +161,24 @@ function assertNotCurrentlyOpenStrict(docId: string, action: string): void {
 registerUndoHandler<{ docId: string; title: string }>(
   "workspace.delete-created-doc",
   async ({ docId, title }) => {
-    const { error } = await takeOversupabase.from(DOC_TABLE).delete().eq("id", docId);
+    const { error } = await takeOversupabase
+      .from(DOC_TABLE)
+      .delete()
+      .eq("id", docId);
     if (error) throw new Error(error.message);
     return `Reverted — deleted doc "${title}".`;
   },
 );
 
-registerUndoHandler<{ docId: string; previousContent: JSONContent; previousYState: string | null }>(
+registerUndoHandler<{
+  docId: string;
+  previousContent: JSONContent;
+  previousYState: string | null;
+}>(
   "workspace.restore-content",
   async ({ docId, previousContent, previousYState }) => {
     const { error } = await takeOversupabase
-.from(DOC_TABLE)
+      .from(DOC_TABLE)
       .update({ content: previousContent, y_state: previousYState })
       .eq("id", docId);
     if (error) throw new Error(error.message);
@@ -169,11 +194,16 @@ function flattenText(node: JSONContent | null | undefined): string {
   if (!node) return "";
   if (node.type === "text" && typeof node.text === "string") return node.text;
   if (!node.content) return "";
-  return node.content.map(flattenText).join(node.type === "paragraph" ? " " : "\n");
+  return node.content
+    .map(flattenText)
+    .join(node.type === "paragraph" ? " " : "\n");
 }
 
 /** Build a short preview from a doc's content. ~200 chars, single line. */
-function buildPreview(content: JSONContent | null | undefined, maxChars = 200): string {
+function buildPreview(
+  content: JSONContent | null | undefined,
+  maxChars = 200,
+): string {
   const text = flattenText(content).replace(/\s+/g, " ").trim();
   if (text.length <= maxChars) return text;
   return text.slice(0, maxChars).trim() + "…";
@@ -193,9 +223,10 @@ function appendParagraphs(
   current: JSONContent | null | undefined,
   paragraphs: { text: string; heading?: 1 | 2 | 3 }[],
 ): JSONContent {
-  const root: JSONContent = current && current.type === "doc"
-    ? { ...current, content: [...(current.content ?? [])] }
-    : { type: "doc", content: [] };
+  const root: JSONContent =
+    current && current.type === "doc"
+      ? { ...current, content: [...(current.content ?? [])] }
+      : { type: "doc", content: [] };
 
   for (const p of paragraphs) {
     const trimmed = (p.text ?? "").trim();
@@ -282,8 +313,19 @@ export const workspaceOverviewAction: AxonAction<
   { includeArchived?: boolean; folderId?: string | null; maxDocs?: number },
   {
     folders: { id: string; name: string; parent_folder_id: string | null }[];
-    docs: { id: string; title: string; folder_id: string | null; updated_at: string; preview: string }[];
-    sheets: { id: string; title: string; folder_id: string | null; updated_at: string }[];
+    docs: {
+      id: string;
+      title: string;
+      folder_id: string | null;
+      updated_at: string;
+      preview: string;
+    }[];
+    sheets: {
+      id: string;
+      title: string;
+      folder_id: string | null;
+      updated_at: string;
+    }[];
     totalDocs: number;
     truncated: boolean;
   }
@@ -294,19 +336,33 @@ export const workspaceOverviewAction: AxonAction<
   input_schema: {
     type: "object",
     properties: {
-      includeArchived: { type: "boolean", description: "Include archived docs/sheets." },
-      folderId: { type: "string", description: "Filter to one folder id (omit for all)." },
-      maxDocs: { type: "number", description: "Cap on docs returned (default 200)." },
+      includeArchived: {
+        type: "boolean",
+        description: "Include archived docs/sheets.",
+      },
+      folderId: {
+        type: "string",
+        description: "Filter to one folder id (omit for all).",
+      },
+      maxDocs: {
+        type: "number",
+        description: "Cap on docs returned (default 200).",
+      },
     },
   },
   handler: async (input) => {
     const cap = Math.max(1, Math.min(500, input.maxDocs ?? 200));
     const [foldersRes, docsRes, sheetsRes] = await Promise.all([
-      takeOversupabase.from(FOLDER_TABLE).select("id, name, parent_folder_id").order("position", { ascending: true }),
-      takeOversupabase.from(DOC_TABLE)
+      takeOversupabase
+        .from(FOLDER_TABLE)
+        .select("id, name, parent_folder_id")
+        .order("position", { ascending: true }),
+      takeOversupabase
+        .from(DOC_TABLE)
         .select("id, title, folder_id, updated_at, archived, content")
         .order("updated_at", { ascending: false }),
-      takeOversupabase.from(SHEET_TABLE)
+      takeOversupabase
+        .from(SHEET_TABLE)
         .select("id, title, folder_id, updated_at, archived")
         .order("updated_at", { ascending: false }),
     ]);
@@ -315,8 +371,11 @@ export const workspaceOverviewAction: AxonAction<
     if (sheetsRes.error) throw new Error(sheetsRes.error.message);
 
     const allDocs = (docsRes.data ?? []) as any[];
-    let docsFiltered = allDocs.filter((d) => input.includeArchived || !d.archived);
-    if (input.folderId !== undefined) docsFiltered = docsFiltered.filter((d) => d.folder_id === input.folderId);
+    let docsFiltered = allDocs.filter(
+      (d) => input.includeArchived || !d.archived,
+    );
+    if (input.folderId !== undefined)
+      docsFiltered = docsFiltered.filter((d) => d.folder_id === input.folderId);
     const totalDocs = docsFiltered.length;
     const truncated = totalDocs > cap;
     const docs = docsFiltered.slice(0, cap).map((d) => ({
@@ -330,14 +389,20 @@ export const workspaceOverviewAction: AxonAction<
     const sheets = (sheetsRes.data ?? [])
       .filter((s: any) => input.includeArchived || !s.archived)
       .map((s: any) => ({
-        id: s.id, title: s.title, folder_id: s.folder_id ?? null, updated_at: s.updated_at,
+        id: s.id,
+        title: s.title,
+        folder_id: s.folder_id ?? null,
+        updated_at: s.updated_at,
       }));
 
     return {
       summary: `Read overview: ${docs.length} docs, ${sheets.length} sheets, ${foldersRes.data?.length ?? 0} folders${truncated ? ` (truncated from ${totalDocs})` : ""}.`,
       data: {
         folders: (foldersRes.data ?? []) as any,
-        docs, sheets, totalDocs, truncated,
+        docs,
+        sheets,
+        totalDocs,
+        truncated,
       },
     };
   },
@@ -352,7 +417,8 @@ export const workspaceCurrentDocAction: AxonAction<
   { docId: string | null; title: string | null }
 > = {
   name: "workspace_current_doc",
-  description: "Get the id of the doc the operator is viewing right now. Use this BEFORE workspace_overview when the user says 'this doc' or 'the doc I'm in'.",
+  description:
+    "Get the id of the doc the operator is viewing right now. Use this BEFORE workspace_overview when the user says 'this doc' or 'the doc I'm in'.",
   input_schema: { type: "object", properties: {} },
   handler: async () => {
     let docId: string | null = null;
@@ -360,7 +426,9 @@ export const workspaceCurrentDocAction: AxonAction<
       const path = window.location.pathname;
       const m = path.match(/\/workspace\/docs\/([0-9a-f-]{36})/i);
       if (m) docId = m[1];
-    } catch { /* SSR / no window */ }
+    } catch {
+      /* SSR / no window */
+    }
 
     if (!docId) {
       return {
@@ -369,10 +437,15 @@ export const workspaceCurrentDocAction: AxonAction<
       };
     }
     const { data, error } = await takeOversupabase
-.from(DOC_TABLE).select("title").eq("id", docId).maybeSingle();
+      .from(DOC_TABLE)
+      .select("title")
+      .eq("id", docId)
+      .maybeSingle();
     if (error) throw new Error(error.message);
     return {
-      summary: data ? `Currently viewing "${data.title}".` : "On a doc page but couldn't read the title.",
+      summary: data
+        ? `Currently viewing "${data.title}".`
+        : "On a doc page but couldn't read the title.",
       data: { docId, title: data?.title ?? null },
     };
   },
@@ -382,10 +455,17 @@ export const workspaceCurrentDocAction: AxonAction<
 /** Full content of one doc. */
 export const workspaceReadDocAction: AxonAction<
   { docId: string },
-  { id: string; title: string; updated_at: string; text: string; folder_id: string | null }
+  {
+    id: string;
+    title: string;
+    updated_at: string;
+    text: string;
+    folder_id: string | null;
+  }
 > = {
   name: "workspace_read_doc",
-  description: "Read the full text of one doc. docId must come from workspace_overview.",
+  description:
+    "Read the full text of one doc. docId must come from workspace_overview.",
   input_schema: {
     type: "object",
     properties: { docId: { type: "string", description: "UUID of the doc." } },
@@ -394,7 +474,7 @@ export const workspaceReadDocAction: AxonAction<
   handler: async (input) => {
     const docId = assertId(input?.docId, "docId", "workspace_read_doc");
     const { data, error } = await takeOversupabase
-.from(DOC_TABLE)
+      .from(DOC_TABLE)
       .select("id, title, updated_at, folder_id, content")
       .eq("id", docId)
       .maybeSingle();
@@ -404,8 +484,11 @@ export const workspaceReadDocAction: AxonAction<
     return {
       summary: `Read "${data.title}" (${text.length} chars).`,
       data: {
-        id: data.id, title: data.title, updated_at: data.updated_at,
-        folder_id: (data as any).folder_id ?? null, text,
+        id: data.id,
+        title: data.title,
+        updated_at: data.updated_at,
+        folder_id: (data as any).folder_id ?? null,
+        text,
       },
     };
   },
@@ -418,7 +501,8 @@ export const workspaceSearchAction: AxonAction<
   { matches: { docId: string; title: string; hits: number; snippet: string }[] }
 > = {
   name: "workspace_search",
-  description: "Keyword search across all docs. Returns top matches by hit count with a snippet.",
+  description:
+    "Keyword search across all docs. Returns top matches by hit count with a snippet.",
   input_schema: {
     type: "object",
     properties: {
@@ -437,7 +521,8 @@ export const workspaceSearchAction: AxonAction<
       return { summary: "Empty search query.", data: { matches: [] } };
     }
     const { data, error } = await takeOversupabase
-.from(DOC_TABLE).select("id, title, content, archived");
+      .from(DOC_TABLE)
+      .select("id, title, content, archived");
     if (error) throw new Error(error.message);
 
     const ranked = ((data ?? []) as any[])
@@ -457,10 +542,22 @@ export const workspaceSearchAction: AxonAction<
         if (hits === 0) return null;
         const start = Math.max(0, firstHit - 40);
         const end = Math.min(text.length, firstHit + 160);
-        const snippet = (start > 0 ? "…" : "") + text.slice(start, end).replace(/\s+/g, " ") + (end < text.length ? "…" : "");
+        const snippet =
+          (start > 0 ? "…" : "") +
+          text.slice(start, end).replace(/\s+/g, " ") +
+          (end < text.length ? "…" : "");
         return { docId: d.id, title: d.title, hits, snippet };
       })
-      .filter((x): x is { docId: string; title: string; hits: number; snippet: string } => x !== null)
+      .filter(
+        (
+          x,
+        ): x is {
+          docId: string;
+          title: string;
+          hits: number;
+          snippet: string;
+        } => x !== null,
+      )
       .sort((a, b) => b.hits - a.hits)
       .slice(0, cap);
 
@@ -483,7 +580,8 @@ export const workspaceCreateDocAction: AxonAction<
   { docId: string; title: string }
 > = {
   name: "workspace_create_doc",
-  description: "Create a new doc with initial body paragraphs. Use for background report writing — operator does not need to be on the doc. Always safe. IMPORTANT: every paragraph string must be REAL prose; do not pass empty strings or placeholders like '...' or 'TBD'.",
+  description:
+    "Create a new doc with initial body paragraphs. Use for background report writing — operator does not need to be on the doc. Always safe. IMPORTANT: every paragraph string must be REAL prose; do not pass empty strings or placeholders like '...' or 'TBD'.",
   input_schema: {
     type: "object",
     properties: {
@@ -491,7 +589,8 @@ export const workspaceCreateDocAction: AxonAction<
       paragraphs: {
         type: "array",
         items: { type: "string" },
-        description: "Body paragraphs as full prose strings. Each becomes a paragraph block. Must contain actual content — empty strings are rejected.",
+        description:
+          "Body paragraphs as full prose strings. Each becomes a paragraph block. Must contain actual content — empty strings are rejected.",
       },
       folderId: { type: "string", description: "Optional folder UUID." },
     },
@@ -513,25 +612,29 @@ export const workspaceCreateDocAction: AxonAction<
     const paragraphs = rawArr.filter((p): p is string => {
       if (typeof p !== "string") return false;
       const t = p.trim();
-      if (t.length < 3) return false;                                 // drop "", " ", "."
-      if (/^[\.…\-_=*]+$/.test(t)) return false;                      // drop "...", "---", etc.
-      if (/^(tbd|tba|todo|placeholder|fill in|fill me|n\/a)$/i.test(t)) return false;
+      if (t.length < 3) return false; // drop "", " ", "."
+      if (/^[\.…\-_=*]+$/.test(t)) return false; // drop "...", "---", etc.
+      if (/^(tbd|tba|todo|placeholder|fill in|fill me|n\/a)$/i.test(t))
+        return false;
       return true;
     });
     if (rawArr.length > 0 && paragraphs.length === 0) {
       throw new Error(
         `workspace_create_doc refused: you passed ${rawArr.length} paragraph(s) but none contained real prose. ` +
-        `Re-call with full sentence strings — every paragraph must be the actual body content you want in the doc, not "", "...", "TBD", or a placeholder.`
+          `Re-call with full sentence strings — every paragraph must be the actual body content you want in the doc, not "", "...", "TBD", or a placeholder.`,
       );
     }
 
-    const folderId = typeof input.folderId === "string" && UUID_RE.test(input.folderId) ? input.folderId : null;
+    const folderId =
+      typeof input.folderId === "string" && UUID_RE.test(input.folderId)
+        ? input.folderId
+        : null;
     const content = appendParagraphs(
       { type: "doc", content: [] },
       paragraphs.map((p) => ({ text: p })),
     );
     const { data, error } = await takeOversupabase
-.from(DOC_TABLE)
+      .from(DOC_TABLE)
       .insert({
         title,
         content,
@@ -547,7 +650,10 @@ export const workspaceCreateDocAction: AxonAction<
     ctx.pushUndo({
       actionName: "workspace_create_doc",
       label: `Delete doc "${title}"`,
-      descriptor: { kind: "workspace.delete-created-doc", payload: { docId: data.id, title } },
+      descriptor: {
+        kind: "workspace.delete-created-doc",
+        payload: { docId: data.id, title },
+      },
     });
 
     return {
@@ -565,13 +671,24 @@ export const workspaceAppendAction: AxonAction<
   { docId: string; title: string; appendedBlocks: number }
 > = {
   name: "workspace_append_to_doc",
-  description: "Append paragraphs to the END of a doc. Use to extend reports, log notes, or write a long doc section-by-section in the background. Each paragraph must be REAL prose — empty strings or placeholders like '...' will be rejected. Safe — never modifies content above. docId from workspace_overview or workspace_current_doc.",
+  description:
+    "Append paragraphs to the END of a doc. Use to extend reports, log notes, or write a long doc section-by-section in the background. Each paragraph must be REAL prose — empty strings or placeholders like '...' will be rejected. Safe — never modifies content above. docId from workspace_overview or workspace_current_doc.",
   input_schema: {
     type: "object",
     properties: {
-      docId: { type: "string", description: "Doc UUID from workspace_overview." },
-      paragraphs: { type: "array", items: { type: "string" }, description: "Paragraphs to append." },
-      heading: { type: "string", description: "Optional H2 heading before paragraphs." },
+      docId: {
+        type: "string",
+        description: "Doc UUID from workspace_overview.",
+      },
+      paragraphs: {
+        type: "array",
+        items: { type: "string" },
+        description: "Paragraphs to append.",
+      },
+      heading: {
+        type: "string",
+        description: "Optional H2 heading before paragraphs.",
+      },
     },
     required: ["docId", "paragraphs"],
   },
@@ -579,27 +696,43 @@ export const workspaceAppendAction: AxonAction<
   handler: async (input, ctx) => {
     const docId = assertId(input?.docId, "docId", "workspace_append_to_doc");
     const openWarning = describeOpenConflict(docId);
-    const paragraphsRaw = assertNonEmptyArray<unknown>(input?.paragraphs, "paragraphs", "workspace_append_to_doc");
-    const paragraphs = paragraphsRaw.filter((p): p is string => typeof p === "string" && p.trim().length > 0);
+    const paragraphsRaw = assertNonEmptyArray<unknown>(
+      input?.paragraphs,
+      "paragraphs",
+      "workspace_append_to_doc",
+    );
+    const paragraphs = paragraphsRaw.filter(
+      (p): p is string => typeof p === "string" && p.trim().length > 0,
+    );
     if (paragraphs.length === 0) {
-      throw new Error("workspace_append_to_doc: paragraphs must be non-empty strings.");
+      throw new Error(
+        "workspace_append_to_doc: paragraphs must be non-empty strings.",
+      );
     }
-    const heading = typeof input?.heading === "string" && input.heading.trim()
-      ? input.heading.trim() : undefined;
+    const heading =
+      typeof input?.heading === "string" && input.heading.trim()
+        ? input.heading.trim()
+        : undefined;
 
     // Read current state for undo + append.
     const { data: current, error: readErr } = await takeOversupabase
-.from(DOC_TABLE).select("title, content, y_state").eq("id", docId).single();
+      .from(DOC_TABLE)
+      .select("title, content, y_state")
+      .eq("id", docId)
+      .single();
     if (readErr) throw new Error(readErr.message);
 
     const blocks: { text: string; heading?: 1 | 2 | 3 }[] = [];
     if (heading) blocks.push({ text: heading, heading: 2 });
     for (const p of paragraphs) blocks.push({ text: p });
 
-    const nextContent = appendParagraphs(current.content as JSONContent, blocks);
+    const nextContent = appendParagraphs(
+      current.content as JSONContent,
+      blocks,
+    );
 
     const { error: writeErr } = await takeOversupabase
-.from(DOC_TABLE)
+      .from(DOC_TABLE)
       .update({
         content: nextContent,
         // Null out y_state so any open editor session re-initializes from
@@ -616,7 +749,11 @@ export const workspaceAppendAction: AxonAction<
       label: `Undo append to "${current.title}"`,
       descriptor: {
         kind: "workspace.restore-content",
-        payload: { docId, previousContent: current.content, previousYState: current.y_state ?? null },
+        payload: {
+          docId,
+          previousContent: current.content,
+          previousYState: current.y_state ?? null,
+        },
       },
     });
 
@@ -636,61 +773,111 @@ export const workspaceAppendAction: AxonAction<
  *  Safe — only modifies text within the marker syntax. */
 export const workspaceFillAction: AxonAction<
   { docId: string; values: Record<string, string> },
-  { docId: string; title: string; replacedCount: number; hintsSeen: string[]; hintsUnfilled: string[] }
+  {
+    docId: string;
+    title: string;
+    replacedCount: number;
+    hintsSeen: string[];
+    hintsUnfilled: string[];
+  }
 > = {
   name: "workspace_fill_placeholders",
-  description: "Replace [FILL: hint] markers in a doc with values. E.g. values={total_raise: '$1.5M'} fills [FILL: total_raise]. Safe.",
+  description:
+    "Replace [FILL: hint] markers in a doc with values. E.g. values={total_raise: '$1.5M'} fills [FILL: total_raise]. Safe.",
   input_schema: {
     type: "object",
     properties: {
-      docId: { type: "string", description: "Doc UUID from workspace_overview." },
-      values: { type: "object", description: "Map of hint → replacement text." },
+      docId: {
+        type: "string",
+        description: "Doc UUID from workspace_overview.",
+      },
+      values: {
+        type: "object",
+        description: "Map of hint → replacement text.",
+      },
     },
     required: ["docId", "values"],
   },
   mutating: true,
   handler: async (input, ctx) => {
-    const docId = assertId(input?.docId, "docId", "workspace_fill_placeholders");
+    const docId = assertId(
+      input?.docId,
+      "docId",
+      "workspace_fill_placeholders",
+    );
     const openWarning = describeOpenConflict(docId);
-    const values = assertObject(input?.values, "values", "workspace_fill_placeholders");
+    const values = assertObject(
+      input?.values,
+      "values",
+      "workspace_fill_placeholders",
+    );
     const { data: current, error: readErr } = await takeOversupabase
-.from(DOC_TABLE).select("title, content, y_state").eq("id", docId).single();
+      .from(DOC_TABLE)
+      .select("title, content, y_state")
+      .eq("id", docId)
+      .single();
     if (readErr) throw new Error(readErr.message);
 
-    const { content: nextContent, replacedCount, hintsSeen } =
-      fillPlaceholders(current.content as JSONContent, values);
+    const {
+      content: nextContent,
+      replacedCount,
+      hintsSeen,
+    } = fillPlaceholders(current.content as JSONContent, values);
 
     if (replacedCount === 0) {
       const seen = Array.from(new Set(hintsSeen));
       return {
-        summary: seen.length === 0
-          ? `No [FILL: …] markers found in "${current.title}".`
-          : `Found ${seen.length} marker${seen.length === 1 ? "" : "s"} but none matched the supplied values: ${seen.join(", ")}.`,
-        data: { docId, title: current.title, replacedCount: 0, hintsSeen: seen, hintsUnfilled: seen },
+        summary:
+          seen.length === 0
+            ? `No [FILL: …] markers found in "${current.title}".`
+            : `Found ${seen.length} marker${seen.length === 1 ? "" : "s"} but none matched the supplied values: ${seen.join(", ")}.`,
+        data: {
+          docId,
+          title: current.title,
+          replacedCount: 0,
+          hintsSeen: seen,
+          hintsUnfilled: seen,
+        },
       };
     }
 
     const { error: writeErr } = await takeOversupabase
-.from(DOC_TABLE)
-      .update({ content: nextContent, y_state: null, updated_by: ctx.operator.supa_id })
+      .from(DOC_TABLE)
+      .update({
+        content: nextContent,
+        y_state: null,
+        updated_by: ctx.operator.supa_id,
+      })
       .eq("id", docId);
     if (writeErr) throw new Error(writeErr.message);
 
     const seen = Array.from(new Set(hintsSeen));
-    const unfilled = seen.filter((h) => !(h in values) && !(h.toLowerCase() in values));
+    const unfilled = seen.filter(
+      (h) => !(h in values) && !(h.toLowerCase() in values),
+    );
 
     ctx.pushUndo({
       actionName: "workspace_fill_placeholders",
       label: `Undo placeholder fills in "${current.title}"`,
       descriptor: {
         kind: "workspace.restore-content",
-        payload: { docId, previousContent: current.content, previousYState: current.y_state ?? null },
+        payload: {
+          docId,
+          previousContent: current.content,
+          previousYState: current.y_state ?? null,
+        },
       },
     });
 
     return {
       summary: `Filled ${replacedCount} placeholder${replacedCount === 1 ? "" : "s"} in "${current.title}"${unfilled.length ? ` (${unfilled.length} unfilled: ${unfilled.join(", ")})` : ""}.${openWarning ? ` ⚠ ${openWarning}` : ""}`,
-      data: { docId, title: current.title, replacedCount, hintsSeen: seen, hintsUnfilled: unfilled },
+      data: {
+        docId,
+        title: current.title,
+        replacedCount,
+        hintsSeen: seen,
+        hintsUnfilled: unfilled,
+      },
     };
   },
 };
@@ -706,12 +893,20 @@ export const workspaceReplaceAction: AxonAction<
   { docId: string; title: string }
 > = {
   name: "workspace_replace_doc_content",
-  description: "DESTRUCTIVE: replace a doc's entire content. Refused in safe mode. Prefer workspace_append_to_doc.",
+  description:
+    "DESTRUCTIVE: replace a doc's entire content. Refused in safe mode. Prefer workspace_append_to_doc.",
   input_schema: {
     type: "object",
     properties: {
-      docId: { type: "string", description: "Doc UUID from workspace_overview." },
-      paragraphs: { type: "array", items: { type: "string" }, description: "Full new content." },
+      docId: {
+        type: "string",
+        description: "Doc UUID from workspace_overview.",
+      },
+      paragraphs: {
+        type: "array",
+        items: { type: "string" },
+        description: "Full new content.",
+      },
     },
     required: ["docId", "paragraphs"],
   },
@@ -721,26 +916,48 @@ export const workspaceReplaceAction: AxonAction<
     if (isSafeModeOn()) {
       refuseDestructive(
         "workspace_replace_doc_content",
-        "workspace_append_to_doc (additive) or workspace_fill_placeholders (only fills [FILL: …] markers)"
+        "workspace_append_to_doc (additive) or workspace_fill_placeholders (only fills [FILL: …] markers)",
       );
     }
-    const docId = assertId(input?.docId, "docId", "workspace_replace_doc_content");
+    const docId = assertId(
+      input?.docId,
+      "docId",
+      "workspace_replace_doc_content",
+    );
     assertNotCurrentlyOpenStrict(docId, "workspace_replace_doc_content");
-    const paragraphsRaw = assertNonEmptyArray<unknown>(input?.paragraphs, "paragraphs", "workspace_replace_doc_content");
-    const paragraphs = paragraphsRaw.filter((p): p is string => typeof p === "string");
+    const paragraphsRaw = assertNonEmptyArray<unknown>(
+      input?.paragraphs,
+      "paragraphs",
+      "workspace_replace_doc_content",
+    );
+    const paragraphs = paragraphsRaw.filter(
+      (p): p is string => typeof p === "string",
+    );
     if (paragraphs.length === 0) {
-      throw new Error("workspace_replace_doc_content: paragraphs must contain at least one string.");
+      throw new Error(
+        "workspace_replace_doc_content: paragraphs must contain at least one string.",
+      );
     }
 
     const { data: current, error: readErr } = await takeOversupabase
-.from(DOC_TABLE).select("title, content, y_state").eq("id", docId).single();
+      .from(DOC_TABLE)
+      .select("title, content, y_state")
+      .eq("id", docId)
+      .single();
     if (readErr) throw new Error(readErr.message);
 
-    const nextContent = appendParagraphs({ type: "doc", content: [] }, paragraphs.map((p) => ({ text: p })));
+    const nextContent = appendParagraphs(
+      { type: "doc", content: [] },
+      paragraphs.map((p) => ({ text: p })),
+    );
 
     const { error: writeErr } = await takeOversupabase
-.from(DOC_TABLE)
-      .update({ content: nextContent, y_state: null, updated_by: ctx.operator.supa_id })
+      .from(DOC_TABLE)
+      .update({
+        content: nextContent,
+        y_state: null,
+        updated_by: ctx.operator.supa_id,
+      })
       .eq("id", docId);
     if (writeErr) throw new Error(writeErr.message);
 
@@ -749,7 +966,11 @@ export const workspaceReplaceAction: AxonAction<
       label: `Undo content replace on "${current.title}"`,
       descriptor: {
         kind: "workspace.restore-content",
-        payload: { docId, previousContent: current.content, previousYState: current.y_state ?? null },
+        payload: {
+          docId,
+          previousContent: current.content,
+          previousYState: current.y_state ?? null,
+        },
       },
     });
 
@@ -766,23 +987,38 @@ export const workspaceDeleteAction: AxonAction<
   { docId: string; title: string }
 > = {
   name: "workspace_delete_doc",
-  description: "DESTRUCTIVE: delete a doc permanently. Refused in safe mode. Prefer archiving.",
+  description:
+    "DESTRUCTIVE: delete a doc permanently. Refused in safe mode. Prefer archiving.",
   input_schema: {
     type: "object",
-    properties: { docId: { type: "string", description: "Doc UUID from workspace_overview." } },
+    properties: {
+      docId: {
+        type: "string",
+        description: "Doc UUID from workspace_overview.",
+      },
+    },
     required: ["docId"],
   },
   mutating: true,
   requiresConfirmation: true,
   handler: async (input, _ctx) => {
     if (isSafeModeOn()) {
-      refuseDestructive("workspace_delete_doc", "archiving (set the archived flag on the doc instead)");
+      refuseDestructive(
+        "workspace_delete_doc",
+        "archiving (set the archived flag on the doc instead)",
+      );
     }
     const docId = assertId(input?.docId, "docId", "workspace_delete_doc");
     const { data: current, error: readErr } = await takeOversupabase
-.from(DOC_TABLE).select("title").eq("id", docId).single();
+      .from(DOC_TABLE)
+      .select("title")
+      .eq("id", docId)
+      .single();
     if (readErr) throw new Error(readErr.message);
-    const { error } = await takeOversupabase.from(DOC_TABLE).delete().eq("id", docId);
+    const { error } = await takeOversupabase
+      .from(DOC_TABLE)
+      .delete()
+      .eq("id", docId);
     if (error) throw new Error(error.message);
     return {
       summary: `Deleted doc "${current.title}".`,

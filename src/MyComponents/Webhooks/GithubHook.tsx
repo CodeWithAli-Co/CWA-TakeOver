@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/shadcn
 import { Badge } from "@/components/ui/shadcnComponents/badge";
 import { Button } from "@/components/ui/shadcnComponents/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/shadcnComponents/tabs";
-import supabase from "../supabase";
+import { takeOversupabase } from "../supabase";
 
 
 // Type definitions for GitHub webhook payload

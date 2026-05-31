@@ -1,5 +1,5 @@
 import { useForm } from "@tanstack/react-form";
-import supabase from "../supabase";
+import { takeOversupabase } from "../supabase";
 import { invoke } from "@tauri-apps/api/core";
 import { getActiveCompanyLabel } from "@/stores/query";
 import { motion } from "framer-motion";

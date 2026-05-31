@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import { useAppStore } from "@/stores/store";
-import supabase from "../supabase";
+import { takeOversupabase } from "../supabase";
 import { Database } from "lucide-react";
 
 const STORAGE_LIMIT = 500;
