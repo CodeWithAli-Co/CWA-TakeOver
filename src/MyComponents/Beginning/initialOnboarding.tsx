@@ -48,8 +48,6 @@ import {
   Loader2,
   AlertTriangle,
   FileSpreadsheet,
-  Plug,
-  Mail,
   MailCheck,
   type LucideIcon,
 } from "lucide-react";
@@ -65,6 +63,13 @@ import {
   StepShell,
   TextInput,
 } from "@/MyComponents/Onboarding/onboardingPrimitives";
+import {
+  CONNECTORS,
+  Monogram,
+  type CatalogEntry,
+} from "@/MyComponents/SettingNavComponents/connectorCatalog";
+import { ConnectorCredentialDialog } from "@/MyComponents/SettingNavComponents/ConnectorCredentialDialog";
+import { useConnectors } from "@/stores/connectors";
 
 // ─────────────────────────────────────────────────────────────
 // Catalog
@@ -328,11 +333,12 @@ const InitialOnboarding = ({ completeInitialLaunch, debugMode = false }: Props) 
           )}
 
           {stepId === "connectors" && (
-            <ConnectorsStepStub
+            <ConnectorsStep
               key="connectors"
               companyName={companyName}
               onBack={goBack}
               onFinish={finish}
+              debugMode={debugMode}
             />
           )}
         </AnimatePresence>
@@ -732,15 +738,48 @@ function ComponentCard({
   );
 }
 
-function ConnectorsStepStub({
+/**
+ * ConnectorsStep — Step 5 of 5.
+ *
+ * Reuses the existing Settings catalog + ConnectorCredentialDialog,
+ * so every schema and verify wired up in Settings is automatically
+ * available here. HubSpot is pinned first with a Recommended badge —
+ * it's the headline connector for the current launch customer.
+ *
+ * `debugMode` disables the connect dialog so the preview pill can
+ * walk through this screen without touching the real connectors
+ * table.
+ */
+function ConnectorsStep({
   companyName,
   onBack,
   onFinish,
+  debugMode,
 }: {
   companyName: string;
   onBack: () => void;
   onFinish: () => void;
+  debugMode: boolean;
 }) {
+  const { data: connectors = [] } = useConnectors();
+  const [activeKind, setActiveKind] = useState<string | null>(null);
+
+  // Curated subset. Order matters — HubSpot first since it's the
+  // primary stack for the current launch customer. The full
+  // 15-connector catalog is still available from Settings.
+  const featuredIds = ["hubspot", "airtable", "stripe", "notion", "github"];
+  const featured = featuredIds
+    .map((id) => CONNECTORS.find((c) => c.id === id))
+    .filter((c): c is CatalogEntry => !!c);
+
+  const connectedKinds = new Set(connectors.map((c) => c.kind));
+  const activeEntry = activeKind
+    ? (CONNECTORS.find((c) => c.id === activeKind) ?? null)
+    : null;
+  const activeExisting = activeKind
+    ? (connectors.find((c) => c.kind === activeKind) ?? null)
+    : null;
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 8 }}
@@ -751,56 +790,109 @@ function ConnectorsStepStub({
       <StepHeader
         eyebrow="Step 5 of 5"
         title="Bring in your data."
-        subtitle={`${companyName ? `${companyName} ` : ""}talks to other tools - let's pull in what you already have so the dashboard isn't empty on day one.`}
+        subtitle={`${companyName ? `${companyName} ` : ""}talks to other tools - wire one up now so the dashboard isn't empty on day one. You can always add more from Settings.`}
       />
+
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-        <PlaceholderCard
-          icon={Plug}
-          label="Connectors"
-          description="Airtable, Stripe, Notion, GitHub - connect your accounts so Axon and the dashboard see your live data."
-        />
-        <PlaceholderCard
-          icon={Mail}
-          label="Import files"
-          description="Drop a CSV, Excel sheet, or QuickBooks export - we'll detect the shape and pull it in."
-        />
+        {featured.map((entry) => (
+          <ConnectorCard
+            key={entry.id}
+            entry={entry}
+            connected={connectedKinds.has(entry.id)}
+            recommended={entry.id === "hubspot"}
+            disabled={debugMode}
+            onClick={() => {
+              if (debugMode) return;
+              setActiveKind(entry.id);
+            }}
+          />
+        ))}
       </div>
+
+      {debugMode && (
+        <p className="text-[11px] text-text-tertiary text-center mt-3 italic">
+          Preview mode - connect dialogs disabled.
+        </p>
+      )}
+
       <p className="text-[11.5px] text-text-tertiary text-center mt-4 max-w-md mx-auto leading-relaxed">
-        You can skip this and wire connectors up later from Settings → Connectors.
+        Skip this and wire connectors up later from Settings - Connectors.
       </p>
+
       <StepActions
         onBack={onBack}
         onNext={onFinish}
+        onSkip={onFinish}
         nextLabel="Take me to login"
       />
+
+      {activeEntry && (
+        <ConnectorCredentialDialog
+          kind={activeEntry.id}
+          name={activeEntry.name}
+          existing={activeExisting}
+          onClose={() => setActiveKind(null)}
+        />
+      )}
     </motion.div>
   );
 }
 
-function PlaceholderCard({
-  icon: Icon,
-  label,
-  description,
+/**
+ * ConnectorCard — single tile inside ConnectorsStep. Mirrors the
+ * Settings catalog tile but more compact so 5+ fit comfortably
+ * in the wizard column. Uses the same Monogram component for
+ * brand parity.
+ */
+function ConnectorCard({
+  entry,
+  connected,
+  recommended,
+  disabled,
+  onClick,
 }: {
-  icon: LucideIcon;
-  label: string;
-  description: string;
+  entry: CatalogEntry;
+  connected: boolean;
+  recommended: boolean;
+  disabled: boolean;
+  onClick: () => void;
 }) {
   return (
-    <div className="rounded-2xl border border-border-soft bg-foreground/[0.03] p-4 hover:bg-foreground/[0.05] transition-colors">
+    <motion.button
+      type="button"
+      onClick={onClick}
+      whileHover={disabled ? undefined : { y: -1 }}
+      disabled={disabled}
+      className={`text-left rounded-2xl border p-4 transition-colors relative ${
+        connected
+          ? "border-primary/60 bg-primary/[0.06]"
+          : "border-border-soft bg-foreground/[0.03] hover:bg-foreground/[0.05] hover:border-foreground/20"
+      } ${disabled ? "opacity-60 cursor-not-allowed" : "cursor-pointer"}`}
+    >
+      {recommended && !connected && (
+        <span className="absolute -top-2 left-3 px-2 h-4 rounded-full text-[9px] font-bold uppercase tracking-[0.16em] bg-primary text-primary-foreground flex items-center">
+          Recommended
+        </span>
+      )}
       <div className="flex items-start gap-3">
-        <div className="w-10 h-10 rounded-xl bg-foreground/[0.05] border border-border-soft flex items-center justify-center shrink-0">
-          <Icon className="h-5 w-5 text-foreground/70" strokeWidth={2.2} />
-        </div>
+        <Monogram letter={entry.monogram} color={entry.brand} size={40} />
         <div className="min-w-0 flex-1">
-          <h3 className="text-[13.5px] font-bold text-foreground/85 leading-tight">
-            {label}
-          </h3>
+          <div className="flex items-center gap-2">
+            <h3 className="text-[13.5px] font-bold text-foreground/90 leading-tight">
+              {entry.name}
+            </h3>
+            {connected && (
+              <span className="ml-auto inline-flex items-center gap-1 px-1.5 h-4 rounded-full bg-primary/15 border border-primary/30 text-primary text-[9px] font-bold uppercase tracking-[0.14em]">
+                <CheckCircle2 size={9} strokeWidth={2.8} />
+                Connected
+              </span>
+            )}
+          </div>
           <p className="text-[11.5px] text-text-tertiary mt-1 leading-relaxed">
-            {description}
+            {entry.tagline}
           </p>
         </div>
       </div>
-    </div>
+    </motion.button>
   );
 }
