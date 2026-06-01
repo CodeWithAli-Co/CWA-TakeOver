@@ -363,17 +363,27 @@ export function PillPicker<T extends string>({
 // Shell — outer page chrome for every step
 // ─────────────────────────────────────────────────────────────────
 
+/** Width preset for StepShell.
+ *  · "form"   — narrow, comfortable reading width (default, used
+ *               for company / profile / identity / industry steps)
+ *  · "grid"   — wide, fits 3-4 column grids (modules + connectors)
+ */
+export type StepShellWidth = "form" | "grid";
+
 export function StepShell({
   currentStep,
   totalSteps,
+  width = "form",
   children,
 }: {
   currentStep: number;
   totalSteps: number;
+  width?: StepShellWidth;
   children: React.ReactNode;
 }) {
+  const maxW = width === "grid" ? "max-w-5xl" : "max-w-xl";
   return (
-    <div className="w-full max-w-xl mx-auto px-6 py-10">
+    <div className={`w-full ${maxW} mx-auto px-6 py-10`}>
       <ProgressDots currentStep={currentStep} totalSteps={totalSteps} />
       <motion.div
         key={currentStep}

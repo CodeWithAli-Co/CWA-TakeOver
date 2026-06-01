@@ -47,8 +47,6 @@ import {
   CheckCircle2,
   Loader2,
   AlertTriangle,
-  FileSpreadsheet,
-  MailCheck,
   type LucideIcon,
 } from "lucide-react";
 
@@ -70,6 +68,10 @@ import {
 } from "@/MyComponents/SettingNavComponents/connectorCatalog";
 import { ConnectorCredentialDialog } from "@/MyComponents/SettingNavComponents/ConnectorCredentialDialog";
 import { useConnectors } from "@/stores/connectors";
+import { MODULES } from "@/MyComponents/Onboarding/modulesCatalog";
+// Onboarding uses the live-preview Builder; Settings keeps the
+// flat ModulesPicker (imported there directly).
+import { ModulesBuilder } from "@/MyComponents/Onboarding/ModulesBuilder";
 
 // ─────────────────────────────────────────────────────────────
 // Catalog
@@ -104,24 +106,12 @@ const COMPANY_INDUSTRIES = {
 } as const;
 type CompanyIndustry = keyof typeof COMPANY_INDUSTRIES;
 
-const TAKEOVER_COMPONENTS = {
-  invoicer: {
-    label: "Invoicer",
-    desc: "Send and track invoices with reminders + payment links.",
-    icon: FileSpreadsheet as LucideIcon,
-  },
-  coldemail: {
-    label: "Cold Email",
-    desc: "Outreach sequences with reply detection and per-domain throttling.",
-    icon: MailCheck as LucideIcon,
-  },
-  workspace: {
-    label: "Workspace",
-    desc: "Realtime docs and sheets with comments, history, and presence.",
-    icon: SparklesIcon as LucideIcon,
-  },
-} as const;
-type TakeOverComponent = keyof typeof TAKEOVER_COMPONENTS;
+/**
+ * Module catalog now lives in @/MyComponents/Onboarding/modulesCatalog
+ * so the Settings → Modules page can render the exact same picker.
+ * `TakeOverComponent` is therefore just `string` (module id).
+ */
+type TakeOverComponent = string;
 
 // ─────────────────────────────────────────────────────────────
 // Step machine
@@ -285,6 +275,9 @@ const InitialOnboarding = ({ completeInitialLaunch, debugMode = false }: Props) 
       <StepShell
         currentStep={Math.max(0, stepIndex)}
         totalSteps={FOUNDER_STEPS.length}
+        width={
+          stepId === "components" || stepId === "connectors" ? "grid" : "form"
+        }
       >
         <AnimatePresence mode="wait">
           {stepId === "identity" && (
@@ -354,8 +347,14 @@ export default InitialOnboarding;
 // ═════════════════════════════════════════════════════════════
 
 function Shell({ children }: { children: React.ReactNode }) {
+  // h-screen (NOT min-h-screen) is what makes scroll actually work:
+  // min-h-screen lets the container grow with content past the
+  // viewport, so overflow-y-auto never has anything to trigger
+  // against. h-screen pins the container at exactly viewport
+  // height, and overflow-y-auto scrolls within it. items-start
+  // anchors content to the top.
   return (
-    <div className="relative w-full min-h-screen bg-background text-foreground flex items-center justify-center overflow-y-auto">
+    <div className="relative w-full h-screen bg-background text-foreground flex items-start justify-center overflow-y-auto">
       <div
         aria-hidden
         className="pointer-events-none fixed inset-0 opacity-[0.05]"
@@ -618,11 +617,6 @@ function ComponentsStep({
   loading: boolean;
   error: string | null;
 }) {
-  const toggle = (id: TakeOverComponent) => {
-    if (value.includes(id)) onChange(value.filter((v) => v !== id));
-    else onChange([...value, id]);
-  };
-
   return (
     <motion.div
       initial={{ opacity: 0, y: 8 }}
@@ -632,26 +626,11 @@ function ComponentsStep({
     >
       <StepHeader
         eyebrow="Step 4 of 5"
-        title="Pick your components."
-        subtitle="Turn on what you need. Each one becomes a section in the app - you can toggle these later from Settings."
+        title="Build your stack."
+        subtitle={`Tap a module, watch it land in your dashboard. ${value.length} of ${MODULES.length} modules picked.`}
       />
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-        {(
-          Object.entries(TAKEOVER_COMPONENTS) as Array<
-            [TakeOverComponent, (typeof TAKEOVER_COMPONENTS)[TakeOverComponent]]
-          >
-        ).map(([key, det]) => (
-          <ComponentCard
-            key={key}
-            id={key}
-            label={det.label}
-            description={det.desc}
-            icon={det.icon}
-            active={value.includes(key)}
-            onToggle={() => toggle(key)}
-          />
-        ))}
-      </div>
+
+      <ModulesBuilder value={value} onChange={onChange} />
 
       {error && (
         <div className="mt-4 rounded-xl border border-destructive/30 bg-destructive/10 p-3 flex items-start gap-2.5">
@@ -675,68 +654,9 @@ function ComponentsStep({
   );
 }
 
-function ComponentCard({
-  id,
-  label,
-  description,
-  icon: Icon,
-  active,
-  onToggle,
-}: {
-  id: TakeOverComponent;
-  label: string;
-  description: string;
-  icon: LucideIcon;
-  active: boolean;
-  onToggle: () => void;
-}) {
-  return (
-    <motion.button
-      key={id}
-      type="button"
-      onClick={onToggle}
-      whileHover={{ y: -1 }}
-      className={`text-left rounded-2xl border p-4 transition-colors ${
-        active
-          ? "border-primary/60 bg-primary/[0.06]"
-          : "border-border-soft bg-foreground/[0.03] hover:bg-foreground/[0.05] hover:border-foreground/20"
-      }`}
-    >
-      <div className="flex items-start gap-3">
-        <div
-          className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 transition-colors ${
-            active
-              ? "bg-primary/15 border border-primary/30"
-              : "bg-foreground/[0.05] border border-border-soft"
-          }`}
-        >
-          <Icon
-            className={`h-5 w-5 ${active ? "text-primary" : "text-foreground/70"}`}
-            strokeWidth={2.2}
-          />
-        </div>
-        <div className="min-w-0 flex-1">
-          <div className="flex items-center gap-2">
-            <h3
-              className={`text-[13.5px] font-bold leading-tight ${active ? "text-foreground" : "text-foreground/85"}`}
-            >
-              {label}
-            </h3>
-            {active && (
-              <CheckCircle2
-                className="h-3.5 w-3.5 text-primary ml-auto"
-                strokeWidth={2.8}
-              />
-            )}
-          </div>
-          <p className="text-[11.5px] text-text-tertiary mt-1 leading-relaxed">
-            {description}
-          </p>
-        </div>
-      </div>
-    </motion.button>
-  );
-}
+// Old inline ComponentCard removed — module rendering is now
+// owned by `ModulesPicker` so onboarding + Settings render the
+// same way.
 
 /**
  * ConnectorsStep — Step 5 of 5.

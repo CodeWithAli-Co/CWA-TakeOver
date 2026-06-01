@@ -30,6 +30,7 @@ import {
   Shield,
   Menu,
   ChevronRight,
+  LayoutGrid,
 } from "lucide-react";
 import { ActiveUser } from "@/stores/query";
 import { DeveloperResourceHub } from "@/MyComponents/HomeDashboard/ResourceHub";
@@ -41,6 +42,7 @@ import TeamsAndProjects from "../SettingNavComponents/TeamProject";
 import UserView, { Role } from "../Reusables/userView";
 import { ProfileSettings } from "./settings/ProfileSettings";
 import { SecuritySettings } from "./settings/SecuritySettings";
+import { ModulesSettings } from "./settings/ModulesSettings";
 
 // ── Tab registry ────────────────────────────────────────────────
 
@@ -96,6 +98,14 @@ const TABS: TabDef[] = [
     description:
       "Wire up the SaaS tools your team already uses — Stripe, Plaid, Google Docs, and more.",
     icon: Plug,
+    elevatedOnly: true,
+  },
+  {
+    value: "modules",
+    label: "Modules",
+    description:
+      "Turn TakeOver modules on or off — change which parts of the app your team sees.",
+    icon: LayoutGrid,
     elevatedOnly: true,
   },
   {
@@ -328,6 +338,11 @@ function TabContent({
             {activeTab === "connectors" && (
               <SectionCard>
                 <ConnectorsSettings />
+              </SectionCard>
+            )}
+            {activeTab === "modules" && (
+              <SectionCard>
+                <ModulesSettings />
               </SectionCard>
             )}
           </UserView>
