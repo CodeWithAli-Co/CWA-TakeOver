@@ -10,6 +10,7 @@ import { TasksComponent } from "@/MyComponents/HomeDashboard/tasks";
 import Meetings from "@/MyComponents/HomeDashboard/meetings";
 import { useEffectiveRow4View } from "./row4ViewStore";
 import { AxonCheckinCard } from "./AxonCheckinCard";
+import { AxonCoachCard } from "./AxonCoachCard";
 import { CareerGrowthCard } from "./CareerGrowthCard";
 import { TeamPulseCard } from "./TeamPulseCard";
 import UserView, { Role } from "@/MyComponents/Reusables/userView";
@@ -469,14 +470,20 @@ function Row4Swapper() {
     );
   }
 
-  // "lists" — original Tasks + Meetings (power-user backdoor)
+  // "lists" — Tasks + Meetings + Axon coach. The Axon card lives
+  // next to Meetings so it can pull from the same daily context
+  // (upcoming meetings + open tasks) and offer concrete actions
+  // rather than just counting them.
   return (
     <>
-      <div className="col-span-7">
+      <div className="col-span-5">
         <TasksComponent />
       </div>
-      <div className="col-span-5">
+      <div className="col-span-4">
         <Meetings />
+      </div>
+      <div className="col-span-3">
+        <AxonCoachCard />
       </div>
     </>
   );

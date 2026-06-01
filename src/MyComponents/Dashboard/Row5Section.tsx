@@ -31,6 +31,7 @@ import {
   Sparkles,
 } from "lucide-react";
 import { BentoCard } from "./BentoCard";
+import { DailySnapshotCard, QuickStartCard } from "./Row5Fallback";
 import { colorForUser } from "@/lib/yjs/awareness";
 import { takeOversupabase } from "@/MyComponents/supabase";
 import { ActiveUser, Employees } from "@/stores/query";
@@ -140,7 +141,7 @@ function useMentionsForUser(currentUsername: string) {
       ).toISOString();
       const needle = `%@${currentUsername}%`;
       const [generalRes, dmRes] = await Promise.all([
-        supabase
+        takeOversupabase
           .from("cwa_chat")
           .select("msg_id, sent_by, message, created_at")
           .ilike("message", needle)
@@ -148,7 +149,7 @@ function useMentionsForUser(currentUsername: string) {
           .neq("sent_by", currentUsername)
           .order("created_at", { ascending: false })
           .limit(10),
-        supabase
+        takeOversupabase
           .from("cwa_dm_chat")
           .select("msg_id, sent_by, message, created_at, dm_group")
           .ilike("message", needle)
@@ -247,7 +248,7 @@ function useCoEditedResources(currentUsername: string) {
       const [docsRes, sheetsRes, docCommentsRes, sheetCommentsRes] =
         await Promise.all([
           docIds.length
-            ? supabase
+            ? takeOversupabase
                 .from("workspace_documents")
                 .select("id, title, owner, updated_at, updated_by, archived")
                 .in("id", docIds)
@@ -255,7 +256,7 @@ function useCoEditedResources(currentUsername: string) {
                 .limit(10)
             : Promise.resolve({ data: [] as any[] }),
           sheetIds.length
-            ? supabase
+            ? takeOversupabase
                 .from("workspace_spreadsheets")
                 .select("id, title, owner, updated_at, updated_by, archived")
                 .in("id", sheetIds)
@@ -263,14 +264,14 @@ function useCoEditedResources(currentUsername: string) {
                 .limit(10)
             : Promise.resolve({ data: [] as any[] }),
           docIds.length
-            ? supabase
+            ? takeOversupabase
                 .from("workspace_comments")
                 .select("resource_id")
                 .eq("resource_type", "document")
                 .in("resource_id", docIds)
             : Promise.resolve({ data: [] as any[] }),
           sheetIds.length
-            ? supabase
+            ? takeOversupabase
                 .from("workspace_comments")
                 .select("resource_id")
                 .eq("resource_type", "spreadsheet")
@@ -342,7 +343,7 @@ function useRecentFeedback(currentUsername: string) {
       const [docCommentsRes, sheetCommentsRes, docsRes, sheetsRes] =
         await Promise.all([
           docIds.length
-            ? supabase
+            ? takeOversupabase
                 .from("workspace_comments")
                 .select("id, body, author, created_at, resource_id, resource_type, status")
                 .eq("resource_type", "document")
@@ -352,7 +353,7 @@ function useRecentFeedback(currentUsername: string) {
                 .limit(15)
             : Promise.resolve({ data: [] as any[] }),
           sheetIds.length
-            ? supabase
+            ? takeOversupabase
                 .from("workspace_comments")
                 .select("id, body, author, created_at, resource_id, resource_type, status")
                 .eq("resource_type", "spreadsheet")
@@ -362,13 +363,13 @@ function useRecentFeedback(currentUsername: string) {
                 .limit(15)
             : Promise.resolve({ data: [] as any[] }),
           docIds.length
-            ? supabase
+            ? takeOversupabase
                 .from("workspace_documents")
                 .select("id, title")
                 .in("id", docIds)
             : Promise.resolve({ data: [] as any[] }),
           sheetIds.length
-            ? supabase
+            ? takeOversupabase
                 .from("workspace_spreadsheets")
                 .select("id, title")
                 .in("id", sheetIds)
@@ -404,6 +405,34 @@ function useRecentFeedback(currentUsername: string) {
 // ─────────────────────────────────────────────────────────────────
 
 export function Row5Section() {
+  // Pre-flight the data hooks the real cards use so we can swap to
+  // the snapshot + quick-start fallbacks when both surfaces would
+  // render empty (no mentions, no co-editing, no recent feedback).
+  // Looks lifeless otherwise on a fresh install or solo founder.
+  const { data: activeUserRows } = ActiveUser();
+  const currentUsername = activeUserRows?.[0]?.username ?? "";
+  const { data: mentions = [] } = useMentionsForUser(currentUsername);
+  const { data: coEdited = [] } = useCoEditedResources(currentUsername);
+  const { data: feedback = [] } = useRecentFeedback(currentUsername);
+
+  // "Empty" = no chat mentions AND no co-editing AND no doc feedback.
+  // Online-presence count is intentionally NOT part of this — a solo
+  // founder will always have 0 online and we'd never show the real
+  // cards if we counted it.
+  const isEmpty =
+    mentions.length === 0 &&
+    coEdited.length === 0 &&
+    feedback.length === 0;
+
+  if (isEmpty) {
+    return (
+      <>
+        <DailySnapshotCard />
+        <QuickStartCard />
+      </>
+    );
+  }
+
   return (
     <>
       <CommunicationPresence />
