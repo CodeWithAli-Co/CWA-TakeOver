@@ -54,7 +54,11 @@ import LoginPage from "@/MyComponents/Beginning/login";
 import { GuidedTourOverlay } from "@/MyComponents/Onboarding/GuidedTourOverlay";
 import { FirstSignInTour } from "@/MyComponents/Onboarding/FirstSignInTour";
 import "@/MyComponents/Onboarding/guidedTour.css";
-import { useOnboardingRedirect } from "@/stores/onboarding";
+// useOnboardingRedirect — superseded by Blaze's InitialOnboarding
+// (pre-login install-binder) on 2026-05-31. My post-login wizard
+// is unwired but the file is kept in case we revive it as the
+// per-user provisioning layer that follows install binding.
+// import { useOnboardingRedirect } from "@/stores/onboarding";
 import { SignUpPage } from "@/MyComponents/Beginning/signup";
 import { ActiveUser, DMGroups, Messages } from "@/stores/query";
 import UserView from "@/MyComponents/Reusables/userView";
@@ -131,10 +135,11 @@ export const Route = createRootRoute({
   component: () => {
     const { pinCheck, isLoggedIn, GroupName, initial_launch, completeInitialLaunch } = useAppStore();
     const { data: user, error: userError } = ActiveUser();
-    // First-run onboarding gate. No-ops if user is already
-    // onboarded, unauthenticated, or already on /welcome —
-    // otherwise bounces them to the welcome wizard.
-    useOnboardingRedirect();
+    // First-run onboarding gate — DISABLED. Blaze's
+    // InitialOnboarding (pre-login install-binder) now handles
+    // the brand-new install flow. My post-login wizard is
+    // unwired pending architectural reconciliation.
+    // useOnboardingRedirect();
     if (userError) {
       sendNotification({
         title: "Error with Active User",

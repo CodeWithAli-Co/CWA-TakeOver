@@ -10,13 +10,17 @@ import {
   CalendarSearch,
   Sparkles,
   RotateCcw,
+  Eye,
+  X,
 } from "lucide-react";
 import { motion } from "framer-motion";
 import UserView, { Role } from "@/MyComponents/Reusables/userView";
 import Quotas from "@/MyComponents/HomeDashboard/qoutas";
 import CompanyStats from "@/MyComponents/HomeDashboard/companyStats";
 import Meetings from "@/MyComponents/HomeDashboard/meetings";
-import { SchedImgStore, useCompanyFilter, type CompanyFilter } from "@/stores/store";
+import { SchedImgStore, useAppStore, useCompanyFilter, type CompanyFilter } from "@/stores/store";
+import { getStronghold } from "@/stores/stronghold";
+import InitialOnboarding from "@/MyComponents/Beginning/initialOnboarding";
 import { QuickActionCard } from "@/MyComponents/HomeDashboard/Components/quickActionCard";
 import { useNavigate } from "@tanstack/react-router";
 import { useQueryClient } from "@tanstack/react-query";
@@ -149,7 +153,11 @@ const Index = () => {
             </UserView>
             {/* TEMP — debug entry into the welcome wizard. Remove
              *  once auto-redirect verified in production. */}
-            <OnboardingDebugPill />
+            {/* Install-binder debug pill — preview the pre-login
+             *  InitialOnboarding flow + hard reset back to it.
+             *  Replaces the old <OnboardingDebugPill /> which was
+             *  for my post-login wizard (now unwired). */}
+            <InstallOnboardingPill />
 
           </motion.div>
         </div>
@@ -468,3 +476,122 @@ function OnboardingDebugPill() {
     </div>
   );
 }
+
+// Pill is unwired pending post-login wizard reconciliation.
+void OnboardingDebugPill;
+
+/* ════════════════════════════════════════════════════════════════
+ * InstallOnboardingPill — TEMPORARY dashboard header chip for
+ * the pre-login InitialOnboarding (install-binder) flow.
+ *
+ *   Preview (👁)  Opens InitialOnboarding in a fullscreen overlay
+ *                 with `debugMode` so no DB / Stronghold writes
+ *                 happen. Walk the founder path end-to-end, or
+ *                 pick Employee to see the bouncer.
+ *
+ *   ↻ Reset      Confirms, then performs a HARD reset back to a
+ *                fresh-install state:
+ *                  • Clears `company_name` from Stronghold
+ *                    (so companySupabase falls back to pseudo-key)
+ *                  • Flips `initial_launch` back to true
+ *                  • Sets `isLoggedIn` to "false"
+ *                  • Reloads the window
+ *                After reload, __root.tsx will render
+ *                InitialOnboarding from scratch.
+ *
+ * Remove this whole component (+ its <InstallOnboardingPill />
+ * usage in the header) before shipping.
+ * ════════════════════════════════════════════════════════════════ */
+function InstallOnboardingPill() {
+  const [preview, setPreview] = useState(false);
+  const [resetting, setResetting] = useState(false);
+
+  const openPreview = () => setPreview(true);
+  const closePreview = () => setPreview(false);
+
+  const hardReset = async () => {
+    const ok = window.confirm(
+      "Hard reset back to the install-binder flow?\n\n" +
+        "This will:\n" +
+        "  · Clear the Stronghold company_name binding\n" +
+        "  · Flip initial_launch back to true\n" +
+        "  · Sign you out\n" +
+        "  · Reload the window\n\n" +
+        "Your remote DB data is NOT touched — only this install's\n" +
+        "local state. Continue?",
+    );
+    if (!ok) return;
+
+    setResetting(true);
+    try {
+      try {
+        const sh = await getStronghold();
+        await sh.removeRecord("company_name");
+      } catch (err) {
+        // Vault may not exist yet on a truly fresh install — fine.
+        console.warn(
+          "[install-pill] stronghold clear failed (probably empty):",
+          err,
+        );
+      }
+
+      const store: any = useAppStore.getState();
+      // Zustand setters on the slice — flip both at once.
+      useAppStore.setState({ initial_launch: true });
+      store.setIsLoggedIn?.("false");
+
+      window.location.reload();
+    } finally {
+      // No-op if reload happened; guard for the error path.
+      setResetting(false);
+    }
+  };
+
+  return (
+    <>
+      <div className="inline-flex items-center gap-0.5 h-7 pl-2 pr-1 rounded-full bg-warning/15 border border-warning/40 text-warning ml-1">
+        <button
+          type="button"
+          onClick={openPreview}
+          className="inline-flex items-center gap-1 text-[10.5px] font-bold uppercase tracking-[0.14em] hover:text-warning/80 transition-colors pr-1"
+          title="Preview the install-binder wizard (no DB writes)"
+        >
+          <Eye size={11} strokeWidth={2.4} />
+          Onboarding
+        </button>
+        <span className="w-px h-3 bg-warning/30" aria-hidden />
+        <button
+          type="button"
+          onClick={hardReset}
+          disabled={resetting}
+          className="p-1 rounded-full hover:bg-warning/20 transition-colors disabled:opacity-50"
+          title="Hard reset — clear Stronghold, flip initial_launch, reload"
+        >
+          <RotateCcw size={10} strokeWidth={2.4} />
+        </button>
+      </div>
+
+      {preview && (
+        <div className="fixed inset-0 z-[10000] bg-background">
+          <button
+            type="button"
+            onClick={closePreview}
+            className="absolute top-4 right-4 z-[10001] inline-flex items-center gap-1.5 h-8 px-3 rounded-full text-[11px] font-semibold text-foreground/85 bg-foreground/[0.05] border border-border-soft hover:border-foreground/30 hover:bg-foreground/[0.08] transition-colors"
+            aria-label="Close preview"
+          >
+            <X size={12} />
+            Close preview
+          </button>
+          <div className="absolute top-4 left-4 z-[10001] inline-flex items-center gap-1.5 h-8 px-3 rounded-full text-[10px] font-bold uppercase tracking-[0.16em] bg-warning/15 border border-warning/40 text-warning">
+            <Eye size={11} strokeWidth={2.4} />
+            Preview mode · no writes
+          </div>
+          <InitialOnboarding debugMode completeInitialLaunch={closePreview} />
+        </div>
+      )}
+    </>
+  );
+}
+
+// Keep TS from flagging unused while pills sit alongside each other.
+void InstallOnboardingPill;
