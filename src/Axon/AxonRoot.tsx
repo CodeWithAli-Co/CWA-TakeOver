@@ -1,9 +1,18 @@
 // ───────────────────────────────────────────────────────────────────
 // AxonRoot — admin-gated mount point.
-// Only renders when the operator has an AXON_ALLOWED_ROLES role.
+//
+// Accepts children so it can wrap them in <AxonProvider> alongside the
+// Axon UI bits (Orb, CommandPanel, etc.). That way any widget rendered
+// inside the same authenticated layout — e.g. AxonCoachCard in the
+// home dashboard — can `useAxon()` and dispatch into the brain
+// without needing its own provider.
+//
+// For non-permitted users we render `children` straight through,
+// without the provider. Widgets call `useOptionalAxon()` and fall
+// back gracefully.
 // ───────────────────────────────────────────────────────────────────
 
-import { useMemo } from "react";
+import { useMemo, type ReactNode } from "react";
 import { ActiveUser } from "@/stores/query";
 import { AXON_ALLOWED_ROLES } from "./config";
 import { AxonProvider } from "./AxonProvider";
@@ -14,7 +23,7 @@ import { SubtitleOverlay } from "./ui/SubtitleOverlay";
 import { DiffOverlay } from "./ui/DiffOverlay";
 import "./axon.css";
 
-export function AxonRoot() {
+export function AxonRoot({ children }: { children?: ReactNode }) {
   const { data: userRows } = ActiveUser();
   const role = userRows?.[0]?.role;
 
@@ -23,11 +32,14 @@ export function AxonRoot() {
     [role]
   );
 
-  if (!permitted) return null;
+  // Non-admin: pass children through, no provider, no UI bits.
+  // useOptionalAxon() in downstream widgets sees null and falls back.
+  if (!permitted) return <>{children}</>;
 
   return (
-    <div data-axon>
-      <AxonProvider>
+    <AxonProvider>
+      {children}
+      <div data-axon>
         <Orb />
         <SubtitleOverlay />
         <CommandPanel />
@@ -36,8 +48,8 @@ export function AxonRoot() {
             a file. Mounted at root level (not inside CommandPanel) so
             it is visible even when the panel is closed. */}
         <DiffOverlay />
-      </AxonProvider>
-    </div>
+      </div>
+    </AxonProvider>
   );
 }
 

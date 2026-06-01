@@ -58,6 +58,22 @@ registerUndoHandler<{
   return `Restored "${title}".`;
 });
 
+registerUndoHandler<{
+  shifts: Array<{ todoId: number; previousDeadline: string | null }>;
+}>("task.restore-deadlines", async ({ shifts }) => {
+  // Restore every original deadline in a single round-trip per row.
+  // We could batch via upsert, but the rows usually number 1-5 so
+  // sequential updates keep the code obvious without a perf hit.
+  for (const s of shifts) {
+    const { error } = await takeOversupabase
+      .from("cwa_todos")
+      .update({ deadline: s.previousDeadline })
+      .eq("todo_id", s.todoId);
+    if (error) throw new Error(error.message);
+  }
+  return `Restored deadlines on ${shifts.length} task${shifts.length === 1 ? "" : "s"}.`;
+});
+
 // Parse deadline from a natural phrase. Conservative — returns null if unsure.
 function parseDeadline(phrase: string | undefined): string | null {
   if (!phrase) return null;
@@ -428,6 +444,182 @@ export const updateTaskStatusAction: AxonAction<
   },
 };
 
+// ── Shift deadlines ────────────────────────────────────────────────
+//
+// Push N tasks' deadlines forward (or backward) by a relative span.
+// Accepts a list of titleOrId entries so the founder can say
+// "extend those three by a week" and have it land in one tool call.
+//
+// Deadlines that were null start from "now" — so "give me 7 more
+// days" on an undated task means "due 7 days from now." That's the
+// more useful behavior than refusing to act.
+
+export const shiftTaskDeadlinesAction: AxonAction<
+  {
+    targets: string[]; // titles or numeric ids
+    days?: number;
+    weeks?: number;
+    hours?: number;
+  },
+  { shifted: number[]; missed: string[] }
+> = {
+  name: "shift_task_deadlines",
+  description:
+    "Push one or more task deadlines forward by a relative span. Accepts a list of title snippets or numeric ids in `targets`. Specify the span as `days`, `weeks`, or `hours` (any combination, all added together). Negative values pull deadlines earlier. Use this when the user asks to extend, postpone, defer, or 'add a week' to tasks. Undoable.",
+  input_schema: {
+    type: "object",
+    properties: {
+      targets: {
+        type: "array",
+        items: { type: "string" },
+        description:
+          "List of task title snippets or numeric ids. Each is matched fuzzy by title (first match wins).",
+      },
+      days: { type: "number", description: "Days to shift (can be negative)." },
+      weeks: { type: "number", description: "Weeks to shift (can be negative)." },
+      hours: { type: "number", description: "Hours to shift (can be negative)." },
+    },
+    required: ["targets"],
+  },
+  mutating: true,
+  handler: async ({ targets, days = 0, weeks = 0, hours = 0 }, ctx) => {
+    const totalMs =
+      (days * 24 + weeks * 24 * 7 + hours) * 60 * 60 * 1000;
+    if (totalMs === 0) {
+      return {
+        summary:
+          "No shift specified — give me days, weeks, or hours to move by.",
+        data: { shifted: [], missed: targets },
+      };
+    }
+
+    // Build a friendly span label for the activity log + summary.
+    const parts: string[] = [];
+    if (weeks) parts.push(`${Math.abs(weeks)}w`);
+    if (days) parts.push(`${Math.abs(days)}d`);
+    if (hours) parts.push(`${Math.abs(hours)}h`);
+    const spanLabel = parts.join(" ");
+    const direction = totalMs >= 0 ? "out" : "in";
+
+    const resolved: Array<{
+      todoId: number;
+      title: string;
+      previousDeadline: string | null;
+      newDeadline: string;
+    }> = [];
+    const missed: string[] = [];
+
+    for (const t of targets) {
+      const asNum = Number(t);
+      let row:
+        | { todo_id: number; title: string; deadline: string | null }
+        | null = null;
+
+      if (!Number.isNaN(asNum) && Number.isInteger(asNum)) {
+        const { data } = await takeOversupabase
+          .from("cwa_todos")
+          .select("todo_id,title,deadline")
+          .eq("todo_id", asNum)
+          .single();
+        if (data) row = data as any;
+      } else {
+        const { data } = await takeOversupabase
+          .from("cwa_todos")
+          .select("todo_id,title,deadline")
+          .ilike("title", `%${t}%`)
+          .limit(1);
+        if (data && data.length > 0) row = data[0] as any;
+      }
+
+      if (!row) {
+        missed.push(t);
+        continue;
+      }
+
+      // Base off the existing deadline if present; otherwise off now.
+      // That keeps "extend by a week" sensible for both dated and
+      // undated tasks.
+      const base = row.deadline ? new Date(row.deadline) : new Date();
+      if (isNaN(base.getTime())) {
+        missed.push(t);
+        continue;
+      }
+      const next = new Date(base.getTime() + totalMs);
+
+      resolved.push({
+        todoId: row.todo_id,
+        title: row.title,
+        previousDeadline: row.deadline,
+        newDeadline: next.toISOString(),
+      });
+    }
+
+    if (resolved.length === 0) {
+      return {
+        summary: `Couldn't match any of those — ${missed.join(", ")}. Want me to list your open tasks so you can point at them?`,
+        data: { shifted: [], missed },
+      };
+    }
+
+    if (ctx.dryRun) {
+      return {
+        summary: `[dry-run] Would shift ${resolved.length} deadline${resolved.length === 1 ? "" : "s"} ${direction} by ${spanLabel}.`,
+        data: { shifted: resolved.map((r) => r.todoId), missed },
+      };
+    }
+
+    // Apply. Sequential — usually 1-5 rows, ordering by failure doesn't
+    // matter since we collect successes for the undo handler.
+    const undoShifts: Array<{
+      todoId: number;
+      previousDeadline: string | null;
+    }> = [];
+    const shifted: number[] = [];
+    for (const r of resolved) {
+      const { error } = await takeOversupabase
+        .from("cwa_todos")
+        .update({ deadline: r.newDeadline })
+        .eq("todo_id", r.todoId);
+      if (error) {
+        missed.push(r.title);
+        continue;
+      }
+      undoShifts.push({
+        todoId: r.todoId,
+        previousDeadline: r.previousDeadline,
+      });
+      shifted.push(r.todoId);
+    }
+
+    if (shifted.length > 0) {
+      ctx.pushUndo({
+        actionName: "shift_task_deadlines",
+        label: `${spanLabel} ${direction} on ${shifted.length} task${shifted.length === 1 ? "" : "s"}`,
+        descriptor: {
+          kind: "task.restore-deadlines",
+          payload: { shifts: undoShifts },
+        },
+      });
+      ctx.logActivity({
+        actionName: "shift_task_deadlines",
+        params: { targets, days, weeks, hours },
+        summary: `Shifted ${shifted.length} deadline${shifted.length === 1 ? "" : "s"} ${direction} by ${spanLabel}`,
+      });
+    }
+
+    const titles = resolved
+      .filter((r) => shifted.includes(r.todoId))
+      .map((r) => `"${r.title}"`)
+      .join(", ");
+    const tail =
+      missed.length > 0 ? ` Skipped: ${missed.join(", ")}.` : "";
+    return {
+      summary: `Pushed ${shifted.length} deadline${shifted.length === 1 ? "" : "s"} ${direction} ${spanLabel} — ${titles}.${tail} Say "undo" to revert.`,
+      data: { shifted, missed },
+    };
+  },
+};
+
 // ── Delete ─────────────────────────────────────────────────────────
 
 export const deleteTaskAction: AxonAction<
@@ -517,5 +709,6 @@ export function registerTaskActions() {
   registerAction(createTaskAction);
   registerAction(listTasksAction);
   registerAction(updateTaskStatusAction);
+  registerAction(shiftTaskDeadlinesAction);
   registerAction(deleteTaskAction);
 }

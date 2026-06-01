@@ -1375,6 +1375,19 @@ export function useAxon(): AxonContextValue {
   if (!ctx) throw new Error("useAxon must be used inside <AxonProvider>");
   return ctx;
 }
+/**
+ * Same as useAxon() but returns null instead of throwing when the
+ * component renders outside the provider. Useful for widgets that
+ * may be embedded in trees that don't (or don't yet) include
+ * <AxonProvider> — e.g. the home dashboard's AxonCoachCard, which
+ * mounts before AxonProvider in some routing configurations.
+ *
+ * Consumers should null-check and gracefully degrade the action
+ * paths (typically to a window-event Cmd+K fallback or a no-op).
+ */
+export function useOptionalAxon(): AxonContextValue | null {
+  return useContext(AxonContext);
+}
 export function useAxonConfirm(): ConfirmContextValue {
   const ctx = useContext(ConfirmContext);
   if (!ctx) throw new Error("useAxonConfirm must be used inside <AxonProvider>");

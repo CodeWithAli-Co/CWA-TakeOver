@@ -429,10 +429,28 @@ body {
   color: inherit;
 }
 
-/* ── Focus Ring ── */
+/* ── Focus Ring ──
+ *
+ * The old rule slapped a 2px brand-red ring on *everything* with
+ * focus — including text inputs, which already convey focus via
+ * their border colour. The result looked like an error state on
+ * every interaction. Softened to a neutral, low-opacity ring that
+ * still satisfies keyboard accessibility without screaming.
+ *
+ * Inputs / textareas / selects are de-ringed explicitly because
+ * their own focus border carries the signal.
+ */
 *:focus-visible {
-  outline: 2px solid hsl(var(--ring));
+  outline: 1.5px solid hsl(var(--foreground) / 0.22);
   outline-offset: 2px;
+  border-radius: 4px;
+}
+
+input:focus-visible,
+textarea:focus-visible,
+select:focus-visible,
+[contenteditable]:focus-visible {
+  outline: none;
 }
 
 /* ── Form defaults ── */

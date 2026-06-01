@@ -332,8 +332,17 @@ export interface Automation {
   nextFire: number;
   /** Created at. */
   createdAt: number;
-  /** One-off reminder vs recurring. */
-  kind: "recurring" | "reminder";
+  /**
+   * Scheduling shape:
+   *   · recurring     — fires every intervalMs, forever, until cancelled
+   *   · reminder      — one-off setTimeout that fires at nextFire
+   *   · on-next-open  — no timer; fires once on the next app launch
+   *                     (or the next hydrate after this one was set).
+   *                     Useful for "bring this up tomorrow" without
+   *                     needing a wall-clock time, and immune to the
+   *                     "app was closed at fire time" problem.
+   */
+  kind: "recurring" | "reminder" | "on-next-open";
   /** The internal setTimeout / setInterval handle — runtime only. */
   _handle?: number;
 }

@@ -967,14 +967,17 @@ export const Route = createRootRoute({
           <SidebarProvider>
             {/* // root.tsx layout section */}
             <AppSidebar />
-            <section id="main-section">
-              <Suspense fallback={<RouteFallback />}>
-                <Outlet />
-              </Suspense>
-            </section>
-            {/* AXON command intelligence — admin-gated inside the module */}
-            <Suspense fallback={null}>
-              <AxonRoot />
+            {/* AxonRoot now wraps the routed Outlet so widgets inside
+             *  the app (e.g. AxonCoachCard on the home dashboard) can
+             *  useAxon() and dispatch into the brain. For non-permitted
+             *  users AxonRoot passes children through with no provider
+             *  and useOptionalAxon() falls back gracefully. */}
+            <Suspense fallback={<RouteFallback />}>
+              <AxonRoot>
+                <section id="main-section">
+                  <Outlet />
+                </section>
+              </AxonRoot>
             </Suspense>
             {/* Guided tour overlay — only renders when tourStore.active. */}
             <GuidedTourOverlay />

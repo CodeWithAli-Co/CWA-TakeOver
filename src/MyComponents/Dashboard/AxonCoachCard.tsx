@@ -34,6 +34,12 @@ import {
   RefreshCw,
   type LucideIcon,
 } from "lucide-react";
+import { useOptionalAxon } from "@/Axon/AxonProvider";
+import {
+  useAxonObservations,
+  type Observation as RealObservation,
+  type CoachAction as RealCoachAction,
+} from "./useAxonObservations";
 
 // ─────────────────────────────────────────────────────────────────
 // Observation templates
@@ -186,9 +192,30 @@ const SAMPLE_OBSERVATIONS: Observation[] = [
 // ─────────────────────────────────────────────────────────────────
 
 export function AxonCoachCard() {
-  // v1: rotate through samples. v2: pick by real-data scoring.
+  // v2: real observations sourced from the founder's workload via
+  // useAxonObservations. The hook returns a priority-sorted list;
+  // we render the top one with a refresh button that rotates
+  // through the rest. Fallback to a single static "loading" line
+  // while the first query resolves so the card never goes blank.
+  const { data: liveObservations, isLoading, isFetching, refetch } =
+    useAxonObservations();
+
+  const observations: (RealObservation | Observation)[] = useMemo(() => {
+    if (liveObservations && liveObservations.length > 0)
+      return liveObservations;
+    // Defensive fallback: the hook should always return at least
+    // the all-clear observation, but if something goes sideways we
+    // keep the static samples around so the card still renders.
+    return SAMPLE_OBSERVATIONS;
+  }, [liveObservations]);
+
   const [obsIdx, setObsIdx] = useState(0);
-  const obs = SAMPLE_OBSERVATIONS[obsIdx]!;
+  // Reset rotation when the underlying list changes (e.g. a task
+  // closed and overdue-cluster dropped out of the top spot).
+  useEffect(() => {
+    setObsIdx(0);
+  }, [liveObservations]);
+  const obs = observations[obsIdx % observations.length]!;
 
   // Friendly local time stamp in the header — feels like a
   // colleague's note rather than an auto-refresh widget.
@@ -198,20 +225,53 @@ export function AxonCoachCard() {
     return () => clearInterval(t);
   }, []);
 
-  const cycle = () =>
-    setObsIdx((i) => (i + 1) % SAMPLE_OBSERVATIONS.length);
+  // Axon panel dispatch — openPanel + submitCommand handles the
+  // brain wiring for us. Optional because the dashboard tree
+  // sometimes mounts outside the AxonProvider — in that case we
+  // fall back to a window-event Cmd+K dispatch so the card still
+  // does *something* useful when clicked.
+  const axon = useOptionalAxon();
+  const dispatchPrompt = (prompt: string) => {
+    if (axon) {
+      axon.openPanel();
+      axon.submitCommand(prompt);
+      return;
+    }
+    // Fallback: nudge the command palette open. Not as good as
+    // direct brain dispatch but keeps the click from being a no-op.
+    try {
+      window.dispatchEvent(
+        new KeyboardEvent("keydown", { key: "k", metaKey: true }),
+      );
+    } catch {
+      /* swallow — environments without window won't reach here */
+    }
+    // eslint-disable-next-line no-console
+    console.warn(
+      "[axon-coach] dispatched outside AxonProvider; opened palette as fallback. prompt:",
+      prompt,
+    );
+  };
 
-  const handleAction = (action: CoachAction) => {
-    // v1: log + alert. v2: open the Axon panel with the prompt
-    // pre-filled and dispatch to the brain.
-    console.log("[axon-coach] action:", action.flavor, action.prompt);
-    // TODO: wire to Axon panel via existing axon dispatch.
+  const cycle = () => {
+    // If we have >1 observation, rotate. Otherwise force a refetch
+    // so the founder can pull a fresh read.
+    if (observations.length > 1) {
+      setObsIdx((i) => (i + 1) % observations.length);
+    } else {
+      refetch();
+    }
+  };
+
+  const handleAction = (action: CoachAction | RealCoachAction) => {
+    // v2: dispatch to the Axon brain via the panel. submitCommand
+    // sends the prompt; openPanel surfaces the conversation.
+    dispatchPrompt(action.prompt);
   };
 
   const askPrompt = (text: string) => {
     if (!text.trim()) return;
-    console.log("[axon-coach] free-form ask:", text);
-    // TODO: dispatch to Axon panel.
+    dispatchPrompt(text);
   };
 
   return (
@@ -234,10 +294,15 @@ export function AxonCoachCard() {
         <button
           type="button"
           onClick={cycle}
-          className="p-1.5 rounded-full text-text-tertiary hover:text-foreground hover:bg-foreground/[0.05] transition-colors"
-          title="Next read"
+          className="p-1.5 rounded-full text-text-tertiary hover:text-foreground hover:bg-foreground/[0.05] transition-colors disabled:opacity-50"
+          title={observations.length > 1 ? "Next read" : "Refresh"}
+          disabled={isLoading}
         >
-          <RefreshCw size={12} strokeWidth={2.4} />
+          <RefreshCw
+            size={12}
+            strokeWidth={2.4}
+            className={isFetching ? "animate-spin" : ""}
+          />
         </button>
       </div>
 

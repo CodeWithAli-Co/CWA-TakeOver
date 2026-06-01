@@ -722,9 +722,13 @@
   font-style: italic;
 }
 .axon-composer input:focus {
-  border-color: rgba(var(--axon-accent-rgb), 0.85);
-  box-shadow: 0 0 0 3px rgba(var(--axon-accent-rgb), 0.15);
+  /* Barely-there focus treatment — a hairline neutral border lift,
+     no glow. The composer signal comes from the cursor being in it,
+     not from a halo around it. */
+  border-color: rgba(255, 255, 255, 0.12);
+  box-shadow: none;
   background: var(--axon-chip-bg);
+  outline: none;
 }
 
 /* Unified pill button — every header toggle (CALL / SIM / SEEING /

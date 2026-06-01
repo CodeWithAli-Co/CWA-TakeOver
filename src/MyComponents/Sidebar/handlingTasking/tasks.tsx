@@ -13,6 +13,7 @@
  */
 
 import React, { useEffect, useMemo, useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { ScrollArea } from "@/components/ui/shadcnComponents/scroll-area";
 import { motion, AnimatePresence } from "framer-motion";
 import {
@@ -293,6 +294,12 @@ const TaskSettings: React.FC<TaskSettingsProps> = ({ embedded = false }) => {
     return map;
   }, [AllEmployees]);
 
+  // Pulled here so handleStatusChange (and the edit-save below) can
+  // proactively invalidate the daily-snapshot card the moment a task
+  // flips status — otherwise the snapshot waits for window-focus or
+  // its 30s staleTime to refetch.
+  const queryClient = useQueryClient();
+
   const [scope, setScope] = useState<"mine" | "everyone">("mine");
   const effectiveScope = isAdmin ? scope : "mine";
 
@@ -339,6 +346,11 @@ const TaskSettings: React.FC<TaskSettingsProps> = ({ embedded = false }) => {
       .eq("todo_id", id);
     if (error) {
       await message(error.message, { title: "Error updating task", kind: "error" });
+    } else {
+      // Belt-and-suspenders: the home dashboard's daily-snapshot card
+      // also has a realtime listener on cwa_todos, but invalidating
+      // here lets it refetch even if realtime is suppressed by RLS.
+      queryClient.invalidateQueries({ queryKey: ["daily-snapshot"] });
     }
   };
 

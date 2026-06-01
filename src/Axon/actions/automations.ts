@@ -70,8 +70,22 @@ export function hydrateAutomations() {
     if (!Array.isArray(parsed)) return;
 
     const now = Date.now();
+    // Collect on-next-open entries so we can fire them after the
+    // main rehydrate loop finishes — that way the rest of the
+    // automation registry is fully restored before we dispatch the
+    // delayed commands (avoids race conditions with recurring fires
+    // that should already be live).
+    const onNextOpenQueue: PersistedAutomation[] = [];
+
     for (const rec of parsed) {
       if (!rec || live.has(rec.id)) continue;
+      if (rec.kind === "on-next-open") {
+        // Don't restore a timer — fire-once on this hydrate. We pull
+        // the record out of localStorage *before* firing so reloading
+        // mid-day can't re-deliver the same reminder.
+        onNextOpenQueue.push(rec);
+        continue;
+      }
       if (rec.kind === "reminder") {
         // Skip reminders whose fire time has passed — we'd rather miss a
         // late fire than spam the operator on reload with a stack of
@@ -111,6 +125,23 @@ export function hydrateAutomations() {
     }
     // Re-persist to prune stale reminders that we just dropped.
     persistAutomations();
+
+    // Fire any on-next-open entries now. Small delay so the panel /
+    // route shell has a chance to mount before we open the panel and
+    // dispatch the command. Each fire is guarded so one bad command
+    // can't block the rest.
+    if (onNextOpenQueue.length > 0) {
+      window.setTimeout(async () => {
+        for (const rec of onNextOpenQueue) {
+          if (!executor) break;
+          try {
+            await executor(rec.command, "text");
+          } catch (e) {
+            console.warn("[AXON] on-next-open fire failed:", e);
+          }
+        }
+      }, 1500);
+    }
   } catch (err) {
     if (typeof console !== "undefined") {
       console.warn("[AXON] automation hydrate failed:", err);
@@ -139,28 +170,99 @@ function parseInterval(spec: string): number | null {
   return null;
 }
 
+/**
+ * Detect natural phrases that should map to the `on-next-open` kind —
+ * "remind me when I open the app", "bring this up tomorrow morning",
+ * "next time I'm here", etc.
+ *
+ * These reminders DON'T set a timer at schedule time. Instead they
+ * persist and fire once on the next `hydrateAutomations()` call.
+ * That makes them immune to the "app was closed when the timer fired"
+ * failure mode that ordinary reminders have.
+ *
+ * We're loose with phrasing because the LLM picks the exact words,
+ * and we'd rather over-match here than ask the user to learn syntax.
+ */
+function isOnNextOpenPhrase(spec: string): boolean {
+  const s = spec.toLowerCase().trim();
+  // Explicit forms first — cheapest checks.
+  if (s === "on-next-open" || s === "next open" || s === "on next open") return true;
+  if (s === "next session" || s === "next time" || s === "next launch") return true;
+  // "when (I|you|he|she|they) open(s)? (the app)?"
+  if (/^when\s+(i|you|he|she|they)\s+open(s)?(\s+the\s+app)?/.test(s)) return true;
+  // "tomorrow morning", "tomorrow when I'm back" — anything starting
+  // with "tomorrow" that doesn't pin a specific time we can parse.
+  if (s.startsWith("tomorrow") && !/\d/.test(s)) return true;
+  // Generic "when I am back / when I'm here".
+  if (/^when\s+(i'?m|you'?re)\s+(back|here|in)/.test(s)) return true;
+  return false;
+}
+
 export const scheduleAutomationAction: AxonAction<
   { description: string; schedule: string; command: string; kind?: "recurring" | "reminder" },
   { id: string; intervalMs: number }
 > = {
   name: "schedule_automation",
   description:
-    "Schedule a recurring or one-off automation. `schedule` is a natural phrase like 'every 15 minutes', 'every hour', 'daily', 'in 3 minutes'. `command` is the natural-language instruction AXON will dispatch to itself at each fire.",
+    "Schedule a recurring or one-off automation, or pin a reminder for the next app launch.\n\n`schedule` accepts:\n  · cadences: 'every 15 minutes', 'every hour', 'daily', 'every monday'\n  · one-off delays: 'in 3 minutes', 'in 2 hours'\n  · on-next-open phrases: 'on next open', 'tomorrow morning', 'when I open the app', 'next session'\n\nFor on-next-open phrases the reminder is persisted with no timer and fires once on the next time the app launches — use this when the user says 'bring this up tomorrow' or 'remind me next time I'm here'. It survives app close and won't get pruned if the user sleeps past a wall-clock time.\n\n`command` is the natural-language instruction AXON will dispatch to itself at each fire.",
   input_schema: {
     type: "object",
     properties: {
       description: { type: "string", description: "Human-readable purpose." },
-      schedule: { type: "string", description: "Cadence phrase." },
+      schedule: { type: "string", description: "Cadence or open-trigger phrase." },
       command: { type: "string", description: "The command to run on each fire." },
-      kind: { type: "string", enum: ["recurring", "reminder"] },
+      kind: {
+        type: "string",
+        enum: ["recurring", "reminder", "on-next-open"],
+        description:
+          "Force a specific kind. Optional — usually inferred from the schedule phrase.",
+      },
     },
     required: ["description", "schedule", "command"],
   },
   handler: async (input, ctx) => {
+    // ── on-next-open branch ────────────────────────────────────────
+    // "bring this up tomorrow when I open the app", "next session",
+    // "remind me when I'm back" — all collapse to the same shape:
+    // persist a record with no timer; fire once on the next hydrate.
+    const isOpenKind =
+      input.kind === "on-next-open" || isOnNextOpenPhrase(input.schedule);
+
+    if (isOpenKind) {
+      const id = `auto-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`;
+      const record: Automation = {
+        id,
+        description: input.description,
+        intervalMs: 0,
+        command: input.command,
+        // nextFire isn't meaningful here, but we set it to creation
+        // time so list views can still sort/show "scheduled at".
+        nextFire: Date.now(),
+        createdAt: Date.now(),
+        kind: "on-next-open",
+        _handle: undefined,
+      };
+      live.set(id, record);
+      persistAutomations();
+
+      ctx.logActivity({
+        actionName: "schedule_automation",
+        params: input as Record<string, unknown>,
+        summary: `Pinned reminder for next open: ${input.description}`,
+        result: { id, intervalMs: 0 },
+      });
+
+      return {
+        summary: `Pinned for next launch — "${input.description}". I'll bring it up the next time you open the app.`,
+        data: { id, intervalMs: 0 },
+      };
+    }
+
+    // ── ordinary (recurring / one-off reminder) branch ─────────────
     const intervalMs = parseInterval(input.schedule);
     if (!intervalMs) {
       return {
-        summary: `I did not recognize the schedule "${input.schedule}". Try "every 15 minutes", "hourly", "daily", or "in 3 minutes".`,
+        summary: `I did not recognize the schedule "${input.schedule}". Try "every 15 minutes", "hourly", "daily", "in 3 minutes", or natural phrases like "on next open" / "tomorrow morning".`,
       };
     }
 
@@ -240,8 +342,9 @@ export const cancelAutomationAction: AxonAction<
   handler: async ({ id }, ctx) => {
     const r = live.get(id);
     if (!r) return { summary: `No automation with id ${id}.`, data: { cancelled: false } };
+    // on-next-open records carry no timer — just drop them.
     if (r.kind === "reminder") clearTimeout(r._handle!);
-    else clearInterval(r._handle!);
+    else if (r.kind === "recurring") clearInterval(r._handle!);
     live.delete(id);
     persistAutomations();
     ctx.logActivity({
@@ -260,7 +363,8 @@ export function _getLiveAutomations(): Automation[] {
 export function _cancelAllAutomations() {
   for (const r of live.values()) {
     if (r.kind === "reminder") clearTimeout(r._handle!);
-    else clearInterval(r._handle!);
+    else if (r.kind === "recurring") clearInterval(r._handle!);
+    // on-next-open carries no handle.
   }
   live.clear();
   persistAutomations();
