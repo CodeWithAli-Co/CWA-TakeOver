@@ -1,4 +1,5 @@
 import { useForm } from "@tanstack/react-form";
+import { useQueryClient } from "@tanstack/react-query";
 import cwa_logo_full from "/codewithali-removebg-preview.png";
 import { useEffect, useState } from "react";
 import { useAppStore } from "@/stores/store";
@@ -11,6 +12,7 @@ import { URL } from "node:url";
 
 export default function PinPage() {
   const { setPinCheck, setIsLoggedIn } = useAppStore();
+  const queryClient = useQueryClient();
   const [showContent, setShowContent] = useState(false);
   const [pinValue, setPinValue] = useState("");
    const navigate = useNavigate()
@@ -37,11 +39,17 @@ export default function PinPage() {
     onSubmit: async ({ value }) => {
       // Modified to handle different PINs
       if (value.pin === "8821") {
+        // Refetch ActiveUser the moment we pass the gate — prevents
+        // the sidebar "Unknown / Member" fallback from sticking if
+        // Supabase session hydration finished while the PIN screen
+        // was up. See stores/query.ts.
+        queryClient.invalidateQueries({ queryKey: ["activeuser"] });
         document.startViewTransition(() => {
           setPinCheck("true");
         });
       } else if (value.pin === "1027") {
         // Client portal PIN - navigate to client portal
+        queryClient.invalidateQueries({ queryKey: ["activeuser"] });
         document.startViewTransition(() => {
           setPinCheck("true"); // Still set login as valid
           setIsLoggedIn("true")

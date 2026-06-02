@@ -16,6 +16,7 @@
 //   • Brand statement on the left names the COO directly.
 
 import { useForm } from "@tanstack/react-form";
+import { useQueryClient } from "@tanstack/react-query";
 import cwa_logo_full from "/codewithali-removebg-preview.png";
 // Legacy imports — kept because the deprecated component still
 // references them. New component below uses its own minimal set.
@@ -134,6 +135,11 @@ const BlueHexagonWireframe: React.FC = () => (
 
 export default function CyberpunkPinPage() {
   const { setPinCheck, setIsLoggedIn } = useAppStore();
+  // Used to invalidate the ActiveUser cache the moment PIN succeeds,
+  // so the sidebar's "Unknown / Member" fallback can't stick if the
+  // Supabase session hydrated in the background while the PIN
+  // screen was up. See stores/query.ts for the full race story.
+  const queryClient = useQueryClient();
   const [showContent, setShowContent] = useState(false);
   const [, setPinValue] = useState("");
   const [isLoading, setIsLoading] = useState(false);
@@ -157,6 +163,13 @@ export default function CyberpunkPinPage() {
       setError(false);
       await new Promise((resolve) => setTimeout(resolve, 700));
       if (value.pin === "8821") {
+        // Force the ActiveUser query to re-run now that we're past
+        // the gate — covers the case where Supabase's session
+        // hydrated during the PIN screen but the suspense query
+        // had already cached an empty result. Without this the
+        // sidebar can show "Unknown / Member" until the user
+        // signs out and back in.
+        queryClient.invalidateQueries({ queryKey: ["activeuser"] });
         document.startViewTransition(() => {
           setPinCheck("true");
         });

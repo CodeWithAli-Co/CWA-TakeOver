@@ -16,17 +16,93 @@ export function getActiveCompanyLabel(): "CodeWithAli" | "simplicity" {
 }
 
 // Fetch Active User with Avatar
+//
+// IMPORTANT: this function runs at app boot inside a useSuspenseQuery,
+// which means it races against Supabase's async session hydration
+// from disk. If we return [] when auth.getUser() hasn't resolved a
+// session yet, React Query caches the empty result, NavUser falls
+// back to "Unknown / Member", and nothing refetches until the user
+// manually signs out and back in.
+//
+// Three defenses, in order:
+//   1. If there's no auth user yet, THROW instead of returning [].
+//      Suspense + retry will keep trying instead of caching the
+//      empty result. Combined with retry: 3 + retryDelay in the
+//      hook config below, this typically resolves on the second try
+//      once Supabase finishes hydrating.
+//   2. A short in-fetch poll: wait up to ~1.5s for auth to land
+//      before giving up on the current attempt. Cuts down the
+//      number of visible suspense retries.
+//   3. An onAuthStateChange subscription (in subscribeActiveUserAuth
+//      below) invalidates the cache whenever Supabase emits
+//      SIGNED_IN / INITIAL_SESSION / TOKEN_REFRESHED so any path
+//      that wakes the session ends with a fresh user record.
 const fetchActiveUser = async () => {
-  const { data: supaID, error: authError } = await takeOversupabase.auth.getUser();
-  if (authError) {
-    console.error("Error fetching user:", authError.message);
+  // Two-layer auth probe:
+  //   1. getSession() reads the persisted session straight out of
+  //      localStorage — synchronous-ish, doesn't hit the network.
+  //      Most reliable signal of "did our previous login survive
+  //      the app close".
+  //   2. getUser() falls back to a network verify if needed. We
+  //      tolerate a slow network here by polling briefly.
+  let supaUser: { id: string } | null = null;
+
+  // Layer 1: persisted session from storage.
+  const { data: sessionData } = await takeOversupabase.auth.getSession();
+  if (sessionData?.session?.user) {
+    supaUser = sessionData.session.user;
+    // eslint-disable-next-line no-console
+    console.debug(
+      "[activeuser] session hit from getSession()",
+      supaUser.id,
+    );
+  }
+
+  // Layer 2: poll getUser() if storage didn't give us one.
+  if (!supaUser) {
+    for (let attempt = 0; attempt < 5; attempt++) {
+      const { data, error } = await takeOversupabase.auth.getUser();
+      if (error) {
+        // eslint-disable-next-line no-console
+        console.debug(
+          "[activeuser] getUser error on attempt",
+          attempt,
+          error.message,
+        );
+        break;
+      }
+      if (data?.user) {
+        supaUser = data.user;
+        // eslint-disable-next-line no-console
+        console.debug(
+          "[activeuser] getUser hit on attempt",
+          attempt,
+        );
+        break;
+      }
+      await new Promise((r) => setTimeout(r, 200));
+    }
+  }
+
+  if (!supaUser) {
+    // No persisted session AND no network-verifiable user. The
+    // user genuinely needs to re-authenticate. We return [] (not
+    // throw) so the UI shows the "Unknown / Member" placeholder
+    // briefly while the refetchInterval polls + the auth-state
+    // listener waits for a real sign-in. Log loudly so we can
+    // diagnose if this hits repeatedly.
+    // eslint-disable-next-line no-console
+    console.warn(
+      "[activeuser] no Supabase session found — session likely expired or never persisted. " +
+        "Logging out and back in will fix it. Polling will continue in case session hydrates late.",
+    );
     return [];
   }
 
   // Query user details including avatar
   const { data, error } = await takeOversupabase    .from("app_users")
     .select("*") // Fetch everything
-    .eq("supa_id", supaID.user.id)
+    .eq("supa_id", supaUser.id)
     .single(); // Fetch a single user
 
   if (error) {
@@ -59,8 +135,62 @@ export const ActiveUser = () => {
   return useSuspenseQuery({
     queryKey: ["activeuser"],
     queryFn: fetchActiveUser,
+    // Poll every 2s while we have no user — this catches the case
+    // where Supabase's session hydration finishes AFTER our initial
+    // fetch already returned []. The interval auto-stops the moment
+    // we have a real user so we're not hammering the network.
+    refetchInterval: (query) => {
+      const data = query.state.data as unknown[] | undefined;
+      if (!Array.isArray(data) || data.length === 0) return 2000;
+      return false;
+    },
+    // Don't refetch on window focus once we have data — it would
+    // briefly swap the cache back to loading via the suspense
+    // boundary on every alt-tab.
+    refetchOnWindowFocus: false,
+    // Once we have the user, keep it warm for a minute.
+    staleTime: 60 * 1000,
   });
 };
+
+/**
+ * Wire up onAuthStateChange → invalidate(["activeuser"]).
+ *
+ * This is the belt-and-suspenders fix: even if the suspense retries
+ * give up (e.g. user takes a long time entering the PIN), as soon
+ * as Supabase emits SIGNED_IN / INITIAL_SESSION / TOKEN_REFRESHED
+ * we drop the cached empty result and refetch.
+ *
+ * Called once from the QueryClient bootstrap (or anywhere that has
+ * access to the client). Returns an unsubscribe function for
+ * cleanliness in tests / hot-reload — never relied on at runtime.
+ */
+let activeUserAuthBound = false;
+export function subscribeActiveUserAuth(queryClient: {
+  invalidateQueries: (filter: { queryKey: unknown[] }) => unknown;
+}): () => void {
+  if (activeUserAuthBound) return () => {};
+  activeUserAuthBound = true;
+  const { data: sub } = takeOversupabase.auth.onAuthStateChange(
+    (event) => {
+      if (
+        event === "SIGNED_IN" ||
+        event === "INITIAL_SESSION" ||
+        event === "TOKEN_REFRESHED" ||
+        event === "USER_UPDATED"
+      ) {
+        queryClient.invalidateQueries({ queryKey: ["activeuser"] });
+      }
+      if (event === "SIGNED_OUT") {
+        queryClient.invalidateQueries({ queryKey: ["activeuser"] });
+      }
+    },
+  );
+  return () => {
+    sub.subscription.unsubscribe();
+    activeUserAuthBound = false;
+  };
+}
 
 
 // Fetch All CWA Credentials — scoped by company

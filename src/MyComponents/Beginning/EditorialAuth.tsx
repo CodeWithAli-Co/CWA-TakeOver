@@ -21,6 +21,7 @@
  */
 
 import { useForm } from "@tanstack/react-form";
+import { useQueryClient } from "@tanstack/react-query";
 import cwa_logo_full from "/codewithali-removebg-preview.png";
 import { useCallback, useEffect, useState } from "react";
 import { useAppStore } from "@/stores/store";
@@ -140,6 +141,7 @@ const HexagonWireframe: React.FC = () => (
 // ────────────────────────────────────────────────────────────────────────
 export default function EditorialAuth() {
   const { setPinCheck, setIsLoggedIn } = useAppStore();
+  const queryClient = useQueryClient();
   const [showContent, setShowContent] = useState(false);
   const [, setPinValue] = useState("");
   const [isLoading, setIsLoading] = useState(false);
@@ -165,6 +167,10 @@ export default function EditorialAuth() {
       setError(false);
       await new Promise((resolve) => setTimeout(resolve, 700));
       if (value.pin === "8821") {
+        // See stores/query.ts — refetch ActiveUser the moment we
+        // pass the gate so the sidebar can't get stuck on the
+        // "Unknown / Member" empty-cache fallback.
+        queryClient.invalidateQueries({ queryKey: ["activeuser"] });
         document.startViewTransition(() => {
           setPinCheck("true");
         });

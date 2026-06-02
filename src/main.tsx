@@ -52,6 +52,14 @@ declare module "@tanstack/react-router" {
 
 const queryclient = new QueryClient();
 
+// Keep the ActiveUser cache honest across Supabase auth events
+// (INITIAL_SESSION / SIGNED_IN / TOKEN_REFRESHED / SIGNED_OUT).
+// Without this, the suspense query can cache an empty result during
+// a boot race and the sidebar shows "Unknown / Member" until the
+// user manually signs out and back in. See stores/query.ts.
+import { subscribeActiveUserAuth } from "@/stores/query";
+subscribeActiveUserAuth(queryclient);
+
 // Render the app
 const rootElement = document.getElementById("root")!;
 if (!rootElement.innerHTML) {
