@@ -518,17 +518,28 @@ export async function runTurn(
   for (let iter = 0; iter < MAX_ITER; iter++) {
     let response: StreamTurnResult;
 
-    // Sentence chunker — only when we're on what should be the final iteration
-    // AND onSentence is provided. We don't know yet if this iter is final, so
-    // we buffer text deltas and commit sentences only if the turn ends without
-    // further tool_use.
+    // Sentence chunker — emit sentences AS THEY'RE GENERATED, not after the
+    // full response completes. Previously we buffered everything and flushed
+    // at end-of-turn so we could withhold pre-tool narration, but that paid
+    // for prudence with first-sentence latency: the ElevenLabs fetch couldn't
+    // start until the model finished talking. Streaming sentences eagerly
+    // lets the first audio fetch overlap with later token generation; the
+    // prefetch buffer in voiceOutput keeps paragraph-2 already-fetched while
+    // paragraph-1's tail is still playing.
+    //
+    // Trade-off: if this iter ends with tool_use, we'll have already spoken
+    // some narration. That's actually desirable — Axon's "let me check…"
+    // preamble is meant to be heard, not swallowed.
     let liveBuf = "";
-    const pendingSentences: string[] = [];
+    const emittedThisIter = new Set<string>();
     const textDelta = (chunk: string) => {
       liveBuf += chunk;
       const { sentences, rest } = drainSentences(liveBuf);
       liveBuf = rest;
-      for (const s of sentences) pendingSentences.push(s);
+      for (const s of sentences) {
+        emittedThisIter.add(s);
+        opts.onSentence?.(s);
+      }
       opts.onTextDelta?.(chunk);
     };
 
@@ -560,13 +571,15 @@ export async function runTurn(
       (c): c is ToolUseBlock => c.type === "tool_use"
     );
 
-    // If no tool uses, this is the final turn — commit any remaining buffered
-    // text as the last sentence.
+    // If no tool uses, this is the final turn — flush any trailing buffer as
+    // the last sentence. Sentences with punctuation already streamed during
+    // generation via the textDelta path; only an un-terminated tail might be
+    // left in liveBuf (e.g. the model stopped mid-word, or the last sentence
+    // never got a period).
     if (toolUses.length === 0 || response.stop_reason === "end_turn") {
       if (opts.onSentence) {
-        for (const s of pendingSentences) opts.onSentence(s);
         const tail = liveBuf.trim();
-        if (tail.length > 0) opts.onSentence(tail);
+        if (tail.length > 0 && !emittedThisIter.has(tail)) opts.onSentence(tail);
       }
       // Mind-map: settle the session with the final spoken text.
       axonGraph.endSession({ summary: finalText, failed: false });

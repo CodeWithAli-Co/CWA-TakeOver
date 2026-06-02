@@ -163,9 +163,13 @@ function sanitizeForSpeech(text: string): string {
   t = t.replace(/^\s*\|.*\|\s*$/gm, "");
   // Block quotes
   t = t.replace(/^\s*>\s?/gm, "");
-  // Em/en dashes into commas (Web Speech reads them weirdly)
-  t = t.replace(/—/g, ", ");
-  t = t.replace(/–/g, ", ");
+  // Em/en dashes — collapse to a single space, NOT comma+space.
+  // The comma-replacement made ElevenLabs treat every dash as a
+  // ~200ms pause, contributing to "Axon pauses too much" — a real
+  // mid-sentence dash should produce a slight prosodic break, not a
+  // beat of silence. A bare space lets the model carry the cadence.
+  t = t.replace(/—/g, " ");
+  t = t.replace(/–/g, " ");
   // Leftover stray asterisks / underscores / pipes / pound signs / backticks
   t = t.replace(/[*_`|#~]+/g, "");
   // Ellipses — shorten long runs to keep cadence
@@ -192,12 +196,26 @@ export class VoiceOutput {
   private callbacks: VoiceOutputCallbacks;
   private currentAudio: HTMLAudioElement | null = null;
 
-  /** Serial queue of pending sentences. */
-  private queue: string[] = [];
+  /** Serial queue of pending sentences. Each entry is the raw text PLUS an
+   *  optional in-flight audio fetch that was started the moment the sentence
+   *  was queued. Pre-starting the fetch in queueSentence() instead of waiting
+   *  for drain() to pull it means the audio blob is often already ready by
+   *  the time the previous sentence finishes — collapsing the paragraph-2
+   *  fetch-latency gap to near zero. */
+  private queue: Array<{
+    text: string;
+    audio: Promise<HTMLAudioElement | null> | null;
+  }> = [];
   /** True when the queue is actively being drained. */
   private draining = false;
   /** Generation counter — any interrupt() bumps it so stale work exits cleanly. */
   private gen = 0;
+  /** How long drain() will linger after the queue runs dry before deciding
+   *  the turn is actually over. The brain emits sentences eagerly during
+   *  streaming, but token generation between paragraphs can leave the queue
+   *  briefly empty. This grace window lets new sentences slot in without
+   *  forcing drain() to tear down and restart cold. */
+  private static readonly DRAIN_GRACE_MS = 350;
 
   constructor(config: VoiceOutputConfig, callbacks: VoiceOutputCallbacks = {}) {
     this.config = config;
@@ -212,15 +230,29 @@ export class VoiceOutput {
   async speak(text: string): Promise<void> {
     if (!text || !text.trim()) return;
     this.interrupt();
-    this.queue = [text];
+    this.queue = [{ text, audio: null }];
     await this.drain();
   }
 
-  /** Append a sentence for immediate-ish playback. Starts draining if idle. */
+  /** Append a sentence for immediate-ish playback. Starts draining if idle.
+   *  Also kicks off the ElevenLabs fetch right now so the audio blob is
+   *  ready by the time drain() reaches this slot — the first sentence of a
+   *  reply, and the first sentence of each new paragraph, no longer pay the
+   *  full network round-trip on the critical path. */
   queueSentence(text: string) {
     const s = text.trim();
     if (!s) return;
-    this.queue.push(s);
+    const path = this.resolveVoicePath();
+    const myGen = this.gen;
+    const audio = path.kind === "eleven"
+      ? this.fetchElevenLabsAudio(s, myGen, path.voiceId).catch((e) => {
+          console.error("[voiceOutput] queued fetch failed:", e, {
+            text: s.slice(0, 120),
+          });
+          return null;
+        })
+      : null;
+    this.queue.push({ text: s, audio });
     if (!this.draining) {
       void this.drain();
     }
@@ -229,6 +261,10 @@ export class VoiceOutput {
   /** Cut off any currently-speaking output and drop the queue. */
   interrupt(): void {
     this.gen++;
+    // Any in-flight prefetched fetches in dropped slots will still resolve
+    // and create blob URLs that nobody plays. Their gen guard inside
+    // fetchElevenLabsAudio bumps to null so they don't blow up, but the
+    // blob URL leak is acceptable — browser GCs them when the doc unloads.
     this.queue = [];
     this.draining = false;
     if (typeof window !== "undefined" && "speechSynthesis" in window) {
@@ -282,68 +318,62 @@ export class VoiceOutput {
     const myGen = this.gen;
     this.callbacks.onStart?.();
 
-    // ── Prefetch buffer ───────────────────────────────────────
-    // Holds the next sentence's decoded ElevenLabs blob ready-to-play.
-    // While sentence N is audibly playing, we eagerly fetch sentence
-    // N+1 in parallel so the next playback starts the instant the
-    // previous one ends — closing the network-round-trip gap that
-    // was being heard as "Axon pauses too long between sentences."
-    // Only used on the ElevenLabs path; Web Speech can't prefetch
-    // (browser API doesn't expose the synthesized audio).
-    let prefetched: Promise<HTMLAudioElement | null> | null = null;
+    // queueSentence() already kicks off each sentence's ElevenLabs fetch the
+    // moment the brain emits it — no separate prefetch buffer needed here.
+    // By the time drain() reaches a slot, the audio blob is usually already
+    // resolved or close to it. This collapses the per-sentence network gap
+    // for BOTH within-paragraph sentences and across-paragraph boundaries.
+    while (this.gen === myGen) {
+      // Wait politely for the next sentence: if the queue is momentarily
+      // empty we hold a short grace window before declaring the turn over,
+      // because the brain emits sentences as the LLM generates them and the
+      // model can pause briefly between paragraphs. Without this grace
+      // window, drain() tears down at the end of paragraph 1 and a fresh
+      // drain restarts cold when paragraph 2's first sentence arrives —
+      // perceived as the long inter-paragraph pause.
+      if (this.queue.length === 0) {
+        const graceUntil = Date.now() + VoiceOutput.DRAIN_GRACE_MS;
+        while (
+          this.queue.length === 0 &&
+          this.gen === myGen &&
+          Date.now() < graceUntil
+        ) {
+          await new Promise((r) => setTimeout(r, 25));
+        }
+        if (this.queue.length === 0) break;
+      }
+      if (this.gen !== myGen) break;
 
-    const startFetch = (text: string, voiceId: string): Promise<HTMLAudioElement | null> => {
-      return this.fetchElevenLabsAudio(text, myGen, voiceId).catch((e) => {
-        console.error("[voiceOutput] prefetch failed:", e, {
-          text: text.slice(0, 120),
-        });
-        return null;
-      });
-    };
-
-    while ((this.queue.length > 0 || prefetched) && this.gen === myGen) {
-      // Acquire the current sentence's audio. Either it was already
-      // prefetched while the prior one played, or this is the first
-      // pass through and we have to kick the fetch off now.
-      let audioPromise: Promise<HTMLAudioElement | null> | null = null;
-      let nextText: string | null = null;
+      const slot = this.queue.shift()!;
       const path = this.resolveVoicePath();
 
-      if (prefetched) {
-        audioPromise = prefetched;
-        prefetched = null;
-      } else if (this.queue.length > 0) {
-        nextText = this.queue.shift()!;
-        if (path.kind === "eleven") {
-          audioPromise = startFetch(nextText, path.voiceId);
-        }
-      }
-
-      // Kick off the NEXT sentence's fetch in parallel (only on the
-      // ElevenLabs path — Web Speech doesn't pre-synthesize). This is
-      // the bit that erases the inter-sentence network gap.
-      if (path.kind === "eleven" && this.queue.length > 0) {
-        const lookahead = this.queue.shift()!;
-        prefetched = startFetch(lookahead, path.voiceId);
-      }
-
       try {
-        if (audioPromise) {
-          const audio = await audioPromise;
+        if (slot.audio) {
+          const audio = await slot.audio;
           if (this.gen !== myGen) break;
           if (audio) {
             await this.playPreparedAudio(audio, myGen);
           }
-        } else if (nextText !== null) {
-          // Web Speech path (no prefetch possible).
-          await this.speakWebSpeech(nextText, myGen);
+        } else if (path.kind === "eleven") {
+          // queueSentence stashed no fetch (race where path wasn't "eleven"
+          // at queue-time). Fetch on demand.
+          const audio = await this.fetchElevenLabsAudio(slot.text, myGen, path.voiceId).catch(
+            (e) => {
+              console.error("[voiceOutput] inline fetch failed:", e, {
+                text: slot.text.slice(0, 120),
+              });
+              return null;
+            }
+          );
+          if (this.gen !== myGen) break;
+          if (audio) await this.playPreparedAudio(audio, myGen);
+        } else {
+          // Web Speech fallback path.
+          await this.speakWebSpeech(slot.text, myGen);
         }
       } catch (e) {
-        // Bumped from warn to error — voice failures should be loud.
-        // Includes the failing text so the operator can correlate
-        // with what they just heard (or didn't hear).
         console.error("[voiceOutput] sentence playback failed:", e, {
-          text: (nextText ?? "").slice(0, 120),
+          text: slot.text.slice(0, 120),
         });
         // Fall through to next sentence; don't abort entire queue.
       }
@@ -489,15 +519,52 @@ export class VoiceOutput {
       return;
     }
     this.currentAudio = audio;
+
+    // How much trailing audio to "skip" in the overlap. ElevenLabs
+    // v3 pads each clip with ~300-500ms of dead silence after the
+    // last word. We resolve the playback promise this many ms BEFORE
+    // the audio actually ends — the drain loop then starts the next
+    // sentence immediately, which means the next speech begins while
+    // the current clip is still finishing its silence padding. From
+    // the listener's perspective the inter-sentence gap collapses
+    // from ~400ms to near-zero.
+    //
+    // Conservative default — pushing this past ~400ms risks clipping
+    // real speech if v3's trailing padding is shorter than expected
+    // for a particular clip.
+    const TAIL_LEAD_MS = 250;
+
     return new Promise<void>((resolve) => {
+      let resolved = false;
+      const finishOnce = () => {
+        if (resolved) return;
+        resolved = true;
+        resolve();
+      };
       const cleanup = () => {
         const url = (audio as any).__cwaBlobUrl as string | undefined;
         if (url) URL.revokeObjectURL(url);
         if (this.currentAudio === audio) this.currentAudio = null;
       };
+
+      // Early-resolve via timeupdate: once the playhead crosses
+      // (duration - TAIL_LEAD_MS), we tell the drain loop we're
+      // "done" so the next sentence can start. The current clip
+      // keeps playing its tail silence in the background — onended
+      // still fires later to handle the URL revoke + currentAudio
+      // pointer cleanup.
+      audio.ontimeupdate = () => {
+        if (resolved) return;
+        if (!isFinite(audio.duration)) return;
+        const remainingMs = (audio.duration - audio.currentTime) * 1000;
+        if (remainingMs <= TAIL_LEAD_MS) {
+          finishOnce();
+        }
+      };
+
       audio.onended = () => {
         cleanup();
-        resolve();
+        finishOnce();
       };
       audio.onerror = () => {
         cleanup();
@@ -505,12 +572,12 @@ export class VoiceOutput {
           audioError: audio.error,
         });
         this.callbacks.onError?.("ElevenLabs playback error");
-        resolve();
+        finishOnce();
       };
       audio.play().catch((e) => {
         cleanup();
         this.callbacks.onError?.(`Playback: ${e?.message ?? e}`);
-        resolve();
+        finishOnce();
       });
     });
   }
