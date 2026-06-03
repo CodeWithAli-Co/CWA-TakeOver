@@ -50,7 +50,7 @@ import {
   type LucideIcon,
 } from "lucide-react";
 
-import { companySupabase, takeOversupabase } from "../supabase";
+import { takeOversupabase } from "../supabase";
 import { getStronghold } from "@/stores/stronghold";
 import {
   FieldGroup,

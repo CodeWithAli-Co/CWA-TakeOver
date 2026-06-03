@@ -84,6 +84,18 @@ const getCompSupabaseCreds = async (): Promise<{
     };
   }
 
+  // *Retrieve from cache first ( stronghold ), if not then fetch from DB
+  const db_url = await stronghold.getRecord("companydb_url");
+  const db_key = await stronghold.getRecord("companydb_key");
+
+  if (db_url && db_key) {
+    console.log("[supabase]: Retrieved Comapny DB creds from Cache ( stronghold )");
+    return {
+      url: db_url,
+      key: db_key,
+    }
+  }
+
   const { data, error } = await takeOversupabase
     .from("takeover_companies")
     .select("companydb_url,companydb_key")
@@ -110,20 +122,18 @@ const getCompSupabaseCreds = async (): Promise<{
   };
 };
 
-const { url: compDB_URL, key: compDB_KEY } = await getCompSupabaseCreds();
 // Separate storage key so this client doesn't fight the master
 // client over the same localStorage entry. The per-tenant client
 // uses an anon / pseudo key and typically doesn't need an auth
 // session at all, but we still give it its own slot to silence
 // the multi-instance warning and prevent any cross-contamination.
-export const companySupabase = createClient(
-  compDB_URL,
-  compDB_KEY,
-  {
+export const getCompanySupabase = async () => {
+  const { url: compDB_URL, key: compDB_KEY } = await getCompSupabaseCreds();
+  return createClient(compDB_URL, compDB_KEY, {
     auth: {
       storageKey: "sb-takeover-tenant-auth",
       persistSession: false,
       autoRefreshToken: false,
     },
-  },
-);
+  });
+};

@@ -20,8 +20,20 @@
 import { useForm } from "@tanstack/react-form";
 import { useState } from "react";
 import { useAppStore } from "@/stores/store";
-import { takeOversupabase } from "../supabase";
-import { Loader2, Mail, Lock, Eye, EyeOff, AlertCircle, Sparkles, Users, ShieldCheck } from "lucide-react";
+import { getCompanySupabase, takeOversupabase } from "../supabase";
+import {
+  Loader2,
+  Mail,
+  Lock,
+  Eye,
+  EyeOff,
+  AlertCircle,
+  Sparkles,
+  Users,
+  ShieldCheck,
+  Building2,
+} from "lucide-react";
+import { getStronghold } from "@/stores/stronghold";
 
 export const LoginPage = () => {
   const { setIsLoggedIn } = useAppStore();
@@ -29,52 +41,126 @@ export const LoginPage = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [authError, setAuthError] = useState<string | null>(null);
+  const [compLookUpError, setCompLookUpError] = useState<string | null>(null);
+  const [loginPhase, setLoginPhase] = useState<number>(1);
+  const [hasInit, setHasInit] = useState<boolean>(false);
   // Forgot-password flow state — lets us show a success toast
   // inline instead of a blocking dialog.
   const [resetting, setResetting] = useState(false);
   const [resetNote, setResetNote] = useState<string | null>(null);
 
   const form = useForm({
-    defaultValues: { email: "", password: "" },
+    defaultValues: { company: "", email: "", password: "" },
     onSubmit: async ({ value }) => {
       setAuthError(null);
+      setCompLookUpError(null);
       setSubmitting(true);
-      try {
-        const { data, error } = await takeOversupabase.auth.signInWithPassword({
-          email: value.email.trim(),
-          password: value.password,
-        });
+      const stronghold = await getStronghold();
 
-        if (error) {
-          // Map Supabase's exact error messages to user-friendly copy.
-          const msg = error.message.toLowerCase();
-          if (msg.includes("invalid login credentials")) {
-            setAuthError("Email or password is incorrect.");
-          } else if (msg.includes("email not confirmed")) {
-            setAuthError("Check your email to confirm the account, then try again.");
-          } else {
-            setAuthError(error.message);
+      // --- PHASE 1 ---
+
+      if (loginPhase === 1) {
+        try {
+          // Check if user is valid employee at company
+          const { data: tkData, error: tkError } = await takeOversupabase
+            .from("takeover_companies")
+            .select("companydb_url,companydb_key")
+            .eq("company_name", value.company)
+            .single()
+            .overrideTypes<{ companydb_url: string; companydb_key: string }>();
+
+          if (!tkData || tkError) {
+            setSubmitting(false);
+            return;
           }
-          return;
-        }
 
-        // Double-check the identity is email-verified before flipping
-        // the store flag. Keeps the "user half-signed-up and stuck"
-        // edge case from landing them in a broken state.
-        const { data: verify } = await takeOversupabase.auth.getUserIdentities();
-        const verified = verify?.identities?.[0]?.identity_data?.email_verified;
-        if (data.user?.role === "authenticated" && verified) {
-          setIsLoggedIn("true");
-          localStorage.setItem("isLoggedIn", "true");
-        } else {
-          setAuthError(
-            "Your email isn't verified yet. Check your inbox for the confirmation link.",
-          );
+          // Save creds to stronghold
+          await stronghold.insertRecord("companydb_url", tkData.companydb_url);
+          await stronghold.insertRecord("companydb_key", tkData.companydb_key);
+
+          const companySupabase = await getCompanySupabase();
+
+          // Check if user already initialzed account or not
+          const { data, error } = await companySupabase
+            .from(import.meta.env.DEV ? "demo_employee_table" : "employee")
+            .select("init_pw")
+            .eq("email", value.email)
+            .single()
+            .overrideTypes<{ init_pw: string }>();
+
+          if (!data || error) {
+            setSubmitting(false);
+            return;
+          }
+
+          import.meta.env.DEV
+            ? console.log("User INIT PW: ", data)
+            : console.log("[login_page]: Moving to Login Phase 2...");
+
+          if (!data.init_pw) {
+            // User is already initialized
+            setHasInit(true);
+          }
+
+          setLoginPhase(2);
+          setSubmitting(false);
+          return;
+        } catch (error) {
+          console.error("Error finding user: ", error);
         }
-      } catch (e) {
-        setAuthError(e instanceof Error ? e.message : "Sign-in failed. Try again.");
-      } finally {
-        setSubmitting(false);
+      }
+
+      // --- PHASE 2 ---
+
+      if (loginPhase === 2) {
+        try {
+          // Auto-login user from company DB and let them set new pw ( dont save )
+          const { data, error } =
+            await takeOversupabase.auth.signInWithPassword({
+              email: value.email.trim(),
+              password: value.password,
+            });
+
+          if (error) {
+            // Map Supabase's exact error messages to user-friendly copy.
+            const msg = error.message.toLowerCase();
+            if (msg.includes("invalid login credentials")) {
+              setAuthError("Email or password is incorrect.");
+            } else if (msg.includes("email not confirmed")) {
+              setAuthError(
+                "Check your email to confirm the account, then try again.",
+              );
+            } else {
+              setAuthError(error.message);
+            }
+            return;
+          }
+
+          // Load Company Components
+          // *And Data ?
+
+          // Double-check the identity is email-verified before flipping
+          // the store flag. Keeps the "user half-signed-up and stuck"
+          // edge case from landing them in a broken state.
+          const { data: verify } =
+            await takeOversupabase.auth.getUserIdentities();
+          const verified =
+            verify?.identities?.[0]?.identity_data?.email_verified;
+          if (data.user?.role === "authenticated" && verified) {
+            setIsLoggedIn("true");
+            localStorage.setItem("isLoggedIn", "true");
+          } else {
+            setAuthError(
+              "Your email isn't verified yet. Check your inbox for the confirmation link.",
+            );
+          }
+        } catch (e) {
+          setAuthError(
+            e instanceof Error ? e.message : "Sign-in failed. Try again.",
+          );
+        } finally {
+          setSubmitting(false);
+        }
       }
     },
   });
@@ -104,114 +190,205 @@ export const LoginPage = () => {
             }}
             className="space-y-4"
           >
-            {/* ── Email ── */}
-            <form.Field
-              name="email"
-              children={(field) => (
-                <FieldShell label="Email" htmlFor={field.name} icon={Mail}>
-                  <input
-                    id={field.name}
-                    name={field.name}
-                    type="email"
-                    autoComplete="email"
-                    autoFocus
-                    placeholder="you@codewithali.com"
-                    value={field.state.value}
-                    onChange={(e) => field.handleChange(e.target.value)}
-                    className="w-full bg-transparent text-[14px] text-zinc-100 placeholder:text-zinc-600 outline-none"
-                  />
-                </FieldShell>
-              )}
-            />
-
-            {/* ── Password ── */}
-            <form.Field
-              name="password"
-              children={(field) => (
-                <div>
-                  <div className="flex items-baseline justify-between mb-1.5">
-                    <label
+            {loginPhase === 1 && (
+              <>
+                {/* Company Dropdown */}
+                <form.Field
+                  name="company"
+                  validators={{
+                    onChangeAsync: async (value) => {
+                      // Check if company exists in TK DB
+                      // setCompLookUpError("No Company found")
+                    },
+                    onChangeAsyncDebounceMs: 1000,
+                  }}
+                  children={(field) => (
+                    <FieldShell
+                      label="Company"
                       htmlFor={field.name}
-                      className="text-[11px] font-semibold text-zinc-400"
+                      icon={Building2}
                     >
-                      Password
-                    </label>
-                    <button
-                      type="button"
-                      disabled={resetting}
-                      onClick={async () => {
-                        // Send a Supabase password-reset email to the
-                        // address currently in the email field. If the
-                        // field is empty, prompt for one rather than
-                        // silently doing nothing.
-                        const email = form.getFieldValue("email")?.trim();
-                        if (!email || !email.includes("@")) {
-                          setAuthError(
-                            "Enter your email above first, then click 'Forgot password?' again.",
-                          );
-                          return;
-                        }
-                        setResetting(true);
-                        setAuthError(null);
-                        setResetNote(null);
-                        const siteUrl =
-                          (import.meta.env.VITE_TAKEOVER_SITE_URL as string | undefined)?.replace(/\/+$/, "")
-                          ?? "";
-                        const redirectTo = siteUrl
-                          ? `${siteUrl}/auth/set-password`
-                          : undefined;
-                        const { error } = await takeOversupabase.auth.resetPasswordForEmail(
-                          email,
-                          redirectTo ? { redirectTo } : undefined,
-                        );
-                        setResetting(false);
-                        if (error) {
-                          setAuthError(`Couldn't send reset email: ${error.message}`);
-                          return;
-                        }
-                        setResetNote(
-                          `Reset link sent to ${email}. Check your inbox (and spam) — open the link to set a new password.`,
-                        );
-                      }}
-                      className="text-[11px] text-zinc-500 hover:text-zinc-200 transition-colors disabled:opacity-50"
-                    >
-                      {resetting ? "Sending…" : "Forgot password?"}
-                    </button>
+                      <input
+                        id={field.name}
+                        name={field.name}
+                        type="text"
+                        autoComplete="off"
+                        autoFocus
+                        placeholder="Acme Corp"
+                        value={field.state.value}
+                        onChange={(e) => field.handleChange(e.target.value)}
+                        className="w-full bg-transparent text-[14px] text-zinc-100 placeholder:text-zinc-600 outline-none"
+                      />
+                    </FieldShell>
+                  )}
+                />
+
+                {compLookUpError && (
+                  <div className="flex items-start gap-2 rounded-md border border-red-500/30 bg-red-500/10 px-3 py-2">
+                    <AlertCircle className="h-3.5 w-3.5 mt-0.5 text-red-400 shrink-0" />
+                    <p className="text-[12px] text-red-200 leading-snug">
+                      {compLookUpError}
+                    </p>
                   </div>
-                  <FieldShell
-                    htmlFor={field.name}
-                    icon={Lock}
-                    trailing={
-                      <button
-                        type="button"
-                        onClick={() => setShowPassword((v) => !v)}
-                        className="text-zinc-500 hover:text-zinc-200 transition-colors"
-                        tabIndex={-1}
+                )}
+
+                {/* ── Email ── */}
+                <form.Field
+                  name="email"
+                  children={(field) => (
+                    <FieldShell label="Email" htmlFor={field.name} icon={Mail}>
+                      <input
+                        id={field.name}
+                        name={field.name}
+                        type="email"
+                        autoComplete="email"
+                        placeholder="you@codewithali.com"
+                        value={field.state.value}
+                        onChange={(e) => field.handleChange(e.target.value)}
+                        className="w-full bg-transparent text-[14px] text-zinc-100 placeholder:text-zinc-600 outline-none"
+                      />
+                    </FieldShell>
+                  )}
+                />
+
+                <section className="flex items-start gap-2 rounded-md border border-orange-500/30 bg-orange-500/10 px-3 py-2">
+                  <AlertCircle className="h-3.5 w-3.5 mt-0.5 text-orange-400 shrink-0" />
+                  <p className="text-[12px] text-orange-200 leading-snug">
+                    This process might take a minute
+                  </p>
+                </section>
+              </>
+            )}
+
+            {loginPhase === 2 && (
+              <>
+                {!hasInit ? (
+                  // New ( set ) Password
+                  <form.Field
+                    name="password"
+                    children={(field) => (
+                      <FieldShell
+                        label="Set Password"
+                        htmlFor={field.name}
+                        icon={Lock}
                       >
-                        {showPassword ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
-                      </button>
-                    }
-                  >
-                    <input
-                      id={field.name}
-                      name={field.name}
-                      type={showPassword ? "text" : "password"}
-                      autoComplete="current-password"
-                      placeholder="Your password"
-                      value={field.state.value}
-                      onChange={(e) => field.handleChange(e.target.value)}
-                      className="w-full bg-transparent text-[14px] text-zinc-100 placeholder:text-zinc-600 outline-none"
-                    />
-                  </FieldShell>
-                </div>
-              )}
-            />
+                        <input
+                          id={field.name}
+                          name={field.name}
+                          type="password"
+                          autoComplete="off"
+                          placeholder="**********"
+                          value={field.state.value}
+                          onChange={(e) => field.handleChange(e.target.value)}
+                          className="w-full bg-transparent text-[14px] text-zinc-100 placeholder:text-zinc-600 outline-none"
+                        />
+                      </FieldShell>
+                    )}
+                  />
+                ) : (
+                  // ── Login Password ──
+                  <form.Field
+                    name="password"
+                    children={(field) => (
+                      <div>
+                        <div className="flex items-baseline justify-between mb-1.5">
+                          <label
+                            htmlFor={field.name}
+                            className="text-[11px] font-semibold text-zinc-400"
+                          >
+                            Password
+                          </label>
+                          <button
+                            type="button"
+                            disabled={resetting}
+                            onClick={async () => {
+                              // Send a Supabase password-reset email to the
+                              // address currently in the email field. If the
+                              // field is empty, prompt for one rather than
+                              // silently doing nothing.
+                              const email = form.getFieldValue("email")?.trim();
+                              if (!email || !email.includes("@")) {
+                                setAuthError(
+                                  "Enter your email above first, then click 'Forgot password?' again.",
+                                );
+                                return;
+                              }
+                              setResetting(true);
+                              setAuthError(null);
+                              setResetNote(null);
+                              const siteUrl =
+                                (
+                                  import.meta.env.VITE_TAKEOVER_SITE_URL as
+                                    | string
+                                    | undefined
+                                )?.replace(/\/+$/, "") ?? "";
+                              const redirectTo = siteUrl
+                                ? `${siteUrl}/auth/set-password`
+                                : undefined;
+                              const { error } =
+                                await takeOversupabase.auth.resetPasswordForEmail(
+                                  email,
+                                  redirectTo ? { redirectTo } : undefined,
+                                );
+                              setResetting(false);
+                              if (error) {
+                                setAuthError(
+                                  `Couldn't send reset email: ${error.message}`,
+                                );
+                                return;
+                              }
+                              setResetNote(
+                                `Reset link sent to ${email}. Check your inbox (and spam) — open the link to set a new password.`,
+                              );
+                            }}
+                            className="text-[11px] text-zinc-500 hover:text-zinc-200 transition-colors disabled:opacity-50"
+                          >
+                            {resetting ? "Sending…" : "Forgot password?"}
+                          </button>
+                        </div>
+                        <FieldShell
+                          htmlFor={field.name}
+                          icon={Lock}
+                          trailing={
+                            <button
+                              type="button"
+                              onClick={() => setShowPassword((v) => !v)}
+                              className="text-zinc-500 hover:text-zinc-200 transition-colors"
+                              tabIndex={-1}
+                            >
+                              {showPassword ? (
+                                <EyeOff className="h-3.5 w-3.5" />
+                              ) : (
+                                <Eye className="h-3.5 w-3.5" />
+                              )}
+                            </button>
+                          }
+                        >
+                          <input
+                            id={field.name}
+                            name={field.name}
+                            type={showPassword ? "text" : "password"}
+                            autoComplete="current-password"
+                            placeholder="Your password"
+                            value={field.state.value}
+                            onChange={(e) => field.handleChange(e.target.value)}
+                            className="w-full bg-transparent text-[14px] text-zinc-100 placeholder:text-zinc-600 outline-none"
+                          />
+                        </FieldShell>
+                      </div>
+                    )}
+                  />
+                )}
+              </>
+            )}
 
             {/* ── Error ── */}
             {authError && (
               <div className="flex items-start gap-2 rounded-md border border-red-500/30 bg-red-500/10 px-3 py-2">
                 <AlertCircle className="h-3.5 w-3.5 mt-0.5 text-red-400 shrink-0" />
-                <p className="text-[12px] text-red-200 leading-snug">{authError}</p>
+                <p className="text-[12px] text-red-200 leading-snug">
+                  {authError}
+                </p>
               </div>
             )}
 
@@ -219,7 +396,9 @@ export const LoginPage = () => {
             {resetNote && (
               <div className="flex items-start gap-2 rounded-md border border-emerald-500/30 bg-emerald-500/10 px-3 py-2">
                 <Mail className="h-3.5 w-3.5 mt-0.5 text-emerald-400 shrink-0" />
-                <p className="text-[12px] text-emerald-200 leading-snug">{resetNote}</p>
+                <p className="text-[12px] text-emerald-200 leading-snug">
+                  {resetNote}
+                </p>
               </div>
             )}
 
@@ -232,7 +411,9 @@ export const LoginPage = () => {
                   disabled={!canSubmit || submitting}
                   className="w-full inline-flex items-center justify-center gap-2 rounded-md bg-zinc-100 px-4 py-2.5 text-[13px] font-semibold text-zinc-950 hover:bg-white disabled:opacity-50 disabled:cursor-not-allowed transition-colors shadow-lg"
                 >
-                  {submitting && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
+                  {submitting && (
+                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                  )}
                   {submitting ? "Signing in…" : "Sign in"}
                 </button>
               )}
@@ -242,10 +423,9 @@ export const LoginPage = () => {
           {/* ── Invite-only footer ── */}
           <div className="mt-8 rounded-lg border border-zinc-800 bg-zinc-900/40 p-4">
             <p className="text-[11.5px] text-zinc-400 leading-relaxed">
-              <b className="text-zinc-200">Accounts are invite-only.</b>
-              {" "}Takeover is an internal tool. If you've been hired and
-              haven't received an invite link, reach out to your hiring
-              contact.
+              <b className="text-zinc-200">Accounts are invite-only.</b>{" "}
+              Takeover is an internal tool. If you've been hired and haven't
+              received an invite link, reach out to your hiring contact.
             </p>
             <button
               type="button"
@@ -299,7 +479,9 @@ function BrandPanel() {
             T
           </div>
           <div>
-            <p className="text-[15px] font-bold tracking-tight text-zinc-100">Takeover</p>
+            <p className="text-[15px] font-bold tracking-tight text-zinc-100">
+              Takeover
+            </p>
             <p className="text-[10px] font-mono uppercase tracking-widest text-zinc-500">
               Ops Platform
             </p>
@@ -346,7 +528,9 @@ function BrandPanel() {
 }
 
 function Feature({
-  icon: Icon, title, body,
+  icon: Icon,
+  title,
+  body,
 }: {
   icon: typeof Sparkles;
   title: string;
@@ -359,7 +543,9 @@ function Feature({
       </div>
       <div>
         <p className="text-[12.5px] font-semibold text-zinc-200">{title}</p>
-        <p className="mt-0.5 text-[11.5px] text-zinc-500 leading-snug">{body}</p>
+        <p className="mt-0.5 text-[11.5px] text-zinc-500 leading-snug">
+          {body}
+        </p>
       </div>
     </li>
   );
@@ -368,7 +554,11 @@ function Feature({
 // ── Input shell — label + icon + optional trailing ────────────
 
 function FieldShell({
-  label, htmlFor, icon: Icon, trailing, children,
+  label,
+  htmlFor,
+  icon: Icon,
+  trailing,
+  children,
 }: {
   label?: string;
   htmlFor?: string;

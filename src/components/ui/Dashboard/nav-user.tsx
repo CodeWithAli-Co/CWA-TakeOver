@@ -34,6 +34,7 @@ import { ActiveUser } from "@/stores/query";
 import { useRolePreview } from "@/stores/store";
 import { useNavigate } from "@tanstack/react-router";
 import UserView, { Role } from "@/MyComponents/Reusables/userView";
+import { getStronghold } from "@/stores/stronghold";
 
 interface NavUserProps {
   userData: {
@@ -60,10 +61,12 @@ export function NavUser({ }: NavUserProps) {
   };
 
   const handleLogout = async () => {
+    const stronghold = await getStronghold();
     const { error } = await takeOversupabase.auth.signOut();
     if (error) {
       console.log("Error Signing Out:", error.message);
     } else {
+      stronghold.removeRecord("company_name");
       localStorage.removeItem("isLoggedIn");
       window.location.reload();
     }
