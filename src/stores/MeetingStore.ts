@@ -1,4 +1,4 @@
-import supabase from "@/MyComponents/supabase"
+import { takeOversupabase } from "@/MyComponents/supabase"
 import { useSuspenseQuery } from "@tanstack/react-query"
 import { create } from "zustand"
 

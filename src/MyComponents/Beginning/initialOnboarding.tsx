@@ -50,7 +50,7 @@ import {
   type LucideIcon,
 } from "lucide-react";
 
-import { takeOversupabase } from "../supabase";
+import { companySupabase, takeOversupabase } from "../supabase";
 import { getStronghold } from "@/stores/stronghold";
 import {
   FieldGroup,
@@ -141,7 +141,10 @@ interface Props {
   debugMode?: boolean;
 }
 
-const InitialOnboarding = ({ completeInitialLaunch, debugMode = false }: Props) => {
+const InitialOnboarding = ({
+  completeInitialLaunch,
+  debugMode = false,
+}: Props) => {
   const [isFounder, setIsFounder] = useState<boolean | null>(null);
   const [stepId, setStepId] = useState<FounderStepId>("identity");
 
@@ -181,6 +184,7 @@ const InitialOnboarding = ({ completeInitialLaunch, debugMode = false }: Props) 
         setStepId("industry");
         return;
       }
+      console.log(value);
 
       const { data, error } = await takeOversupabase
         .from("takeover_companies")
@@ -188,6 +192,7 @@ const InitialOnboarding = ({ completeInitialLaunch, debugMode = false }: Props) 
         .eq("company_name", value.companyName)
         .eq("founder_email", value.founderEmail)
         .eq("company_email", value.companyEmail)
+        .eq("initialized", false)
         .single();
 
       if (!data || error) {
@@ -207,6 +212,9 @@ const InitialOnboarding = ({ completeInitialLaunch, debugMode = false }: Props) 
         );
         return;
       }
+
+      // *Check if connection to compnay DB was successful
+      // ...
 
       setCompanyId((data as { id: number }).id);
       setCompanyName(value.companyName);
@@ -260,7 +268,19 @@ const InitialOnboarding = ({ completeInitialLaunch, debugMode = false }: Props) 
     if (ok) setStepId("connectors");
   };
 
-  const finish = () => completeInitialLaunch();
+  const finish = async () => {
+    const { error } = await takeOversupabase
+      .from("takeover_companies")
+      .update({ initialized: true })
+      .eq("id", companyId);
+    if (error) {
+      console.error("Error initializing company.");
+      setBindError("Failed to Initialize company");
+      setStepId("company");
+      return;
+    }
+    completeInitialLaunch();
+  };
 
   if (isFounder === false) {
     return (
@@ -439,10 +459,7 @@ function CompanyBindingStep({
   bindError: string | null;
   onBack: () => void;
 }) {
-  const isSubmitting = useStore(
-    form.store,
-    (s: any) => s.isSubmitting,
-  );
+  const isSubmitting = useStore(form.store, (s: any) => s.isSubmitting);
   const canSubmit = useStore(
     form.store,
     (s: any) =>

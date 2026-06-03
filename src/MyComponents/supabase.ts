@@ -117,8 +117,8 @@ const { url: compDB_URL, key: compDB_KEY } = await getCompSupabaseCreds();
 // session at all, but we still give it its own slot to silence
 // the multi-instance warning and prevent any cross-contamination.
 export const companySupabase = createClient(
-  compDB_URL ?? "",
-  compDB_KEY ?? "",
+  compDB_URL,
+  compDB_KEY,
   {
     auth: {
       storageKey: "sb-takeover-tenant-auth",
