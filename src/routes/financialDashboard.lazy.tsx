@@ -33,6 +33,9 @@ import { takeOversupabase } from "@/MyComponents/supabase";
 import { FinancialProvider } from "@/MyComponents/Financial/FinancialContext";
 import ModelerBentoView from "@/MyComponents/Financial/ModelerBentoView";
 import { EXPENSE_COLORS, REVENUE_COLORS } from "@/stores/FinancialConstants";
+import { useStripeDashboard } from "@/lib/useStripeDashboard";
+import { formatStripeAmount } from "@/lib/stripe";
+import { Plug, Users } from "lucide-react";
 
 // ════════════════════════════════════════════
 // Shared utilities
@@ -107,29 +110,63 @@ const MetricCell: React.FC<{
 // parent's <Tabs> re-renders this tree (Tabs keep all TabsContent mounted).
 // Wrapping the impl with React.memo means the heavy Recharts trees only
 // re-render when one of the props actually changes reference.
+type StripeBundle = ReturnType<typeof useStripeDashboard>;
+
 const OverviewTabImpl: React.FC<{
-  invoices: InvoiceType[];
-  bankBalance: number;
-  expenseTotal: number;
-  revenueByCategory: { name: string; value: number }[];
-  expenseByCategory: { name: string; value: number }[];
-  totalRevenueFromCategories: number;
-}> = ({ invoices, bankBalance, expenseTotal, revenueByCategory, expenseByCategory, totalRevenueFromCategories }) => {
+  stripe: StripeBundle;
+}> = ({ stripe }) => {
+  const {
+    connected,
+    snapshot,
+    timeseries,
+    products,
+    balance,
+    recent,
+    outstanding,
+  } = stripe;
 
-  const { totalRevenue, totalPaid, monthlyChartData, growthRate } = useMemo(() => {
-    const totalRevenue = invoices.reduce((s, inv) => s + (Number(inv.outcome) || 0), 0);
-    const totalPaid = invoices.filter((inv) => inv.status === "paid").reduce((s, inv) => s + (Number(inv.outcome) || 0), 0);
-    const monthly = aggregateMonthly(invoices);
-    let growth = 0;
-    if (monthly.length >= 2) {
-      const prev = monthly[monthly.length - 2].revenue;
-      const curr = monthly[monthly.length - 1].revenue;
-      growth = prev > 0 ? ((curr - prev) / prev) * 100 : 0;
-    }
-    return { totalRevenue, totalPaid, monthlyChartData: monthly, growthRate: growth };
-  }, [invoices]);
+  // Empty state — user hasn't connected Stripe yet. Show the same
+  // bento skeleton so the layout doesn't jump when they connect.
+  if (!connected) {
+    return (
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
+        <div className="col-span-1 lg:col-span-12 bg-card border border-border rounded-sm p-10 flex flex-col items-center text-center gap-3">
+          <div className="p-3 rounded-sm bg-primary/[0.08] border border-primary/15">
+            <Plug className="h-5 w-5 text-primary" />
+          </div>
+          <div>
+            <p className="text-[14px] font-bold text-foreground">Connect Stripe to see live revenue</p>
+            <p className="text-[12px] text-muted-foreground/70 mt-1">
+              MRR, MTD revenue, outstanding invoices, and recent charges land here once you paste a restricted key in Settings → Connectors.
+            </p>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
-  const netProfit = totalRevenueFromCategories - expenseTotal;
+  // Derive ARR + WoW-style net activity deltas from the snapshot.
+  const mrrCents = snapshot?.mrr_cents ?? 0;
+  const arrCents = mrrCents * 12;
+  const currency = snapshot?.currency ?? "usd";
+  const activeSubs = snapshot?.active_subscriptions ?? 0;
+  const newSubs = snapshot?.new_subscriptions_this_month ?? 0;
+  const churnedSubs = snapshot?.churned_this_month ?? 0;
+  const netSubDelta = newSubs - churnedSubs;
+
+  // Chart data shapes for Recharts. The timeseries route already
+  // hands us pre-bucketed { label, net_cents, charge_count } rows.
+  const revenueSeries = (timeseries?.series ?? []).map((p) => ({
+    month: p.label,
+    revenue: p.net_cents / 100,
+    count: p.charge_count,
+  }));
+
+  // Revenue-by-product pie — value in dollars for nicer tooltips.
+  const productPie = (products?.items ?? []).map((p) => ({
+    name: p.name,
+    value: p.value_cents / 100,
+  }));
 
   return (
     // ════════════════════════════════════════════
@@ -142,66 +179,111 @@ const OverviewTabImpl: React.FC<{
     //   Row 3:      Revenue Sources (4) · Expense Breakdown (4) · Recent Transactions (4)
     // ════════════════════════════════════════════
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-12 gap-4">
-      {/* ROW 1 — KPI strip spans full width */}
+      {/* ROW 1 — KPI strip: Stripe-driven financials.
+          Bank → Stripe-side balance (available + pending).
+          Revenue → MRR (the metric every SaaS investor opens with).
+          Expenses → ARR (MRR × 12 — the demo-friendly forward number).
+          Net Profit → Active Subs count + net delta this month.
+          Invoice Growth → Outstanding invoices count + total. */}
       <div className="col-span-1 md:col-span-2 lg:col-span-12 bg-card border border-border rounded-sm overflow-hidden">
         <div className="flex">
-          <MetricCell icon={<Wallet className="h-3 w-3" />} label="Bank" value={`$${bankBalance.toLocaleString()}`} />
-          <MetricCell icon={<TrendingUp className="h-3 w-3" />} label="Revenue (annual)" value={`$${totalRevenueFromCategories.toLocaleString()}`} />
-          <MetricCell icon={<CreditCard className="h-3 w-3" />} label="Expenses (annual)" value={`$${expenseTotal.toLocaleString()}`} />
-          <MetricCell icon={<DollarSign className="h-3 w-3" />} label="Net Profit" value={`$${netProfit.toLocaleString()}`} trend={{ value: netProfit > 0 ? 100 : 0, positive: netProfit > 0 }} />
-          <MetricCell icon={<Activity className="h-3 w-3" />} label="Invoice Growth" value={`${growthRate > 0 ? "+" : ""}${growthRate.toFixed(1)}%`} trend={{ value: growthRate, positive: growthRate >= 0 }} borderRight={false} />
+          <MetricCell
+            icon={<Wallet className="h-3 w-3" />}
+            label="Stripe balance"
+            value={formatStripeAmount(balance?.available_cents ?? 0, balance?.primary_currency ?? currency, { compact: true })}
+            trend={
+              balance && balance.pending_cents > 0
+                ? { value: balance.pending_cents / 100, positive: true }
+                : undefined
+            }
+          />
+          <MetricCell
+            icon={<TrendingUp className="h-3 w-3" />}
+            label="MRR"
+            value={formatStripeAmount(mrrCents, currency, { compact: true })}
+          />
+          <MetricCell
+            icon={<DollarSign className="h-3 w-3" />}
+            label="ARR"
+            value={formatStripeAmount(arrCents, currency, { compact: true })}
+          />
+          <MetricCell
+            icon={<Users className="h-3 w-3" />}
+            label="Active subs"
+            value={String(activeSubs)}
+            trend={
+              newSubs > 0 || churnedSubs > 0
+                ? { value: netSubDelta, positive: netSubDelta >= 0 }
+                : undefined
+            }
+          />
+          <MetricCell
+            icon={<Receipt className="h-3 w-3" />}
+            label="Outstanding"
+            value={formatStripeAmount(outstanding?.total_cents ?? 0, outstanding?.currency ?? currency, { compact: true })}
+            trend={
+              outstanding && outstanding.count > 0
+                ? { value: outstanding.count, positive: false }
+                : undefined
+            }
+            borderRight={false}
+          />
         </div>
       </div>
 
-      {/* ROW 2 — Invoice Revenue (8) + Invoice Volume (4) */}
+      {/* ROW 2 — Net Revenue chart (8) + Charge Volume (4).
+          Both feed off the same /api/stripe/timeseries result, so
+          the network round-trip is shared. */}
       <div className="col-span-1 md:col-span-2 lg:col-span-8 bg-card border border-border rounded-sm p-5">
-          <div className="flex items-center justify-between mb-4">
-            <div>
-              <p className="text-[11px] text-muted-foreground/40 uppercase tracking-[0.15em] font-medium">Invoice Revenue</p>
-              <p className="text-[11px] text-muted-foreground mt-0.5">Last 6 months · paid + pending</p>
-            </div>
-            <span className="text-[18px] font-bold text-foreground">${totalPaid.toLocaleString()}</span>
+        <div className="flex items-center justify-between mb-4">
+          <div>
+            <p className="text-[11px] text-muted-foreground/40 uppercase tracking-[0.15em] font-medium">Net revenue</p>
+            <p className="text-[11px] text-muted-foreground mt-0.5">Last {timeseries?.months ?? 6} months · paid minus refunds</p>
           </div>
-          <div className="h-56">
-            {monthlyChartData.length > 0 ? (
-              <ResponsiveContainer>
-                <AreaChart data={monthlyChartData}>
-                  <defs>
-                    <linearGradient id="paidGrad" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="0%" stopColor="#ef4444" stopOpacity={0.3} />
-                      <stop offset="100%" stopColor="#ef4444" stopOpacity={0} />
-                    </linearGradient>
-                    <linearGradient id="pendGrad" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="0%" stopColor="#ffffff" stopOpacity={0.15} />
-                      <stop offset="100%" stopColor="#ffffff" stopOpacity={0} />
-                    </linearGradient>
-                  </defs>
-                  <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.04)" />
-                  <XAxis dataKey="month" tick={{ fill: "rgba(255,255,255,0.3)", fontSize: 11 }} axisLine={false} tickLine={false} />
-                  <YAxis tick={{ fill: "rgba(255,255,255,0.3)", fontSize: 11 }} axisLine={false} tickLine={false} />
-                  <Tooltip contentStyle={{ backgroundColor: "#0a0a0a", border: "1px solid rgba(255,255,255,0.08)", borderRadius: "2px", fontSize: "12px" }} itemStyle={{ color: "#fff" }} formatter={(v: any) => [`$${Number(v).toLocaleString()}`, ""]} />
-                  <Area type="monotone" dataKey="revenue" stroke="#ef4444" strokeWidth={2} fill="url(#paidGrad)" name="Paid" />
-                  <Area type="monotone" dataKey="pending" stroke="rgba(255,255,255,0.4)" strokeWidth={2} fill="url(#pendGrad)" name="Pending" />
-                </AreaChart>
-              </ResponsiveContainer>
-            ) : (
-              <div className="h-full flex items-center justify-center"><p className="text-[12px] text-muted-foreground/40">No invoice data yet</p></div>
+          <span className="text-[18px] font-bold text-foreground">
+            {formatStripeAmount(
+              (timeseries?.series ?? []).reduce((s, p) => s + p.net_cents, 0),
+              currency,
             )}
-          </div>
+          </span>
         </div>
+        <div className="h-56">
+          {revenueSeries.length > 0 ? (
+            <ResponsiveContainer>
+              <AreaChart data={revenueSeries}>
+                <defs>
+                  <linearGradient id="revGrad" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor="#ef4444" stopOpacity={0.3} />
+                    <stop offset="100%" stopColor="#ef4444" stopOpacity={0} />
+                  </linearGradient>
+                </defs>
+                <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.04)" />
+                <XAxis dataKey="month" tick={{ fill: "rgba(255,255,255,0.3)", fontSize: 11 }} axisLine={false} tickLine={false} />
+                <YAxis tick={{ fill: "rgba(255,255,255,0.3)", fontSize: 11 }} axisLine={false} tickLine={false} tickFormatter={(v) => `$${Number(v) >= 1000 ? `${Math.round(Number(v) / 1000)}k` : Number(v)}`} />
+                <Tooltip contentStyle={{ backgroundColor: "#0a0a0a", border: "1px solid rgba(255,255,255,0.08)", borderRadius: "2px", fontSize: "12px" }} itemStyle={{ color: "#fff" }} formatter={(v: any) => [`$${Number(v).toLocaleString(undefined, { maximumFractionDigits: 2 })}`, "Revenue"]} />
+                <Area type="monotone" dataKey="revenue" stroke="#ef4444" strokeWidth={2} fill="url(#revGrad)" />
+              </AreaChart>
+            </ResponsiveContainer>
+          ) : (
+            <div className="h-full flex items-center justify-center"><p className="text-[12px] text-muted-foreground/40">No revenue in this window yet</p></div>
+          )}
+        </div>
+      </div>
 
       <div className="col-span-1 md:col-span-2 lg:col-span-4 bg-card border border-border rounded-sm p-5">
         <div className="flex items-center justify-between mb-4">
           <div>
-            <p className="text-[11px] text-muted-foreground/40 uppercase tracking-[0.15em] font-medium">Invoice Volume</p>
-            <p className="text-[11px] text-muted-foreground mt-0.5">Last 6 months · all invoices</p>
+            <p className="text-[11px] text-muted-foreground/40 uppercase tracking-[0.15em] font-medium">Charge volume</p>
+            <p className="text-[11px] text-muted-foreground mt-0.5">Last {timeseries?.months ?? 6} months · count</p>
           </div>
-          <span className="text-[18px] font-bold text-foreground">{invoices.length}</span>
+          <span className="text-[18px] font-bold text-foreground">
+            {revenueSeries.reduce((s, p) => s + p.count, 0)}
+          </span>
         </div>
         <div className="h-56">
-          {monthlyChartData.length > 0 ? (
+          {revenueSeries.length > 0 ? (
             <ResponsiveContainer>
-              <BarChart data={monthlyChartData}>
+              <BarChart data={revenueSeries}>
                 <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.04)" />
                 <XAxis dataKey="month" tick={{ fill: "rgba(255,255,255,0.3)", fontSize: 11 }} axisLine={false} tickLine={false} />
                 <YAxis tick={{ fill: "rgba(255,255,255,0.3)", fontSize: 11 }} axisLine={false} tickLine={false} />
@@ -210,115 +292,141 @@ const OverviewTabImpl: React.FC<{
               </BarChart>
             </ResponsiveContainer>
           ) : (
-            <div className="h-full flex items-center justify-center"><p className="text-[12px] text-muted-foreground/40">No invoice data yet</p></div>
+            <div className="h-full flex items-center justify-center"><p className="text-[12px] text-muted-foreground/40">No charge data yet</p></div>
           )}
         </div>
       </div>
 
-      {/* ROW 3 — Revenue Sources (4) + Expense Breakdown (4) + Recent Transactions (4) */}
+      {/* ROW 3 — Revenue by Product (4) + Recent Transactions (4) + Outstanding (4) */}
       <div className="col-span-1 md:col-span-1 lg:col-span-4 bg-card border border-border rounded-sm p-5">
-        <p className="text-[11px] text-muted-foreground/40 uppercase tracking-[0.15em] font-medium mb-4">Revenue Sources</p>
-          {revenueByCategory.length > 0 ? (
+        <p className="text-[11px] text-muted-foreground/40 uppercase tracking-[0.15em] font-medium mb-4">Revenue by product</p>
+          {productPie.length > 0 ? (
             <div className="grid grid-cols-2 gap-3">
               <div className="h-48">
                 <ResponsiveContainer>
                   <PieChart>
-                    <Pie data={revenueByCategory} dataKey="value" cx="50%" cy="50%" innerRadius={36} outerRadius={70} stroke="none">
-                      {revenueByCategory.map((entry, i) => <Cell key={i} fill={REVENUE_COLORS[entry.name] || "#ef4444"} />)}
+                    <Pie data={productPie} dataKey="value" cx="50%" cy="50%" innerRadius={36} outerRadius={70} stroke="none">
+                      {productPie.map((entry, i) => <Cell key={i} fill={REVENUE_COLORS[entry.name] || `hsl(${(i * 60) % 360} 65% 55%)`} />)}
                     </Pie>
-                    <Tooltip contentStyle={{ backgroundColor: "#0a0a0a", border: "1px solid rgba(255,255,255,0.08)", borderRadius: "2px", fontSize: "12px" }} itemStyle={{ color: "#fff" }} formatter={(v: any) => [`$${Number(v).toLocaleString()}`, ""]} />
+                    <Tooltip contentStyle={{ backgroundColor: "#0a0a0a", border: "1px solid rgba(255,255,255,0.08)", borderRadius: "2px", fontSize: "12px" }} itemStyle={{ color: "#fff" }} formatter={(v: any) => [`$${Number(v).toLocaleString(undefined, { maximumFractionDigits: 2 })}/mo`, ""]} />
                   </PieChart>
                 </ResponsiveContainer>
               </div>
               <div className="space-y-1.5 self-center">
-                {revenueByCategory.slice(0, 6).map((r) => (
+                {productPie.slice(0, 6).map((r, i) => (
                   <div key={r.name} className="flex items-center justify-between text-[11px]">
-                    <div className="flex items-center gap-1.5">
-                      <div className="h-1.5 w-1.5 rounded-full" style={{ background: REVENUE_COLORS[r.name] || "#ef4444" }} />
+                    <div className="flex items-center gap-1.5 min-w-0">
+                      <div className="h-1.5 w-1.5 rounded-full shrink-0" style={{ background: REVENUE_COLORS[r.name] || `hsl(${(i * 60) % 360} 65% 55%)` }} />
                       <span className="text-muted-foreground/70 truncate">{r.name}</span>
                     </div>
-                    <span className="text-foreground/60">${(r.value / 1000).toFixed(1)}k</span>
+                    <span className="text-foreground/60 tabular-nums shrink-0 ml-2">${r.value >= 1000 ? `${(r.value / 1000).toFixed(1)}k` : r.value.toFixed(0)}</span>
                   </div>
                 ))}
               </div>
             </div>
           ) : (
-            <div className="h-48 flex items-center justify-center"><p className="text-[12px] text-muted-foreground/40">No revenue data yet</p></div>
+            <div className="h-48 flex items-center justify-center"><p className="text-[12px] text-muted-foreground/40">No active subscriptions yet</p></div>
           )}
         </div>
 
-      <div className="col-span-1 md:col-span-1 lg:col-span-4 bg-card border border-border rounded-sm p-5">
-        <p className="text-[11px] text-muted-foreground/40 uppercase tracking-[0.15em] font-medium mb-4">Expense Breakdown</p>
-        {expenseByCategory.length > 0 ? (
-          <div className="grid grid-cols-2 gap-3">
-            <div className="h-48">
-              <ResponsiveContainer>
-                <PieChart>
-                  <Pie data={expenseByCategory} dataKey="value" cx="50%" cy="50%" innerRadius={36} outerRadius={70} stroke="none">
-                    {expenseByCategory.map((entry, i) => <Cell key={i} fill={EXPENSE_COLORS[entry.name] || "#ef4444"} />)}
-                  </Pie>
-                  <Tooltip contentStyle={{ backgroundColor: "#0a0a0a", border: "1px solid rgba(255,255,255,0.08)", borderRadius: "2px", fontSize: "12px" }} itemStyle={{ color: "#fff" }} formatter={(v: any) => [`$${Number(v).toLocaleString()}`, ""]} />
-                </PieChart>
-              </ResponsiveContainer>
-            </div>
-            <div className="space-y-1.5 self-center">
-              {expenseByCategory.slice(0, 6).map((e) => (
-                <div key={e.name} className="flex items-center justify-between text-[11px]">
-                  <div className="flex items-center gap-1.5">
-                    <div className="h-1.5 w-1.5 rounded-full" style={{ background: EXPENSE_COLORS[e.name] || "#ef4444" }} />
-                    <span className="text-muted-foreground/70 truncate">{e.name}</span>
-                  </div>
-                  <span className="text-foreground/60">${(e.value / 1000).toFixed(1)}k</span>
-                </div>
-              ))}
-            </div>
-          </div>
-        ) : (
-          <div className="h-48 flex items-center justify-center"><p className="text-[12px] text-muted-foreground/40">No expense data yet</p></div>
-        )}
-      </div>
-
-      {/* Recent Transactions — narrowed to col-span-4, top 5 invoices as
-          a simple stacked list (the 4-col table didn't fit a quarter-width
-          card). */}
+      {/* Recent Transactions — Stripe charges, last 10. The CWA invoice
+          table moved to the Reports tab as a customer-tracking surface. */}
       <div className="col-span-1 md:col-span-2 lg:col-span-4 bg-card border border-border rounded-sm overflow-hidden">
         <div className="px-5 pt-4 pb-3 flex items-center justify-between border-b border-border">
           <div className="flex items-center gap-3">
             <div className="p-1.5 rounded-sm bg-muted/40"><Receipt className="h-3.5 w-3.5 text-primary/70" /></div>
             <div>
-              <p className="text-[11px] text-muted-foreground/40 uppercase tracking-[0.15em] font-medium">Recent Transactions</p>
-              <p className="text-[11px] text-muted-foreground/60 mt-0.5">{invoices.length} total invoices</p>
+              <p className="text-[11px] text-muted-foreground/40 uppercase tracking-[0.15em] font-medium">Recent transactions</p>
+              <p className="text-[11px] text-muted-foreground/60 mt-0.5">Last {recent?.count ?? 0} paid charges</p>
             </div>
           </div>
-          <span className="text-[14px] font-bold text-foreground tabular-nums">${totalRevenue.toLocaleString()}</span>
+          <span className="text-[14px] font-bold text-foreground tabular-nums">
+            {formatStripeAmount(
+              (recent?.charges ?? []).reduce((s, c) => s + c.amount_cents, 0),
+              recent?.charges[0]?.currency ?? currency,
+            )}
+          </span>
         </div>
         <div>
-          {invoices.length === 0 ? (
-            <div className="py-12 text-center"><p className="text-[13px] text-muted-foreground/40">No invoices yet</p></div>
+          {!recent || recent.charges.length === 0 ? (
+            <div className="py-12 text-center"><p className="text-[13px] text-muted-foreground/40">No paid charges yet</p></div>
           ) : (
-            invoices.slice(0, 5).map((inv: InvoiceType, i) => (
+            recent.charges.slice(0, 5).map((ch, i) => (
               <motion.div
-                key={inv.invoice_id}
+                key={ch.id}
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 transition={{ delay: i * 0.03 }}
                 className="flex items-center gap-3 px-5 py-3 border-b border-white/[0.025] last:border-b-0 hover:bg-muted/20 transition-colors"
               >
                 <div className="flex-1 min-w-0">
-                  <div className="text-[13px] font-medium text-white/80 truncate">{inv.invoice_title}</div>
-                  <div className="text-[11px] text-muted-foreground/60 truncate">{inv.client_name}</div>
+                  <div className="text-[13px] font-medium text-white/80 truncate">
+                    {ch.customer_name ?? ch.customer_email ?? "Anonymous"}
+                  </div>
+                  <div className="text-[11px] text-muted-foreground/60 truncate">
+                    {ch.description ?? new Date(ch.created_at).toLocaleDateString()}
+                  </div>
                 </div>
                 <div className="shrink-0 flex flex-col items-end gap-0.5">
                   <span className="text-[13px] font-semibold text-foreground/80 tabular-nums">
-                    ${Number(inv.outcome).toFixed(2)}
+                    {formatStripeAmount(ch.amount_cents, ch.currency)}
                   </span>
-                  <span
-                    className={`text-[9px] uppercase tracking-wider px-1.5 py-0.5 rounded-sm border ${
-                      inv.status === "paid"
-                        ? "bg-emerald-500/[0.08] text-emerald-400 border-emerald-500/15"
-                        : "bg-primary/[0.08] text-primary border-primary/15"
-                    }`}
-                  >
+                  <span className="text-[9px] uppercase tracking-wider px-1.5 py-0.5 rounded-sm border bg-emerald-500/[0.08] text-emerald-400 border-emerald-500/15">
+                    paid
+                  </span>
+                </div>
+              </motion.div>
+            ))
+          )}
+        </div>
+      </div>
+
+      {/* Outstanding Invoices — replaces Expense Breakdown. Top 5
+          unpaid invoices ranked by amount × age, with a hero total. */}
+      <div className="col-span-1 md:col-span-1 lg:col-span-4 bg-card border border-border rounded-sm overflow-hidden">
+        <div className="px-5 pt-4 pb-3 flex items-center justify-between border-b border-border">
+          <div className="flex items-center gap-3">
+            <div className="p-1.5 rounded-sm bg-muted/40"><AlertTriangle className="h-3.5 w-3.5 text-primary/70" /></div>
+            <div>
+              <p className="text-[11px] text-muted-foreground/40 uppercase tracking-[0.15em] font-medium">Outstanding</p>
+              <p className="text-[11px] text-muted-foreground/60 mt-0.5">{outstanding?.count ?? 0} unpaid invoices</p>
+            </div>
+          </div>
+          <span className="text-[14px] font-bold text-foreground tabular-nums">
+            {formatStripeAmount(outstanding?.total_cents ?? 0, outstanding?.currency ?? currency)}
+          </span>
+        </div>
+        <div>
+          {!outstanding || outstanding.count === 0 ? (
+            <div className="py-12 text-center"><p className="text-[13px] text-muted-foreground/40">All invoices paid · clean slate</p></div>
+          ) : (
+            outstanding.invoices.slice(0, 5).map((inv, i) => (
+              <motion.div
+                key={inv.id}
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ delay: i * 0.03 }}
+                className="flex items-center gap-3 px-5 py-3 border-b border-white/[0.025] last:border-b-0 hover:bg-muted/20 transition-colors"
+              >
+                <div className="flex-1 min-w-0">
+                  <div className="text-[13px] font-medium text-white/80 truncate">
+                    {inv.customer_name ?? inv.customer_email ?? inv.number ?? "Anonymous"}
+                  </div>
+                  <div className="text-[11px] text-muted-foreground/60 truncate">
+                    {inv.days_overdue > 0
+                      ? `${inv.days_overdue} day${inv.days_overdue === 1 ? "" : "s"} overdue`
+                      : `Due ${inv.due_date ? new Date(inv.due_date).toLocaleDateString() : "soon"}`}
+                  </div>
+                </div>
+                <div className="shrink-0 flex flex-col items-end gap-0.5">
+                  <span className="text-[13px] font-semibold text-foreground/80 tabular-nums">
+                    {formatStripeAmount(inv.amount_due_cents, inv.currency)}
+                  </span>
+                  <span className={`text-[9px] uppercase tracking-wider px-1.5 py-0.5 rounded-sm border ${
+                    inv.days_overdue > 0
+                      ? "bg-primary/[0.08] text-primary border-primary/15"
+                      : "bg-amber-500/[0.08] text-amber-400 border-amber-500/15"
+                  }`}>
                     {inv.status}
                   </span>
                 </div>
@@ -764,6 +872,7 @@ const ReportsTab: React.FC<{ invoices: InvoiceType[] }> = ({ invoices }) => {
 // ════════════════════════════════════════════
 const FinancialDashboardContent: React.FC = () => {
   const { data: invoices = [], isLoading, refetch } = AllInvoices();
+  const stripe = useStripeDashboard();
   const [bankBalance, setBankBalance] = useState(0);
   const [expenseTotal, setExpenseTotal] = useState(0);
   const [revenueByCategory, setRevenueByCategory] = useState<{ name: string; value: number }[]>([]);
@@ -841,8 +950,14 @@ const FinancialDashboardContent: React.FC = () => {
               <p className="text-[12px] text-muted-foreground/60 mt-0.5">Portfolio overview across CodeWithAli & Simplicity</p>
             </div>
           </div>
-          <button onClick={() => refetch()} className="flex items-center gap-2 px-3 py-1.5 bg-muted/30 hover:bg-primary/[0.06] border border-border hover:border-primary/15 text-muted-foreground hover:text-primary rounded-sm text-[12px] transition-colors">
-            <RefreshCcw className="h-3 w-3" /> Refresh
+          <button
+            onClick={() => {
+              refetch();
+              void stripe.refetchAll();
+            }}
+            className="flex items-center gap-2 px-3 py-1.5 bg-muted/30 hover:bg-primary/[0.06] border border-border hover:border-primary/15 text-muted-foreground hover:text-primary rounded-sm text-[12px] transition-colors"
+          >
+            <RefreshCcw className={`h-3 w-3 ${stripe.loading ? "animate-spin" : ""}`} /> Refresh
           </button>
         </div>
       </div>
@@ -870,14 +985,7 @@ const FinancialDashboardContent: React.FC = () => {
 
           <div className="pt-4 pb-10 space-y-4">
             <TabsContent value="overview">
-              <OverviewTab
-                invoices={invoices}
-                bankBalance={bankBalance}
-                expenseTotal={expenseTotal}
-                revenueByCategory={revenueByCategory}
-                expenseByCategory={expenseByCategory}
-                totalRevenueFromCategories={totalRevenueFromCategories}
-              />
+              <OverviewTab stripe={stripe} />
             </TabsContent>
 
             <TabsContent value="companies">

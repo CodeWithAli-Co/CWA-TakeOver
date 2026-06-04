@@ -68,7 +68,69 @@ export interface StripeOutstanding {
   computed_at: string;
 }
 
-async function postProxy<T>(path: string, key: string): Promise<T> {
+export interface StripeTimeseriesPoint {
+  month: string;          // "2026-05"
+  label: string;          // "May"
+  revenue_cents: number;  // gross paid
+  refund_cents: number;
+  net_cents: number;      // gross - refunds, what the chart should plot
+  charge_count: number;
+}
+
+export interface StripeTimeseries {
+  months: number;
+  currency: string;
+  series: StripeTimeseriesPoint[];
+  computed_at: string;
+}
+
+export interface StripeProductRow {
+  product_id: string;
+  name: string;
+  value_cents: number;  // monthly normalized
+  sub_count: number;
+}
+
+export interface StripeProducts {
+  currency: string;
+  items: StripeProductRow[];
+  computed_at: string;
+}
+
+export interface StripeBalance {
+  primary_currency: string;
+  available_cents: number;
+  pending_cents: number;
+  other_currencies: Array<{
+    currency: string;
+    available_cents: number;
+    pending_cents: number;
+  }>;
+  computed_at: string;
+}
+
+export interface StripeRecentCharge {
+  id: string;
+  amount_cents: number;
+  currency: string;
+  created_at: string;
+  description: string | null;
+  customer_id: string | null;
+  customer_name: string | null;
+  customer_email: string | null;
+}
+
+export interface StripeRecent {
+  count: number;
+  charges: StripeRecentCharge[];
+  computed_at: string;
+}
+
+async function postProxy<T>(
+  path: string,
+  key: string,
+  payload?: Record<string, unknown>,
+): Promise<T> {
   if (!PROXY_BASE) {
     throw new Error(
       "Stripe proxy URL not configured (VITE_TAKEOVER_SITE_URL).",
@@ -81,7 +143,7 @@ async function postProxy<T>(path: string, key: string): Promise<T> {
       "TakeOver-App": "true",
       "Content-Type": "application/json",
     },
-    body: "{}",
+    body: JSON.stringify(payload ?? {}),
   });
   // Always try to parse JSON — the proxy returns structured errors
   // with { ok: false, error } on non-2xx.
@@ -133,6 +195,55 @@ export async function stripeOutstanding(
     key,
   );
   return res.outstanding;
+}
+
+/** Monthly revenue timeseries for the financial dashboard chart.
+ *  Net (paid minus refunds) per month, last N months. Default 6,
+ *  capped at 24 server-side. */
+export async function stripeTimeseries(
+  key: string,
+  months = 6,
+): Promise<StripeTimeseries> {
+  const res = await postProxy<{ ok: true; timeseries: StripeTimeseries }>(
+    "timeseries",
+    key,
+    { months },
+  );
+  return res.timeseries;
+}
+
+/** Active-sub MRR split by Stripe Product. Drives the Revenue
+ *  Sources pie chart. */
+export async function stripeProducts(key: string): Promise<StripeProducts> {
+  const res = await postProxy<{ ok: true; products: StripeProducts }>(
+    "products",
+    key,
+  );
+  return res.products;
+}
+
+/** Stripe-side balance (available + pending). NOT the user's real
+ *  bank balance — that would need Plaid or similar. */
+export async function stripeBalance(key: string): Promise<StripeBalance> {
+  const res = await postProxy<{ ok: true; balance: StripeBalance }>(
+    "balance",
+    key,
+  );
+  return res.balance;
+}
+
+/** Last N paid charges with customer info hydrated. Drives the
+ *  Recent Transactions widget. */
+export async function stripeRecentCharges(
+  key: string,
+  limit = 10,
+): Promise<StripeRecent> {
+  const res = await postProxy<{ ok: true; recent: StripeRecent }>(
+    "recent",
+    key,
+    { limit },
+  );
+  return res.recent;
 }
 
 /** Format minor units (cents) as the major-unit currency string a
