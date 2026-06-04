@@ -21,6 +21,7 @@ const TaskLazyRouteImport = createFileRoute('/task')()
 const StrategyLazyRouteImport = createFileRoute('/strategy')()
 const SettingsLazyRouteImport = createFileRoute('/settings')()
 const ScheduleLazyRouteImport = createFileRoute('/schedule')()
+const SalesLazyRouteImport = createFileRoute('/sales')()
 const SUsersLazyRouteImport = createFileRoute('/s-users')()
 const SOverridesLazyRouteImport = createFileRoute('/s-overrides')()
 const SFinanceOpsLazyRouteImport = createFileRoute('/s-finance-ops')()
@@ -119,6 +120,11 @@ const ScheduleLazyRoute = ScheduleLazyRouteImport.update({
   path: '/schedule',
   getParentRoute: () => rootRouteImport,
 } as any).lazy(() => import('./routes/schedule.lazy').then((d) => d.Route))
+const SalesLazyRoute = SalesLazyRouteImport.update({
+  id: '/sales',
+  path: '/sales',
+  getParentRoute: () => rootRouteImport,
+} as any).lazy(() => import('./routes/sales.lazy').then((d) => d.Route))
 const SUsersLazyRoute = SUsersLazyRouteImport.update({
   id: '/s-users',
   path: '/s-users',
@@ -407,6 +413,7 @@ export interface FileRoutesByFullPath {
   '/s-finance-ops': typeof SFinanceOpsLazyRoute
   '/s-overrides': typeof SOverridesLazyRoute
   '/s-users': typeof SUsersLazyRoute
+  '/sales': typeof SalesLazyRoute
   '/schedule': typeof ScheduleLazyRoute
   '/settings': typeof SettingsLazyRoute
   '/strategy': typeof StrategyLazyRoute
@@ -464,6 +471,7 @@ export interface FileRoutesByTo {
   '/s-finance-ops': typeof SFinanceOpsLazyRoute
   '/s-overrides': typeof SOverridesLazyRoute
   '/s-users': typeof SUsersLazyRoute
+  '/sales': typeof SalesLazyRoute
   '/schedule': typeof ScheduleLazyRoute
   '/settings': typeof SettingsLazyRoute
   '/strategy': typeof StrategyLazyRoute
@@ -521,6 +529,7 @@ export interface FileRoutesById {
   '/s-finance-ops': typeof SFinanceOpsLazyRoute
   '/s-overrides': typeof SOverridesLazyRoute
   '/s-users': typeof SUsersLazyRoute
+  '/sales': typeof SalesLazyRoute
   '/schedule': typeof ScheduleLazyRoute
   '/settings': typeof SettingsLazyRoute
   '/strategy': typeof StrategyLazyRoute
@@ -580,6 +589,7 @@ export interface FileRouteTypes {
     | '/s-finance-ops'
     | '/s-overrides'
     | '/s-users'
+    | '/sales'
     | '/schedule'
     | '/settings'
     | '/strategy'
@@ -637,6 +647,7 @@ export interface FileRouteTypes {
     | '/s-finance-ops'
     | '/s-overrides'
     | '/s-users'
+    | '/sales'
     | '/schedule'
     | '/settings'
     | '/strategy'
@@ -693,6 +704,7 @@ export interface FileRouteTypes {
     | '/s-finance-ops'
     | '/s-overrides'
     | '/s-users'
+    | '/sales'
     | '/schedule'
     | '/settings'
     | '/strategy'
@@ -751,6 +763,7 @@ export interface RootRouteChildren {
   SFinanceOpsLazyRoute: typeof SFinanceOpsLazyRoute
   SOverridesLazyRoute: typeof SOverridesLazyRoute
   SUsersLazyRoute: typeof SUsersLazyRoute
+  SalesLazyRoute: typeof SalesLazyRoute
   ScheduleLazyRoute: typeof ScheduleLazyRoute
   SettingsLazyRoute: typeof SettingsLazyRoute
   StrategyLazyRoute: typeof StrategyLazyRoute
@@ -827,6 +840,13 @@ declare module '@tanstack/react-router' {
       path: '/schedule'
       fullPath: '/schedule'
       preLoaderRoute: typeof ScheduleLazyRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/sales': {
+      id: '/sales'
+      path: '/sales'
+      fullPath: '/sales'
+      preLoaderRoute: typeof SalesLazyRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/s-users': {
@@ -1223,6 +1243,7 @@ const rootRouteChildren: RootRouteChildren = {
   SFinanceOpsLazyRoute: SFinanceOpsLazyRoute,
   SOverridesLazyRoute: SOverridesLazyRoute,
   SUsersLazyRoute: SUsersLazyRoute,
+  SalesLazyRoute: SalesLazyRoute,
   ScheduleLazyRoute: ScheduleLazyRoute,
   SettingsLazyRoute: SettingsLazyRoute,
   StrategyLazyRoute: StrategyLazyRoute,

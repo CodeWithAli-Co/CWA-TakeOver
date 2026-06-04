@@ -36,6 +36,7 @@ import {
   Coins,
   Briefcase,
   Compass,
+  TrendingUp,
   type LucideIcon,
 } from "lucide-react";
 
@@ -1036,6 +1037,14 @@ export const adminData = {
       icon: Briefcase,
     },
     {
+      // Sales — native CRM. Leadership roles see the full surface so
+      // pipeline is visible alongside strategy + operations.
+      title: "Sales",
+      url: "/sales",
+      isActive: false,
+      icon: TrendingUp,
+    },
+    {
       title: "Strategy",
       url: "/strategy",
       isActive: false,
@@ -1401,6 +1410,15 @@ export const cooData = {
       ],
     },
 
+    // ── Sales (native CRM — replaces what HubSpot would cover) ──
+    {
+      title: "Sales",
+      url: "/sales",
+      icon: TrendingUp,
+      isActive: false,
+      company: "codeWithAli" as const,
+    },
+
     // ── Day-to-day operations ──
     {
       title: "Operations",
@@ -1604,6 +1622,15 @@ export const ceoData = {
       ],
     },
 
+    // ── Sales (native CRM — replaces what HubSpot would cover) ──
+    {
+      title: "Sales",
+      url: "/sales",
+      icon: TrendingUp,
+      isActive: false,
+      company: "codeWithAli" as const,
+    },
+
     // ── Day-to-day operations ──
     {
       title: "Operations",
@@ -1768,6 +1795,15 @@ export const cfoData = {
       icon: Coins,
     },
     {
+      // Sales — native CRM, sits next to Capital Plan in the revenue
+      // stack. CFO cares about pipeline forecasting + booked revenue
+      // attribution, both of which surface on the /sales dashboard.
+      title: "Sales",
+      url: "/sales",
+      isActive: false,
+      icon: TrendingUp,
+    },
+    {
       title: "Roadmap",
       url: "/roadmap",
       isActive: false,
@@ -1876,6 +1912,14 @@ export const cfoData = {
       url: "/operations",
       isActive: false,
       icon: Briefcase,
+    },
+    {
+      // Sales — native CRM. Leadership roles see the full surface so
+      // pipeline is visible alongside strategy + operations.
+      title: "Sales",
+      url: "/sales",
+      isActive: false,
+      icon: TrendingUp,
     },
     {
       title: "Strategy",
