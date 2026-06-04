@@ -34,8 +34,11 @@ import { FinancialProvider } from "@/MyComponents/Financial/FinancialContext";
 import ModelerBentoView from "@/MyComponents/Financial/ModelerBentoView";
 import { EXPENSE_COLORS, REVENUE_COLORS } from "@/stores/FinancialConstants";
 import { useStripeDashboard } from "@/lib/useStripeDashboard";
-import { formatStripeAmount } from "@/lib/stripe";
-import { Plug, Users } from "lucide-react";
+import { formatStripeAmount, type CustomerStatus } from "@/lib/stripe";
+import {
+  Plug, Users, Search, ArrowDownUp, Banknote, Calendar, Tag,
+  CheckCircle, XCircle, Clock, ArrowDownToLine, Crown, Mail,
+} from "lucide-react";
 
 // ════════════════════════════════════════════
 // Shared utilities
@@ -626,7 +629,588 @@ const OverviewTabImpl: React.FC<{
 const OverviewTab = React.memo(OverviewTabImpl);
 
 // ════════════════════════════════════════════
-// COMPANIES TAB — side-by-side comparison
+// Shared empty / not-connected state for Stripe-backed tabs.
+// ════════════════════════════════════════════
+const StripeEmptyState: React.FC<{ message?: string }> = ({
+  message = "Connect Stripe to see live data",
+}) => (
+  <div className="bg-card border border-border rounded-sm p-10 flex flex-col items-center text-center gap-3">
+    <div className="p-3 rounded-sm bg-primary/[0.08] border border-primary/15">
+      <Plug className="h-5 w-5 text-primary" />
+    </div>
+    <p className="text-[13px] text-foreground">{message}</p>
+    <p className="text-[11px] text-muted-foreground/70 max-w-md">
+      Add a restricted key in Settings → Connectors. Once connected, this tab populates with your real Stripe data.
+    </p>
+  </div>
+);
+
+// ════════════════════════════════════════════
+// CUSTOMERS TAB — full customer list w/ search, filter, sort.
+// Replaces the old Companies tab.
+// ════════════════════════════════════════════
+const STATUS_LABELS: Record<CustomerStatus, string> = {
+  active: "Active",
+  past_customer: "Past",
+  one_time: "One-time",
+  free: "Free",
+};
+
+const STATUS_PILL: Record<CustomerStatus, string> = {
+  active: "bg-emerald-500/[0.08] text-emerald-500 border-emerald-500/15",
+  past_customer: "bg-muted text-muted-foreground border-border",
+  one_time: "bg-blue-500/[0.08] text-blue-500 border-blue-500/15",
+  free: "bg-amber-500/[0.08] text-amber-500 border-amber-500/15",
+};
+
+// SUB_STATUS_PILL is referenced by the combined view below; declaring it
+// here means the dead-code SubscriptionsTab further down also still has
+// it in scope for as long as we keep that component around.
+const SUB_STATUS_PILL_INLINE: Record<string, string> = {
+  active: "bg-emerald-500/[0.08] text-emerald-500 border-emerald-500/15",
+  trialing: "bg-blue-500/[0.08] text-blue-500 border-blue-500/15",
+  past_due: "bg-amber-500/[0.08] text-amber-500 border-amber-500/15",
+  unpaid: "bg-amber-500/[0.08] text-amber-500 border-amber-500/15",
+  paused: "bg-muted text-muted-foreground border-border",
+  canceled: "bg-muted text-muted-foreground border-border",
+  incomplete: "bg-primary/[0.08] text-primary border-primary/15",
+  incomplete_expired: "bg-primary/[0.08] text-primary border-primary/15",
+};
+
+// Small status pill — dot + uppercase mono label, used across the
+// bento for customer / sub / payout rows. Green = healthy, amber =
+// attention, blue = non-recurring, zinc = terminal/neutral.
+const StatusPill: React.FC<{ kind: string }> = ({ kind }) => {
+  const map: Record<string, { wrap: string; dot: string; label: string }> = {
+    active: { wrap: "bg-emerald-500/10 text-emerald-300 border-emerald-500/20", dot: "bg-emerald-400", label: "Active" },
+    past_customer: { wrap: "bg-amber-500/10 text-amber-300 border-amber-500/20", dot: "bg-amber-400", label: "Past" },
+    past_due: { wrap: "bg-amber-500/10 text-amber-300 border-amber-500/20", dot: "bg-amber-400", label: "Past due" },
+    canceled: { wrap: "bg-white/[0.04] text-zinc-500 border-white/[0.08]", dot: "bg-zinc-500", label: "Canceled" },
+    one_time: { wrap: "bg-blue-500/10 text-blue-300 border-blue-500/20", dot: "bg-blue-400", label: "One-time" },
+    free: { wrap: "bg-white/[0.04] text-zinc-500 border-white/[0.08]", dot: "bg-zinc-500", label: "Free" },
+    paid: { wrap: "bg-emerald-500/10 text-emerald-300 border-emerald-500/20", dot: "bg-emerald-400", label: "Paid" },
+    trialing: { wrap: "bg-blue-500/10 text-blue-300 border-blue-500/20", dot: "bg-blue-400", label: "Trialing" },
+    pending: { wrap: "bg-amber-500/10 text-amber-300 border-amber-500/20", dot: "bg-amber-400", label: "Pending" },
+    in_transit: { wrap: "bg-blue-500/10 text-blue-300 border-blue-500/20", dot: "bg-blue-400", label: "In transit" },
+    failed: { wrap: "bg-rose-500/10 text-rose-300 border-rose-500/20", dot: "bg-rose-400", label: "Failed" },
+  };
+  const s = map[kind] ?? { wrap: "bg-white/[0.04] text-zinc-500 border-white/[0.08]", dot: "bg-zinc-500", label: kind.replace("_", " ") };
+  return (
+    <span className={`inline-flex items-center gap-1.5 px-1.5 py-0.5 text-[9.5px] font-mono uppercase tracking-wider rounded border ${s.wrap}`}>
+      <span className={`h-1 w-1 rounded-full ${s.dot}`} />
+      {s.label}
+    </span>
+  );
+};
+
+const CustomersTab: React.FC<{ stripe: StripeBundle }> = ({ stripe }) => {
+  const { connected, customers, subscriptions, payouts } = stripe;
+  const [search, setSearch] = useState("");
+  const [statusFilter, setStatusFilter] = useState<"all" | CustomerStatus>("all");
+  const [subStatusFilter, setSubStatusFilter] = useState<string>("all");
+
+  const summary = customers?.summary;
+  const subSummary = subscriptions?.summary;
+  const allCustomers = customers?.items ?? [];
+  const allSubs = subscriptions?.items ?? [];
+
+  const filteredCustomers = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    let list = allCustomers;
+    if (statusFilter !== "all") list = list.filter((c) => c.status === statusFilter);
+    if (q) {
+      list = list.filter(
+        (c) =>
+          (c.name?.toLowerCase().includes(q) ?? false) ||
+          (c.email?.toLowerCase().includes(q) ?? false),
+      );
+    }
+    return list;
+  }, [allCustomers, search, statusFilter]);
+
+  const filteredSubs = useMemo(
+    () => (subStatusFilter === "all" ? allSubs : allSubs.filter((s) => s.status === subStatusFilter)),
+    [allSubs, subStatusFilter],
+  );
+
+  // Aggregate paid payouts into monthly buckets for the cadence chart.
+  // Last 8 months, sorted oldest → newest. Failed/pending payouts
+  // excluded so the chart reflects actual cash in.
+  const chartData = useMemo(() => {
+    if (!payouts) return [];
+    const buckets = new Map<string, { month: string; label: string; v: number }>();
+    for (const p of payouts.items) {
+      if (p.status !== "paid") continue;
+      const d = new Date(p.arrival_date);
+      const key = `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, "0")}`;
+      const label = d.toLocaleDateString(undefined, { month: "short", timeZone: "UTC" });
+      const existing = buckets.get(key) ?? { month: key, label, v: 0 };
+      existing.v += p.amount_cents / 100;
+      buckets.set(key, existing);
+    }
+    return Array.from(buckets.values()).sort((a, b) => a.month.localeCompare(b.month)).slice(-8);
+  }, [payouts]);
+  const peak = useMemo(() => Math.max(...chartData.map((c) => c.v), 1), [chartData]);
+
+  // Tab definitions with live counts.
+  const cTabs: Array<{ key: "all" | CustomerStatus; label: string; count: number }> = [
+    { key: "all", label: "All", count: summary?.total ?? 0 },
+    { key: "active", label: "Active", count: summary?.active ?? 0 },
+    { key: "past_customer", label: "Past", count: summary?.past_customer ?? 0 },
+    { key: "one_time", label: "One-time", count: summary?.one_time ?? 0 },
+    { key: "free", label: "Free", count: summary?.free ?? 0 },
+  ];
+  const sTabs: Array<{ key: string; label: string; count: number }> = [
+    { key: "all", label: "All", count: subSummary?.total ?? 0 },
+    { key: "active", label: "Active", count: subSummary?.by_status?.active ?? 0 },
+    { key: "trialing", label: "Trialing", count: subSummary?.by_status?.trialing ?? 0 },
+    { key: "past_due", label: "Past due", count: subSummary?.by_status?.past_due ?? 0 },
+    { key: "canceled", label: "Canceled", count: subSummary?.by_status?.canceled ?? 0 },
+  ];
+
+  // Suppress unused-warning on the vestigial selection state that the
+  // previous master-detail used; keeping the var around lets a future
+  // pass re-introduce row-click drill-down without rewiring data.
+  const [, setSelectedCustomerId] = useState<string | null>(null);
+  void setSelectedCustomerId;
+
+  if (!connected) return <StripeEmptyState />;
+
+  // Shared tile chrome — gradient surface + hairline border, used by
+  // every cell of the bento so they all share the same depth.
+  const tile = "bg-gradient-to-b from-zinc-900 to-zinc-950 border border-white/[0.07] rounded-xl hover:border-white/[0.13] transition-colors";
+  const eyebrow = "text-[10px] font-mono uppercase tracking-[0.2em] text-zinc-500 font-medium";
+  const serifTitle = "ed-serif text-[20px] mt-1.5 text-zinc-100";
+  const monoNum = "font-mono tabular-nums";
+
+  // KPI tiles share a layout — eyebrow on top, big mono number below.
+  // Defined inline as data so the four payout KPIs can map cleanly.
+  const payoutKpis = [
+    { eyebrow: "YTD paid", v: formatStripeAmount(payouts?.summary.total_paid_ytd_cents ?? 0, payouts?.currency ?? "usd") },
+    { eyebrow: "YTD payouts", v: String(payouts?.summary.count_ytd ?? 0) },
+    { eyebrow: "Avg payout", v: formatStripeAmount(payouts?.summary.average_payout_cents ?? 0, payouts?.currency ?? "usd") },
+    {
+      eyebrow: "Last payout",
+      v: payouts?.summary.last_payout
+        ? formatStripeAmount(payouts.summary.last_payout.amount_cents, payouts.summary.last_payout.currency)
+        : "—",
+      sub: payouts?.summary.last_payout
+        ? new Date(payouts.summary.last_payout.arrival_date).toLocaleDateString(undefined, { month: "short", day: "numeric" })
+        : null,
+    },
+  ];
+
+  return (
+    <div className="space-y-3">
+      {/* One-off serif font for tile titles. Loaded inline so this tab
+          doesn't depend on a global font registration. */}
+      <style>{`@import url('https://fonts.googleapis.com/css2?family=Newsreader:ital,wght@0,400;0,500;1,400&display=swap');.ed-serif{font-family:'Newsreader',Georgia,serif}`}</style>
+
+      <div className="grid grid-cols-12 gap-3.5">
+        {/* ── Customers directory (4 cols × 2 rows) ─────────── */}
+        <div className={`col-span-12 lg:col-span-4 lg:row-span-2 ${tile} overflow-hidden flex flex-col`}>
+          <div className="px-5 pt-5">
+            <p className={eyebrow}>Directory</p>
+            <h3 className={serifTitle}>Customers</h3>
+          </div>
+          <div className="flex mx-5 mt-3 border-b border-white/[0.07] flex-wrap">
+            {cTabs.map((t) => (
+              <button
+                key={t.key}
+                onClick={() => setStatusFilter(t.key)}
+                className={`px-2.5 py-2 text-[10.5px] font-mono uppercase tracking-wider transition-colors relative ${statusFilter === t.key ? "text-zinc-100" : "text-zinc-500 hover:text-zinc-300"}`}
+              >
+                {t.label}{" "}
+                <span className={statusFilter === t.key ? "text-emerald-400 ml-1" : "text-zinc-700 ml-1"}>{t.count}</span>
+                {statusFilter === t.key && <span className="absolute -bottom-px left-2.5 right-2.5 h-0.5 bg-emerald-400" />}
+              </button>
+            ))}
+          </div>
+          <div className="px-5 mt-3">
+            <div className="flex items-center gap-2 border border-white/[0.07] rounded-lg px-3 py-2 bg-black/30">
+              <Search className="h-3.5 w-3.5 text-zinc-600" />
+              <input
+                type="text"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="Search name or email…"
+                className="w-full bg-transparent outline-none text-[12px] text-zinc-100 placeholder:text-zinc-700"
+              />
+            </div>
+          </div>
+          <div className="mt-2 overflow-y-auto max-h-[520px]">
+            {filteredCustomers.length === 0 ? (
+              <div className="py-12 text-center text-[11.5px] font-mono uppercase tracking-wider text-zinc-600">No customers</div>
+            ) : (
+              filteredCustomers.map((c) => (
+                <div key={c.id} className="flex items-center justify-between px-5 py-3 border-b border-white/[0.07] hover:bg-white/[0.02] transition-colors">
+                  <div className="min-w-0 flex-1">
+                    <div className="text-[13.5px] font-semibold text-zinc-100 truncate">{c.name ?? "No name"}</div>
+                    <div className="text-[11px] font-mono text-zinc-500 truncate">{c.email ?? "—"}</div>
+                  </div>
+                  <div className="flex flex-col items-end gap-1 shrink-0 pl-3">
+                    <span className={`text-[13.5px] font-medium text-zinc-100 ${monoNum}`}>{formatStripeAmount(c.ltv_cents, c.currency)}</span>
+                    <StatusPill kind={c.status} />
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+        </div>
+
+        {/* ── Subscriptions directory (4 cols × 2 rows) ─────── */}
+        <div className={`col-span-12 lg:col-span-4 lg:row-span-2 ${tile} overflow-hidden flex flex-col`}>
+          <div className="px-5 pt-5">
+            <p className={eyebrow}>Recurring</p>
+            <h3 className={serifTitle}>Subscriptions</h3>
+          </div>
+          <div className="flex mx-5 mt-3 border-b border-white/[0.07] flex-wrap">
+            {sTabs.map((t) => (
+              <button
+                key={t.key}
+                onClick={() => setSubStatusFilter(t.key)}
+                className={`px-2.5 py-2 text-[10.5px] font-mono uppercase tracking-wider transition-colors relative ${subStatusFilter === t.key ? "text-zinc-100" : "text-zinc-500 hover:text-zinc-300"}`}
+              >
+                {t.label}{" "}
+                <span className={subStatusFilter === t.key ? "text-emerald-400 ml-1" : "text-zinc-700 ml-1"}>{t.count}</span>
+                {subStatusFilter === t.key && <span className="absolute -bottom-px left-2.5 right-2.5 h-0.5 bg-emerald-400" />}
+              </button>
+            ))}
+          </div>
+          <div className="mt-3 overflow-y-auto max-h-[600px]">
+            {filteredSubs.length === 0 ? (
+              <div className="py-12 text-center text-[11.5px] font-mono uppercase tracking-wider text-zinc-600">No subscriptions</div>
+            ) : (
+              filteredSubs.map((s) => (
+                <div key={s.id} className="flex items-center justify-between px-5 py-3 border-b border-white/[0.07] hover:bg-white/[0.02] transition-colors">
+                  <div className="min-w-0 flex-1">
+                    <div className="text-[13.5px] font-semibold text-zinc-100 truncate">{s.customer_name ?? "Anonymous"}</div>
+                    <div className="text-[11px] font-mono text-zinc-500 truncate">{s.product_name ?? "—"}</div>
+                  </div>
+                  <div className="flex flex-col items-end gap-1 shrink-0 pl-3">
+                    <span className={`text-[13.5px] font-medium text-zinc-100 ${monoNum}`}>
+                      {formatStripeAmount(s.mrr_cents, s.currency)}
+                      <span className="text-zinc-600 text-[10px]">/mo</span>
+                    </span>
+                    <StatusPill kind={s.status} />
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+        </div>
+
+        {/* ── Hero KPI: gross volume YTD with mini sparkline ── */}
+        <div className={`col-span-12 sm:col-span-6 lg:col-span-4 ${tile} p-5 flex flex-col justify-between gap-4 min-h-[148px]`}>
+          <p className={eyebrow}>Gross volume · YTD</p>
+          <div className={`text-[36px] font-medium tracking-tight leading-none text-zinc-100 ${monoNum}`}>
+            {formatStripeAmount(summary?.total_ltv_cents ?? 0, customers?.currency ?? "usd")}
+          </div>
+          <div className="flex items-end gap-1 h-11">
+            {chartData.length === 0 ? (
+              <div className="text-[10.5px] font-mono text-zinc-600 self-center">No payout data yet</div>
+            ) : (
+              chartData.map((d, i) => (
+                <div
+                  key={i}
+                  className="flex-1 rounded-t-sm bg-gradient-to-b from-emerald-400 to-emerald-500/30"
+                  style={{ height: `${Math.max((d.v / peak) * 100, 4)}%` }}
+                />
+              ))
+            )}
+          </div>
+        </div>
+
+        {/* ── MRR mini ───────────────────────────────────────── */}
+        <div className={`col-span-6 sm:col-span-3 lg:col-span-2 ${tile} p-5 flex flex-col justify-between gap-3 min-h-[148px]`}>
+          <p className={eyebrow}>MRR</p>
+          <div className={`text-[26px] font-medium tracking-tight leading-none text-zinc-100 ${monoNum}`}>
+            {formatStripeAmount(subSummary?.total_mrr_cents ?? 0, subscriptions?.currency ?? "usd")}
+          </div>
+        </div>
+
+        {/* ── Active subs mini ───────────────────────────────── */}
+        <div className={`col-span-6 sm:col-span-3 lg:col-span-2 ${tile} p-5 flex flex-col justify-between gap-3 min-h-[148px]`}>
+          <p className={`${eyebrow} flex items-center gap-2`}>
+            <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.6)]" />
+            Active
+          </p>
+          <div>
+            <div className={`text-[26px] font-medium tracking-tight leading-none text-emerald-400 ${monoNum}`}>
+              {subSummary?.by_status?.active ?? 0}
+            </div>
+            <div className="text-[11px] font-mono text-zinc-600 mt-1">of {subSummary?.total ?? 0} subs</div>
+          </div>
+        </div>
+
+        {/* ── Payout cadence chart (8 cols × 2 rows) ────────── */}
+        <div className={`col-span-12 lg:col-span-8 lg:row-span-2 ${tile} p-5 flex flex-col`}>
+          <div className="flex items-baseline gap-3 mb-4">
+            <div>
+              <p className={eyebrow}>Payout cadence</p>
+              <h3 className={serifTitle}>Monthly totals</h3>
+            </div>
+            <span className="ml-auto text-[11px] font-mono text-zinc-500">paid only</span>
+          </div>
+          <div className="flex items-end gap-3 flex-1 pl-12 relative border-b border-white/[0.13] min-h-[200px]">
+            {[100, 75, 50, 25, 0].map((g) => (
+              <div key={g} className="absolute left-12 right-0 border-t border-dashed border-white/[0.07]" style={{ bottom: `${g}%` }}>
+                <span className="absolute -left-12 -top-1.5 text-[10px] font-mono text-zinc-700 w-10 text-right">
+                  ${Math.round((g / 100) * peak).toLocaleString()}
+                </span>
+              </div>
+            ))}
+            {chartData.length === 0 ? (
+              <div className="absolute inset-0 flex items-center justify-center text-[11.5px] font-mono uppercase tracking-wider text-zinc-600">No payouts yet</div>
+            ) : (
+              chartData.map((d) => (
+                <div key={d.month} className="flex-1 flex items-end justify-center h-full">
+                  <div
+                    className={`w-full max-w-[60px] rounded-t-md relative ${d.v === peak ? "bg-gradient-to-b from-emerald-300 to-emerald-400" : "bg-gradient-to-b from-emerald-500 to-emerald-500/50"}`}
+                    style={{ height: `${(d.v / peak) * 100}%` }}
+                  >
+                    {d.v === peak && (
+                      <span className={`absolute -top-5 left-0 right-0 text-center text-[10.5px] text-emerald-300 ${monoNum}`}>
+                        ${d.v.toFixed(2)}
+                      </span>
+                    )}
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+          {chartData.length > 0 && (
+            <div className="flex gap-3 pl-12 mt-3">
+              {chartData.map((d) => (
+                <span key={d.month} className="flex-1 text-center text-[10px] font-mono uppercase tracking-widest text-zinc-500">
+                  {d.label}
+                </span>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* ── Four payout KPI tiles (2 cols each) ────────────── */}
+        {payoutKpis.map((k) => (
+          <div
+            key={k.eyebrow}
+            className={`col-span-6 sm:col-span-3 lg:col-span-2 ${tile} p-5 flex flex-col justify-between gap-3 min-h-[148px]`}
+          >
+            <p className={eyebrow}>{k.eyebrow}</p>
+            <div>
+              <div className={`text-[26px] font-medium tracking-tight leading-none text-zinc-100 ${monoNum}`}>{k.v}</div>
+              {k.sub && <div className="text-[11px] font-mono text-zinc-600 mt-1">{k.sub}</div>}
+            </div>
+          </div>
+        ))}
+
+        {/* ── Payout history table (full width) ──────────────── */}
+        <div className={`col-span-12 ${tile} overflow-hidden`}>
+          <div className="px-6 pt-5 flex items-baseline gap-3">
+            <div>
+              <p className={eyebrow}>Payouts to your bank</p>
+              <h3 className={serifTitle}>Payout history</h3>
+            </div>
+            <span className="ml-auto text-[11px] font-mono text-zinc-500">Stripe · Standard</span>
+          </div>
+          <div className="grid grid-cols-[1.4fr_0.9fr_0.8fr_0.8fr_1fr] gap-3 px-6 py-3.5 mt-4 border-b border-white/[0.13] text-[10px] font-mono uppercase tracking-[0.16em] text-zinc-500">
+            <span>Arrived</span>
+            <span>Amount</span>
+            <span>Status</span>
+            <span>Method</span>
+            <span>Description</span>
+          </div>
+          {(payouts?.items ?? []).length === 0 ? (
+            <div className="py-12 text-center text-[11.5px] font-mono uppercase tracking-wider text-zinc-600">No payouts yet</div>
+          ) : (
+            (payouts?.items ?? []).map((p) => (
+              <div
+                key={p.id}
+                className="grid grid-cols-[1.4fr_0.9fr_0.8fr_0.8fr_1fr] gap-3 px-6 py-4 border-b border-white/[0.07] items-center hover:bg-white/[0.02] transition-colors"
+              >
+                <div>
+                  <div className="text-[13.5px] font-semibold text-zinc-100">
+                    {new Date(p.arrival_date).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" })}
+                  </div>
+                  <div className="text-[11px] font-mono text-zinc-500">
+                    Initiated {new Date(p.created_at).toLocaleDateString(undefined, { month: "short", day: "numeric" })}
+                  </div>
+                </div>
+                <span className={`text-[13px] font-medium text-zinc-100 ${monoNum}`}>{formatStripeAmount(p.amount_cents, p.currency)}</span>
+                <div><StatusPill kind={p.status} /></div>
+                <span className="text-[13px] font-mono text-zinc-400 capitalize">{p.method ?? "—"}</span>
+                <span className="text-[13px] font-mono text-zinc-400 truncate">{p.statement_descriptor ?? p.description ?? "—"}</span>
+              </div>
+            ))
+          )}
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// ════════════════════════════════════════════
+// SUBSCRIPTIONS TAB — full subscription list w/ status filters.
+// ════════════════════════════════════════════
+const SUB_STATUS_PILL: Record<string, string> = {
+  active: "bg-emerald-500/[0.08] text-emerald-500 border-emerald-500/15",
+  trialing: "bg-blue-500/[0.08] text-blue-500 border-blue-500/15",
+  past_due: "bg-amber-500/[0.08] text-amber-500 border-amber-500/15",
+  unpaid: "bg-amber-500/[0.08] text-amber-500 border-amber-500/15",
+  paused: "bg-muted text-muted-foreground border-border",
+  canceled: "bg-muted text-muted-foreground border-border",
+  incomplete: "bg-primary/[0.08] text-primary border-primary/15",
+  incomplete_expired: "bg-primary/[0.08] text-primary border-primary/15",
+};
+
+const SubscriptionsTab: React.FC<{ stripe: StripeBundle }> = ({ stripe }) => {
+  const { connected, subscriptions } = stripe;
+  const [statusFilter, setStatusFilter] = useState<string>("all");
+
+  const summary = subscriptions?.summary;
+  const allItems = subscriptions?.items ?? [];
+  const byStatus = summary?.by_status ?? {};
+
+  const filtered = useMemo(() => {
+    if (statusFilter === "all") return allItems;
+    return allItems.filter((s) => s.status === statusFilter);
+  }, [allItems, statusFilter]);
+
+  if (!connected) return <StripeEmptyState />;
+
+  // Build the status pill list dynamically from what's actually in
+  // the data. Active + Trialing always show even at 0 since they're
+  // the headline metrics.
+  const statusOptions: Array<{ key: string; label: string }> = [
+    { key: "all", label: "All" },
+    { key: "active", label: "Active" },
+    { key: "trialing", label: "Trialing" },
+    { key: "past_due", label: "Past due" },
+    { key: "canceled", label: "Canceled" },
+  ];
+
+  return (
+    <div className="space-y-4">
+      {/* Summary strip — counts per major status + total MRR. */}
+      <div className="bg-card border border-border rounded-sm overflow-hidden">
+        <div className="flex">
+          <div className="flex-1 px-5 py-4 border-r border-border">
+            <p className="text-[10px] text-muted-foreground/60 uppercase tracking-[0.12em] font-medium">Total subs</p>
+            <p className="text-xl font-bold text-foreground tracking-tight mt-1">{summary?.total ?? 0}</p>
+          </div>
+          <div className="flex-1 px-5 py-4 border-r border-border">
+            <p className="text-[10px] text-muted-foreground/60 uppercase tracking-[0.12em] font-medium">Active</p>
+            <p className="text-xl font-bold text-emerald-500 tracking-tight mt-1">{byStatus.active ?? 0}</p>
+          </div>
+          <div className="flex-1 px-5 py-4 border-r border-border">
+            <p className="text-[10px] text-muted-foreground/60 uppercase tracking-[0.12em] font-medium">Trialing</p>
+            <p className="text-xl font-bold text-blue-500 tracking-tight mt-1">{byStatus.trialing ?? 0}</p>
+          </div>
+          <div className="flex-1 px-5 py-4 border-r border-border">
+            <p className="text-[10px] text-muted-foreground/60 uppercase tracking-[0.12em] font-medium">Past due</p>
+            <p className="text-xl font-bold text-amber-500 tracking-tight mt-1">{byStatus.past_due ?? 0}</p>
+          </div>
+          <div className="flex-1 px-5 py-4">
+            <p className="text-[10px] text-muted-foreground/60 uppercase tracking-[0.12em] font-medium">Total MRR</p>
+            <p className="text-xl font-bold text-foreground tracking-tight mt-1 tabular-nums">
+              {formatStripeAmount(summary?.total_mrr_cents ?? 0, subscriptions?.currency ?? "usd", { compact: true })}
+            </p>
+          </div>
+        </div>
+      </div>
+
+      {/* Filter pills. */}
+      <div className="bg-card border border-border rounded-sm p-4">
+        <div className="flex items-center gap-1.5 bg-muted/30 border border-border rounded-sm p-0.5 w-fit">
+          {statusOptions.map((opt) => {
+            const count = opt.key === "all" ? summary?.total ?? 0 : byStatus[opt.key] ?? 0;
+            return (
+              <button
+                key={opt.key}
+                onClick={() => setStatusFilter(opt.key)}
+                className={`px-3 py-1 rounded-sm text-[11px] font-medium transition-all ${
+                  statusFilter === opt.key
+                    ? "bg-primary/10 text-primary"
+                    : "text-muted-foreground/60 hover:text-muted-foreground"
+                }`}
+              >
+                {opt.label} ({count})
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Table. */}
+      <div className="bg-card border border-border rounded-sm overflow-hidden">
+        <div className="grid grid-cols-[2fr_2fr_1fr_1fr_1.2fr_0.8fr] gap-4 px-5 py-2.5 border-b border-border text-[10px] text-muted-foreground/60 uppercase tracking-[0.15em]">
+          <span>Customer</span>
+          <span>Product</span>
+          <span>Status</span>
+          <span className="text-right">MRR</span>
+          <span className="text-right">Renews</span>
+          <span className="text-right">Auto-renew</span>
+        </div>
+        <div className="max-h-[600px] overflow-y-auto">
+          {filtered.length === 0 ? (
+            <div className="py-12 text-center">
+              <p className="text-[13px] text-muted-foreground/40">
+                {subscriptions ? "No subscriptions match your filter" : "Loading subscriptions…"}
+              </p>
+            </div>
+          ) : (
+            filtered.map((s) => (
+              <div
+                key={s.id}
+                className="grid grid-cols-[2fr_2fr_1fr_1fr_1.2fr_0.8fr] gap-4 items-center px-5 py-3 border-b border-white/[0.025] last:border-b-0 hover:bg-muted/20 transition-colors"
+              >
+                <div className="min-w-0">
+                  <div className="text-[13px] font-medium text-foreground/80 truncate">
+                    {s.customer_name ?? s.customer_email ?? "Anonymous"}
+                  </div>
+                  {s.customer_name && s.customer_email && (
+                    <div className="text-[11px] text-muted-foreground/60 truncate">{s.customer_email}</div>
+                  )}
+                </div>
+                <span className="text-[12px] text-foreground/70 truncate">{s.product_name ?? "—"}</span>
+                <div>
+                  <span className={`text-[10px] uppercase tracking-wider px-1.5 py-0.5 rounded-sm border ${SUB_STATUS_PILL[s.status] ?? "bg-muted text-muted-foreground border-border"}`}>
+                    {s.status.replace("_", " ")}
+                  </span>
+                </div>
+                <span className="text-[13px] font-semibold text-right text-foreground tabular-nums">
+                  {formatStripeAmount(s.mrr_cents, s.currency)}
+                </span>
+                <div className="text-right">
+                  <div className="text-[12px] text-foreground/80">
+                    {new Date(s.current_period_end).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "2-digit" })}
+                  </div>
+                  {s.days_until_renewal > 0 && (
+                    <div className="text-[10px] text-muted-foreground/60">in {s.days_until_renewal}d</div>
+                  )}
+                </div>
+                <div className="text-right">
+                  {s.cancel_at_period_end ? (
+                    <span className="inline-flex items-center gap-1 text-[10px] text-primary uppercase tracking-wider">
+                      <XCircle className="h-3 w-3" /> No
+                    </span>
+                  ) : (
+                    <span className="inline-flex items-center gap-1 text-[10px] text-emerald-500 uppercase tracking-wider">
+                      <CheckCircle className="h-3 w-3" /> Yes
+                    </span>
+                  )}
+                </div>
+              </div>
+            ))
+          )}
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// ════════════════════════════════════════════
+// (Old CompaniesTab removed — replaced by CustomersTab + SubscriptionsTab.)
 // ════════════════════════════════════════════
 const CompaniesTab: React.FC<{
   totalRevenueFromCategories: number;
@@ -795,7 +1379,165 @@ const CompaniesTab: React.FC<{
 };
 
 // ════════════════════════════════════════════
-// CASH FLOW TAB — burn rate, runway gauge, monthly trend
+// PAYOUTS TAB — when money actually hit the bank.
+// Replaces the old Cash Flow tab.
+// ════════════════════════════════════════════
+const PAYOUT_STATUS_PILL: Record<string, string> = {
+  paid: "bg-emerald-500/[0.08] text-emerald-500 border-emerald-500/15",
+  in_transit: "bg-blue-500/[0.08] text-blue-500 border-blue-500/15",
+  pending: "bg-amber-500/[0.08] text-amber-500 border-amber-500/15",
+  failed: "bg-primary/[0.08] text-primary border-primary/15",
+  canceled: "bg-muted text-muted-foreground border-border",
+};
+
+// PayoutsSection — the body of the old PayoutsTab, extracted so it
+// can render both as a standalone tab AND folded inline at the bottom
+// of the combined Customers tab without duplicating chart + table
+// markup. Caller is responsible for the not-connected gate.
+const PayoutsSection: React.FC<{ stripe: StripeBundle }> = ({ stripe }) => {
+  const { payouts } = stripe;
+
+  // Aggregate payouts into monthly buckets for the cadence chart.
+  const monthlyPayouts = useMemo(() => {
+    if (!payouts) return [];
+    const buckets = new Map<string, { label: string; amount_cents: number; count: number }>();
+    for (const p of payouts.items) {
+      // Bucket by arrival date YYYY-MM. Failed payouts excluded
+      // so the chart shows actual cash-in, not attempts.
+      if (p.status !== "paid") continue;
+      const d = new Date(p.arrival_date);
+      const key = `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, "0")}`;
+      const label = d.toLocaleDateString(undefined, { month: "short", timeZone: "UTC" });
+      const existing = buckets.get(key) ?? { label, amount_cents: 0, count: 0 };
+      existing.amount_cents += p.amount_cents;
+      existing.count += 1;
+      buckets.set(key, existing);
+    }
+    return Array.from(buckets.entries())
+      .sort((a, b) => a[0].localeCompare(b[0]))
+      .map(([, v]) => ({ ...v, amount: v.amount_cents / 100 }));
+  }, [payouts]);
+
+  const summary = payouts?.summary;
+  const items = payouts?.items ?? [];
+
+  return (
+    <div className="space-y-4">
+      {/* Summary strip — YTD total + count + average + last payout. */}
+      <div className="bg-card border border-border rounded-sm overflow-hidden">
+        <div className="flex">
+          <div className="flex-1 px-5 py-4 border-r border-border">
+            <p className="text-[10px] text-muted-foreground/60 uppercase tracking-[0.12em] font-medium">YTD paid</p>
+            <p className="text-xl font-bold text-foreground tracking-tight mt-1 tabular-nums">
+              {formatStripeAmount(summary?.total_paid_ytd_cents ?? 0, payouts?.currency ?? "usd", { compact: true })}
+            </p>
+          </div>
+          <div className="flex-1 px-5 py-4 border-r border-border">
+            <p className="text-[10px] text-muted-foreground/60 uppercase tracking-[0.12em] font-medium">YTD payouts</p>
+            <p className="text-xl font-bold text-foreground tracking-tight mt-1">{summary?.count_ytd ?? 0}</p>
+          </div>
+          <div className="flex-1 px-5 py-4 border-r border-border">
+            <p className="text-[10px] text-muted-foreground/60 uppercase tracking-[0.12em] font-medium">Avg payout</p>
+            <p className="text-xl font-bold text-foreground tracking-tight mt-1 tabular-nums">
+              {formatStripeAmount(summary?.average_payout_cents ?? 0, payouts?.currency ?? "usd", { compact: true })}
+            </p>
+          </div>
+          <div className="flex-1 px-5 py-4">
+            <p className="text-[10px] text-muted-foreground/60 uppercase tracking-[0.12em] font-medium">Last payout</p>
+            {summary?.last_payout ? (
+              <>
+                <p className="text-xl font-bold text-foreground tracking-tight mt-1 tabular-nums">
+                  {formatStripeAmount(summary.last_payout.amount_cents, summary.last_payout.currency, { compact: true })}
+                </p>
+                <p className="text-[11px] text-muted-foreground mt-0.5">
+                  {new Date(summary.last_payout.arrival_date).toLocaleDateString(undefined, { month: "short", day: "numeric" })}
+                </p>
+              </>
+            ) : (
+              <p className="text-xl font-bold text-muted-foreground tracking-tight mt-1">—</p>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* Cadence chart — monthly payout totals (paid only). */}
+      <div className="bg-card border border-border rounded-sm p-5">
+        <div className="flex items-center justify-between mb-4">
+          <div>
+            <p className="text-[11px] text-muted-foreground/40 uppercase tracking-[0.15em] font-medium">Payout cadence</p>
+            <p className="text-[11px] text-muted-foreground mt-0.5">Monthly totals · paid only</p>
+          </div>
+        </div>
+        <div className="h-56">
+          {monthlyPayouts.length > 0 ? (
+            <ResponsiveContainer>
+              <BarChart data={monthlyPayouts}>
+                <CartesianGrid strokeDasharray="3 3" stroke="currentColor" className="text-border/40" />
+                <XAxis dataKey="label" tick={{ fill: "currentColor", fontSize: 11 }} className="text-muted-foreground/60" axisLine={false} tickLine={false} />
+                <YAxis tick={{ fill: "currentColor", fontSize: 11 }} className="text-muted-foreground/60" axisLine={false} tickLine={false} tickFormatter={(v) => `$${Number(v) >= 1000 ? `${Math.round(Number(v) / 1000)}k` : Number(v)}`} />
+                <Tooltip contentStyle={{ backgroundColor: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: "2px", fontSize: "12px", color: "hsl(var(--foreground))" }} itemStyle={{ color: "hsl(var(--foreground))" }} formatter={(v: any) => [`$${Number(v).toLocaleString(undefined, { maximumFractionDigits: 2 })}`, "Paid"]} />
+                <Bar dataKey="amount" fill="#10b981" radius={[2, 2, 0, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          ) : (
+            <div className="h-full flex items-center justify-center"><p className="text-[12px] text-muted-foreground/40">No payouts yet</p></div>
+          )}
+        </div>
+      </div>
+
+      {/* Payouts table. */}
+      <div className="bg-card border border-border rounded-sm overflow-hidden">
+        <div className="grid grid-cols-[1.2fr_1fr_1fr_1fr_2fr] gap-4 px-5 py-2.5 border-b border-border text-[10px] text-muted-foreground/60 uppercase tracking-[0.15em]">
+          <span>Arrived</span>
+          <span className="text-right">Amount</span>
+          <span>Status</span>
+          <span>Method</span>
+          <span>Description</span>
+        </div>
+        <div className="max-h-[500px] overflow-y-auto">
+          {items.length === 0 ? (
+            <div className="py-12 text-center">
+              <p className="text-[13px] text-muted-foreground/40">No payouts yet</p>
+            </div>
+          ) : (
+            items.map((p) => (
+              <div
+                key={p.id}
+                className="grid grid-cols-[1.2fr_1fr_1fr_1fr_2fr] gap-4 items-center px-5 py-3 border-b border-white/[0.025] last:border-b-0 hover:bg-muted/20 transition-colors"
+              >
+                <div>
+                  <div className="text-[13px] font-medium text-foreground/80">
+                    {new Date(p.arrival_date).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" })}
+                  </div>
+                  <div className="text-[10px] text-muted-foreground/60">
+                    Initiated {new Date(p.created_at).toLocaleDateString(undefined, { month: "short", day: "numeric" })}
+                  </div>
+                </div>
+                <span className="text-[13px] font-semibold text-right text-foreground tabular-nums">
+                  {formatStripeAmount(p.amount_cents, p.currency)}
+                </span>
+                <div>
+                  <span className={`text-[10px] uppercase tracking-wider px-1.5 py-0.5 rounded-sm border ${PAYOUT_STATUS_PILL[p.status] ?? "bg-muted text-muted-foreground border-border"}`}>
+                    {p.status.replace("_", " ")}
+                  </span>
+                </div>
+                <span className="text-[12px] text-foreground/70 capitalize">
+                  {p.method ?? "—"}
+                </span>
+                <span className="text-[11px] text-muted-foreground/70 truncate">
+                  {p.statement_descriptor ?? p.description ?? "—"}
+                </span>
+              </div>
+            ))
+          )}
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// ════════════════════════════════════════════
+// (Old CashFlowTab below — kept as dead code until tab strip rewire.)
 // ════════════════════════════════════════════
 const CashFlowTab: React.FC<{
   bankBalance: number;
@@ -930,7 +1672,8 @@ const CashFlowTab: React.FC<{
 // ════════════════════════════════════════════
 // REPORTS TAB — filterable invoice list + export
 // ════════════════════════════════════════════
-const ReportsTab: React.FC<{ invoices: InvoiceType[] }> = ({ invoices }) => {
+const ReportsTab: React.FC<{ invoices: InvoiceType[]; stripe: StripeBundle }> = ({ invoices, stripe }) => {
+  const { failed: failedSlice } = stripe;
   const [statusFilter, setStatusFilter] = useState<"all" | "paid" | "pending">("all");
   const [searchQuery, setSearchQuery] = useState("");
 
@@ -970,6 +1713,73 @@ const ReportsTab: React.FC<{ invoices: InvoiceType[] }> = ({ invoices }) => {
 
   return (
     <div className="space-y-4">
+      {/* Failed payments / dunning queue — sits above the invoice
+          list since at-risk revenue is the more urgent surface.
+          Hidden when zero failures so the section doesn't take up
+          space on clean accounts. */}
+      {failedSlice && failedSlice.count > 0 && (
+        <div className="bg-card border border-border rounded-sm overflow-hidden">
+          <div className="px-5 pt-4 pb-3 flex items-center justify-between border-b border-border bg-amber-500/[0.03]">
+            <div className="flex items-center gap-3">
+              <div className="p-1.5 rounded-sm bg-amber-500/[0.08] border border-amber-500/15">
+                <AlertTriangle className="h-3.5 w-3.5 text-amber-500" />
+              </div>
+              <div>
+                <p className="text-[11px] text-muted-foreground/40 uppercase tracking-[0.15em] font-medium">Failed payments · dunning queue</p>
+                <p className="text-[11px] text-muted-foreground/60 mt-0.5">
+                  {failedSlice.count} failed in last 30 days · {failedSlice.retryable_count} retryable
+                </p>
+              </div>
+            </div>
+            <span className="text-[16px] font-bold text-foreground tabular-nums">
+              {formatStripeAmount(failedSlice.total_cents, failedSlice.currency)}
+            </span>
+          </div>
+          <div className="grid grid-cols-[2fr_2fr_1fr_1fr_0.8fr] gap-4 px-5 py-2.5 border-b border-border text-[10px] text-muted-foreground/60 uppercase tracking-[0.15em]">
+            <span>Customer</span>
+            <span>Reason</span>
+            <span>Attempted</span>
+            <span className="text-right">Amount</span>
+            <span className="text-right">Action</span>
+          </div>
+          <div className="max-h-[300px] overflow-y-auto">
+            {failedSlice.items.map((f) => (
+              <div
+                key={f.id}
+                className="grid grid-cols-[2fr_2fr_1fr_1fr_0.8fr] gap-4 items-center px-5 py-3 border-b border-white/[0.025] last:border-b-0 hover:bg-muted/20 transition-colors"
+              >
+                <div className="min-w-0">
+                  <div className="text-[13px] font-medium text-foreground/80 truncate">
+                    {f.customer_name ?? f.customer_email ?? "Anonymous"}
+                  </div>
+                  {f.customer_name && f.customer_email && (
+                    <div className="text-[11px] text-muted-foreground/60 truncate">{f.customer_email}</div>
+                  )}
+                </div>
+                <span className="text-[12px] text-muted-foreground/80 truncate">
+                  {f.failure_message ?? f.failure_code ?? "—"}
+                </span>
+                <span className="text-[11px] text-muted-foreground">
+                  {new Date(f.attempted_at).toLocaleDateString(undefined, { month: "short", day: "numeric" })}
+                </span>
+                <span className="text-[13px] font-semibold text-right text-foreground tabular-nums">
+                  {formatStripeAmount(f.amount_cents, f.currency)}
+                </span>
+                <div className="text-right">
+                  <span className={`text-[10px] uppercase tracking-wider px-1.5 py-0.5 rounded-sm border ${
+                    f.retryable
+                      ? "bg-amber-500/[0.08] text-amber-500 border-amber-500/15"
+                      : "bg-primary/[0.08] text-primary border-primary/15"
+                  }`}>
+                    {f.retryable ? "Retry" : "Triage"}
+                  </span>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* Filters + export */}
       <div className="bg-card border border-border rounded-sm p-4">
         <div className="flex items-center gap-3 flex-wrap">
@@ -1151,11 +1961,8 @@ const FinancialDashboardContent: React.FC = () => {
             <TabsTrigger value="overview" className="data-[state=active]:bg-primary/10 data-[state=active]:text-primary text-muted-foreground rounded-sm text-[12px] h-7 px-4">
               <BarChart3 className="h-3.5 w-3.5 mr-1.5" /> Overview
             </TabsTrigger>
-            <TabsTrigger value="companies" className="data-[state=active]:bg-primary/10 data-[state=active]:text-primary text-muted-foreground rounded-sm text-[12px] h-7 px-4">
-              <Building2 className="h-3.5 w-3.5 mr-1.5" /> Companies
-            </TabsTrigger>
-            <TabsTrigger value="cashflow" className="data-[state=active]:bg-primary/10 data-[state=active]:text-primary text-muted-foreground rounded-sm text-[12px] h-7 px-4">
-              <Flame className="h-3.5 w-3.5 mr-1.5" /> Cash Flow
+            <TabsTrigger value="customers" className="data-[state=active]:bg-primary/10 data-[state=active]:text-primary text-muted-foreground rounded-sm text-[12px] h-7 px-4">
+              <Users className="h-3.5 w-3.5 mr-1.5" /> Customers
             </TabsTrigger>
             <TabsTrigger value="reports" className="data-[state=active]:bg-primary/10 data-[state=active]:text-primary text-muted-foreground rounded-sm text-[12px] h-7 px-4">
               <FileBarChart className="h-3.5 w-3.5 mr-1.5" /> Reports
@@ -1170,26 +1977,12 @@ const FinancialDashboardContent: React.FC = () => {
               <OverviewTab stripe={stripe} />
             </TabsContent>
 
-            <TabsContent value="companies">
-              <CompaniesTab
-                totalRevenueFromCategories={totalRevenueFromCategories}
-                expenseTotal={expenseTotal}
-                bankBalance={bankBalance}
-                invoices={invoices}
-              />
-            </TabsContent>
-
-            <TabsContent value="cashflow">
-              <CashFlowTab
-                bankBalance={bankBalance}
-                expenseTotal={expenseTotal}
-                totalRevenueFromCategories={totalRevenueFromCategories}
-                invoices={invoices}
-              />
+            <TabsContent value="customers">
+              <CustomersTab stripe={stripe} />
             </TabsContent>
 
             <TabsContent value="reports">
-              <ReportsTab invoices={invoices} />
+              <ReportsTab invoices={invoices} stripe={stripe} />
             </TabsContent>
 
             {/* Scenario modeler lives in its own tab and is rendered as a
