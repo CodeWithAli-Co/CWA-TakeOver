@@ -131,25 +131,15 @@ const OverviewTabImpl: React.FC<{
     payouts,
   } = stripe;
 
-  // Empty state — user hasn't connected Stripe yet. Show the same
-  // bento skeleton so the layout doesn't jump when they connect.
-  if (!connected) {
-    return (
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
-        <div className="col-span-1 lg:col-span-12 bg-card border border-border rounded-sm p-10 flex flex-col items-center text-center gap-3">
-          <div className="p-3 rounded-sm bg-primary/[0.08] border border-primary/15">
-            <Plug className="h-5 w-5 text-primary" />
-          </div>
-          <div>
-            <p className="text-[14px] font-bold text-foreground">Connect Stripe to see live revenue</p>
-            <p className="text-[12px] text-muted-foreground/70 mt-1">
-              MRR, MTD revenue, outstanding invoices, and recent charges land here once you paste a restricted key in Settings → Connectors.
-            </p>
-          </div>
-        </div>
-      </div>
-    );
-  }
+  // Shared editorial chrome — kept in sync with CustomersTab so both
+  // tabs read as one design system. Same gradient surface, hairline
+  // border, mono eyebrows, Newsreader serif titles, mono numerics.
+  const tile = "bg-gradient-to-b from-zinc-800/40 to-zinc-900/70 border border-white/[0.08] rounded-xl hover:border-white/[0.14] transition-colors";
+  const eyebrow = "text-[10px] font-mono uppercase tracking-[0.2em] text-zinc-400 font-medium";
+  const serifTitle = "ed-serif text-[20px] mt-1.5 text-zinc-100";
+  const monoNum = "font-mono tabular-nums";
+
+  if (!connected) return <StripeEmptyState />;
 
   // Derive ARR + WoW-style net activity deltas from the snapshot.
   const mrrCents = snapshot?.mrr_cents ?? 0;
@@ -205,417 +195,324 @@ const OverviewTabImpl: React.FC<{
 
   return (
     // ════════════════════════════════════════════
-    // BENTO LAYOUT — 12-col grid with varied row splits so each tile earns
-    // its real estate. Row heights are not forced, but h-full on each tile
-    // keeps siblings within a row aligned.
+    // EDITORIAL BENTO — same chrome + density as the Customers tab.
     //
-    //   Row 1 (12): KPI strip (single card, 5 metric cells)
-    //   Row 2:      Invoice Revenue (8) · Invoice Volume (4)
-    //   Row 3:      Revenue Sources (4) · Expense Breakdown (4) · Recent Transactions (4)
+    //   Row 1: 6 compact KPI tiles (col-2 each = 12)
+    //   Row 2: Net revenue area chart (8×2) + Revenue mix (4) + Charge volume (4)
+    //   Row 3: Recent transactions (6) + Outstanding invoices (6)
+    //   Row 4: Failed payments (6) + Top customers (6)
     // ════════════════════════════════════════════
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-12 gap-4">
-      {/* ROW 1 — KPI strip: Stripe-driven financials.
-          Bank → Stripe-side balance (available + pending).
-          Revenue → MRR (the metric every SaaS investor opens with).
-          Expenses → ARR (MRR × 12 — the demo-friendly forward number).
-          Net Profit → Active Subs count + net delta this month.
-          Invoice Growth → Outstanding invoices count + total. */}
-      <div className="col-span-1 md:col-span-2 lg:col-span-12 bg-card border border-border rounded-sm overflow-hidden">
-        <div className="flex">
-          <MetricCell
-            icon={<Wallet className="h-3 w-3" />}
-            label="Stripe balance"
-            value={formatStripeAmount(balance?.available_cents ?? 0, balance?.primary_currency ?? currency, { compact: true })}
-            trend={
-              balance && balance.pending_cents > 0
-                ? { value: balance.pending_cents / 100, positive: true }
-                : undefined
-            }
-          />
-          <MetricCell
-            icon={<TrendingUp className="h-3 w-3" />}
-            label="MRR"
-            value={formatStripeAmount(mrrCents, currency, { compact: true })}
-          />
-          <MetricCell
-            icon={<DollarSign className="h-3 w-3" />}
-            label="ARR"
-            value={formatStripeAmount(arrCents, currency, { compact: true })}
-          />
-          <MetricCell
-            icon={<Users className="h-3 w-3" />}
-            label="Active subs"
-            value={String(activeSubs)}
-            trend={
-              newSubs > 0 || churnedSubs > 0
-                ? { value: netSubDelta, positive: netSubDelta >= 0 }
-                : undefined
-            }
-          />
-          <MetricCell
-            icon={<Receipt className="h-3 w-3" />}
-            label="Outstanding"
-            value={formatStripeAmount(outstanding?.total_cents ?? 0, outstanding?.currency ?? currency, { compact: true })}
-            trend={
-              outstanding && outstanding.count > 0
-                ? { value: outstanding.count, positive: false }
-                : undefined
-            }
-            borderRight={false}
-          />
+    <div className="grid grid-cols-12 gap-3.5">
+      {/* ── KPI strip (6 compact tiles at col-2 each = 12) ─── */}
+      <div className={`col-span-6 sm:col-span-4 lg:col-span-2 ${tile} p-4 flex flex-col gap-1.5`}>
+        <p className={eyebrow}>Stripe balance</p>
+        <div className={`text-[20px] font-medium tracking-tight leading-none text-zinc-100 ${monoNum}`}>
+          {formatStripeAmount(balance?.available_cents ?? 0, balance?.primary_currency ?? currency, { compact: true })}
+        </div>
+        {balance && balance.pending_cents > 0 && (
+          <div className="text-[10px] font-mono text-zinc-500 leading-none">
+            + {formatStripeAmount(balance.pending_cents, balance.primary_currency ?? currency, { compact: true })} pending
+          </div>
+        )}
+      </div>
+
+      <div className={`col-span-6 sm:col-span-4 lg:col-span-2 ${tile} p-4 flex flex-col gap-1.5`}>
+        <p className={eyebrow}>MRR</p>
+        <div className={`text-[20px] font-medium tracking-tight leading-none text-zinc-100 ${monoNum}`}>
+          {formatStripeAmount(mrrCents, currency, { compact: true })}
         </div>
       </div>
 
-      {/* ROW 2 — Net Revenue chart (8) + Charge Volume (4).
-          Both feed off the same /api/stripe/timeseries result, so
-          the network round-trip is shared. */}
-      <div className="col-span-1 md:col-span-2 lg:col-span-8 bg-card border border-border rounded-sm p-5">
-        <div className="flex items-center justify-between mb-4">
-          <div>
-            <p className="text-[11px] text-muted-foreground/40 uppercase tracking-[0.15em] font-medium">Net revenue</p>
-            <p className="text-[11px] text-muted-foreground mt-0.5">Last {timeseries?.months ?? 6} months · paid minus refunds</p>
+      <div className={`col-span-6 sm:col-span-4 lg:col-span-2 ${tile} p-4 flex flex-col gap-1.5`}>
+        <p className={eyebrow}>ARR</p>
+        <div className={`text-[20px] font-medium tracking-tight leading-none text-zinc-100 ${monoNum}`}>
+          {formatStripeAmount(arrCents, currency, { compact: true })}
+        </div>
+      </div>
+
+      <div className={`col-span-6 sm:col-span-4 lg:col-span-2 ${tile} p-4 flex flex-col gap-1.5`}>
+        <p className={`${eyebrow} flex items-center gap-2`}>
+          <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.6)]" />
+          Active subs
+        </p>
+        <div className={`text-[20px] font-medium tracking-tight leading-none text-emerald-400 ${monoNum}`}>
+          {activeSubs}
+        </div>
+        {(newSubs > 0 || churnedSubs > 0) && (
+          <div className={`text-[10px] font-mono leading-none ${netSubDelta >= 0 ? "text-emerald-400/70" : "text-amber-400/70"}`}>
+            {netSubDelta >= 0 ? "+" : ""}{netSubDelta} this month
           </div>
-          <span className="text-[18px] font-bold text-foreground">
+        )}
+      </div>
+
+      <div className={`col-span-6 sm:col-span-4 lg:col-span-2 ${tile} p-4 flex flex-col gap-1.5`}>
+        <p className={eyebrow}>Outstanding</p>
+        <div className={`text-[20px] font-medium tracking-tight leading-none text-zinc-100 ${monoNum}`}>
+          {formatStripeAmount(outstanding?.total_cents ?? 0, outstanding?.currency ?? currency, { compact: true })}
+        </div>
+        {outstanding && outstanding.count > 0 && (
+          <div className="text-[10px] font-mono text-zinc-500 leading-none">
+            {outstanding.count} unpaid
+          </div>
+        )}
+      </div>
+
+      <div className={`col-span-6 sm:col-span-4 lg:col-span-2 ${tile} p-4 flex flex-col gap-1.5`}>
+        <p className={eyebrow}>Failed · 30d</p>
+        <div className={`text-[20px] font-medium tracking-tight leading-none ${failed && failed.count > 0 ? "text-amber-400" : "text-zinc-100"} ${monoNum}`}>
+          {formatStripeAmount(failed?.total_cents ?? 0, failed?.currency ?? currency, { compact: true })}
+        </div>
+        {failed && failed.count > 0 && (
+          <div className="text-[10px] font-mono text-zinc-500 leading-none">
+            {failed.count} · {failed.retryable_count} retryable
+          </div>
+        )}
+      </div>
+
+      {/* ── Net revenue area chart (8 cols × 2 rows) ──────── */}
+      <div className={`col-span-12 lg:col-span-8 lg:row-span-2 ${tile} p-5 flex flex-col`}>
+        <div className="flex items-baseline gap-3 mb-4">
+          <div>
+            <p className={eyebrow}>Net revenue</p>
+            <h3 className={serifTitle}>Last {timeseries?.months ?? 6} months</h3>
+          </div>
+          <span className={`ml-auto text-[18px] text-zinc-100 ${monoNum}`}>
             {formatStripeAmount(
               (timeseries?.series ?? []).reduce((s, p) => s + p.net_cents, 0),
               currency,
             )}
           </span>
         </div>
-        <div className="h-56">
+        <div className="flex-1 min-h-[260px]">
           {revenueSeries.length > 0 ? (
             <ResponsiveContainer>
               <AreaChart data={revenueSeries}>
                 <defs>
-                  {/* Green for revenue — standard dashboard convention.
-                      Red on a revenue chart reads as losses to anyone
-                      glancing (especially investors). */}
-                  <linearGradient id="revGrad" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor="#10b981" stopOpacity={0.3} />
-                    <stop offset="100%" stopColor="#10b981" stopOpacity={0} />
+                  <linearGradient id="overviewRevGrad" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor="#3ecf8e" stopOpacity={0.35} />
+                    <stop offset="100%" stopColor="#3ecf8e" stopOpacity={0} />
                   </linearGradient>
                 </defs>
-                <CartesianGrid strokeDasharray="3 3" stroke="currentColor" className="text-border/40" />
-                <XAxis dataKey="month" tick={{ fill: "currentColor", fontSize: 11 }} className="text-muted-foreground/60" axisLine={false} tickLine={false} />
-                <YAxis tick={{ fill: "currentColor", fontSize: 11 }} className="text-muted-foreground/60" axisLine={false} tickLine={false} tickFormatter={(v) => `$${Number(v) >= 1000 ? `${Math.round(Number(v) / 1000)}k` : Number(v)}`} />
-                <Tooltip contentStyle={{ backgroundColor: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: "2px", fontSize: "12px", color: "hsl(var(--foreground))" }} itemStyle={{ color: "hsl(var(--foreground))" }} formatter={(v: any) => [`$${Number(v).toLocaleString(undefined, { maximumFractionDigits: 2 })}`, "Revenue"]} />
-                <Area type="monotone" dataKey="revenue" stroke="#10b981" strokeWidth={2} fill="url(#revGrad)" />
+                <CartesianGrid strokeDasharray="3 3" stroke="#27272a" />
+                <XAxis dataKey="month" tick={{ fill: "#71717a", fontSize: 10, fontFamily: "ui-monospace, monospace" }} axisLine={false} tickLine={false} />
+                <YAxis tick={{ fill: "#71717a", fontSize: 10, fontFamily: "ui-monospace, monospace" }} axisLine={false} tickLine={false} tickFormatter={(v) => `$${Number(v) >= 1000 ? `${Math.round(Number(v) / 1000)}k` : Number(v)}`} />
+                <Tooltip contentStyle={{ backgroundColor: "#18181b", border: "1px solid #3f3f46", borderRadius: "8px", fontSize: "12px", color: "#fafafa" }} itemStyle={{ color: "#fafafa" }} formatter={(v: any) => [`$${Number(v).toLocaleString(undefined, { maximumFractionDigits: 2 })}`, "Revenue"]} />
+                <Area type="monotone" dataKey="revenue" stroke="#3ecf8e" strokeWidth={1.5} fill="url(#overviewRevGrad)" />
               </AreaChart>
             </ResponsiveContainer>
           ) : (
-            <div className="h-full flex items-center justify-center"><p className="text-[12px] text-muted-foreground/40">No revenue in this window yet</p></div>
+            <div className="h-full flex items-center justify-center"><p className="text-[11.5px] font-mono uppercase tracking-wider text-zinc-600">No revenue in window</p></div>
           )}
         </div>
       </div>
 
-      <div className="col-span-1 md:col-span-2 lg:col-span-4 bg-card border border-border rounded-sm p-5">
-        <div className="flex items-center justify-between mb-4">
-          <div>
-            <p className="text-[11px] text-muted-foreground/40 uppercase tracking-[0.15em] font-medium">Charge volume</p>
-            <p className="text-[11px] text-muted-foreground mt-0.5">Last {timeseries?.months ?? 6} months · count</p>
+      {/* ── Revenue mix pie (4 cols, top of right column) ──── */}
+      <div className={`col-span-12 lg:col-span-4 ${tile} p-5`}>
+        <p className={eyebrow}>Revenue mix</p>
+        <h3 className={serifTitle}>By product</h3>
+        {productPie.length > 0 ? (
+          <div className="grid grid-cols-2 gap-3 mt-4">
+            <div className="h-40">
+              <ResponsiveContainer>
+                <PieChart>
+                  <Pie data={productPie} dataKey="value" cx="50%" cy="50%" innerRadius={28} outerRadius={56} stroke="none">
+                    {productPie.map((entry, i) => <Cell key={i} fill={REVENUE_COLORS[entry.name] || `hsl(${(i * 60) % 360} 65% 55%)`} />)}
+                  </Pie>
+                  <Tooltip contentStyle={{ backgroundColor: "#18181b", border: "1px solid #3f3f46", borderRadius: "8px", fontSize: "12px", color: "#fafafa" }} formatter={(v: any) => [`$${Number(v).toLocaleString(undefined, { maximumFractionDigits: 2 })}/mo`, ""]} />
+                </PieChart>
+              </ResponsiveContainer>
+            </div>
+            <div className="space-y-1.5 self-center">
+              {productPie.slice(0, 5).map((r, i) => (
+                <div key={r.name} className="flex items-center justify-between text-[10.5px]">
+                  <div className="flex items-center gap-1.5 min-w-0">
+                    <div className="h-1.5 w-1.5 rounded-full shrink-0" style={{ background: REVENUE_COLORS[r.name] || `hsl(${(i * 60) % 360} 65% 55%)` }} />
+                    <span className="text-zinc-400 truncate">{r.name}</span>
+                  </div>
+                  <span className={`text-zinc-300 shrink-0 ml-2 ${monoNum}`}>${r.value >= 1000 ? `${(r.value / 1000).toFixed(1)}k` : r.value.toFixed(0)}</span>
+                </div>
+              ))}
+            </div>
           </div>
-          <span className="text-[18px] font-bold text-foreground">
+        ) : (
+          <div className="h-40 flex items-center justify-center mt-4"><p className="text-[11.5px] font-mono uppercase tracking-wider text-zinc-600">No active subs</p></div>
+        )}
+      </div>
+
+      {/* ── Charge volume bar chart (4 cols, bottom of right) ──── */}
+      <div className={`col-span-12 lg:col-span-4 ${tile} p-5`}>
+        <div className="flex items-baseline gap-3">
+          <div>
+            <p className={eyebrow}>Volume</p>
+            <h3 className={serifTitle}>Charges</h3>
+          </div>
+          <span className={`ml-auto text-[16px] text-zinc-100 ${monoNum}`}>
             {revenueSeries.reduce((s, p) => s + p.count, 0)}
           </span>
         </div>
-        <div className="h-56">
+        <div className="h-40 mt-4">
           {revenueSeries.length > 0 ? (
             <ResponsiveContainer>
               <BarChart data={revenueSeries}>
-                <CartesianGrid strokeDasharray="3 3" stroke="currentColor" className="text-border/40" />
-                <XAxis dataKey="month" tick={{ fill: "currentColor", fontSize: 11 }} className="text-muted-foreground/60" axisLine={false} tickLine={false} />
-                <YAxis tick={{ fill: "currentColor", fontSize: 11 }} className="text-muted-foreground/60" axisLine={false} tickLine={false} />
-                <Tooltip contentStyle={{ backgroundColor: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: "2px", fontSize: "12px", color: "hsl(var(--foreground))" }} itemStyle={{ color: "hsl(var(--foreground))" }} />
-                <Bar dataKey="count" fill="#10b981" radius={[2, 2, 0, 0]} />
+                <CartesianGrid strokeDasharray="3 3" stroke="#27272a" />
+                <XAxis dataKey="month" tick={{ fill: "#71717a", fontSize: 10, fontFamily: "ui-monospace, monospace" }} axisLine={false} tickLine={false} />
+                <YAxis tick={{ fill: "#71717a", fontSize: 10, fontFamily: "ui-monospace, monospace" }} axisLine={false} tickLine={false} />
+                <Tooltip contentStyle={{ backgroundColor: "#18181b", border: "1px solid #3f3f46", borderRadius: "8px", fontSize: "12px", color: "#fafafa" }} />
+                <Bar dataKey="count" fill="#3ecf8e" radius={[2, 2, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
           ) : (
-            <div className="h-full flex items-center justify-center"><p className="text-[12px] text-muted-foreground/40">No charge data yet</p></div>
+            <div className="h-full flex items-center justify-center"><p className="text-[11.5px] font-mono uppercase tracking-wider text-zinc-600">No charge data</p></div>
           )}
         </div>
       </div>
 
-      {/* ROW 3 — Revenue by Product (4) + Recent Transactions (4) + Outstanding (4) */}
-      <div className="col-span-1 md:col-span-1 lg:col-span-4 bg-card border border-border rounded-sm p-5">
-        <p className="text-[11px] text-muted-foreground/40 uppercase tracking-[0.15em] font-medium mb-4">Revenue by product</p>
-          {productPie.length > 0 ? (
-            <div className="grid grid-cols-2 gap-3">
-              <div className="h-48">
-                <ResponsiveContainer>
-                  <PieChart>
-                    <Pie data={productPie} dataKey="value" cx="50%" cy="50%" innerRadius={36} outerRadius={70} stroke="none">
-                      {productPie.map((entry, i) => <Cell key={i} fill={REVENUE_COLORS[entry.name] || `hsl(${(i * 60) % 360} 65% 55%)`} />)}
-                    </Pie>
-                    <Tooltip contentStyle={{ backgroundColor: "#0a0a0a", border: "1px solid rgba(255,255,255,0.08)", borderRadius: "2px", fontSize: "12px" }} itemStyle={{ color: "#fff" }} formatter={(v: any) => [`$${Number(v).toLocaleString(undefined, { maximumFractionDigits: 2 })}/mo`, ""]} />
-                  </PieChart>
-                </ResponsiveContainer>
-              </div>
-              <div className="space-y-1.5 self-center">
-                {productPie.slice(0, 6).map((r, i) => (
-                  <div key={r.name} className="flex items-center justify-between text-[11px]">
-                    <div className="flex items-center gap-1.5 min-w-0">
-                      <div className="h-1.5 w-1.5 rounded-full shrink-0" style={{ background: REVENUE_COLORS[r.name] || `hsl(${(i * 60) % 360} 65% 55%)` }} />
-                      <span className="text-muted-foreground/70 truncate">{r.name}</span>
-                    </div>
-                    <span className="text-foreground/60 tabular-nums shrink-0 ml-2">${r.value >= 1000 ? `${(r.value / 1000).toFixed(1)}k` : r.value.toFixed(0)}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          ) : (
-            <div className="h-48 flex items-center justify-center"><p className="text-[12px] text-muted-foreground/40">No active subscriptions yet</p></div>
-          )}
-        </div>
-
-      {/* Recent Transactions — Stripe charges, last 10. The CWA invoice
-          table moved to the Reports tab as a customer-tracking surface. */}
-      <div className="col-span-1 md:col-span-2 lg:col-span-4 bg-card border border-border rounded-sm overflow-hidden">
-        <div className="px-5 pt-4 pb-3 flex items-center justify-between border-b border-border">
-          <div className="flex items-center gap-3">
-            <div className="p-1.5 rounded-sm bg-muted/40"><Receipt className="h-3.5 w-3.5 text-primary/70" /></div>
-            <div>
-              <p className="text-[11px] text-muted-foreground/40 uppercase tracking-[0.15em] font-medium">Recent transactions</p>
-              <p className="text-[11px] text-muted-foreground/60 mt-0.5">Last {recent?.count ?? 0} paid charges</p>
-            </div>
+      {/* ── Recent transactions list (6 cols) ──────────────── */}
+      <div className={`col-span-12 lg:col-span-6 ${tile} overflow-hidden flex flex-col`}>
+        <div className="px-5 pt-5 flex items-baseline gap-3">
+          <div>
+            <p className={eyebrow}>Recent transactions</p>
+            <h3 className={serifTitle}>Last {recent?.count ?? 0} charges</h3>
           </div>
-          <span className="text-[14px] font-bold text-foreground tabular-nums">
+          <span className={`ml-auto text-[14px] text-zinc-100 ${monoNum}`}>
             {formatStripeAmount(
               (recent?.charges ?? []).reduce((s, c) => s + c.amount_cents, 0),
               recent?.charges[0]?.currency ?? currency,
             )}
           </span>
         </div>
-        <div>
+        <div className="mt-3">
           {!recent || recent.charges.length === 0 ? (
-            <div className="py-12 text-center"><p className="text-[13px] text-muted-foreground/40">No paid charges yet</p></div>
+            <div className="py-12 text-center text-[11.5px] font-mono uppercase tracking-wider text-zinc-600">No paid charges yet</div>
           ) : (
-            recent.charges.slice(0, 5).map((ch, i) => (
-              <motion.div
-                key={ch.id}
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ delay: i * 0.03 }}
-                className="flex items-center gap-3 px-5 py-3 border-b border-white/[0.025] last:border-b-0 hover:bg-muted/20 transition-colors"
-              >
+            recent.charges.slice(0, 6).map((ch) => (
+              <div key={ch.id} className="flex items-center gap-3 px-5 py-3 border-b border-white/[0.04] last:border-b-0 hover:bg-white/[0.02] transition-colors">
                 <div className="flex-1 min-w-0">
-                  <div className="text-[13px] font-medium text-white/80 truncate">
+                  <div className="text-[13.5px] font-semibold text-zinc-100 truncate">
                     {ch.customer_name ?? ch.customer_email ?? "Anonymous"}
                   </div>
-                  <div className="text-[11px] text-muted-foreground/60 truncate">
+                  <div className="text-[11px] font-mono text-zinc-500 truncate">
                     {ch.description ?? new Date(ch.created_at).toLocaleDateString()}
                   </div>
                 </div>
-                <div className="shrink-0 flex flex-col items-end gap-0.5">
-                  <span className="text-[13px] font-semibold text-foreground/80 tabular-nums">
+                <div className="shrink-0 flex flex-col items-end gap-1">
+                  <span className={`text-[13.5px] font-medium text-zinc-100 ${monoNum}`}>
                     {formatStripeAmount(ch.amount_cents, ch.currency)}
                   </span>
-                  <span className="text-[9px] uppercase tracking-wider px-1.5 py-0.5 rounded-sm border bg-emerald-500/[0.08] text-emerald-400 border-emerald-500/15">
-                    paid
-                  </span>
+                  <StatusPill kind="paid" />
                 </div>
-              </motion.div>
+              </div>
             ))
           )}
         </div>
       </div>
 
-      {/* Outstanding Invoices — replaces Expense Breakdown. Top 5
-          unpaid invoices ranked by amount × age, with a hero total. */}
-      <div className="col-span-1 md:col-span-1 lg:col-span-4 bg-card border border-border rounded-sm overflow-hidden">
-        <div className="px-5 pt-4 pb-3 flex items-center justify-between border-b border-border">
-          <div className="flex items-center gap-3">
-            <div className="p-1.5 rounded-sm bg-muted/40"><AlertTriangle className="h-3.5 w-3.5 text-primary/70" /></div>
-            <div>
-              <p className="text-[11px] text-muted-foreground/40 uppercase tracking-[0.15em] font-medium">Outstanding</p>
-              <p className="text-[11px] text-muted-foreground/60 mt-0.5">{outstanding?.count ?? 0} unpaid invoices</p>
-            </div>
+      {/* ── Outstanding invoices list (6 cols) ─────────────── */}
+      <div className={`col-span-12 lg:col-span-6 ${tile} overflow-hidden flex flex-col`}>
+        <div className="px-5 pt-5 flex items-baseline gap-3">
+          <div>
+            <p className={eyebrow}>Outstanding</p>
+            <h3 className={serifTitle}>Unpaid invoices</h3>
           </div>
-          <span className="text-[14px] font-bold text-foreground tabular-nums">
+          <span className={`ml-auto text-[14px] text-zinc-100 ${monoNum}`}>
             {formatStripeAmount(outstanding?.total_cents ?? 0, outstanding?.currency ?? currency)}
           </span>
         </div>
-        <div>
+        <div className="mt-3">
           {!outstanding || outstanding.count === 0 ? (
-            <div className="py-12 text-center"><p className="text-[13px] text-muted-foreground/40">All invoices paid · clean slate</p></div>
+            <div className="py-12 text-center text-[11.5px] font-mono uppercase tracking-wider text-zinc-600">All invoices paid · clean slate</div>
           ) : (
-            outstanding.invoices.slice(0, 5).map((inv, i) => (
-              <motion.div
-                key={inv.id}
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ delay: i * 0.03 }}
-                className="flex items-center gap-3 px-5 py-3 border-b border-white/[0.025] last:border-b-0 hover:bg-muted/20 transition-colors"
-              >
+            outstanding.invoices.slice(0, 6).map((inv) => (
+              <div key={inv.id} className="flex items-center gap-3 px-5 py-3 border-b border-white/[0.04] last:border-b-0 hover:bg-white/[0.02] transition-colors">
                 <div className="flex-1 min-w-0">
-                  <div className="text-[13px] font-medium text-white/80 truncate">
+                  <div className="text-[13.5px] font-semibold text-zinc-100 truncate">
                     {inv.customer_name ?? inv.customer_email ?? inv.number ?? "Anonymous"}
                   </div>
-                  <div className="text-[11px] text-muted-foreground/60 truncate">
+                  <div className="text-[11px] font-mono text-zinc-500 truncate">
                     {inv.days_overdue > 0
                       ? `${inv.days_overdue} day${inv.days_overdue === 1 ? "" : "s"} overdue`
                       : `Due ${inv.due_date ? new Date(inv.due_date).toLocaleDateString() : "soon"}`}
                   </div>
                 </div>
-                <div className="shrink-0 flex flex-col items-end gap-0.5">
-                  <span className="text-[13px] font-semibold text-foreground/80 tabular-nums">
+                <div className="shrink-0 flex flex-col items-end gap-1">
+                  <span className={`text-[13.5px] font-medium text-zinc-100 ${monoNum}`}>
                     {formatStripeAmount(inv.amount_due_cents, inv.currency)}
                   </span>
-                  <span className={`text-[9px] uppercase tracking-wider px-1.5 py-0.5 rounded-sm border ${
-                    inv.days_overdue > 0
-                      ? "bg-primary/[0.08] text-primary border-primary/15"
-                      : "bg-amber-500/[0.08] text-amber-400 border-amber-500/15"
-                  }`}>
-                    {inv.status}
-                  </span>
+                  <StatusPill kind={inv.days_overdue > 0 ? "past_due" : "pending"} />
                 </div>
-              </motion.div>
+              </div>
             ))
           )}
         </div>
       </div>
 
-      {/* ROW 4 — Failed Payments (4) + New Customers (4) + Top Customers by Spend (4).
-          Three independent data slices, all stitched off the same hook fetch.
-          Failed-payments callout is amber/red since it represents at-risk
-          revenue; New Customers is green when growing; Top Customers is
-          neutral chrome with revenue values on the right. */}
-      <div className="col-span-1 md:col-span-1 lg:col-span-4 bg-card border border-border rounded-sm overflow-hidden">
-        <div className="px-5 pt-4 pb-3 flex items-center justify-between border-b border-border">
-          <div className="flex items-center gap-3">
-            <div className="p-1.5 rounded-sm bg-muted/40"><AlertTriangle className="h-3.5 w-3.5 text-amber-500/80" /></div>
-            <div>
-              <p className="text-[11px] text-muted-foreground/40 uppercase tracking-[0.15em] font-medium">Failed payments</p>
-              <p className="text-[11px] text-muted-foreground/60 mt-0.5">
-                {failed?.count ?? 0} in last 30 days
-                {failed && failed.retryable_count > 0 ? ` · ${failed.retryable_count} retryable` : ""}
-              </p>
-            </div>
+      {/* ── Failed payments list (6 cols) ──────────────────── */}
+      <div className={`col-span-12 lg:col-span-6 ${tile} overflow-hidden flex flex-col`}>
+        <div className="px-5 pt-5 flex items-baseline gap-3">
+          <div>
+            <p className={eyebrow}>Failed payments</p>
+            <h3 className={serifTitle}>Last 30 days</h3>
           </div>
-          <span className="text-[14px] font-bold text-foreground tabular-nums">
+          <span className={`ml-auto text-[14px] ${failed && failed.count > 0 ? "text-amber-400" : "text-zinc-100"} ${monoNum}`}>
             {formatStripeAmount(failed?.total_cents ?? 0, failed?.currency ?? currency)}
           </span>
         </div>
-        <div>
+        <div className="mt-3">
           {!failed || failed.count === 0 ? (
-            <div className="py-12 text-center"><p className="text-[13px] text-muted-foreground/40">No failed payments · clean</p></div>
+            <div className="py-12 text-center text-[11.5px] font-mono uppercase tracking-wider text-zinc-600">No failed payments</div>
           ) : (
-            failed.items.slice(0, 5).map((f, i) => (
-              <motion.div
-                key={f.id}
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ delay: i * 0.03 }}
-                className="flex items-center gap-3 px-5 py-3 border-b border-white/[0.025] last:border-b-0 hover:bg-muted/20 transition-colors"
-              >
+            failed.items.slice(0, 6).map((f) => (
+              <div key={f.id} className="flex items-center gap-3 px-5 py-3 border-b border-white/[0.04] last:border-b-0 hover:bg-white/[0.02] transition-colors">
                 <div className="flex-1 min-w-0">
-                  <div className="text-[13px] font-medium text-foreground/80 truncate">
+                  <div className="text-[13.5px] font-semibold text-zinc-100 truncate">
                     {f.customer_name ?? f.customer_email ?? "Anonymous"}
                   </div>
-                  <div className="text-[11px] text-muted-foreground/60 truncate">
+                  <div className="text-[11px] font-mono text-zinc-500 truncate">
                     {f.failure_message ?? f.failure_code ?? "Payment failed"}
                   </div>
                 </div>
-                <div className="shrink-0 flex flex-col items-end gap-0.5">
-                  <span className="text-[13px] font-semibold text-foreground/80 tabular-nums">
+                <div className="shrink-0 flex flex-col items-end gap-1">
+                  <span className={`text-[13.5px] font-medium text-zinc-100 ${monoNum}`}>
                     {formatStripeAmount(f.amount_cents, f.currency)}
                   </span>
-                  <span className={`text-[9px] uppercase tracking-wider px-1.5 py-0.5 rounded-sm border ${
-                    f.retryable
-                      ? "bg-amber-500/[0.08] text-amber-500 border-amber-500/15"
-                      : "bg-primary/[0.08] text-primary border-primary/15"
-                  }`}>
-                    {f.retryable ? "retry" : "action"}
-                  </span>
+                  <StatusPill kind={f.retryable ? "pending" : "failed"} />
                 </div>
-              </motion.div>
+              </div>
             ))
           )}
         </div>
       </div>
 
-      <div className="col-span-1 md:col-span-1 lg:col-span-4 bg-card border border-border rounded-sm p-5">
-        <div className="flex items-center justify-between mb-4">
+      {/* ── Top customers by LTV (6 cols) ──────────────────── */}
+      <div className={`col-span-12 lg:col-span-6 ${tile} overflow-hidden flex flex-col`}>
+        <div className="px-5 pt-5 flex items-baseline gap-3">
           <div>
-            <p className="text-[11px] text-muted-foreground/40 uppercase tracking-[0.15em] font-medium">New customers</p>
-            <p className="text-[11px] text-muted-foreground mt-0.5">Last 30 days</p>
+            <p className={eyebrow}>Top customers</p>
+            <h3 className={serifTitle}>By lifetime value</h3>
           </div>
-          <div className="flex items-baseline gap-2">
-            <span className="text-[22px] font-bold text-foreground tabular-nums">{newCustomersThisPeriod}</span>
-            {(newCustomersThisPeriod > 0 || newCustomersPriorPeriod > 0) && (
-              <span className={`text-[10px] font-medium flex items-center gap-0.5 ${
-                newCustomersDelta >= 0 ? "text-emerald-500" : "text-primary"
-              }`}>
-                {newCustomersDelta >= 0 ? <TrendingUp className="h-2.5 w-2.5" /> : <TrendingDown className="h-2.5 w-2.5" />}
-                {Math.abs(newCustomersDeltaPct).toFixed(0)}%
-              </span>
-            )}
-          </div>
+          <span className="ml-auto text-[10px] font-mono text-zinc-500">
+            {topCustomers.length} of {customerItems.length}
+          </span>
         </div>
-        <p className="text-[11px] text-muted-foreground/70 mb-3">
-          {newCustomersPriorPeriod} in previous 30 days
-        </p>
-        {/* Latest payout strip — the small "money actually hit the bank"
-            anchor that complements the count card above it. */}
-        {latestPayout && (
-          <div className="mt-4 pt-3 border-t border-border flex items-center justify-between">
-            <div>
-              <p className="text-[10px] text-muted-foreground/50 uppercase tracking-[0.1em]">Latest payout</p>
-              <p className="text-[12px] text-foreground/70 mt-0.5">
-                {new Date(latestPayout.arrival_date).toLocaleDateString(undefined, { month: "short", day: "numeric" })}
-                {" · "}
-                <span className={`text-[10px] uppercase ${
-                  latestPayout.status === "paid" ? "text-emerald-500" : "text-amber-500"
-                }`}>
-                  {latestPayout.status}
-                </span>
-              </p>
-            </div>
-            <span className="text-[16px] font-semibold text-foreground tabular-nums">
-              {formatStripeAmount(latestPayout.amount_cents, latestPayout.currency)}
-            </span>
-          </div>
-        )}
-        {!latestPayout && payouts && (
-          <div className="mt-4 pt-3 border-t border-border">
-            <p className="text-[11px] text-muted-foreground/40">No payouts yet</p>
-          </div>
-        )}
-      </div>
-
-      <div className="col-span-1 md:col-span-1 lg:col-span-4 bg-card border border-border rounded-sm overflow-hidden">
-        <div className="px-5 pt-4 pb-3 flex items-center justify-between border-b border-border">
-          <div className="flex items-center gap-3">
-            <div className="p-1.5 rounded-sm bg-muted/40"><Users className="h-3.5 w-3.5 text-emerald-500/80" /></div>
-            <div>
-              <p className="text-[11px] text-muted-foreground/40 uppercase tracking-[0.15em] font-medium">Top customers by spend</p>
-              <p className="text-[11px] text-muted-foreground/60 mt-0.5">All time · by LTV</p>
-            </div>
-          </div>
-        </div>
-        <div>
+        <div className="mt-3">
           {topCustomers.length === 0 ? (
-            <div className="py-12 text-center"><p className="text-[13px] text-muted-foreground/40">No paying customers yet</p></div>
+            <div className="py-12 text-center text-[11.5px] font-mono uppercase tracking-wider text-zinc-600">No paying customers yet</div>
           ) : (
             topCustomers.map((c, i) => (
-              <motion.div
-                key={c.id}
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ delay: i * 0.03 }}
-                className="flex items-center gap-3 px-5 py-3 border-b border-white/[0.025] last:border-b-0 hover:bg-muted/20 transition-colors"
-              >
+              <div key={c.id} className="flex items-center gap-3 px-5 py-3 border-b border-white/[0.04] last:border-b-0 hover:bg-white/[0.02] transition-colors">
+                <span className={`text-[10px] text-zinc-600 w-5 ${monoNum}`}>{String(i + 1).padStart(2, "0")}</span>
                 <div className="flex-1 min-w-0">
-                  <div className="text-[13px] font-medium text-foreground/80 truncate">
+                  <div className="text-[13.5px] font-semibold text-zinc-100 truncate">
                     {c.name ?? c.email ?? "Anonymous customer"}
                   </div>
-                  <div className="text-[11px] text-muted-foreground/60 truncate">
-                    {c.name && c.email ? c.email : c.mrr_cents > 0 ? `${formatStripeAmount(c.mrr_cents, c.currency)}/mo` : "One-time"}
+                  <div className="text-[11px] font-mono text-zinc-500 truncate">
+                    {c.mrr_cents > 0 ? `${formatStripeAmount(c.mrr_cents, c.currency)}/mo` : "One-time"}
                   </div>
                 </div>
-                <span className="text-[13px] font-semibold text-foreground tabular-nums shrink-0">
+                <span className={`text-[13.5px] font-medium text-zinc-100 shrink-0 ${monoNum}`}>
                   {formatStripeAmount(c.ltv_cents, c.currency)}
                 </span>
-              </motion.div>
+              </div>
             ))
           )}
         </div>
@@ -1677,6 +1574,12 @@ const ReportsTab: React.FC<{ invoices: InvoiceType[]; stripe: StripeBundle }> = 
   const [statusFilter, setStatusFilter] = useState<"all" | "paid" | "pending">("all");
   const [searchQuery, setSearchQuery] = useState("");
 
+  // Shared editorial chrome — same tokens as Overview + Customers.
+  const tile = "bg-gradient-to-b from-zinc-800/40 to-zinc-900/70 border border-white/[0.08] rounded-xl hover:border-white/[0.14] transition-colors";
+  const eyebrow = "text-[10px] font-mono uppercase tracking-[0.2em] text-zinc-400 font-medium";
+  const serifTitle = "ed-serif text-[20px] mt-1.5 text-zinc-100";
+  const monoNum = "font-mono tabular-nums";
+
   const filtered = invoices.filter(inv => {
     const matchStatus = statusFilter === "all" || inv.status === statusFilter;
     const matchSearch = !searchQuery ||
@@ -1687,6 +1590,9 @@ const ReportsTab: React.FC<{ invoices: InvoiceType[]; stripe: StripeBundle }> = 
 
   const paidCount = invoices.filter(i => i.status === "paid").length;
   const pendingCount = invoices.filter(i => i.status === "pending").length;
+
+  const totalValue = filtered.reduce((s, i) => s + Number(i.outcome), 0);
+  const avgInvoice = filtered.length > 0 ? totalValue / filtered.length : 0;
 
   const exportCSV = () => {
     const rows = [
@@ -1711,148 +1617,200 @@ const ReportsTab: React.FC<{ invoices: InvoiceType[]; stripe: StripeBundle }> = 
     URL.revokeObjectURL(url);
   };
 
+  // Invoice filter tab definitions with live counts.
+  const iTabs: Array<{ key: typeof statusFilter; label: string; count: number }> = [
+    { key: "all", label: "All", count: invoices.length },
+    { key: "paid", label: "Paid", count: paidCount },
+    { key: "pending", label: "Pending", count: pendingCount },
+  ];
+
   return (
-    <div className="space-y-4">
-      {/* Failed payments / dunning queue — sits above the invoice
-          list since at-risk revenue is the more urgent surface.
-          Hidden when zero failures so the section doesn't take up
-          space on clean accounts. */}
-      {failedSlice && failedSlice.count > 0 && (
-        <div className="bg-card border border-border rounded-sm overflow-hidden">
-          <div className="px-5 pt-4 pb-3 flex items-center justify-between border-b border-border bg-amber-500/[0.03]">
-            <div className="flex items-center gap-3">
-              <div className="p-1.5 rounded-sm bg-amber-500/[0.08] border border-amber-500/15">
-                <AlertTriangle className="h-3.5 w-3.5 text-amber-500" />
-              </div>
-              <div>
-                <p className="text-[11px] text-muted-foreground/40 uppercase tracking-[0.15em] font-medium">Failed payments · dunning queue</p>
-                <p className="text-[11px] text-muted-foreground/60 mt-0.5">
-                  {failedSlice.count} failed in last 30 days · {failedSlice.retryable_count} retryable
-                </p>
-              </div>
+    <div className="space-y-3">
+      <div className="grid grid-cols-12 gap-3.5">
+        {/* ── KPI strip — 4 compact tiles (col-3 each = 12) ──── */}
+        <div className={`col-span-6 lg:col-span-3 ${tile} p-4 flex flex-col gap-1.5`}>
+          <p className={eyebrow}>Showing</p>
+          <div className={`text-[20px] font-medium tracking-tight leading-none text-zinc-100 ${monoNum}`}>
+            {filtered.length}
+          </div>
+          <div className="text-[10px] font-mono text-zinc-500 leading-none">of {invoices.length} invoices</div>
+        </div>
+
+        <div className={`col-span-6 lg:col-span-3 ${tile} p-4 flex flex-col gap-1.5`}>
+          <p className={eyebrow}>Total value</p>
+          <div className={`text-[20px] font-medium tracking-tight leading-none text-zinc-100 ${monoNum}`}>
+            ${totalValue >= 1000 ? `${(totalValue / 1000).toFixed(1)}k` : totalValue.toFixed(0)}
+          </div>
+        </div>
+
+        <div className={`col-span-6 lg:col-span-3 ${tile} p-4 flex flex-col gap-1.5`}>
+          <p className={eyebrow}>Avg invoice</p>
+          <div className={`text-[20px] font-medium tracking-tight leading-none text-zinc-100 ${monoNum}`}>
+            ${avgInvoice >= 1000 ? `${(avgInvoice / 1000).toFixed(1)}k` : avgInvoice.toFixed(0)}
+          </div>
+        </div>
+
+        <div className={`col-span-6 lg:col-span-3 ${tile} p-4 flex flex-col gap-1.5`}>
+          <p className={`${eyebrow} flex items-center gap-2`}>
+            {failedSlice && failedSlice.count > 0 && (
+              <span className="h-1.5 w-1.5 rounded-full bg-amber-400/80 shadow-[0_0_6px_rgba(251,191,36,0.55)]" />
+            )}
+            Dunning · 30d
+          </p>
+          <div className={`text-[20px] font-medium tracking-tight leading-none ${failedSlice && failedSlice.count > 0 ? "text-amber-400" : "text-zinc-100"} ${monoNum}`}>
+            {failedSlice ? formatStripeAmount(failedSlice.total_cents, failedSlice.currency, { compact: true }) : "$0"}
+          </div>
+          {failedSlice && failedSlice.count > 0 && (
+            <div className="text-[10px] font-mono text-zinc-500 leading-none">
+              {failedSlice.count} · {failedSlice.retryable_count} retryable
             </div>
-            <span className="text-[16px] font-bold text-foreground tabular-nums">
-              {formatStripeAmount(failedSlice.total_cents, failedSlice.currency)}
+          )}
+        </div>
+
+        {/* ── Failed payments / dunning queue (12 cols) ────────
+            Sits above the invoice table since at-risk revenue is
+            the more urgent surface. Tile is hidden entirely when
+            count = 0 so clean accounts don't see an empty card. */}
+        {failedSlice && failedSlice.count > 0 && (
+          <div className={`col-span-12 ${tile} overflow-hidden flex flex-col`}>
+            <div className="px-5 pt-5 flex items-baseline gap-3">
+              <div>
+                <p className={`${eyebrow} flex items-center gap-2`}>
+                  <span className="h-1.5 w-1.5 rounded-full bg-amber-400/80 shadow-[0_0_6px_rgba(251,191,36,0.55)]" />
+                  Failed payments
+                </p>
+                <h3 className={serifTitle}>Dunning queue</h3>
+              </div>
+              <span className={`ml-auto text-[16px] text-amber-400 ${monoNum}`}>
+                {formatStripeAmount(failedSlice.total_cents, failedSlice.currency)}
+              </span>
+            </div>
+            <div className="grid grid-cols-[2fr_2fr_1fr_0.9fr_0.7fr] gap-4 px-5 py-2.5 mt-4 border-b border-white/[0.13] text-[10px] font-mono uppercase tracking-[0.16em] text-zinc-500">
+              <span>Customer</span>
+              <span>Reason</span>
+              <span>Attempted</span>
+              <span className="text-right">Amount</span>
+              <span className="text-right">Action</span>
+            </div>
+            <div className="max-h-[320px] overflow-y-auto">
+              {failedSlice.items.map((f) => (
+                <div
+                  key={f.id}
+                  className="grid grid-cols-[2fr_2fr_1fr_0.9fr_0.7fr] gap-4 items-center px-5 py-3 border-b border-white/[0.04] last:border-b-0 hover:bg-white/[0.02] transition-colors"
+                >
+                  <div className="min-w-0">
+                    <div className="text-[13.5px] font-semibold text-zinc-100 truncate">
+                      {f.customer_name ?? f.customer_email ?? "Anonymous"}
+                    </div>
+                    {f.customer_name && f.customer_email && (
+                      <div className="text-[11px] font-mono text-zinc-500 truncate">{f.customer_email}</div>
+                    )}
+                  </div>
+                  <span className="text-[12px] text-zinc-400 truncate">
+                    {f.failure_message ?? f.failure_code ?? "—"}
+                  </span>
+                  <span className="text-[11px] font-mono text-zinc-500">
+                    {new Date(f.attempted_at).toLocaleDateString(undefined, { month: "short", day: "numeric" })}
+                  </span>
+                  <span className={`text-[13px] font-medium text-right text-zinc-100 ${monoNum}`}>
+                    {formatStripeAmount(f.amount_cents, f.currency)}
+                  </span>
+                  <div className="flex justify-end">
+                    <StatusPill kind={f.retryable ? "pending" : "failed"} />
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* ── Invoice table (12 cols, full width) ──────────────
+            Header is editorial: eyebrow + serif title on the left,
+            mono-uppercase filter tabs in the middle, search field +
+            export button on the right. The table body inherits the
+            same row styling as the other lists across the dashboard. */}
+        <div className={`col-span-12 ${tile} overflow-hidden flex flex-col`}>
+          <div className="px-5 pt-5 flex items-baseline gap-3 flex-wrap">
+            <div>
+              <p className={eyebrow}>CWA accounts receivable</p>
+              <h3 className={serifTitle}>Invoices</h3>
+            </div>
+            <span className={`ml-auto text-[14px] text-zinc-100 ${monoNum}`}>
+              ${totalValue.toLocaleString(undefined, { maximumFractionDigits: 2 })}
             </span>
           </div>
-          <div className="grid grid-cols-[2fr_2fr_1fr_1fr_0.8fr] gap-4 px-5 py-2.5 border-b border-border text-[10px] text-muted-foreground/60 uppercase tracking-[0.15em]">
-            <span>Customer</span>
-            <span>Reason</span>
-            <span>Attempted</span>
-            <span className="text-right">Amount</span>
-            <span className="text-right">Action</span>
-          </div>
-          <div className="max-h-[300px] overflow-y-auto">
-            {failedSlice.items.map((f) => (
-              <div
-                key={f.id}
-                className="grid grid-cols-[2fr_2fr_1fr_1fr_0.8fr] gap-4 items-center px-5 py-3 border-b border-white/[0.025] last:border-b-0 hover:bg-muted/20 transition-colors"
-              >
-                <div className="min-w-0">
-                  <div className="text-[13px] font-medium text-foreground/80 truncate">
-                    {f.customer_name ?? f.customer_email ?? "Anonymous"}
-                  </div>
-                  {f.customer_name && f.customer_email && (
-                    <div className="text-[11px] text-muted-foreground/60 truncate">{f.customer_email}</div>
-                  )}
-                </div>
-                <span className="text-[12px] text-muted-foreground/80 truncate">
-                  {f.failure_message ?? f.failure_code ?? "—"}
-                </span>
-                <span className="text-[11px] text-muted-foreground">
-                  {new Date(f.attempted_at).toLocaleDateString(undefined, { month: "short", day: "numeric" })}
-                </span>
-                <span className="text-[13px] font-semibold text-right text-foreground tabular-nums">
-                  {formatStripeAmount(f.amount_cents, f.currency)}
-                </span>
-                <div className="text-right">
-                  <span className={`text-[10px] uppercase tracking-wider px-1.5 py-0.5 rounded-sm border ${
-                    f.retryable
-                      ? "bg-amber-500/[0.08] text-amber-500 border-amber-500/15"
-                      : "bg-primary/[0.08] text-primary border-primary/15"
-                  }`}>
-                    {f.retryable ? "Retry" : "Triage"}
-                  </span>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
 
-      {/* Filters + export */}
-      <div className="bg-card border border-border rounded-sm p-4">
-        <div className="flex items-center gap-3 flex-wrap">
-          <div className="flex items-center gap-1.5 bg-muted/30 border border-border rounded-sm p-0.5">
-            {(["all", "paid", "pending"] as const).map(s => (
+          {/* Filter strip — same tab pattern as the Customers tab
+              directory (mono caps, count chip, emerald underline on
+              the active item). Search input + export button are
+              right-aligned. */}
+          <div className="px-5 mt-4 flex items-end justify-between gap-4 border-b border-white/[0.07] flex-wrap">
+            <div className="flex flex-wrap">
+              {iTabs.map((t) => (
+                <button
+                  key={t.key}
+                  onClick={() => setStatusFilter(t.key)}
+                  className={`relative px-2.5 py-2 text-[10.5px] font-mono uppercase tracking-wider transition-colors ${statusFilter === t.key ? "text-zinc-100" : "text-zinc-500 hover:text-zinc-300"}`}
+                >
+                  {t.label}{" "}
+                  <span className={statusFilter === t.key ? "text-emerald-400 ml-1" : "text-zinc-700 ml-1"}>{t.count}</span>
+                  {statusFilter === t.key && <span className="absolute -bottom-px left-2.5 right-2.5 h-0.5 bg-emerald-400" />}
+                </button>
+              ))}
+            </div>
+            <div className="flex items-center gap-2 mb-2">
+              <div className="flex items-center gap-2 border border-white/[0.07] rounded-lg px-3 py-1.5 bg-black/30 w-64">
+                <Search className="h-3.5 w-3.5 text-zinc-600" />
+                <input
+                  type="text"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  placeholder="Search title or client…"
+                  className="w-full bg-transparent outline-none text-[12px] text-zinc-100 placeholder:text-zinc-700"
+                />
+              </div>
               <button
-                key={s}
-                onClick={() => setStatusFilter(s)}
-                className={`px-3 py-1 rounded-sm text-[11px] font-medium transition-all ${
-                  statusFilter === s
-                    ? "bg-primary/10 text-primary"
-                    : "text-muted-foreground/50 hover:text-muted-foreground/70"
-                }`}
+                onClick={exportCSV}
+                disabled={filtered.length === 0}
+                className="flex items-center gap-1.5 px-3 py-1.5 border border-white/[0.08] text-[10px] font-mono uppercase tracking-[0.16em] text-zinc-400 hover:text-zinc-100 hover:border-white/[0.15] rounded-lg transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
               >
-                {s === "all" ? `All (${invoices.length})` : s === "paid" ? `Paid (${paidCount})` : `Pending (${pendingCount})`}
+                <Download className="h-3 w-3" /> Export CSV
               </button>
-            ))}
+            </div>
           </div>
-          <input
-            type="text"
-            placeholder="Search by title or client..."
-            value={searchQuery}
-            onChange={e => setSearchQuery(e.target.value)}
-            className="flex-1 px-3 py-1.5 bg-muted/30 border border-border rounded-sm text-[12px] text-foreground/60 placeholder:text-muted-foreground/40 focus:outline-none focus:border-border"
-          />
-          <button
-            onClick={exportCSV}
-            disabled={filtered.length === 0}
-            className="flex items-center gap-1.5 px-3 py-1.5 bg-primary/[0.08] hover:bg-red-500/[0.12] border border-primary/15 text-primary text-[11px] rounded-sm transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
-          >
-            <Download className="h-3 w-3" /> Export CSV
-          </button>
-        </div>
-      </div>
 
-      {/* Summary cards */}
-      <div className="grid grid-cols-3 gap-4">
-        <div className="bg-card border border-border rounded-sm p-4">
-          <p className="text-[10px] text-muted-foreground/60 uppercase tracking-wider">Showing</p>
-          <p className="text-2xl font-bold text-foreground tracking-tight mt-1">{filtered.length}</p>
-          <p className="text-[11px] text-muted-foreground mt-0.5">of {invoices.length} invoices</p>
-        </div>
-        <div className="bg-card border border-border rounded-sm p-4">
-          <p className="text-[10px] text-muted-foreground/60 uppercase tracking-wider">Total Value</p>
-          <p className="text-2xl font-bold text-primary tracking-tight mt-1">${filtered.reduce((s, i) => s + Number(i.outcome), 0).toLocaleString()}</p>
-        </div>
-        <div className="bg-card border border-border rounded-sm p-4">
-          <p className="text-[10px] text-muted-foreground/60 uppercase tracking-wider">Avg Invoice</p>
-          <p className="text-2xl font-bold text-foreground tracking-tight mt-1">${filtered.length > 0 ? Math.round(filtered.reduce((s, i) => s + Number(i.outcome), 0) / filtered.length).toLocaleString() : "0"}</p>
-        </div>
-      </div>
+          {/* Table header */}
+          <div className="grid grid-cols-[2fr_1.5fr_1fr_1fr_0.9fr] gap-4 px-5 py-2.5 border-b border-white/[0.07] text-[10px] font-mono uppercase tracking-[0.16em] text-zinc-500">
+            <span>Invoice</span>
+            <span>Client</span>
+            <span>Date</span>
+            <span className="text-right">Amount</span>
+            <span className="text-right">Status</span>
+          </div>
 
-      {/* Detailed table */}
-      <div className="bg-card border border-border rounded-sm overflow-hidden">
-        <div className="grid grid-cols-[2fr_1.5fr_1fr_1fr_1fr] gap-4 px-5 py-2.5 border-b border-border text-[10px] text-muted-foreground/60 uppercase tracking-[0.15em]">
-          <span>Invoice</span><span>Client</span><span>Date</span><span className="text-right">Amount</span><span className="text-right">Status</span>
-        </div>
-        <div className="max-h-[500px] overflow-y-auto">
-          {filtered.length === 0 ? (
-            <div className="py-12 text-center"><p className="text-[13px] text-muted-foreground/40">No invoices match your filters</p></div>
-          ) : (
-            filtered.map((inv) => (
-              <div key={inv.invoice_id} className="grid grid-cols-[2fr_1.5fr_1fr_1fr_1fr] gap-4 items-center px-5 py-3 border-b border-white/[0.025] last:border-b-0 hover:bg-card transition-colors">
-                <span className="text-[13px] font-medium text-white/75 truncate">{inv.invoice_title}</span>
-                <span className="text-[12px] text-muted-foreground/70 truncate">{inv.client_name}</span>
-                <span className="text-[11px] text-muted-foreground">{new Date(inv.creation_date).toLocaleDateString()}</span>
-                <span className="text-[13px] font-medium text-right text-foreground/80">${Number(inv.outcome).toFixed(2)}</span>
-                <div className="flex justify-end">
-                  <span className={`text-[10px] uppercase tracking-wider px-2 py-0.5 rounded-sm border ${inv.status === "paid" ? "bg-emerald-500/[0.08] text-emerald-400 border-emerald-500/15" : "bg-primary/[0.08] text-primary border-primary/15"}`}>{inv.status}</span>
+          {/* Table rows */}
+          <div className="max-h-[540px] overflow-y-auto">
+            {filtered.length === 0 ? (
+              <div className="py-12 text-center text-[11.5px] font-mono uppercase tracking-wider text-zinc-600">No invoices match</div>
+            ) : (
+              filtered.map((inv) => (
+                <div
+                  key={inv.invoice_id}
+                  className="grid grid-cols-[2fr_1.5fr_1fr_1fr_0.9fr] gap-4 items-center px-5 py-3 border-b border-white/[0.04] last:border-b-0 hover:bg-white/[0.02] transition-colors"
+                >
+                  <span className="text-[13.5px] font-semibold text-zinc-100 truncate">{inv.invoice_title}</span>
+                  <span className="text-[12px] text-zinc-400 truncate">{inv.client_name}</span>
+                  <span className="text-[11px] font-mono text-zinc-500">{new Date(inv.creation_date).toLocaleDateString()}</span>
+                  <span className={`text-[13px] font-medium text-right text-zinc-100 ${monoNum}`}>
+                    ${Number(inv.outcome).toFixed(2)}
+                  </span>
+                  <div className="flex justify-end">
+                    <StatusPill kind={inv.status === "paid" ? "paid" : "pending"} />
+                  </div>
                 </div>
-              </div>
-            ))
-          )}
+              ))
+            )}
+          </div>
         </div>
       </div>
     </div>
@@ -1862,6 +1820,58 @@ const ReportsTab: React.FC<{ invoices: InvoiceType[]; stripe: StripeBundle }> = 
 // ════════════════════════════════════════════
 // MAIN COMPONENT
 // ════════════════════════════════════════════
+// ════════════════════════════════════════════
+// StripeStatusPill — real connection indicator for the masthead.
+//
+// Three visual states, all driven by props that originate in the
+// useStripeDashboard hook (which itself reads the stored restricted
+// key from the connectors store + the live query state):
+//
+//   1. connected + no error          → emerald, pulsing dot, "Live · Stripe connected"
+//   2. connected but a query errored → amber,   solid  dot, "Stripe error"
+//   3. not connected                 → zinc,    static dot, "Stripe not connected"
+//
+// IMPORTANT: this is NOT a frontend ornament — `connected` is true
+// only when the user has saved a Stripe connector and that connector
+// has a non-empty restricted key. The verify() call gates whether
+// the key gets saved in the first place, so a `connected=true` state
+// here means an actual Stripe round-trip succeeded at some point.
+const StripeStatusPill: React.FC<{
+  connected: boolean;
+  loading: boolean;
+  error: boolean;
+}> = ({ connected, loading, error }) => {
+  let wrap: string;
+  let dotColor: string;
+  let label: string;
+  let pulsing = false;
+
+  if (!connected) {
+    wrap = "bg-zinc-500/[0.06] border-zinc-500/20 text-zinc-500";
+    dotColor = "bg-zinc-500";
+    label = "Stripe not connected";
+  } else if (error) {
+    wrap = "bg-amber-500/[0.07] border-amber-500/25 text-amber-300/85";
+    dotColor = "bg-amber-400 shadow-[0_0_6px_rgba(251,191,36,0.55)]";
+    label = "Stripe · sync error";
+  } else {
+    wrap = "bg-emerald-500/[0.08] border-emerald-500/25 text-emerald-300";
+    dotColor = "bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.7)]";
+    label = loading ? "Live · syncing" : "Live · Stripe connected";
+    pulsing = !loading;
+  }
+
+  return (
+    <div className={`flex items-center gap-2 px-2.5 py-1 rounded-full border text-[10px] font-mono uppercase tracking-[0.16em] transition-colors ${wrap}`}>
+      <span className="relative flex h-1.5 w-1.5">
+        {pulsing && <span className="absolute inline-flex h-full w-full rounded-full bg-emerald-400/70 opacity-75 animate-ping" />}
+        <span className={`relative inline-flex h-1.5 w-1.5 rounded-full ${dotColor}`} />
+      </span>
+      {label}
+    </div>
+  );
+};
+
 const FinancialDashboardContent: React.FC = () => {
   const { data: invoices = [], isLoading, refetch } = AllInvoices();
   const stripe = useStripeDashboard();
@@ -1870,6 +1880,17 @@ const FinancialDashboardContent: React.FC = () => {
   const [revenueByCategory, setRevenueByCategory] = useState<{ name: string; value: number }[]>([]);
   const [expenseByCategory, setExpenseByCategory] = useState<{ name: string; value: number }[]>([]);
   const [tab, setTab] = useState("overview");
+
+  // Last-updated stamp for the masthead — sourced from whichever Stripe
+  // slice last computed (snapshot is the cheapest + fastest, so it's
+  // usually the freshest one). Falls back to null when not connected.
+  const lastUpdatedLabel = useMemo(() => {
+    const ts = stripe.snapshot?.computed_at;
+    if (!ts) return null;
+    return new Date(ts)
+      .toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" })
+      .toUpperCase();
+  }, [stripe.snapshot?.computed_at]);
 
   // Load Supabase aggregates
   useEffect(() => {
@@ -1930,45 +1951,92 @@ const FinancialDashboardContent: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-background overflow-y-auto transition-colors duration-500">
-      {/* Header */}
-      <div className="px-8 pt-7 pb-2">
-        <div className="flex items-end justify-between">
-          <div className="flex items-center gap-3">
-            <div className="p-2.5 rounded-sm bg-primary/[0.08] border border-primary/15">
-              <Wallet className="h-5 w-5 text-primary" />
-            </div>
-            <div>
-              <h1 className="text-[24px] font-bold text-foreground tracking-tight">Finance</h1>
-              <p className="text-[12px] text-muted-foreground/60 mt-0.5">Portfolio overview across CodeWithAli & Simplicity</p>
-            </div>
+      {/* Newsreader serif loaded inline once for the editorial header. */}
+      <style>{`@import url('https://fonts.googleapis.com/css2?family=Newsreader:ital,wght@0,400;0,500;0,600;1,400&display=swap');.fd-serif{font-family:'Newsreader',Georgia,serif}`}</style>
+
+      {/* ════════════════════════════════════════════
+          Editorial masthead — serif title, mono eyebrow on
+          the left; live connection pill + last-updated stamp
+          on the right. The pill's emerald-vs-zinc state is
+          driven by stripe.connected (real connection check,
+          not a frontend ornament). */}
+      <div className="px-8 pt-8 pb-0">
+        <div className="flex items-start justify-between gap-6">
+          <div className="space-y-2 min-w-0 max-w-[60%]">
+            <p className="flex items-center gap-2 text-[10px] font-mono uppercase tracking-[0.22em] text-muted-foreground/70">
+              <span className="relative flex h-1.5 w-1.5">
+                <span className="absolute inline-flex h-full w-full rounded-full bg-emerald-400/70 opacity-75 animate-ping" />
+                <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.7)]" />
+              </span>
+              CodeWithAli · Portfolio
+            </p>
+            <h1 className="fd-serif text-[44px] leading-[1.02] text-foreground tracking-tight">
+              Finance{" "}
+              <span className="italic font-normal text-foreground/80">&amp; strategy</span>
+            </h1>
+            <p className="text-[12.5px] text-muted-foreground/70 leading-snug pt-1">
+              Portfolio overview across{" "}
+              <span className="text-foreground/85 font-medium">CodeWithAli</span>{" "}
+              <span className="text-muted-foreground/40">&amp;</span>{" "}
+              <span className="text-foreground/85 font-medium">Simplicity</span>
+            </p>
           </div>
-          <button
-            onClick={() => {
-              refetch();
-              void stripe.refetchAll();
-            }}
-            className="flex items-center gap-2 px-3 py-1.5 bg-muted/30 hover:bg-primary/[0.06] border border-border hover:border-primary/15 text-muted-foreground hover:text-primary rounded-sm text-[12px] transition-colors"
-          >
-            <RefreshCcw className={`h-3 w-3 ${stripe.loading ? "animate-spin" : ""}`} /> Refresh
-          </button>
+
+          {/* Right rail — connection state + updated stamp. The
+              pill ONLY goes emerald when stripe.connected is true
+              (which comes from useConnectors → an actual stored
+              restricted key + a verify() round-trip at connect time).
+              Without a key, it shows the muted "not connected"
+              state and links to the connector settings page. */}
+          <div className="flex flex-col items-end gap-2 shrink-0">
+            <StripeStatusPill
+              connected={stripe.connected}
+              loading={stripe.loading}
+              error={!!stripe.error}
+            />
+            <button
+              onClick={() => {
+                refetch();
+                void stripe.refetchAll();
+              }}
+              className="group flex items-center gap-1.5 text-[10px] font-mono uppercase tracking-[0.18em] text-muted-foreground/60 hover:text-foreground transition-colors"
+              title="Refetch all dashboard data"
+            >
+              <RefreshCcw className={`h-3 w-3 transition-transform group-hover:rotate-180 ${stripe.loading ? "animate-spin" : ""}`} />
+              {lastUpdatedLabel ? (
+                <span>Updated {lastUpdatedLabel}</span>
+              ) : (
+                <span>{stripe.loading ? "Syncing" : "Refresh"}</span>
+              )}
+            </button>
+          </div>
         </div>
       </div>
 
-      {/* Top-level tabs */}
-      <div className="px-8 pt-5">
+      {/* ════════════════════════════════════════════
+          Underline tab strip. Replaces the chrome-y pill bar
+          with flat mono uppercase labels + a hairline rule
+          across the page. Active gets a 2px primary underline
+          riding the page's bottom-border so the tab "owns"
+          its section visually. */}
+      <div className="px-8 pt-6">
         <Tabs value={tab} onValueChange={setTab}>
-          <TabsList className="bg-muted/30 border border-border rounded-sm h-9 p-0.5">
-            <TabsTrigger value="overview" className="data-[state=active]:bg-primary/10 data-[state=active]:text-primary text-muted-foreground rounded-sm text-[12px] h-7 px-4">
-              <BarChart3 className="h-3.5 w-3.5 mr-1.5" /> Overview
+          <TabsList className="relative bg-transparent border-0 rounded-none h-auto p-0 w-full justify-start gap-8 border-b border-border/60">
+            <TabsTrigger value="overview" className="group relative bg-transparent data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:text-primary text-muted-foreground/70 hover:text-foreground rounded-none px-0 pb-3 pt-0 h-auto text-[11px] font-mono uppercase tracking-[0.18em] transition-colors">
+              <BarChart3 className="h-3 w-3 mr-1.5 opacity-80" /> Overview
+              <span className="absolute -bottom-px left-0 right-0 h-0.5 bg-primary scale-x-0 group-data-[state=active]:scale-x-100 transition-transform origin-left" />
             </TabsTrigger>
-            <TabsTrigger value="customers" className="data-[state=active]:bg-primary/10 data-[state=active]:text-primary text-muted-foreground rounded-sm text-[12px] h-7 px-4">
-              <Users className="h-3.5 w-3.5 mr-1.5" /> Customers
+            <TabsTrigger value="customers" className="group relative bg-transparent data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:text-primary text-muted-foreground/70 hover:text-foreground rounded-none px-0 pb-3 pt-0 h-auto text-[11px] font-mono uppercase tracking-[0.18em] transition-colors">
+              <Users className="h-3 w-3 mr-1.5 opacity-80" /> Customers
+              <span className="absolute -bottom-px left-0 right-0 h-0.5 bg-primary scale-x-0 group-data-[state=active]:scale-x-100 transition-transform origin-left" />
             </TabsTrigger>
-            <TabsTrigger value="reports" className="data-[state=active]:bg-primary/10 data-[state=active]:text-primary text-muted-foreground rounded-sm text-[12px] h-7 px-4">
-              <FileBarChart className="h-3.5 w-3.5 mr-1.5" /> Reports
+            <TabsTrigger value="reports" className="group relative bg-transparent data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:text-primary text-muted-foreground/70 hover:text-foreground rounded-none px-0 pb-3 pt-0 h-auto text-[11px] font-mono uppercase tracking-[0.18em] transition-colors">
+              <FileBarChart className="h-3 w-3 mr-1.5 opacity-80" /> Reports
+              <span className="absolute -bottom-px left-0 right-0 h-0.5 bg-primary scale-x-0 group-data-[state=active]:scale-x-100 transition-transform origin-left" />
             </TabsTrigger>
-            <TabsTrigger value="modeler" className="data-[state=active]:bg-primary/10 data-[state=active]:text-primary text-muted-foreground rounded-sm text-[12px] h-7 px-4">
-              <Sparkles className="h-3.5 w-3.5 mr-1.5" /> Modeler
+            <TabsTrigger value="modeler" className="group relative bg-transparent data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:text-primary text-muted-foreground/70 hover:text-foreground rounded-none px-0 pb-3 pt-0 h-auto text-[11px] font-mono uppercase tracking-[0.18em] transition-colors">
+              <Sparkles className="h-3 w-3 mr-1.5 opacity-80" /> Modeler
+              <span className="absolute -bottom-px left-0 right-0 h-0.5 bg-primary scale-x-0 group-data-[state=active]:scale-x-100 transition-transform origin-left" />
             </TabsTrigger>
           </TabsList>
 
