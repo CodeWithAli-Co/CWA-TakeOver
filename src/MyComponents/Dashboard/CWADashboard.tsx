@@ -52,11 +52,13 @@ import { useQuery } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
 import { takeOversupabase } from "@/MyComponents/supabase";
 import { useCandidates } from "@/MyComponents/Hiring/recruitingQueries";
+import { useStripeDashboard } from "@/lib/useStripeDashboard";
 
-// TODO(revenue): placeholder series — no real revenue source exists
-// yet. When `cwa_revenue_snapshots` (or whatever ships) lands, swap
-// this constant for a query. Kept in real units so the y-axis logic
-// doesn't need to change at that point.
+// Fallback revenue series used when Stripe isn't connected (or the
+// account has no charge history yet). The chart prefers live data from
+// useStripeDashboard().timeseries.series when available — see the
+// `revenueData` useMemo in CWADashboardContent — so this constant is
+// only the demo skeleton the dashboard shows on a brand-new install.
 const REAL_REVENUE_SERIES = [
   { month: "Sep", revenue: 320, expenses: 280 },
   { month: "Oct", revenue: 580, expenses: 310 },
@@ -836,7 +838,70 @@ function CWADashboardContent() {
   const openBugList = bugReports ?? [];
   const newCandidates = candidates ?? [];
 
-  const revenueData = REAL_REVENUE_SERIES;
+  // ── Revenue chart data ────────────────────────────────────────
+  //
+  // Revenue line comes from Stripe (useStripeDashboard fans out the
+  // /api/stripe/timeseries call once for the whole app). Expense line
+  // is a flat monthly burn computed from cwa_expenses — we don't track
+  // expenses by historical month, so applying current burn evenly
+  // across the window is the truthful baseline.
+  //
+  // If Stripe isn't connected (or the account has no charges in
+  // window), the chart falls back to REAL_REVENUE_SERIES so the home
+  // dashboard still renders something useful on a fresh install.
+  const stripe = useStripeDashboard();
+
+  const { data: monthlyBurnDollars = 0 } = useQuery({
+    queryKey: ["dashboard", "monthly-expense-burn"],
+    queryFn: async () => {
+      const { data, error } = await takeOversupabase
+        .from("cwa_expenses")
+        .select("amount, frequency");
+      if (error) return 0;
+      let monthlyTotal = 0;
+      for (const e of (data ?? []) as Array<{
+        amount: number | string;
+        frequency: string | null;
+      }>) {
+        const amt = Number(e.amount) || 0;
+        switch (e.frequency) {
+          case "yearly":
+            monthlyTotal += amt / 12;
+            break;
+          case "quarterly":
+            monthlyTotal += amt / 3;
+            break;
+          case "weekly":
+            monthlyTotal += amt * (52 / 12);
+            break;
+          case "monthly":
+          default:
+            monthlyTotal += amt;
+        }
+      }
+      return Math.round(monthlyTotal);
+    },
+    staleTime: 5 * 60_000,
+  });
+
+  const revenueData = useMemo(() => {
+    const series = stripe.timeseries?.series ?? [];
+    if (stripe.connected && series.length > 0) {
+      // Keep the same 8-month window the chart was tuned for so the
+      // KPI strip + summary footer math (avg / best / worst) don't
+      // need to change.
+      return series.slice(-8).map((p) => ({
+        month: p.label,
+        revenue: Math.round(p.revenue_cents / 100),
+        expenses: monthlyBurnDollars,
+      }));
+    }
+    return REAL_REVENUE_SERIES;
+  }, [stripe.connected, stripe.timeseries, monthlyBurnDollars]);
+
+  // Used to swap the "Last 8 months" subtitle for a live indicator.
+  const usingLiveRevenue =
+    stripe.connected && (stripe.timeseries?.series.length ?? 0) > 0;
 
   return (
     <div className="grid grid-cols-12 gap-3">
@@ -1018,9 +1083,31 @@ function CWADashboardContent() {
                 <span className="text-[11px] text-foreground uppercase tracking-[0.14em] font-bold">
                   Revenue vs Expenses
                 </span>
-                <span className="text-[10.5px] text-text-tertiary">
-                  Last 8 months
-                </span>
+                {/* Source indicator — when Stripe is connected and has
+                 *  shipped data for the window, show a small pulsing
+                 *  green pill so the operator knows the chart is live.
+                 *  Otherwise show the quieter "Demo data" tag so the
+                 *  fallback series isn't mistaken for real revenue. */}
+                {usingLiveRevenue ? (
+                  <span className="inline-flex items-center gap-1 text-[10px] uppercase tracking-[0.14em] font-semibold text-success">
+                    <span className="relative flex h-1.5 w-1.5">
+                      <span className="absolute inline-flex h-full w-full rounded-full bg-success/70 opacity-75 animate-ping" />
+                      <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-success" />
+                    </span>
+                    Live · Stripe
+                  </span>
+                ) : (
+                  <span
+                    className="text-[10.5px] text-text-tertiary"
+                    title={
+                      stripe.connected
+                        ? "Stripe connected but no charges in this window yet"
+                        : "Connect Stripe in Settings → Connectors to see live revenue"
+                    }
+                  >
+                    Last 8 months · Demo data
+                  </span>
+                )}
                 {/* Period delta badge — inline with the title.
                  *  Colored success/destructive based on direction;
                  *  same arrow icons used in the StatCards above. */}
