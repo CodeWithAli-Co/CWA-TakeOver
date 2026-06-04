@@ -48,9 +48,13 @@ import {
   Loader2,
   AlertTriangle,
   type LucideIcon,
+  AlertCircle,
+  Upload,
+  Keyboard,
+  Trash2,
 } from "lucide-react";
 
-import { takeOversupabase } from "../supabase";
+import { getCompanySupabase, takeOversupabase } from "../supabase";
 import { getStronghold } from "@/stores/stronghold";
 import {
   FieldGroup,
@@ -122,6 +126,7 @@ type FounderStepId =
   | "company"
   | "industry"
   | "components"
+  | "employees"
   | "connectors";
 
 const FOUNDER_STEPS: FounderStepId[] = [
@@ -129,8 +134,14 @@ const FOUNDER_STEPS: FounderStepId[] = [
   "company",
   "industry",
   "components",
+  "employees",
   "connectors",
 ];
+
+interface ParsedEmployees {
+  name: string;
+  email: string;
+}
 
 interface Props {
   completeInitialLaunch: () => void;
@@ -193,7 +204,13 @@ const InitialOnboarding = ({
         .eq("founder_email", value.founderEmail)
         .eq("company_email", value.companyEmail)
         .eq("initialized", false)
-        .single();
+        .single()
+        .overrideTypes<{
+          id: number;
+          initialized: boolean;
+          companydb_url: string;
+          companydb_key: string;
+        }>();
 
       if (!data || error) {
         setBindError(
@@ -204,7 +221,11 @@ const InitialOnboarding = ({
 
       try {
         const sh = await getStronghold();
-        await sh.insertRecord("company_name", value.companyName);
+        await sh.insertManyRecords([
+          { key: "company_name", value: value.companyName },
+          { key: "companydb_url", value: data.companydb_url },
+          { key: "companydb_key", value: data.companydb_key },
+        ]);
       } catch (err) {
         console.error("[onboarding] stronghold write failed:", err);
         setBindError(
@@ -213,12 +234,58 @@ const InitialOnboarding = ({
         return;
       }
 
-      // *Check if connection to compnay DB was successful
-      // ...
-
       setCompanyId((data as { id: number }).id);
       setCompanyName(value.companyName);
       setStepId("industry");
+    },
+  });
+
+  const employeesForm = useForm({
+    defaultValues: {
+      mailListFile: "",
+      mailList: [] as ParsedEmployees[],
+      mailListImportKind: "" as "txt" | "csv",
+      singleAdd: [] as ParsedEmployees[],
+    },
+    onSubmit: async ({ value }) => {
+      if (!companyId) {
+        console.error("Company ID is required to initialize Employees");
+        return;
+      }
+
+      // *May contain duplicates, need to remove the dup with "employee-X" as name
+      const mailList = [...value.mailList, ...value.singleAdd];
+      console.log({ value, mailList });
+      // Sign Employees up in Company's DB
+      const headers: Record<string, string> = import.meta.env.DEV
+        ? {
+            "Content-Type": "application/json",
+            "TakeOver-App": "true",
+            DevTakeOver: "true",
+          }
+        : { "Content-Type": "application/json", "TakeOver-App": "true" };
+      const res = await fetch(
+        `${import.meta.env.VITE_TAKEOVER_SITE_URL}/api/initialize_employees`,
+        {
+          method: "POST",
+          headers: headers,
+          body: JSON.stringify({
+            companyID: companyId,
+            list: mailList,
+          }), // *Keep in mind that max payload is 2MB
+        },
+      );
+
+      const response: { success: boolean; error_msg?: string } =
+        await res.json();
+      if (!response.success) {
+        console.error(response.error_msg);
+        return;
+      }
+
+      setStepId("connectors");
+      employeesForm.reset();
+      return;
     },
   });
 
@@ -263,21 +330,23 @@ const InitialOnboarding = ({
     setStepId(FOUNDER_STEPS[i - 1]!);
   };
 
-  const goToConnectors = async () => {
+  const goToEmployees = async () => {
     const ok = await persistComponents();
-    if (ok) setStepId("connectors");
+    if (ok) setStepId("employees");
   };
 
   const finish = async () => {
-    const { error } = await takeOversupabase
-      .from("takeover_companies")
-      .update({ initialized: true })
-      .eq("id", companyId);
-    if (error) {
-      console.error("Error initializing company.");
-      setBindError("Failed to Initialize company");
-      setStepId("company");
-      return;
+    if (import.meta.env.PROD) {
+      const { error } = await takeOversupabase
+        .from("takeover_companies")
+        .update({ initialized: true })
+        .eq("id", companyId);
+      if (error) {
+        console.error("Error initializing company.");
+        setBindError("Failed to Initialize company");
+        setStepId("company");
+        return;
+      }
     }
     completeInitialLaunch();
   };
@@ -339,10 +408,309 @@ const InitialOnboarding = ({
               value={components}
               onChange={setComponents}
               onBack={goBack}
-              onNext={goToConnectors}
+              onNext={goToEmployees}
               loading={persisting}
               error={persistError}
             />
+          )}
+
+          {stepId === "employees" && (
+            <motion.div
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -6 }}
+              transition={{ duration: 0.25 }}
+            >
+              <StepHeader
+                eyebrow="Step 5 of 6"
+                title="Add/Import your Employees"
+                subtitle="This is for adding your existing employees. New hires will need to be hired from within the app after initializing."
+              />
+
+              <form
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  employeesForm.handleSubmit();
+                }}
+                className="space-y-3.5"
+              >
+                <FieldGroup title="Upload file with emails" icon={Upload}>
+                  {/* Text File Import */}
+                  <employeesForm.Subscribe
+                    selector={(state) => [
+                      state.values.mailList,
+                      state.values.mailListImportKind,
+                    ]}
+                    children={([mailList, importKind]) => {
+                      const clearMailListFiles = () => {
+                        employeesForm.resetField("mailListFile");
+                        employeesForm.resetField("mailListImportKind");
+                        employeesForm.resetField("mailList");
+                        return;
+                      };
+                      return (
+                        <>
+                          {/* Text File Import */}
+                          <employeesForm.Field
+                            name="mailListFile"
+                            children={(field) => {
+                              const parseTxt = (
+                                files: FileList | null,
+                              ): ParsedEmployees[] => {
+                                if (!files) return [];
+                                const parsedContent: ParsedEmployees[] = [];
+
+                                const fileReader = new FileReader();
+                                fileReader.onerror = () => {
+                                  console.error("Error reading file");
+                                  return;
+                                };
+                                fileReader.readAsText(files[0]);
+                                fileReader.onloadend = () => {
+                                  const content = fileReader.result as
+                                    | string
+                                    | null;
+                                  if (!content) {
+                                    console.warn("File has no content");
+                                    return;
+                                  }
+
+                                  const matches = [
+                                    ...content.matchAll(
+                                      /(?:\w+\.?)+@\w+\.com/gmu,
+                                    ),
+                                  ];
+                                  if (!matches) {
+                                    console.warn("No matches found in file");
+                                    return;
+                                  }
+                                  for (const [
+                                    idx,
+                                    [email],
+                                  ] of matches.entries()) {
+                                    parsedContent.push({
+                                      email: email,
+                                      name: `employee-${idx}`,
+                                    });
+                                  }
+                                };
+                                return parsedContent;
+                              };
+                              return (
+                                <FormField label="Text File Import">
+                                  <input
+                                    name={field.name}
+                                    type="file"
+                                    accept=".txt"
+                                    disabled={
+                                      mailList.length > 0 &&
+                                      importKind === "csv"
+                                    }
+                                    onChange={(e) => {
+                                      clearMailListFiles();
+                                      employeesForm.setFieldValue(
+                                        "mailListImportKind",
+                                        "txt",
+                                      );
+                                      employeesForm.setFieldValue(
+                                        "mailList",
+                                        parseTxt(e.target.files),
+                                      );
+                                      field.handleChange(e.target.value);
+                                    }}
+                                    className="w-full px-3.5 py-2.5 bg-foreground/[0.04] border border-border-soft rounded-xl text-[13.5px] text-foreground placeholder:text-text-tertiary/60 outline-none focus:border-foreground/20 focus:bg-foreground/[0.06] transition-colors"
+                                  />
+                                </FormField>
+                              );
+                            }}
+                          />
+
+                          {/* CSV File Import -- *Add later */}
+                          {/* <employeesForm.Field
+                            name="mailListFile"
+                            children={(field) => {
+                              const parseCSV = (): ParsedEmployees[] => {
+                                return [
+                                  {
+                                    name: "CSV Employee",
+                                    email: "empl@example.com",
+                                  },
+                                ];
+                              };
+                              return (
+                                <FormField label="CSV File Import">
+                                  <input
+                                    name={field.name}
+                                    type="file"
+                                    accept=".csv"
+                                    disabled={
+                                      mailList.length > 0 &&
+                                      importKind === "txt"
+                                    }
+                                    onChange={(e) => {
+                                      clearMailListFiles();
+                                      employeesForm.setFieldValue(
+                                        "mailListImportKind",
+                                        "csv",
+                                      );
+                                      employeesForm.setFieldValue(
+                                        "mailList",
+                                        parseCSV(),
+                                      );
+                                      field.handleChange(e.target.value);
+                                    }}
+                                    className="w-full px-3.5 py-2.5 bg-foreground/[0.04] border border-border-soft rounded-xl text-[13.5px] text-foreground placeholder:text-text-tertiary/60 outline-none focus:border-foreground/20 focus:bg-foreground/[0.06] transition-colors"
+                                  />
+                                </FormField>
+                              );
+                            }}
+                          /> */}
+
+                          <button
+                            type="button"
+                            onClick={() => clearMailListFiles()}
+                            className="inline-flex items-center gap-2 p-1 rounded-md text-[12.5px] font-semibold bg-orange-600/40 text-orange-300/90 hover:bg-orange-600/60 border border-orange-600 transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+                          >
+                            <Trash2 size={14} />
+                            <span>Clear Import Files</span>
+                          </button>
+                        </>
+                      );
+                    }}
+                  />
+                </FieldGroup>
+
+                <FieldGroup title="Manual Import" icon={Keyboard}>
+                  <employeesForm.Field
+                    name="singleAdd"
+                    children={(field) => {
+                      const regex = /((?:\w+\s?)+) - ((?:\w+\.?)+@\w+\.com)/iu;
+                      const parseInput = (input: string): ParsedEmployees => {
+                        const match = input.match(regex)!;
+                        return {
+                          email: match[2],
+                          name: match[1],
+                        };
+                      };
+                      return (
+                        <FormField label="Employee">
+                          <input
+                            id={`${field.name}_id`}
+                            name={field.name}
+                            type="text"
+                            autoComplete="off"
+                            onChange={(e) => {
+                              if (regex.test(e.target.value)) {
+                                field.pushValue(parseInput(e.target.value));
+                                setBindError(null);
+                              } else {
+                                setBindError(
+                                  e.target.value.length > 0
+                                    ? "Invalid Format. Must be <name> - <email>"
+                                    : null,
+                                );
+                              }
+                            }}
+                            className="w-full px-3.5 py-2.5 bg-foreground/[0.04] border border-border-soft rounded-xl text-[13.5px] text-foreground placeholder:text-text-tertiary/60 outline-none focus:border-foreground/20 focus:bg-foreground/[0.06] transition-colors"
+                          />
+
+                          {field.state.value.map((empl, i) => {
+                            return (
+                              <section
+                                key={empl.name}
+                                onClick={() => {
+                                  employeesForm.removeFieldValue(
+                                    "singleAdd",
+                                    i,
+                                  );
+                                }}
+                                className="my-2 text-left rounded-2xl border p-4 transition-colors relative border-border-soft bg-foreground/[0.03] hover:bg-foreground/[0.05] hover:border-foreground/20 cursor-pointer select-none"
+                              >
+                                <div className="flex items-start gap-3">
+                                  {/* Monogram */}
+                                  <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0 border">
+                                    <span
+                                      className="font-bold leading-none"
+                                      style={{
+                                        fontSize: Math.round(40 * 0.4),
+                                        fontFamily:
+                                          "var(--ed-font-display, Inter), system-ui, sans-serif",
+                                      }}
+                                    >
+                                      {empl.name.charAt(0)}
+                                    </span>
+                                  </div>
+                                  <div className="min-w-0 flex-1">
+                                    <h3 className="text-[13.5px] font-bold text-foreground/90 leading-tight">
+                                      {empl.name}
+                                    </h3>
+                                    <p className="text-[11.5px] text-text-tertiary mt-1 leading-relaxed">
+                                      {empl.email}
+                                    </p>
+                                  </div>
+                                </div>
+                              </section>
+                            );
+                          })}
+                        </FormField>
+                      );
+                    }}
+                  />
+                </FieldGroup>
+
+                <section className="flex items-start gap-2 rounded-md border border-orange-500/30 bg-orange-500/10 px-3 py-2">
+                  <AlertCircle className="h-3.5 w-3.5 mt-0.5 text-orange-400 shrink-0" />
+                  <p className="text-[12px] text-orange-200 leading-snug">
+                    This process might take a minute
+                  </p>
+                </section>
+
+                {bindError && (
+                  <div className="rounded-xl border border-destructive/30 bg-destructive/10 p-3 flex items-start gap-2.5">
+                    <AlertTriangle
+                      className="h-4 w-4 text-destructive shrink-0 mt-px"
+                      strokeWidth={2.4}
+                    />
+                    <p className="text-[12px] text-destructive leading-relaxed">
+                      {bindError}
+                    </p>
+                  </div>
+                )}
+
+                <employeesForm.Subscribe
+                  selector={(state) => [state.canSubmit, state.isSubmitting]}
+                  children={([canSubmit, isSubmitting]) => {
+                    return (
+                      <div className="flex items-center justify-between gap-3 mt-7">
+                        <button
+                          type="button"
+                          onClick={goBack}
+                          disabled={isSubmitting}
+                          className="inline-flex items-center gap-1.5 h-10 px-3.5 rounded-full text-[12px] font-semibold text-text-tertiary hover:text-foreground transition-colors disabled:opacity-50"
+                        >
+                          Back
+                        </button>
+                        <button
+                          type="submit"
+                          disabled={!canSubmit || isSubmitting || !!bindError}
+                          className="inline-flex items-center gap-2 h-10 px-5 rounded-full text-[12.5px] font-semibold bg-primary text-primary-foreground hover:bg-primary/90 shadow-[0_2px_12px_-2px_hsl(var(--primary)/0.45)] transition-all disabled:opacity-40 disabled:cursor-not-allowed disabled:shadow-none"
+                        >
+                          {isSubmitting ? (
+                            <>
+                              <Loader2 size={13} className="animate-spin" />
+                              Adding...
+                            </>
+                          ) : (
+                            "Add Employees"
+                          )}
+                        </button>
+                      </div>
+                    );
+                  }}
+                />
+              </form>
+            </motion.div>
           )}
 
           {stepId === "connectors" && (
@@ -476,7 +844,7 @@ function CompanyBindingStep({
       transition={{ duration: 0.25 }}
     >
       <StepHeader
-        eyebrow="Step 2 of 5"
+        eyebrow="Step 2 of 6"
         title="Find your company."
         subtitle="We'll match these against your registered workspace. They must match exactly what we set up with you."
       />
@@ -533,6 +901,13 @@ function CompanyBindingStep({
             )}
           />
         </FieldGroup>
+
+        <section className="flex items-start gap-2 rounded-md border border-orange-500/30 bg-orange-500/10 px-3 py-2">
+          <AlertCircle className="h-3.5 w-3.5 mt-0.5 text-orange-400 shrink-0" />
+          <p className="text-[12px] text-orange-200 leading-snug">
+            This process might take a minute
+          </p>
+        </section>
 
         {bindError && (
           <div className="rounded-xl border border-destructive/30 bg-destructive/10 p-3 flex items-start gap-2.5">
@@ -594,7 +969,7 @@ function IndustryStep({
       transition={{ duration: 0.25 }}
     >
       <StepHeader
-        eyebrow="Step 3 of 5"
+        eyebrow="Step 3 of 6"
         title="What industry are you in?"
         subtitle="Drives sensible defaults - modules, dashboards, Axon prompts."
       />
@@ -642,7 +1017,7 @@ function ComponentsStep({
       transition={{ duration: 0.25 }}
     >
       <StepHeader
-        eyebrow="Step 4 of 5"
+        eyebrow="Step 4 of 6"
         title="Build your stack."
         subtitle={`Tap a module, watch it land in your dashboard. ${value.length} of ${MODULES.length} modules picked.`}
       />
@@ -704,7 +1079,14 @@ function ConnectorsStep({
   // Curated subset. Order matters — HubSpot first since it's the
   // primary stack for the current launch customer. The full
   // 15-connector catalog is still available from Settings.
-  const featuredIds = ["hubspot", "airtable", "stripe", "notion", "github"];
+  const featuredIds = [
+    "hubspot",
+    "google-docs",
+    "airtable",
+    "stripe",
+    "notion",
+    "github",
+  ];
   const featured = featuredIds
     .map((id) => CONNECTORS.find((c) => c.id === id))
     .filter((c): c is CatalogEntry => !!c);
@@ -725,7 +1107,7 @@ function ConnectorsStep({
       transition={{ duration: 0.25 }}
     >
       <StepHeader
-        eyebrow="Step 5 of 5"
+        eyebrow="Step 6 of 6"
         title="Bring in your data."
         subtitle={`${companyName ? `${companyName} ` : ""}talks to other tools - wire one up now so the dashboard isn't empty on day one. You can always add more from Settings.`}
       />
@@ -812,7 +1194,19 @@ function ConnectorCard({
         </span>
       )}
       <div className="flex items-start gap-3">
-        <Monogram letter={entry.monogram} color={entry.brand} size={40} />
+        {entry.logo_url ? (
+          <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0">
+            <img
+              src={entry.logo_url}
+              alt={entry.name}
+              width={500}
+              height={500}
+              className="h-full w-auto object-contain"
+            />
+          </div>
+        ) : (
+          <Monogram letter={entry.monogram} color={entry.brand} size={40} />
+        )}
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2">
             <h3 className="text-[13.5px] font-bold text-foreground/90 leading-tight">

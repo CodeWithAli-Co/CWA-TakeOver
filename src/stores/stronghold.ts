@@ -100,6 +100,27 @@ export class TakeOverStronghold {
     await this.stronghold!.save();
   }
 
+  /**
+   * Insert / overwrite mutliple key-value pairs at once, stamp last_synced,
+   * and persist the vault to disk.
+   */
+  public async insertManyRecords(records: { key: string, value: string }[]): Promise<void> {
+    this.assertReady();
+    for (const { key, value } of records) {
+      const valueBytes = Array.from(new TextEncoder().encode(value));
+      await this.store!.insert(key, valueBytes);
+    }
+
+    // last_synced is the canonical "this install was last
+    // touched" timestamp. Stored as an encoded string so it
+    // round-trips through the same TextDecoder path as other
+    // records.
+    const tsBytes = Array.from(new TextEncoder().encode(String(Date.now())));
+    await this.store!.insert("last_synced", tsBytes);
+
+    await this.stronghold!.save();
+  }
+
   /** Delete a key + persist. */
   public async removeRecord(key: string): Promise<void> {
     this.assertReady();

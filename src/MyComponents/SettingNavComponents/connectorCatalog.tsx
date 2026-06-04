@@ -20,6 +20,8 @@ export interface CatalogEntry {
   id: string;
   /** Display name. */
   name: string;
+  /** Official connector company logo */
+  logo_url?: string;
   /** Single-letter monogram for the avatar tile. */
   monogram: string;
   /** Rough brand color, hex. Drives the monogram tint. */
@@ -64,6 +66,7 @@ export const CONNECTORS: CatalogEntry[] = [
   {
     id: "stripe",
     name: "Stripe",
+    logo_url: "/PlatformIcons/stripe_logo.png",
     monogram: "S",
     brand: "#635BFF",
     tagline: "Payments, subscriptions, invoices — publishable + secret key.",
@@ -73,6 +76,7 @@ export const CONNECTORS: CatalogEntry[] = [
   {
     id: "airtable",
     name: "Airtable",
+    logo_url: "/PlatformIcons/airtable_logo.png",
     monogram: "A",
     brand: "#FCB400",
     tagline: "Personal access token + base id, read / write bases.",
@@ -84,6 +88,7 @@ export const CONNECTORS: CatalogEntry[] = [
   {
     id: "github",
     name: "GitHub",
+    logo_url: "/PlatformIcons/github_logo.png",
     monogram: "G",
     brand: "#24292F",
     tagline: "OAuth — repos, PRs, issues, commit activity.",
@@ -111,6 +116,7 @@ export const CONNECTORS: CatalogEntry[] = [
   {
     id: "notion",
     name: "Notion",
+    logo_url: "/PlatformIcons/notion_logo.png",
     monogram: "N",
     brand: "#000000",
     tagline: "OAuth — pages, databases, blocks. Bot must be invited.",
@@ -131,6 +137,7 @@ export const CONNECTORS: CatalogEntry[] = [
   {
     id: "hubspot",
     name: "HubSpot",
+    logo_url: "/PlatformIcons/hubspot_logo.png",
     monogram: "H",
     brand: "#FF7A59",
     tagline: "OAuth + portal id + granular scopes. Contacts, deals, pipelines.",
@@ -149,6 +156,7 @@ export const CONNECTORS: CatalogEntry[] = [
   {
     id: "google-docs",
     name: "Google Docs",
+    logo_url: "/PlatformIcons/google_docs_logo.png",
     monogram: "G",
     brand: "#4285F4",
     tagline: "OAuth2 — Drive scopes, refresh tokens, per-doc permissions.",
