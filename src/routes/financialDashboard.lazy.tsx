@@ -123,6 +123,9 @@ const OverviewTabImpl: React.FC<{
     balance,
     recent,
     outstanding,
+    customers,
+    failed,
+    payouts,
   } = stripe;
 
   // Empty state — user hasn't connected Stripe yet. Show the same
@@ -167,6 +170,35 @@ const OverviewTabImpl: React.FC<{
     name: p.name,
     value: p.value_cents / 100,
   }));
+
+  // New-customer counts. Bucket created_at into "last 30 days" and
+  // the prior 30 days so the card can show a delta pill alongside
+  // the headline count. Same pattern as the timeseries window
+  // delta but for headcount instead of dollars.
+  const now = Date.now();
+  const thirtyDaysMs = 30 * 24 * 60 * 60 * 1000;
+  const customerItems = customers?.items ?? [];
+  const newCustomersThisPeriod = customerItems.filter((c) => {
+    const t = Date.parse(c.created_at);
+    return now - t <= thirtyDaysMs;
+  }).length;
+  const newCustomersPriorPeriod = customerItems.filter((c) => {
+    const t = Date.parse(c.created_at);
+    const age = now - t;
+    return age > thirtyDaysMs && age <= 2 * thirtyDaysMs;
+  }).length;
+  const newCustomersDelta = newCustomersThisPeriod - newCustomersPriorPeriod;
+  const newCustomersDeltaPct = newCustomersPriorPeriod > 0
+    ? (newCustomersDelta / newCustomersPriorPeriod) * 100
+    : newCustomersThisPeriod > 0
+      ? 100
+      : 0;
+
+  // Top customers by spend — server-side already sorted by LTV DESC.
+  const topCustomers = customerItems.slice(0, 5);
+
+  // Latest payout for the small inline summary at the top of Row 4.
+  const latestPayout = payouts?.summary.last_payout ?? null;
 
   return (
     // ════════════════════════════════════════════
@@ -252,16 +284,19 @@ const OverviewTabImpl: React.FC<{
             <ResponsiveContainer>
               <AreaChart data={revenueSeries}>
                 <defs>
+                  {/* Green for revenue — standard dashboard convention.
+                      Red on a revenue chart reads as losses to anyone
+                      glancing (especially investors). */}
                   <linearGradient id="revGrad" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor="#ef4444" stopOpacity={0.3} />
-                    <stop offset="100%" stopColor="#ef4444" stopOpacity={0} />
+                    <stop offset="0%" stopColor="#10b981" stopOpacity={0.3} />
+                    <stop offset="100%" stopColor="#10b981" stopOpacity={0} />
                   </linearGradient>
                 </defs>
-                <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.04)" />
-                <XAxis dataKey="month" tick={{ fill: "rgba(255,255,255,0.3)", fontSize: 11 }} axisLine={false} tickLine={false} />
-                <YAxis tick={{ fill: "rgba(255,255,255,0.3)", fontSize: 11 }} axisLine={false} tickLine={false} tickFormatter={(v) => `$${Number(v) >= 1000 ? `${Math.round(Number(v) / 1000)}k` : Number(v)}`} />
-                <Tooltip contentStyle={{ backgroundColor: "#0a0a0a", border: "1px solid rgba(255,255,255,0.08)", borderRadius: "2px", fontSize: "12px" }} itemStyle={{ color: "#fff" }} formatter={(v: any) => [`$${Number(v).toLocaleString(undefined, { maximumFractionDigits: 2 })}`, "Revenue"]} />
-                <Area type="monotone" dataKey="revenue" stroke="#ef4444" strokeWidth={2} fill="url(#revGrad)" />
+                <CartesianGrid strokeDasharray="3 3" stroke="currentColor" className="text-border/40" />
+                <XAxis dataKey="month" tick={{ fill: "currentColor", fontSize: 11 }} className="text-muted-foreground/60" axisLine={false} tickLine={false} />
+                <YAxis tick={{ fill: "currentColor", fontSize: 11 }} className="text-muted-foreground/60" axisLine={false} tickLine={false} tickFormatter={(v) => `$${Number(v) >= 1000 ? `${Math.round(Number(v) / 1000)}k` : Number(v)}`} />
+                <Tooltip contentStyle={{ backgroundColor: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: "2px", fontSize: "12px", color: "hsl(var(--foreground))" }} itemStyle={{ color: "hsl(var(--foreground))" }} formatter={(v: any) => [`$${Number(v).toLocaleString(undefined, { maximumFractionDigits: 2 })}`, "Revenue"]} />
+                <Area type="monotone" dataKey="revenue" stroke="#10b981" strokeWidth={2} fill="url(#revGrad)" />
               </AreaChart>
             </ResponsiveContainer>
           ) : (
@@ -284,11 +319,11 @@ const OverviewTabImpl: React.FC<{
           {revenueSeries.length > 0 ? (
             <ResponsiveContainer>
               <BarChart data={revenueSeries}>
-                <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.04)" />
-                <XAxis dataKey="month" tick={{ fill: "rgba(255,255,255,0.3)", fontSize: 11 }} axisLine={false} tickLine={false} />
-                <YAxis tick={{ fill: "rgba(255,255,255,0.3)", fontSize: 11 }} axisLine={false} tickLine={false} />
-                <Tooltip contentStyle={{ backgroundColor: "#0a0a0a", border: "1px solid rgba(255,255,255,0.08)", borderRadius: "2px", fontSize: "12px" }} itemStyle={{ color: "#fff" }} />
-                <Bar dataKey="count" fill="#ef4444" radius={[2, 2, 0, 0]} />
+                <CartesianGrid strokeDasharray="3 3" stroke="currentColor" className="text-border/40" />
+                <XAxis dataKey="month" tick={{ fill: "currentColor", fontSize: 11 }} className="text-muted-foreground/60" axisLine={false} tickLine={false} />
+                <YAxis tick={{ fill: "currentColor", fontSize: 11 }} className="text-muted-foreground/60" axisLine={false} tickLine={false} />
+                <Tooltip contentStyle={{ backgroundColor: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: "2px", fontSize: "12px", color: "hsl(var(--foreground))" }} itemStyle={{ color: "hsl(var(--foreground))" }} />
+                <Bar dataKey="count" fill="#10b981" radius={[2, 2, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
           ) : (
@@ -430,6 +465,153 @@ const OverviewTabImpl: React.FC<{
                     {inv.status}
                   </span>
                 </div>
+              </motion.div>
+            ))
+          )}
+        </div>
+      </div>
+
+      {/* ROW 4 — Failed Payments (4) + New Customers (4) + Top Customers by Spend (4).
+          Three independent data slices, all stitched off the same hook fetch.
+          Failed-payments callout is amber/red since it represents at-risk
+          revenue; New Customers is green when growing; Top Customers is
+          neutral chrome with revenue values on the right. */}
+      <div className="col-span-1 md:col-span-1 lg:col-span-4 bg-card border border-border rounded-sm overflow-hidden">
+        <div className="px-5 pt-4 pb-3 flex items-center justify-between border-b border-border">
+          <div className="flex items-center gap-3">
+            <div className="p-1.5 rounded-sm bg-muted/40"><AlertTriangle className="h-3.5 w-3.5 text-amber-500/80" /></div>
+            <div>
+              <p className="text-[11px] text-muted-foreground/40 uppercase tracking-[0.15em] font-medium">Failed payments</p>
+              <p className="text-[11px] text-muted-foreground/60 mt-0.5">
+                {failed?.count ?? 0} in last 30 days
+                {failed && failed.retryable_count > 0 ? ` · ${failed.retryable_count} retryable` : ""}
+              </p>
+            </div>
+          </div>
+          <span className="text-[14px] font-bold text-foreground tabular-nums">
+            {formatStripeAmount(failed?.total_cents ?? 0, failed?.currency ?? currency)}
+          </span>
+        </div>
+        <div>
+          {!failed || failed.count === 0 ? (
+            <div className="py-12 text-center"><p className="text-[13px] text-muted-foreground/40">No failed payments · clean</p></div>
+          ) : (
+            failed.items.slice(0, 5).map((f, i) => (
+              <motion.div
+                key={f.id}
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ delay: i * 0.03 }}
+                className="flex items-center gap-3 px-5 py-3 border-b border-white/[0.025] last:border-b-0 hover:bg-muted/20 transition-colors"
+              >
+                <div className="flex-1 min-w-0">
+                  <div className="text-[13px] font-medium text-foreground/80 truncate">
+                    {f.customer_name ?? f.customer_email ?? "Anonymous"}
+                  </div>
+                  <div className="text-[11px] text-muted-foreground/60 truncate">
+                    {f.failure_message ?? f.failure_code ?? "Payment failed"}
+                  </div>
+                </div>
+                <div className="shrink-0 flex flex-col items-end gap-0.5">
+                  <span className="text-[13px] font-semibold text-foreground/80 tabular-nums">
+                    {formatStripeAmount(f.amount_cents, f.currency)}
+                  </span>
+                  <span className={`text-[9px] uppercase tracking-wider px-1.5 py-0.5 rounded-sm border ${
+                    f.retryable
+                      ? "bg-amber-500/[0.08] text-amber-500 border-amber-500/15"
+                      : "bg-primary/[0.08] text-primary border-primary/15"
+                  }`}>
+                    {f.retryable ? "retry" : "action"}
+                  </span>
+                </div>
+              </motion.div>
+            ))
+          )}
+        </div>
+      </div>
+
+      <div className="col-span-1 md:col-span-1 lg:col-span-4 bg-card border border-border rounded-sm p-5">
+        <div className="flex items-center justify-between mb-4">
+          <div>
+            <p className="text-[11px] text-muted-foreground/40 uppercase tracking-[0.15em] font-medium">New customers</p>
+            <p className="text-[11px] text-muted-foreground mt-0.5">Last 30 days</p>
+          </div>
+          <div className="flex items-baseline gap-2">
+            <span className="text-[22px] font-bold text-foreground tabular-nums">{newCustomersThisPeriod}</span>
+            {(newCustomersThisPeriod > 0 || newCustomersPriorPeriod > 0) && (
+              <span className={`text-[10px] font-medium flex items-center gap-0.5 ${
+                newCustomersDelta >= 0 ? "text-emerald-500" : "text-primary"
+              }`}>
+                {newCustomersDelta >= 0 ? <TrendingUp className="h-2.5 w-2.5" /> : <TrendingDown className="h-2.5 w-2.5" />}
+                {Math.abs(newCustomersDeltaPct).toFixed(0)}%
+              </span>
+            )}
+          </div>
+        </div>
+        <p className="text-[11px] text-muted-foreground/70 mb-3">
+          {newCustomersPriorPeriod} in previous 30 days
+        </p>
+        {/* Latest payout strip — the small "money actually hit the bank"
+            anchor that complements the count card above it. */}
+        {latestPayout && (
+          <div className="mt-4 pt-3 border-t border-border flex items-center justify-between">
+            <div>
+              <p className="text-[10px] text-muted-foreground/50 uppercase tracking-[0.1em]">Latest payout</p>
+              <p className="text-[12px] text-foreground/70 mt-0.5">
+                {new Date(latestPayout.arrival_date).toLocaleDateString(undefined, { month: "short", day: "numeric" })}
+                {" · "}
+                <span className={`text-[10px] uppercase ${
+                  latestPayout.status === "paid" ? "text-emerald-500" : "text-amber-500"
+                }`}>
+                  {latestPayout.status}
+                </span>
+              </p>
+            </div>
+            <span className="text-[16px] font-semibold text-foreground tabular-nums">
+              {formatStripeAmount(latestPayout.amount_cents, latestPayout.currency)}
+            </span>
+          </div>
+        )}
+        {!latestPayout && payouts && (
+          <div className="mt-4 pt-3 border-t border-border">
+            <p className="text-[11px] text-muted-foreground/40">No payouts yet</p>
+          </div>
+        )}
+      </div>
+
+      <div className="col-span-1 md:col-span-1 lg:col-span-4 bg-card border border-border rounded-sm overflow-hidden">
+        <div className="px-5 pt-4 pb-3 flex items-center justify-between border-b border-border">
+          <div className="flex items-center gap-3">
+            <div className="p-1.5 rounded-sm bg-muted/40"><Users className="h-3.5 w-3.5 text-emerald-500/80" /></div>
+            <div>
+              <p className="text-[11px] text-muted-foreground/40 uppercase tracking-[0.15em] font-medium">Top customers by spend</p>
+              <p className="text-[11px] text-muted-foreground/60 mt-0.5">All time · by LTV</p>
+            </div>
+          </div>
+        </div>
+        <div>
+          {topCustomers.length === 0 ? (
+            <div className="py-12 text-center"><p className="text-[13px] text-muted-foreground/40">No paying customers yet</p></div>
+          ) : (
+            topCustomers.map((c, i) => (
+              <motion.div
+                key={c.id}
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ delay: i * 0.03 }}
+                className="flex items-center gap-3 px-5 py-3 border-b border-white/[0.025] last:border-b-0 hover:bg-muted/20 transition-colors"
+              >
+                <div className="flex-1 min-w-0">
+                  <div className="text-[13px] font-medium text-foreground/80 truncate">
+                    {c.name ?? c.email ?? "Anonymous customer"}
+                  </div>
+                  <div className="text-[11px] text-muted-foreground/60 truncate">
+                    {c.name && c.email ? c.email : c.mrr_cents > 0 ? `${formatStripeAmount(c.mrr_cents, c.currency)}/mo` : "One-time"}
+                  </div>
+                </div>
+                <span className="text-[13px] font-semibold text-foreground tabular-nums shrink-0">
+                  {formatStripeAmount(c.ltv_cents, c.currency)}
+                </span>
               </motion.div>
             ))
           )}

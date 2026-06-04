@@ -126,6 +126,128 @@ export interface StripeRecent {
   computed_at: string;
 }
 
+// ── Customers ─────────────────────────────────────────────────
+
+export type CustomerStatus = "active" | "past_customer" | "one_time" | "free";
+
+export interface StripeCustomerRow {
+  id: string;
+  name: string | null;
+  email: string | null;
+  created_at: string;
+  status: CustomerStatus;
+  mrr_cents: number;
+  ltv_cents: number;
+  active_sub_count: number;
+  last_activity_at: string;
+  currency: string;
+}
+
+export interface StripeCustomersSummary {
+  total: number;
+  active: number;
+  past_customer: number;
+  one_time: number;
+  free: number;
+  total_ltv_cents: number;
+  total_mrr_cents: number;
+}
+
+export interface StripeCustomers {
+  currency: string;
+  summary: StripeCustomersSummary;
+  items: StripeCustomerRow[];
+  computed_at: string;
+}
+
+// ── Payouts ───────────────────────────────────────────────────
+
+export interface StripePayoutRow {
+  id: string;
+  amount_cents: number;
+  currency: string;
+  arrival_date: string;
+  created_at: string;
+  status: string;
+  method: string | null;
+  type: string | null;
+  description: string | null;
+  statement_descriptor: string | null;
+  failure_code: string | null;
+  failure_message: string | null;
+}
+
+export interface StripePayoutsSummary {
+  total_paid_ytd_cents: number;
+  count_ytd: number;
+  average_payout_cents: number;
+  last_payout: StripePayoutRow | null;
+}
+
+export interface StripePayouts {
+  currency: string;
+  summary: StripePayoutsSummary;
+  items: StripePayoutRow[];
+  computed_at: string;
+}
+
+// ── Failed payments ───────────────────────────────────────────
+
+export interface StripeFailedRow {
+  id: string;
+  amount_cents: number;
+  currency: string;
+  attempted_at: string;
+  failure_code: string | null;
+  failure_message: string | null;
+  description: string | null;
+  customer_id: string | null;
+  customer_name: string | null;
+  customer_email: string | null;
+  retryable: boolean;
+}
+
+export interface StripeFailed {
+  count: number;
+  total_cents: number;
+  retryable_count: number;
+  currency: string;
+  items: StripeFailedRow[];
+  computed_at: string;
+}
+
+// ── Subscriptions ─────────────────────────────────────────────
+
+export interface StripeSubscriptionRow {
+  id: string;
+  status: string;
+  customer_id: string;
+  customer_name: string | null;
+  customer_email: string | null;
+  product_id: string | null;
+  product_name: string | null;
+  mrr_cents: number;
+  currency: string;
+  started_at: string;
+  current_period_end: string;
+  cancel_at_period_end: boolean;
+  trial_end: string | null;
+  days_until_renewal: number;
+}
+
+export interface StripeSubscriptionsSummary {
+  total: number;
+  by_status: Record<string, number>;
+  total_mrr_cents: number;
+}
+
+export interface StripeSubscriptions {
+  currency: string;
+  summary: StripeSubscriptionsSummary;
+  items: StripeSubscriptionRow[];
+  computed_at: string;
+}
+
 async function postProxy<T>(
   path: string,
   key: string,
@@ -244,6 +366,105 @@ export async function stripeRecentCharges(
     { limit },
   );
   return res.recent;
+}
+
+/** Customer list with LTV + MRR contribution + status. Powers the
+ *  new Customers tab. Ranked by LTV DESC server-side. */
+export async function stripeCustomers(key: string): Promise<StripeCustomers> {
+  const res = await postProxy<{ ok: true; customers: StripeCustomers }>(
+    "customers",
+    key,
+  );
+  return res.customers;
+}
+
+/** Payout history — when money has actually been deposited to the
+ *  connected bank account. Plus YTD summary numbers. */
+export async function stripePayouts(key: string): Promise<StripePayouts> {
+  const res = await postProxy<{ ok: true; payouts: StripePayouts }>(
+    "payouts",
+    key,
+  );
+  return res.payouts;
+}
+
+/** Failed charges in the last 30 days, ranked by amount. Each
+ *  row carries a `retryable` flag indicating whether the failure
+ *  code suggests a transient issue (decline, expired card) vs one
+ *  requiring customer action. */
+export async function stripeFailed(key: string): Promise<StripeFailed> {
+  const res = await postProxy<{ ok: true; failed: StripeFailed }>(
+    "failed",
+    key,
+  );
+  return res.failed;
+}
+
+/** Full subscription list with customer + product hydrated.
+ *  Status-prioritized sort (active first), MRR DESC within status. */
+export async function stripeSubscriptions(
+  key: string,
+): Promise<StripeSubscriptions> {
+  const res = await postProxy<{
+    ok: true;
+    subscriptions: StripeSubscriptions;
+  }>("subscriptions", key);
+  return res.subscriptions;
+}
+
+// ── Period comparison ─────────────────────────────────────────
+
+export interface WindowDelta {
+  current_cents: number;
+  previous_cents: number;
+  delta_cents: number;
+  delta_pct: number;
+  positive: boolean;
+}
+
+/** Compute "this period vs previous equal period" from the
+ *  timeseries data we already have. Caller supplies the timeseries
+ *  series (oldest-to-newest by month) and how many months to
+ *  count as "current"; we sum the tail N months and the prior N
+ *  months and produce a delta pill the KPI cards consume directly.
+ *
+ *  Months = 1 → "this month vs last month"
+ *  Months = 3 → "this quarter vs last quarter"
+ *  Months = 6 → "this half-year vs last half-year"
+ *
+ *  When there aren't enough prior months in the series to make a
+ *  comparison, returns delta_pct: 0 and positive: true so the UI
+ *  can render a neutral state instead of a misleading "+∞%" jump
+ *  from zero. */
+export function computeWindowDelta(
+  series: StripeTimeseriesPoint[],
+  months: number,
+): WindowDelta {
+  if (series.length < months) {
+    const partial = series.reduce((s, p) => s + p.net_cents, 0);
+    return {
+      current_cents: partial,
+      previous_cents: 0,
+      delta_cents: partial,
+      delta_pct: 0,
+      positive: true,
+    };
+  }
+  const current = series
+    .slice(-months)
+    .reduce((s, p) => s + p.net_cents, 0);
+  const previous = series
+    .slice(-(months * 2), -months)
+    .reduce((s, p) => s + p.net_cents, 0);
+  const delta = current - previous;
+  const pct = previous > 0 ? (delta / previous) * 100 : current > 0 ? 100 : 0;
+  return {
+    current_cents: current,
+    previous_cents: previous,
+    delta_cents: delta,
+    delta_pct: pct,
+    positive: delta >= 0,
+  };
 }
 
 /** Format minor units (cents) as the major-unit currency string a

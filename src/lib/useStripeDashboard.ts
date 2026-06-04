@@ -30,16 +30,24 @@ import { useMemo } from "react";
 import { useConnectors } from "@/stores/connectors";
 import {
   stripeBalance,
+  stripeCustomers,
+  stripeFailed,
   stripeOutstanding,
+  stripePayouts,
   stripeProducts,
   stripeRecentCharges,
   stripeSnapshot,
+  stripeSubscriptions,
   stripeTimeseries,
   type StripeBalance,
+  type StripeCustomers,
+  type StripeFailed,
   type StripeOutstanding,
+  type StripePayouts,
   type StripeProducts,
   type StripeRecent,
   type StripeSnapshot,
+  type StripeSubscriptions,
   type StripeTimeseries,
 } from "@/lib/stripe";
 
@@ -63,6 +71,10 @@ interface StripeDashboardBundle {
   balance: StripeBalance | null;
   recent: StripeRecent | null;
   outstanding: StripeOutstanding | null;
+  customers: StripeCustomers | null;
+  payouts: StripePayouts | null;
+  failed: StripeFailed | null;
+  subscriptions: StripeSubscriptions | null;
 
   /** Re-pull everything. Each slice independently invalidates. */
   refetchAll: () => Promise<void>;
@@ -71,7 +83,10 @@ interface StripeDashboardBundle {
 export function useStripeDashboard(
   opts?: { timeseriesMonths?: number; recentLimit?: number },
 ): StripeDashboardBundle {
-  const months = opts?.timeseriesMonths ?? 6;
+  // Default bumped to 12 months so callers can compute "this N
+  // months vs prior N months" deltas from one timeseries fetch
+  // without a separate comparison endpoint.
+  const months = opts?.timeseriesMonths ?? 12;
   const limit = opts?.recentLimit ?? 10;
 
   const { data: connectors = [] } = useConnectors();
@@ -138,7 +153,42 @@ export function useStripeDashboard(
     refetchOnWindowFocus: false,
   });
 
-  const queries = [snapQ, tsQ, prodQ, balQ, recentQ, outQ];
+  const custQ = useQuery({
+    queryKey: ["stripe", "customers", keyFp],
+    queryFn: () => stripeCustomers(key),
+    enabled: connected,
+    // Customer list is the heaviest call (1k customer cap, joined
+    // with subs + charges). Bump stale to 5min so navigation
+    // between tabs doesn't refetch it constantly.
+    staleTime: 5 * 60 * 1000,
+    refetchOnWindowFocus: false,
+  });
+
+  const payQ = useQuery({
+    queryKey: ["stripe", "payouts", keyFp],
+    queryFn: () => stripePayouts(key),
+    enabled: connected,
+    staleTime: STALE_MS,
+    refetchOnWindowFocus: false,
+  });
+
+  const failedQ = useQuery({
+    queryKey: ["stripe", "failed", keyFp],
+    queryFn: () => stripeFailed(key),
+    enabled: connected,
+    staleTime: STALE_MS,
+    refetchOnWindowFocus: false,
+  });
+
+  const subsQ = useQuery({
+    queryKey: ["stripe", "subscriptions", keyFp],
+    queryFn: () => stripeSubscriptions(key),
+    enabled: connected,
+    staleTime: 5 * 60 * 1000,
+    refetchOnWindowFocus: false,
+  });
+
+  const queries = [snapQ, tsQ, prodQ, balQ, recentQ, outQ, custQ, payQ, failedQ, subsQ];
   const loading = connected && queries.some((q) => q.isLoading);
   const error =
     (queries.find((q) => q.error)?.error as Error | undefined) ?? null;
@@ -157,6 +207,10 @@ export function useStripeDashboard(
     balance: balQ.data ?? null,
     recent: recentQ.data ?? null,
     outstanding: outQ.data ?? null,
+    customers: custQ.data ?? null,
+    payouts: payQ.data ?? null,
+    failed: failedQ.data ?? null,
+    subscriptions: subsQ.data ?? null,
     refetchAll,
   };
 }
