@@ -20,6 +20,7 @@ import type { Connector } from "@/stores/connectors";
 import { airtableListTables } from "@/lib/airtable";
 import { githubRepoSummary } from "@/lib/github";
 import { notionSearch } from "@/lib/notion";
+import { formatStripeAmount, stripeSnapshot } from "@/lib/stripe";
 
 export interface ConnectorSummary {
   ok: boolean;
@@ -45,10 +46,12 @@ async function fetchConnectorSummary(
         return await summarizeAirtable(creds);
       case "notion":
         return await summarizeNotion(creds);
+      case "stripe":
+        return await summarizeStripe(creds);
       default:
-        // OpenAI / Stripe / SendGrid / Resend / OAuth-stubs etc.
-        // Credentials saved but no live summary available client-
-        // side. Show a quiet "connected" state.
+        // OpenAI / SendGrid / Resend / OAuth-stubs etc. Credentials
+        // saved but no live summary available client-side. Show a
+        // quiet "connected" state.
         return { ok: true, text: "Credentials saved" };
     }
   } catch (e: any) {
@@ -133,6 +136,45 @@ async function summarizeNotion(
         ? "No pages shared yet"
         : `${pages} page${pages === 1 ? "" : "s"} · ${dbs} db${dbs === 1 ? "" : "s"}`,
     extra: { pageCount: pages, dbCount: dbs },
+  };
+}
+
+async function summarizeStripe(
+  creds: Record<string, unknown>,
+): Promise<ConnectorSummary> {
+  const key = String(creds.secret_key ?? "").trim();
+  if (!key) {
+    return {
+      ok: false,
+      text: "No key saved",
+      error: "Restricted key missing",
+    };
+  }
+  // Snapshot is the same call the dashboard widget uses. TanStack
+  // dedupes both consumers when they share a connector id, so we
+  // pay this network round-trip once and get tile + widget for it.
+  const snap = await stripeSnapshot(key);
+  const mrr = formatStripeAmount(snap.mrr_cents, snap.currency, {
+    compact: true,
+  });
+  const subs = snap.active_subscriptions;
+  return {
+    ok: true,
+    text:
+      subs === 0
+        ? `${mrr} MRR · no active subs`
+        : `${mrr} MRR · ${subs} active sub${subs === 1 ? "" : "s"}`,
+    detail:
+      snap.churned_this_month > 0
+        ? `+${snap.new_subscriptions_this_month} new, −${snap.churned_this_month} churned this month`
+        : `+${snap.new_subscriptions_this_month} new this month`,
+    extra: {
+      mrr_cents: snap.mrr_cents,
+      mtd_revenue_cents: snap.mtd_revenue_cents,
+      active_subscriptions: snap.active_subscriptions,
+      currency: snap.currency,
+      computed_at: snap.computed_at,
+    },
   };
 }
 

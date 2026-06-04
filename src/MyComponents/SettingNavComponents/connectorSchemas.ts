@@ -113,27 +113,20 @@ const SCHEMAS: Record<string, ConnectorSchema> = {
   stripe: {
     docsUrl: "https://dashboard.stripe.com/apikeys",
     blurb:
-      "Pull customers, subscriptions, invoices, and MRR. Use a restricted key with read scopes.",
+      "Pull MRR, MTD revenue, and outstanding invoices into your financial dashboard. AXON gets verbs over your revenue.",
     fields: [
       {
-        key: "publishable_key",
-        label: "Publishable key",
-        type: "text",
-        placeholder: "pk_live_…",
-        hint: "Browser-safe key. Used for client-side calls.",
-        pattern: /^pk_/,
-      },
-      {
         key: "secret_key",
-        label: "Secret key",
+        label: "Restricted API key",
         type: "password",
-        placeholder: "sk_live_… or rk_live_…",
-        hint: "Stripe blocks browser → secret-key calls. We'll proxy through an Edge Function.",
-        pattern: /^(sk|rk)_/,
+        placeholder: "rk_live_… or sk_live_…",
+        hint:
+          "Best practice: create a restricted key with read access to Customers, Subscriptions, Invoices, and Charges. We'll verify it before saving.",
+        pattern: /^(rk|sk)_(live|test)_/,
       },
     ],
     disclaimer:
-      "Data fetch (customers / MRR / charges) lands in the next release alongside the Edge Function.",
+      "Your key is routed through the Takeover proxy so Stripe accepts the call (browser CORS is blocked by Stripe). The proxy forwards verbatim — never logged, never stored.",
   },
 
   airtable: {

@@ -19,6 +19,7 @@
 import { airtablePing } from "@/lib/airtable";
 import { githubMe } from "@/lib/github";
 import { notionMe } from "@/lib/notion";
+import { stripeVerify } from "@/lib/stripe";
 
 export interface VerifyOk {
   ok: true;
@@ -54,7 +55,7 @@ export async function verifyConnector(
       case "openai":
         return await verifyOpenAI(creds);
       case "stripe":
-        return verifyStripeFormat(creds);
+        return await verifyStripe(creds);
       case "sendgrid":
         return verifySendGridFormat(creds);
       case "resend":
@@ -163,32 +164,41 @@ async function verifyOpenAI(
   return { ok: false, error: msg };
 }
 
-// ─── Format-only checks (browser CORS blocks the real ping) ────
+// ─── Stripe: real verification via the takeover-B2B proxy ─────
 
-function verifyStripeFormat(
+async function verifyStripe(
   creds: Record<string, any>,
-): VerifyResult {
-  const pub = String(creds.publishable_key ?? "").trim();
+): Promise<VerifyResult> {
   const sec = String(creds.secret_key ?? "").trim();
-  if (!pub || !sec) {
-    return { ok: false, error: "Both publishable and secret key are required." };
+  if (!sec) {
+    return { ok: false, error: "Restricted API key is required." };
   }
-  if (!/^pk_/.test(pub)) {
-    return { ok: false, error: "Publishable key must start with `pk_`." };
-  }
-  if (!/^(sk|rk)_/.test(sec)) {
+  if (!/^(sk|rk)_(live|test)_/.test(sec)) {
     return {
       ok: false,
-      error: "Secret/restricted key must start with `sk_` or `rk_`.",
+      error:
+        "Key must start with `rk_` (restricted, recommended) or `sk_` (secret), in live or test mode.",
     };
   }
-  return {
-    ok: true,
-    summary:
-      "Keys format-checked. Stripe blocks browser → secret-key calls, so full verification waits on the Edge Function.",
-    degraded: true,
-  };
+  try {
+    const { account } = await stripeVerify(sec);
+    const mode = account.livemode ? "Live" : "Test";
+    const tag = account.charges_enabled
+      ? ""
+      : " — charges disabled on this account";
+    return {
+      ok: true,
+      summary: `Connected to ${account.display_name} (${mode})${tag}.`,
+    };
+  } catch (e: any) {
+    return {
+      ok: false,
+      error: e?.message ?? "Stripe rejected the key.",
+    };
+  }
 }
+
+// ─── Format-only checks (browser CORS blocks the real ping) ────
 
 function verifySendGridFormat(
   creds: Record<string, any>,
