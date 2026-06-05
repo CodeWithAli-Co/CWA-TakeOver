@@ -1,46 +1,58 @@
 /**
  * PipelineView — kanban view of deals grouped by stage.
  *
- * Day 5 scope: column shells + deal cards + a filter strip. No
- * drag-drop yet — clicking a card stubs to a console log; Day 6
- * wires dnd-kit + useMoveDeal optimistic mutation, Day 7 opens
- * the deal detail drawer on click.
+ * Day 5 shipped the static skeleton (columns + cards + filters).
+ * Day 6 adds:
+ *   · Native HTML5 drag-drop between columns (no new dependencies —
+ *     same approach as the Tasks kanban; works in every browser)
+ *   · useMoveDeal optimistic mutation (instant card movement,
+ *     server-side stage + position update behind it)
+ *   · companies map lookup so the card subtitle shows the company
+ *     name instead of the source slug placeholder
  *
- * Layout:
- *   · Filter chip row (Owner: All / Me, Source: All / Inbound / Outbound)
- *   · 6 columns side-by-side on lg+, 2-up on md, single column on mobile
- *   · Each column: stage header (eyebrow + count + total $) over a
- *     vertical stack of deal cards
- *   · Each card: serif title + company/contact subtitle, amount + days
- *     in stage, owner-avatar slot (placeholder until Day 6)
+ * Drop targets — two kinds, the handlers stopPropagation to keep
+ * them from racing:
+ *   · Column (empty area or below all cards) → newPosition = last + 1024
+ *   · Card (insert above) → newPosition = average of prev + over
  *
- * Color logic for column accents matches the dashboard chart:
- *   · interested / demo / proposal / negotiation → neutral zinc
- *   · won → soft emerald (booked revenue)
- *   · lost → muted zinc with strikethrough column title
+ * Position model (fractional indexing):
+ *   · empty column drop → max(positions) + 1024 (or 1024 if empty)
+ *   · drop above target → (prevCard.position + targetCard.position) / 2
+ *                         (or target.position − 1024 when first)
+ *   · server stores numeric, never reindexes — cheap on writes
+ *
+ * Day 7 wires click → deal detail drawer. Drag activation distance
+ * is governed by the native draggable threshold (~3–5px), so a
+ * normal click doesn't fire a drag.
  */
 
 import React, { useMemo, useState } from "react";
 import { Plus, AlertCircle, GripVertical } from "lucide-react";
 import {
   useDealsByStage,
+  useMoveDeal,
+  useCreateDeal,
+  useCrmCompanies,
   DEAL_STAGES,
   formatCrmAmount,
   daysInStage,
   type CrmDeal,
   type DealStage,
 } from "@/stores/crm";
+import { DealDetailDrawer } from "./DealDetailDrawer";
 
 // ────────────────────────────────────────────────
-// Shared editorial chrome — kept in sync with the rest of /sales
-// so dropping the kanban into SalesPage doesn't introduce a new
-// design vocabulary.
+// Shared editorial chrome — kept in sync with the rest of /sales.
 // ────────────────────────────────────────────────
 const tile =
   "bg-gradient-to-b from-zinc-800/40 to-zinc-900/70 border border-white/[0.08] rounded-xl hover:border-white/[0.14] transition-colors";
 const eyebrow =
   "text-[10px] font-mono uppercase tracking-[0.2em] text-zinc-400 font-medium";
 const monoNum = "font-mono tabular-nums";
+
+// MIME-typed dataTransfer key so we won't catch random "text/plain"
+// drags from other parts of the app.
+const DT_KEY = "application/x-crm-deal-id";
 
 const STAGE_LABEL: Record<DealStage, string> = {
   interested:  "Interested",
@@ -51,15 +63,13 @@ const STAGE_LABEL: Record<DealStage, string> = {
   lost:        "Lost",
 };
 
-// Per-stage column accent. Won gets emerald to read as "booked",
-// lost gets a quiet zinc so the eye doesn't dwell on it.
 const STAGE_ACCENT: Record<DealStage, { rail: string; total: string }> = {
-  interested:  { rail: "bg-zinc-700/60",       total: "text-zinc-200" },
-  demo:        { rail: "bg-blue-500/50",       total: "text-zinc-200" },
-  proposal:    { rail: "bg-blue-400/60",       total: "text-zinc-200" },
-  negotiation: { rail: "bg-amber-500/60",      total: "text-zinc-200" },
-  won:         { rail: "bg-emerald-500/70",    total: "text-emerald-400" },
-  lost:        { rail: "bg-zinc-700/40",       total: "text-zinc-500" },
+  interested:  { rail: "bg-zinc-700/60",    total: "text-zinc-200" },
+  demo:        { rail: "bg-blue-500/50",    total: "text-zinc-200" },
+  proposal:    { rail: "bg-blue-400/60",    total: "text-zinc-200" },
+  negotiation: { rail: "bg-amber-500/60",   total: "text-zinc-200" },
+  won:         { rail: "bg-emerald-500/70", total: "text-emerald-400" },
+  lost:        { rail: "bg-zinc-700/40",    total: "text-zinc-500" },
 };
 
 // ════════════════════════════════════════════
@@ -69,16 +79,29 @@ export const PipelineView: React.FC = () => {
   const [ownerFilter, setOwnerFilter] = useState<"all" | "me">("all");
   const [sourceFilter, setSourceFilter] = useState<"all" | "inbound" | "outbound">("all");
 
-  // For "me" filter we'd need the current user's supa_id; Day 5
-  // wires the chip but defers the lookup until Day 8 when we add
-  // the auth context to the kanban. Until then the chip is visible
-  // but the filter is a no-op when "me" is selected.
-  const { data: byStage, isLoading } = useDealsByStage({
-    // ownerId: ownerFilter === "me" ? currentUserSupaId : undefined,
-  });
+  const { data: byStage, isLoading } = useDealsByStage();
+  const { data: companies = [] } = useCrmCompanies({});
+  const moveDeal = useMoveDeal();
+  const createDeal = useCreateDeal();
 
-  // Source filter happens client-side since there's no per-source
-  // query; the dataset stays small enough that this is fine.
+  // Drag UI state
+  const [draggingId, setDraggingId] = useState<string | null>(null);
+  const [overStage, setOverStage] = useState<DealStage | null>(null);
+  const [overCardId, setOverCardId] = useState<string | null>(null);
+
+  // Detail drawer state. Clicking a card opens the deal in a
+  // right-slide drawer where you can edit fields + see the activity
+  // timeline. Backdrop click or Escape closes it.
+  const [activeDealId, setActiveDealId] = useState<string | null>(null);
+
+  // Companies map so cards show company name in their subtitle.
+  const companyMap = useMemo(() => {
+    const m = new Map<string, string>();
+    for (const c of companies) m.set(c.id, c.name);
+    return m;
+  }, [companies]);
+
+  // Source filter applied client-side.
   const filteredByStage = useMemo(() => {
     if (!byStage) return null;
     if (sourceFilter === "all") return byStage;
@@ -90,19 +113,110 @@ export const PipelineView: React.FC = () => {
       next[stage] = (byStage[stage] ?? []).filter((d) => {
         const src = (d.source ?? "").toLowerCase();
         if (sourceFilter === "inbound") {
-          return src === "inbound" || src === "waitlist" || src === "website" || src === "referral";
+          return ["inbound", "waitlist", "website", "referral"].includes(src);
         }
-        return src === "outbound" || src === "cold" || src === "outreach";
+        return ["outbound", "cold", "outreach"].includes(src);
       });
     }
     return next;
   }, [byStage, sourceFilter]);
 
+  // Flat lookup for the drop handler.
+  const dealLookup = useMemo(() => {
+    const m = new Map<string, CrmDeal>();
+    if (!byStage) return m;
+    for (const stage of DEAL_STAGES) {
+      for (const d of byStage[stage] ?? []) m.set(d.id, d);
+    }
+    return m;
+  }, [byStage]);
+
+  // ── Drop handler ────────────────────────────────────
+  // dropAboveCardId === null → empty column / bottom-of-column drop.
+  // Otherwise insert above the specified card.
+  const handleDrop = (
+    dealId: string,
+    newStage: DealStage,
+    dropAboveCardId: string | null,
+  ) => {
+    const fromDeal = dealLookup.get(dealId);
+    if (!fromDeal) return;
+
+    const colDeals = (filteredByStage?.[newStage] ?? [])
+      .filter((d) => d.id !== dealId);
+
+    let newPosition: number;
+    if (dropAboveCardId === null) {
+      // Drop at the bottom.
+      const lastPos = colDeals.length > 0
+        ? (colDeals[colDeals.length - 1].position ?? 0)
+        : 0;
+      newPosition = lastPos + 1024;
+    } else {
+      const overIdx = colDeals.findIndex((d) => d.id === dropAboveCardId);
+      if (overIdx <= 0) {
+        const overDeal = colDeals[overIdx] ?? null;
+        newPosition = (overDeal?.position ?? 0) - 1024;
+      } else {
+        const prev = colDeals[overIdx - 1];
+        const over = colDeals[overIdx];
+        newPosition = ((prev.position ?? 0) + (over.position ?? 0)) / 2;
+      }
+    }
+
+    if (
+      fromDeal.stage === newStage &&
+      fromDeal.position === newPosition
+    ) {
+      return;
+    }
+
+    moveDeal.mutate({
+      id: fromDeal.id,
+      stage: newStage,
+      position: newPosition,
+    });
+  };
+
+  // Coordinated drag-end cleanup — fires regardless of whether the
+  // drop succeeded, so we always clear the hover state.
+  const clearDragState = () => {
+    setDraggingId(null);
+    setOverStage(null);
+    setOverCardId(null);
+  };
+
+  // ── Create deal ─────────────────────────────────────
+  // Inserts a stub deal in the requested stage, then immediately
+  // opens the detail drawer so the user can fill in real values.
+  // The new row lands at the bottom of its column (highest position)
+  // so it doesn't shove existing cards around mid-add.
+  const handleAddDeal = (stage: DealStage) => {
+    const colDeals = byStage?.[stage] ?? [];
+    const lastPos = colDeals.length > 0
+      ? (colDeals[colDeals.length - 1].position ?? 0)
+      : 0;
+    createDeal.mutate(
+      {
+        name: "Untitled deal",
+        stage,
+        amount_cents: 0,
+        probability: 50,
+        position: lastPos + 1024,
+      },
+      {
+        onSuccess: (row) => {
+          // Pop the new deal open in the drawer so the user starts
+          // typing into the title field immediately.
+          setActiveDealId(row.id);
+        },
+      },
+    );
+  };
+
   return (
     <div className="space-y-4">
-      {/* ── Filter strip ────────────────────────────────────
-          Same chip pattern as the financial dashboard's tab strips.
-          Subtle enough to recede when not in use. */}
+      {/* ── Filter strip ──────────────────────────────────── */}
       <div className="flex items-center gap-6 flex-wrap">
         <FilterChipGroup
           label="Owner"
@@ -123,12 +237,20 @@ export const PipelineView: React.FC = () => {
           ]}
           onChange={(v) => setSourceFilter(v as typeof sourceFilter)}
         />
+
+        {/* Primary CTA — pushed right with ml-auto. Creates a stub
+            deal in 'interested' and opens the drawer for editing. */}
+        <button
+          onClick={() => handleAddDeal("interested")}
+          disabled={createDeal.isPending}
+          className="ml-auto flex items-center gap-1.5 px-3 py-1.5 border border-white/[0.1] hover:border-emerald-500/40 hover:bg-emerald-500/[0.04] text-[10.5px] font-mono uppercase tracking-[0.16em] text-zinc-300 hover:text-emerald-300 rounded-lg transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+        >
+          <Plus className="h-3 w-3" />
+          {createDeal.isPending ? "Adding…" : "New deal"}
+        </button>
       </div>
 
-      {/* ── Kanban grid ────────────────────────────────────
-          6 equal columns on lg+, 2-up on md, full-width on mobile.
-          min-h prevents the row from collapsing when stages are empty
-          (otherwise the columns squash to nothing on a fresh install). */}
+      {/* ── Kanban grid ───────────────────────────────────── */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-3">
         {DEAL_STAGES.map((stage) => (
           <PipelineColumn
@@ -136,16 +258,67 @@ export const PipelineView: React.FC = () => {
             stage={stage}
             deals={filteredByStage?.[stage] ?? []}
             loading={isLoading}
+            companyMap={companyMap}
+            draggingId={draggingId}
+            isOverColumn={overStage === stage && overCardId === null}
+            overCardId={overCardId}
+            onCardDragStart={(id) => setDraggingId(id)}
+            onCardDragEnd={clearDragState}
+            onColumnDragOver={(e) => {
+              e.preventDefault();
+              if (draggingId) {
+                e.dataTransfer.dropEffect = "move";
+                setOverStage(stage);
+                setOverCardId(null);
+              }
+            }}
+            onColumnDragLeave={() => {
+              if (overStage === stage && overCardId === null) {
+                setOverStage(null);
+              }
+            }}
+            onColumnDrop={(e) => {
+              e.preventDefault();
+              const id = e.dataTransfer.getData(DT_KEY);
+              if (id) handleDrop(id, stage, null);
+              clearDragState();
+            }}
+            onCardDragOver={(e, cardId) => {
+              e.preventDefault();
+              e.stopPropagation();
+              if (draggingId && draggingId !== cardId) {
+                e.dataTransfer.dropEffect = "move";
+                setOverStage(stage);
+                setOverCardId(cardId);
+              }
+            }}
+            onCardDrop={(e, cardId) => {
+              e.preventDefault();
+              e.stopPropagation();
+              const id = e.dataTransfer.getData(DT_KEY);
+              if (id && id !== cardId) handleDrop(id, stage, cardId);
+              clearDragState();
+            }}
+            onOpenDeal={setActiveDealId}
+            onAddDeal={handleAddDeal}
+            isAdding={createDeal.isPending}
           />
         ))}
       </div>
+
+      {/* Detail drawer — controlled by activeDealId. Mounted at the
+          root of the view so its fixed-positioned panel escapes the
+          kanban scroll container. */}
+      <DealDetailDrawer
+        dealId={activeDealId}
+        onClose={() => setActiveDealId(null)}
+      />
     </div>
   );
 };
 
 // ────────────────────────────────────────────────
-// FilterChipGroup — small reusable group with a leading mono label
-// and a hairline-bordered chip cluster. Used for both Owner + Source.
+// FilterChipGroup
 // ────────────────────────────────────────────────
 const FilterChipGroup: React.FC<{
   label: string;
@@ -174,22 +347,59 @@ const FilterChipGroup: React.FC<{
 );
 
 // ────────────────────────────────────────────────
-// PipelineColumn — one stage's column. Header carries the stage
-// name + count + total $. Body is a vertical stack of DealCards
-// with a max-height + scroll past the fold.
+// PipelineColumn
 // ────────────────────────────────────────────────
-const PipelineColumn: React.FC<{
+interface PipelineColumnProps {
   stage: DealStage;
   deals: CrmDeal[];
   loading: boolean;
-}> = ({ stage, deals, loading }) => {
+  companyMap: Map<string, string>;
+  draggingId: string | null;
+  isOverColumn: boolean;
+  overCardId: string | null;
+  onCardDragStart: (id: string) => void;
+  onCardDragEnd: () => void;
+  onColumnDragOver: (e: React.DragEvent) => void;
+  onColumnDragLeave: () => void;
+  onColumnDrop: (e: React.DragEvent) => void;
+  onCardDragOver: (e: React.DragEvent, cardId: string) => void;
+  onCardDrop: (e: React.DragEvent, cardId: string) => void;
+  onOpenDeal: (id: string) => void;
+  onAddDeal: (stage: DealStage) => void;
+  isAdding: boolean;
+}
+
+const PipelineColumn: React.FC<PipelineColumnProps> = ({
+  stage,
+  deals,
+  loading,
+  companyMap,
+  draggingId,
+  isOverColumn,
+  overCardId,
+  onCardDragStart,
+  onCardDragEnd,
+  onColumnDragOver,
+  onColumnDragLeave,
+  onColumnDrop,
+  onCardDragOver,
+  onCardDrop,
+  onOpenDeal,
+  onAddDeal,
+  isAdding,
+}) => {
   const totalCents = deals.reduce((s, d) => s + d.amount_cents, 0);
   const accent = STAGE_ACCENT[stage];
 
   return (
-    <div className={`${tile} flex flex-col min-h-[480px]`}>
-      {/* Header — left accent rail tells you which column you're in
-          when scanning horizontally. */}
+    <div
+      className={`${tile} flex flex-col min-h-[480px] transition-colors ${
+        isOverColumn ? "border-emerald-500/40 bg-emerald-500/[0.02]" : ""
+      }`}
+      onDragOver={onColumnDragOver}
+      onDragLeave={onColumnDragLeave}
+      onDrop={onColumnDrop}
+    >
       <div className="flex items-center gap-2 px-3 pt-3 pb-2">
         <span className={`h-3 w-0.5 rounded-sm ${accent.rail}`} />
         <p className={`${eyebrow} flex-1`}>
@@ -201,21 +411,49 @@ const PipelineColumn: React.FC<{
             ? formatCrmAmount(totalCents, deals[0]?.currency ?? "usd", { compact: true })
             : "—"}
         </span>
+        {/* Per-column add button — adds a deal directly into this
+            stage. Sits at the very right of the header so it doesn't
+            steal attention from the count + total. */}
+        <button
+          onClick={() => onAddDeal(stage)}
+          disabled={isAdding}
+          className="p-1 -mr-1 rounded text-zinc-600 hover:text-emerald-400 hover:bg-emerald-500/[0.08] transition-colors disabled:opacity-40"
+          title={`Add deal to ${STAGE_LABEL[stage]}`}
+        >
+          <Plus className="h-3 w-3" />
+        </button>
       </div>
 
-      {/* Hairline below the header so the cards underneath read as
-          a separate, focused list. */}
       <div className="border-b border-white/[0.05] mx-3" />
 
-      {/* Cards */}
       <div className="flex-1 overflow-y-auto p-2 space-y-2 max-h-[640px]">
         {loading ? (
           <ColumnLoadingState />
         ) : deals.length === 0 ? (
-          <ColumnEmptyState stage={stage} />
+          <ColumnEmptyState
+            stage={stage}
+            isDropTarget={isOverColumn}
+            onAdd={() => onAddDeal(stage)}
+            isAdding={isAdding}
+          />
         ) : (
           deals.map((deal) => (
-            <DealCard key={deal.id} deal={deal} />
+            <DealCard
+              key={deal.id}
+              deal={deal}
+              companyMap={companyMap}
+              isDragging={draggingId === deal.id}
+              isDropAbove={overCardId === deal.id && draggingId !== deal.id}
+              onDragStart={(e) => {
+                e.dataTransfer.setData(DT_KEY, deal.id);
+                e.dataTransfer.effectAllowed = "move";
+                onCardDragStart(deal.id);
+              }}
+              onDragEnd={onCardDragEnd}
+              onDragOver={(e) => onCardDragOver(e, deal.id)}
+              onDrop={(e) => onCardDrop(e, deal.id)}
+              onOpen={() => onOpenDeal(deal.id)}
+            />
           ))
         )}
       </div>
@@ -224,39 +462,62 @@ const PipelineColumn: React.FC<{
 };
 
 // ────────────────────────────────────────────────
-// DealCard — a single deal. Day 5 ships visual only — click stubs
-// to console.log; Day 7 opens the detail drawer.
-//
-// Visual hierarchy:
-//   1. Title (serif, the focal piece — the deal name is the headline)
-//   2. Subtitle (mono caps, quiet — company or contact context)
-//   3. Bottom row: amount left, days-in-stage right (both mono)
-//
-// The drag handle icon hints at Day 6's behavior without actually
-// being draggable yet.
+// DealCard — visual card with native draggable + drop affordances.
 // ────────────────────────────────────────────────
-const DealCard: React.FC<{ deal: CrmDeal }> = ({ deal }) => {
-  const days = daysInStage(deal);
-  const isStale = days >= 14 && (deal.stage !== "won" && deal.stage !== "lost");
+interface DealCardProps {
+  deal: CrmDeal;
+  companyMap: Map<string, string>;
+  isDragging: boolean;
+  isDropAbove: boolean;
+  onDragStart: (e: React.DragEvent) => void;
+  onDragEnd: () => void;
+  onDragOver: (e: React.DragEvent) => void;
+  onDrop: (e: React.DragEvent) => void;
+  onOpen: () => void;
+}
 
-  // Subtitle prefers company_id name (would need a join — Day 6
-  // adds a companies map lookup). For Day 5 we show the source as
-  // a stand-in so the card has something below the title.
-  const subtitle = deal.source ?? "no source";
+const DealCard: React.FC<DealCardProps> = ({
+  deal,
+  companyMap,
+  isDragging,
+  isDropAbove,
+  onDragStart,
+  onDragEnd,
+  onDragOver,
+  onDrop,
+  onOpen,
+}) => {
+  const days = daysInStage(deal);
+  const isStale = days >= 14 && deal.stage !== "won" && deal.stage !== "lost";
+
+  const companyName = deal.company_id ? companyMap.get(deal.company_id) : null;
+  const subtitle = companyName ?? deal.source ?? "no source";
 
   return (
-    <button
-      type="button"
+    <div
+      draggable
+      onDragStart={onDragStart}
+      onDragEnd={onDragEnd}
+      onDragOver={onDragOver}
+      onDrop={onDrop}
       onClick={() => {
-        // Day 7 will route this to the deal drawer.
-        // eslint-disable-next-line no-console
-        console.log("[sales] open deal", deal.id, deal.name);
+        // Suppress click when a drag is in flight so a dropped card
+        // doesn't immediately open the drawer underneath the cursor.
+        if (isDragging) return;
+        onOpen();
       }}
-      className="group w-full text-left bg-gradient-to-b from-zinc-900/80 to-zinc-900/40 border border-white/[0.05] hover:border-white/[0.12] rounded-lg p-3 transition-colors"
+      className={`group relative w-full text-left bg-gradient-to-b from-zinc-900/80 to-zinc-900/40 border rounded-lg p-3 transition-all cursor-grab active:cursor-grabbing ${
+        isDragging
+          ? "opacity-30 border-white/[0.05]"
+          : "border-white/[0.05] hover:border-white/[0.12]"
+      }`}
     >
-      {/* Header row: drag-grip placeholder + title.
-          The grip is purely a visual affordance for Day 5; it becomes
-          the actual dnd-kit drag handle in Day 6. */}
+      {/* Drop-above indicator — thin emerald bar at the top edge of
+          the card we're about to land above. */}
+      {isDropAbove && (
+        <span className="absolute -top-1 left-2 right-2 h-0.5 bg-emerald-400 rounded-full shadow-[0_0_8px_rgba(52,211,153,0.6)]" />
+      )}
+
       <div className="flex items-start gap-1.5">
         <GripVertical className="h-3 w-3 text-zinc-700 mt-0.5 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity" />
         <h4 className="ed-serif text-[14px] leading-tight text-zinc-100 flex-1">
@@ -264,12 +525,10 @@ const DealCard: React.FC<{ deal: CrmDeal }> = ({ deal }) => {
         </h4>
       </div>
 
-      {/* Subtitle — quiet mono caps */}
       <p className="text-[10px] font-mono uppercase tracking-wider text-zinc-500 mt-1 truncate">
         {subtitle}
       </p>
 
-      {/* Bottom row: amount + days-in-stage indicator */}
       <div className="flex items-baseline justify-between mt-2.5">
         <span className={`text-[14px] font-medium text-zinc-100 ${monoNum}`}>
           {formatCrmAmount(deal.amount_cents, deal.currency)}
@@ -278,19 +537,22 @@ const DealCard: React.FC<{ deal: CrmDeal }> = ({ deal }) => {
           className={`text-[10px] font-mono ${
             isStale ? "text-amber-400/80" : "text-zinc-500"
           }`}
-          title={isStale ? "Sitting in stage for 14+ days — consider following up" : undefined}
+          title={
+            isStale
+              ? "Sitting in stage for 14+ days — consider following up"
+              : undefined
+          }
         >
           {isStale && <AlertCircle className="h-2.5 w-2.5 inline mr-0.5 -mt-0.5" />}
           {days}d
         </span>
       </div>
-    </button>
+    </div>
   );
 };
 
 // ────────────────────────────────────────────────
-// Loading skeleton for a column. Three pill placeholders so the
-// kanban doesn't pop when data lands.
+// Loading + empty states
 // ────────────────────────────────────────────────
 const ColumnLoadingState: React.FC = () => (
   <div className="space-y-2">
@@ -310,21 +572,35 @@ const ColumnLoadingState: React.FC = () => (
   </div>
 );
 
-// ────────────────────────────────────────────────
-// Empty column — small + call to action so the kanban doesn't look
-// abandoned when stages are empty on a fresh install.
-// ────────────────────────────────────────────────
-const ColumnEmptyState: React.FC<{ stage: DealStage }> = ({ stage }) => (
-  <div className="border border-dashed border-white/[0.06] rounded-lg p-4 flex flex-col items-center justify-center gap-1 text-center mt-2">
+const ColumnEmptyState: React.FC<{
+  stage: DealStage;
+  isDropTarget: boolean;
+  onAdd: () => void;
+  isAdding: boolean;
+}> = ({ stage, isDropTarget, onAdd, isAdding }) => (
+  <button
+    type="button"
+    onClick={onAdd}
+    disabled={isAdding}
+    className={`w-full border border-dashed rounded-lg p-4 flex flex-col items-center justify-center gap-1 text-center mt-2 transition-colors disabled:opacity-50 ${
+      isDropTarget
+        ? "border-emerald-500/40 bg-emerald-500/[0.04]"
+        : "border-white/[0.06] hover:border-emerald-500/30 hover:bg-emerald-500/[0.03] cursor-pointer"
+    }`}
+  >
     <Plus className="h-3.5 w-3.5 text-zinc-700" />
     <p className="text-[10.5px] font-mono uppercase tracking-wider text-zinc-600">
-      {stage === "won"
-        ? "No closed wins yet"
-        : stage === "lost"
-          ? "No losses logged"
-          : "Add a deal"}
+      {isDropTarget
+        ? "Drop here"
+        : isAdding
+          ? "Adding…"
+          : stage === "won"
+            ? "Log a closed win"
+            : stage === "lost"
+              ? "Log a lost deal"
+              : "Add a deal"}
     </p>
-  </div>
+  </button>
 );
 
 export default PipelineView;

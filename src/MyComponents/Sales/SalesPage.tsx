@@ -58,6 +58,7 @@ import {
 } from "@/stores/crm";
 import { useQueryClient } from "@tanstack/react-query";
 import { PipelineView } from "./PipelineView";
+import { ContactsView } from "./ContactsView";
 
 // ════════════════════════════════════════════
 // Shared editorial chrome — same tokens as the financial dashboard
@@ -226,10 +227,7 @@ export const SalesPage: React.FC = () => {
             </TabsContent>
 
             <TabsContent value="contacts">
-              <PlaceholderTab
-                title="Contacts"
-                subtitle="Searchable list + lifecycle filters — ships Day 8"
-              />
+              <ContactsView />
             </TabsContent>
 
             <TabsContent value="companies">
