@@ -33,6 +33,7 @@ import {
   useStartGmailConnect,
   useDisconnectGmail,
   useGmailRealtime,
+  useToggleGmailSync,
   type GmailConnection as GmailConnectionRow,
 } from "@/stores/gmail";
 
@@ -201,11 +202,13 @@ const ConnectedView: React.FC<{
   isDisconnecting: boolean;
 }> = ({ connection, onDisconnect, onReconnect, isDisconnecting }) => {
   const [confirmDisconnect, setConfirmDisconnect] = useState(false);
+  const toggleSync = useToggleGmailSync();
 
   const connectedAt = new Date(connection.connected_at);
   const lastSync = connection.last_sync_at
     ? new Date(connection.last_sync_at)
     : null;
+  const syncEnabled = !!connection.sync_enabled;
 
   return (
     <div className="space-y-3">
@@ -246,7 +249,7 @@ const ConnectedView: React.FC<{
       </div>
 
       {/* Last sync */}
-      {lastSync && (
+      {lastSync && syncEnabled && (
         <div className="flex items-baseline justify-between gap-3">
           <p className={eyebrow}>Last inbox sync</p>
           <p className={`text-[11px] text-zinc-400 ${monoNum}`}>
@@ -259,6 +262,47 @@ const ConnectedView: React.FC<{
           </p>
         </div>
       )}
+
+      {/* Auto-sync toggle — opt-in inbound sync. Off by default for
+          privacy. When on, /api/gmail/sync pulls replies from CRM
+          contacts on Inbox + deal-drawer mount and surfaces them
+          in the activity timeline. */}
+      <div className="border-t border-white/[0.04] pt-3">
+        <div className="flex items-start justify-between gap-3">
+          <div className="flex-1 min-w-0">
+            <p className={eyebrow}>Auto-sync replies</p>
+            <p className="text-[11.5px] text-zinc-400 mt-1 leading-relaxed">
+              Pull replies from CRM contacts into deal timelines. Only
+              messages from people already in your CRM are read —
+              everything else stays untouched.
+            </p>
+          </div>
+          <button
+            type="button"
+            role="switch"
+            aria-checked={syncEnabled}
+            disabled={toggleSync.isPending}
+            onClick={() =>
+              toggleSync.mutate({
+                connectionId: connection.id,
+                enabled: !syncEnabled,
+              })
+            }
+            className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer items-center rounded-full transition-colors disabled:opacity-50 ${
+              syncEnabled
+                ? "bg-emerald-500/60"
+                : "bg-zinc-700/60 hover:bg-zinc-600/60"
+            }`}
+            title={syncEnabled ? "Sync is on" : "Sync is off"}
+          >
+            <span
+              className={`inline-block h-3.5 w-3.5 transform rounded-full bg-white shadow transition-transform ${
+                syncEnabled ? "translate-x-[18px]" : "translate-x-[3px]"
+              }`}
+            />
+          </button>
+        </div>
+      </div>
 
       {/* Actions */}
       <div className="flex items-center gap-2 pt-2">

@@ -43,6 +43,9 @@ export interface GmailConnection {
   scopes: string[];
   connected_at: string;
   last_sync_at: string | null;
+  /** Opt-in inbound sync. When false, /api/gmail/sync no-ops for
+   *  this row — Gmail content is never read. Default false. */
+  sync_enabled?: boolean;
   // Note: access_token and refresh_token columns exist on the
   // row but are encrypted blobs the desktop never decrypts. We
   // don't select them here — keeps them out of the desktop's
@@ -292,6 +295,101 @@ export function useDisconnectGmail() {
       if (error) throw error;
     },
     onSuccess: () => {
+      if (userSupaId) {
+        qc.invalidateQueries({
+          queryKey: gmailKeys.connection(userSupaId),
+        });
+      }
+    },
+  });
+}
+
+// ────────────────────────────────────────────────
+// useToggleGmailSync — flip sync_enabled on/off. Writes directly
+// to gmail_connections (the user's auth session has UPDATE allowed
+// on their own row by RLS). Invalidates connection query so the
+// toggle's checked state stays in sync with the DB.
+// ────────────────────────────────────────────────
+
+export function useToggleGmailSync() {
+  const qc = useQueryClient();
+  const { data: meRows } = ActiveUser();
+  const userSupaId: string | undefined = (meRows?.[0] as any)?.supa_id;
+
+  return useMutation({
+    mutationFn: async (args: { connectionId: string; enabled: boolean }) => {
+      if (!userSupaId) throw new Error("Not signed in.");
+      const client = await getCompanySupabase();
+      const { error } = await client
+        .from("gmail_connections")
+        .update({ sync_enabled: args.enabled })
+        .eq("id", args.connectionId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      if (userSupaId) {
+        qc.invalidateQueries({
+          queryKey: gmailKeys.connection(userSupaId),
+        });
+      }
+    },
+  });
+}
+
+// ────────────────────────────────────────────────
+// useSyncInbox — trigger a one-shot sync run. Server short-circuits
+// if sync_enabled is false (returns { synced: 0, skipped: "disabled" }).
+// Safe to call repeatedly — dedup is server-side.
+// ────────────────────────────────────────────────
+
+export interface SyncInboxResult {
+  ok: true;
+  synced: number;
+  skipped?: "disabled" | "no-contacts";
+}
+
+export function useSyncInbox() {
+  const qc = useQueryClient();
+  const { data: meRows } = ActiveUser();
+  const userSupaId: string | undefined = (meRows?.[0] as any)?.supa_id;
+
+  return useMutation({
+    mutationFn: async (): Promise<SyncInboxResult> => {
+      if (!userSupaId) throw new Error("Not signed in.");
+      const stronghold = await getStronghold();
+      const companyName = (await stronghold.getRecord("company_name")) ?? "";
+      const base = import.meta.env.VITE_TAKEOVER_SITE_URL;
+      if (!base) {
+        throw new Error("VITE_TAKEOVER_SITE_URL not configured.");
+      }
+      const res = await fetch(`${base}/api/gmail/sync`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "TakeOver-App": "true",
+        },
+        body: JSON.stringify({
+          user_supa_id: userSupaId,
+          company_name: companyName,
+        }),
+      });
+      if (!res.ok) {
+        const detail = await res.text().catch(() => "");
+        let parsed: { error?: string } = {};
+        try { parsed = JSON.parse(detail); } catch { /* noop */ }
+        throw new Error(
+          parsed.error ?? `gmail/sync failed: ${res.status} ${detail.slice(0, 200)}`,
+        );
+      }
+      return (await res.json()) as SyncInboxResult;
+    },
+    onSuccess: (data) => {
+      // If anything synced, invalidate CRM activity queries so the
+      // new inbound rows appear in deal + contact timelines.
+      if (data.synced > 0) {
+        qc.invalidateQueries({ queryKey: ["crm", "activities"] });
+      }
+      // Always invalidate connection so last_sync_at refreshes.
       if (userSupaId) {
         qc.invalidateQueries({
           queryKey: gmailKeys.connection(userSupaId),

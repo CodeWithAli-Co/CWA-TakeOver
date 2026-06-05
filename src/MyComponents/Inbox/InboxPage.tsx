@@ -17,9 +17,9 @@
  *     the Gmail link, this is the obvious place to look.
  */
 
-import { useState } from "react";
-import { Mail, Send, Plug, ExternalLink, Inbox as InboxIcon } from "lucide-react";
-import { useGmailConnection } from "@/stores/gmail";
+import { useEffect, useRef, useState } from "react";
+import { Mail, Send, Plug, ExternalLink, Inbox as InboxIcon, RefreshCw } from "lucide-react";
+import { useGmailConnection, useSyncInbox } from "@/stores/gmail";
 import { ComposeEmailModal } from "./ComposeEmailModal";
 import { useNavigate } from "@tanstack/react-router";
 
@@ -32,6 +32,25 @@ export const InboxPage: React.FC = () => {
   const { data: connection, isLoading } = useGmailConnection();
   const [composeOpen, setComposeOpen] = useState(false);
   const navigate = useNavigate();
+  const sync = useSyncInbox();
+
+  // Auto-sync on mount IF the operator has opted into sync. Without
+  // opt-in this is a no-op server-side, but skip the round-trip
+  // entirely to avoid noise in the network panel.
+  const didAutoSync = useRef(false);
+  useEffect(() => {
+    if (didAutoSync.current) return;
+    if (!connection?.sync_enabled) return;
+    didAutoSync.current = true;
+    sync.mutate(undefined, {
+      onError: (e) => {
+        // Silent — don't block the page. Manual Sync button is right
+        // there if the operator wants to retry.
+        console.warn("[inbox] auto-sync failed:", e);
+      },
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [connection?.sync_enabled]);
 
   return (
     <div className="min-h-screen bg-zinc-950 text-zinc-100">
@@ -52,14 +71,36 @@ export const InboxPage: React.FC = () => {
             </p>
           </div>
           {connection && (
-            <button
-              type="button"
-              onClick={() => setComposeOpen(true)}
-              className="flex items-center gap-1.5 px-4 py-2 border border-emerald-500/40 bg-emerald-500/[0.08] hover:bg-emerald-500/[0.16] text-[11px] font-mono uppercase tracking-wider text-emerald-200 rounded-md transition-colors shrink-0"
-            >
-              <Send className="h-3.5 w-3.5" />
-              Compose
-            </button>
+            <div className="flex items-center gap-2 shrink-0">
+              {connection.sync_enabled && (
+                <button
+                  type="button"
+                  onClick={() => sync.mutate()}
+                  disabled={sync.isPending}
+                  title={
+                    sync.isPending
+                      ? "Syncing inbox…"
+                      : connection.last_sync_at
+                      ? `Last synced ${new Date(connection.last_sync_at).toLocaleTimeString()}`
+                      : "Sync inbox now"
+                  }
+                  className="flex items-center gap-1.5 px-3 py-2 border border-white/[0.1] hover:border-emerald-500/40 hover:bg-emerald-500/[0.04] text-[11px] font-mono uppercase tracking-wider text-zinc-300 hover:text-emerald-300 rounded-md transition-colors disabled:opacity-50"
+                >
+                  <RefreshCw
+                    className={`h-3 w-3 ${sync.isPending ? "animate-spin" : ""}`}
+                  />
+                  {sync.isPending ? "Syncing…" : "Sync"}
+                </button>
+              )}
+              <button
+                type="button"
+                onClick={() => setComposeOpen(true)}
+                className="flex items-center gap-1.5 px-4 py-2 border border-emerald-500/40 bg-emerald-500/[0.08] hover:bg-emerald-500/[0.16] text-[11px] font-mono uppercase tracking-wider text-emerald-200 rounded-md transition-colors"
+              >
+                <Send className="h-3.5 w-3.5" />
+                Compose
+              </button>
+            </div>
           )}
         </header>
 
