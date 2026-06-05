@@ -25,6 +25,7 @@ import { CreateChannelDialog } from "./CreateChannelDialog";
 import { StarredView } from "./StarredView";
 import { ThreadsView } from "./ThreadsView";
 import { WebhookManager } from "./WebhookManager";
+import { SlackChannelView } from "./SlackInChat";
 import { announceHuddleStart, consumePendingHuddleJoin } from "./Huddle/HuddleRing";
 import { useHuddleStore } from "@/stores/huddleStore";
 import {
@@ -59,6 +60,10 @@ export const ChatLayout = () => {
   const {
     activeThreadRootId, setActiveThreadRootId, threadStyle, markRead,
   } = useChatStore();
+  // Slack-in-Chat selection — when set, ChatLayout renders
+  // SlackChannelView instead of the native MessageList/Composer.
+  // Both surfaces share the same sidebar; only the right pane swaps.
+  const activeSlackChannelId = useChatStore((s) => s.activeSlackChannelId);
   const [searchQuery, setSearchQuery] = useState("");
   const [forwardSource, setForwardSource] = useState<MessageInterface | null>(null);
   const [createChannelOpen, setCreateChannelOpen] = useState(false);
@@ -361,6 +366,20 @@ export const ChatLayout = () => {
               className="flex-1 flex flex-col min-h-0 min-w-0"
             >
               <ThreadsView currentUsername={username} />
+            </motion.div>
+          ) : activeSlackChannelId ? (
+            // Slack-in-Chat view. Wins over native GroupName so that
+            // clicking a Slack channel in the sidebar always lands
+            // here, regardless of stale GroupName state.
+            <motion.div
+              key={`slack-${activeSlackChannelId}`}
+              initial={{ opacity: 0, x: 14, filter: "blur(4px)" }}
+              animate={{ opacity: 1, x: 0, filter: "blur(0px)" }}
+              exit={{ opacity: 0, x: -14, filter: "blur(4px)" }}
+              transition={{ duration: 0.22, ease: [0.16, 1, 0.3, 1] }}
+              className="flex-1 flex flex-col min-h-0 min-w-0"
+            >
+              <SlackChannelView />
             </motion.div>
           ) : GroupName ? (
             <motion.div

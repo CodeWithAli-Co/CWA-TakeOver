@@ -44,6 +44,15 @@ interface ChatStoreState {
   resetAllUnread: () => void;
   setUnreadCount: (group: string, count: number) => void;
 
+  // ── Slack-in-Chat selection ────────────────────────────────────
+  // When activeSlackChannelId is set, ChatLayout renders
+  // SlackChannelView in place of native MessageList/MessageComposer.
+  // Selecting a Slack channel clears GroupName-based native selection
+  // (and vice versa) so only one chat surface is ever active at a time.
+  activeSlackChannelId: string | null;
+  activeSlackChannelName: string | null;
+  setActiveSlackChannel: (id: string | null, name?: string | null) => void;
+
   // Presence (transient)
   presenceByUser: Record<string, PresenceEntry>;
   setPresence: (username: string, lastSeen: number) => void;
@@ -142,6 +151,15 @@ export const useChatStore = create<ChatStoreState>()(
         set((state) => ({
           unreadCounts: { ...state.unreadCounts, [group]: count },
         })),
+
+      // ── Slack-in-Chat selection ──────────────────────────────────
+      activeSlackChannelId: null,
+      activeSlackChannelName: null,
+      setActiveSlackChannel: (id, name = null) =>
+        set({
+          activeSlackChannelId: id,
+          activeSlackChannelName: id ? name : null,
+        }),
 
       replyingTo: null,
       setReplyingTo: (target) => set({ replyingTo: target }),

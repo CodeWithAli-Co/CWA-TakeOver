@@ -45,6 +45,7 @@ import {
   isOneOnOneDM,
   dmOtherParty,
 } from "./displayName";
+import { SlackSidebarSection } from "./SlackInChat";
 
 interface Group {
   id: string | number;
@@ -130,6 +131,10 @@ export const ChatSidebar: React.FC<Props> = ({ groups, employees, onCreateChanne
   const dmsTop = uncategorized.filter((g) => !isChannelGroup(g));
 
   const handleSelect = (name: string) => {
+    // Clear any active Slack-in-Chat selection — selecting a native
+    // channel/DM should always win and put us back on TakeOver's
+    // own messaging surface.
+    useChatStore.getState().setActiveSlackChannel(null);
     setGroupName(name);
     markRead(name);
   };
@@ -302,6 +307,11 @@ export const ChatSidebar: React.FC<Props> = ({ groups, employees, onCreateChanne
                 }
               />
             ))}
+
+            {/* Section: SLACK — channels from the connected Slack
+             *  workspace. Auto-hides when no Slack connector exists,
+             *  so fresh installs and Slack-less tenants don't see it. */}
+            <SlackSidebarSection />
 
             {/* Categories */}
             {channelCategories.map((cat) => {
