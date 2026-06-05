@@ -20,7 +20,7 @@ import {
   Search, ArrowRight, Hash, GitPullRequest, AlertCircle, Code as CodeIcon,
   Inbox, Sparkles, Home, MessageCircle, ClipboardList, Users,
   UserCircle, CalendarDays, BarChart3, FileText, Bug, FolderKanban,
-  HandHeart, TrendingUp,
+  HandHeart, TrendingUp, Phone, Mail, StickyNote, Video,
 } from "lucide-react";
 import { useNavigate } from "@tanstack/react-router";
 import {
@@ -30,6 +30,8 @@ import { useQuickCompose } from "@/MyComponents/Chat/quickComposeStore";
 import { useEffectiveRow4View, useRow4View } from "@/MyComponents/Dashboard/row4ViewStore";
 import { useSendKudosDialog } from "@/MyComponents/Dashboard/sendKudosStore";
 import { useCreateGrowthTrackDialog } from "@/MyComponents/Dashboard/createGrowthTrackStore";
+import { useLogActivityDialog } from "@/MyComponents/Sales/logActivityStore";
+import type { ActivityType } from "@/stores/crm";
 import { ActiveUser } from "@/stores/query";
 import { useRolePreview } from "@/stores/store";
 import { isCLevel } from "@/MyComponents/Dashboard/row4ViewStore";
@@ -60,6 +62,7 @@ export function CommandPalette() {
   const openCompose = useQuickCompose((s) => s.openCompose);
   const openSendKudos = useSendKudosDialog((s) => s.openDialog);
   const openCreateGrowthTrack = useCreateGrowthTrackDialog((s) => s.openDialog);
+  const openLogActivity = useLogActivityDialog((s) => s.openDialog);
   const toggleFromRow4 = useRow4View((s) => s.toggleFrom);
   // Resolve current effective Row 4 view so the toggle works even
   // when the user hasn't set an explicit preference yet (they're on
@@ -249,6 +252,47 @@ export function CommandPalette() {
             },
           }]
         : []),
+      // Sales — Log activity verbs. Five entries: one generic
+      // "Log activity" + four type-prefilled shortcuts. The
+      // prefilled variants accept a free-text tail, so typing
+      // "log call discovery with Acme" routes to the modal with
+      // type=call and the rest of the line as the title.
+      // Sales — Stripe → CRM sync. Fires a custom event the
+      // SalesPage handles; if the user isn't on /sales we navigate
+      // there first so the toast lands in view.
+      { id: "ax-stripe-sync", label: "Sync Stripe customers", icon: Sparkles, hint: "Run",
+        haystack: "stripe sync customers crm contacts billing backfill import",
+        onChoose: () => {
+          dispatchCustom("cwa-sales-stripe-sync", null);
+          close();
+          navigate({ to: "/sales" });
+        } },
+      ...(([
+        { id: "ax-log",      type: undefined as ActivityType | undefined, icon: ClipboardList, label: "Log activity",            keywords: "log activity crm sales" },
+        { id: "ax-log-call", type: "call"    as ActivityType,             icon: Phone,         label: "Log call",                keywords: "log call phone crm activity sales" },
+        { id: "ax-log-mail", type: "email"   as ActivityType,             icon: Mail,          label: "Log email",               keywords: "log email crm activity sales" },
+        { id: "ax-log-meet", type: "meeting" as ActivityType,             icon: CalendarDays,  label: "Log meeting",             keywords: "log meeting crm activity sales sync" },
+        { id: "ax-log-note", type: "note"    as ActivityType,             icon: StickyNote,    label: "Log note",                keywords: "log note crm activity sales" },
+        { id: "ax-log-demo", type: "demo"    as ActivityType,             icon: Video,         label: "Log demo",                keywords: "log demo crm activity sales" },
+      ] as const).map((v) => ({
+        id: v.id,
+        label: v.label,
+        icon: v.icon,
+        hint: "Compose",
+        haystack: v.keywords,
+        onChoose: () => {
+          // Strip the verb prefix from the query so the remainder
+          // can seed the modal's title field. Mirrors the /msg
+          // parser above — keep them aligned.
+          const verbRe = /^\s*(\/?(?:log\s+)?(?:activity|call|email|mail|meeting|meet|note|demo))\s*/i;
+          const tail = query.replace(verbRe, "").trim();
+          close();
+          openLogActivity({
+            type: v.type,
+            title: tail.length > 0 ? tail : undefined,
+          });
+        },
+      }))),
     ];
 
     return [

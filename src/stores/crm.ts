@@ -458,6 +458,161 @@ export function useDeleteContact() {
 }
 
 // ============================================================
+// Stripe ↔ CRM sync
+// ============================================================
+//
+// Single direction for now: Stripe customer list → crm_contacts.
+//
+// Match strategy is `stripe_customer_id` first (already-synced rows),
+// then `lower(email)` (rows the operator created manually before
+// hooking up Stripe). Without the email fallback we'd dupe every
+// real customer the first time the operator presses Sync.
+//
+// Lifecycle mapping:
+//   · active         → customer (paying)
+//   · past_customer  → churned
+//   · one_time / free → customer  (they bought once; still "won")
+//
+// Everything is upserted server-side via individual update / insert
+// calls. Could batch via `upsert()` with onConflict — kept as
+// per-row writes so we can attribute counts ("created N, updated M")
+// in the toast and so any one row's error doesn't kill the whole
+// sync.
+
+/**
+ * Map a Stripe customer status string onto our lifecycle column.
+ * Exported so other callers (Axon actions, demo seed) can stay
+ * consistent with the same rule.
+ */
+export function stripeStatusToLifecycle(
+  status: "active" | "past_customer" | "one_time" | "free" | string,
+): LifecycleStage {
+  switch (status) {
+    case "active":        return "customer";
+    case "past_customer": return "churned";
+    case "one_time":      return "customer";
+    case "free":          return "customer";
+    default:              return "lead";
+  }
+}
+
+export interface SyncStripeCustomersInput {
+  /** Full StripeCustomerRow list from useStripeDashboard(). Caller
+   *  owns the fetch so the sync hook stays pure. */
+  customers: Array<{
+    id: string;
+    name: string | null;
+    email: string | null;
+    status: string;
+    mrr_cents: number;
+    ltv_cents: number;
+    last_activity_at: string;
+  }>;
+}
+
+export interface SyncStripeCustomersResult {
+  created: number;
+  updated: number;
+  skipped: number;   // customers with no email AND no existing match
+  errors: Array<{ stripeId: string; message: string }>;
+}
+
+export function useSyncStripeCustomers() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (
+      input: SyncStripeCustomersInput,
+    ): Promise<SyncStripeCustomersResult> => {
+      // Pull the whole contacts table once so we can do match lookups
+      // in memory instead of hammering the API per row.
+      const { data: existing, error: fetchErr } = await takeOversupabase
+        .from(CONTACTS_TABLE)
+        .select("id, email, stripe_customer_id");
+      if (fetchErr) throw fetchErr;
+
+      const byStripeId = new Map<string, { id: string }>();
+      const byEmail = new Map<string, { id: string }>();
+      for (const row of existing ?? []) {
+        if (row.stripe_customer_id) {
+          byStripeId.set(row.stripe_customer_id, { id: row.id });
+        }
+        if (row.email) {
+          byEmail.set(row.email.toLowerCase(), { id: row.id });
+        }
+      }
+
+      let created = 0;
+      let updated = 0;
+      let skipped = 0;
+      const errors: SyncStripeCustomersResult["errors"] = [];
+
+      for (const cust of input.customers) {
+        const lifecycle = stripeStatusToLifecycle(cust.status);
+        const lastActivity = cust.last_activity_at || new Date().toISOString();
+
+        // Match priority: stripe id → email
+        const matchById = byStripeId.get(cust.id);
+        const matchByEmail = cust.email
+          ? byEmail.get(cust.email.toLowerCase())
+          : undefined;
+        const matched = matchById ?? matchByEmail;
+
+        try {
+          if (matched) {
+            const { error } = await takeOversupabase
+              .from(CONTACTS_TABLE)
+              .update({
+                name:               cust.name ?? undefined,
+                email:              cust.email ?? undefined,
+                lifecycle_stage:    lifecycle,
+                source:             "stripe",
+                stripe_customer_id: cust.id,
+                last_contacted_at:  lastActivity,
+              })
+              .eq("id", matched.id);
+            if (error) throw error;
+            updated += 1;
+          } else if (!cust.email && !cust.name) {
+            // Stripe occasionally has guest-checkout customers with
+            // neither name nor email. Skipping them rather than
+            // creating a row that's just an opaque id.
+            skipped += 1;
+          } else {
+            const { error } = await takeOversupabase
+              .from(CONTACTS_TABLE)
+              .insert({
+                name:               cust.name,
+                email:              cust.email,
+                lifecycle_stage:    lifecycle,
+                source:             "stripe",
+                stripe_customer_id: cust.id,
+                first_touched_at:   lastActivity,
+                last_contacted_at:  lastActivity,
+              });
+            if (error) throw error;
+            created += 1;
+          }
+        } catch (e) {
+          errors.push({
+            stripeId: cust.id,
+            message: e instanceof Error ? e.message : String(e),
+          });
+        }
+      }
+
+      return { created, updated, skipped, errors };
+    },
+    onSuccess: () => {
+      // Touch every contacts slice — the lifecycle filters update,
+      // the dashboard counts update, the kanban deal-contact
+      // pickers re-fetch. Cheap because the cache invalidation
+      // is server-side via the existing realtime channel anyway.
+      qc.invalidateQueries({ queryKey: crmKeys.contacts });
+    },
+  });
+}
+
+// ============================================================
 // Deals
 // ============================================================
 export function useCrmDeals(opts: { ownerId?: string | null } = {}) {
@@ -939,6 +1094,60 @@ export function daysInStage(deal: CrmDeal, now: Date = new Date()): number {
   const t = Date.parse(deal.updated_at);
   if (isNaN(t)) return 0;
   return Math.floor((now.getTime() - t) / (1000 * 60 * 60 * 24));
+}
+
+/**
+ * extractEmailDomain — lowercased substring after the @, trimmed.
+ * Returns null for malformed / empty inputs so callers can use it
+ * as a simple guard. Strips common subdomains so "mail.acme.com"
+ * matches "acme.com" without false-negative; we keep the public
+ * suffix logic simple — anything past the last two dots stays.
+ *
+ * Examples:
+ *   "Bob@Acme.com"        → "acme.com"
+ *   "bob@mail.acme.com"   → "acme.com"
+ *   "bob@acme.co.uk"      → "acme.co.uk" (last 3 segments when 2nd
+ *                                          is a known short TLD)
+ *   ""                    → null
+ *   "no-at-sign"          → null
+ */
+export function extractEmailDomain(email: string | null | undefined): string | null {
+  if (!email) return null;
+  const at = email.lastIndexOf("@");
+  if (at === -1 || at === email.length - 1) return null;
+  const raw = email.slice(at + 1).trim().toLowerCase();
+  if (!raw.includes(".")) return null;
+  const parts = raw.split(".");
+  // Heuristic for ccTLDs like .co.uk, .com.au — keep 3 segments
+  // when the 2nd-to-last is a known short TLD marker.
+  const shortTlds = new Set(["co", "com", "org", "net", "gov", "ac", "edu"]);
+  if (parts.length >= 3 && shortTlds.has(parts[parts.length - 2])) {
+    return parts.slice(-3).join(".");
+  }
+  return parts.slice(-2).join(".");
+}
+
+/**
+ * findCompanyByEmailDomain — given a contact's email and a map of
+ * companies (typically the result of useCrmCompanies()), returns
+ * the company id whose domain matches. Used at contact-create time
+ * to auto-attach contacts to their employer without making the user
+ * pick from a dropdown.
+ *
+ * Match is case-insensitive on both sides; the schema's unique
+ * index on lower(domain) makes this safe to rely on for 1:1 matches.
+ */
+export function findCompanyByEmailDomain(
+  email: string | null | undefined,
+  companies: CrmCompany[],
+): string | null {
+  const domain = extractEmailDomain(email);
+  if (!domain) return null;
+  for (const c of companies) {
+    if (!c.domain) continue;
+    if (c.domain.toLowerCase() === domain) return c.id;
+  }
+  return null;
 }
 
 /**

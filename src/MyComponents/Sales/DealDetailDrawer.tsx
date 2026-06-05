@@ -29,7 +29,9 @@ import {
   Video,
   StickyNote,
   Sparkles,
+  Plus,
 } from "lucide-react";
+import { useLogActivityDialog } from "./logActivityStore";
 import {
   useCrmDeal,
   useUpdateDeal,
@@ -155,6 +157,7 @@ const DealDrawerContent: React.FC<{
   const { data: companies = [] } = useCrmCompanies({});
   const { data: contacts = [] } = useCrmContacts({});
   const updateDeal = useUpdateDeal();
+  const openLogActivity = useLogActivityDialog((s) => s.openDialog);
 
   // Local draft state — synced from the server row on first load,
   // then maintained locally so typing doesn't re-render against
@@ -166,6 +169,26 @@ const DealDrawerContent: React.FC<{
   useEffect(() => {
     if (deal) setDraft({});
   }, [deal?.id]);
+
+  // Companies + contacts maps for the dropdowns and the linked-record
+  // labels in the header subtitle. These MUST be declared before the
+  // early loading return — otherwise the hook count differs between
+  // the loading and loaded render passes and React throws "Rendered
+  // more hooks than during the previous render."
+  //
+  // We read company_id off (draft → deal → null) directly so this
+  // hook doesn't need the merged `current` value, which lives below
+  // the early return.
+  const effectiveCompanyId = draft.company_id ?? deal?.company_id ?? null;
+  const companyMap = useMemo(() => {
+    const m = new Map<string, string>();
+    for (const c of companies) m.set(c.id, c.name);
+    return m;
+  }, [companies]);
+  const contactsForCompany = useMemo(() => {
+    if (!effectiveCompanyId) return contacts;
+    return contacts.filter((c) => c.company_id === effectiveCompanyId);
+  }, [contacts, effectiveCompanyId]);
 
   if (isLoading || !deal) {
     return (
@@ -180,19 +203,6 @@ const DealDrawerContent: React.FC<{
 
   // Merge draft over server data so the form reflects in-flight edits.
   const current = { ...deal, ...draft };
-
-  // Companies + contacts maps for the dropdowns and the linked-record
-  // labels in the header subtitle.
-  const companyMap = useMemo(() => {
-    const m = new Map<string, string>();
-    for (const c of companies) m.set(c.id, c.name);
-    return m;
-  }, [companies]);
-
-  const contactsForCompany = useMemo(() => {
-    if (!current.company_id) return contacts;
-    return contacts.filter((c) => c.company_id === current.company_id);
-  }, [contacts, current.company_id]);
 
   // Save helper — only fires the mutation if the field actually
   // changed against the server value. Cleared local draft on success.
@@ -399,8 +409,9 @@ const DealDrawerContent: React.FC<{
         )}
       </section>
 
-      {/* Activity timeline. Day 10 adds the composer above the feed;
-          for now it's read-only with a hint at the bottom. */}
+      {/* Activity timeline. "+ Log" opens the global composer
+          pre-routed to this deal (and its contact/company, since
+          the modal auto-resolves them from the deal). */}
       <section>
         <div className="flex items-baseline justify-between mb-3">
           <div>
@@ -409,21 +420,34 @@ const DealDrawerContent: React.FC<{
               Recent activity
             </h3>
           </div>
-          <span className="text-[10px] font-mono text-zinc-500">
-            {activities.length} {activities.length === 1 ? "event" : "events"}
-          </span>
+          <div className="flex items-center gap-3">
+            <span className="text-[10px] font-mono text-zinc-500">
+              {activities.length} {activities.length === 1 ? "event" : "events"}
+            </span>
+            <button
+              onClick={() => openLogActivity({ dealId })}
+              className="flex items-center gap-1.5 px-2.5 py-1 border border-white/[0.1] hover:border-emerald-500/40 hover:bg-emerald-500/[0.04] text-[10px] font-mono uppercase tracking-[0.16em] text-zinc-300 hover:text-emerald-300 rounded-md transition-colors"
+            >
+              <Plus className="h-3 w-3" />
+              Log
+            </button>
+          </div>
         </div>
 
         {activities.length === 0 ? (
-          <div className="border border-dashed border-white/[0.06] rounded-lg p-6 flex flex-col items-center justify-center gap-2 text-center">
+          <button
+            type="button"
+            onClick={() => openLogActivity({ dealId })}
+            className="w-full border border-dashed border-white/[0.06] rounded-lg p-6 flex flex-col items-center justify-center gap-2 text-center hover:border-emerald-500/30 hover:bg-emerald-500/[0.02] transition-colors"
+          >
             <Sparkles className="h-4 w-4 text-zinc-700" />
             <p className="text-[10.5px] font-mono uppercase tracking-wider text-zinc-600">
               No activity logged yet
             </p>
             <p className="text-[11px] text-zinc-600 mt-1">
-              Composer ships Day 10 — for now log activities via Cmd+K.
+              Click to log a call, email, or meeting · or use Cmd+K.
             </p>
-          </div>
+          </button>
         ) : (
           <ul className="space-y-0">
             {activities.slice(0, 30).map((a) => (

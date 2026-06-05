@@ -34,6 +34,7 @@ import { ScheduleStatsShortcut } from "@/MyComponents/Timesheet/ScheduleStatsSho
 import { Row4SwapShortcut } from "@/MyComponents/Dashboard/Row4SwapShortcut";
 import { SendKudosDialog } from "@/MyComponents/Dashboard/SendKudosDialog";
 import { CreateGrowthTrackDialog } from "@/MyComponents/Dashboard/CreateGrowthTrackDialog";
+import { LogActivityModal } from "@/MyComponents/Sales/LogActivityModal";
 import { useQuickCompose } from "@/MyComponents/Chat/quickComposeStore";
 import { displayLabelForDM, isDMKey } from "@/MyComponents/Chat/displayName";
 import { takeOversupabase } from "@/MyComponents/supabase";
@@ -1005,6 +1006,11 @@ export const Route = createRootRoute({
              *  only when their respective zustand store has open=true. */}
             <SendKudosDialog />
             <CreateGrowthTrackDialog />
+            {/* Sales — global "Log activity" composer. Opens from
+             *  Cmd+K verbs ("Log call", "Log email", "Log meeting",
+             *  "Log note") or from any deal / contact / company
+             *  drawer via the "+ Log activity" button. */}
+            <LogActivityModal />
             {/* Chat-only message search — now bound to Cmd+Shift+F */}
             <Suspense fallback={null}>
               <GlobalSearch open={searchOpen} onOpenChange={setSearchOpen} />

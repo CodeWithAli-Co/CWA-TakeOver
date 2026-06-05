@@ -21,11 +21,13 @@ import {
   useUpdateContact,
   useActivitiesForContact,
   useCrmCompanies,
+  findCompanyByEmailDomain,
   LIFECYCLE_STAGES,
   type LifecycleStage,
   type CrmContact,
 } from "@/stores/crm";
 import { LifecyclePill } from "./LifecyclePill";
+import { useLogActivityDialog } from "./logActivityStore";
 
 // ────────────────────────────────────────────────
 // Shared chrome
@@ -285,6 +287,7 @@ const ContactDrawerContent: React.FC<{
   const { data: activities = [] } = useActivitiesForContact(contactId);
   const { data: companies = [] } = useCrmCompanies({});
   const updateContact = useUpdateContact();
+  const openLogActivity = useLogActivityDialog((s) => s.openDialog);
 
   const [draft, setDraft] = useState<Partial<CrmContact>>({});
 
@@ -356,7 +359,21 @@ const ContactDrawerContent: React.FC<{
             onChange={(e) =>
               setDraft((d) => ({ ...d, email: e.target.value || null }))
             }
-            onBlur={() => commit({ email: current.email })}
+            onBlur={() => {
+              // On blur, save email + attempt auto-attribution: if
+              // the contact has no company set yet and the email's
+              // domain matches an existing crm_companies row, attach
+              // them automatically. Saves the user a dropdown trip.
+              const patch: Partial<CrmContact> = { email: current.email };
+              if (!current.company_id) {
+                const match = findCompanyByEmailDomain(current.email, companies);
+                if (match) {
+                  patch.company_id = match;
+                  setDraft((d) => ({ ...d, company_id: match }));
+                }
+              }
+              commit(patch);
+            }}
             placeholder="name@company.com"
             className="w-full bg-zinc-900 border border-white/[0.08] rounded-md px-2 py-1.5 text-[12px] text-zinc-100 outline-none focus:border-white/[0.15] placeholder:text-zinc-600"
           />
@@ -460,21 +477,34 @@ const ContactDrawerContent: React.FC<{
               Activity
             </h3>
           </div>
-          <span className="text-[10px] font-mono text-zinc-500">
-            {activities.length} {activities.length === 1 ? "event" : "events"}
-          </span>
+          <div className="flex items-center gap-3">
+            <span className="text-[10px] font-mono text-zinc-500">
+              {activities.length} {activities.length === 1 ? "event" : "events"}
+            </span>
+            <button
+              onClick={() => openLogActivity({ contactId })}
+              className="flex items-center gap-1.5 px-2.5 py-1 border border-white/[0.1] hover:border-emerald-500/40 hover:bg-emerald-500/[0.04] text-[10px] font-mono uppercase tracking-[0.16em] text-zinc-300 hover:text-emerald-300 rounded-md transition-colors"
+            >
+              <Plus className="h-3 w-3" />
+              Log
+            </button>
+          </div>
         </div>
 
         {activities.length === 0 ? (
-          <div className="border border-dashed border-white/[0.06] rounded-lg p-6 flex flex-col items-center justify-center gap-2 text-center">
+          <button
+            type="button"
+            onClick={() => openLogActivity({ contactId })}
+            className="w-full border border-dashed border-white/[0.06] rounded-lg p-6 flex flex-col items-center justify-center gap-2 text-center hover:border-emerald-500/30 hover:bg-emerald-500/[0.02] transition-colors"
+          >
             <FileText className="h-4 w-4 text-zinc-700" />
             <p className="text-[10.5px] font-mono uppercase tracking-wider text-zinc-600">
               No activity logged yet
             </p>
             <p className="text-[11px] text-zinc-600 mt-1">
-              Composer ships Day 10.
+              Click to log a call, email, or meeting · or use Cmd+K.
             </p>
-          </div>
+          </button>
         ) : (
           <ul className="space-y-0">
             {activities.slice(0, 30).map((a) => (

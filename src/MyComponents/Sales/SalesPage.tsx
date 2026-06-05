@@ -16,7 +16,7 @@
  * managing its own subscription.
  */
 
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
   Tabs,
   TabsContent,
@@ -39,6 +39,7 @@ import {
   MessageSquare,
   Video,
   StickyNote,
+  CreditCard,
 } from "lucide-react";
 import {
   useCrmContacts,
@@ -46,6 +47,7 @@ import {
   useCrmCompanies,
   useRecentActivities,
   useCrmRealtime,
+  useSyncStripeCustomers,
   weightedForecastCents,
   bookedRevenueCents,
   formatCrmAmount,
@@ -59,6 +61,8 @@ import {
 import { useQueryClient } from "@tanstack/react-query";
 import { PipelineView } from "./PipelineView";
 import { ContactsView } from "./ContactsView";
+import { CompaniesView } from "./CompaniesView";
+import { useStripeDashboard } from "@/lib/useStripeDashboard";
 
 // ════════════════════════════════════════════
 // Shared editorial chrome — same tokens as the financial dashboard
@@ -89,6 +93,64 @@ export const SalesPage: React.FC = () => {
 
   const qc = useQueryClient();
   const [tab, setTab] = useState<typeof SALES_TABS[number]["value"]>("dashboard");
+
+  // Stripe sync — pulls the customer list off useStripeDashboard()
+  // (already cached by the financial dashboard) and pushes a one-shot
+  // import into crm_contacts. The status pill below shows the last
+  // sync result for ~6 seconds, then fades.
+  const stripeDash = useStripeDashboard();
+  const syncStripe = useSyncStripeCustomers();
+  const [syncToast, setSyncToast] = useState<string | null>(null);
+
+  const stripeConnected =
+    !!stripeDash.connected && (stripeDash.customers?.items?.length ?? 0) > 0;
+  const stripeCustomerCount = stripeDash.customers?.items?.length ?? 0;
+
+  // Keep the latest handler in a ref so the cwa-sales-stripe-sync
+  // event listener (registered once on mount) always invokes the
+  // current closure — otherwise it captures stale `stripeDash`.
+  const handlerRef = useRef<() => void>(() => {});
+
+  const handleStripeSync = async () => {
+    if (!stripeConnected) {
+      setSyncToast("Stripe not connected");
+      window.setTimeout(() => setSyncToast(null), 4_000);
+      return;
+    }
+    try {
+      const result = await syncStripe.mutateAsync({
+        customers: (stripeDash.customers?.items ?? []).map((c) => ({
+          id: c.id,
+          name: c.name,
+          email: c.email,
+          status: c.status,
+          mrr_cents: c.mrr_cents,
+          ltv_cents: c.ltv_cents,
+          last_activity_at: c.last_activity_at,
+        })),
+      });
+      const parts: string[] = [];
+      if (result.created) parts.push(`${result.created} added`);
+      if (result.updated) parts.push(`${result.updated} updated`);
+      if (result.skipped) parts.push(`${result.skipped} skipped`);
+      if (result.errors.length) parts.push(`${result.errors.length} errors`);
+      setSyncToast(parts.length ? parts.join(" · ") : "Already in sync");
+      window.setTimeout(() => setSyncToast(null), 6_000);
+    } catch (e) {
+      setSyncToast(e instanceof Error ? e.message : "Sync failed");
+      window.setTimeout(() => setSyncToast(null), 6_000);
+    }
+  };
+
+  // Update the ref every render so the listener sees latest closure.
+  handlerRef.current = handleStripeSync;
+
+  // Listen for the Cmd+K "Sync Stripe customers" verb.
+  useEffect(() => {
+    const onSyncReq = () => { void handlerRef.current(); };
+    window.addEventListener("cwa-sales-stripe-sync", onSyncReq);
+    return () => window.removeEventListener("cwa-sales-stripe-sync", onSyncReq);
+  }, []);
 
   // Pull the four headline slices for the masthead status + KPI strip.
   const { data: contacts = [] } = useCrmContacts({});
@@ -169,13 +231,37 @@ export const SalesPage: React.FC = () => {
               Stripe pill here (that's the financial dashboard's home).
               Recent-activity timestamp doubles as the freshness signal. */}
           <div className="flex flex-col items-end gap-2 shrink-0">
-            <div className="flex items-center gap-2 px-2.5 py-1 rounded-full border bg-emerald-500/[0.08] border-emerald-500/25 text-emerald-300 text-[10px] font-mono uppercase tracking-[0.16em]">
-              <span className="relative flex h-1.5 w-1.5">
-                <span className="absolute inline-flex h-full w-full rounded-full bg-emerald-400/70 opacity-75 animate-ping" />
-                <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-emerald-400 shadow-[0_0_6px_rgba(52,211,153,0.7)]" />
-              </span>
-              Live · CRM
+            <div className="flex items-center gap-2">
+              {/* Stripe sync button — backfills Stripe customers into
+                  crm_contacts as one row each. Disabled when Stripe
+                  isn't connected. Pending state + result toast next to
+                  the button keep operator feedback inline. */}
+              <button
+                onClick={handleStripeSync}
+                disabled={!stripeConnected || syncStripe.isPending}
+                title={
+                  stripeConnected
+                    ? `Pull ${stripeCustomerCount} Stripe customers into CRM`
+                    : "Connect Stripe on the financial dashboard first"
+                }
+                className="flex items-center gap-1.5 px-2.5 py-1 rounded-full border text-[10px] font-mono uppercase tracking-[0.16em] transition-colors disabled:opacity-40 disabled:cursor-not-allowed border-white/[0.1] hover:border-emerald-500/40 hover:bg-emerald-500/[0.04] text-zinc-300 hover:text-emerald-300"
+              >
+                <CreditCard className="h-3 w-3" />
+                {syncStripe.isPending ? "Syncing…" : "Sync · Stripe"}
+              </button>
+              <div className="flex items-center gap-2 px-2.5 py-1 rounded-full border bg-emerald-500/[0.08] border-emerald-500/25 text-emerald-300 text-[10px] font-mono uppercase tracking-[0.16em]">
+                <span className="relative flex h-1.5 w-1.5">
+                  <span className="absolute inline-flex h-full w-full rounded-full bg-emerald-400/70 opacity-75 animate-ping" />
+                  <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-emerald-400 shadow-[0_0_6px_rgba(52,211,153,0.7)]" />
+                </span>
+                Live · CRM
+              </div>
             </div>
+            {syncToast && (
+              <div className="text-[10px] font-mono uppercase tracking-[0.16em] text-emerald-300 self-end">
+                {syncToast}
+              </div>
+            )}
             <button
               onClick={() => {
                 qc.invalidateQueries({ queryKey: ["crm"] });
@@ -231,17 +317,11 @@ export const SalesPage: React.FC = () => {
             </TabsContent>
 
             <TabsContent value="companies">
-              <PlaceholderTab
-                title="Companies"
-                subtitle="Account list + auto-attribution from email domain — ships Day 9"
-              />
+              <CompaniesView />
             </TabsContent>
 
             <TabsContent value="activity">
-              <PlaceholderTab
-                title="Activity"
-                subtitle="Cross-entity timeline + composer — ships Day 10"
-              />
+              <ActivityTab activities={recentActivity} hasData={hasData} />
             </TabsContent>
           </div>
         </Tabs>
@@ -287,6 +367,13 @@ const DashboardTab: React.FC<{
       {/* Pipeline-by-stage (col-8) + Recent activity (col-4) */}
       <PipelineByStageCard deals={deals} hasData={hasData} />
       <RecentActivityCard activities={recentActivity} hasData={hasData} />
+
+      {/* Row 3 — Top deals + At-risk + Win-rate by source. Three
+          col-4 tiles balance the row visually with the col-8 +
+          col-4 above. */}
+      <TopDealsCard deals={deals} />
+      <AtRiskDealsCard deals={deals} />
+      <WinRateBySourceCard deals={deals} />
     </div>
   );
 };
@@ -548,6 +635,346 @@ const KpiTile: React.FC<{
     )}
   </div>
 );
+
+// ════════════════════════════════════════════
+// ActivityTab — full timeline view (dedicated tab). The dashboard tile
+// shows the last 10; this view fetches up to 100 and renders them
+// with day-grouped headers. The composer is the global Cmd+K verb
+// or any drawer's "+ Log" button — no inline composer needed here
+// since those entry points are everywhere.
+// ════════════════════════════════════════════
+const ActivityTab: React.FC<{
+  activities: CrmActivity[];
+  hasData: boolean;
+}> = ({ activities, hasData }) => {
+  // Group by date (YYYY-MM-DD) for visual scanning. "Today" /
+  // "Yesterday" headers when applicable.
+  const grouped = useMemo(() => {
+    const groups: Array<{ label: string; items: CrmActivity[] }> = [];
+    const byDay = new Map<string, CrmActivity[]>();
+    for (const a of activities) {
+      const d = new Date(a.happened_at);
+      const key = `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
+      if (!byDay.has(key)) byDay.set(key, []);
+      byDay.get(key)!.push(a);
+    }
+    const now = new Date();
+    const todayKey = `${now.getFullYear()}-${now.getMonth()}-${now.getDate()}`;
+    const yest = new Date(now);
+    yest.setDate(now.getDate() - 1);
+    const yKey = `${yest.getFullYear()}-${yest.getMonth()}-${yest.getDate()}`;
+    for (const [key, items] of byDay.entries()) {
+      let label: string;
+      if (key === todayKey) label = "Today";
+      else if (key === yKey) label = "Yesterday";
+      else {
+        const sample = new Date(items[0].happened_at);
+        label = sample.toLocaleDateString(undefined, {
+          weekday: "long",
+          month: "short",
+          day: "numeric",
+        });
+      }
+      groups.push({ label, items });
+    }
+    return groups;
+  }, [activities]);
+
+  if (!hasData || activities.length === 0) {
+    return (
+      <div className={`${tile} p-12 flex flex-col items-center justify-center text-center gap-3 min-h-[420px]`}>
+        <div className="p-3 rounded-full bg-primary/[0.07] border border-primary/15">
+          <Activity className="h-5 w-5 text-primary/80" />
+        </div>
+        <div>
+          <p className={eyebrow}>Activity</p>
+          <h3 className="ed-serif text-[24px] mt-1 text-zinc-100">
+            No activity yet
+          </h3>
+          <p className="text-[12px] text-muted-foreground/70 mt-2 max-w-md">
+            Log a call, email, or meeting from any drawer's "+ Log" button —
+            or hit Cmd+K and type "log call".
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className={`${tile} p-5`}>
+      <div className="flex items-baseline gap-3 mb-4">
+        <div>
+          <p className={eyebrow}>Timeline</p>
+          <h3 className={serifTitle}>All activity</h3>
+        </div>
+        <span className="ml-auto text-[11px] font-mono text-zinc-500">
+          {activities.length} {activities.length === 1 ? "event" : "events"}
+        </span>
+      </div>
+
+      <div className="space-y-5">
+        {grouped.map((g) => (
+          <section key={g.label}>
+            <p className={`${eyebrow} mb-2`}>{g.label}</p>
+            <ul className="space-y-0 border border-white/[0.04] rounded-lg overflow-hidden">
+              {g.items.map((a) => {
+                const Icon = ACTIVITY_ICON[a.type] ?? FileText;
+                return (
+                  <li
+                    key={a.id}
+                    className="flex items-start gap-3 px-3 py-3 border-b border-white/[0.04] last:border-b-0 hover:bg-white/[0.02] transition-colors"
+                  >
+                    <div className="mt-0.5 p-1.5 rounded-md bg-white/[0.04] border border-white/[0.05] shrink-0">
+                      <Icon className="h-3 w-3 text-zinc-300" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-baseline justify-between gap-2">
+                        <p className="text-[12.5px] font-semibold text-zinc-100 truncate">
+                          {a.title ?? a.type[0].toUpperCase() + a.type.slice(1)}
+                        </p>
+                        <span className="text-[10px] font-mono text-zinc-500 shrink-0">
+                          {new Date(a.happened_at).toLocaleTimeString(
+                            undefined,
+                            { hour: "numeric", minute: "2-digit" },
+                          )}
+                        </span>
+                      </div>
+                      {a.body_md && (
+                        <p className="text-[11.5px] text-zinc-400 mt-0.5 whitespace-pre-wrap leading-relaxed">
+                          {a.body_md}
+                        </p>
+                      )}
+                      {a.outcome && (
+                        <p className="text-[10px] font-mono text-zinc-600 uppercase tracking-wider mt-1">
+                          {a.outcome}
+                        </p>
+                      )}
+                    </div>
+                  </li>
+                );
+              })}
+            </ul>
+          </section>
+        ))}
+      </div>
+    </div>
+  );
+};
+
+// ════════════════════════════════════════════
+// Day 13 enrichment cards — Top Deals / At-Risk / Win Rate
+// ════════════════════════════════════════════
+
+// ────────────────────────────────────────────────
+// TopDealsCard — top 5 open deals by amount. The "what should I focus
+// on closing?" view. Sorted descending; clamps to 5 so the card stays
+// scannable. Each row gets a stage chip + days-in-stage stamp so the
+// list reads at a glance.
+// ────────────────────────────────────────────────
+const TopDealsCard: React.FC<{ deals: CrmDeal[] }> = ({ deals }) => {
+  const top = useMemo(() => {
+    return deals
+      .filter((d) => DEAL_OPEN_STAGES.includes(d.stage))
+      .sort((a, b) => b.amount_cents - a.amount_cents)
+      .slice(0, 5);
+  }, [deals]);
+
+  return (
+    <div className={`col-span-12 lg:col-span-4 ${tile} p-5 flex flex-col`}>
+      <div className="flex items-baseline gap-3 mb-3">
+        <div>
+          <p className={eyebrow}>Top deals</p>
+          <h3 className={serifTitle}>By value</h3>
+        </div>
+        <span className="ml-auto text-[11px] font-mono text-zinc-500">
+          {top.length === 0 ? "—" : `top ${top.length}`}
+        </span>
+      </div>
+      {top.length === 0 ? (
+        <p className="text-[11.5px] font-mono uppercase tracking-wider text-zinc-600 py-6 text-center">
+          No open deals yet
+        </p>
+      ) : (
+        <ul className="space-y-0">
+          {top.map((d) => {
+            const days = Math.max(
+              0,
+              Math.floor(
+                (Date.now() - Date.parse(d.updated_at ?? d.created_at)) /
+                  86_400_000,
+              ),
+            );
+            return (
+              <li
+                key={d.id}
+                className="flex items-baseline gap-3 py-2 border-b border-white/[0.04] last:border-b-0"
+              >
+                <span className="flex-1 text-[12.5px] text-zinc-100 truncate">
+                  {d.name}
+                </span>
+                <span className="text-[10px] font-mono uppercase tracking-wider text-zinc-500">
+                  {d.stage}
+                </span>
+                <span className={`text-[12px] text-emerald-400 ${monoNum}`}>
+                  {formatCrmAmount(d.amount_cents, d.currency, { compact: true })}
+                </span>
+                <span className="text-[10px] font-mono text-zinc-600 w-8 text-right">
+                  {days}d
+                </span>
+              </li>
+            );
+          })}
+        </ul>
+      )}
+    </div>
+  );
+};
+
+// ────────────────────────────────────────────────
+// AtRiskDealsCard — open deals that have been sitting untouched for 7+
+// days. The implicit assumption is updated_at moves whenever an
+// activity logs against the deal (because useLogActivity touches the
+// deal row's updated_at downstream via realtime, AND inline drawer
+// edits touch it), so it's a fair proxy for "no one's done anything
+// here in a while."
+// ────────────────────────────────────────────────
+const AtRiskDealsCard: React.FC<{ deals: CrmDeal[] }> = ({ deals }) => {
+  const stale = useMemo(() => {
+    const cutoff = Date.now() - 7 * 86_400_000;
+    return deals
+      .filter((d) => {
+        if (!DEAL_OPEN_STAGES.includes(d.stage)) return false;
+        const t = Date.parse(d.updated_at ?? d.created_at);
+        return !isNaN(t) && t < cutoff;
+      })
+      .sort((a, b) => b.amount_cents - a.amount_cents)
+      .slice(0, 5);
+  }, [deals]);
+
+  return (
+    <div className={`col-span-12 lg:col-span-4 ${tile} p-5 flex flex-col`}>
+      <div className="flex items-baseline gap-3 mb-3">
+        <div>
+          <p className={eyebrow}>At risk</p>
+          <h3 className={serifTitle}>Silent 7d+</h3>
+        </div>
+        <span className={`ml-auto text-[11px] font-mono ${stale.length > 0 ? "text-amber-400/80" : "text-zinc-500"}`}>
+          {stale.length === 0 ? "all warm" : `${stale.length} stale`}
+        </span>
+      </div>
+      {stale.length === 0 ? (
+        <p className="text-[11.5px] font-mono uppercase tracking-wider text-zinc-600 py-6 text-center">
+          No deals going cold
+        </p>
+      ) : (
+        <ul className="space-y-0">
+          {stale.map((d) => {
+            const days = Math.floor(
+              (Date.now() - Date.parse(d.updated_at ?? d.created_at)) /
+                86_400_000,
+            );
+            return (
+              <li
+                key={d.id}
+                className="flex items-baseline gap-3 py-2 border-b border-white/[0.04] last:border-b-0"
+              >
+                <span className="flex-1 text-[12.5px] text-zinc-100 truncate">
+                  {d.name}
+                </span>
+                <span className="text-[10px] font-mono uppercase tracking-wider text-zinc-500">
+                  {d.stage}
+                </span>
+                <span className={`text-[11px] text-amber-400/80 ${monoNum}`}>
+                  {days}d
+                </span>
+              </li>
+            );
+          })}
+        </ul>
+      )}
+    </div>
+  );
+};
+
+// ────────────────────────────────────────────────
+// WinRateBySourceCard — groups won + lost deals by their source,
+// renders win % as a horizontal bar. Sources with under 2 closed
+// deals are bucketed into "Other" so a single-deal source can't
+// claim "100% win rate".
+// ────────────────────────────────────────────────
+const WinRateBySourceCard: React.FC<{ deals: CrmDeal[] }> = ({ deals }) => {
+  const rows = useMemo(() => {
+    const buckets = new Map<string, { won: number; lost: number }>();
+    for (const d of deals) {
+      if (d.stage !== "won" && d.stage !== "lost") continue;
+      const key = (d.source ?? "unspecified").toLowerCase();
+      const row = buckets.get(key) ?? { won: 0, lost: 0 };
+      if (d.stage === "won") row.won += 1; else row.lost += 1;
+      buckets.set(key, row);
+    }
+    const all = Array.from(buckets.entries()).map(([source, v]) => ({
+      source,
+      total: v.won + v.lost,
+      won: v.won,
+      winPct: v.won + v.lost > 0 ? Math.round((v.won / (v.won + v.lost)) * 100) : 0,
+    }));
+    // Sources with under 2 deals → "Other" to dampen noise.
+    const named = all.filter((r) => r.total >= 2);
+    const otherDeals = all.filter((r) => r.total < 2);
+    if (otherDeals.length > 0) {
+      const won = otherDeals.reduce((s, r) => s + r.won, 0);
+      const total = otherDeals.reduce((s, r) => s + r.total, 0);
+      named.push({
+        source: "other",
+        total,
+        won,
+        winPct: total > 0 ? Math.round((won / total) * 100) : 0,
+      });
+    }
+    return named.sort((a, b) => b.total - a.total).slice(0, 5);
+  }, [deals]);
+
+  return (
+    <div className={`col-span-12 lg:col-span-4 ${tile} p-5 flex flex-col`}>
+      <div className="flex items-baseline gap-3 mb-3">
+        <div>
+          <p className={eyebrow}>Win rate</p>
+          <h3 className={serifTitle}>By source</h3>
+        </div>
+        <span className="ml-auto text-[11px] font-mono text-zinc-500">
+          {rows.reduce((s, r) => s + r.total, 0)} closed
+        </span>
+      </div>
+      {rows.length === 0 ? (
+        <p className="text-[11.5px] font-mono uppercase tracking-wider text-zinc-600 py-6 text-center">
+          Close some deals to see win rate
+        </p>
+      ) : (
+        <div className="space-y-2.5">
+          {rows.map((r) => (
+            <div key={r.source}>
+              <div className="flex items-baseline justify-between gap-3 mb-1">
+                <p className="text-[10.5px] font-mono uppercase tracking-wider text-zinc-400">
+                  {r.source}
+                  <span className="text-zinc-700 ml-1.5">{r.total}</span>
+                </p>
+                <span className={`text-[12px] ${monoNum} ${r.winPct >= 50 ? "text-emerald-400" : "text-zinc-300"}`}>
+                  {r.winPct}%
+                </span>
+              </div>
+              <div className="h-2 rounded-sm bg-white/[0.03] overflow-hidden">
+                <div
+                  className={`h-full rounded-sm transition-all duration-300 ${r.winPct >= 50 ? "bg-emerald-500/70" : "bg-zinc-700/70"}`}
+                  style={{ width: `${Math.max(r.winPct, r.total > 0 ? 3 : 0)}%` }}
+                />
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+};
 
 // ────────────────────────────────────────────────
 // PlaceholderTab — used by the four upcoming tabs so the route shell
