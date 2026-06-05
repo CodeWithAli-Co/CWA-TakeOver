@@ -14,7 +14,7 @@
 
 import { useState } from "react";
 import { Send, Check, AlertCircle, X, Mail } from "lucide-react";
-import { useSendEmail, useGmailConnection } from "@/stores/gmail";
+import { useSendEmail, useGmailConnection, useGmailAliases } from "@/stores/gmail";
 
 const eyebrow =
   "text-[10px] font-mono uppercase tracking-[0.2em] text-zinc-400 font-medium";
@@ -56,7 +56,28 @@ export const ComposeEmailModal: React.FC<ComposeEmailModalProps> = ({
   const [sentInfo, setSentInfo] = useState<{ gmail_id: string } | null>(null);
 
   const { data: connection } = useGmailConnection();
+  const { data: aliases } = useGmailAliases();
   const sendEmail = useSendEmail();
+
+  // Default the From: picker to whichever alias Gmail considers
+  // default — falls back to the connected primary if no other
+  // aliases are set up. Once the user changes the picker, that
+  // value persists for the life of this modal instance.
+  const defaultAlias = (aliases ?? []).find((a) => a.is_default)?.email
+    ?? connection?.email
+    ?? "";
+  const [fromAlias, setFromAlias] = useState<string>(defaultAlias);
+  // Keep fromAlias in sync if aliases load after first render
+  // (very common — modal opens, aliases query is still pending).
+  useEffect(() => {
+    if (!fromAlias && defaultAlias) setFromAlias(defaultAlias);
+  }, [defaultAlias, fromAlias]);
+
+  // Find the matching alias object so we can pull its display_name
+  // through to the send payload. If the picker shows
+  // "Sales Team <sales@yourco.com>", recipients see the same.
+  const selectedAlias = (aliases ?? []).find((a) => a.email === fromAlias);
+  const showPicker = (aliases ?? []).length > 1;
 
   const handleSend = async () => {
     setSendError(null);
@@ -70,6 +91,12 @@ export const ComposeEmailModal: React.FC<ComposeEmailModalProps> = ({
         deal_id: dealId,
         contact_id: contactId,
         thread_id: threadId,
+        // Only send from_alias if the operator picked something
+        // other than their connected primary — keeps the network
+        // payload clean for the common case.
+        from_alias:
+          fromAlias && fromAlias !== connection?.email ? fromAlias : undefined,
+        from_display_name: selectedAlias?.display_name || undefined,
       });
       setSentInfo({ gmail_id: result.gmail_id });
       window.setTimeout(onClose, 1200);
@@ -126,6 +153,31 @@ export const ComposeEmailModal: React.FC<ComposeEmailModalProps> = ({
                 Connect Gmail in <strong>Settings → Connectors</strong> before
                 you can send.
               </span>
+            </div>
+          )}
+
+          {/* From — only renders when the operator has multiple
+              verified aliases set up in Gmail. Single-alias users
+              (just the connected account) don't need a picker. */}
+          {showPicker && (
+            <div>
+              <p className="text-[10px] font-mono uppercase tracking-[0.18em] text-zinc-500 mb-1.5">
+                From
+              </p>
+              <select
+                value={fromAlias}
+                onChange={(e) => setFromAlias(e.target.value)}
+                className="w-full bg-zinc-900/60 border border-white/[0.08] rounded-md px-3 py-2 text-[12.5px] text-zinc-100 outline-none focus:border-emerald-500/30 appearance-none cursor-pointer"
+              >
+                {(aliases ?? []).map((a) => (
+                  <option key={a.email} value={a.email}>
+                    {a.display_name
+                      ? `${a.display_name} <${a.email}>`
+                      : a.email}
+                    {a.is_primary ? " · primary" : ""}
+                  </option>
+                ))}
+              </select>
             </div>
           )}
 
@@ -198,7 +250,9 @@ export const ComposeEmailModal: React.FC<ComposeEmailModalProps> = ({
         <div className="px-5 py-3 border-t border-white/[0.06] flex items-center justify-between gap-3 bg-black/30">
           <span className="flex items-center gap-1.5 text-[10px] font-mono text-zinc-600 uppercase tracking-wider">
             <Mail className="h-3 w-3" />
-            {connection ? `via ${connection.email}` : "Gmail not connected"}
+            {connection
+              ? `via ${fromAlias || connection.email}`
+              : "Gmail not connected"}
           </span>
           <button
             type="button"

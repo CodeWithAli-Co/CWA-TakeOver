@@ -15,7 +15,7 @@
  * the deal drawer. Quiet by default — a single row of two pills.
  */
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   Sparkles, Mail, Copy, RefreshCw, X, AlertCircle, Send, Check,
 } from "lucide-react";
@@ -30,7 +30,7 @@ import type {
   CrmContact,
   CrmCompany,
 } from "@/stores/crm";
-import { useSendEmail, useGmailConnection } from "@/stores/gmail";
+import { useSendEmail, useGmailConnection, useGmailAliases } from "@/stores/gmail";
 
 interface DealAiContext {
   deal: CrmDeal;
@@ -217,7 +217,20 @@ const DraftEmailModal: React.FC<{
   // Need the Gmail connection state to gate Send + show a friendly
   // message if the operator hasn't connected yet.
   const { data: connection } = useGmailConnection();
+  const { data: aliases } = useGmailAliases();
   const sendEmail = useSendEmail();
+
+  // From-address picker — falls back to connected primary when only
+  // one address is set up. Mirrors the standalone ComposeEmailModal.
+  const defaultAlias = (aliases ?? []).find((a) => a.is_default)?.email
+    ?? connection?.email
+    ?? "";
+  const [fromAlias, setFromAlias] = useState<string>(defaultAlias);
+  useEffect(() => {
+    if (!fromAlias && defaultAlias) setFromAlias(defaultAlias);
+  }, [defaultAlias, fromAlias]);
+  const selectedAlias = (aliases ?? []).find((a) => a.email === fromAlias);
+  const showAliasPicker = (aliases ?? []).length > 1;
 
   const run = async () => {
     setBusy(true);
@@ -239,6 +252,9 @@ const DraftEmailModal: React.FC<{
         body,
         deal_id: ctx.deal.id,
         contact_id: ctx.contact?.id,
+        from_alias:
+          fromAlias && fromAlias !== connection?.email ? fromAlias : undefined,
+        from_display_name: selectedAlias?.display_name || undefined,
       });
       setSentInfo({ gmail_id: result.gmail_id });
       // Brief delay so the operator sees the success state before
@@ -295,6 +311,30 @@ const DraftEmailModal: React.FC<{
         </div>
 
         <div className="px-5 py-4 space-y-4 overflow-y-auto">
+          {/* From: alias picker — only renders if multiple verified
+              aliases are set up in Gmail. Single-alias users skip. */}
+          {showAliasPicker && (
+            <div>
+              <p className="text-[10px] font-mono uppercase tracking-[0.18em] text-zinc-500 mb-1.5">
+                From
+              </p>
+              <select
+                value={fromAlias}
+                onChange={(e) => setFromAlias(e.target.value)}
+                className="w-full bg-zinc-900/60 border border-white/[0.08] rounded-md px-3 py-2 text-[12.5px] text-zinc-100 outline-none focus:border-emerald-500/30 appearance-none cursor-pointer"
+              >
+                {(aliases ?? []).map((a) => (
+                  <option key={a.email} value={a.email}>
+                    {a.display_name
+                      ? `${a.display_name} <${a.email}>`
+                      : a.email}
+                    {a.is_primary ? " · primary" : ""}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
+
           {/* To: recipient */}
           <div>
             <p className="text-[10px] font-mono uppercase tracking-[0.18em] text-zinc-500 mb-1.5">
@@ -407,7 +447,7 @@ const DraftEmailModal: React.FC<{
         <div className="px-5 py-3 border-t border-white/[0.06] flex items-center justify-between gap-3 bg-black/30">
           <span className="text-[10px] font-mono text-zinc-600 uppercase tracking-wider">
             {connection
-              ? `via ${connection.email}`
+              ? `via ${fromAlias || connection.email}`
               : "Connect Gmail in Settings → Connectors to send"}
           </span>
           <div className="flex items-center gap-2">

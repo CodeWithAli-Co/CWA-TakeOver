@@ -213,6 +213,10 @@ export interface SendEmailInput {
   /** Optional — when replying to an inbound email, pass the
    *  original's thread_id so Gmail threads the reply correctly. */
   thread_id?: string;
+  /** Optional — verified "Send mail as" alias to send from. When
+   *  unset, From: is the connected account's primary address. */
+  from_alias?: string;
+  from_display_name?: string;
 }
 
 export interface SendEmailResult {
@@ -254,6 +258,8 @@ export function useSendEmail() {
           deal_id: input.deal_id,
           contact_id: input.contact_id,
           thread_id: input.thread_id,
+          from_alias: input.from_alias,
+          from_display_name: input.from_display_name,
         }),
       });
       if (!res.ok) {
@@ -443,6 +449,70 @@ export function useSyncInbox() {
           queryKey: gmailKeys.connection(userSupaId),
         });
       }
+    },
+  });
+}
+
+// ────────────────────────────────────────────────
+// useGmailAliases — list of verified "Send mail as" addresses the
+// operator has set up in Gmail. Powers the From: picker in the
+// compose + draft modals so the operator can send AS a professional
+// alias (sales@yourco.com) instead of their personal Gmail.
+//
+// Setup is one-time and done in Gmail itself: Settings → Accounts
+// → "Send mail as" → Add → verify the link Gmail emails. After
+// that, this hook surfaces the alias and the send route accepts it.
+// ────────────────────────────────────────────────
+
+export interface GmailAlias {
+  email: string;
+  display_name: string;
+  is_default: boolean;
+  is_primary: boolean;
+}
+
+export const gmailAliasKeys = {
+  all: (userSupaId: string) => ["gmail", "aliases", userSupaId] as const,
+};
+
+export function useGmailAliases() {
+  const { data: meRows } = ActiveUser();
+  const userSupaId: string | undefined = (meRows?.[0] as any)?.supa_id;
+
+  return useQuery<GmailAlias[]>({
+    queryKey: userSupaId
+      ? gmailAliasKeys.all(userSupaId)
+      : ["gmail", "aliases", "anon"],
+    enabled: !!userSupaId,
+    // Aliases change rarely (only when the user adds/verifies a
+    // new one in Gmail). 5-min stale window keeps the picker
+    // snappy without going stale across sessions.
+    staleTime: 5 * 60 * 1000,
+    queryFn: async (): Promise<GmailAlias[]> => {
+      if (!userSupaId) return [];
+      const stronghold = await getStronghold();
+      const companyName = (await stronghold.getRecord("company_name")) ?? "";
+      const base = import.meta.env.VITE_TAKEOVER_SITE_URL;
+      if (!base) throw new Error("VITE_TAKEOVER_SITE_URL not configured.");
+      const res = await fetch(`${base}/api/gmail/aliases`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "TakeOver-App": "true",
+        },
+        body: JSON.stringify({
+          user_supa_id: userSupaId,
+          company_name: companyName,
+        }),
+      });
+      if (!res.ok) {
+        const detail = await res.text().catch(() => "");
+        let parsed: { error?: string } = {};
+        try { parsed = JSON.parse(detail); } catch { /* noop */ }
+        throw new Error(parsed.error ?? `aliases failed: ${res.status}`);
+      }
+      const json = (await res.json()) as { aliases?: GmailAlias[] };
+      return json.aliases ?? [];
     },
   });
 }
