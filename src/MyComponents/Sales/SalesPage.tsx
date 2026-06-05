@@ -60,8 +60,9 @@ import {
 } from "@/stores/crm";
 import { useQueryClient } from "@tanstack/react-query";
 import { PipelineView } from "./PipelineView";
-import { ContactsView } from "./ContactsView";
-import { CompaniesView } from "./CompaniesView";
+import { ContactsView, ContactDetailDrawer } from "./ContactsView";
+import { CompaniesView, CompanyDetailDrawer } from "./CompaniesView";
+import { DealDetailDrawer } from "./DealDetailDrawer";
 import { useStripeDashboard } from "@/lib/useStripeDashboard";
 
 // ════════════════════════════════════════════
@@ -326,6 +327,15 @@ export const SalesPage: React.FC = () => {
           </div>
         </Tabs>
       </div>
+
+      {/* All three detail drawers mount once at the root of /sales so
+          they survive tab switches and cross-drawer hot-swaps work.
+          State is owned by salesDrawerStore — only one drawer is open
+          at a time (opening one closes the other two), and the drawer
+          components themselves read activeXId off the store. */}
+      <DealDetailDrawer />
+      <ContactDetailDrawer />
+      <CompanyDetailDrawer />
     </div>
   );
 };

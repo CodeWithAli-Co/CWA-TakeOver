@@ -39,7 +39,7 @@ import {
   type CrmDeal,
   type DealStage,
 } from "@/stores/crm";
-import { DealDetailDrawer } from "./DealDetailDrawer";
+import { useSalesDrawer } from "./salesDrawerStore";
 
 // ────────────────────────────────────────────────
 // Shared editorial chrome — kept in sync with the rest of /sales.
@@ -89,10 +89,11 @@ export const PipelineView: React.FC = () => {
   const [overStage, setOverStage] = useState<DealStage | null>(null);
   const [overCardId, setOverCardId] = useState<string | null>(null);
 
-  // Detail drawer state. Clicking a card opens the deal in a
-  // right-slide drawer where you can edit fields + see the activity
-  // timeline. Backdrop click or Escape closes it.
-  const [activeDealId, setActiveDealId] = useState<string | null>(null);
+  // Open-deal handler now routes through the shared sales drawer
+  // store — the drawer itself is mounted globally on SalesPage so it
+  // survives tab switches and cross-drawer navigation hot-swaps work
+  // (e.g. clicking the company link inside the deal drawer).
+  const openDeal = useSalesDrawer((s) => s.openDeal);
 
   // Companies map so cards show company name in their subtitle.
   const companyMap = useMemo(() => {
@@ -208,7 +209,7 @@ export const PipelineView: React.FC = () => {
         onSuccess: (row) => {
           // Pop the new deal open in the drawer so the user starts
           // typing into the title field immediately.
-          setActiveDealId(row.id);
+          openDeal(row.id);
         },
       },
     );
@@ -299,20 +300,15 @@ export const PipelineView: React.FC = () => {
               if (id && id !== cardId) handleDrop(id, stage, cardId);
               clearDragState();
             }}
-            onOpenDeal={setActiveDealId}
+            onOpenDeal={openDeal}
             onAddDeal={handleAddDeal}
             isAdding={createDeal.isPending}
           />
         ))}
       </div>
-
-      {/* Detail drawer — controlled by activeDealId. Mounted at the
-          root of the view so its fixed-positioned panel escapes the
-          kanban scroll container. */}
-      <DealDetailDrawer
-        dealId={activeDealId}
-        onClose={() => setActiveDealId(null)}
-      />
+      {/* DealDetailDrawer used to be rendered here. It now lives at
+          the SalesPage root so the drawer survives tab switches and
+          cross-drawer hot-swaps work. */}
     </div>
   );
 };

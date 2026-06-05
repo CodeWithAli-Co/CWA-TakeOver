@@ -20,11 +20,14 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { Plus, Search, X, Building2, Users, TrendingUp, Activity as ActivityIcon } from "lucide-react";
 import { useLogActivityDialog } from "./logActivityStore";
+import { useSalesDrawer } from "./salesDrawerStore";
+import { InlineDeleteButton } from "./InlineDeleteButton";
 import {
   useCrmCompanies,
   useCrmCompany,
   useCreateCompany,
   useUpdateCompany,
+  useDeleteCompany,
   useCrmContacts,
   useCrmDeals,
   formatCrmAmount,
@@ -51,7 +54,8 @@ type SortKey = "alpha" | "recent" | "pipeline";
 export const CompaniesView: React.FC = () => {
   const [search, setSearch] = useState("");
   const [sortBy, setSortBy] = useState<SortKey>("alpha");
-  const [activeCompanyId, setActiveCompanyId] = useState<string | null>(null);
+  // Drawer state lives on the shared salesDrawerStore.
+  const openCompany = useSalesDrawer((s) => s.openCompany);
 
   const { data: companies = [], isLoading } = useCrmCompanies({ search });
   const { data: allContacts = [] } = useCrmContacts({});
@@ -122,7 +126,7 @@ export const CompaniesView: React.FC = () => {
   const handleAddCompany = () => {
     createCompany.mutate(
       { name: "New company" },
-      { onSuccess: (row) => setActiveCompanyId(row.id) },
+      { onSuccess: (row) => openCompany(row.id) },
     );
   };
 
@@ -206,17 +210,14 @@ export const CompaniesView: React.FC = () => {
                   contactCount: 0,
                   lastTouchedAt: null,
                 }}
-                onClick={() => setActiveCompanyId(c.id)}
+                onClick={() => openCompany(c.id)}
               />
             ))
           )}
         </div>
       </div>
-
-      <CompanyDetailDrawer
-        companyId={activeCompanyId}
-        onClose={() => setActiveCompanyId(null)}
-      />
+      {/* CompanyDetailDrawer used to be rendered here. It now lives at
+          the SalesPage root so the drawer survives tab switches. */}
     </div>
   );
 };
@@ -285,11 +286,13 @@ const CompanyRow: React.FC<{
 
 // ────────────────────────────────────────────────
 // CompanyDetailDrawer
+//
+// Zero-prop now — sources activeCompanyId off the shared
+// salesDrawerStore so SalesPage can mount it once globally.
 // ────────────────────────────────────────────────
-const CompanyDetailDrawer: React.FC<{
-  companyId: string | null;
-  onClose: () => void;
-}> = ({ companyId, onClose }) => {
+export const CompanyDetailDrawer: React.FC = () => {
+  const companyId = useSalesDrawer((s) => s.activeCompanyId);
+  const onClose = useSalesDrawer((s) => s.close);
   const isOpen = !!companyId;
 
   useEffect(() => {
@@ -330,6 +333,7 @@ const CompanyDrawerContent: React.FC<{
   const { data: allContacts = [] } = useCrmContacts({});
   const { data: allDeals = [] } = useCrmDeals();
   const updateCompany = useUpdateCompany();
+  const deleteCompany = useDeleteCompany();
   const openLogActivity = useLogActivityDialog((s) => s.openDialog);
 
   const [draft, setDraft] = useState<Partial<CrmCompany>>({});
@@ -390,6 +394,14 @@ const CompanyDrawerContent: React.FC<{
               <ActivityIcon className="h-3 w-3" />
               Log
             </button>
+            <InlineDeleteButton
+              label={`company "${current.name}"`}
+              disabled={deleteCompany.isPending}
+              onDelete={async () => {
+                await deleteCompany.mutateAsync(company.id);
+                onClose();
+              }}
+            />
             <button
               onClick={onClose}
               className="text-zinc-500 hover:text-zinc-200 transition-colors"
@@ -599,53 +611,65 @@ const Stat: React.FC<{
 );
 
 // ────────────────────────────────────────────────
-// LinkedContactRow / LinkedDealRow — quiet rows for the drawer's
-// cross-entity lists. Click handlers are stubs for Day 10/11 when
-// we wire cross-drawer routing.
+// LinkedContactRow / LinkedDealRow — clickable rows for the drawer's
+// cross-entity lists. Clicking a row hot-swaps the drawer to the
+// linked entity via salesDrawerStore.openContact / openDeal.
 // ────────────────────────────────────────────────
-const LinkedContactRow: React.FC<{ contact: CrmContact }> = ({ contact }) => (
-  <li
-    className="flex items-center justify-between gap-3 px-3 py-2 border-b border-white/[0.04] last:border-b-0 hover:bg-white/[0.02] transition-colors text-[11.5px]"
-  >
-    <span className="text-zinc-200 font-medium truncate">
-      {contact.name ?? <span className="italic text-zinc-600">No name</span>}
-      {contact.title && (
-        <span className="text-zinc-500 font-normal ml-1.5">· {contact.title}</span>
-      )}
-    </span>
-    <span className="text-[10px] font-mono uppercase tracking-wider text-zinc-600 shrink-0">
-      {contact.lifecycle_stage}
-    </span>
-  </li>
-);
+const LinkedContactRow: React.FC<{ contact: CrmContact }> = ({ contact }) => {
+  const openContact = useSalesDrawer((s) => s.openContact);
+  return (
+    <li className="border-b border-white/[0.04] last:border-b-0">
+      <button
+        type="button"
+        onClick={() => openContact(contact.id)}
+        className="w-full flex items-center justify-between gap-3 px-3 py-2 hover:bg-white/[0.02] transition-colors text-[11.5px] text-left"
+      >
+        <span className="text-zinc-200 font-medium truncate">
+          {contact.name ?? <span className="italic text-zinc-600">No name</span>}
+          {contact.title && (
+            <span className="text-zinc-500 font-normal ml-1.5">· {contact.title}</span>
+          )}
+        </span>
+        <span className="text-[10px] font-mono uppercase tracking-wider text-zinc-600 shrink-0">
+          {contact.lifecycle_stage}
+        </span>
+      </button>
+    </li>
+  );
+};
 
 const LinkedDealRow: React.FC<{ deal: CrmDeal }> = ({ deal }) => {
+  const openDeal = useSalesDrawer((s) => s.openDeal);
   const isOpen = DEAL_OPEN_STAGES.includes(deal.stage);
   return (
-    <li
-      className="flex items-center justify-between gap-3 px-3 py-2 border-b border-white/[0.04] last:border-b-0 hover:bg-white/[0.02] transition-colors text-[11.5px]"
-    >
-      <span className="text-zinc-200 font-medium truncate">{deal.name}</span>
-      <div className="flex items-baseline gap-3 shrink-0">
-        <span
-          className={`${monoNum} ${
-            deal.stage === "won"
-              ? "text-emerald-400"
-              : deal.stage === "lost"
-                ? "text-zinc-600"
-                : "text-zinc-300"
-          }`}
-        >
-          {formatCrmAmount(deal.amount_cents, deal.currency, { compact: true })}
-        </span>
-        <span
-          className={`text-[10px] font-mono uppercase tracking-wider ${
-            isOpen ? "text-zinc-500" : "text-zinc-700"
-          }`}
-        >
-          {deal.stage}
-        </span>
-      </div>
+    <li className="border-b border-white/[0.04] last:border-b-0">
+      <button
+        type="button"
+        onClick={() => openDeal(deal.id)}
+        className="w-full flex items-center justify-between gap-3 px-3 py-2 hover:bg-white/[0.02] transition-colors text-[11.5px] text-left"
+      >
+        <span className="text-zinc-200 font-medium truncate">{deal.name}</span>
+        <div className="flex items-baseline gap-3 shrink-0">
+          <span
+            className={`${monoNum} ${
+              deal.stage === "won"
+                ? "text-emerald-400"
+                : deal.stage === "lost"
+                  ? "text-zinc-600"
+                  : "text-zinc-300"
+            }`}
+          >
+            {formatCrmAmount(deal.amount_cents, deal.currency, { compact: true })}
+          </span>
+          <span
+            className={`text-[10px] font-mono uppercase tracking-wider ${
+              isOpen ? "text-zinc-500" : "text-zinc-700"
+            }`}
+          >
+            {deal.stage}
+          </span>
+        </div>
+      </button>
     </li>
   );
 };

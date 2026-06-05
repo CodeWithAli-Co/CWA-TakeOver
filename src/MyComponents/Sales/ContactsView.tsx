@@ -19,6 +19,7 @@ import {
   useCrmContact,
   useCreateContact,
   useUpdateContact,
+  useDeleteContact,
   useActivitiesForContact,
   useCrmCompanies,
   findCompanyByEmailDomain,
@@ -28,6 +29,8 @@ import {
 } from "@/stores/crm";
 import { LifecyclePill } from "./LifecyclePill";
 import { useLogActivityDialog } from "./logActivityStore";
+import { useSalesDrawer } from "./salesDrawerStore";
+import { InlineDeleteButton } from "./InlineDeleteButton";
 
 // ────────────────────────────────────────────────
 // Shared chrome
@@ -53,7 +56,9 @@ const LIFECYCLE_LABEL: Record<LifecycleStage, string> = {
 export const ContactsView: React.FC = () => {
   const [lifecycle, setLifecycle] = useState<LifecycleStage | "all">("all");
   const [search, setSearch] = useState("");
-  const [activeContactId, setActiveContactId] = useState<string | null>(null);
+  // Drawer state lives on the shared salesDrawerStore so the contact
+  // drawer (mounted at SalesPage root) can be opened from anywhere.
+  const openContact = useSalesDrawer((s) => s.openContact);
 
   // Server-side filter — useCrmContacts already supports the
   // lifecycle + search args, no client-side filtering needed.
@@ -88,7 +93,7 @@ export const ContactsView: React.FC = () => {
     createContact.mutate(
       { name: null, lifecycle_stage: "lead" },
       {
-        onSuccess: (row) => setActiveContactId(row.id),
+        onSuccess: (row) => openContact(row.id),
       },
     );
   };
@@ -181,18 +186,14 @@ export const ContactsView: React.FC = () => {
                 key={c.id}
                 contact={c}
                 companyName={c.company_id ? companyMap.get(c.company_id) ?? null : null}
-                onClick={() => setActiveContactId(c.id)}
+                onClick={() => openContact(c.id)}
               />
             ))
           )}
         </div>
       </div>
-
-      {/* Detail drawer */}
-      <ContactDetailDrawer
-        contactId={activeContactId}
-        onClose={() => setActiveContactId(null)}
-      />
+      {/* ContactDetailDrawer used to be rendered here. It now lives at
+          the SalesPage root so the drawer survives tab switches. */}
     </div>
   );
 };
@@ -242,11 +243,13 @@ const ContactRow: React.FC<{
 // ────────────────────────────────────────────────
 // ContactDetailDrawer — same right-slide pattern as DealDetailDrawer.
 // Inline edit form + activity timeline.
+//
+// Zero-prop now — sources activeContactId off the shared
+// salesDrawerStore so SalesPage can mount it once globally.
 // ────────────────────────────────────────────────
-const ContactDetailDrawer: React.FC<{
-  contactId: string | null;
-  onClose: () => void;
-}> = ({ contactId, onClose }) => {
+export const ContactDetailDrawer: React.FC = () => {
+  const contactId = useSalesDrawer((s) => s.activeContactId);
+  const onClose = useSalesDrawer((s) => s.close);
   const isOpen = !!contactId;
 
   useEffect(() => {
@@ -287,6 +290,7 @@ const ContactDrawerContent: React.FC<{
   const { data: activities = [] } = useActivitiesForContact(contactId);
   const { data: companies = [] } = useCrmCompanies({});
   const updateContact = useUpdateContact();
+  const deleteContact = useDeleteContact();
   const openLogActivity = useLogActivityDialog((s) => s.openDialog);
 
   const [draft, setDraft] = useState<Partial<CrmContact>>({});
@@ -320,13 +324,23 @@ const ContactDrawerContent: React.FC<{
       <header className="space-y-2">
         <div className="flex items-center justify-between">
           <p className={eyebrow}>Contact</p>
-          <button
-            onClick={onClose}
-            className="text-zinc-500 hover:text-zinc-200 transition-colors"
-            aria-label="Close drawer"
-          >
-            <X className="h-4 w-4" />
-          </button>
+          <div className="flex items-center gap-2">
+            <InlineDeleteButton
+              label={current.name ? `contact "${current.name}"` : "this contact"}
+              disabled={deleteContact.isPending}
+              onDelete={async () => {
+                await deleteContact.mutateAsync(contact.id);
+                onClose();
+              }}
+            />
+            <button
+              onClick={onClose}
+              className="text-zinc-500 hover:text-zinc-200 transition-colors"
+              aria-label="Close drawer"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          </div>
         </div>
 
         <input
@@ -421,7 +435,21 @@ const ContactDrawerContent: React.FC<{
               ))}
             </select>
           </Field>
-          <Field label="Company">
+          <Field
+            label="Company"
+            action={
+              current.company_id ? (
+                <button
+                  type="button"
+                  onClick={() => useSalesDrawer.getState().openCompany(current.company_id!)}
+                  className="text-[10px] font-mono uppercase tracking-wider text-zinc-500 hover:text-emerald-300 transition-colors"
+                  title="Open company drawer"
+                >
+                  → View
+                </button>
+              ) : null
+            }
+          >
             <select
               value={current.company_id ?? ""}
               onChange={(e) => {
@@ -545,9 +573,15 @@ const ContactDrawerContent: React.FC<{
 const Field: React.FC<{
   label: string;
   children: React.ReactNode;
-}> = ({ label, children }) => (
+  /** Trailing action slot — used by the Company field to render a
+   *  "→ View" link that jumps to the company drawer. */
+  action?: React.ReactNode;
+}> = ({ label, children, action }) => (
   <label className="block">
-    <span className={`${eyebrow} block mb-1`}>{label}</span>
+    <span className={`${eyebrow} flex items-center justify-between mb-1`}>
+      <span>{label}</span>
+      {action}
+    </span>
     {children}
   </label>
 );

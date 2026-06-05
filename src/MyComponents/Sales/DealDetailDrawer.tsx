@@ -32,9 +32,12 @@ import {
   Plus,
 } from "lucide-react";
 import { useLogActivityDialog } from "./logActivityStore";
+import { useSalesDrawer } from "./salesDrawerStore";
+import { InlineDeleteButton } from "./InlineDeleteButton";
 import {
   useCrmDeal,
   useUpdateDeal,
+  useDeleteDeal,
   useActivitiesForDeal,
   useCrmCompanies,
   useCrmContacts,
@@ -101,11 +104,16 @@ function relTime(iso: string): string {
 
 // ════════════════════════════════════════════
 // Drawer
+//
+// Zero-prop component now — pulls active deal id from the shared
+// salesDrawerStore so cross-drawer navigation works (a link from
+// the deal drawer to a company drawer can clear `activeDealId` and
+// set `activeCompanyId` in one call, and both drawers update).
 // ════════════════════════════════════════════
-export const DealDetailDrawer: React.FC<{
-  dealId: string | null;
-  onClose: () => void;
-}> = ({ dealId, onClose }) => {
+export const DealDetailDrawer: React.FC = () => {
+  const dealId = useSalesDrawer((s) => s.activeDealId);
+  const closeStoreDrawer = useSalesDrawer((s) => s.close);
+  const onClose = closeStoreDrawer;
   const isOpen = !!dealId;
 
   // Escape key closes. Listener only mounts while open so we don't
@@ -157,6 +165,7 @@ const DealDrawerContent: React.FC<{
   const { data: companies = [] } = useCrmCompanies({});
   const { data: contacts = [] } = useCrmContacts({});
   const updateDeal = useUpdateDeal();
+  const deleteDeal = useDeleteDeal();
   const openLogActivity = useLogActivityDialog((s) => s.openDialog);
 
   // Local draft state — synced from the server row on first load,
@@ -225,13 +234,23 @@ const DealDrawerContent: React.FC<{
       <header className="space-y-2">
         <div className="flex items-center justify-between">
           <p className={eyebrow}>Deal</p>
-          <button
-            onClick={onClose}
-            className="text-zinc-500 hover:text-zinc-200 transition-colors"
-            aria-label="Close drawer"
-          >
-            <X className="h-4 w-4" />
-          </button>
+          <div className="flex items-center gap-2">
+            <InlineDeleteButton
+              label={`deal "${current.name}"`}
+              disabled={deleteDeal.isPending}
+              onDelete={async () => {
+                await deleteDeal.mutateAsync(deal.id);
+                onClose();
+              }}
+            />
+            <button
+              onClick={onClose}
+              className="text-zinc-500 hover:text-zinc-200 transition-colors"
+              aria-label="Close drawer"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          </div>
         </div>
 
         <input
@@ -243,12 +262,18 @@ const DealDrawerContent: React.FC<{
           style={{ fontFamily: "Newsreader, Georgia, serif" }}
         />
 
-        {/* Subtitle line — linked company + current stage pill. */}
+        {/* Subtitle line — linked company (clickable → company drawer)
+            + current stage pill. */}
         <div className="flex items-center gap-2 text-[12px] text-zinc-500">
           {current.company_id && companyMap.get(current.company_id) ? (
-            <span className="text-zinc-400">
+            <button
+              type="button"
+              onClick={() => useSalesDrawer.getState().openCompany(current.company_id!)}
+              className="text-zinc-400 hover:text-emerald-300 transition-colors underline-offset-2 hover:underline"
+              title="Open company"
+            >
               {companyMap.get(current.company_id)}
-            </span>
+            </button>
           ) : (
             <span className="italic text-zinc-600">No company</span>
           )}
@@ -340,9 +365,25 @@ const DealDrawerContent: React.FC<{
       </div>
 
       {/* Linkage — company + contact dropdowns. Contact list narrows
-          to people at the chosen company when one is set. */}
+          to people at the chosen company when one is set. Each picker
+          gets a sibling "→ view" arrow when a value is set so the
+          operator can jump straight to that linked drawer. */}
       <section className="grid grid-cols-1 gap-3">
-        <Field label="Company">
+        <Field
+          label="Company"
+          action={
+            current.company_id ? (
+              <button
+                type="button"
+                onClick={() => useSalesDrawer.getState().openCompany(current.company_id!)}
+                className="text-[10px] font-mono uppercase tracking-wider text-zinc-500 hover:text-emerald-300 transition-colors"
+                title="Open company drawer"
+              >
+                → View
+              </button>
+            ) : null
+          }
+        >
           <select
             value={current.company_id ?? ""}
             onChange={(e) => {
@@ -360,7 +401,21 @@ const DealDrawerContent: React.FC<{
             ))}
           </select>
         </Field>
-        <Field label="Contact">
+        <Field
+          label="Contact"
+          action={
+            current.contact_id ? (
+              <button
+                type="button"
+                onClick={() => useSalesDrawer.getState().openContact(current.contact_id!)}
+                className="text-[10px] font-mono uppercase tracking-wider text-zinc-500 hover:text-emerald-300 transition-colors"
+                title="Open contact drawer"
+              >
+                → View
+              </button>
+            ) : null
+          }
+        >
           <select
             value={current.contact_id ?? ""}
             onChange={(e) => {
@@ -502,9 +557,16 @@ const ActivityRow: React.FC<{ activity: CrmActivity }> = ({ activity }) => {
 const Field: React.FC<{
   label: string;
   children: React.ReactNode;
-}> = ({ label, children }) => (
+  /** Optional trailing element placed to the right of the label —
+   *  used by the company / contact rows to render the "→ View" link
+   *  that jumps to the linked entity's drawer. */
+  action?: React.ReactNode;
+}> = ({ label, children, action }) => (
   <label className="block">
-    <span className={`${eyebrow} block mb-1`}>{label}</span>
+    <span className={`${eyebrow} flex items-center justify-between mb-1`}>
+      <span>{label}</span>
+      {action}
+    </span>
     {children}
   </label>
 );
