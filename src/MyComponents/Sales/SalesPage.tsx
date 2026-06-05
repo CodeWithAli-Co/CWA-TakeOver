@@ -31,6 +31,14 @@ import {
   KanbanSquare,
   Sparkles,
   RefreshCcw,
+  Phone,
+  Mail,
+  Calendar as CalendarIcon,
+  FileText,
+  CheckCircle2,
+  MessageSquare,
+  Video,
+  StickyNote,
 } from "lucide-react";
 import {
   useCrmContacts,
@@ -41,10 +49,15 @@ import {
   weightedForecastCents,
   bookedRevenueCents,
   formatCrmAmount,
+  DEAL_STAGES,
   DEAL_OPEN_STAGES,
   type CrmDeal,
+  type CrmActivity,
+  type DealStage,
+  type ActivityType,
 } from "@/stores/crm";
 import { useQueryClient } from "@tanstack/react-query";
+import { PipelineView } from "./PipelineView";
 
 // ════════════════════════════════════════════
 // Shared editorial chrome — same tokens as the financial dashboard
@@ -203,15 +216,13 @@ export const SalesPage: React.FC = () => {
               <DashboardTab
                 kpis={kpis}
                 deals={deals}
+                recentActivity={recentActivity}
                 hasData={hasData}
               />
             </TabsContent>
 
             <TabsContent value="pipeline">
-              <PlaceholderTab
-                title="Pipeline"
-                subtitle="Drag-drop kanban — ships Day 5–6"
-              />
+              <PipelineView />
             </TabsContent>
 
             <TabsContent value="contacts">
@@ -242,14 +253,29 @@ export const SalesPage: React.FC = () => {
 };
 
 // ────────────────────────────────────────────────
-// Dashboard tab — KPI strip + (placeholder) pipeline-by-stage chart
-// + (placeholder) recent activity feed. Day 4 fills these in.
+// KPI shape — extracted so DashboardTab's prop type stays honest
+// without a hacky useDerivedKpis trick.
+// ────────────────────────────────────────────────
+interface SalesKpis {
+  contactCount: number;
+  customerCount: number;
+  leadsThisWeek: number;
+  companyCount: number;
+  openDeals: number;
+  pipelineCents: number;
+  bookedThisMonthCents: number;
+}
+
+// ────────────────────────────────────────────────
+// Dashboard tab — KPI strip + pipeline-by-stage chart + recent
+// activity feed. All three widgets are now live.
 // ────────────────────────────────────────────────
 const DashboardTab: React.FC<{
-  kpis: ReturnType<typeof useDerivedKpis>;
+  kpis: SalesKpis;
   deals: CrmDeal[];
+  recentActivity: CrmActivity[];
   hasData: boolean;
-}> = ({ kpis, hasData }) => {
+}> = ({ kpis, deals, recentActivity, hasData }) => {
   return (
     <div className="grid grid-cols-12 gap-3.5">
       {/* KPI strip — 6 compact tiles (col-2 each = 12) */}
@@ -260,43 +286,237 @@ const DashboardTab: React.FC<{
       <KpiTile label="New · 7d" value={String(kpis.leadsThisWeek)} sub="new leads this week" />
       <KpiTile label="Companies" value={String(kpis.companyCount)} sub="accounts tracked" />
 
-      {/* Pipeline-by-stage + activity placeholder row — wires Day 4 */}
-      <div className={`col-span-12 lg:col-span-8 ${tile} p-5`}>
-        <p className={eyebrow}>Pipeline</p>
-        <h3 className={serifTitle}>By stage</h3>
-        <div className="h-56 flex items-center justify-center mt-4">
-          <p className="text-[11.5px] font-mono uppercase tracking-wider text-zinc-600">
-            {hasData ? "Day 4 — wire pipeline-by-stage chart" : "Pipeline chart appears once you add deals"}
-          </p>
-        </div>
-      </div>
-
-      <div className={`col-span-12 lg:col-span-4 ${tile} p-5`}>
-        <p className={eyebrow}>Recent activity</p>
-        <h3 className={serifTitle}>Latest touchpoints</h3>
-        <div className="h-56 flex items-center justify-center mt-4">
-          <p className="text-[11.5px] font-mono uppercase tracking-wider text-zinc-600">
-            {hasData ? "Day 4 — wire activity feed" : "Log activities to populate this feed"}
-          </p>
-        </div>
-      </div>
+      {/* Pipeline-by-stage (col-8) + Recent activity (col-4) */}
+      <PipelineByStageCard deals={deals} hasData={hasData} />
+      <RecentActivityCard activities={recentActivity} hasData={hasData} />
     </div>
   );
 };
 
-// Re-derived inside the tab so TypeScript can infer the shape for the
-// prop type up above (avoids needing to export an extra interface).
-function useDerivedKpis() {
-  return {
-    contactCount: 0,
-    customerCount: 0,
-    leadsThisWeek: 0,
-    companyCount: 0,
-    openDeals: 0,
-    pipelineCents: 0,
-    bookedThisMonthCents: 0,
-  };
+// ────────────────────────────────────────────────
+// PipelineByStageCard — horizontal bar chart showing total deal
+// value per stage. Bars are rendered with native flex/width so we
+// don't pull in recharts for a 6-row chart; matches the lightweight
+// SVG-free pattern from the customer's bento payout chart.
+//
+// Stages render in the canonical pipeline order. The currently-
+// leading open stage (highest $) gets the emerald accent; everyone
+// else stays zinc to keep the visual hierarchy honest.
+// ────────────────────────────────────────────────
+const STAGE_LABELS: Record<DealStage, string> = {
+  interested: "Interested",
+  demo: "Demo",
+  proposal: "Proposal",
+  negotiation: "Negotiation",
+  won: "Won",
+  lost: "Lost",
+};
+
+const PipelineByStageCard: React.FC<{
+  deals: CrmDeal[];
+  hasData: boolean;
+}> = ({ deals, hasData }) => {
+  // Aggregate $ + count per stage. Done inline because the chart
+  // re-renders on every realtime invalidation; trivially cheap with
+  // ~hundreds of deals.
+  const byStage = useMemo(() => {
+    const init: Record<DealStage, { cents: number; count: number }> = {
+      interested:  { cents: 0, count: 0 },
+      demo:        { cents: 0, count: 0 },
+      proposal:    { cents: 0, count: 0 },
+      negotiation: { cents: 0, count: 0 },
+      won:         { cents: 0, count: 0 },
+      lost:        { cents: 0, count: 0 },
+    };
+    for (const d of deals) {
+      init[d.stage].cents += d.amount_cents;
+      init[d.stage].count += 1;
+    }
+    return init;
+  }, [deals]);
+
+  // Leading open stage gets the emerald accent — "where's the
+  // pipeline most concentrated right now?"
+  const peakOpenStage = useMemo<DealStage | null>(() => {
+    let best: DealStage | null = null;
+    let bestCents = 0;
+    for (const s of DEAL_OPEN_STAGES) {
+      if (byStage[s].cents > bestCents) {
+        bestCents = byStage[s].cents;
+        best = s;
+      }
+    }
+    return best;
+  }, [byStage]);
+
+  // Scale denominator — the biggest single bar across ALL stages
+  // (including won/lost) so every bar reads on the same axis.
+  const peakAny = Math.max(...DEAL_STAGES.map((s) => byStage[s].cents), 1);
+
+  return (
+    <div className={`col-span-12 lg:col-span-8 ${tile} p-5 flex flex-col`}>
+      <div className="flex items-baseline gap-3 mb-4">
+        <div>
+          <p className={eyebrow}>Pipeline</p>
+          <h3 className={serifTitle}>By stage</h3>
+        </div>
+        <span className={`ml-auto text-[11px] font-mono text-zinc-500`}>
+          {hasData ? `${deals.length} deal${deals.length === 1 ? "" : "s"}` : "no deals yet"}
+        </span>
+      </div>
+
+      {!hasData ? (
+        <div className="flex-1 min-h-[200px] flex items-center justify-center">
+          <p className="text-[11.5px] font-mono uppercase tracking-wider text-zinc-600">
+            Pipeline chart appears once you add deals
+          </p>
+        </div>
+      ) : (
+        <div className="space-y-2.5">
+          {DEAL_STAGES.map((stage) => {
+            const { cents, count } = byStage[stage];
+            const widthPct = (cents / peakAny) * 100;
+            const isPeak = stage === peakOpenStage;
+            const isTerminal = stage === "won" || stage === "lost";
+
+            // Color logic:
+            //   peak open stage → emerald (where pipeline lives)
+            //   won             → soft emerald (booked revenue)
+            //   lost            → quiet zinc (don't dwell)
+            //   other open      → zinc/70 (neutral pipeline depth)
+            const barCls = isPeak
+              ? "bg-emerald-500/70 group-hover:bg-emerald-400/80"
+              : stage === "won"
+                ? "bg-emerald-500/30 group-hover:bg-emerald-500/40"
+                : stage === "lost"
+                  ? "bg-zinc-700/50 group-hover:bg-zinc-600/60"
+                  : "bg-zinc-700/70 group-hover:bg-zinc-600/80";
+
+            return (
+              <div key={stage} className="group">
+                <div className="flex items-baseline justify-between gap-3 mb-1">
+                  <p className="text-[10.5px] font-mono uppercase tracking-wider text-zinc-400">
+                    {STAGE_LABELS[stage]}
+                    <span className="text-zinc-700 ml-1.5">{count}</span>
+                  </p>
+                  <span className={`text-[12px] ${isTerminal && stage === "won" ? "text-emerald-400" : "text-zinc-200"} ${monoNum}`}>
+                    {cents > 0 ? formatCrmAmount(cents, "usd", { compact: true }) : "—"}
+                  </span>
+                </div>
+                <div className="h-2.5 rounded-sm bg-white/[0.03] overflow-hidden">
+                  <div
+                    className={`h-full rounded-sm transition-all duration-300 ${barCls}`}
+                    style={{ width: `${Math.max(widthPct, cents > 0 ? 2 : 0)}%` }}
+                  />
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+};
+
+// ────────────────────────────────────────────────
+// RecentActivityCard — last 10 activity events across all entities,
+// rendered with type-specific icons + relative timestamp. Mirrors
+// the financial dashboard's "Recent transactions" row pattern.
+// ────────────────────────────────────────────────
+const ACTIVITY_ICON: Record<ActivityType, React.ComponentType<{ className?: string }>> = {
+  call:    Phone,
+  email:   Mail,
+  meeting: CalendarIcon,
+  note:    StickyNote,
+  task:    CheckCircle2,
+  demo:    Video,
+  sms:     MessageSquare,
+};
+
+/** Compact "2h ago" / "3d ago" relative formatter. Returns the
+ *  absolute date when older than 30 days so the activity feed
+ *  doesn't end up displaying "412d ago" for cold leads. */
+function relTime(iso: string): string {
+  const t = Date.parse(iso);
+  if (isNaN(t)) return "";
+  const diffMs = Date.now() - t;
+  const minutes = Math.floor(diffMs / 60_000);
+  if (minutes < 1) return "just now";
+  if (minutes < 60) return `${minutes}m ago`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `${hours}h ago`;
+  const days = Math.floor(hours / 24);
+  if (days < 30) return `${days}d ago`;
+  return new Date(t).toLocaleDateString(undefined, {
+    month: "short",
+    day: "numeric",
+  });
 }
+
+const RecentActivityCard: React.FC<{
+  activities: CrmActivity[];
+  hasData: boolean;
+}> = ({ activities, hasData }) => {
+  const items = activities.slice(0, 10);
+
+  return (
+    <div className={`col-span-12 lg:col-span-4 ${tile} overflow-hidden flex flex-col`}>
+      <div className="px-5 pt-5 flex items-baseline gap-3">
+        <div>
+          <p className={eyebrow}>Recent activity</p>
+          <h3 className={serifTitle}>Latest touchpoints</h3>
+        </div>
+        <span className="ml-auto text-[11px] font-mono text-zinc-500">
+          {items.length === 0 ? "—" : `last ${items.length}`}
+        </span>
+      </div>
+
+      <div className="mt-3 max-h-[420px] overflow-y-auto">
+        {items.length === 0 ? (
+          <div className="py-12 text-center text-[11.5px] font-mono uppercase tracking-wider text-zinc-600">
+            {hasData
+              ? "Log activities to populate this feed"
+              : "No activity yet"}
+          </div>
+        ) : (
+          items.map((a) => {
+            const Icon = ACTIVITY_ICON[a.type] ?? FileText;
+            return (
+              <div
+                key={a.id}
+                className="flex items-start gap-3 px-5 py-3 border-b border-white/[0.04] last:border-b-0 hover:bg-white/[0.02] transition-colors"
+              >
+                <div className="mt-0.5 p-1.5 rounded-md bg-white/[0.04] border border-white/[0.05] shrink-0">
+                  <Icon className="h-3 w-3 text-zinc-300" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-baseline justify-between gap-2">
+                    <p className="text-[12.5px] font-semibold text-zinc-100 truncate">
+                      {a.title ?? a.type[0].toUpperCase() + a.type.slice(1)}
+                    </p>
+                    <span className="text-[10px] font-mono text-zinc-500 shrink-0">
+                      {relTime(a.happened_at)}
+                    </span>
+                  </div>
+                  {a.body_md && (
+                    <p className="text-[11px] text-zinc-500 mt-0.5 line-clamp-2">
+                      {a.body_md}
+                    </p>
+                  )}
+                  {a.outcome && (
+                    <p className="text-[10px] font-mono text-zinc-600 uppercase tracking-wider mt-1">
+                      {a.outcome}
+                    </p>
+                  )}
+                </div>
+              </div>
+            );
+          })
+        )}
+      </div>
+    </div>
+  );
+};
 
 // ────────────────────────────────────────────────
 // KpiTile — same compact density as the financial dashboard's KPIs.
