@@ -92,24 +92,32 @@ function KpiCell({
   hint?: React.ReactNode;
   valueTone?: "default" | "success" | "destructive";
 }) {
+  // Tone tokens lean editorial — emerald for positive (Net Profit
+  // is the "Live Stripe" tone too so it reads as continuity),
+  // soft rose for negative, otherwise default zinc.
   const toneCls =
     valueTone === "success"
-      ? "text-success"
+      ? "text-emerald-300"
       : valueTone === "destructive"
-        ? "text-destructive"
-        : "text-foreground";
+        ? "text-rose-300"
+        : "text-zinc-100";
+  // Editorial KpiCell — mono uppercase eyebrow, Newsreader serif
+  // hero figure, quiet zinc hint. Tone classes still apply on top
+  // of the base zinc-100 so success/destructive cells stay
+  // distinguishable.
   return (
     <div className="min-w-0">
-      <div className="text-[10px] uppercase tracking-[0.12em] font-semibold text-text-tertiary truncate">
+      <div className="text-[9.5px] font-mono uppercase tracking-[0.2em] text-zinc-400 truncate">
         {label}
       </div>
       <div
-        className={`text-[18px] font-bold tabular-nums leading-tight mt-0.5 ${toneCls}`}
+        className={`text-[22px] font-medium tabular-nums leading-tight mt-1 ${toneCls}`}
+        style={{ fontFamily: "Newsreader, Georgia, serif" }}
       >
         {value}
       </div>
       {hint && (
-        <div className="text-[10.5px] text-text-tertiary/85 mt-0.5 truncate">
+        <div className="text-[10.5px] font-mono uppercase tracking-[0.12em] text-zinc-500 mt-1 truncate">
           {hint}
         </div>
       )}
@@ -327,64 +335,84 @@ function InboxCard({
   delay?: number;
 }) {
   const navigate = useNavigate();
-  const accentCls =
-    accent === "primary"     ? "text-primary" :
-    accent === "warning"     ? "text-warning" :
-    accent === "success"     ? "text-success" :
-                               "text-destructive";
+
+  // Editorial accent system — emerald for positive states (success
+  // + primary), amber for warning, soft rose for destructive. The
+  // count is the focal point so it gets the strongest accent.
+  const accentText =
+    accent === "primary"     ? "text-emerald-300" :
+    accent === "warning"     ? "text-amber-300" :
+    accent === "success"     ? "text-emerald-300" :
+                               "text-rose-300";
+  const accentHoverBorder =
+    accent === "primary"     ? "hover:border-emerald-500/30" :
+    accent === "warning"     ? "hover:border-amber-500/30" :
+    accent === "success"     ? "hover:border-emerald-500/30" :
+                               "hover:border-rose-500/30";
+  const accentDot =
+    accent === "primary"     ? "bg-emerald-400" :
+    accent === "warning"     ? "bg-amber-400" :
+    accent === "success"     ? "bg-emerald-400" :
+                               "bg-rose-400";
 
   return (
     <button
       type="button"
       onClick={to ? () => navigate({ to: to as any }) : undefined}
       disabled={!to}
-      className="
+      className={`
         group relative w-full text-left
-        bg-card border-xs border-border-soft rounded-xl
-        hover:border-border transition-colors
+        bg-gradient-to-b from-zinc-800/40 to-zinc-900/70
+        border border-white/[0.06] rounded-xl
+        ${accentHoverBorder} transition-colors
         px-5 py-4
-        focus-visible:outline-none focus-visible:border-primary/40
+        focus-visible:outline-none focus-visible:border-emerald-500/40
         disabled:cursor-default
-      "
+        overflow-hidden
+      `}
     >
-      {/* Header line — label + count + chevron. The count picks up
-       *  the accent colour so the eye lands on the metric first. */}
-      <div className="flex items-center gap-2 mb-2.5">
-        <span className="text-[10.5px] font-semibold tracking-wide text-foreground/70 uppercase">
-          {label}
-        </span>
-        <span className={`text-[10.5px] font-bold tabular-nums ${accentCls}`}>
-          {count}
-        </span>
+      {/* Eyebrow — mono uppercase tracking, the editorial signature. */}
+      <div className="flex items-center justify-between gap-2 mb-3">
+        <div className="flex items-center gap-1.5">
+          <span className={`h-1 w-1 rounded-full ${accentDot}`} />
+          <span className="text-[9.5px] font-mono uppercase tracking-[0.2em] text-zinc-400">
+            {label}
+          </span>
+        </div>
         {to && (
           <ChevronRight
-            className="ml-auto h-3 w-3 text-text-tertiary group-hover:text-foreground transition-colors"
+            className="h-3 w-3 text-zinc-600 group-hover:text-emerald-300 group-hover:translate-x-0.5 transition-all"
           />
         )}
       </div>
 
-      {/* Body — preview as the hero, OR a muted empty state.
-       *  Preview text is bold (matches MeetingCard / TaskItem title
-       *  treatment); meta below is text-tertiary at [11px].
-       *
-       *  min-h reserves the same vertical space whether the card has
-       *  a 1-line empty message OR a populated title+meta pair, so
-       *  the four cards in the top strip always line up at the same
-       *  height regardless of which ones are empty. */}
+      {/* Hero count — Newsreader serif, big and confident. The number
+       *  is the focal point of the card; everything else supports it. */}
+      <div className="flex items-baseline gap-2 mb-2">
+        <span
+          className={`text-[28px] leading-none font-medium tabular-nums ${accentText}`}
+          style={{ fontFamily: "Newsreader, Georgia, serif" }}
+        >
+          {count}
+        </span>
+      </div>
+
+      {/* Body — preview title + meta or muted empty state. min-h keeps
+       *  the four-card row aligned regardless of which slots are empty. */}
       <div className="min-h-[38px]">
         {preview ? (
           <>
-            <h3 className="text-[13.5px] font-bold text-foreground leading-snug line-clamp-2">
+            <h3 className="text-[13px] font-semibold text-zinc-100 leading-snug line-clamp-2 tracking-tight">
               {preview.text}
             </h3>
             {preview.meta && (
-              <p className="mt-1 text-[11px] text-text-tertiary leading-snug line-clamp-1">
+              <p className="mt-1 text-[10.5px] font-mono uppercase tracking-[0.12em] text-zinc-500 leading-snug line-clamp-1">
                 {preview.meta}
               </p>
             )}
           </>
         ) : (
-          <p className="text-[12px] text-text-tertiary italic">
+          <p className="text-[11.5px] text-zinc-500 italic">
             {emptyText}
           </p>
         )}
@@ -1078,9 +1106,9 @@ function CWADashboardContent() {
             firstAvg > 0 ? ((secondAvg - firstAvg) / firstAvg) * 100 : 0;
           const trendPositive = trendPct >= 0;
           return (
-            <header className="flex items-center justify-between gap-3 px-5 py-3.5 border-b border-xs border-border/15">
+            <header className="flex items-center justify-between gap-3 px-5 py-3.5 border-b border-white/[0.05]">
               <div className="flex items-baseline gap-2 min-w-0 flex-wrap">
-                <span className="text-[11px] text-foreground uppercase tracking-[0.14em] font-bold">
+                <span className="text-[10px] font-mono uppercase tracking-[0.2em] text-zinc-400">
                   Revenue vs Expenses
                 </span>
                 {/* Source indicator — when Stripe is connected and has

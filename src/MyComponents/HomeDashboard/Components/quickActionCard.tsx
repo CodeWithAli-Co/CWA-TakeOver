@@ -47,21 +47,24 @@ export const QuickActionCard = ({
         whileTap={{ scale: 0.97 }}
         aria-current={active ? "page" : undefined}
         className={[
-          // Compact chip sized for the 56px header bar.
+          // Compact chip sized for the 56px header bar. Editorial
+          // accent: hover and active states tint emerald to match
+          // the sidebar / dashboard accent language instead of the
+          // generic shadcn surface tokens.
           "inline-flex items-center gap-1.5 px-2.5 h-7 rounded-md",
           "transition-colors duration-150 cursor-pointer group",
           active
-            ? "bg-surface-2 text-fg"
-            : "bg-transparent text-fg-muted hover:bg-surface hover:text-fg",
+            ? "bg-emerald-500/[0.08] text-emerald-200"
+            : "bg-transparent text-zinc-400 hover:bg-emerald-500/[0.04] hover:text-emerald-200",
         ].join(" ")}
       >
         <Icon
           className={[
             "h-3.5 w-3.5 transition-colors",
-            active ? "text-primary" : "text-fg-muted group-hover:text-fg",
+            active ? "text-emerald-300" : "text-zinc-500 group-hover:text-emerald-300/80",
           ].join(" ")}
         />
-        <span className="text-[12px] font-medium whitespace-nowrap leading-none">
+        <span className="text-[11.5px] font-medium whitespace-nowrap leading-none tracking-tight">
           {title}
         </span>
       </motion.div>

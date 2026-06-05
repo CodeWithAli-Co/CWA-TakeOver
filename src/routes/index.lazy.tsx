@@ -106,9 +106,12 @@ const Index = () => {
             className="flex items-center gap-3 min-w-0"
           >
             <PresenceDot />
-            <h1 className="text-[14.5px] font-semibold text-fg tracking-tight whitespace-nowrap">
+            <h1
+              className="text-[15px] text-zinc-100 tracking-tight whitespace-nowrap font-medium"
+              style={{ fontFamily: "Newsreader, Georgia, serif" }}
+            >
               {getGreeting()},{" "}
-              <span className="text-primary">{username}</span>
+              <span className="text-emerald-300">{username}</span>
             </h1>
             <span className="hidden lg:inline-block w-px h-3.5 bg-line-strong/70" aria-hidden />
             <div className="hidden lg:flex items-center gap-2 text-[11.5px] text-fg-muted whitespace-nowrap">
@@ -549,22 +552,25 @@ function InstallOnboardingPill() {
 
   return (
     <>
-      <div className="inline-flex items-center gap-0.5 h-7 pl-2 pr-1 rounded-full bg-warning/15 border border-warning/40 text-warning ml-1">
+      {/* Editorial debug pill — quietened from the loud warning
+       *  yellow chip to a soft amber-tinted outline that still reads
+       *  as "temporary/dev" without shouting in the header. */}
+      <div className="inline-flex items-center gap-0.5 h-7 pl-2 pr-1 rounded-full bg-amber-500/[0.06] border border-amber-500/30 text-amber-300 ml-1">
         <button
           type="button"
           onClick={openPreview}
-          className="inline-flex items-center gap-1 text-[10.5px] font-bold uppercase tracking-[0.14em] hover:text-warning/80 transition-colors pr-1"
+          className="inline-flex items-center gap-1 text-[10px] font-mono uppercase tracking-[0.18em] hover:text-amber-200 transition-colors pr-1"
           title="Preview the install-binder wizard (no DB writes)"
         >
           <Eye size={11} strokeWidth={2.4} />
           Onboarding
         </button>
-        <span className="w-px h-3 bg-warning/30" aria-hidden />
+        <span className="w-px h-3 bg-amber-500/30" aria-hidden />
         <button
           type="button"
           onClick={hardReset}
           disabled={resetting}
-          className="p-1 rounded-full hover:bg-warning/20 transition-colors disabled:opacity-50"
+          className="p-1 rounded-full hover:bg-amber-500/15 transition-colors disabled:opacity-50"
           title="Hard reset — clear Stronghold, flip initial_launch, reload"
         >
           <RotateCcw size={10} strokeWidth={2.4} />

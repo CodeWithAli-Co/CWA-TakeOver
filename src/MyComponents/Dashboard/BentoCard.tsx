@@ -48,11 +48,14 @@ export function BentoCard({
       initial={{ opacity: 0, y: 8, scale: 0.98 }}
       animate={{ opacity: 1, y: 0, scale: 1 }}
       transition={{ delay, duration: 0.3, ease: "easeOut" }}
-      className={`bento-card rounded-xl border-xs border-border-soft bg-card overflow-hidden ${span} ${className}`}
+      // Editorial surface: zinc gradient tile, hairline emerald-leaning
+      // border that warms on hover, soft inset highlight on top. Matches
+      // the Sales / Inbox cards so the whole app reads as one family.
+      className={`bento-card rounded-xl border border-white/[0.06] bg-gradient-to-b from-zinc-800/40 to-zinc-900/70 overflow-hidden transition-colors hover:border-emerald-500/20 ${span} ${className}`}
     >
       {label && withHeaderBar && (
-        <header className="bg-popover/70 border-b border-xs border-border-soft px-4 py-2 flex items-center justify-between gap-2">
-          <span className="text-[10px] font-semibold uppercase tracking-[0.15em] text-text-tertiary">
+        <header className="bg-zinc-950/40 border-b border-white/[0.05] px-4 py-2.5 flex items-center justify-between gap-2">
+          <span className="text-[10px] font-mono uppercase tracking-[0.2em] text-zinc-400">
             {label}
           </span>
           {headerActions && (
@@ -67,14 +70,14 @@ export function BentoCard({
           flush against the card edge. */}
       {label && !withHeaderBar && noPadding && (
         <div className="px-4 pt-4 pb-1">
-          <span className="text-[10px] font-semibold uppercase tracking-[0.15em] text-text-tertiary">
+          <span className="text-[10px] font-mono uppercase tracking-[0.2em] text-zinc-400">
             {label}
           </span>
         </div>
       )}
       <div className={noPadding ? "" : "p-4"}>
         {label && !withHeaderBar && !noPadding && (
-          <span className="text-[10px] font-semibold uppercase tracking-[0.15em] text-text-tertiary block mb-2">
+          <span className="text-[10px] font-mono uppercase tracking-[0.2em] text-zinc-400 block mb-2">
             {label}
           </span>
         )}
@@ -100,8 +103,15 @@ export function BentoValue({
   children: ReactNode;
   className?: string;
 }) {
+  // Editorial value treatment — Newsreader serif at 30px, medium
+  // weight so the number reads as a confident editorial figure
+  // (like the deal-card hero totals on Sales) rather than the old
+  // generic Tailwind bold-sans. Tabular nums keep grids aligning.
   return (
-    <span className={`text-3xl font-bold text-foreground tabular-nums leading-none ${className}`}>
+    <span
+      className={`text-[30px] font-medium text-zinc-100 tabular-nums leading-none ${className}`}
+      style={{ fontFamily: "Newsreader, Georgia, serif" }}
+    >
       {children}
     </span>
   );

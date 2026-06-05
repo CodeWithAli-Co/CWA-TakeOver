@@ -287,7 +287,7 @@ export function AxonCoachCard() {
             <span className="text-[10.5px] text-text-tertiary">·</span>
             <span className="text-[10.5px] text-text-tertiary">{stamp}</span>
           </div>
-          <span className="text-[10px] uppercase tracking-[0.18em] font-bold text-primary">
+          <span className="text-[9.5px] font-mono uppercase tracking-[0.2em] text-emerald-300">
             {obs.kind}
           </span>
         </div>

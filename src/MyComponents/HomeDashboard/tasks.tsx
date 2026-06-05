@@ -397,22 +397,17 @@ export const TasksComponent = () => {
   const simpCount = todos?.filter((t: any) => t.company === "simplicity").length ?? 0;
 
   return (
-    <div className="bg-card border-xs border-border-soft rounded-xl h-full overflow-hidden flex flex-col">
-      {/* Editorial-style header — same surface as the body, separated
-       *  only by a whisper-thin hairline. Decorative top gradient
-       *  removed; the chrome it added fought the calmer card design.
-       *  Padding bumped to py-3.5 so the title has breathing room
-       *  without making the header feel like its own region. */}
-      <div className="px-5 py-3.5 flex items-center gap-3 border-b border-xs border-border/15">
-        {/* Left: title + total. Company breakdown dots removed —
-         *  the per-card company indicator already conveys which
-         *  org each task belongs to. Surfacing both was visual
-         *  noise without adding info the operator could act on. */}
+    <div className="bg-gradient-to-b from-zinc-800/40 to-zinc-900/70 border border-white/[0.06] rounded-xl h-full overflow-hidden flex flex-col transition-colors hover:border-emerald-500/15">
+      {/* Editorial header — mono uppercase eyebrow + tab pills with
+       *  editorial tone tokens (rose/amber/emerald instead of brand
+       *  red/yellow/green) so the tabs match the donut palette
+       *  upstream. */}
+      <div className="px-5 py-3.5 flex items-center gap-3 border-b border-white/[0.05]">
         <div className="flex items-center gap-2 min-w-0 flex-shrink-0">
-          <span className="text-[11px] text-foreground uppercase tracking-[0.14em] font-bold">
+          <span className="text-[10px] font-mono uppercase tracking-[0.2em] text-zinc-400">
             Tasks
           </span>
-          <span className="text-[11px] text-text-tertiary tabular-nums font-medium">
+          <span className="text-[10.5px] text-zinc-500 tabular-nums">
             {totalTasks}
           </span>
         </div>
@@ -422,19 +417,19 @@ export const TasksComponent = () => {
           <TabsList className="bg-transparent rounded-md h-7 p-0 gap-0.5">
             <TabsTrigger
               value="to-do"
-              className="data-[state=active]:bg-primary/12 data-[state=active]:text-primary text-text-tertiary rounded-md text-[10.5px] h-6 px-2 font-semibold uppercase tracking-wider"
+              className="data-[state=active]:bg-rose-500/[0.08] data-[state=active]:text-rose-300 text-zinc-500 rounded-md text-[10px] h-6 px-2 font-mono uppercase tracking-[0.16em]"
             >
               Open · {todoCount}
             </TabsTrigger>
             <TabsTrigger
               value="in-progress"
-              className="data-[state=active]:bg-warning/12 data-[state=active]:text-warning text-text-tertiary rounded-md text-[10.5px] h-6 px-2 font-semibold uppercase tracking-wider"
+              className="data-[state=active]:bg-amber-500/[0.08] data-[state=active]:text-amber-300 text-zinc-500 rounded-md text-[10px] h-6 px-2 font-mono uppercase tracking-[0.16em]"
             >
               Active · {inProgressCount}
             </TabsTrigger>
             <TabsTrigger
               value="done"
-              className="data-[state=active]:bg-success/12 data-[state=active]:text-success text-text-tertiary rounded-md text-[10.5px] h-6 px-2 font-semibold uppercase tracking-wider"
+              className="data-[state=active]:bg-emerald-500/[0.08] data-[state=active]:text-emerald-300 text-zinc-500 rounded-md text-[10px] h-6 px-2 font-mono uppercase tracking-[0.16em]"
             >
               Done · {doneCount}
             </TabsTrigger>

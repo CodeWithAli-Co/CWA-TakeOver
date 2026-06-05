@@ -521,16 +521,12 @@ const Meetings = () => {
   };
 
   const Header = (
-    <div className="px-5 py-3.5 flex items-center gap-3 border-b border-xs border-border/15">
-      {/* Title + total only — the company breakdown dots+counts
-       *  were visual noise. Each meeting card already shows its
-       *  org via the small corner dot, which is where that info
-       *  actually helps the operator. */}
+    <div className="px-5 py-3.5 flex items-center gap-3 border-b border-white/[0.05]">
       <div className="flex items-center gap-2 min-w-0 flex-shrink-0">
-        <span className="text-[11px] text-foreground uppercase tracking-[0.14em] font-bold">
+        <span className="text-[10px] font-mono uppercase tracking-[0.2em] text-zinc-400">
           Meetings
         </span>
-        <span className="text-[11px] text-text-tertiary tabular-nums font-medium">
+        <span className="text-[10.5px] text-zinc-500 tabular-nums">
           {list.length}
         </span>
       </div>
@@ -578,7 +574,7 @@ const Meetings = () => {
 
   if (list.length === 0) {
     return (
-      <div className="bg-card border-xs border-border-soft rounded-xl overflow-hidden h-full flex flex-col">
+      <div className="bg-gradient-to-b from-zinc-800/40 to-zinc-900/70 border border-white/[0.06] rounded-xl overflow-hidden h-full flex flex-col transition-colors hover:border-emerald-500/15">
         {Header}
         <div className="flex-1 flex items-center justify-center px-5 pb-5">
           <div className="text-center">
@@ -610,7 +606,7 @@ const Meetings = () => {
         />
       )}
 
-      <div className="bg-card border-xs border-border-soft rounded-xl h-full overflow-hidden flex flex-col">
+      <div className="bg-gradient-to-b from-zinc-800/40 to-zinc-900/70 border border-white/[0.06] rounded-xl h-full overflow-hidden flex flex-col transition-colors hover:border-emerald-500/15">
         {Header}
         <div className="flex-1 min-h-0">
           <ScrollArea className="h-[540px]">

@@ -209,12 +209,16 @@ export function TasksOverviewCard({ username }: Props) {
 
   // ── Donut slices ──
   const total = list.length;
+  // Editorial donut palette — emerald for done, amber for in-progress,
+  // soft rose for open. Lifts the donut off the brand-red default
+  // so it sits in the same family as the rest of the dashboard
+  // (Sales cards, Inbox pills, callouts).
   const slices = useMemo(
     () =>
       [
-        { key: "open", count: open.length, color: "hsl(var(--primary))" },
-        { key: "progress", count: inProgress.length, color: "hsl(var(--warning))" },
-        { key: "done", count: done.length, color: "hsl(var(--success))" },
+        { key: "open", count: open.length, color: "rgb(251 113 133)" },        // rose-400
+        { key: "progress", count: inProgress.length, color: "rgb(251 191 36)" }, // amber-400
+        { key: "done", count: done.length, color: "rgb(52 211 153)" },          // emerald-400
       ].filter((s) => s.count > 0),
     [open.length, inProgress.length, done.length],
   );
@@ -239,12 +243,12 @@ export function TasksOverviewCard({ username }: Props) {
        *  The You/Everyone toggle is gated to leadership only
        *  (CEO, COO, Head of Growth) so non-leadership roles can't peek
        *  at the whole team's task load. */}
-      <header className="flex items-center justify-between gap-3 px-5 py-3.5 border-b border-xs border-border/15">
+      <header className="flex items-center justify-between gap-3 px-5 py-3.5 border-b border-white/[0.05]">
         <div className="flex items-center gap-2 min-w-0">
-          <span className="text-[11px] text-foreground uppercase tracking-[0.14em] font-bold">
+          <span className="text-[10px] font-mono uppercase tracking-[0.2em] text-zinc-400">
             Tasks Overview
           </span>
-          <span className="text-[11px] text-text-tertiary tabular-nums font-medium">
+          <span className="text-[10.5px] text-zinc-500 tabular-nums">
             {list.length}
           </span>
         </div>
@@ -529,10 +533,10 @@ function Donut({
             })}
         </svg>
 
-        {/* Center stack — three tiers of typography, tightly spaced.
-         *  Hero % at the top, "DONE" subtitle in success green (mood
-         *  cue when high-completion), "X of Y" tabular line at the
-         *  bottom. */}
+        {/* Editorial center stack — Newsreader serif hero %, mono
+         *  uppercase "Done" eyebrow in emerald, quiet tabular "X of Y"
+         *  meta line. Same typography language as the Sales hero
+         *  totals and Inbox row numbers. */}
         <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
           <motion.div
             initial={{ scale: 0.75, opacity: 0 }}
@@ -540,28 +544,35 @@ function Donut({
             transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1], delay: 0.2 }}
             className="flex items-baseline gap-0.5"
           >
-            <span className="text-[38px] font-bold tabular-nums text-foreground leading-none">
+            <span
+              className="text-[40px] tabular-nums text-zinc-100 leading-none font-medium"
+              style={{ fontFamily: "Newsreader, Georgia, serif" }}
+            >
               <AnimatedNumber value={pctDone} />
             </span>
-            <span className="text-[18px] font-semibold text-foreground/50 leading-none">
+            <span
+              className="text-[18px] text-zinc-500 leading-none"
+              style={{ fontFamily: "Newsreader, Georgia, serif" }}
+            >
               %
             </span>
           </motion.div>
-          <div className="text-[8.5px] font-bold uppercase tracking-[0.22em] text-success mt-1.5">
+          <div className="text-[9px] font-mono uppercase tracking-[0.24em] text-emerald-400/80 mt-2">
             Done
           </div>
-          <div className="text-[10px] tabular-nums text-text-tertiary mt-1 font-medium">
+          <div className="text-[10px] tabular-nums text-zinc-500 mt-1.5 font-mono">
             <AnimatedNumber value={doneCount} /> of {total}
           </div>
         </div>
       </div>
 
-      {/* Legend — Linear-analytics-style rows: dot + label + count
-       *  on the top line, a thin proportional progress bar below. */}
+      {/* Editorial legend — colored dots match the donut's desaturated
+       *  rose/amber/emerald palette so the rows + slices read as one.
+       *  Bars dropped to /60 opacity to stop competing with the donut. */}
       <div className="flex flex-col gap-2.5 min-w-0 flex-1">
         <LegendBar
           sliceKey="open"
-          color="bg-primary"
+          color="bg-rose-400/70"
           label="Open"
           count={openCount}
           total={total}
@@ -570,7 +581,7 @@ function Donut({
         />
         <LegendBar
           sliceKey="progress"
-          color="bg-warning"
+          color="bg-amber-400/70"
           label="Active"
           count={progressCount}
           total={total}
@@ -579,7 +590,7 @@ function Donut({
         />
         <LegendBar
           sliceKey="done"
-          color="bg-success"
+          color="bg-emerald-400/70"
           label="Done"
           count={doneCount}
           total={total}
@@ -626,25 +637,27 @@ function LegendBar({
       className="cursor-default transition-opacity"
       style={{ opacity: dim ? 0.4 : 1 }}
     >
+      {/* Quieter editorial row — mono uppercase label, tabular count
+       *  in zinc-200 instead of bold-foreground, percentage in faint
+       *  zinc-500. The bar opacity below dims so the proportions read
+       *  without competing with the donut's slices upstream. */}
       <div className="flex items-center gap-2 min-w-0">
         <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${color}`} />
-        <span className="text-[11px] text-foreground/80 font-medium flex-1 truncate">
+        <span className="text-[10.5px] font-mono uppercase tracking-[0.16em] text-zinc-300 flex-1 truncate">
           {label}
         </span>
-        <span className="text-[11.5px] tabular-nums text-foreground font-bold">
+        <span className="text-[12px] tabular-nums text-zinc-200">
           <AnimatedNumber value={count} />
         </span>
-        <span className="text-[10px] tabular-nums text-text-tertiary font-medium w-8 text-right">
+        <span className="text-[10px] tabular-nums text-zinc-500 w-8 text-right">
           <AnimatedNumber value={pct} />%
         </span>
       </div>
-      {/* Mini proportion bar — thin track + filled portion. Matches
-       *  the slice color so the row visually echoes the donut. */}
-      <div className="mt-1 h-[3px] rounded-full bg-foreground/[0.06] overflow-hidden">
+      <div className="mt-1.5 h-[2px] rounded-full bg-white/[0.04] overflow-hidden">
         <motion.div
           className={`h-full rounded-full ${color}`}
           initial={{ width: 0 }}
-          animate={{ width: `${pct}%` }}
+          animate={{ width: `${pct}%`, opacity: 0.75 }}
           transition={{ duration: 0.55, ease: [0.16, 1, 0.3, 1] }}
         />
       </div>
@@ -713,22 +726,35 @@ function Callout({
   onClick: () => void;
   delay?: number;
 }) {
-  const toneCls = {
-    destructive: "text-destructive",
-    warning: "text-warning",
-    primary: "text-primary",
-    success: "text-success",
+  // Editorial tone tokens — emerald lean for positive, amber for
+  // warnings, soft rose for destructive. Same family as the rest of
+  // the dashboard so the page reads as one piece.
+  const toneAccent = {
+    destructive: "text-rose-300",
+    warning: "text-amber-300",
+    primary: "text-emerald-300",
+    success: "text-emerald-300",
+  }[tone];
+
+  const toneDot = {
+    destructive: "bg-rose-400",
+    warning: "bg-amber-400",
+    primary: "bg-emerald-400",
+    success: "bg-emerald-400",
   }[tone];
 
   const selectedBorderCls = {
-    destructive: "border-destructive/40 bg-destructive/[0.05]",
-    warning: "border-warning/40 bg-warning/[0.05]",
-    primary: "border-primary/40 bg-primary/[0.05]",
-    success: "border-success/40 bg-success/[0.05]",
+    destructive: "border-rose-500/30 bg-rose-500/[0.04]",
+    warning: "border-amber-500/30 bg-amber-500/[0.04]",
+    primary: "border-emerald-500/30 bg-emerald-500/[0.04]",
+    success: "border-emerald-500/30 bg-emerald-500/[0.04]",
   }[tone];
 
   const isActive = count > 0;
-  const pulseDot = isActive && (tone === "destructive" || tone === "warning");
+  // Quietened pulse — only fire on destructive (overdue), and even
+  // then with a much softer animation than before. The eye still
+  // catches it without the card feeling loud.
+  const pulseDot = isActive && tone === "destructive";
 
   return (
     <motion.button
@@ -740,60 +766,48 @@ function Callout({
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.3, ease: [0.16, 1, 0.3, 1], delay }}
       aria-pressed={selected}
-      // Padding bumped px-2.5→px-3 / py-2→py-2.5 so the bigger count
-      // and refined type have room to breathe.
-      className={`relative block w-full text-left rounded-lg border-xs px-3 py-2.5 transition-colors cursor-pointer ${
+      className={`relative block w-full text-left rounded-lg border px-3.5 py-3 transition-colors cursor-pointer ${
         selected
           ? selectedBorderCls
-          : "bg-foreground/[0.03] border-border-soft hover:bg-foreground/[0.05] hover:border-foreground/15"
+          : "bg-zinc-900/40 border-white/[0.05] hover:bg-zinc-900/60 hover:border-white/[0.1]"
       }`}
     >
-      <div
-        className={`flex items-center justify-between gap-2 ${
-          isActive ? toneCls : "text-text-tertiary"
-        }`}
-      >
-        <div className="flex items-center gap-1.5 min-w-0">
+      {/* Eyebrow — colored dot + mono uppercase tracking label.
+       *  Restraint here is the point: the card carries information,
+       *  not noise. The count below does the heavy lifting. */}
+      <div className="flex items-center gap-1.5 min-w-0">
+        <span className="relative inline-flex h-1.5 w-1.5 flex-shrink-0">
           {pulseDot && (
-            <span className="relative inline-flex h-1.5 w-1.5 flex-shrink-0">
-              <span
-                className={`absolute inset-0 rounded-full ${
-                  tone === "destructive" ? "bg-destructive" : "bg-warning"
-                } opacity-70 animate-ping`}
-              />
-              <span
-                className={`relative inline-flex h-1.5 w-1.5 rounded-full ${
-                  tone === "destructive" ? "bg-destructive" : "bg-warning"
-                }`}
-              />
-            </span>
+            <span className={`absolute inset-0 rounded-full ${toneDot} opacity-60 animate-ping`} />
           )}
-          {/* Icon nudged larger (h-3) so it reads at the same
-           *  weight as the bumped label type. */}
-          <Icon className="h-3 w-3 flex-shrink-0" />
-          {/* Label: 10px / font-bold / 0.14em tracking. Slightly
-           *  bolder + more spaced than the previous 9.5px setting
-           *  for a more "editorial header" feel. */}
-          <span className="text-[10px] font-bold uppercase tracking-[0.14em] truncate">
-            {label}
-          </span>
-        </div>
-        {/* Hero count number — bumped 15px → 20px so it carries the
-         *  card's stat weight on its own without help from the icon
-         *  or label sizing. */}
+          <span
+            className={`relative inline-flex h-1.5 w-1.5 rounded-full ${
+              isActive ? toneDot : "bg-zinc-700"
+            }`}
+          />
+        </span>
+        <Icon className={`h-3 w-3 flex-shrink-0 ${isActive ? toneAccent : "text-zinc-600"}`} />
+        <span className="text-[9.5px] font-mono uppercase tracking-[0.18em] truncate text-zinc-400">
+          {label}
+        </span>
+      </div>
+
+      {/* Hero count — Newsreader serif, the focal number of each
+       *  callout. Tone-tinted when active, quieter zinc when zero. */}
+      <div className="mt-2 flex items-baseline justify-between gap-2">
         <span
-          className={`text-[20px] font-bold tabular-nums leading-none ${
-            isActive ? toneCls : "text-text-tertiary/40"
+          className={`text-[24px] leading-none font-medium tabular-nums ${
+            isActive ? toneAccent : "text-zinc-600"
           }`}
+          style={{ fontFamily: "Newsreader, Georgia, serif" }}
         >
           <AnimatedNumber value={count} />
         </span>
       </div>
-      {/* Hint line: slightly softer color (text-tertiary/85) so the
-       *  number and label own the visual hierarchy. The empty space
-       *  is preserved when no hint is supplied so all four cards
-       *  align to the same height. */}
-      <div className="mt-1.5 text-[10.5px] truncate text-text-tertiary/85">
+
+      {/* Hint — quietened to zinc-500 so the count + eyebrow own the
+       *  visual hierarchy. Min-h preserves alignment across cards. */}
+      <div className="mt-1.5 text-[10.5px] text-zinc-500 truncate min-h-[14px]">
         {hint || " "}
       </div>
     </motion.button>
