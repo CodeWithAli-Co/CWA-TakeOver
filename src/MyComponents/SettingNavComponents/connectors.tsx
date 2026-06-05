@@ -29,6 +29,7 @@ import {
   type Connector as PersistedConnector,
 } from "@/stores/connectors";
 import { ConnectorCredentialDialog } from "./ConnectorCredentialDialog";
+import { GmailConnection } from "@/MyComponents/Settings/GmailConnection";
 import {
   CONNECTORS,
   Monogram,
@@ -109,6 +110,12 @@ export const ConnectorsSettings = () => {
           first.
         </p>
       </header>
+
+      {/* First-class email integration — Gmail OAuth. Lives above
+          the catalog because send-from-app + inbox-sync is a major
+          product feature (drives the AI email draft, contact inbox
+          timeline, etc.), not just another API-key paste. */}
+      <GmailConnection />
 
       {/* Filter bar */}
       <div className="flex items-center gap-2 flex-wrap">
