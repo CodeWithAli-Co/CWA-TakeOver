@@ -38,6 +38,7 @@ import { registerWorkspaceActions } from "./workspace";
 import { registerCapitalPlanActions } from "./capital_plan";
 import { registerConnectorActions } from "./connectors";
 import { registerCrmActions } from "./crm";
+import { registerSlackActions } from "./slack";
 
 let registered = false;
 
@@ -82,4 +83,5 @@ export function registerAllActions() {
   registerCapitalPlanActions();
   registerConnectorActions();
   registerCrmActions();
+  registerSlackActions();
 }

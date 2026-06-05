@@ -55,6 +55,7 @@ import {
   type OperationsSnapshot,
 } from "@/Axon/engine/draftOperationsBrief";
 import { ConnectorsStrip } from "./ConnectorsStrip";
+import { SlackPulsePanel } from "./SlackPulsePanel";
 import { format, startOfWeek, endOfWeek } from "date-fns";
 import {
   ActiveUser,
@@ -210,6 +211,12 @@ export function OperationsDashboard() {
          *  connectors are wired up, so fresh installs don't see
          *  a stub. */}
         <ConnectorsStrip />
+
+        {/* Slack pulse — live channel activity preview from the
+         *  connected workspace. Auto-hides when Slack isn't
+         *  connected, so the same null-state contract as
+         *  ConnectorsStrip — no empty card on fresh installs. */}
+        <SlackPulsePanel />
 
         {/* Unified bento — single 3-col grid. Activity removed
          *  per ops feedback (low signal); Quotas now spans the

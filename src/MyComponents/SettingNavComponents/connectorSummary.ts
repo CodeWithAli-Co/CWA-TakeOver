@@ -20,6 +20,7 @@ import type { Connector } from "@/stores/connectors";
 import { airtableListTables } from "@/lib/airtable";
 import { githubRepoSummary } from "@/lib/github";
 import { notionSearch } from "@/lib/notion";
+import { slackAuthTest, slackListChannels } from "@/lib/slack";
 import { formatStripeAmount, stripeSnapshot } from "@/lib/stripe";
 
 export interface ConnectorSummary {
@@ -48,6 +49,8 @@ async function fetchConnectorSummary(
         return await summarizeNotion(creds);
       case "stripe":
         return await summarizeStripe(creds);
+      case "slack":
+        return await summarizeSlack(creds);
       default:
         // OpenAI / SendGrid / Resend / OAuth-stubs etc. Credentials
         // saved but no live summary available client-side. Show a
@@ -174,6 +177,38 @@ async function summarizeStripe(
       active_subscriptions: snap.active_subscriptions,
       currency: snap.currency,
       computed_at: snap.computed_at,
+    },
+  };
+}
+
+async function summarizeSlack(
+  creds: Record<string, unknown>,
+): Promise<ConnectorSummary> {
+  const token = String(creds.bot_token ?? "").trim();
+  if (!token) {
+    return { ok: false, text: "No token saved", error: "Missing bot token" };
+  }
+  // Two cheap calls in parallel — auth.test confirms liveness + gives
+  // us the workspace name; conversations.list gives a channel count
+  // so the tile says something more useful than "Connected".
+  const [auth, channels] = await Promise.all([
+    slackAuthTest(token),
+    slackListChannels(token, { limit: 200, types: "public_channel" }).catch(() => []),
+  ]);
+  const memberCount = channels.filter((c) => c.is_member).length;
+  return {
+    ok: true,
+    text:
+      channels.length === 0
+        ? `${auth.team} — no public channels`
+        : `${channels.length} channel${channels.length === 1 ? "" : "s"}${memberCount ? ` · in ${memberCount}` : ""}`,
+    detail: `Workspace: ${auth.team}`,
+    extra: {
+      team: auth.team,
+      team_id: auth.team_id,
+      bot_user_id: auth.user_id,
+      channel_count: channels.length,
+      member_count: memberCount,
     },
   };
 }

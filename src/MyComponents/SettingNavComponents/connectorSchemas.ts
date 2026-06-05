@@ -195,9 +195,37 @@ const SCHEMAS: Record<string, ConnectorSchema> = {
       "Pages must be explicitly shared with the integration. In Notion, hit the ••• menu on a page → Connections → add your integration.",
   },
 
-  // Stubs — same shape so the catalog renders the modal but the
-  // actual wiring (OAuth callback URLs etc.) is a separate epic.
-  slack: makeOAuthStub("Slack", "https://api.slack.com/apps"),
+  // Slack — bot-token flow. Full OAuth lives behind a redirect URL
+  // we don't have a public callback for; the bot-token path gives
+  // us 95% of the demo value (post + read channels) with zero
+  // backend work. The operator creates a Slack App at
+  // api.slack.com/apps, installs it to their workspace, and pastes
+  // the Bot User OAuth Token here.
+  slack: {
+    docsUrl: "https://api.slack.com/apps",
+    blurb:
+      "Post into channels, read team pulse, summarize threads. Uses a Bot User OAuth Token (xoxb-…) from a Slack App you install to your workspace.",
+    fields: [
+      {
+        key: "bot_token",
+        label: "Bot User OAuth Token",
+        type: "password",
+        placeholder: "xoxb-…",
+        hint: "Create an app at api.slack.com/apps → OAuth & Permissions. Add scopes: chat:write, channels:read, channels:history, users:read. Install to workspace and copy the Bot Token.",
+        pattern: /^xoxb-/,
+      },
+      {
+        key: "default_channel",
+        label: "Default channel (optional)",
+        type: "text",
+        placeholder: "#general or C12345",
+        hint: "Channel AXON uses when no channel is specified. Bot must be a member of any private channel.",
+        required: false,
+      },
+    ],
+    disclaimer:
+      "We verify the token by calling Slack's auth.test endpoint and save the team name. The Bot Token is workspace-wide; revoke it from your Slack App's Install page if you ever need to rotate.",
+  },
   linear: makeOAuthStub("Linear", "https://linear.app/settings/api"),
   asana: makeOAuthStub("Asana", "https://app.asana.com/0/my-apps"),
 

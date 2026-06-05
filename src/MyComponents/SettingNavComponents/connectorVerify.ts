@@ -19,6 +19,7 @@
 import { airtablePing } from "@/lib/airtable";
 import { githubMe } from "@/lib/github";
 import { notionMe } from "@/lib/notion";
+import { slackPing } from "@/lib/slack";
 import { stripeVerify } from "@/lib/stripe";
 
 export interface VerifyOk {
@@ -54,6 +55,8 @@ export async function verifyConnector(
         return await verifyNotion(creds);
       case "openai":
         return await verifyOpenAI(creds);
+      case "slack":
+        return await verifySlack(creds);
       case "stripe":
         return await verifyStripe(creds);
       case "sendgrid":
@@ -134,6 +137,31 @@ async function verifyNotion(
     };
   } catch (e: any) {
     return { ok: false, error: e?.message ?? "Notion rejected the token." };
+  }
+}
+
+async function verifySlack(
+  creds: Record<string, any>,
+): Promise<VerifyResult> {
+  const token = String(creds.bot_token ?? "").trim();
+  if (!token) return { ok: false, error: "Bot User OAuth Token is required." };
+  if (!/^xoxb-/.test(token)) {
+    return {
+      ok: false,
+      error: "Bot token should start with `xoxb-`. Check OAuth & Permissions in your Slack App.",
+    };
+  }
+  try {
+    const r = await slackPing(token);
+    return {
+      ok: true,
+      summary: `Connected to "${r.team}" as @${r.user}.`,
+    };
+  } catch (e: any) {
+    // Slack returns helpful error strings on auth.test:
+    //   not_authed, invalid_auth, account_inactive, missing_scope, …
+    // Pass them through so the operator can act on them.
+    return { ok: false, error: e?.message ?? "Slack rejected the token." };
   }
 }
 

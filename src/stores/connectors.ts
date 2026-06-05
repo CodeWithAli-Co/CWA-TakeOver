@@ -23,9 +23,29 @@ import {
   useQueryClient,
 } from "@tanstack/react-query";
 import { takeOversupabase } from "@/MyComponents/supabase";
+import { getStronghold } from "@/stores/stronghold";
 
 const CONNECTORS_TABLE = "connectors";
-const CONNECTORS_KEY = ["connectors"] as const;
+
+/** Read the company this install is bound to from Stronghold. Used
+ *  to scope every connector read/write to the active tenant. Falls
+ *  back to null for un-bound dev installs — those rows still work
+ *  but are visible to every un-bound install on the same Supabase. */
+async function getActiveCompany(): Promise<string | null> {
+  try {
+    const stronghold = await getStronghold();
+    const name = await stronghold.getRecord("company_name");
+    return (typeof name === "string" && name.trim().length > 0) ? name.trim() : null;
+  } catch {
+    return null;
+  }
+}
+
+// Tenant-aware cache invalidation strategy:
+//   All connector queries live under the top-level ["connectors"]
+//   prefix. Mutations invalidate the prefix, which sweeps every
+//   tenant-scoped key under it. Cheap, correct, and avoids us
+//   having to thread the active company through every onSuccess.
 
 export type ConnectorStatus = "connected" | "error" | "disconnected";
 
@@ -42,15 +62,24 @@ export interface Connector {
   created_by: string | null;
 }
 
-/** List all connectors visible to the current session. */
+/** List all connectors for the current tenant. Scoped to the
+ *  `company` bound in Stronghold so two tenants on the same
+ *  Supabase project never see each other's rows. Un-bound installs
+ *  (dev) see only rows with company=NULL. */
 export function useConnectors() {
   return useQuery({
-    queryKey: CONNECTORS_KEY,
+    // Two-step key so the company resolves at runtime — TanStack
+    // re-keys automatically when getActiveCompany flips.
+    queryKey: ["connectors", "tenant-scoped"] as const,
     queryFn: async () => {
-      const { data, error } = await takeOversupabase
-  .from(CONNECTORS_TABLE)
+      const company = await getActiveCompany();
+      const q = takeOversupabase
+        .from(CONNECTORS_TABLE)
         .select("*")
         .order("connected_at", { ascending: false });
+      const { data, error } = company
+        ? await q.eq("company", company)
+        : await q.is("company", null);
       if (error) throw error;
       return (data ?? []) as Connector[];
     },
@@ -68,7 +97,13 @@ export interface UpsertConnectorArgs {
 }
 
 /** Insert or update credentials for a given `kind`. Conflict
- *  resolution uses the partial unique index on (kind, company). */
+ *  resolution uses the partial unique index on (kind, company).
+ *
+ *  Multi-tenant safety: if the caller doesn't pass `company`, we
+ *  pull it from Stronghold so connectors are always scoped to the
+ *  active tenant. Two tenants on the same Supabase project will
+ *  each get their own (kind, company) row instead of clobbering
+ *  each other. */
 export function useUpsertConnector() {
   const qc = useQueryClient();
   return useMutation({
@@ -77,7 +112,9 @@ export function useUpsertConnector() {
       // vs insert. We can't rely on the partial unique index +
       // upsert because PostgREST's `on_conflict` doesn't support
       // index predicates.
-      const company = args.company ?? null;
+      const company = args.company !== undefined
+        ? args.company
+        : await getActiveCompany();
       const existingQ = takeOversupabase
         .from(CONNECTORS_TABLE)
         .select("id")
@@ -124,7 +161,8 @@ export function useUpsertConnector() {
         return data as Connector;
       }
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: CONNECTORS_KEY }),
+    onSuccess: () =>
+      qc.invalidateQueries({ queryKey: ["connectors"] }),
   });
 }
 
@@ -139,7 +177,8 @@ export function useDeleteConnector() {
         .eq("id", id);
       if (error) throw error;
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: CONNECTORS_KEY }),
+    onSuccess: () =>
+      qc.invalidateQueries({ queryKey: ["connectors"] }),
   });
 }
 
@@ -170,25 +209,36 @@ export function useMarkConnectorSync() {
         .eq("id", args.id);
       if (error) throw error;
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: CONNECTORS_KEY }),
+    onSuccess: () =>
+      qc.invalidateQueries({ queryKey: ["connectors"] }),
   });
 }
 
 /** Imperative read — fetch one connector by kind from Supabase.
  *  Used by Axon actions that run outside React. Returns null if
- *  not connected. */
+ *  not connected.
+ *
+ *  Multi-tenant: if no `company` is passed, we auto-resolve it
+ *  from Stronghold so the lookup is always tenant-scoped. Pass
+ *  `null` explicitly to look up workspace-global rows. */
 export async function fetchConnectorByKind(
   kind: string,
   company?: string | null,
 ): Promise<Connector | null> {
+  // Three cases:
+  //   · company === undefined → auto-resolve from Stronghold
+  //   · company === null      → explicit lookup of unbound row
+  //   · company === string    → explicit lookup of named tenant
+  const tenant = company !== undefined ? company : await getActiveCompany();
+
   const q = takeOversupabase
     .from(CONNECTORS_TABLE)
     .select("*")
     .eq("kind", kind)
     .eq("status", "connected")
     .limit(1);
-  const { data, error } = company
-    ? await q.eq("company", company)
+  const { data, error } = tenant
+    ? await q.eq("company", tenant)
     : await q.is("company", null);
   if (error) return null;
   return ((data as Connector[] | null) ?? [])[0] ?? null;
