@@ -82,6 +82,44 @@ export function useGmailConnection(opts: {
     queryFn: async () => {
       if (!userSupaId) return null;
       const client = await getCompanySupabase();
+
+      // DIAGNOSTIC — surface what the desktop sees so we can pinpoint
+      // an RLS mismatch (auth.uid != user_supa_id), wrong tenant
+      // client, or stale session. Remove once Gmail visibility is
+      // confirmed end-to-end.
+      try {
+        const { data: authData } = await client.auth.getUser();
+        const authUid = authData?.user?.id ?? null;
+        const matches = authUid === userSupaId;
+        console.log("[gmail-diag] querying gmail_connections", {
+          activeUserSupaId: userSupaId,
+          authUid,
+          matches,
+        });
+        if (!matches) {
+          console.warn(
+            "[gmail-diag] auth.uid != active user supa_id — RLS will hide the row. " +
+            "The callback wrote user_supa_id = activeUser.supa_id but the desktop's " +
+            "RLS check is on auth.uid().",
+          );
+        }
+        // Probe how many rows the desktop's session can see at all.
+        // If this returns 0 but the SQL editor shows rows, RLS is
+        // blocking us. If it returns the row, the .eq filter must be
+        // mismatched on type/whitespace.
+        const { data: anyRows, error: anyErr } = await client
+          .from("gmail_connections")
+          .select("id, user_supa_id, email")
+          .limit(5);
+        console.log("[gmail-diag] rows visible to desktop session:", {
+          rowCount: anyRows?.length ?? 0,
+          rows: anyRows,
+          error: anyErr?.message,
+        });
+      } catch (e) {
+        console.warn("[gmail-diag] diagnostic probe failed:", e);
+      }
+
       const { data, error } = await client
         .from("gmail_connections")
         .select(
@@ -98,6 +136,7 @@ export function useGmailConnection(opts: {
         if (error.code === "PGRST116") return null;
         throw error;
       }
+      console.log("[gmail-diag] final query result:", data);
       return (data as GmailConnection) ?? null;
     },
   });
