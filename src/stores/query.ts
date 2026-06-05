@@ -484,9 +484,26 @@ export const AllTodos = () => {
 
 
 // Meetings Query — scoped by company
-interface MeetingInterface {
+//
+// Exported so MeetingCard / drawers / join mutation can all share
+// one shape. (Was a local interface; kept the same name.)
+export interface MeetingInterface {
   id: number;
   meeting_title: string;
+  // Free-form notes / agenda. Nullable — see
+  // migrations/meeting_description_and_joins.sql.
+  description?: string | null;
+  // Opt-in flag. When false (default) the Join button never
+  // renders on the card. The creator flips this on/off.
+  allow_join?: boolean;
+  // Self-added teammates, as user_supa_id strings. Distinct
+  // from `attendee_ids` which the creator picks up-front.
+  joiners?: string[];
+  // Roster the creator picked when adding the meeting. Used to
+  // decide whether someone is already "in" before showing Join.
+  attendee_ids?: string[];
+  // Whoever created the meeting — hides Join button from them.
+  created_by?: string | null;
   time?: string;
   date: string;
   attendees: number;

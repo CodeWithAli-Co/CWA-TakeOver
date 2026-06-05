@@ -11,10 +11,13 @@ import {
   Trash,
   EllipsisVertical,
   Pencil,
+  UserPlus,
+  Check,
 } from "lucide-react";
 import { SchedImgStore } from "@/stores/store";
 import { Button } from "@/components/ui/button";
-import { Employees, MeetingsQuery } from "@/stores/query";
+import { ActiveUser, Employees, MeetingsQuery } from "@/stores/query";
+import { useJoinMeeting } from "@/stores/MeetingStore";
 import { AddMeeting, type MeetingAttendeeOption } from "../subForms/MeetingForms/addMeeting";
 import { takeOversupabase } from "../supabase";
 import { message } from "@tauri-apps/plugin-dialog";
@@ -234,6 +237,7 @@ function MeetingCard({
   onEdit,
   onDelete,
   usersById,
+  viewerSupaId,
 }: {
   meeting: any;
   onEdit: (id: number) => void;
@@ -241,11 +245,50 @@ function MeetingCard({
   /** supa_id → AvatarUser. Built once in the parent so all cards
    *  share the same lookup map instead of each rebuilding it. */
   usersById: Map<string, AvatarUser>;
+  /** Current viewer's supa_id — drives whether the Join button is
+   *  shown and lets us mark the user as already-joined. Optional
+   *  so a logged-out / pre-auth render still works (no Join). */
+  viewerSupaId?: string;
 }) {
   const co = companyStyle(meeting.company);
   const cat = categoryFor(meeting);
   const join = joinUrl(meeting);
   const locLabel = locationLabel(meeting);
+
+  // ── Join state ────────────────────────────────────────────────
+  //
+  // The Join button surfaces only when ALL of the following hold:
+  //   · meeting.allow_join is true (creator opted in)
+  //   · we know who the viewer is (viewerSupaId)
+  //   · viewer is NOT the meeting's creator (creators are already in)
+  //   · viewer is NOT already an attendee_id (the creator added them)
+  //   · viewer is NOT already in joiners (idempotent)
+  //
+  // We compute these once per render so the conditionals downstream
+  // read cleanly.
+  const joinersArr: string[] = Array.isArray(meeting?.joiners)
+    ? meeting.joiners
+    : [];
+  const attendeeIdsArr: string[] = Array.isArray(meeting?.attendee_ids)
+    ? meeting.attendee_ids
+    : [];
+
+  const alreadyJoined = !!viewerSupaId && joinersArr.includes(viewerSupaId);
+  const isCreator =
+    !!viewerSupaId &&
+    !!meeting?.created_by &&
+    meeting.created_by === viewerSupaId;
+  const isAttendee =
+    !!viewerSupaId && attendeeIdsArr.includes(viewerSupaId);
+
+  const canJoin =
+    meeting?.allow_join === true &&
+    !!viewerSupaId &&
+    !isCreator &&
+    !isAttendee &&
+    !alreadyJoined;
+
+  const joinMut = useJoinMeeting();
 
   // Resolve attendee_ids → user objects. IDs that don't resolve
   // (deleted users) are dropped silently rather than rendered as
@@ -335,6 +378,16 @@ function MeetingCard({
         {meeting.meeting_title}
       </h3>
 
+      {/* Description preview — only renders when the row has one.
+       *  Clamped to 2 lines so a long agenda doesn't blow out the
+       *  card. Full text lives on the Schedule day view (clicking
+       *  the card already navigates there). */}
+      {meeting.description && (
+        <p className="text-[11.5px] text-text-tertiary leading-relaxed line-clamp-2 mt-1.5 pr-2">
+          {meeting.description}
+        </p>
+      )}
+
       {/* Bottom row — location pill + time on the left, avatar
        *  stack on the right. mt-3 gives the title room to breathe.
        *  Avatar stack lives at the far right with ml-auto so a
@@ -400,6 +453,69 @@ function MeetingCard({
         )}
 
         <div className="ml-auto flex items-center gap-2">
+          {/* Join button / already-joined pill.
+           *  We render the action FIRST (left of the avatar stack)
+           *  because it's the only interactive element other
+           *  teammates have on this card — they should be able to
+           *  spot it instantly. The button is small + emerald to
+           *  match the rest of the editorial accent language.
+           *
+           *  When the viewer already joined we swap the button for
+           *  a quiet "Joined" pill — same footprint, no second
+           *  click. */}
+          {canJoin && (
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                if (joinMut.isPending) return;
+                joinMut.mutate({
+                  meetingId: meeting.id,
+                  userSupaId: viewerSupaId!,
+                });
+              }}
+              disabled={joinMut.isPending}
+              className="
+                inline-flex items-center gap-1 rounded-md
+                bg-emerald-500/[0.10] hover:bg-emerald-500/[0.18]
+                border border-emerald-500/30 hover:border-emerald-400/50
+                px-2 py-0.5 text-[10.5px] font-semibold
+                text-emerald-300 hover:text-emerald-200
+                transition-colors disabled:opacity-50 disabled:cursor-wait
+              "
+              aria-label="Join this meeting"
+            >
+              <UserPlus className="h-2.5 w-2.5" />
+              {joinMut.isPending ? "Joining…" : "Join"}
+            </button>
+          )}
+          {!canJoin && alreadyJoined && (
+            <span
+              className="
+                inline-flex items-center gap-1 rounded-md
+                bg-emerald-500/[0.06] border border-emerald-500/20
+                px-2 py-0.5 text-[10.5px] font-medium text-emerald-400/80
+              "
+              title="You joined this meeting"
+            >
+              <Check className="h-2.5 w-2.5" />
+              Joined
+            </span>
+          )}
+          {/* Joiners tally — render only when there's at least one
+           *  self-joined teammate AND there isn't already a Join
+           *  button competing for the same slot. Keeps the right-
+           *  hand cluster from getting noisy on cards no one has
+           *  joined yet. */}
+          {joinersArr.length > 0 && !canJoin && !alreadyJoined && (
+            <span
+              className="text-[10.5px] tabular-nums text-text-tertiary whitespace-nowrap"
+              title={`${joinersArr.length} teammate${joinersArr.length === 1 ? "" : "s"} joined`}
+            >
+              +{joinersArr.length}
+            </span>
+          )}
+
           <AvatarStack
             count={meeting.attendees}
             seed={String(meeting.id ?? meeting.meeting_title ?? "x")}
@@ -463,6 +579,13 @@ const Meetings = () => {
   const { setIsShowing, isShowing } = SchedImgStore();
   const { data: meetings, error, refetch } = MeetingsQuery();
   const { data: employees } = Employees();
+  // Viewer identity — drives the Join button on each MeetingCard.
+  // ActiveUser is already used elsewhere in the file via the
+  // employees query path, so we just pull it cheaply here. Empty
+  // when not yet logged in / mid-PIN-auth — the cards handle that
+  // by hiding the Join button entirely.
+  const { data: meRows } = ActiveUser();
+  const viewerSupaId: string | undefined = (meRows?.[0] as any)?.supa_id;
   if (error) console.log("Error Fetching Meetings", error.message);
 
   // Resolve every employee's avatar URL once and stash by supa_id.
@@ -657,6 +780,7 @@ const Meetings = () => {
                         onEdit={editMeeting}
                         onDelete={delMeeting}
                         usersById={usersById}
+                        viewerSupaId={viewerSupaId}
                       />
                     ))}
                   </div>

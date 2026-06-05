@@ -99,6 +99,8 @@ export const EditMeeting = ({ meetingID, open, setOpen, onComplete, users = [] }
   // creaating a state for the form default values to handle async loading
   const [defaultValues, setDefaultValues] = useState({
     meetingTitle: "",
+    description: "",
+    allowJoin: false,
     time: "",
     date: "",
     attendees: "",
@@ -118,6 +120,14 @@ export const EditMeeting = ({ meetingID, open, setOpen, onComplete, users = [] }
       // extraact values from the meeting dataa
       setDefaultValues({
         meetingTitle: data.meeting_title || "",
+        // description / allow_join hydrated from the row. Falls back
+        // to neutral defaults when the columns are NULL (rows created
+        // before the migration ran).
+        // @ts-expect-error — description column landed in
+        // meeting_description_and_joins.sql; types may lag.
+        description: data.description || "",
+        // @ts-expect-error — allow_join column from same migration.
+        allowJoin: data.allow_join ?? false,
         time: data.time || "",
         date: data.date || "",
         attendees: data.attendees?.toString() || "",
@@ -195,6 +205,11 @@ export const EditMeeting = ({ meetingID, open, setOpen, onComplete, users = [] }
 
       const basePatch: Patch = {
         meeting_title: value.meetingTitle,
+        // Same trim-to-null trick as AddMeeting so the card render
+        // can still gate with `description &&` and stays honest about
+        // "actually empty" vs "an empty string".
+        description: value.description.trim() || null,
+        allow_join: value.allowJoin,
         time: value.time,
         date: value.date,
         attendees: attendeeCount,
@@ -308,13 +323,76 @@ export const EditMeeting = ({ meetingID, open, setOpen, onComplete, users = [] }
                     autoComplete="off"
                     required
                     placeholder="Meeting title"
-                    className="bg-background/40 border-border text-foreground/70 
-                    focus:border-primary/30 focus:ring-2 focus:ring-primary/20 
+                    className="bg-background/40 border-border text-foreground/70
+                    focus:border-primary/30 focus:ring-2 focus:ring-primary/20
                     transition-all duration-300"
                     value={field.state.value}
                     onChange={(e) => field.handleChange(e.target.value)}
                   />
                 </div>
+              )}
+            />
+
+            {/* Description — same field that landed in AddMeeting.
+             *  Editing pre-populates from the row so the creator can
+             *  edit existing agendas in place. */}
+            <form.Field
+              name="description"
+              children={(field) => (
+                <div className="grid gap-2">
+                  <Label
+                    htmlFor={field.name}
+                    className="text-foreground/70 flex items-center gap-2"
+                  >
+                    <Tags className="w-4 h-4 text-primary" />
+                    Description
+                    <span className="text-[10px] text-muted-foreground/60 ml-1 font-normal">
+                      optional
+                    </span>
+                  </Label>
+                  <textarea
+                    id={field.name}
+                    autoComplete="off"
+                    rows={3}
+                    placeholder="What's this meeting about? Agenda, links, anything teammates would need to know before joining."
+                    className="bg-background/40 border border-border rounded-md px-3 py-2 text-[13px] text-foreground/85
+                      focus:border-primary/30 focus:ring-2 focus:ring-primary/20 focus:outline-none
+                      transition-all duration-300 resize-none placeholder:text-muted-foreground/40 leading-relaxed"
+                    value={field.state.value}
+                    onChange={(e) => field.handleChange(e.target.value)}
+                  />
+                </div>
+              )}
+            />
+
+            {/* Allow team to join — mirrors AddMeeting. Flipping
+             *  this off after the meeting has joiners does NOT
+             *  remove them; it just stops new joiners. The card
+             *  can still surface a "joiners" count for completed/
+             *  historical context. */}
+            <form.Field
+              name="allowJoin"
+              children={(field) => (
+                <label
+                  htmlFor={field.name}
+                  className="flex items-start gap-3 rounded-md border border-border bg-background/30 hover:bg-background/50 hover:border-primary/30 px-3 py-2.5 cursor-pointer transition-colors group"
+                >
+                  <input
+                    id={field.name}
+                    type="checkbox"
+                    checked={field.state.value}
+                    onChange={(e) => field.handleChange(e.target.checked)}
+                    className="mt-0.5 h-4 w-4 rounded border-border bg-background text-emerald-500 focus:ring-1 focus:ring-emerald-500/40 focus:ring-offset-0 cursor-pointer accent-emerald-500"
+                  />
+                  <div className="flex-1 min-w-0">
+                    <p className="text-[12.5px] font-medium text-foreground/85 leading-snug">
+                      Let teammates join
+                    </p>
+                    <p className="text-[11px] text-muted-foreground/70 mt-0.5 leading-snug">
+                      Shows a Join button on the meeting card. Off = private (only the people you list as attendees see it as theirs).
+                    </p>
+                  </div>
+                </label>
               )}
             />
 

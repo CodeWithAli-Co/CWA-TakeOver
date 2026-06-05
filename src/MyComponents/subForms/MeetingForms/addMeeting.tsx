@@ -90,6 +90,12 @@ export const AddMeeting = ({ users = [] }: AddMeetingProps = {}) => {
   const form = useForm({
     defaultValues: {
       meetingTitle: "",
+      description: "",
+      // Opt-in flag. When true the meeting card will show a "Join"
+      // button to teammates so they can self-add. Default off so
+      // every meeting is private by default — the creator has to
+      // deliberately open it up.
+      allowJoin: false,
       time: "",
       date: "",
       attendees: "",
@@ -110,6 +116,10 @@ export const AddMeeting = ({ users = [] }: AddMeetingProps = {}) => {
       // Type-specific location handling layered on top below.
       const baseInsert = {
         meeting_title: value.meetingTitle,
+        // Trim — an empty description sends null instead of "" so
+        // the meeting card can do `description &&` to gate render.
+        description: value.description.trim() || null,
+        allow_join: value.allowJoin,
         time: value.time,
         date: value.date,
         attendees: attendeeCount,
@@ -251,13 +261,73 @@ export const AddMeeting = ({ users = [] }: AddMeetingProps = {}) => {
                     autoComplete="off"
                     required
                     placeholder="Task title"
-                    className="bg-background/40 border-border text-foreground/70 
-                    focus:border-primary/30 focus:ring-2 focus:ring-primary/20 
+                    className="bg-background/40 border-border text-foreground/70
+                    focus:border-primary/30 focus:ring-2 focus:ring-primary/20
                     transition-all duration-300"
                     value={field.state.value}
                     onChange={(e) => field.handleChange(e.target.value)}
                   />
                 </div>
+              )}
+            />
+
+            {/* Description — free-form notes / agenda. Empty allowed. */}
+            <form.Field
+              name="description"
+              children={(field) => (
+                <div className="grid gap-2">
+                  <Label
+                    htmlFor={field.name}
+                    className="text-foreground/70 flex items-center gap-2"
+                  >
+                    <Tags className="w-4 h-4 text-primary" />
+                    Description
+                    <span className="text-[10px] text-muted-foreground/60 ml-1 font-normal">
+                      optional
+                    </span>
+                  </Label>
+                  <textarea
+                    id={field.name}
+                    autoComplete="off"
+                    rows={3}
+                    placeholder="What's this meeting about? Agenda, links, anything teammates would need to know before joining."
+                    className="bg-background/40 border border-border rounded-md px-3 py-2 text-[13px] text-foreground/85
+                      focus:border-primary/30 focus:ring-2 focus:ring-primary/20 focus:outline-none
+                      transition-all duration-300 resize-none placeholder:text-muted-foreground/40 leading-relaxed"
+                    value={field.state.value}
+                    onChange={(e) => field.handleChange(e.target.value)}
+                  />
+                </div>
+              )}
+            />
+
+            {/* Allow team to join — opt-in checkbox. When ON, a
+             *  Join button surfaces on the meeting card for
+             *  teammates who aren't the creator. Default OFF so
+             *  every meeting is private unless explicitly opened. */}
+            <form.Field
+              name="allowJoin"
+              children={(field) => (
+                <label
+                  htmlFor={field.name}
+                  className="flex items-start gap-3 rounded-md border border-border bg-background/30 hover:bg-background/50 hover:border-primary/30 px-3 py-2.5 cursor-pointer transition-colors group"
+                >
+                  <input
+                    id={field.name}
+                    type="checkbox"
+                    checked={field.state.value}
+                    onChange={(e) => field.handleChange(e.target.checked)}
+                    className="mt-0.5 h-4 w-4 rounded border-border bg-background text-emerald-500 focus:ring-1 focus:ring-emerald-500/40 focus:ring-offset-0 cursor-pointer accent-emerald-500"
+                  />
+                  <div className="flex-1 min-w-0">
+                    <p className="text-[12.5px] font-medium text-foreground/85 leading-snug">
+                      Let teammates join
+                    </p>
+                    <p className="text-[11px] text-muted-foreground/70 mt-0.5 leading-snug">
+                      Shows a Join button on the meeting card. Off by default — only the people you add as attendees see this meeting as theirs.
+                    </p>
+                  </div>
+                </label>
               )}
             />
 
