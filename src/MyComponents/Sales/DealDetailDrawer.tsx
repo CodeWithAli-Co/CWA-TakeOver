@@ -34,6 +34,7 @@ import {
 import { useLogActivityDialog } from "./logActivityStore";
 import { useSalesDrawer } from "./salesDrawerStore";
 import { InlineDeleteButton } from "./InlineDeleteButton";
+import { DealAiStrip } from "./DealAiStrip";
 import {
   useCrmDeal,
   useUpdateDeal,
@@ -463,6 +464,17 @@ const DealDrawerContent: React.FC<{
           </Field>
         )}
       </section>
+
+      {/* AI assist strip — two buttons that talk to Claude with the
+          deal context + activity history. Summarize is single-call
+          and renders an inline paragraph; Draft email pops a small
+          modal where the rep types intent + gets back subject/body. */}
+      <DealAiStrip
+        deal={deal}
+        activities={activities}
+        contact={contacts.find((c) => c.id === current.contact_id) ?? null}
+        company={companies.find((c) => c.id === current.company_id) ?? null}
+      />
 
       {/* Activity timeline. "+ Log" opens the global composer
           pre-routed to this deal (and its contact/company, since

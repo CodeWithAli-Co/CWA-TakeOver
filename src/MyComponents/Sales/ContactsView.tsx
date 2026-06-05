@@ -31,6 +31,7 @@ import { LifecyclePill } from "./LifecyclePill";
 import { useLogActivityDialog } from "./logActivityStore";
 import { useSalesDrawer } from "./salesDrawerStore";
 import { InlineDeleteButton } from "./InlineDeleteButton";
+import { SavedViewsMenu } from "./SavedViewsMenu";
 
 // ────────────────────────────────────────────────
 // Shared chrome
@@ -56,6 +57,11 @@ const LIFECYCLE_LABEL: Record<LifecycleStage, string> = {
 export const ContactsView: React.FC = () => {
   const [lifecycle, setLifecycle] = useState<LifecycleStage | "all">("all");
   const [search, setSearch] = useState("");
+  // Active saved-view id — used by the SavedViewsMenu pill to show
+  // the current view name and to highlight the active row in its
+  // dropdown. Cleared whenever the operator changes a filter so the
+  // pill stops claiming to reflect a saved view it no longer matches.
+  const [activeViewId, setActiveViewId] = useState<string | null>(null);
   // Drawer state lives on the shared salesDrawerStore so the contact
   // drawer (mounted at SalesPage root) can be opened from anywhere.
   const openContact = useSalesDrawer((s) => s.openContact);
@@ -126,6 +132,19 @@ export const ContactsView: React.FC = () => {
           <span className={`ml-auto text-[14px] text-zinc-100 ${monoNum}`}>
             {allContacts.length}
           </span>
+          <SavedViewsMenu
+            entity="contacts"
+            currentFilters={{ lifecycle, search }}
+            activeViewId={activeViewId}
+            onActiveViewChange={setActiveViewId}
+            onApply={(f) => {
+              // Be defensive — saved views are JSON blobs and could
+              // be from older shapes. Only pull keys we know about.
+              const next = f as { lifecycle?: LifecycleStage | "all"; search?: string };
+              if (next.lifecycle) setLifecycle(next.lifecycle);
+              if (typeof next.search === "string") setSearch(next.search);
+            }}
+          />
           <button
             onClick={handleAddContact}
             disabled={createContact.isPending}
@@ -143,7 +162,7 @@ export const ContactsView: React.FC = () => {
             {cTabs.map((t) => (
               <button
                 key={t.key}
-                onClick={() => setLifecycle(t.key)}
+                onClick={() => { setLifecycle(t.key); setActiveViewId(null); }}
                 className={`relative px-2.5 py-2 text-[10.5px] font-mono uppercase tracking-wider transition-colors ${
                   lifecycle === t.key ? "text-zinc-100" : "text-zinc-500 hover:text-zinc-300"
                 }`}
@@ -163,7 +182,7 @@ export const ContactsView: React.FC = () => {
             <input
               type="text"
               value={search}
-              onChange={(e) => setSearch(e.target.value)}
+              onChange={(e) => { setSearch(e.target.value); setActiveViewId(null); }}
               placeholder="Search name or email…"
               className="w-full bg-transparent outline-none text-[12px] text-zinc-100 placeholder:text-zinc-700"
             />

@@ -63,6 +63,7 @@ import { PipelineView } from "./PipelineView";
 import { ContactsView, ContactDetailDrawer } from "./ContactsView";
 import { CompaniesView, CompanyDetailDrawer } from "./CompaniesView";
 import { DealDetailDrawer } from "./DealDetailDrawer";
+import { useSalesDrawerUrl } from "./salesDrawerStore";
 import { useStripeDashboard } from "@/lib/useStripeDashboard";
 
 // ════════════════════════════════════════════
@@ -91,6 +92,11 @@ const SALES_TABS = [
 export const SalesPage: React.FC = () => {
   // Realtime subscription mounts once for the whole /sales surface.
   useCrmRealtime();
+
+  // Two-way URL sync for the active drawer. Lets users share links
+  // like /sales?deal=abc and gets the back button doing the obvious
+  // thing (close the drawer / pop to prior drawer state).
+  useSalesDrawerUrl();
 
   const qc = useQueryClient();
   const [tab, setTab] = useState<typeof SALES_TABS[number]["value"]>("dashboard");
