@@ -12,7 +12,7 @@
  * logic on the server side applies identically.
  */
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Send, Check, AlertCircle, X, Mail } from "lucide-react";
 import { useSendEmail, useGmailConnection, useGmailAliases } from "@/stores/gmail";
 
