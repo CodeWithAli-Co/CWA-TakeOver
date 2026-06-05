@@ -56,23 +56,20 @@ export function SlackPulsePanel() {
     () => connectors.find((c) => c.kind === "slack" && c.status === "connected"),
     [connectors],
   );
-  const botToken = useMemo(() => {
-    const creds = (slack?.credentials ?? {}) as Record<string, unknown>;
-    return typeof creds.bot_token === "string" ? creds.bot_token.trim() : "";
-  }, [slack]);
 
   const pulse = useQuery<PulseData>({
     queryKey: ["slack", "pulse", slack?.id ?? "none"],
-    enabled: !!botToken,
+    enabled: !!slack,
     staleTime: STALE_MS,
     refetchOnWindowFocus: false,
     queryFn: async () => {
       // Parallel: channels + users. We need both before we can show
       // anything, so launching them concurrently halves perceived
-      // latency vs sequential.
+      // latency vs sequential. The token lookup happens server-side
+      // in the takeover-B2B proxy via tenant scoping.
       const [allChannels, users] = await Promise.all([
-        slackListChannels(botToken, { limit: 100, types: "public_channel" }),
-        slackListUsers(botToken).catch(() => [] as SlackUser[]),
+        slackListChannels({ limit: 100, types: "public_channel" }),
+        slackListUsers().catch(() => [] as SlackUser[]),
       ]);
       const userDir = new Map(users.map((u) => [u.id, u] as const));
 
@@ -90,7 +87,7 @@ export function SlackPulsePanel() {
       // panel; we render whatever came back.
       const histories = await Promise.all(
         ranked.map((c) =>
-          slackChannelHistory(botToken, c.id, MESSAGES_PER_CHANNEL).catch(
+          slackChannelHistory(c.id, MESSAGES_PER_CHANNEL).catch(
             () => [] as SlackMessage[],
           ),
         ),

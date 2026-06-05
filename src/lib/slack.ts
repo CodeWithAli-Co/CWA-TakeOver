@@ -1,11 +1,34 @@
 /**
- * lib/slack.ts — minimal browser-side Slack Web API client.
+ * lib/slack.ts — Slack Web API client, routed through takeover-B2B.
  *
- * Slack's Web API supports CORS for bot tokens (xoxb-…) when called
- * from a browser with the Authorization header set, so we can hit
- * it straight from the Tauri webview with no Edge Function in
- * between. Same architecture as `lib/airtable.ts` — bring your own
- * token, call straight to the provider, no proxy hop.
+ * Architecture: same proxy pattern as Gmail (stores/gmail.ts) and
+ * Stripe (lib/stripe.ts). The desktop never talks to slack.com
+ * directly. Every call goes through the takeover-B2B proxy at
+ * `${VITE_TAKEOVER_SITE_URL}/api/slack/proxy`, which:
+ *
+ *   1. Looks up the bot token from the central `connectors` table
+ *      (scoped by `company`) — OR accepts an explicit `token` in
+ *      the request body for verify-on-save before the row exists.
+ *   2. Form-encodes the call body with the token + params.
+ *   3. POSTs to https://slack.com/api/{method}.
+ *   4. Returns the parsed JSON response verbatim.
+ *
+ * Why the proxy hop (vs. direct from the desktop):
+ *
+ *   · Bot tokens never get loaded into the webview after the
+ *     initial save — server holds them and forwards calls.
+ *   · No CORS to fight (slack.com's preflight rejects browser
+ *     Authorization headers; the proxy doesn't care).
+ *   · Receivable webhook URLs (Slack → takeover-B2B → user) become
+ *     possible — useful for "AXON notices when someone @mentions
+ *     you in Slack" features down the line.
+ *   · Server-side audit logging, rate limiting, retry all live in
+ *     one place across every connector.
+ *
+ * Public function signatures are unchanged from the direct-call
+ * version, so callers in Axon/actions/slack.ts, SlackPulsePanel,
+ * connectorVerify, and connectorSummary all keep working without
+ * modification.
  *
  * Why bot tokens (xoxb) and not full OAuth?
  *
@@ -34,7 +57,34 @@
  * `error` string up.
  */
 
-const BASE_URL = "https://slack.com/api";
+import { getStronghold } from "@/stores/stronghold";
+
+/** Build the proxy URL once per call — reads VITE_TAKEOVER_SITE_URL
+ *  lazily so vite-dev can swap envs without a rebuild. Throws if
+ *  the env is missing so we don't silently fall back to direct
+ *  slack.com calls and re-introduce the CORS bug. */
+function proxyUrl(): string {
+  const base = import.meta.env.VITE_TAKEOVER_SITE_URL;
+  if (!base) {
+    throw new Error(
+      "VITE_TAKEOVER_SITE_URL not configured — set in .env.local. " +
+      "Slack calls route through takeover-B2B.",
+    );
+  }
+  return `${base.replace(/\/$/, "")}/api/slack/proxy`;
+}
+
+/** Tenant scope for connector lookup. The proxy uses this to find
+ *  the right `connectors` row when no explicit token is passed. */
+async function getCompanyName(): Promise<string | null> {
+  try {
+    const stronghold = await getStronghold();
+    const name = await stronghold.getRecord("company_name");
+    return typeof name === "string" && name.trim() ? name.trim() : null;
+  } catch {
+    return null;
+  }
+}
 
 // ────────────────────────────────────────────────
 // Response shapes — Slack API surface is huge; we
@@ -132,44 +182,56 @@ interface SlackUsersListResponse {
 }
 
 // ────────────────────────────────────────────────
-// Shared fetcher — every Slack call goes through here.
+// Shared fetcher — every Slack call goes through the proxy.
+//
+// Two calling modes:
+//   · Explicit token (verify-on-save, before the connector row
+//     exists): caller passes the xoxb-… string. The proxy
+//     forwards it as-is to slack.com.
+//   · Lookup (everything after save): caller passes `null` for
+//     token. The proxy reads the bot_token from the tenant's
+//     `connectors` row, scoped by company_name.
 // ────────────────────────────────────────────────
 
 async function slackFetch<T>(
-  token: string,
-  endpoint: string,
-  init?: { method?: "GET" | "POST"; query?: Record<string, string>; body?: Record<string, unknown> },
+  token: string | null,
+  method: string,
+  params: Record<string, string | number | boolean | undefined> = {},
 ): Promise<T> {
-  const method = init?.method ?? "GET";
-  const url = new URL(`${BASE_URL}/${endpoint}`);
+  const companyName = await getCompanyName();
 
-  // Slack accepts query params on GET, JSON body on POST.
-  if (method === "GET" && init?.query) {
-    for (const [k, v] of Object.entries(init.query)) url.searchParams.set(k, v);
-  }
-
-  const headers: Record<string, string> = {
-    Authorization: `Bearer ${token}`,
-  };
-  if (method === "POST") {
-    // Slack requires charset=utf-8 explicitly for chat.postMessage —
-    // without it the API rejects the body with `invalid_payload`.
-    headers["Content-Type"] = "application/json; charset=utf-8";
-  }
-
-  const res = await fetch(url.toString(), {
+  // Body schema — kept flat so the proxy can validate easily.
+  const body: Record<string, unknown> = {
     method,
-    headers,
-    body: method === "POST" ? JSON.stringify(init?.body ?? {}) : undefined,
+    params,
+    company_name: companyName,
+  };
+  if (token) body.token = token;
+
+  const res = await fetch(proxyUrl(), {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      // TakeOver-App header matches the convention Gmail uses, so
+      // the proxy can reject random web requests at the edge.
+      "TakeOver-App": "true",
+    },
+    body: JSON.stringify(body),
   });
 
   if (!res.ok) {
-    // Slack rarely returns non-2xx (it prefers 200 + ok:false), but
-    // network/proxy errors can. Surface the status line so the
-    // caller can show something sensible.
-    throw new Error(`Slack ${res.status} ${res.statusText}`);
+    // Proxy errors (token lookup failed, missing connector, slack.com
+    // 5xx) come back as 4xx/5xx. Surface what we can.
+    const detail = await res.text().catch(() => "");
+    let parsed: { error?: string } = {};
+    try { parsed = JSON.parse(detail); } catch { /* noop */ }
+    throw new Error(
+      parsed.error ?? `Slack proxy ${res.status}: ${detail.slice(0, 200)}`,
+    );
   }
 
+  // The proxy returns Slack's response verbatim — same { ok, ... }
+  // shape we'd see from a direct call.
   const json = (await res.json()) as T & { ok: boolean; error?: string };
   if (!json.ok) {
     throw new Error(`Slack: ${json.error ?? "unknown error"}`);
@@ -181,9 +243,12 @@ async function slackFetch<T>(
 // Public helpers — one per endpoint we care about.
 // ────────────────────────────────────────────────
 
-/** auth.test — smoke test the token. Returns workspace + bot id. */
-export async function slackAuthTest(token: string): Promise<SlackAuthTest> {
-  return slackFetch<SlackAuthTest>(token, "auth.test", { method: "POST" });
+/** auth.test — smoke test the token. Returns workspace + bot id.
+ *  Called in two contexts:
+ *    · verify-on-save (token explicit, no row yet) → pass the token.
+ *    · post-save liveness check (token in DB) → pass null. */
+export async function slackAuthTest(token: string | null = null): Promise<SlackAuthTest> {
+  return slackFetch<SlackAuthTest>(token, "auth.test");
 }
 
 /** conversations.list — the bot's visible channels. Returns at
@@ -191,7 +256,6 @@ export async function slackAuthTest(token: string): Promise<SlackAuthTest> {
  *  by default. Set `types` to "public_channel,private_channel" to
  *  include privates the bot has been invited to. */
 export async function slackListChannels(
-  token: string,
   opts: {
     limit?: number;
     types?: string;
@@ -199,15 +263,12 @@ export async function slackListChannels(
   } = {},
 ): Promise<SlackChannel[]> {
   const res = await slackFetch<SlackConversationsListResponse>(
-    token,
+    null,
     "conversations.list",
     {
-      method: "GET",
-      query: {
-        limit: String(opts.limit ?? 200),
-        types: opts.types ?? "public_channel",
-        exclude_archived: String(opts.excludeArchived ?? true),
-      },
+      limit: opts.limit ?? 200,
+      types: opts.types ?? "public_channel",
+      exclude_archived: opts.excludeArchived ?? true,
     },
   );
   return res.channels ?? [];
@@ -216,45 +277,35 @@ export async function slackListChannels(
 /** conversations.history — recent messages in one channel.
  *  Default 20 — enough for the pulse strip without flooding. */
 export async function slackChannelHistory(
-  token: string,
   channelId: string,
   limit = 20,
 ): Promise<SlackMessage[]> {
   const res = await slackFetch<SlackConversationsHistoryResponse>(
-    token,
+    null,
     "conversations.history",
-    {
-      method: "GET",
-      query: { channel: channelId, limit: String(limit) },
-    },
+    { channel: channelId, limit },
   );
   return res.messages ?? [];
 }
 
 /** chat.postMessage — send a message to a channel. The channel can
  *  be an id (`C12345`) or a name with `#` prefix (`#general`). */
-export async function slackPostMessage(
-  token: string,
-  args: {
-    channel: string;
-    text: string;
-    /** Optional thread to reply into. Pass an existing message ts. */
-    thread_ts?: string;
-    /** When true, Slack unfurls links into rich previews. Default true. */
-    unfurl_links?: boolean;
-  },
-): Promise<{ channel: string; ts: string }> {
+export async function slackPostMessage(args: {
+  channel: string;
+  text: string;
+  /** Optional thread to reply into. Pass an existing message ts. */
+  thread_ts?: string;
+  /** When true, Slack unfurls links into rich previews. Default true. */
+  unfurl_links?: boolean;
+}): Promise<{ channel: string; ts: string }> {
   const res = await slackFetch<SlackPostMessageResponse>(
-    token,
+    null,
     "chat.postMessage",
     {
-      method: "POST",
-      body: {
-        channel: args.channel,
-        text: args.text,
-        thread_ts: args.thread_ts,
-        unfurl_links: args.unfurl_links ?? true,
-      },
+      channel: args.channel,
+      text: args.text,
+      thread_ts: args.thread_ts,
+      unfurl_links: args.unfurl_links ?? true,
     },
   );
   return {
@@ -266,21 +317,20 @@ export async function slackPostMessage(
 /** users.list — directory snapshot used for id → display-name
  *  lookups in the pulse view. Cap at 200 by default — typical
  *  team workspaces fit comfortably. */
-export async function slackListUsers(
-  token: string,
-  limit = 200,
-): Promise<SlackUser[]> {
+export async function slackListUsers(limit = 200): Promise<SlackUser[]> {
   const res = await slackFetch<SlackUsersListResponse>(
-    token,
+    null,
     "users.list",
-    { method: "GET", query: { limit: String(limit) } },
+    { limit },
   );
   return res.members ?? [];
 }
 
 /** Smoke test — confirms the token is live and surfaces the team
- *  + bot user. Used by the connect modal to validate before save. */
-export async function slackPing(token: string): Promise<{
+ *  + bot user. Used by the connect modal to validate before save
+ *  (token explicit) and by the connectorSummary tile (token=null,
+ *  proxy looks it up). */
+export async function slackPing(token: string | null = null): Promise<{
   team: string;
   team_id: string;
   user: string;

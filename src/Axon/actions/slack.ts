@@ -50,11 +50,16 @@ interface SlackCreds {
   default_channel?: string;
 }
 
-/** Pull the Slack bot token out of the connector row — or return an
- *  error string for AXON to relay to the operator. */
+/** Confirm the Slack connector is wired up for this tenant — or
+ *  return an error string for AXON to relay to the operator. We no
+ *  longer read the bot_token out: every Slack call goes through the
+ *  takeover-B2B proxy which looks the token up server-side from the
+ *  tenant's `connectors` row. We only check presence + extract the
+ *  default channel (which the desktop is the source of truth for
+ *  since it drives the post-without-channel UX). */
 function readSlackCreds(
   connector: Connector | null,
-): { token: string; defaultChannel: string | null } | { error: string } {
+): { defaultChannel: string | null } | { error: string } {
   if (!connector) {
     return {
       error:
@@ -62,12 +67,12 @@ function readSlackCreds(
     };
   }
   const creds = (connector.credentials ?? {}) as SlackCreds;
-  const token = (creds.bot_token ?? "").trim();
-  if (!token) {
+  // Soft check: if bot_token is missing from the row, something
+  // upstream broke the connector and the proxy will fail anyway.
+  if (!creds.bot_token || !String(creds.bot_token).trim()) {
     return { error: "Slack credentials are incomplete (missing bot_token)." };
   }
   return {
-    token,
     defaultChannel:
       typeof creds.default_channel === "string" && creds.default_channel.trim()
         ? creds.default_channel.trim()
@@ -123,7 +128,7 @@ export const slackListChannelsAction: AxonAction<
     const types = input.include_private
       ? "public_channel,private_channel"
       : "public_channel";
-    const channels = await slackListChannels(creds.token, {
+    const channels = await slackListChannels({
       limit: input.limit ?? 50,
       types,
     });
@@ -191,7 +196,7 @@ export const slackRecentMessagesAction: AxonAction<
     // a name, resolve it via the channel list.
     let channelId = input.channel.trim();
     if (channelId.startsWith("#")) {
-      const channels = await slackListChannels(creds.token, { limit: 1000 });
+      const channels = await slackListChannels({ limit: 1000 });
       const want = channelId.slice(1).toLowerCase();
       const hit = channels.find((c) => c.name.toLowerCase() === want);
       if (!hit) {
@@ -204,8 +209,8 @@ export const slackRecentMessagesAction: AxonAction<
     }
 
     const [history, users] = await Promise.all([
-      slackChannelHistory(creds.token, channelId, input.limit ?? 20),
-      slackListUsers(creds.token).catch(() => [] as SlackUser[]),
+      slackChannelHistory(channelId, input.limit ?? 20),
+      slackListUsers().catch(() => [] as SlackUser[]),
     ]);
     const userMap = new Map(users.map((u) => [u.id, u] as const));
 
@@ -268,7 +273,7 @@ export const slackPostMessageAction: AxonAction<
       );
     }
 
-    const r = await slackPostMessage(creds.token, {
+    const r = await slackPostMessage({
       channel,
       text: input.text,
       thread_ts: input.thread_ts,
@@ -327,13 +332,13 @@ export const slackPulseAction: AxonAction<
     // Pull the directory once so we can render author labels in
     // the previews. If users.list fails (missing scope), fall back
     // to raw @user ids — non-fatal.
-    const users = await slackListUsers(creds.token).catch(() => [] as SlackUser[]);
+    const users = await slackListUsers().catch(() => [] as SlackUser[]);
     const userMap = new Map(users.map((u) => [u.id, u] as const));
 
     // We don't have an "activity sort" endpoint on Slack — sort by
     // member count as a rough proxy for "main channels", which
     // matches what an operator would scan first anyway.
-    const channels = await slackListChannels(creds.token, { limit: 100 });
+    const channels = await slackListChannels({ limit: 100 });
     const ranked = channels
       .filter((c) => !c.is_archived && (c.is_member ?? true))
       .sort((a, b) => (b.num_members ?? 0) - (a.num_members ?? 0))
@@ -342,7 +347,7 @@ export const slackPulseAction: AxonAction<
     const perChannel = input.per_channel ?? 5;
     const results = await Promise.all(
       ranked.map(async (c) => {
-        const msgs = await slackChannelHistory(creds.token, c.id, perChannel).catch(
+        const msgs = await slackChannelHistory(c.id, perChannel).catch(
           () => [] as SlackMessage[],
         );
         return {
@@ -398,7 +403,7 @@ export const slackResolveChannelAction: AxonAction<
       return { summary: creds.error, data: { id: null, name: input.name, is_member: false } };
     }
     const want = input.name.replace(/^#/, "").trim().toLowerCase();
-    const channels = await slackListChannels(creds.token, { limit: 1000 });
+    const channels = await slackListChannels({ limit: 1000 });
     const hit = channels.find((c) => c.name.toLowerCase() === want);
     if (!hit) {
       return {

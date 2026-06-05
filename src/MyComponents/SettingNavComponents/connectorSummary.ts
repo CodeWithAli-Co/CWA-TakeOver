@@ -184,16 +184,19 @@ async function summarizeStripe(
 async function summarizeSlack(
   creds: Record<string, unknown>,
 ): Promise<ConnectorSummary> {
-  const token = String(creds.bot_token ?? "").trim();
-  if (!token) {
+  // The proxy looks up the bot token from the tenant's connector
+  // row — we only need to confirm it was saved at all so we can
+  // distinguish "not connected" from "connected but proxy failed".
+  if (!creds.bot_token || !String(creds.bot_token).trim()) {
     return { ok: false, text: "No token saved", error: "Missing bot token" };
   }
-  // Two cheap calls in parallel — auth.test confirms liveness + gives
-  // us the workspace name; conversations.list gives a channel count
-  // so the tile says something more useful than "Connected".
+  // Two cheap proxy calls in parallel — auth.test confirms
+  // liveness + gives us the workspace name; conversations.list
+  // gives a channel count so the tile says something more useful
+  // than "Connected".
   const [auth, channels] = await Promise.all([
-    slackAuthTest(token),
-    slackListChannels(token, { limit: 200, types: "public_channel" }).catch(() => []),
+    slackAuthTest(),
+    slackListChannels({ limit: 200, types: "public_channel" }).catch(() => []),
   ]);
   const memberCount = channels.filter((c) => c.is_member).length;
   return {
