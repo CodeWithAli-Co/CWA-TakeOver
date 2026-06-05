@@ -287,12 +287,33 @@ export function useDisconnectGmail() {
   return useMutation({
     mutationFn: async (connectionId: string) => {
       if (!userSupaId) throw new Error("Not signed in.");
-      const client = await getCompanySupabase();
-      const { error } = await client
-        .from("gmail_connections")
-        .delete()
-        .eq("id", connectionId);
-      if (error) throw error;
+      // Through the mutate proxy for the same RLS reason as
+      // useToggleGmailSync — gmail_connections has no DELETE
+      // policy for the auth.uid mismatch case, so a direct delete
+      // from the desktop silently no-ops.
+      const stronghold = await getStronghold();
+      const companyName = (await stronghold.getRecord("company_name")) ?? "";
+      const base = import.meta.env.VITE_TAKEOVER_SITE_URL;
+      if (!base) throw new Error("VITE_TAKEOVER_SITE_URL not configured.");
+      const res = await fetch(`${base}/api/gmail/mutate`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "TakeOver-App": "true",
+        },
+        body: JSON.stringify({
+          action: "disconnect",
+          user_supa_id: userSupaId,
+          company_name: companyName,
+          connection_id: connectionId,
+        }),
+      });
+      if (!res.ok) {
+        const detail = await res.text().catch(() => "");
+        let parsed: { error?: string } = {};
+        try { parsed = JSON.parse(detail); } catch { /* noop */ }
+        throw new Error(parsed.error ?? `disconnect failed: ${res.status}`);
+      }
     },
     onSuccess: () => {
       if (userSupaId) {
@@ -319,12 +340,35 @@ export function useToggleGmailSync() {
   return useMutation({
     mutationFn: async (args: { connectionId: string; enabled: boolean }) => {
       if (!userSupaId) throw new Error("Not signed in.");
-      const client = await getCompanySupabase();
-      const { error } = await client
-        .from("gmail_connections")
-        .update({ sync_enabled: args.enabled })
-        .eq("id", args.connectionId);
-      if (error) throw error;
+      // Through the mutate proxy — RLS on gmail_connections has no
+      // UPDATE policy, so a direct desktop write silently affects
+      // 0 rows. Service-role on the server bypasses RLS, and the
+      // WHERE clause double-checks user_supa_id so we can never
+      // touch a different user's row.
+      const stronghold = await getStronghold();
+      const companyName = (await stronghold.getRecord("company_name")) ?? "";
+      const base = import.meta.env.VITE_TAKEOVER_SITE_URL;
+      if (!base) throw new Error("VITE_TAKEOVER_SITE_URL not configured.");
+      const res = await fetch(`${base}/api/gmail/mutate`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "TakeOver-App": "true",
+        },
+        body: JSON.stringify({
+          action: "set_sync_enabled",
+          user_supa_id: userSupaId,
+          company_name: companyName,
+          connection_id: args.connectionId,
+          enabled: args.enabled,
+        }),
+      });
+      if (!res.ok) {
+        const detail = await res.text().catch(() => "");
+        let parsed: { error?: string } = {};
+        try { parsed = JSON.parse(detail); } catch { /* noop */ }
+        throw new Error(parsed.error ?? `set_sync_enabled failed: ${res.status}`);
+      }
     },
     onSuccess: () => {
       if (userSupaId) {
