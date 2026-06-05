@@ -30,6 +30,7 @@ import type {
   CrmContact,
   CrmCompany,
 } from "@/stores/crm";
+import { useSendEmail, useGmailConnection } from "@/stores/gmail";
 
 interface DealAiContext {
   deal: CrmDeal;
@@ -204,6 +205,19 @@ const DraftEmailModal: React.FC<{
   const [result, setResult] = useState<DraftEmailResult | null>(null);
   const [subject, setSubject] = useState("");
   const [body, setBody] = useState("");
+  // Default the To: line to the contact attached to this deal. The
+  // operator can still edit it (e.g. CC a champion's boss) before
+  // sending. Some deals have no contact — in that case To: starts
+  // empty and the operator types it in.
+  const contactEmail = (ctx.contact as { email?: string } | null)?.email ?? "";
+  const [to, setTo] = useState(contactEmail);
+  const [sendError, setSendError] = useState<string | null>(null);
+  const [sentInfo, setSentInfo] = useState<{ gmail_id: string } | null>(null);
+
+  // Need the Gmail connection state to gate Send + show a friendly
+  // message if the operator hasn't connected yet.
+  const { data: connection } = useGmailConnection();
+  const sendEmail = useSendEmail();
 
   const run = async () => {
     setBusy(true);
@@ -216,6 +230,25 @@ const DraftEmailModal: React.FC<{
     }
   };
 
+  const handleSend = async () => {
+    setSendError(null);
+    try {
+      const result = await sendEmail.mutateAsync({
+        to,
+        subject,
+        body,
+        deal_id: ctx.deal.id,
+        contact_id: ctx.contact?.id,
+      });
+      setSentInfo({ gmail_id: result.gmail_id });
+      // Brief delay so the operator sees the success state before
+      // the modal evaporates.
+      window.setTimeout(onClose, 1200);
+    } catch (e) {
+      setSendError(e instanceof Error ? e.message : String(e));
+    }
+  };
+
   const copyAll = async () => {
     try {
       await navigator.clipboard.writeText(`Subject: ${subject}\n\n${body}`);
@@ -223,6 +256,16 @@ const DraftEmailModal: React.FC<{
       console.warn("[DraftEmailModal] copy failed:", e);
     }
   };
+
+  // Send button is enabled only when we have all the pieces: a
+  // connection, a valid-looking To: address, and a drafted body.
+  const canSend =
+    !!connection &&
+    to.includes("@") &&
+    subject.trim().length > 0 &&
+    body.trim().length > 0 &&
+    !sendEmail.isPending &&
+    !sentInfo;
 
   return (
     <div className="fixed inset-0 z-[60] flex items-start justify-center pt-[6vh] px-4">
@@ -252,6 +295,20 @@ const DraftEmailModal: React.FC<{
         </div>
 
         <div className="px-5 py-4 space-y-4 overflow-y-auto">
+          {/* To: recipient */}
+          <div>
+            <p className="text-[10px] font-mono uppercase tracking-[0.18em] text-zinc-500 mb-1.5">
+              To
+            </p>
+            <input
+              type="email"
+              value={to}
+              onChange={(e) => setTo(e.target.value)}
+              placeholder={contactEmail || "name@company.com"}
+              className="w-full bg-zinc-900/60 border border-white/[0.08] rounded-md px-3 py-2 text-[12.5px] text-zinc-100 outline-none focus:border-emerald-500/30 placeholder:text-zinc-600"
+            />
+          </div>
+
           {/* Intent input */}
           <div>
             <p className="text-[10px] font-mono uppercase tracking-[0.18em] text-zinc-500 mb-1.5">
@@ -323,10 +380,35 @@ const DraftEmailModal: React.FC<{
           )}
         </div>
 
+        {/* Send error + success surfaces — render above the footer
+            so the operator sees feedback inline. */}
+        {sendError && (
+          <div className="mx-5 mb-2 border border-amber-500/30 bg-amber-500/[0.04] rounded-lg p-3 flex items-start gap-2 text-[12px] text-amber-200">
+            <AlertCircle className="h-3.5 w-3.5 shrink-0 mt-0.5" />
+            <span className="flex-1">{sendError}</span>
+            <button
+              type="button"
+              onClick={() => setSendError(null)}
+              className="text-amber-300/70 hover:text-amber-100 transition-colors"
+              aria-label="Dismiss"
+            >
+              <X className="h-3 w-3" />
+            </button>
+          </div>
+        )}
+        {sentInfo && (
+          <div className="mx-5 mb-2 border border-emerald-500/30 bg-emerald-500/[0.06] rounded-lg p-3 flex items-center gap-2 text-[12px] text-emerald-200">
+            <Check className="h-3.5 w-3.5 shrink-0" />
+            <span>Sent. Check your Gmail Sent folder to confirm.</span>
+          </div>
+        )}
+
         {/* Footer */}
         <div className="px-5 py-3 border-t border-white/[0.06] flex items-center justify-between gap-3 bg-black/30">
           <span className="text-[10px] font-mono text-zinc-600 uppercase tracking-wider">
-            Claude · sonnet
+            {connection
+              ? `via ${connection.email}`
+              : "Connect Gmail in Settings → Connectors to send"}
           </span>
           <div className="flex items-center gap-2">
             {result?.ok && (
@@ -341,12 +423,39 @@ const DraftEmailModal: React.FC<{
             )}
             <button
               type="button"
-              disabled
-              title="Send-from-app ships with the email-integration arc"
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-[11px] font-mono uppercase tracking-wider border border-emerald-500/30 bg-emerald-500/[0.05] text-emerald-300/60 cursor-not-allowed"
+              onClick={handleSend}
+              disabled={!canSend}
+              title={
+                !connection
+                  ? "Connect Gmail first"
+                  : !to.includes("@")
+                  ? "Enter a valid To: email address"
+                  : !subject.trim() || !body.trim()
+                  ? "Generate a draft first"
+                  : sendEmail.isPending
+                  ? "Sending…"
+                  : sentInfo
+                  ? "Sent"
+                  : "Send via Gmail"
+              }
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-[11px] font-mono uppercase tracking-wider border border-emerald-500/40 bg-emerald-500/[0.08] hover:bg-emerald-500/[0.16] text-emerald-200 transition-colors disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-emerald-500/[0.08]"
             >
-              <Send className="h-3 w-3" />
-              Send · soon
+              {sentInfo ? (
+                <>
+                  <Check className="h-3 w-3" />
+                  Sent
+                </>
+              ) : sendEmail.isPending ? (
+                <>
+                  <Send className="h-3 w-3 animate-pulse" />
+                  Sending…
+                </>
+              ) : (
+                <>
+                  <Send className="h-3 w-3" />
+                  Send
+                </>
+              )}
             </button>
           </div>
         </div>

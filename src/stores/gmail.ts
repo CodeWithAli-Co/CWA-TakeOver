@@ -81,63 +81,42 @@ export function useGmailConnection(opts: {
     refetchInterval: opts.isPolling ? 3_000 : false,
     queryFn: async () => {
       if (!userSupaId) return null;
-      const client = await getCompanySupabase();
 
-      // DIAGNOSTIC — surface what the desktop sees so we can pinpoint
-      // an RLS mismatch (auth.uid != user_supa_id), wrong tenant
-      // client, or stale session. Remove once Gmail visibility is
-      // confirmed end-to-end.
-      try {
-        const { data: authData } = await client.auth.getUser();
-        const authUid = authData?.user?.id ?? null;
-        const matches = authUid === userSupaId;
-        console.log("[gmail-diag] querying gmail_connections", {
-          activeUserSupaId: userSupaId,
-          authUid,
-          matches,
-        });
-        if (!matches) {
-          console.warn(
-            "[gmail-diag] auth.uid != active user supa_id — RLS will hide the row. " +
-            "The callback wrote user_supa_id = activeUser.supa_id but the desktop's " +
-            "RLS check is on auth.uid().",
-          );
-        }
-        // Probe how many rows the desktop's session can see at all.
-        // If this returns 0 but the SQL editor shows rows, RLS is
-        // blocking us. If it returns the row, the .eq filter must be
-        // mismatched on type/whitespace.
-        const { data: anyRows, error: anyErr } = await client
-          .from("gmail_connections")
-          .select("id, user_supa_id, email")
-          .limit(5);
-        console.log("[gmail-diag] rows visible to desktop session:", {
-          rowCount: anyRows?.length ?? 0,
-          rows: anyRows,
-          error: anyErr?.message,
-        });
-      } catch (e) {
-        console.warn("[gmail-diag] diagnostic probe failed:", e);
+      // Read via the takeover-B2B proxy, NOT directly from Supabase.
+      // Two reasons:
+      //   1. RLS gates SELECT on `user_supa_id = auth.uid()`. If
+      //      app_users.supa_id ever drifts from auth.users.id, the
+      //      desktop sees 0 rows. The proxy uses the service-role
+      //      key and bypasses RLS.
+      //   2. The desktop is prone to "Multiple GoTrueClient instances"
+      //      races where one client ends up logged-out. The proxy
+      //      runs on the server with its own clean Supabase client.
+      const stronghold = await getStronghold();
+      const companyName = (await stronghold.getRecord("company_name")) ?? "";
+      const base = import.meta.env.VITE_TAKEOVER_SITE_URL;
+      if (!base) {
+        throw new Error(
+          "VITE_TAKEOVER_SITE_URL not configured — set in .env.local.",
+        );
       }
+      const url = new URL(`${base}/api/gmail/connection`);
+      url.searchParams.set("user_supa_id", userSupaId);
+      if (companyName) url.searchParams.set("company_name", companyName);
 
-      const { data, error } = await client
-        .from("gmail_connections")
-        .select(
-          "id, user_supa_id, email, expires_at, scopes, connected_at, last_sync_at",
-        )
-        .eq("user_supa_id", userSupaId)
-        .order("connected_at", { ascending: false })
-        .limit(1)
-        .maybeSingle();
-      if (error) {
-        console.warn("[gmail] connection fetch error:", error.message);
-        // PostgREST 406 / row-not-found returns error.code = PGRST116.
-        // Treat as "not connected" rather than failing the query.
-        if (error.code === "PGRST116") return null;
-        throw error;
+      const res = await fetch(url.toString(), {
+        method: "GET",
+        headers: { "TakeOver-App": "true" },
+      });
+      if (!res.ok) {
+        const detail = await res.text().catch(() => "");
+        throw new Error(
+          `gmail/connection failed: ${res.status} ${detail.slice(0, 200)}`,
+        );
       }
-      console.log("[gmail-diag] final query result:", data);
-      return (data as GmailConnection) ?? null;
+      const json = (await res.json()) as {
+        connection: GmailConnection | null;
+      };
+      return json.connection ?? null;
     },
   });
 }
@@ -210,6 +189,83 @@ export function useStartGmailConnect() {
       await openExternal(json.authorize_url);
 
       return { authorize_url: json.authorize_url };
+    },
+  });
+}
+
+// ────────────────────────────────────────────────
+// useSendEmail — send an email through the operator's connected
+// Gmail. Server handles token decrypt + refresh + Gmail API call +
+// optional activity log. Desktop just hands over the message.
+// ────────────────────────────────────────────────
+
+export interface SendEmailInput {
+  to: string;
+  subject: string;
+  body: string;
+  /** Optional — if present, server logs an outbound email activity
+   *  on this deal (and contact if provided). */
+  deal_id?: string;
+  contact_id?: string;
+}
+
+export interface SendEmailResult {
+  ok: true;
+  gmail_id: string;
+  thread_id: string;
+}
+
+export function useSendEmail() {
+  const qc = useQueryClient();
+  const { data: meRows } = ActiveUser();
+  const userSupaId: string | undefined = (meRows?.[0] as any)?.supa_id;
+
+  return useMutation({
+    mutationFn: async (input: SendEmailInput): Promise<SendEmailResult> => {
+      if (!userSupaId) throw new Error("Not signed in.");
+
+      const stronghold = await getStronghold();
+      const companyName = (await stronghold.getRecord("company_name")) ?? "";
+      const base = import.meta.env.VITE_TAKEOVER_SITE_URL;
+      if (!base) {
+        throw new Error(
+          "VITE_TAKEOVER_SITE_URL not configured — set in .env.local.",
+        );
+      }
+
+      const res = await fetch(`${base}/api/gmail/send`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "TakeOver-App": "true",
+        },
+        body: JSON.stringify({
+          user_supa_id: userSupaId,
+          company_name: companyName,
+          to: input.to,
+          subject: input.subject,
+          body: input.body,
+          deal_id: input.deal_id,
+          contact_id: input.contact_id,
+        }),
+      });
+      if (!res.ok) {
+        const detail = await res.text().catch(() => "");
+        let parsed: { error?: string } = {};
+        try { parsed = JSON.parse(detail); } catch { /* noop */ }
+        throw new Error(
+          parsed.error ?? `gmail/send failed: ${res.status} ${detail.slice(0, 200)}`,
+        );
+      }
+      return (await res.json()) as SendEmailResult;
+    },
+    onSuccess: (_data, input) => {
+      // If the send logged an activity, refresh the deal's activity
+      // timeline so the new row appears immediately.
+      if (input.deal_id) {
+        qc.invalidateQueries({ queryKey: ["crm", "activities", input.deal_id] });
+        qc.invalidateQueries({ queryKey: ["crm", "deal", input.deal_id] });
+      }
     },
   });
 }
