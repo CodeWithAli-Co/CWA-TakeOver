@@ -84,8 +84,10 @@ export function RolePreviewSelector() {
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
           <button
-            className={`flex items-center gap-2 ${
-              isCollapsed ? "p-2" : "px-2.5 py-2 w-full"
+            className={`flex items-center ${
+              isCollapsed
+                ? "justify-center p-2"
+                : "gap-2 px-2.5 py-2 w-full"
             } bg-muted/30 hover:bg-muted/50 border border-border hover:border-white/[0.07] rounded-sm transition-all duration-200 group`}
           >
             <Eye className="h-3.5 w-3.5 text-muted-foreground/60 group-hover:text-muted-foreground/70 transition-colors shrink-0" />

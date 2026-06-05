@@ -454,6 +454,92 @@ export function useSyncInbox() {
 }
 
 // ────────────────────────────────────────────────
+// useInboxActivities — pull email activity rows for the Inbox page.
+// Powers both the "Inbox" tab (direction=inbound) and the "Sent"
+// tab (direction=outbound). Queries crm_activities directly via
+// the desktop's authenticated Supabase client — RLS on
+// crm_activities is permissive within the tenant so this works
+// without going through a proxy.
+//
+// Returned rows include the same metadata blob the sync route
+// writes (gmail_id, thread_id, from, subject), so the list rows
+// can render snippets + link out to the original contact's drawer.
+// ────────────────────────────────────────────────
+
+export interface InboxActivity {
+  id: string;
+  type: string;
+  title: string | null;
+  body_md: string | null;
+  contact_id: string | null;
+  deal_id: string | null;
+  happened_at: string;
+  metadata: {
+    direction?: "inbound" | "outbound";
+    from?: string;
+    subject?: string;
+    thread_id?: string;
+    gmail_id?: string;
+    [k: string]: unknown;
+  } | null;
+}
+
+export function useInboxActivities(opts: {
+  direction: "inbound" | "outbound";
+  limit?: number;
+}) {
+  const { data: meRows } = ActiveUser();
+  const userSupaId: string | undefined = (meRows?.[0] as any)?.supa_id;
+
+  return useQuery<InboxActivity[]>({
+    queryKey: [
+      "gmail",
+      "inbox-activities",
+      opts.direction,
+      opts.limit ?? 100,
+      userSupaId ?? "anon",
+    ],
+    enabled: !!userSupaId,
+    queryFn: async () => {
+      if (!userSupaId) return [];
+      // Read via the server proxy, not direct Supabase. RLS on
+      // crm_activities hides rows from the desktop's auth.uid()
+      // when it doesn't match actor_supa_id (same drift we saw
+      // with gmail_connections). Service-role on the server
+      // bypasses RLS and scopes by user_supa_id in the WHERE.
+      const stronghold = await getStronghold();
+      const companyName = (await stronghold.getRecord("company_name")) ?? "";
+      const base = import.meta.env.VITE_TAKEOVER_SITE_URL;
+      if (!base) throw new Error("VITE_TAKEOVER_SITE_URL not configured.");
+
+      const res = await fetch(`${base}/api/gmail/activities`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "TakeOver-App": "true",
+        },
+        body: JSON.stringify({
+          user_supa_id: userSupaId,
+          company_name: companyName,
+          direction: opts.direction,
+          limit: opts.limit ?? 100,
+        }),
+      });
+      if (!res.ok) {
+        const detail = await res.text().catch(() => "");
+        let parsed: { error?: string } = {};
+        try { parsed = JSON.parse(detail); } catch { /* noop */ }
+        throw new Error(
+          parsed.error ?? `gmail/activities failed: ${res.status}`,
+        );
+      }
+      const json = (await res.json()) as { activities?: InboxActivity[] };
+      return json.activities ?? [];
+    },
+  });
+}
+
+// ────────────────────────────────────────────────
 // useGmailAliases — list of verified "Send mail as" addresses the
 // operator has set up in Gmail. Powers the From: picker in the
 // compose + draft modals so the operator can send AS a professional

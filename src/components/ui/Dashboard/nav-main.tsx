@@ -50,6 +50,16 @@ export function NavMain({
   const ACTIVE_CLS =
     "data-[active=true]:bg-primary/15 data-[active=true]:text-primary data-[active=true]:font-semibold " +
     "data-[active=true]:rounded-sm data-[active=true]:[&_svg]:text-primary";
+
+  // Centering in collapsed mode: shadcn's SidebarMenuButton flexes
+  // left-aligned by default. When the rail collapses to 32px wide,
+  // text/badges still take up flex space (just clipped by overflow)
+  // which drifts the icon off-center to the left. Force
+  // justify-center while collapsed and hide the text/badge spans.
+  const COLLAPSED_CENTER =
+    "group-data-[collapsible=icon]:justify-center " +
+    "group-data-[collapsible=icon]:px-0";
+
   return (
     <SidebarGroup>
       <SidebarMenu className="space-y-0.5">
@@ -70,11 +80,15 @@ export function NavMain({
                     tooltip={item.title}
                     isActive={groupActive}
                     onClick={() => navigate({ to: !item.isActive ? "#" : item.url })}
-                    className={`hover:bg-muted/60 text-foreground/90 hover:text-foreground rounded-sm transition-colors ${ACTIVE_CLS}`}
+                    className={`hover:bg-muted/60 text-foreground/90 hover:text-foreground rounded-sm transition-colors ${ACTIVE_CLS} ${COLLAPSED_CENTER}`}
                   >
-                    {item.icon && <item.icon className="h-4 w-4 text-muted-foreground" />}
-                    <span className="text-[13px] font-medium">{item.title}</span>
-                    <ChevronRight className="ml-auto h-3.5 w-3.5 text-muted-foreground/70 transition-transform duration-200 group-data-[state=open]/collapsible:rotate-90" />
+                    {item.icon && (
+                      <item.icon className="h-4 w-4 shrink-0 text-muted-foreground" />
+                    )}
+                    <span className="text-[13px] font-medium group-data-[collapsible=icon]:hidden">
+                      {item.title}
+                    </span>
+                    <ChevronRight className="ml-auto h-3.5 w-3.5 text-muted-foreground/70 transition-transform duration-200 group-data-[state=open]/collapsible:rotate-90 group-data-[collapsible=icon]:hidden" />
                   </SidebarMenuButton>
                 </CollapsibleTrigger>
                 <CollapsibleContent>
@@ -102,10 +116,10 @@ export function NavMain({
                 tooltip={item.title}
                 isActive={selfActive}
                 onClick={() => navigate({ to: item.url })}
-                className={`hover:bg-muted/60 text-foreground/90 hover:text-foreground rounded-sm transition-colors ${ACTIVE_CLS}`}
+                className={`hover:bg-muted/60 text-foreground/90 hover:text-foreground rounded-sm transition-colors ${ACTIVE_CLS} ${COLLAPSED_CENTER}`}
               >
                 {item.icon && (
-                  <span className="relative">
+                  <span className="relative shrink-0">
                     <item.icon className="h-4 w-4 text-muted-foreground" />
                     {item.title === "Chat" && totalUnread > 0 && (
                       <span className="absolute -top-1 -right-1">
@@ -114,9 +128,11 @@ export function NavMain({
                     )}
                   </span>
                 )}
-                <span className="text-[13px] font-medium">{item.title}</span>
+                <span className="text-[13px] font-medium group-data-[collapsible=icon]:hidden">
+                  {item.title}
+                </span>
                 {item.title === "Chat" && totalUnread > 0 && (
-                  <span className="ml-auto">
+                  <span className="ml-auto group-data-[collapsible=icon]:hidden">
                     <UnreadBadge count={totalUnread} />
                   </span>
                 )}

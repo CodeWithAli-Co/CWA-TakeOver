@@ -34,7 +34,15 @@ export function CompanyToggle() {
             <button
               key={company.key}
               onClick={() => setActiveCompany(company.key)}
-              className={`relative flex items-center gap-2 rounded-sm px-2.5 py-1.5 text-[11px] font-medium transition-all duration-200 ${
+              // Geometry adapts to sidebar state: in expanded mode
+              // the label needs gap + horizontal padding; in
+              // collapsed mode the label is gone, so we drop both
+              // and center the icon inside the square.
+              className={`relative flex items-center rounded-sm py-1.5 text-[11px] font-medium transition-all duration-200 ${
+                isCollapsed
+                  ? "justify-center px-0"
+                  : "gap-2 px-2.5"
+              } ${
                 isActive
                   ? "text-primary-foreground"
                   : "text-muted-foreground hover:text-foreground hover:bg-muted"
@@ -51,7 +59,11 @@ export function CompanyToggle() {
                   }}
                 />
               )}
-              <span className="relative z-10 flex items-center gap-2">
+              <span
+                className={`relative z-10 flex items-center ${
+                  isCollapsed ? "" : "gap-2"
+                }`}
+              >
                 <Icon className="h-3.5 w-3.5 shrink-0" />
                 {!isCollapsed && (
                   <span className="truncate">{company.label}</span>
