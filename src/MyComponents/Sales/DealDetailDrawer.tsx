@@ -30,11 +30,13 @@ import {
   StickyNote,
   Sparkles,
   Plus,
+  Reply,
 } from "lucide-react";
 import { useLogActivityDialog } from "./logActivityStore";
 import { useSalesDrawer } from "./salesDrawerStore";
 import { InlineDeleteButton } from "./InlineDeleteButton";
 import { DealAiStrip } from "./DealAiStrip";
+import { ComposeEmailModal } from "@/MyComponents/Inbox/ComposeEmailModal";
 import {
   useCrmDeal,
   useUpdateDeal,
@@ -530,35 +532,85 @@ const DealDrawerContent: React.FC<{
 // ────────────────────────────────────────────────
 // ActivityRow — single timeline entry. Lighter chrome than the
 // kanban card so the timeline reads as a quiet list, not loud cards.
+//
+// For inbound email rows (type=email + metadata.direction=inbound)
+// we render a Reply pill that opens ComposeEmailModal pre-filled
+// with the original sender, an Re: subject, and the thread_id so
+// the reply threads correctly in Gmail.
 // ────────────────────────────────────────────────
 const ActivityRow: React.FC<{ activity: CrmActivity }> = ({ activity }) => {
   const Icon = ACTIVITY_ICON[activity.type] ?? FileText;
+  const [replyOpen, setReplyOpen] = useState(false);
+
+  // Show the Reply affordance only when this activity actually
+  // came from a sync run with the right metadata. Outbound rows
+  // skip the button — replying to your own sent email is weird.
+  const meta = activity.metadata;
+  const isInboundEmail =
+    activity.type === "email" && meta?.direction === "inbound" && !!meta.from;
+
+  // Pre-compose the reply context. Re: prepended only if the
+  // original subject doesn't already start with it (avoids
+  // "Re: Re: Re: ...").
+  const replySubject = (() => {
+    const s = (meta?.subject ?? "").trim();
+    if (!s) return "Re:";
+    if (/^re:\s/i.test(s)) return s;
+    return `Re: ${s}`;
+  })();
+
   return (
-    <li className="flex items-start gap-3 py-3 border-b border-white/[0.04] last:border-b-0">
-      <div className="mt-0.5 p-1.5 rounded-md bg-white/[0.04] border border-white/[0.05] shrink-0">
-        <Icon className="h-3 w-3 text-zinc-300" />
-      </div>
-      <div className="flex-1 min-w-0">
-        <div className="flex items-baseline justify-between gap-2">
-          <p className="text-[12.5px] font-semibold text-zinc-100 truncate">
-            {activity.title ?? activity.type[0].toUpperCase() + activity.type.slice(1)}
-          </p>
-          <span className="text-[10px] font-mono text-zinc-500 shrink-0">
-            {relTime(activity.happened_at)}
-          </span>
+    <>
+      <li className="flex items-start gap-3 py-3 border-b border-white/[0.04] last:border-b-0">
+        <div className="mt-0.5 p-1.5 rounded-md bg-white/[0.04] border border-white/[0.05] shrink-0">
+          <Icon className="h-3 w-3 text-zinc-300" />
         </div>
-        {activity.body_md && (
-          <p className="text-[11px] text-zinc-500 mt-0.5 whitespace-pre-wrap">
-            {activity.body_md}
-          </p>
-        )}
-        {activity.outcome && (
-          <p className="text-[10px] font-mono text-zinc-600 uppercase tracking-wider mt-1">
-            {activity.outcome}
-          </p>
-        )}
-      </div>
-    </li>
+        <div className="flex-1 min-w-0">
+          <div className="flex items-baseline justify-between gap-2">
+            <p className="text-[12.5px] font-semibold text-zinc-100 truncate">
+              {activity.title ?? activity.type[0].toUpperCase() + activity.type.slice(1)}
+            </p>
+            <span className="text-[10px] font-mono text-zinc-500 shrink-0">
+              {relTime(activity.happened_at)}
+            </span>
+          </div>
+          {activity.body_md && (
+            <p className="text-[11px] text-zinc-500 mt-0.5 whitespace-pre-wrap">
+              {activity.body_md}
+            </p>
+          )}
+          {activity.outcome && (
+            <p className="text-[10px] font-mono text-zinc-600 uppercase tracking-wider mt-1">
+              {activity.outcome}
+            </p>
+          )}
+          {isInboundEmail && (
+            <div className="mt-2">
+              <button
+                type="button"
+                onClick={() => setReplyOpen(true)}
+                className="flex items-center gap-1.5 px-2 py-1 border border-white/[0.08] hover:border-emerald-500/40 hover:bg-emerald-500/[0.04] text-[10px] font-mono uppercase tracking-[0.16em] text-zinc-300 hover:text-emerald-300 rounded-md transition-colors"
+                title={`Reply to ${meta?.from ?? ""}`}
+              >
+                <Reply className="h-3 w-3" />
+                Reply
+              </button>
+            </div>
+          )}
+        </div>
+      </li>
+      {replyOpen && isInboundEmail && (
+        <ComposeEmailModal
+          mode="reply"
+          defaultTo={meta?.from ?? ""}
+          defaultSubject={replySubject}
+          threadId={meta?.thread_id}
+          dealId={activity.deal_id ?? undefined}
+          contactId={activity.contact_id ?? undefined}
+          onClose={() => setReplyOpen(false)}
+        />
+      )}
+    </>
   );
 };
 

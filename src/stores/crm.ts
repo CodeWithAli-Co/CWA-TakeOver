@@ -134,6 +134,21 @@ export interface CrmDeal {
   updated_at: string;
 }
 
+/** Metadata blob attached to email activities by the Gmail
+ *  send/sync routes. Inbound rows carry `direction: "inbound"`,
+ *  the original sender, subject, and Gmail thread/message IDs so
+ *  the desktop can render a Reply button. Outbound rows carry
+ *  `direction: "outbound"`. Other activity types may use
+ *  metadata for their own purposes — keep this loose. */
+export interface CrmActivityMetadata {
+  direction?: "inbound" | "outbound";
+  gmail_id?: string;
+  thread_id?: string;
+  from?: string;
+  subject?: string;
+  [key: string]: unknown;
+}
+
 export interface CrmActivity {
   id: string;
   type: ActivityType;
@@ -148,6 +163,7 @@ export interface CrmActivity {
   outcome: string | null;
   meeting_id: string | null;
   created_at: string;
+  metadata?: CrmActivityMetadata | null;
 }
 
 // ============================================================

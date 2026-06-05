@@ -210,6 +210,9 @@ export interface SendEmailInput {
    *  on this deal (and contact if provided). */
   deal_id?: string;
   contact_id?: string;
+  /** Optional — when replying to an inbound email, pass the
+   *  original's thread_id so Gmail threads the reply correctly. */
+  thread_id?: string;
 }
 
 export interface SendEmailResult {
@@ -250,6 +253,7 @@ export function useSendEmail() {
           body: input.body,
           deal_id: input.deal_id,
           contact_id: input.contact_id,
+          thread_id: input.thread_id,
         }),
       });
       if (!res.ok) {

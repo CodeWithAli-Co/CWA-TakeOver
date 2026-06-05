@@ -25,6 +25,17 @@ interface ComposeEmailModalProps {
   defaultTo?: string;
   defaultSubject?: string;
   defaultBody?: string;
+  /** Reply context. When set, this send routes through the same
+   *  Gmail thread so replies group correctly on both ends.
+   *  Server uses it as the Gmail `threadId` parameter. */
+  threadId?: string;
+  /** Optional — when present, log the reply against this deal so
+   *  the activity timeline shows it next to the original inbound. */
+  dealId?: string;
+  contactId?: string;
+  /** Label override for the modal header. Defaults to "New email";
+   *  reply flow passes "Reply". */
+  mode?: "compose" | "reply";
   onClose: () => void;
 }
 
@@ -32,6 +43,10 @@ export const ComposeEmailModal: React.FC<ComposeEmailModalProps> = ({
   defaultTo = "",
   defaultSubject = "",
   defaultBody = "",
+  threadId,
+  dealId,
+  contactId,
+  mode = "compose",
   onClose,
 }) => {
   const [to, setTo] = useState(defaultTo);
@@ -50,7 +65,11 @@ export const ComposeEmailModal: React.FC<ComposeEmailModalProps> = ({
         to,
         subject,
         body,
-        // No deal_id / contact_id — standalone send, no activity log.
+        // Pass through reply context when present so the server logs
+        // the activity against the deal/contact AND threads on Gmail.
+        deal_id: dealId,
+        contact_id: contactId,
+        thread_id: threadId,
       });
       setSentInfo({ gmail_id: result.gmail_id });
       window.setTimeout(onClose, 1200);
@@ -80,12 +99,12 @@ export const ComposeEmailModal: React.FC<ComposeEmailModalProps> = ({
         {/* Header */}
         <div className="px-5 pt-4 pb-3 flex items-center justify-between border-b border-white/[0.06]">
           <div>
-            <p className={eyebrow}>Compose</p>
+            <p className={eyebrow}>{mode === "reply" ? "Reply" : "Compose"}</p>
             <h2
               className="text-[20px] text-zinc-100 leading-tight mt-0.5"
               style={{ fontFamily: "Newsreader, Georgia, serif" }}
             >
-              New email
+              {mode === "reply" ? "Reply" : "New email"}
             </h2>
           </div>
           <button
