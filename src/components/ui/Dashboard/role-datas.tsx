@@ -1045,6 +1045,15 @@ export const adminData = {
       icon: TrendingUp,
     },
     {
+      // Inbox — send email from inside Takeover via the operator's
+      // connected Gmail. Compose-to-anyone surface; deal-attached
+      // sends still live in the deal drawer.
+      title: "Inbox",
+      url: "/inbox",
+      isActive: false,
+      icon: Send,
+    },
+    {
       title: "Strategy",
       url: "/strategy",
       isActive: false,
@@ -1418,6 +1427,14 @@ export const cooData = {
       isActive: false,
       company: "codeWithAli" as const,
     },
+    {
+      // Inbox — send email via the operator's connected Gmail.
+      title: "Inbox",
+      url: "/inbox",
+      icon: Send,
+      isActive: false,
+      company: "codeWithAli" as const,
+    },
 
     // ── Day-to-day operations ──
     {
@@ -1630,6 +1647,14 @@ export const ceoData = {
       isActive: false,
       company: "codeWithAli" as const,
     },
+    {
+      // Inbox — send email via the operator's connected Gmail.
+      title: "Inbox",
+      url: "/inbox",
+      icon: Send,
+      isActive: false,
+      company: "codeWithAli" as const,
+    },
 
     // ── Day-to-day operations ──
     {
@@ -1804,6 +1829,15 @@ export const cfoData = {
       icon: TrendingUp,
     },
     {
+      // Inbox — send email from inside Takeover via the operator's
+      // connected Gmail. Compose-to-anyone surface; deal-attached
+      // sends still live in the deal drawer.
+      title: "Inbox",
+      url: "/inbox",
+      isActive: false,
+      icon: Send,
+    },
+    {
       title: "Roadmap",
       url: "/roadmap",
       isActive: false,
@@ -1920,6 +1954,15 @@ export const cfoData = {
       url: "/sales",
       isActive: false,
       icon: TrendingUp,
+    },
+    {
+      // Inbox — send email from inside Takeover via the operator's
+      // connected Gmail. Compose-to-anyone surface; deal-attached
+      // sends still live in the deal drawer.
+      title: "Inbox",
+      url: "/inbox",
+      isActive: false,
+      icon: Send,
     },
     {
       title: "Strategy",

@@ -38,6 +38,7 @@ const OnboardingLazyRouteImport = createFileRoute('/onboarding')()
 const OffersLazyRouteImport = createFileRoute('/offers')()
 const Mod_logsLazyRouteImport = createFileRoute('/mod_logs')()
 const InvoicerLazyRouteImport = createFileRoute('/invoicer')()
+const InboxLazyRouteImport = createFileRoute('/inbox')()
 const HiringLazyRouteImport = createFileRoute('/hiring')()
 const GrowthLazyRouteImport = createFileRoute('/growth')()
 const GraduationPlanLazyRouteImport = createFileRoute('/graduationPlan')()
@@ -205,6 +206,11 @@ const InvoicerLazyRoute = InvoicerLazyRouteImport.update({
   path: '/invoicer',
   getParentRoute: () => rootRouteImport,
 } as any).lazy(() => import('./routes/invoicer.lazy').then((d) => d.Route))
+const InboxLazyRoute = InboxLazyRouteImport.update({
+  id: '/inbox',
+  path: '/inbox',
+  getParentRoute: () => rootRouteImport,
+} as any).lazy(() => import('./routes/inbox.lazy').then((d) => d.Route))
 const HiringLazyRoute = HiringLazyRouteImport.update({
   id: '/hiring',
   path: '/hiring',
@@ -397,6 +403,7 @@ export interface FileRoutesByFullPath {
   '/graduationPlan': typeof GraduationPlanLazyRoute
   '/growth': typeof GrowthLazyRoute
   '/hiring': typeof HiringLazyRoute
+  '/inbox': typeof InboxLazyRoute
   '/invoicer': typeof InvoicerLazyRoute
   '/mod_logs': typeof Mod_logsLazyRoute
   '/offers': typeof OffersLazyRoute
@@ -455,6 +462,7 @@ export interface FileRoutesByTo {
   '/graduationPlan': typeof GraduationPlanLazyRoute
   '/growth': typeof GrowthLazyRoute
   '/hiring': typeof HiringLazyRoute
+  '/inbox': typeof InboxLazyRoute
   '/invoicer': typeof InvoicerLazyRoute
   '/mod_logs': typeof Mod_logsLazyRoute
   '/offers': typeof OffersLazyRoute
@@ -513,6 +521,7 @@ export interface FileRoutesById {
   '/graduationPlan': typeof GraduationPlanLazyRoute
   '/growth': typeof GrowthLazyRoute
   '/hiring': typeof HiringLazyRoute
+  '/inbox': typeof InboxLazyRoute
   '/invoicer': typeof InvoicerLazyRoute
   '/mod_logs': typeof Mod_logsLazyRoute
   '/offers': typeof OffersLazyRoute
@@ -573,6 +582,7 @@ export interface FileRouteTypes {
     | '/graduationPlan'
     | '/growth'
     | '/hiring'
+    | '/inbox'
     | '/invoicer'
     | '/mod_logs'
     | '/offers'
@@ -631,6 +641,7 @@ export interface FileRouteTypes {
     | '/graduationPlan'
     | '/growth'
     | '/hiring'
+    | '/inbox'
     | '/invoicer'
     | '/mod_logs'
     | '/offers'
@@ -688,6 +699,7 @@ export interface FileRouteTypes {
     | '/graduationPlan'
     | '/growth'
     | '/hiring'
+    | '/inbox'
     | '/invoicer'
     | '/mod_logs'
     | '/offers'
@@ -747,6 +759,7 @@ export interface RootRouteChildren {
   GraduationPlanLazyRoute: typeof GraduationPlanLazyRoute
   GrowthLazyRoute: typeof GrowthLazyRoute
   HiringLazyRoute: typeof HiringLazyRoute
+  InboxLazyRoute: typeof InboxLazyRoute
   InvoicerLazyRoute: typeof InvoicerLazyRoute
   Mod_logsLazyRoute: typeof Mod_logsLazyRoute
   OffersLazyRoute: typeof OffersLazyRoute
@@ -959,6 +972,13 @@ declare module '@tanstack/react-router' {
       path: '/invoicer'
       fullPath: '/invoicer'
       preLoaderRoute: typeof InvoicerLazyRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/inbox': {
+      id: '/inbox'
+      path: '/inbox'
+      fullPath: '/inbox'
+      preLoaderRoute: typeof InboxLazyRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/hiring': {
@@ -1227,6 +1247,7 @@ const rootRouteChildren: RootRouteChildren = {
   GraduationPlanLazyRoute: GraduationPlanLazyRoute,
   GrowthLazyRoute: GrowthLazyRoute,
   HiringLazyRoute: HiringLazyRoute,
+  InboxLazyRoute: InboxLazyRoute,
   InvoicerLazyRoute: InvoicerLazyRoute,
   Mod_logsLazyRoute: Mod_logsLazyRoute,
   OffersLazyRoute: OffersLazyRoute,
