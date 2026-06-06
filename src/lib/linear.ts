@@ -73,14 +73,27 @@ export interface LinearIssue {
   id: string;
   identifier: string;
   title: string;
+  description?: string | null;
   state: { name: string; type: string; color: string };
   priority: number;
   priorityLabel: string;
-  assignee: { id: string; name: string } | null;
+  assignee: { id: string; name: string; email?: string } | null;
   team: { id: string; key: string; name: string };
   dueDate: string | null;
   url: string;
   updatedAt: string;
+  createdAt?: string;
+  /** Linear's parent cycle for sprint grouping. Null when the
+   *  issue isn't assigned to a cycle yet. */
+  cycle?: { id: string; number: number; name: string | null } | null;
+  /** Labels carry signal — "bug" / "blocked" / "regression" etc.
+   *  Drive AXON's insight detection (e.g. "blocked count rising"). */
+  labels?: { nodes: Array<{ id: string; name: string; color: string }> };
+  /** Project assignment — Linear's higher-level grouping (above
+   *  cycles). Null when the issue is loose. */
+  project?: { id: string; name: string; state: string } | null;
+  /** Comment count — surfaces collaboration intensity in the row. */
+  comments?: { nodes: Array<{ id: string }> };
 }
 
 export interface LinearCycle {
@@ -138,14 +151,20 @@ export async function linearListIssues(
           id
           identifier
           title
+          description
           state { name type color }
           priority
           priorityLabel
-          assignee { id name }
+          assignee { id name email }
           team { id key name }
           dueDate
           url
           updatedAt
+          createdAt
+          cycle { id number name }
+          labels { nodes { id name color } }
+          project { id name state }
+          comments { nodes { id } }
         }
       }
     }`,

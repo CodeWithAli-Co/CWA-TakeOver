@@ -1500,6 +1500,7 @@ export const cooData = {
         { title: "Mod Logs", url: "/mod_logs" },
         { title: "Capital Plan", url: "/capitalPlan" },
         { title: "Vercel", url: "/vercel" },
+        { title: "Linear", url: "/linear" },
       ],
     },
 
@@ -1721,6 +1722,7 @@ export const ceoData = {
         { title: "Mod Logs", url: "/mod_logs" },
         { title: "Capital Plan", url: "/capitalPlan" },
         { title: "Vercel", url: "/vercel" },
+        { title: "Linear", url: "/linear" },
       ],
     },
 
