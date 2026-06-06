@@ -39,6 +39,9 @@ import { registerCapitalPlanActions } from "./capital_plan";
 import { registerConnectorActions } from "./connectors";
 import { registerCrmActions } from "./crm";
 import { registerSlackActions } from "./slack";
+import { registerLinearActions } from "./linear";
+import { registerVercelActions } from "./vercel";
+import { registerCalcomActions } from "./calcom";
 
 let registered = false;
 
@@ -84,4 +87,7 @@ export function registerAllActions() {
   registerConnectorActions();
   registerCrmActions();
   registerSlackActions();
+  registerLinearActions();
+  registerVercelActions();
+  registerCalcomActions();
 }

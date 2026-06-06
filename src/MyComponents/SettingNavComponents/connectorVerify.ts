@@ -17,10 +17,13 @@
  */
 
 import { airtablePing } from "@/lib/airtable";
+import { calcomPing } from "@/lib/calcom";
 import { githubMe } from "@/lib/github";
+import { linearPing } from "@/lib/linear";
 import { notionMe } from "@/lib/notion";
 import { slackPing } from "@/lib/slack";
 import { stripeVerify } from "@/lib/stripe";
+import { vercelPing } from "@/lib/vercel";
 
 export interface VerifyOk {
   ok: true;
@@ -55,8 +58,14 @@ export async function verifyConnector(
         return await verifyNotion(creds);
       case "openai":
         return await verifyOpenAI(creds);
+      case "cal-com":
+        return await verifyCalcom(creds);
+      case "linear":
+        return await verifyLinear(creds);
       case "slack":
         return await verifySlack(creds);
+      case "vercel":
+        return await verifyVercel(creds);
       case "stripe":
         return await verifyStripe(creds);
       case "sendgrid":
@@ -137,6 +146,57 @@ async function verifyNotion(
     };
   } catch (e: any) {
     return { ok: false, error: e?.message ?? "Notion rejected the token." };
+  }
+}
+
+async function verifyCalcom(
+  creds: Record<string, any>,
+): Promise<VerifyResult> {
+  const key = String(creds.api_key ?? "").trim();
+  if (!key) return { ok: false, error: "API key is required." };
+  try {
+    const r = await calcomPing(key);
+    return {
+      ok: true,
+      summary: `Authenticated as ${r.name} (${r.email}, ${r.timezone}).`,
+    };
+  } catch (e: any) {
+    return { ok: false, error: e?.message ?? "Cal.com rejected the key." };
+  }
+}
+
+async function verifyVercel(
+  creds: Record<string, any>,
+): Promise<VerifyResult> {
+  const token = String(creds.token ?? "").trim();
+  if (!token) return { ok: false, error: "Token is required." };
+  try {
+    const r = await vercelPing(token);
+    return {
+      ok: true,
+      summary: `Authenticated as ${r.name} (@${r.username}).`,
+    };
+  } catch (e: any) {
+    return { ok: false, error: e?.message ?? "Vercel rejected the token." };
+  }
+}
+
+async function verifyLinear(
+  creds: Record<string, any>,
+): Promise<VerifyResult> {
+  const token = String(creds.token ?? "").trim();
+  if (!token) return { ok: false, error: "Personal API key is required." };
+  if (!/^lin_api_/.test(token)) {
+    return { ok: false, error: "Key should start with `lin_api_`." };
+  }
+  try {
+    const r = await linearPing(token);
+    return {
+      ok: true,
+      summary: `Connected to "${r.org}" as ${r.name}.`,
+    };
+  } catch (e: any) {
+    return { ok: false, error: e?.message ?? "Linear rejected the key." };
   }
 }
 

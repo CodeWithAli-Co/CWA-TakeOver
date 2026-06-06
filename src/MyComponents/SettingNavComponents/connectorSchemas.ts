@@ -177,6 +177,22 @@ const SCHEMAS: Record<string, ConnectorSchema> = {
     ],
   },
 
+  vercel: {
+    docsUrl: "https://vercel.com/account/tokens",
+    blurb:
+      "List projects, recent deployments, and prod status. Create a token at vercel.com/account/tokens (full or team-scoped is fine).",
+    fields: [
+      {
+        key: "token",
+        label: "Personal / Team Token",
+        type: "password",
+        placeholder: "Vercel API token",
+        hint:
+          "Tokens inherit your account's project access. For team accounts, scope to a specific team to limit blast radius.",
+      },
+    ],
+  },
+
   notion: {
     docsUrl: "https://www.notion.so/profile/integrations",
     blurb:
@@ -226,7 +242,24 @@ const SCHEMAS: Record<string, ConnectorSchema> = {
     disclaimer:
       "We verify the token by calling Slack's auth.test endpoint and save the team name. The Bot Token is workspace-wide; revoke it from your Slack App's Install page if you ever need to rotate.",
   },
-  linear: makeOAuthStub("Linear", "https://linear.app/settings/api"),
+  // Linear — Personal Access Token (lin_api_…). Their GraphQL API
+  // accepts the token from the browser with CORS, no proxy needed.
+  linear: {
+    docsUrl: "https://linear.app/settings/api",
+    blurb:
+      "Read issues, cycles, and projects from your Linear workspace. Use a Personal API Key from linear.app/settings/api.",
+    fields: [
+      {
+        key: "token",
+        label: "Personal API Key",
+        type: "password",
+        placeholder: "lin_api_…",
+        hint:
+          "Generate at linear.app/settings/api → New API key. No scopes to pick — keys inherit your account permissions.",
+        pattern: /^lin_api_/,
+      },
+    ],
+  },
   asana: makeOAuthStub("Asana", "https://app.asana.com/0/my-apps"),
 
   hubspot: makeOAuthStub(
@@ -237,6 +270,22 @@ const SCHEMAS: Record<string, ConnectorSchema> = {
     "Calendly",
     "https://calendly.com/integrations/api_webhooks",
   ),
+
+  "cal-com": {
+    docsUrl: "https://cal.com/settings/developer/api-keys",
+    blurb:
+      "Read upcoming meetings and event types. Create an API key at cal.com/settings/developer/api-keys.",
+    fields: [
+      {
+        key: "api_key",
+        label: "API Key",
+        type: "password",
+        placeholder: "cal_live_…",
+        hint:
+          "API keys grant the same access as your account. Use a per-environment key (live/test) when possible.",
+      },
+    ],
+  },
   "google-docs": makeOAuthStub(
     "Google Docs",
     "https://console.cloud.google.com/apis/credentials",

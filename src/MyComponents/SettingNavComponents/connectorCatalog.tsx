@@ -96,6 +96,15 @@ export const CONNECTORS: CatalogEntry[] = [
     tier: "Medium",
   },
   {
+    id: "vercel",
+    name: "Vercel",
+    monogram: "V",
+    brand: "#000000",
+    tagline: "Token-based — projects, deployments, prod status.",
+    category: "Deploy",
+    tier: "Easy",
+  },
+  {
     id: "slack",
     name: "Slack",
     monogram: "S",
@@ -152,6 +161,15 @@ export const CONNECTORS: CatalogEntry[] = [
     tagline: "OAuth + event types + webhook signing keys for scheduling.",
     category: "Scheduling",
     tier: "Hard",
+  },
+  {
+    id: "cal-com",
+    name: "Cal.com",
+    monogram: "C",
+    brand: "#0EA5E9",
+    tagline: "API key — upcoming meetings, event types, today's calendar.",
+    category: "Scheduling",
+    tier: "Easy",
   },
   {
     id: "google-docs",
