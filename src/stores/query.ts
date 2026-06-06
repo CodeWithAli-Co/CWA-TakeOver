@@ -8,6 +8,7 @@ import {
 } from "@tanstack/react-query";
 import { message } from "@tauri-apps/plugin-dialog";
 import { useCompanyFilter } from "./store";
+import { rehydrateCompanyBinding } from "./rehydrateCompanyBinding";
 
 /* ─── Helper: get current company label for DB storage ─── */
 export function getActiveCompanyLabel(): "CodeWithAli" | "simplicity" {
@@ -114,6 +115,19 @@ const fetchActiveUser = async () => {
   }
 
   const { data: AvatarUrl } = takeOversupabase.storage.from('avatars').getPublicUrl(data.avatar)
+
+  // Rehydrate Stronghold's company_name from the server if it's
+  // empty -- happens on fresh installs, new machines, and after the
+  // 7-day Stronghold cache invalidation fires. Without this, every
+  // connector query falls back to .is("company", null) and silently
+  // returns zero rows for users who actually have connectors saved.
+  //
+  // Fire-and-forget: we don't await it because (a) it's idempotent,
+  // (b) the helper dedups concurrent calls per user, and (c) we
+  // don't want to block ActiveUser's suspense boundary on a network
+  // round-trip. By the time the user navigates to a connector
+  // surface, the binding will be in place.
+  void rehydrateCompanyBinding(data.supa_id);
 
   // Return user data or default values
   return [
