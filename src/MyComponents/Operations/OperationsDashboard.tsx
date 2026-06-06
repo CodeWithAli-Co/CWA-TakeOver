@@ -55,6 +55,7 @@ import {
 import { ConnectorsStrip } from "./ConnectorsStrip";
 import { SlackPulsePanel } from "./SlackPulsePanel";
 import { MeetingsPanel } from "@/MyComponents/Meetings/MeetingsPanel";
+import { FinancePanel } from "@/MyComponents/Finance/FinancePanel";
 import { format, startOfWeek, endOfWeek } from "date-fns";
 import {
   ActiveUser,
@@ -221,6 +222,12 @@ export function OperationsDashboard() {
          *  Calendly, etc). Source badge per row, optional per-
          *  provider filter. Auto-hides when nothing's connected. */}
         <MeetingsPanel />
+
+        {/* Finance — provider-neutral cash + MRR + burn + runway
+         *  pulled from every connected finance provider (Stripe
+         *  today; Mercury, Plaid, Brex, Toast slot in). Source
+         *  badge per transaction. Auto-hides when not connected. */}
+        <FinancePanel />
 
         {/* Unified bento — single 3-col grid. Activity removed
          *  per ops feedback (low signal); Quotas now spans the

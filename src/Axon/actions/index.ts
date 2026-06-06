@@ -43,6 +43,7 @@ import { registerLinearActions } from "./linear";
 import { registerVercelActions } from "./vercel";
 import { registerCalcomActions } from "./calcom";
 import { registerUnifiedMeetingsActions } from "./unified_meetings";
+import { registerUnifiedFinanceActions } from "./unified_finance";
 
 let registered = false;
 
@@ -92,4 +93,5 @@ export function registerAllActions() {
   registerVercelActions();
   registerCalcomActions();
   registerUnifiedMeetingsActions();
+  registerUnifiedFinanceActions();
 }

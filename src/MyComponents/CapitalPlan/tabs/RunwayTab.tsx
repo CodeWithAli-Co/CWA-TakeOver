@@ -26,21 +26,69 @@ import {
   estimateMonthlyBurn, projectRunwayMonths, totalRaisedToDate,
   type CapitalPlanData, type CapitalActual,
 } from "../CapitalPlan.queries";
+import {
+  totalCashCents,
+  useUnifiedFinance,
+} from "@/lib/unified/finance";
+import { SourceBadge } from "@/lib/unified/SourceBadge";
+import { getSourceMeta } from "@/lib/unified/types";
 
 const CASH_KEY = "cwa-capital-plan-cash-on-hand";
+const CASH_MODE_KEY = "cwa-capital-plan-cash-mode"; // "auto" | "manual"
 
 export function RunwayTab({ plan }: { plan: CapitalPlanData }) {
-  // Manual cash-on-hand — persisted to localStorage. When MCP wires
-  // in Mercury/Brex/Ramp this becomes a live balance read.
-  const [cashOnHand, setCashOnHand] = useState<number>(() => {
+  // ── Cash on hand — unified finance + manual fallback ──────────
+  // Live cash from every connected finance provider (Stripe today;
+  // Mercury, Plaid, Brex, Toast as they ship). Operator can flip
+  // to manual override mode and type a number; their preference
+  // persists across sessions.
+  const fin = useUnifiedFinance();
+  const liveCashCents = useMemo(
+    () => totalCashCents(fin.balances),
+    [fin.balances],
+  );
+  const liveCash = Math.round(liveCashCents / 100);
+  const hasLiveCash = fin.balances.length > 0 && liveCashCents > 0;
+
+  // Operator's chosen mode persists. Default to "auto" once any
+  // finance provider is connected, "manual" otherwise.
+  const [mode, setMode] = useState<"auto" | "manual">(() => {
+    try {
+      const raw = window.localStorage.getItem(CASH_MODE_KEY);
+      if (raw === "auto" || raw === "manual") return raw;
+    } catch { /* ignore */ }
+    return "auto";
+  });
+  useEffect(() => {
+    try { window.localStorage.setItem(CASH_MODE_KEY, mode); } catch { /* ignore */ }
+  }, [mode]);
+
+  const [manualCash, setManualCash] = useState<number>(() => {
     try {
       const raw = window.localStorage.getItem(CASH_KEY);
       return raw ? Number(raw) : 0;
     } catch { return 0; }
   });
   useEffect(() => {
-    try { window.localStorage.setItem(CASH_KEY, String(cashOnHand)); } catch { /* ignore */ }
-  }, [cashOnHand]);
+    try { window.localStorage.setItem(CASH_KEY, String(manualCash)); } catch { /* ignore */ }
+  }, [manualCash]);
+
+  // Effective cash: live when in auto mode AND providers are
+  // connected; manual otherwise. This single value flows into the
+  // runway math + the KPI render.
+  const cashOnHand = mode === "auto" && hasLiveCash ? liveCash : manualCash;
+  const setCashOnHand = (n: number) => {
+    setMode("manual");
+    setManualCash(n);
+  };
+  // Connected source list for the "live from" attribution.
+  const liveSources = useMemo(
+    () =>
+      Array.from(
+        new Set(fin.balances.filter((b) => b.available_cents > 0).map((b) => b.source)),
+      ),
+    [fin.balances],
+  );
 
   const totalRaised = useMemo(
     () => totalRaisedToDate(plan.rounds, plan.checks),
@@ -81,6 +129,11 @@ export function RunwayTab({ plan }: { plan: CapitalPlanData }) {
           cashOnHand={cashOnHand}
           onChange={setCashOnHand}
           suggested={suggestedCash}
+          mode={mode}
+          onSetMode={setMode}
+          liveAvailable={hasLiveCash}
+          liveCash={liveCash}
+          liveSources={liveSources}
         />
         <KPI
           icon={<TrendingDown className="h-3.5 w-3.5" />}
@@ -164,26 +217,57 @@ function KPI({
 
 function CashKPI({
   cashOnHand, onChange, suggested,
+  mode, onSetMode, liveAvailable, liveCash, liveSources,
 }: {
   cashOnHand: number;
   onChange: (n: number) => void;
   suggested: number;
+  mode: "auto" | "manual";
+  onSetMode: (m: "auto" | "manual") => void;
+  liveAvailable: boolean;
+  liveCash: number;
+  liveSources: string[];
 }) {
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(cashOnHand);
+  const isLive = mode === "auto" && liveAvailable;
   function commit() {
     onChange(draft);
     setEditing(false);
   }
   return (
     <div
-      className="border border-border border-l-[3px] border-l-emerald-500 rounded-md bg-card p-4 cursor-pointer hover:bg-muted/40 hover:border-foreground/20 transition-colors shadow-[0_4px_12px_rgba(0,0,0,0.35)]"
-      onClick={() => { if (!editing) { setDraft(cashOnHand); setEditing(true); } }}
+      className="border border-border border-l-[3px] border-l-emerald-500 rounded-md bg-card p-4 transition-colors shadow-[0_4px_12px_rgba(0,0,0,0.35)] cursor-pointer hover:bg-muted/40 hover:border-foreground/20"
+      onClick={() => {
+        if (isLive) return; // live cards aren't directly editable; user toggles to manual first
+        if (!editing) { setDraft(cashOnHand); setEditing(true); }
+      }}
     >
-      <div className="flex items-center gap-1.5 text-[9.5px] uppercase tracking-[0.18em] text-muted-foreground font-bold mb-1.5">
-        <BanknoteIcon className="h-3.5 w-3.5 text-muted-foreground/70" />
-        Cash on hand
+      <div className="flex items-center justify-between gap-2 mb-1.5">
+        <div className="flex items-center gap-1.5 text-[9.5px] uppercase tracking-[0.18em] text-muted-foreground font-bold">
+          <BanknoteIcon className="h-3.5 w-3.5 text-muted-foreground/70" />
+          Cash on hand
+        </div>
+        {/* Live attribution — when in auto mode AND at least one
+         *  finance provider is reporting cash, show "Live" + source
+         *  badges so the operator knows the number's coming from
+         *  Stripe/Mercury/etc rather than a stale manual entry. */}
+        {isLive && (
+          <div className="flex items-center gap-1">
+            <span className="inline-flex items-center gap-1 text-[8.5px] uppercase tracking-[0.14em] font-bold text-emerald-300/90">
+              <span className="relative inline-flex h-1.5 w-1.5">
+                <span className="absolute inline-flex h-full w-full rounded-full bg-emerald-400/70 opacity-75 animate-ping" />
+                <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-emerald-400" />
+              </span>
+              Live
+            </span>
+            {liveSources.slice(0, 2).map((s) => (
+              <SourceBadge key={s} source={s} size="xs" variant="dot" />
+            ))}
+          </div>
+        )}
       </div>
+
       {editing ? (
         <div className="flex items-center gap-1">
           <input
@@ -202,16 +286,45 @@ function CashKPI({
           <div className="text-[20px] font-bold text-emerald-200 tabular-nums tracking-tight">
             {formatDollars(cashOnHand)}
           </div>
+          {/* Footer line — different message per mode. */}
           <div className="text-[10px] text-muted-foreground/70 mt-1">
-            click to edit
-            {cashOnHand === 0 && suggested > 0 && (
-              <button
-                type="button"
-                onClick={(e) => { e.stopPropagation(); onChange(suggested); }}
-                className="ml-2 text-emerald-300/80 hover:text-emerald-200 underline-offset-2 hover:underline"
-              >
-                use raised: {formatDollars(suggested)}
-              </button>
+            {isLive ? (
+              <span>
+                {liveSources.length > 0
+                  ? `from ${liveSources.map((s) => getSourceMeta(s)?.name ?? s).join(" + ")}`
+                  : "live"}
+                <button
+                  type="button"
+                  onClick={(e) => { e.stopPropagation(); onSetMode("manual"); }}
+                  className="ml-2 text-muted-foreground/70 hover:text-foreground/90 underline-offset-2 hover:underline"
+                  title="Switch to manual override"
+                >
+                  override
+                </button>
+              </span>
+            ) : (
+              <span>
+                click to edit
+                {cashOnHand === 0 && suggested > 0 && (
+                  <button
+                    type="button"
+                    onClick={(e) => { e.stopPropagation(); onChange(suggested); }}
+                    className="ml-2 text-emerald-300/80 hover:text-emerald-200 underline-offset-2 hover:underline"
+                  >
+                    use raised: {formatDollars(suggested)}
+                  </button>
+                )}
+                {liveAvailable && (
+                  <button
+                    type="button"
+                    onClick={(e) => { e.stopPropagation(); onSetMode("auto"); }}
+                    className="ml-2 text-emerald-300/80 hover:text-emerald-200 underline-offset-2 hover:underline"
+                    title="Use live balance from connected finance providers"
+                  >
+                    use live: {formatDollars(liveCash)}
+                  </button>
+                )}
+              </span>
             )}
           </div>
         </>

@@ -9,6 +9,12 @@
 
 import { takeOversupabase } from "@/MyComponents/supabase";
 import type { Monitor } from "../types";
+import {
+  fetchUnifiedFinance,
+  monthlyBurnCents,
+  runwayDays,
+  totalCashCents,
+} from "@/lib/unified/finance";
 
 function companyLabel(active: string): "CodeWithAli" | "simplicity" {
   return active === "simplicityFunds" ? "simplicity" : "CodeWithAli";
@@ -224,6 +230,187 @@ export const MONITORS: Monitor[] = [
           const delta = now - baseline;
           baseline = now;
           return `${delta} new signup${delta === 1 ? "" : "s"} detected.`;
+        }
+        return null;
+      };
+    })(),
+  },
+  // ─── runway-alarm ────────────────────────────────────────────────
+  //
+  // Fires when current runway (cash / burn) drops below 90 days, and
+  // adds an urgency line if the upcoming round closes after the cash
+  // runs out. Once per session — the user heard it once, they don't
+  // need to hear it every 15 minutes.
+  {
+    id: "runway-alarm",
+    label: "Runway alarm",
+    description:
+      "Reads cash from connected finance providers + burn from Capital Plan actuals. Fires when runway < 90 days. Once per session.",
+    intervalMs: 15 * 60 * 1000,
+    check: (() => {
+      let fired = false;
+      return async (_ctx) => {
+        if (fired) return null;
+        try {
+          const fin = await fetchUnifiedFinance({ txLimit: 200 });
+          const cash = totalCashCents(fin.balances);
+          const burn = monthlyBurnCents(fin.transactions, 30);
+          const days = runwayDays(cash, burn);
+          if (days === null) return null;
+          if (days >= 90) return null;
+
+          // Look up the next planning/raising round to add the
+          // "you'll be empty before close" urgency line.
+          const { data: rounds } = await takeOversupabase
+            .from("capital_rounds")
+            .select("name, target_close_date, status")
+            .in("status", ["planning", "raising"])
+            .not("target_close_date", "is", null)
+            .order("target_close_date", { ascending: true })
+            .limit(1);
+          const next = rounds?.[0] as
+            | { name: string; target_close_date: string }
+            | undefined;
+          const daysToClose = next?.target_close_date
+            ? Math.ceil(
+                (new Date(next.target_close_date).getTime() - Date.now()) /
+                  86_400_000,
+              )
+            : null;
+
+          fired = true;
+          if (next && daysToClose !== null && days < daysToClose) {
+            return `${days} days of runway at current burn. Your ${next.name} closes in ${daysToClose} days — you'll be empty before then.`;
+          }
+          return `${days} days of runway at current burn. Worth a serious look.`;
+        } catch {
+          return null;
+        }
+      };
+    })(),
+  },
+
+  // ─── investor-stale ──────────────────────────────────────────────
+  //
+  // Looks at capital_checks in active (non-final) statuses. Fires when
+  // any check's last_touch_at is older than 14 days. Lists the top 3
+  // names so the operator can act. Once per 6h.
+  {
+    id: "investor-stale",
+    label: "Stale investors",
+    description:
+      "Watches the active investor pipeline. Fires when a check has gone quiet > 14 days. Once per 6 hours.",
+    intervalMs: 60 * 60 * 1000,
+    check: (() => {
+      const STORE_KEY = "axon:monitor:investor-stale:v1";
+      const COOLDOWN_MS = 6 * 60 * 60 * 1000;
+      type Persisted = { firedAt: number; signature: string };
+      const load = (): Persisted | null => {
+        try {
+          const raw = localStorage.getItem(STORE_KEY);
+          return raw ? (JSON.parse(raw) as Persisted) : null;
+        } catch {
+          return null;
+        }
+      };
+      const save = (p: Persisted) => {
+        try {
+          localStorage.setItem(STORE_KEY, JSON.stringify(p));
+        } catch {
+          /* ignore */
+        }
+      };
+      return async (_ctx) => {
+        const STALE_DAYS = 14;
+        const cutoff = new Date(Date.now() - STALE_DAYS * 86_400_000)
+          .toISOString();
+
+        // Active = pre-decision statuses where a follow-up matters.
+        const ACTIVE = [
+          "lead",
+          "intro",
+          "meeting",
+          "diligence",
+          "verbal",
+          "term-sheet",
+        ];
+        const { data, error } = await takeOversupabase
+          .from("capital_checks")
+          .select("investor_name, last_touch_at, created_at")
+          .in("status", ACTIVE)
+          .or(
+            `last_touch_at.lt.${cutoff},and(last_touch_at.is.null,created_at.lt.${cutoff})`,
+          )
+          .order("last_touch_at", { ascending: true, nullsFirst: true })
+          .limit(10);
+        if (error || !data || data.length === 0) return null;
+
+        const names = data.map((r: any) => r.investor_name as string);
+        const signature = names.join("|");
+
+        const prev = load();
+        if (prev && prev.signature === signature) {
+          if (Date.now() - prev.firedAt < COOLDOWN_MS) return null;
+        }
+        save({ firedAt: Date.now(), signature });
+
+        const top = names.slice(0, 3).join(", ");
+        const more = names.length > 3 ? ` (+${names.length - 3} more)` : "";
+        return names.length === 1
+          ? `${top} hasn't heard from you in over ${STALE_DAYS} days. Worth a touch.`
+          : `${names.length} investors are stale: ${top}${more}.`;
+      };
+    })(),
+  },
+
+  // ─── round-behind ────────────────────────────────────────────────
+  //
+  // Fires when a round is within 14 days of its target_close_date but
+  // committed amount is under 60% of target. Once per round per
+  // session.
+  {
+    id: "round-behind",
+    label: "Round behind plan",
+    description:
+      "Alerts when a fundraising round is close to its target_close_date but under-committed.",
+    intervalMs: 60 * 60 * 1000,
+    check: (() => {
+      const firedFor = new Set<string>();
+      return async (_ctx) => {
+        const WARNING_DAYS = 14;
+        const MIN_PROGRESS = 0.6;
+
+        const { data: rounds, error } = await takeOversupabase
+          .from("capital_rounds")
+          .select("id, name, status, target_amount, target_close_date")
+          .in("status", ["planning", "raising"])
+          .not("target_close_date", "is", null);
+        if (error || !rounds || rounds.length === 0) return null;
+
+        for (const r of rounds as any[]) {
+          if (firedFor.has(r.id)) continue;
+          const target = Number(r.target_amount) || 0;
+          if (target <= 0) continue;
+          const daysToClose = Math.ceil(
+            (new Date(r.target_close_date).getTime() - Date.now()) /
+              86_400_000,
+          );
+          if (daysToClose < 0 || daysToClose > WARNING_DAYS) continue;
+
+          const { data: checks } = await takeOversupabase
+            .from("capital_checks")
+            .select("committed_amount")
+            .eq("round_id", r.id);
+          const committed = (checks ?? []).reduce(
+            (s: number, c: any) => s + (Number(c.committed_amount) || 0),
+            0,
+          );
+          const progress = committed / target;
+          if (progress >= MIN_PROGRESS) continue;
+
+          firedFor.add(r.id);
+          const pct = Math.round(progress * 100);
+          return `${r.name} closes in ${daysToClose} days but you're only at ${pct}% of target. Time to push hard.`;
         }
         return null;
       };
