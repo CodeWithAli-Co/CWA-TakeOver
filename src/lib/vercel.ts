@@ -87,8 +87,30 @@ export interface VercelDeployment {
     | "CANCELED";
   readyState?: string;
   created: number;
+  /** ms timestamp when the build started (set when Vercel kicks
+   *  off the actual build process — sometimes after `created`). */
+  buildingAt?: number;
+  /** ms timestamp when the deployment became live. Subtracting
+   *  buildingAt from this yields the build duration. */
+  ready?: number;
   target: "production" | "preview" | null;
-  meta?: Record<string, unknown>;
+  /** Inspector / dashboard URL on Vercel. */
+  inspectorUrl?: string;
+  /** Aliases that point to this deployment (the prod alias is
+   *  here when target === "production"). */
+  aliasAssigned?: number | null;
+  /** Vercel sets `meta` from the git provider — commit message,
+   *  branch, sha, author. The keys are namespaced by provider
+   *  (githubCommitMessage, gitlabCommitMessage, etc). We only type
+   *  the GitHub case since it's the common one; cast for others. */
+  meta?: {
+    githubCommitMessage?: string;
+    githubCommitRef?: string;
+    githubCommitSha?: string;
+    githubCommitAuthorName?: string;
+    [k: string]: unknown;
+  };
+  creator?: { uid: string; username?: string; email?: string };
 }
 
 interface VercelDeploymentsResponse {
