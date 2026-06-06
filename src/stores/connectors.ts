@@ -39,6 +39,8 @@ import {
   useQueryClient,
 } from "@tanstack/react-query";
 import { takeOversupabase } from "@/MyComponents/supabase";
+import { getActiveCompanyLabel } from "@/stores/query";
+import { useCompanyFilter } from "@/stores/store";
 
 // Tenant-aware cache invalidation:
 //   All connector queries live under the top-level ["connectors"]
@@ -86,6 +88,31 @@ function siteBase(): string {
   return String(base);
 }
 
+/**
+ * Resolve the active company toggle as a server-side scope hint.
+ *
+ * Multi-company founders (a user who owns both CodeWithAli and
+ * SimplicityFunds in takeover_companies) need to pick which tenant's
+ * connector catalog they see. The desktop already has a global
+ * company toggle (useCompanyFilter); we just forward its current
+ * value as `company_hint` on every proxy call.
+ *
+ * The server verifies membership before honoring the hint, so a
+ * stale or spoofed value can never expose another tenant's
+ * connectors -- if the hint doesn't check out the server falls back
+ * to its default founder_email resolution.
+ *
+ * Returns "CodeWithAli" or "simplicity" (the same labels every other
+ * company-scoped table uses). null when something is genuinely off.
+ */
+function getCompanyHint(): string | null {
+  try {
+    return getActiveCompanyLabel();
+  } catch {
+    return null;
+  }
+}
+
 async function callProxy<T>(
   path: "list" | "get" | "mutate",
   body: Record<string, unknown>,
@@ -112,15 +139,21 @@ async function callProxy<T>(
 }
 
 /** List all connectors for the current tenant. Server resolves the
- *  tenant from the viewer's user_supa_id. */
+ *  tenant from the viewer's user_supa_id, biased by the active
+ *  company toggle (company_hint) so multi-company founders see the
+ *  right tenant's catalog. The query key includes the active toggle
+ *  so TanStack re-fetches the moment the user flips it -- no manual
+ *  invalidation needed on company switch. */
 export function useConnectors() {
+  const activeCompany = useCompanyFilter((s) => s.activeCompany);
   return useQuery({
-    queryKey: ["connectors", "tenant-scoped"] as const,
+    queryKey: ["connectors", "tenant-scoped", activeCompany] as const,
     queryFn: async () => {
       const userSupaId = await getViewerSupaId();
       if (!userSupaId) return [] as Connector[];
       const json = await callProxy<{ connectors: Connector[] }>("list", {
         user_supa_id: userSupaId,
+        company_hint: getCompanyHint(),
       });
       return json.connectors ?? [];
     },
@@ -153,6 +186,7 @@ export function useUpsertConnector() {
       }
       const json = await callProxy<{ connector: Connector }>("mutate", {
         user_supa_id: userSupaId,
+        company_hint: getCompanyHint(),
         action: "upsert",
         kind: args.kind,
         credentials: args.credentials,
@@ -177,6 +211,7 @@ export function useDeleteConnector() {
       }
       await callProxy<{ connector: null }>("mutate", {
         user_supa_id: userSupaId,
+        company_hint: getCompanyHint(),
         action: "delete",
         id,
       });
@@ -202,6 +237,7 @@ export function useMarkConnectorSync() {
       }
       await callProxy<{ connector: Connector | null }>("mutate", {
         user_supa_id: userSupaId,
+        company_hint: getCompanyHint(),
         action: "mark_sync",
         id: args.id,
         ok: args.ok,
@@ -218,7 +254,7 @@ export function useMarkConnectorSync() {
  *
  *  The optional `company` arg from v1 is kept on the signature for
  *  backwards compat with existing call sites but is now ignored;
- *  the server resolves the tenant from the viewer. */
+ *  the server resolves the tenant from the viewer + company_hint. */
 export async function fetchConnectorByKind(
   kind: string,
   _company?: string | null,
@@ -228,6 +264,7 @@ export async function fetchConnectorByKind(
   try {
     const json = await callProxy<{ connector: Connector | null }>("get", {
       user_supa_id: userSupaId,
+      company_hint: getCompanyHint(),
       kind,
     });
     return json.connector ?? null;
