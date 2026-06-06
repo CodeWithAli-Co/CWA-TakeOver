@@ -21,7 +21,7 @@
  * pointing at Settings → Connectors.
  */
 
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { motion } from "framer-motion";
 import {
@@ -30,7 +30,6 @@ import {
   Box,
   CheckCircle2,
   Clock,
-  ExternalLink,
   GitBranch,
   Globe,
   Loader2,
@@ -49,6 +48,10 @@ import {
   type VercelDeployment,
   type VercelProject,
 } from "@/lib/vercel";
+import { Sparkline } from "./Sparkline";
+import { DeploymentDrawer } from "./DeploymentDrawer";
+import { computeInsights } from "./insights";
+import { InsightsCard } from "./InsightsCard";
 
 const POLL_MS = 30_000;
 const PROJECT_LIMIT = 30;
@@ -61,6 +64,11 @@ export function VercelDashboard() {
     [connectors],
   );
   const token = (conn?.credentials as any)?.token as string | undefined;
+
+  // Drawer state — which deployment, if any, is currently expanded.
+  // Drawer is a sibling rendered at the end of the page; the rows
+  // call setOpenUid(deployment.uid) on click.
+  const [openUid, setOpenUid] = useState<string | null>(null);
 
   const projectsQ = useQuery<VercelProject[]>({
     queryKey: ["vercel-dashboard", "projects", conn?.id ?? "none"],
@@ -136,6 +144,53 @@ export function VercelDashboard() {
     return { totalDeploys, successRate, avgBuildSeconds, failed24h };
   }, [deploymentsQ.data]);
 
+  /** 30-day daily series for sparkline rendering. Two parallel
+   *  arrays — `dailyDeploys` is the count of deploys finishing each
+   *  day, `dailyBuildSeconds` is the average build time (READY only).
+   *  Days with no data get 0 / null and the sparkline interpolates. */
+  const dailySeries = useMemo(() => {
+    const days = 30;
+    const today = new Date();
+    const dayStart = new Date(
+      today.getFullYear(),
+      today.getMonth(),
+      today.getDate(),
+    ).getTime();
+
+    const deployCounts = new Array<number>(days).fill(0);
+    const buildSums = new Array<number>(days).fill(0);
+    const buildCounts = new Array<number>(days).fill(0);
+
+    for (const d of deploymentsQ.data ?? []) {
+      // Bucket by day relative to today. Index 0 = 29 days ago,
+      // index 29 = today.
+      const bucket =
+        days -
+        1 -
+        Math.floor((dayStart - d.created) / 86_400_000);
+      if (bucket < 0 || bucket >= days) continue;
+      deployCounts[bucket]! += 1;
+      if (d.state === "READY" && d.ready && d.buildingAt) {
+        buildSums[bucket]! += (d.ready - d.buildingAt) / 1000;
+        buildCounts[bucket]! += 1;
+      }
+    }
+
+    const dailyDeploys = deployCounts;
+    const dailyBuildSeconds = buildSums.map((sum, i) =>
+      buildCounts[i] === 0 ? 0 : sum / buildCounts[i]!,
+    );
+
+    return { dailyDeploys, dailyBuildSeconds };
+  }, [deploymentsQ.data]);
+
+  /** AXON insights — heuristic engine over the deploy list.
+   *  Auto-hides when nothing notable. */
+  const insights = useMemo(
+    () => computeInsights(deploymentsQ.data ?? []),
+    [deploymentsQ.data],
+  );
+
   // ─── Render ──────────────────────────────────────────────────────
 
   if (!token) {
@@ -181,7 +236,16 @@ export function VercelDashboard() {
         </div>
       </header>
 
-      {/* KPI grid */}
+      {/* AXON insights — heuristic observations over recent deploys.
+       *  Renders above the KPIs because it's the "what should I care
+       *  about?" answer the operator wants first. Auto-hides when
+       *  there's nothing to surface. */}
+      <InsightsCard insights={insights} />
+
+      {/* KPI grid — sparklines render in the bottom-right of cards
+       *  whose metrics naturally trend over time (deploys, build
+       *  duration). Skip them on success-rate + 24h-failure where a
+       *  30-day chart doesn't tell a useful story. */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-6">
         <KpiCard
           icon={Zap}
@@ -192,6 +256,7 @@ export function VercelDashboard() {
               : weekStats.totalDeploys.toString()
           }
           tone="neutral"
+          sparklineValues={dailySeries.dailyDeploys}
         />
         <KpiCard
           icon={CheckCircle2}
@@ -220,6 +285,7 @@ export function VercelDashboard() {
               : formatDuration(weekStats.avgBuildSeconds)
           }
           tone="neutral"
+          sparklineValues={dailySeries.dailyBuildSeconds}
         />
         <KpiCard
           icon={AlertTriangle}
@@ -245,7 +311,11 @@ export function VercelDashboard() {
             {Array.from(prodLatestByProject.values())
               .sort((a, b) => b.created - a.created)
               .map((d) => (
-                <ProductionStatusCard key={d.uid} deployment={d} />
+                <ProductionStatusCard
+                  key={d.uid}
+                  deployment={d}
+                  onOpen={setOpenUid}
+                />
               ))}
           </div>
         )}
@@ -268,7 +338,12 @@ export function VercelDashboard() {
               )
               .slice(0, 5)
               .map((d) => (
-                <DeployRow key={d.uid} deployment={d} emphasizeError />
+                <DeployRow
+                  key={d.uid}
+                  deployment={d}
+                  emphasizeError
+                  onOpen={setOpenUid}
+                />
               ))}
           </div>
         </Section>
@@ -300,12 +375,27 @@ export function VercelDashboard() {
             </div>
             <div className="divide-y divide-border/10">
               {(deploymentsQ.data ?? []).slice(0, 25).map((d) => (
-                <DeployRow key={d.uid} deployment={d} />
+                <DeployRow key={d.uid} deployment={d} onOpen={setOpenUid} />
               ))}
             </div>
           </div>
         )}
       </Section>
+
+      {/* Deployment detail drawer — slides in from the right when
+       *  any row is clicked. Esc + backdrop click close. Mounting at
+       *  this level (rather than per-row) means only one drawer is
+       *  ever live, regardless of which row triggered it. */}
+      <DeploymentDrawer
+        deployment={
+          openUid
+            ? (deploymentsQ.data ?? []).find((d) => d.uid === openUid) ?? null
+            : null
+        }
+        onClose={() => setOpenUid(null)}
+        token={token}
+        onRedeployed={() => deploymentsQ.refetch()}
+      />
 
       {/* All projects — bottom directory */}
       <Section
@@ -420,11 +510,15 @@ function KpiCard({
   label,
   value,
   tone,
+  sparklineValues,
 }: {
   icon: React.ComponentType<{ size?: number; className?: string }>;
   label: string;
   value: string;
   tone: "up" | "watch" | "warning" | "neutral";
+  /** Optional 30-day series. When present, renders a tiny inline
+   *  trend chart in the bottom-right corner of the card. */
+  sparklineValues?: number[];
 }) {
   const toneCls =
     tone === "up"
@@ -434,22 +528,48 @@ function KpiCard({
       : tone === "warning"
       ? "text-destructive"
       : "text-foreground";
+  // Only render the sparkline when there's signal — all zeros
+  // looks like the chart is broken, so suppress it.
+  const showSparkline =
+    !!sparklineValues &&
+    sparklineValues.length > 1 &&
+    sparklineValues.some((v) => v > 0);
   return (
     <div className="rounded-xl border-xs border-border-soft bg-foreground/[0.03] px-4 py-3">
-      <div className="flex items-center gap-1.5 mb-1">
-        <Icon size={11} className={`${toneCls} opacity-70`} />
-        <span className="text-[9.5px] font-bold uppercase tracking-[0.14em] text-text-tertiary">
-          {label}
-        </span>
+      <div className="flex items-center justify-between gap-2 mb-1">
+        <div className="flex items-center gap-1.5">
+          <Icon size={11} className={`${toneCls} opacity-70`} />
+          <span className="text-[9.5px] font-bold uppercase tracking-[0.14em] text-text-tertiary">
+            {label}
+          </span>
+        </div>
       </div>
-      <p className={`text-[20px] font-semibold tabular-nums leading-tight ${toneCls}`}>
-        {value}
-      </p>
+      <div className="flex items-end justify-between gap-3">
+        <p className={`text-[20px] font-semibold tabular-nums leading-tight ${toneCls}`}>
+          {value}
+        </p>
+        {showSparkline && (
+          <div className={`${toneCls} opacity-80 shrink-0`}>
+            <Sparkline
+              values={sparklineValues!}
+              width={70}
+              height={20}
+              ariaLabel={`${label} trend last 30 days`}
+            />
+          </div>
+        )}
+      </div>
     </div>
   );
 }
 
-function ProductionStatusCard({ deployment }: { deployment: VercelDeployment }) {
+function ProductionStatusCard({
+  deployment,
+  onOpen,
+}: {
+  deployment: VercelDeployment;
+  onOpen: (uid: string) => void;
+}) {
   const commit = deployment.meta?.githubCommitMessage as string | undefined;
   const branch = deployment.meta?.githubCommitRef as string | undefined;
   const author = deployment.meta?.githubCommitAuthorName as string | undefined;
@@ -457,19 +577,15 @@ function ProductionStatusCard({ deployment }: { deployment: VercelDeployment }) 
     deployment.ready && deployment.buildingAt
       ? (deployment.ready - deployment.buildingAt) / 1000
       : null;
-  const inspector =
-    deployment.inspectorUrl ??
-    `https://vercel.com/dashboard?proj=${deployment.name}`;
 
   return (
-    <motion.a
-      href={inspector}
-      target="_blank"
-      rel="noopener noreferrer"
+    <motion.button
+      type="button"
+      onClick={() => onOpen(deployment.uid)}
       initial={{ opacity: 0, y: 4 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.3 }}
-      className="block rounded-xl border-xs border-border-soft bg-foreground/[0.03] hover:bg-foreground/[0.05] hover:border-foreground/15 transition-colors p-3 group"
+      className="text-left w-full block rounded-xl border-xs border-border-soft bg-foreground/[0.03] hover:bg-foreground/[0.05] hover:border-foreground/15 transition-colors p-3 group"
     >
       <header className="flex items-start justify-between gap-2 mb-2">
         <div className="min-w-0 flex-1">
@@ -509,10 +625,7 @@ function ProductionStatusCard({ deployment }: { deployment: VercelDeployment }) 
         <p className="text-[10px] text-text-tertiary/70 mt-1 truncate">by {author}</p>
       )}
 
-      <span className="absolute opacity-0 group-hover:opacity-100 transition-opacity">
-        <ExternalLink className="h-3 w-3" />
-      </span>
-    </motion.a>
+    </motion.button>
   );
 }
 
@@ -556,9 +669,11 @@ function ProjectRow({
 function DeployRow({
   deployment,
   emphasizeError,
+  onOpen,
 }: {
   deployment: VercelDeployment;
   emphasizeError?: boolean;
+  onOpen: (uid: string) => void;
 }) {
   const commit = deployment.meta?.githubCommitMessage as string | undefined;
   const branch = deployment.meta?.githubCommitRef as string | undefined;
@@ -566,16 +681,12 @@ function DeployRow({
     deployment.ready && deployment.buildingAt
       ? (deployment.ready - deployment.buildingAt) / 1000
       : null;
-  const inspector =
-    deployment.inspectorUrl ??
-    `https://vercel.com/dashboard?proj=${deployment.name}`;
 
   return (
-    <a
-      href={inspector}
-      target="_blank"
-      rel="noopener noreferrer"
-      className={`grid grid-cols-12 gap-3 px-4 py-2.5 items-center hover:bg-foreground/[0.04] transition-colors ${
+    <button
+      type="button"
+      onClick={() => onOpen(deployment.uid)}
+      className={`w-full text-left grid grid-cols-12 gap-3 px-4 py-2.5 items-center hover:bg-foreground/[0.04] transition-colors ${
         emphasizeError
           ? "bg-destructive/[0.05] border border-destructive/15 rounded-lg"
           : ""
@@ -605,7 +716,7 @@ function DeployRow({
       <div className="col-span-3 md:col-span-1 text-[11px] tabular-nums text-text-tertiary text-right">
         {relativeTime(deployment.created)}
       </div>
-    </a>
+    </button>
   );
 }
 

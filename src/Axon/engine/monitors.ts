@@ -15,6 +15,9 @@ import {
   runwayDays,
   totalCashCents,
 } from "@/lib/unified/finance";
+import { fetchConnectorByKind } from "@/stores/connectors";
+import { vercelListDeployments } from "@/lib/vercel";
+import { slackPostMessage } from "@/lib/slack";
 
 function companyLabel(active: string): "CodeWithAli" | "simplicity" {
   return active === "simplicityFunds" ? "simplicity" : "CodeWithAli";
@@ -413,6 +416,84 @@ export const MONITORS: Monitor[] = [
           return `${r.name} closes in ${daysToClose} days but you're only at ${pct}% of target. Time to push hard.`;
         }
         return null;
+      };
+    })(),
+  },
+  // ─── vercel-prod-failure ─────────────────────────────────────────
+  //
+  // Watches Vercel deployments. Fires when a production deploy
+  // transitions to ERROR. Speaks via AXON AND posts to Slack's
+  // configured "default channel" if Slack is connected.
+  //
+  // Dedupe by deployment uid so a refresh-and-still-broken state
+  // doesn't keep nagging. We persist seen uids per session (closure)
+  // — fine because each session start does want to re-flag prod
+  // failures that are still present.
+  {
+    id: "vercel-prod-failure",
+    label: "Vercel production failure",
+    description:
+      "Watches Vercel deploys, fires when a production deploy errors. Speaks via AXON + posts to Slack if connected.",
+    intervalMs: 2 * 60 * 1000,
+    check: (() => {
+      const announced = new Set<string>();
+      return async (_ctx) => {
+        try {
+          const vercelConn = await fetchConnectorByKind("vercel");
+          const vercelToken = (vercelConn?.credentials as any)?.token as
+            | string
+            | undefined;
+          if (!vercelToken) return null;
+
+          // Only inspect the last hour — older failures already had
+          // their chance to nag.
+          const deploys = await vercelListDeployments(vercelToken, {
+            limit: 30,
+            state: "ERROR",
+          });
+          const cutoff = Date.now() - 60 * 60 * 1000;
+          const prodFails = deploys.filter(
+            (d) => d.target === "production" && d.created >= cutoff,
+          );
+          const fresh = prodFails.find((d) => !announced.has(d.uid));
+          if (!fresh) return null;
+          announced.add(fresh.uid);
+
+          // Compose the headline once — same text we'll speak and
+          // post to Slack so the operator + team see the same thing.
+          const commit =
+            (fresh.meta?.githubCommitMessage as string | undefined) ||
+            "no commit message";
+          const branch =
+            (fresh.meta?.githubCommitRef as string | undefined) || "main";
+          const inspector =
+            fresh.inspectorUrl ??
+            `https://vercel.com/dashboard?proj=${fresh.name}`;
+          const headline = `Vercel: ${fresh.name} production build failed on ${branch} — "${commit.slice(0, 80)}". ${inspector}`;
+
+          // Best-effort Slack post. Silent on failure so we don't
+          // spam the voice channel with proxy errors — the AXON
+          // voice line still fires regardless.
+          try {
+            const slackConn = await fetchConnectorByKind("slack");
+            const slackCreds =
+              (slackConn?.credentials as any) ?? {};
+            const channel = slackCreds.default_channel as string | undefined;
+            if (slackConn && channel) {
+              await slackPostMessage({
+                channel,
+                text: `:rotating_light: ${headline}`,
+              });
+            }
+          } catch {
+            // ignore — voice alert still goes out below
+          }
+
+          // Voice line — tighter than the Slack post since it's spoken.
+          return `${fresh.name} production build just failed on ${branch}. Investigate?`;
+        } catch {
+          return null;
+        }
       };
     })(),
   },
