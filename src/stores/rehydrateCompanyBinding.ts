@@ -1,30 +1,33 @@
 /**
  * stores/rehydrateCompanyBinding.ts
  *
- * Auto-rehydrates Stronghold's company_name (plus companydb creds)
- * whenever the cache is empty -- on a new machine, after a reinstall,
- * after the 7-day Stronghold cache invalidation fires, or after the
- * user is bumped through onboarding.
+ * Keeps Stronghold's company_name (plus companydb creds) aligned
+ * with the user's active company toggle. Used to seed Stronghold
+ * on fresh installs / new machines / after the 7-day cache
+ * invalidation, AND to self-heal when the cache disagrees with the
+ * toggle (which happens to multi-company founders on first sign-in
+ * after a reinstall -- the resolver picks one tenant arbitrarily,
+ * then the operator flips the toggle and expects the cache to
+ * follow).
  *
- * Without this, every connector-store call falls back to
- * .is("company", null) and silently returns zero rows even though
- * the user's connectors are sitting in the master DB. Gmail is the
- * lone survivor because it routes through a server proxy that keys
- * off user_supa_id only -- this helper extends that exact pattern to
- * the Stronghold cache itself.
+ * v2 (today):
+ *   - sends company_hint from getActiveCompanyLabel() so the server
+ *     can pick the right tenant for users who own multiple
+ *     takeover_companies rows.
+ *   - drops the "early-out if Stronghold has any value" check.
+ *     Instead, only early-out when the cached value MATCHES the
+ *     hint or when there's no hint to compare against. A stale
+ *     cache now self-heals on the next ActiveUser load.
  *
- * Idempotent. Cheap when Stronghold is already populated (early-out
- * after one local read). Safe to call from any post-login lifecycle
- * point -- multiple concurrent calls dedup behind one in-flight
- * promise.
- *
- * Usage:
- *   await rehydrateCompanyBinding(userSupaId);
+ * Idempotent. Cheap when the cache already matches (one local read
+ * + one cheap string compare). Per-session dedup keyed by
+ * user_supa_id + hint so concurrent calls collapse to one fetch.
  *
  * Returns the resolved company_name (or null for unbound installs).
  */
 
 import { getStronghold } from "@/stores/stronghold";
+import { getActiveCompanyLabel } from "@/stores/query";
 
 interface ResolvedTenant {
   company_name: string | null;
@@ -33,36 +36,50 @@ interface ResolvedTenant {
   source: string;
 }
 
-// Per-session dedup: avoid hammering resolve-tenant if multiple call
-// sites fire on the same launch. Keyed by user_supa_id so a user
-// switch within the same session re-resolves cleanly.
+// Per-session dedup map. Key includes the hint so a toggle flip
+// invalidates the dedup and re-resolves cleanly.
 const inFlight = new Map<string, Promise<string | null>>();
+
+function activeHint(): string | null {
+  try {
+    return getActiveCompanyLabel();
+  } catch {
+    return null;
+  }
+}
 
 export async function rehydrateCompanyBinding(
   userSupaId: string | undefined | null,
 ): Promise<string | null> {
   if (!userSupaId) return null;
 
-  const cached = inFlight.get(userSupaId);
+  const hint = activeHint();
+  const dedupKey = `${userSupaId}::${hint ?? ""}`;
+  const cached = inFlight.get(dedupKey);
   if (cached) return cached;
 
   const promise = (async () => {
     try {
-      // Early-out: Stronghold already knows. We trust the local
-      // value rather than re-resolving on every call.
       const sh = await getStronghold();
-      const existing = await sh.getRecord("company_name");
-      if (existing && existing.trim().length > 0) {
-        return existing.trim();
+      const existing = (await sh.getRecord("company_name"))?.trim() || null;
+
+      // Early-out cases:
+      //   - Cache already matches the active hint -> nothing to do.
+      //   - No hint AND cache has a value -> caller doesn't care
+      //     which tenant; trust whatever is there. (Pre-toggle code
+      //     paths.)
+      if (existing && (existing === hint || !hint)) {
+        return existing;
       }
 
-      // Ask the server who this user belongs to.
+      // Otherwise ask the server. Send the hint so multi-company
+      // founders land on the right tenant.
       const base = import.meta.env.VITE_TAKEOVER_SITE_URL;
       if (!base) {
         console.warn(
           "[rehydrate-binding] VITE_TAKEOVER_SITE_URL not set; skipping",
         );
-        return null;
+        return existing;
       }
 
       const res = await fetch(`${base}/api/connectors/resolve-tenant`, {
@@ -71,7 +88,10 @@ export async function rehydrateCompanyBinding(
           "Content-Type": "application/json",
           "TakeOver-App": "true",
         },
-        body: JSON.stringify({ user_supa_id: userSupaId }),
+        body: JSON.stringify({
+          user_supa_id: userSupaId,
+          company_hint: hint,
+        }),
       });
 
       if (!res.ok) {
@@ -79,18 +99,25 @@ export async function rehydrateCompanyBinding(
           "[rehydrate-binding] resolve-tenant returned",
           res.status,
         );
-        return null;
+        return existing;
       }
       const json = (await res.json()) as ResolvedTenant;
       if (!json.company_name) {
-        // Genuinely unbound (dev install, mid-onboarding). Not an
-        // error -- the caller treats it as null.
-        return null;
+        // Genuinely unbound (dev install, mid-onboarding). Don't
+        // touch the cache.
+        return existing;
       }
 
-      // Write all three records together so the cache is consistent
-      // and last_synced gets stamped once. companydb_url/key may be
-      // null on master-only installs -- only write the ones we got.
+      // If the server's answer matches what's already cached, skip
+      // the write -- saves the disk hit and avoids stamping
+      // last_synced unnecessarily.
+      if (json.company_name === existing) {
+        return existing;
+      }
+
+      // Write all three records together so the cache is consistent.
+      // companydb_url/key may be null on master-only installs --
+      // only write the keys we got back.
       const records: { key: string; value: string }[] = [
         { key: "company_name", value: json.company_name },
       ];
@@ -102,22 +129,30 @@ export async function rehydrateCompanyBinding(
       }
       await sh.insertManyRecords(records);
 
-      console.log(
-        "[rehydrate-binding] restored company_name from server:",
-        json.company_name,
-        `(source: ${json.source})`,
-      );
+      if (existing && existing !== json.company_name) {
+        console.log(
+          "[rehydrate-binding] corrected stale binding:",
+          existing,
+          "->",
+          json.company_name,
+          `(source: ${json.source}, hint: ${hint ?? "none"})`,
+        );
+      } else {
+        console.log(
+          "[rehydrate-binding] seeded company_name:",
+          json.company_name,
+          `(source: ${json.source})`,
+        );
+      }
       return json.company_name;
     } catch (err) {
       console.error("[rehydrate-binding] failed:", err);
       return null;
     } finally {
-      // Drop the in-flight entry on next tick so a subsequent
-      // rebind (e.g. after onboarding) can re-run cleanly.
-      setTimeout(() => inFlight.delete(userSupaId!), 0);
+      setTimeout(() => inFlight.delete(dedupKey), 0);
     }
   })();
 
-  inFlight.set(userSupaId, promise);
+  inFlight.set(dedupKey, promise);
   return promise;
 }
