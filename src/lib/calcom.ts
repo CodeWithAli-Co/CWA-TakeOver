@@ -387,3 +387,93 @@ export function calcomBookingUrl(
   const qs = params.toString();
   return qs ? `${base}?${qs}` : base;
 }
+
+// ────────────────────────────────────────────────
+// Bookings — write path
+// ────────────────────────────────────────────────
+
+export interface CalCreatedBooking {
+  id: number;
+  uid: string;
+  title: string;
+  start: string;
+  end: string;
+  status: string;
+  attendees?: { name: string; email: string; timeZone?: string }[];
+  meetingUrl?: string | null;
+}
+
+/**
+ * Create a Cal.com booking on the operator's behalf. Used by the
+ * Axon `calcom_create_booking` action when the operator says "book
+ * a meeting with Lesley today at 6pm".
+ *
+ * Routes through a separate POST endpoint (/api/calcom/booking) so
+ * the read proxy (/api/calcom/proxy) stays GET-only — clearer
+ * permission boundary, simpler allowlist on each side.
+ *
+ * Cal.com requires `start` in UTC ISO, an `eventTypeId`, and a
+ * named + emailed attendee. The proxy coerces non-UTC datetimes
+ * server-side so callers can pass local-offset strings safely.
+ */
+export async function calcomCreateBooking(args: {
+  eventTypeId: number;
+  start: string;
+  attendee: {
+    name: string;
+    email: string;
+    timeZone?: string;
+    language?: string;
+  };
+  guests?: string[];
+  metadata?: Record<string, unknown>;
+}): Promise<CalCreatedBooking> {
+  const base = import.meta.env.VITE_TAKEOVER_SITE_URL;
+  if (!base) {
+    throw new Error(
+      "VITE_TAKEOVER_SITE_URL not configured -- Cal.com booking unavailable.",
+    );
+  }
+  const companyName = await getCompanyName();
+
+  const res = await fetch(
+    `${String(base).replace(/\/$/, "")}/api/calcom/booking`,
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "TakeOver-App": "true",
+      },
+      body: JSON.stringify({
+        company_name: companyName,
+        eventTypeId: args.eventTypeId,
+        start: args.start,
+        attendee: args.attendee,
+        ...(args.guests ? { guests: args.guests } : {}),
+        ...(args.metadata ? { metadata: args.metadata } : {}),
+      }),
+    },
+  );
+
+  if (!res.ok) {
+    const detail = await res.text().catch(() => "");
+    throw new Error(extractCalcomError(detail, res.status));
+  }
+
+  const raw = (await res.json()) as unknown;
+  // Cal v2 envelope: { status: "success", data: <booking> }
+  let booking: unknown = raw;
+  if (
+    raw &&
+    typeof raw === "object" &&
+    "status" in raw &&
+    (raw as { status?: string }).status === "success" &&
+    "data" in raw
+  ) {
+    booking = (raw as { data: unknown }).data;
+  }
+  if (!booking || typeof booking !== "object") {
+    throw new Error("Cal.com returned an unexpected booking shape.");
+  }
+  return booking as CalCreatedBooking;
+}
