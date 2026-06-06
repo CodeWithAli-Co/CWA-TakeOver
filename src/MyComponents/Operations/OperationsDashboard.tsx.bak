@@ -37,9 +37,11 @@ import {
   ChevronDown,
   ChevronLeft,
   ChevronRight,
+  Circle,
   CircleDashed,
   Flag,
   Loader2,
+  MoreHorizontal,
   Pencil,
   Plus,
   RefreshCw,
@@ -614,6 +616,75 @@ function TasksSection({
         </div>
       )}
     </SectionCard>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────
+// Legacy kanban column — replaced by TaskListGroup further down.
+// Kept dead-stripped to reduce maintenance surface.
+// ─────────────────────────────────────────────────────────────────
+
+function _DeadKanbanColumn({
+  title,
+  Icon,
+  iconCls,
+  tasks,
+  expandedId,
+  setExpandedId,
+  onStatusChange,
+}: {
+  title: string;
+  Icon: typeof Circle;
+  iconCls: string;
+  tasks: TodosInterface[];
+  expandedId: number | null;
+  setExpandedId: React.Dispatch<React.SetStateAction<number | null>>;
+  onStatusChange: (id: number, status: string) => void;
+}) {
+  return (
+    <div className="flex flex-col min-w-0">
+      {/* Column header — icon + name + count + "..." menu. */}
+      <div className="flex items-center justify-between gap-2 pb-2 mb-2 border-b border-xs border-border/15">
+        <div className="flex items-center gap-1.5 min-w-0">
+          <Icon size={12} strokeWidth={2.2} className={`shrink-0 ${iconCls}`} />
+          <span className="text-[11.5px] font-bold text-foreground/85 truncate">
+            {title}
+          </span>
+          <span className="text-[11px] font-semibold tabular-nums text-text-tertiary">
+            {tasks.length}
+          </span>
+        </div>
+        <button
+          type="button"
+          className="text-text-tertiary hover:text-foreground p-0.5 rounded transition-colors"
+          aria-label="Column menu"
+        >
+          <MoreHorizontal size={12} />
+        </button>
+      </div>
+
+      {/* Cards stack — column scrolls within the section. */}
+      <div className="flex flex-col gap-2">
+        {tasks.length === 0 ? (
+          <p className="text-[10.5px] text-text-tertiary italic px-1 py-1">
+            Empty
+          </p>
+        ) : (
+          tasks.map((t, i) => (
+            <KanbanCard
+              key={t.todo_id}
+              task={t}
+              delay={Math.min(i, 6) * 0.025}
+              isExpanded={expandedId === t.todo_id}
+              onToggle={() =>
+                setExpandedId((x) => (x === t.todo_id ? null : t.todo_id))
+              }
+              onStatusChange={onStatusChange}
+            />
+          ))
+        )}
+      </div>
+    </div>
   );
 }
 

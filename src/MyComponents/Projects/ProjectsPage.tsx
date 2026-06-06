@@ -15,9 +15,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import {
-  Search, Plus, Filter, LayoutGrid, Rows3, Flag, AlertCircle,
-  Calendar, ChevronRight, CircleDot, Activity, Eye, CheckCircle2,
-  Pause, Loader2,
+  Search, Plus, Filter, LayoutGrid, Rows3, Flag, AlertCircle, Loader2,
 } from "lucide-react";
 import { ActiveUser } from "@/stores/query";
 import {
@@ -29,7 +27,10 @@ import {
 } from "@/stores/projects";
 import { ProjectDetailDrawer } from "./ProjectDetailDrawer";
 import { CreateProjectDialog } from "./CreateProjectDialog";
-import { STATUS_META, PRIORITY_META, daysUntil, fmtDate, AvatarStack } from "./projectStyles";
+import {
+  STATUS_META, PRIORITY_META, daysUntil, fmtDate, AvatarStack,
+  StatusIcon, PriorityIcon,
+} from "./projectStyles";
 
 const STATUS_FILTERS: { id: "all" | ProjectStatus; label: string }[] = [
   { id: "all",          label: "All" },
@@ -67,7 +68,10 @@ export function ProjectsPage({ embedded = false }: ProjectsPageProps = {}) {
   const [query, setQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<"all" | ProjectStatus>("all");
   const [priorityFilter, setPriorityFilter] = useState<"all" | ProjectPriority>("all");
-  const [view, setView] = useState<"board" | "list">("board");
+  // Linear-inspired default: list view first. Information density
+  // is higher, scanning is faster, and the visual chrome is calmer.
+  // Board view stays available via the toggle for visual planning.
+  const [view, setView] = useState<"board" | "list">("list");
   const [activeId, setActiveId] = useState<string | null>(null);
   const [createOpen, setCreateOpen] = useState(false);
 
@@ -351,6 +355,19 @@ function BoardView({
   );
 }
 
+/**
+ * ListView — Linear-inspired dense list. Every row is a single
+ * line on desktop: status circle + title + (truncated description)
+ * + priority bars + owner + due + progress. No row chrome, no
+ * pill borders, just hover affordance and a hairline divider.
+ *
+ * The visual move that matters most: status went from a chunky
+ * coloured chip with an icon and a text label to a single 14px
+ * filled circle. Same information, ~1/8th the visual weight.
+ * Priority moved from a labeled flag chip to a 4-bar mini chart
+ * (Linear's signature). Both indicators stay color-coded so
+ * scanning still works.
+ */
 function ListView({
   projects,
   onOpen,
@@ -359,63 +376,92 @@ function ListView({
   onOpen: (id: string) => void;
 }) {
   return (
-    <div className="divide-y divide-border/15">
-      {/* Header strip — editorial caps + tracking, hairline bg. */}
-      <div className="hidden md:grid grid-cols-12 gap-3 px-5 py-2.5 text-[10.5px] font-bold uppercase tracking-[0.14em] text-text-tertiary bg-foreground/[0.03] border-b border-xs border-border/15">
-        <div className="col-span-5">Project</div>
+    <div className="divide-y divide-border/10">
+      {/* Header strip — quieter than before; smaller caps, no bg.  */}
+      <div className="hidden md:grid grid-cols-12 gap-3 px-4 py-2 text-[9.5px] font-semibold uppercase tracking-[0.16em] text-text-tertiary/80 border-b border-xs border-border/10">
+        <div className="col-span-6">Project</div>
         <div className="col-span-2">Status</div>
         <div className="col-span-1">Priority</div>
-        <div className="col-span-2">Owner</div>
+        <div className="col-span-1">Owner</div>
         <div className="col-span-1">Due</div>
         <div className="col-span-1 text-right">Progress</div>
       </div>
       {projects.map((p) => {
-        const sm = STATUS_META[p.status];
-        const pm = PRIORITY_META[p.priority];
         const days = p.due ? daysUntil(p.due) : null;
+        const overdue = days !== null && days < 0;
+        const dueSoon = days !== null && days >= 0 && days <= 7;
         return (
           <button
             key={p.id}
             type="button"
             onClick={() => onOpen(p.id)}
-            className="w-full grid grid-cols-12 gap-3 px-5 py-3.5 hover:bg-foreground/[0.04] transition-colors text-left"
+            className="w-full grid grid-cols-12 gap-3 px-4 py-2.5 hover:bg-foreground/[0.035] transition-colors text-left group"
           >
-            <div className="col-span-12 md:col-span-5 min-w-0">
-              <div className="text-[13.5px] font-semibold text-foreground truncate">{p.title}</div>
-              <div className="text-[11.5px] text-text-tertiary truncate mt-0.5">{p.description}</div>
-            </div>
-            <div className="col-span-4 md:col-span-2 flex items-center">
-              <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md border text-[10.5px] font-bold ${sm.chip}`}>
-                <sm.Icon size={10} strokeWidth={2.5} />
-                {sm.label}
+            {/* Project: status circle inline with title for
+             *  scanning. Description sits below in a smaller, dimmer
+             *  type — only shows on larger screens where there's room. */}
+            <div className="col-span-12 md:col-span-6 min-w-0 flex items-start gap-2.5">
+              <span className="pt-[3px] shrink-0">
+                <StatusIcon status={p.status} size={13} />
               </span>
+              <div className="min-w-0 flex-1">
+                <div className="text-[13px] font-semibold text-foreground truncate leading-tight">
+                  {p.title}
+                </div>
+                {p.description && (
+                  <div className="hidden lg:block text-[11.5px] text-text-tertiary truncate mt-0.5">
+                    {p.description}
+                  </div>
+                )}
+              </div>
             </div>
+
+            {/* Status label — circle is in the title column already;
+             *  this column just renders the textual status, dimmed. */}
+            <div className="col-span-4 md:col-span-2 flex items-center text-[11.5px] text-text-secondary">
+              {STATUS_META[p.status].label}
+            </div>
+
+            {/* Priority — Linear-style bars. */}
             <div className="col-span-4 md:col-span-1 flex items-center">
-              <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md text-[10.5px] font-bold ${pm.chip}`}>
-                <Flag size={9} strokeWidth={2.5} />
-                {pm.label}
-              </span>
+              <PriorityIcon priority={p.priority} size={11} />
             </div>
-            <div className="col-span-4 md:col-span-2 flex items-center gap-2 text-[12px] text-text-secondary">
-              <span className="truncate">{p.owner_username ?? "—"}</span>
+
+            {/* Owner — bare text. */}
+            <div className="col-span-4 md:col-span-1 flex items-center text-[11.5px] text-text-secondary truncate">
+              {p.owner_username ?? "—"}
             </div>
-            <div className="col-span-6 md:col-span-1 flex items-center text-[11.5px] text-text-secondary">
+
+            {/* Due — tabular nums, tonal warning when overdue/soon. */}
+            <div className="col-span-6 md:col-span-1 flex items-center text-[11.5px] tabular-nums">
               {p.due ? (
-                <span className={days !== null && days < 0 ? "text-red-500 font-semibold" : days !== null && days <= 7 ? "text-orange-500 font-semibold" : ""}>
+                <span
+                  className={
+                    overdue
+                      ? "text-destructive font-semibold"
+                      : dueSoon
+                      ? "text-warning font-semibold"
+                      : "text-text-secondary"
+                  }
+                >
                   {fmtDate(p.due)}
                 </span>
               ) : (
-                <span className="text-text-tertiary">No due</span>
+                <span className="text-text-tertiary">—</span>
               )}
             </div>
+
+            {/* Progress — slimmer track + tighter number. */}
             <div className="col-span-6 md:col-span-1 flex items-center justify-end gap-2">
-              <div className="w-14 h-1.5 rounded-full bg-foreground/[0.08] overflow-hidden">
+              <div className="w-12 h-[3px] rounded-full bg-foreground/[0.08] overflow-hidden">
                 <div
-                  className={`h-full ${p.status === "completed" ? "bg-emerald-500" : "bg-primary"}`}
+                  className={`h-full ${
+                    p.status === "completed" ? "bg-success" : "bg-foreground/70"
+                  }`}
                   style={{ width: `${p.progress}%` }}
                 />
               </div>
-              <span className="text-[10.5px] font-bold tabular-nums text-text-secondary w-7 text-right">
+              <span className="text-[10.5px] font-semibold tabular-nums text-text-tertiary w-7 text-right">
                 {p.progress}%
               </span>
             </div>
@@ -445,7 +491,6 @@ function ListView({
  * match the reference's premium card feel.
  */
 function ProjectCard({ project, onOpen }: { project: Project; onOpen: () => void }) {
-  const sm = STATUS_META[project.status];
   const days = project.due ? daysUntil(project.due) : null;
   const remainingLabel =
     project.due === null
@@ -479,30 +524,36 @@ function ProjectCard({ project, onOpen }: { project: Project; onOpen: () => void
       onClick={onOpen}
       className="group relative block w-full text-left rounded-2xl border-xs border-border-soft bg-foreground/[0.03] hover:bg-foreground/[0.05] hover:border-border/30 transition-colors p-5 flex flex-col gap-4 min-h-[240px]"
     >
-      {/* Top row: title + remaining + status pill */}
+      {/* Top row: status circle + title block on the left; priority
+       *  bars + remaining label on the right. Linear lays out cards
+       *  this way — single status circle in the top-left, no chunky
+       *  pill borders. */}
       <div className="flex items-start justify-between gap-3">
-        <div className="min-w-0 flex-1">
-          <h3 className="text-[14.5px] font-bold text-foreground leading-[1.25] line-clamp-2">
-            {project.title}
-          </h3>
-          <p className={`text-[12px] mt-1 font-medium ${remainingTone}`}>
-            {remainingLabel}
-          </p>
+        <div className="min-w-0 flex-1 flex items-start gap-2.5">
+          <span className="pt-[3px] shrink-0">
+            <StatusIcon status={project.status} size={14} />
+          </span>
+          <div className="min-w-0">
+            <h3 className="text-[14px] font-semibold text-foreground leading-[1.3] line-clamp-2">
+              {project.title}
+            </h3>
+            <p className="text-[11px] mt-1 text-text-tertiary">
+              {STATUS_META[project.status].label}
+            </p>
+          </div>
         </div>
-        {/* Status pill — pulled from STATUS_META for consistent tone. */}
-        <span
-          className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full border text-[10.5px] font-bold whitespace-nowrap ${sm.chip}`}
-        >
-          <sm.Icon size={11} strokeWidth={2.5} />
-          {sm.label}
-        </span>
+        <div className="flex flex-col items-end gap-1.5 shrink-0">
+          <PriorityIcon priority={project.priority} size={11} />
+          <span className={`text-[11px] font-medium ${remainingTone}`}>
+            {remainingLabel}
+          </span>
+        </div>
       </div>
 
-      {/* Visual content area — replaces the "screenshot" slot in the
-       *  reference. Uses real project signal: description + progress
-       *  + sub-status breakdown. Nested surface (inset) so it reads
-       *  as a content "panel" inside the card. */}
-      <div className="flex-1 rounded-xl bg-foreground/[0.025] border-xs border-border-soft p-4 flex flex-col gap-3">
+      {/* Body — flattened. The previous "nested inset panel" pattern
+       *  added a card-inside-a-card look that Linear deliberately
+       *  avoids. Same content, no second container. */}
+      <div className="flex-1 flex flex-col gap-3">
         {/* Description — 2 lines max. */}
         <p className="text-[12.5px] text-text-secondary leading-relaxed line-clamp-2 min-h-[36px]">
           {project.description || (
@@ -510,20 +561,17 @@ function ProjectCard({ project, onOpen }: { project: Project; onOpen: () => void
           )}
         </p>
 
-        {/* Progress + percentage */}
-        <div>
-          <div className="flex items-center justify-between text-[10.5px] font-bold uppercase tracking-[0.14em] text-text-tertiary mb-1.5">
-            <span>Progress</span>
-            <span className="tabular-nums text-foreground/80">
-              {project.progress}%
-            </span>
-          </div>
-          <div className="h-1.5 rounded-full bg-foreground/[0.07] overflow-hidden">
+        {/* Progress — slimmer track, no uppercase eyebrow. */}
+        <div className="flex items-center gap-2">
+          <div className="flex-1 h-[3px] rounded-full bg-foreground/[0.08] overflow-hidden">
             <div
               className={`h-full rounded-full transition-all ${progressFill}`}
               style={{ width: `${project.progress}%` }}
             />
           </div>
+          <span className="text-[11px] font-semibold tabular-nums text-text-secondary w-8 text-right">
+            {project.progress}%
+          </span>
         </div>
 
         {/* Task breakdown — tiny stat row */}

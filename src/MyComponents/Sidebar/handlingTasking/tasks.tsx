@@ -45,6 +45,89 @@ const STATUS_META: Record<TaskStatus, { dot: string; tint: string; text: string;
   done:          { dot: "rgb(52,211,153)", tint: "rgba(52,211,153,0.12)", text: "text-emerald-400", label: "DONE" },
 };
 
+// ────────────────────────────────────────────────
+// Linear-inspired indicators for tasks. Smaller, quieter visual
+// vocabulary than the chunky chips this page used to render — a
+// single colored circle for status, a stacked bar mini-chart for
+// priority. Same color semantics, ~1/8th the visual weight.
+// ────────────────────────────────────────────────
+
+const TaskStatusIcon: React.FC<{ status: TaskStatus; size?: number }> = ({
+  status,
+  size = 13,
+}) => {
+  const meta = STATUS_META[status];
+  return (
+    <span
+      className="relative inline-flex shrink-0"
+      style={{ width: size, height: size, color: meta.dot }}
+      title={meta.label}
+    >
+      {status === "to-do" && (
+        <span className="absolute inset-0 rounded-full border-[2px] border-current opacity-70" />
+      )}
+      {status === "in-progress" && (
+        <>
+          <span className="absolute inset-0 rounded-full border-[2px] border-current opacity-60" />
+          <span
+            className="absolute inset-[2px] rounded-full bg-current opacity-90"
+            style={{ clipPath: "polygon(50% 0, 100% 0, 100% 100%, 50% 100%)" }}
+          />
+        </>
+      )}
+      {status === "done" && (
+        <>
+          <span className="absolute inset-0 rounded-full bg-current" />
+          <svg
+            viewBox="0 0 12 12"
+            className="absolute inset-0 m-auto"
+            style={{ width: size * 0.7, height: size * 0.7 }}
+          >
+            <path
+              d="M2.5 6.5l2.4 2.4 4.6-4.8"
+              fill="none"
+              stroke="white"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+          </svg>
+        </>
+      )}
+    </span>
+  );
+};
+
+const TaskPriorityBars: React.FC<{
+  priority: TaskPriority;
+  size?: number;
+}> = ({ priority, size = 11 }) => {
+  const meta = PRIORITY_META[priority];
+  const active = priority === "high" ? 3 : priority === "medium" ? 2 : 1;
+  const slotWidth = size / 3 - 0.5;
+  return (
+    <span
+      className="inline-flex items-end gap-[1.5px] shrink-0"
+      style={{ height: size, width: size, color: meta.accent }}
+      title={`Priority: ${meta.label.toLowerCase()}`}
+    >
+      {[1, 2, 3].map((i) => {
+        const isOn = i <= active;
+        const fillH = size * (0.4 + 0.3 * (i - 1));
+        return (
+          <span
+            key={i}
+            className={`rounded-[1px] ${
+              isOn ? "bg-current" : "bg-current opacity-20"
+            }`}
+            style={{ width: slotWidth, height: fillH }}
+          />
+        );
+      })}
+    </span>
+  );
+};
+
 // Avatar palette - deterministic by username hash
 function avatarAccent(name: string): string {
   const palette = [
@@ -156,7 +239,6 @@ const KanbanCard: React.FC<{
     task.status === "in-progress" ? "done" : null;
 
   const priority = task.priority as TaskPriority | undefined;
-  const pMeta = priority ? PRIORITY_META[priority] : null;
   const due = dueDateMeta(task.deadline as any);
   const names = assigneeNames(task.assignee);
 
@@ -170,60 +252,49 @@ const KanbanCard: React.FC<{
       // Editorial card surface — matches home page row treatment:
       // hairline soft border, restrained background tint, hover
       // brightens slightly without changing border weight.
-      className="relative bg-foreground/[0.03] hover:bg-foreground/[0.05] border-xs border-border-soft hover:border-border/25 rounded-none p-3 transition-colors group overflow-hidden"
+      className="relative bg-foreground/[0.03] hover:bg-foreground/[0.05] border-xs border-border-soft hover:border-border/25 rounded-none p-3 transition-colors group"
     >
-      {pMeta && (
-        <span
-          aria-hidden
-          className="absolute left-0 top-2 bottom-2 w-[2.5px] rounded-none"
-          style={{ background: pMeta.accent }}
-        />
-      )}
-
-      <div className="pl-2 flex items-start justify-between mb-1.5 gap-2">
-        <h4 className="text-[12.5px] font-semibold text-foreground leading-snug flex-1">
-          {task.title}
-        </h4>
-        {pMeta && (
-          // Priority chip — tinted bg + matching text + hairline.
-          // Same recipe as the home page semantic chips.
-          <span
-            className="text-[9px] uppercase tracking-[0.12em] px-1.5 py-0.5 rounded-none shrink-0 font-bold"
-            style={{
-              background: `${pMeta.accent}14`,
-              color: pMeta.accent,
-              border: `1px solid ${pMeta.accent}26`,
-            }}
-          >
-            {pMeta.label}
+      {/* Top row — status circle + title on the left, priority bars
+       *  on the right. Linear's signature layout: every row leads
+       *  with a single status indicator. The chunky priority chip
+       *  is replaced by a 3-bar mini-chart that takes ~1/8th the
+       *  visual real estate while preserving the color signal.   */}
+      <div className="flex items-start justify-between mb-1.5 gap-2">
+        <div className="flex items-start gap-2 min-w-0 flex-1">
+          <span className="pt-[2px] shrink-0">
+            <TaskStatusIcon status={task.status as TaskStatus} size={12} />
           </span>
-        )}
+          <h4 className="text-[12.5px] font-semibold text-foreground leading-snug min-w-0 flex-1">
+            {task.title}
+          </h4>
+        </div>
+        {priority && <TaskPriorityBars priority={priority} size={10} />}
       </div>
 
       {task.description && (
-        <p className="pl-2 text-[11px] text-text-tertiary leading-snug mb-2 line-clamp-2">
+        <p className="pl-[18px] text-[11px] text-text-tertiary leading-snug mb-2 line-clamp-2">
           {task.description}
         </p>
       )}
 
       {task.assigned_by && (
-        <div className="pl-2 mb-1.5 inline-flex items-center gap-1">
-          <span className="text-[9px] font-bold uppercase tracking-[0.12em] text-text-tertiary/70">
-            Assigned by
-          </span>
+        // Quieter "assigned by" — no uppercase eyebrow, smaller
+        // avatar, single-line treatment.
+        <div className="pl-[18px] mb-1.5 inline-flex items-center gap-1.5 text-[10.5px] text-text-tertiary">
+          <span className="opacity-70">from</span>
           <span
             className="inline-flex items-center justify-center w-3.5 h-3.5 rounded-full text-[8px] font-bold text-white"
             style={{ background: avatarAccent(task.assigned_by) }}
           >
             {initialsFor(task.assigned_by)}
           </span>
-          <span className="text-[10px] font-medium text-foreground/75">
+          <span className="text-foreground/75 font-medium">
             {task.assigned_by}
           </span>
         </div>
       )}
 
-      <div className="pl-2 flex items-center justify-between gap-2">
+      <div className="pl-[18px] flex items-center justify-between gap-2">
         <div className="flex items-center gap-2.5 text-[10px]">
           {due && (
             <span className={["inline-flex items-center gap-1", due.color].join(" ")}>
@@ -1218,7 +1289,6 @@ const InboxListItem: React.FC<{
   const priority = task.priority as TaskPriority | undefined;
   const pMeta = priority ? PRIORITY_META[priority] : null;
   const status = task.status as TaskStatus;
-  const sMeta = STATUS_META[status];
   const names = assigneeNames(task.assignee);
 
   // Status icon — proper visual signal instead of a tiny dot.
