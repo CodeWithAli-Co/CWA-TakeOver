@@ -1501,6 +1501,7 @@ export const cooData = {
         { title: "Capital Plan", url: "/capitalPlan" },
         { title: "Vercel", url: "/vercel" },
         { title: "Linear", url: "/linear" },
+        { title: "Infrastructure", url: "/infrastructure" },
       ],
     },
 
@@ -1723,6 +1724,7 @@ export const ceoData = {
         { title: "Capital Plan", url: "/capitalPlan" },
         { title: "Vercel", url: "/vercel" },
         { title: "Linear", url: "/linear" },
+        { title: "Infrastructure", url: "/infrastructure" },
       ],
     },
 

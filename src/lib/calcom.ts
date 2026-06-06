@@ -60,6 +60,12 @@ async function getCompanyName(): Promise<string | null> {
  *
  *  · apiKey provided  → verify-on-save mode (server forwards as-is)
  *  · apiKey == null   → lookup mode (server reads from connectors)
+ *
+ *  v2 response envelope: most v2 endpoints return
+ *    { status: "success", data: <payload> }
+ *  We unwrap `data` automatically so callers don't have to. When
+ *  the response is already shaped like the legacy v1 (no envelope),
+ *  we pass it through unchanged.
  */
 async function calcomFetch<T>(
   apiKey: string | null,
@@ -84,16 +90,99 @@ async function calcomFetch<T>(
   });
 
   if (!res.ok) {
-    // Proxy errors (missing connector, slack-style env issues,
-    // upstream 4xx/5xx) come back as 4xx/5xx with { error }.
+    // Proxy errors (missing connector, env misconfig) come back as
+    // 4xx/5xx. Cal.com's own errors land here too.
     const detail = await res.text().catch(() => "");
-    let parsed: { error?: string; message?: string } = {};
-    try { parsed = JSON.parse(detail); } catch { /* noop */ }
-    const msg =
-      parsed.error ?? parsed.message ?? `Cal.com proxy ${res.status}: ${detail.slice(0, 200)}`;
-    throw new Error(msg);
+    throw new Error(extractCalcomError(detail, res.status));
   }
-  return (await res.json()) as T;
+
+  const raw = (await res.json()) as unknown;
+
+  // v2 also returns 200 OK with { status: "error", ... } in the
+  // body sometimes (e.g. when an endpoint validates input
+  // server-side rather than returning a 4xx). Treat those as
+  // throws too — same error semantics as a non-2xx.
+  if (
+    raw &&
+    typeof raw === "object" &&
+    "status" in raw &&
+    (raw as { status?: string }).status === "error"
+  ) {
+    throw new Error(
+      extractCalcomError(JSON.stringify(raw), res.status),
+    );
+  }
+
+  // v2 success envelope: { status: "success", data: <payload> }.
+  // Unwrap so callers see the same shape they always did.
+  if (
+    raw &&
+    typeof raw === "object" &&
+    "status" in raw &&
+    (raw as { status?: string }).status === "success" &&
+    "data" in raw
+  ) {
+    return (raw as { data: T }).data;
+  }
+  return raw as T;
+}
+
+/** Extract a human-readable error message from a Cal.com response
+ *  body. Handles every error shape we've seen in the wild:
+ *
+ *    · v1 legacy: { message: "..." }
+ *    · v2 string: { error: "..." }
+ *    · v2 object: { error: { code, message, details } }
+ *    · v2 nested status: { status: "error", error: {...} }
+ *    · proxy-level: { error: "..." } from our takeover-B2B route
+ *    · raw text on parse failure
+ *
+ *  Whatever we get, NEVER let "[object Object]" leak through —
+ *  that's the bug this helper exists to prevent. */
+function extractCalcomError(raw: string, status: number): string {
+  if (!raw || !raw.trim()) return `Cal.com ${status}`;
+  let body: unknown;
+  try {
+    body = JSON.parse(raw);
+  } catch {
+    return `Cal.com ${status}: ${raw.slice(0, 200)}`;
+  }
+  if (!body || typeof body !== "object") {
+    return `Cal.com ${status}`;
+  }
+  const b = body as Record<string, unknown>;
+
+  // Walk down a chain of plausible error shapes — string wins
+  // outright; object with .message gets that; otherwise we
+  // JSON-stringify the most error-ish field as a last resort.
+  const candidates: unknown[] = [
+    b.message,
+    b.error,
+    (b.error as Record<string, unknown> | undefined)?.message,
+    (b.error as Record<string, unknown> | undefined)?.details,
+    b.detail,
+    b.details,
+  ];
+
+  for (const c of candidates) {
+    if (typeof c === "string" && c.trim()) {
+      return `Cal.com: ${c.trim()}`;
+    }
+    if (c && typeof c === "object") {
+      // Last-ditch: extract .message off any nested object before
+      // falling back to a JSON dump.
+      const cm = (c as { message?: unknown }).message;
+      if (typeof cm === "string" && cm.trim()) {
+        return `Cal.com: ${cm.trim()}`;
+      }
+    }
+  }
+
+  // We had a JSON object but no recognizable error field. Dump it
+  // (truncated) so the operator can still see what came back
+  // instead of "[object Object]".
+  const dump = JSON.stringify(body).slice(0, 200);
+  return `Cal.com ${status}: ${dump}`;
 }
 
 /** Strip undefined keys so they don't get serialized as "undefined"
@@ -169,10 +258,17 @@ export interface CalAvailableSlot {
 
 /** /me — smoke test the API key. Two calling contexts:
  *    · verify-on-save (key explicit, no row yet) → pass the key.
- *    · post-save liveness check (key in DB) → pass null. */
+ *    · post-save liveness check (key in DB) → pass null.
+ *
+ *  v2 returns the user object directly inside `data` (which the
+ *  fetcher already unwrapped). The legacy v1 shape `{ user: ... }`
+ *  is also handled — we look at both. */
 export async function calcomMe(apiKey: string | null = null): Promise<CalUser> {
-  const data = await calcomFetch<CalMeResponse>(apiKey, "me");
-  return data.user;
+  const raw = await calcomFetch<CalUser | CalMeResponse>(apiKey, "me");
+  // v2 returns CalUser directly; v1 wrapped it in { user: ... }.
+  return "user" in (raw as object)
+    ? (raw as CalMeResponse).user
+    : (raw as CalUser);
 }
 
 /** Upcoming bookings — server reads the saved API key. */
@@ -192,22 +288,30 @@ export async function calcomUpcomingBookings(
     limit = (_ignored as { limit?: number }).limit ?? limit;
   }
   const after = new Date().toISOString();
-  const data = await calcomFetch<CalBookingsResponse>(null, "bookings", {
-    afterStart: after,
-    take: limit ?? 25,
-  });
-  return data.bookings ?? [];
+  // v2: GET /v2/bookings?afterStart=…&take=… returns either a flat
+  // array (after `data` unwrap) or { bookings: […] }. Handle both.
+  const raw = await calcomFetch<CalBooking[] | CalBookingsResponse>(
+    null,
+    "bookings",
+    { afterStart: after, take: limit ?? 25 },
+  );
+  if (Array.isArray(raw)) return raw;
+  return raw?.bookings ?? [];
 }
 
-/** Event types — schedulable slots the user offers. */
+/** Event types — schedulable slots the user offers. v2 endpoint:
+ *  GET /v2/event-types. Response is either a flat array (after
+ *  envelope unwrap) or { event_types: […] } (v1-style). Handle
+ *  both for safety during the migration window. */
 export async function calcomListEventTypes(
   _ignored?: unknown, // legacy positional arg — kept for back-compat
 ): Promise<CalEventType[]> {
-  const data = await calcomFetch<CalEventTypesResponse>(
+  const raw = await calcomFetch<CalEventType[] | CalEventTypesResponse>(
     null,
     "event-types",
   );
-  return data.event_types ?? [];
+  if (Array.isArray(raw)) return raw;
+  return raw?.event_types ?? [];
 }
 
 /** Smoke test for the connect dialog. */
@@ -233,14 +337,17 @@ export async function calcomAvailableSlots(
     timeZone?: string;
   },
 ): Promise<CalAvailableSlot[]> {
-  const data = await calcomFetch<CalSlotsResponse>(null, "slots", {
+  // v2 endpoint: GET /v2/slots/available. Returns
+  //   { slots: { "YYYY-MM-DD": [{ time: "...iso..." }] } }
+  // after envelope unwrap. Same shape as v1, just under a new path.
+  const raw = await calcomFetch<CalSlotsResponse>(null, "slots/available", {
     eventTypeId: args.eventTypeId,
     startTime: args.startTime,
     endTime: args.endTime,
     ...(args.timeZone ? { timeZone: args.timeZone } : {}),
   });
   const flat: CalAvailableSlot[] = [];
-  for (const [date, slots] of Object.entries(data.slots ?? {})) {
+  for (const [date, slots] of Object.entries(raw?.slots ?? {})) {
     for (const s of slots) flat.push({ start: s.time, date });
   }
   flat.sort((a, b) => Date.parse(a.start) - Date.parse(b.start));
