@@ -193,8 +193,16 @@ export const calcomEventTypesAction: AxonAction<
       id: e.id,
       title: e.title,
       slug: e.slug,
-      minutes: e.length,
+      // v2 calls this lengthInMinutes (was `length` in v1). We
+      // surface a stable `minutes` key to keep downstream Axon
+      // utterances ("a 30-minute meeting") simple and version-free.
+      minutes: e.lengthInMinutes,
       hidden: e.hidden,
+      // v2 includes the official booking page URL straight on the
+      // event type. Forwarded so the LLM can quote the share link
+      // when the operator asks for it.
+      booking_url: e.bookingUrl ?? null,
+      username: e.users?.[0]?.username ?? null,
     }));
     ctx.logActivity({
       actionName: "calcom_event_types",
@@ -280,10 +288,11 @@ export const calcomAvailableSlotsAction: AxonAction<
     if ("error" in creds) throw new Error(creds.error);
 
     // Resolve event type: by slug if provided, else by minutes.
+    // Cal v2 renamed `length` -> `lengthInMinutes`; match on that.
     const types = await calcomListEventTypes(creds.apiKey);
     let eventType =
       (input.event_slug && types.find((t) => t.slug === input.event_slug)) ||
-      (input.minutes && types.find((t) => t.length === input.minutes)) ||
+      (input.minutes && types.find((t) => t.lengthInMinutes === input.minutes)) ||
       null;
     if (!eventType) {
       const detail = input.event_slug
@@ -333,7 +342,7 @@ export const calcomAvailableSlotsAction: AxonAction<
           id: eventType.id,
           slug: eventType.slug,
           title: eventType.title,
-          minutes: eventType.length,
+          minutes: eventType.lengthInMinutes,
         },
         slots,
         booking_url: bookingUrl,

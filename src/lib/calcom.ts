@@ -234,9 +234,21 @@ export interface CalEventType {
   id: number;
   title: string;
   slug: string;
-  length: number;
+  /** Minutes per slot. Cal.com v2 renamed the v1 `length` field to
+   *  `lengthInMinutes`; we follow the v2 name. The proxy returns
+   *  v2 shapes so this is always the live value. */
+  lengthInMinutes: number;
   description: string | null;
   hidden: boolean;
+  /** v2-only: official shareable booking page URL. Cal builds this
+   *  server-side so we don't have to assemble it from username +
+   *  slug. Optional because older event-types responses may omit
+   *  it; fall back to calcomBookingUrl() if absent. */
+  bookingUrl?: string;
+  /** v2-only: users this event type belongs to. We mainly need
+   *  `username` for constructing share links when `bookingUrl` is
+   *  absent. */
+  users?: { id: number; username: string | null; name: string | null }[];
 }
 
 interface CalEventTypesResponse {
