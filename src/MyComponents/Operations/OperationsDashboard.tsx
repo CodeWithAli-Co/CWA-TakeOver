@@ -54,6 +54,7 @@ import {
 } from "@/Axon/engine/draftOperationsBrief";
 import { ConnectorsStrip } from "./ConnectorsStrip";
 import { SlackPulsePanel } from "./SlackPulsePanel";
+import { MeetingsPanel } from "@/MyComponents/Meetings/MeetingsPanel";
 import { format, startOfWeek, endOfWeek } from "date-fns";
 import {
   ActiveUser,
@@ -214,6 +215,12 @@ export function OperationsDashboard() {
          *  connected, so the same null-state contract as
          *  ConnectorsStrip — no empty card on fresh installs. */}
         <SlackPulsePanel />
+
+        {/* Meetings — provider-neutral schedule pulled from every
+         *  connected meetings provider (Cal.com, Google Calendar,
+         *  Calendly, etc). Source badge per row, optional per-
+         *  provider filter. Auto-hides when nothing's connected. */}
+        <MeetingsPanel />
 
         {/* Unified bento — single 3-col grid. Activity removed
          *  per ops feedback (low signal); Quotas now spans the

@@ -42,6 +42,7 @@ import { registerSlackActions } from "./slack";
 import { registerLinearActions } from "./linear";
 import { registerVercelActions } from "./vercel";
 import { registerCalcomActions } from "./calcom";
+import { registerUnifiedMeetingsActions } from "./unified_meetings";
 
 let registered = false;
 
@@ -90,4 +91,5 @@ export function registerAllActions() {
   registerLinearActions();
   registerVercelActions();
   registerCalcomActions();
+  registerUnifiedMeetingsActions();
 }

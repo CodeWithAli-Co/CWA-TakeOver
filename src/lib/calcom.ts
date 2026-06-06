@@ -131,3 +131,73 @@ export async function calcomPing(apiKey: string): Promise<{
   const u = await calcomMe(apiKey);
   return { name: u.name, email: u.email, timezone: u.timeZone };
 }
+
+// ────────────────────────────────────────────────
+// Availability / slots
+//
+// Used by the outbound-scheduling AXON action — "find a 30-min slot
+// next week to meet with Sarah". We hit Cal.com's /v1/slots endpoint
+// with an event type id + a time window, get back a map of date →
+// available start times, and return them in the operator's tz.
+// ────────────────────────────────────────────────
+
+interface CalSlotsResponse {
+  /** Map of YYYY-MM-DD → array of slot objects. */
+  slots: Record<string, { time: string; attendees?: number }[]>;
+}
+
+export interface CalAvailableSlot {
+  /** Full ISO datetime of the slot start. */
+  start: string;
+  /** Date bucket Cal.com grouped it under (YYYY-MM-DD). */
+  date: string;
+}
+
+/** Available slots for an event type in a given window. */
+export async function calcomAvailableSlots(
+  apiKey: string,
+  args: {
+    eventTypeId: number;
+    startTime: string; // ISO
+    endTime: string;   // ISO
+    timeZone?: string;
+  },
+): Promise<CalAvailableSlot[]> {
+  const data = await calcomFetch<CalSlotsResponse>(apiKey, "/slots", {
+    eventTypeId: args.eventTypeId,
+    startTime: args.startTime,
+    endTime: args.endTime,
+    ...(args.timeZone ? { timeZone: args.timeZone } : {}),
+  });
+  const flat: CalAvailableSlot[] = [];
+  for (const [date, slots] of Object.entries(data.slots ?? {})) {
+    for (const s of slots) flat.push({ start: s.time, date });
+  }
+  // Order earliest first
+  flat.sort((a, b) => Date.parse(a.start) - Date.parse(b.start));
+  return flat;
+}
+
+/** Build the operator's public booking URL for a given event slug.
+ *  Optionally pre-fill the prefill query params Cal.com supports —
+ *  ?email=, ?name=, ?date= — so an outbound link goes straight to
+ *  Sarah's view of the calendar with her info already entered. */
+export function calcomBookingUrl(
+  username: string,
+  eventSlug: string,
+  prefill?: {
+    email?: string;
+    name?: string;
+    /** YYYY-MM-DD to land on. */
+    date?: string;
+  },
+): string {
+  const base = `https://cal.com/${username}/${eventSlug}`;
+  if (!prefill) return base;
+  const params = new URLSearchParams();
+  if (prefill.email) params.set("email", prefill.email);
+  if (prefill.name) params.set("name", prefill.name);
+  if (prefill.date) params.set("date", prefill.date);
+  const qs = params.toString();
+  return qs ? `${base}?${qs}` : base;
+}
