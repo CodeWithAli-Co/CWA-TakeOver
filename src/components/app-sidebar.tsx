@@ -55,7 +55,7 @@ function SidebarBrand() {
           </span>
           <span className="text-[10px] text-muted-foreground leading-none">
             {/* *This is the version of Simplicity & TakeOver app */}
-            {isSimplicity ? "v1.4.6" : "v1.8.0"}
+            {isSimplicity ? "v1.4.6" : "v1.8.1"}
           </span>
         </div>
       )}

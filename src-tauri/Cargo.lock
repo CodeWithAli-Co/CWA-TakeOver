@@ -1063,7 +1063,7 @@ dependencies = [
 
 [[package]]
 name = "cwa-takeover"
-version = "1.8.0"
+version = "1.8.1"
 dependencies = [
  "aes-gcm",
  "chrono",

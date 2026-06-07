@@ -257,7 +257,7 @@ export default function EditorialAuth() {
             transition={{ duration: 0.6, delay: 0.9 }}
             className="relative flex items-center gap-3 text-[11px] text-zinc-600"
           >
-            <span>v1.8.0</span>
+            <span>v1.8.1</span>
             <span className="text-zinc-800">·</span>
             <span className="inline-flex items-center gap-1.5">
               <span className="h-1.5 w-1.5 rounded-full bg-emerald-500/80" />

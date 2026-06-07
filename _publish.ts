@@ -35,7 +35,7 @@ const PROJECT_DIR = process.env.PROJECT_DIR ?? process.cwd(); // dir holding pac
 const BUCKET = "takeover_downloads";
 const VERSION_RE = /v?(?:\d{1,2}\.)+\d{1,2}/i;
 // A commit subject that opens with a version tag, e.g. "v1.2.3 ...".
-const VERSION_COMMIT_RE = /^v\d{1,2}(?:\.\d{1,2})+\b/i;
+const VERSION_COMMIT_RE = /^(?:(?:release:|`)\s?)?v\d{1,2}(?:\.\d{1,2})+\b`?/i;
 
 interface UploadTarget {
   path: string;

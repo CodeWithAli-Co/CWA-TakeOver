@@ -251,7 +251,7 @@ export default function CyberpunkPinPage() {
             transition={{ duration: 0.6, delay: 0.9 }}
             className="relative flex items-center gap-3 text-[11px] text-zinc-600"
           >
-            <span>v1.8.0</span>
+            <span>v1.8.1</span>
             <span className="text-zinc-800">·</span>
             <span className="inline-flex items-center gap-1.5">
               <span className="h-1.5 w-1.5 rounded-full bg-sky-400/90" />
@@ -930,7 +930,7 @@ function _DeprecatedCyberpunkPinPage() {
           className="fixed bottom-0 left-0 right-0 bg-black border-t border-cyan-700/50 p-2 font-mono text-xs text-cyan-600 z-20"
         >
           <div className="flex justify-between items-center">
-            <div>TAKEOVER v1.8.0 // CYBERSEC MODULE ACTIVE</div>
+            <div>TAKEOVER v1.8.1 // CYBERSEC MODULE ACTIVE</div>
             <div className="flex items-center space-x-4">
               <div>CORE TEMP: 42.3°C</div>
               <div>CPU: 12%</div>
