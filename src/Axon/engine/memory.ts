@@ -44,6 +44,55 @@ export interface DeferEntry {
   text: string;
 }
 
+/**
+ * Structured operator profile -- the "Axon actually knows you" layer.
+ *
+ * Distinct from `prefs` (which is free-form k/v) because each field
+ * here has KNOWN SEMANTICS that the context-aware preamble uses to
+ * decide when to surface it.
+ *
+ * Example: lunch_time is only injected into the brain's context near
+ * actual lunch hours. partner_name surfaces only when the recent
+ * conversation has personal context. workday_end surfaces in the
+ * end-of-day window. Surfacing every field every turn would be
+ * wasteful and creepy ("hi Ali, your wife Sarah and I have been
+ * thinking about your overdue tasks" -- no). The profile fields are
+ * the inputs to a TASTEFUL injection policy.
+ *
+ * All fields are optional. Operators set what they want, leave
+ * everything else blank. extras is the escape hatch for facts that
+ * don't fit a known field -- the preamble surfaces those only when
+ * the operator explicitly asks "what do you know about me."
+ */
+export interface OperatorProfile {
+  // ── Personal ──────────────────────────────────────────────────
+  partner_name?: string;
+  family?: string;
+  location?: string;
+  timezone?: string;
+
+  // ── Routine (time-of-day relevant) ─────────────────────────────
+  workday_start?: string; // human-readable: "8am"
+  workday_end?: string;
+  lunch_time?: string;
+  focus_block?: string;
+  exercise?: string;
+
+  // ── Style (cheap to always include) ────────────────────────────
+  comm_style?: string;
+  avoid_topics?: string[];
+
+  // ── Goals & stressors (surfaces in coaching contexts) ──────────
+  current_focus?: string;
+  stressors?: string[];
+  wins?: string[];
+
+  // ── Catch-all ─────────────────────────────────────────────────
+  extras?: Record<string, string>;
+}
+
+const EMPTY_PROFILE: OperatorProfile = {};
+
 export interface PersistentMemory {
   notes: MemoryNote[];
   /** Last session timestamp. Used to say "welcome back after X hours." */
@@ -56,6 +105,8 @@ export interface PersistentMemory {
   decisions: DecisionEntry[];
   /** Things the operator deferred during sessions. */
   defers: DeferEntry[];
+  /** Structured operator profile (F.3). The "knows you" layer. */
+  profile: OperatorProfile;
 }
 
 const EMPTY: PersistentMemory = {
@@ -65,6 +116,7 @@ const EMPTY: PersistentMemory = {
   sessionSummaries: [],
   decisions: [],
   defers: [],
+  profile: { ...EMPTY_PROFILE },
 };
 const MAX_NOTES = 24;
 /** Cap on session summaries kept in memory. After this we shift the
@@ -97,6 +149,9 @@ export function loadMemory(): PersistentMemory {
       defers: (parsed.defers ?? [])
         .filter((d) => d && d.ts >= cutoff)
         .slice(-MAX_DEFERS),
+      // Profile is new in F.3 -- older stored memory won't have it.
+      // Spread over EMPTY_PROFILE so partial profiles work too.
+      profile: { ...EMPTY_PROFILE, ...(parsed.profile ?? {}) },
     };
   } catch {
     return { ...EMPTY };
@@ -127,6 +182,50 @@ export function addNote(m: PersistentMemory, kind: MemoryNote["kind"], text: str
 
 export function setPref(m: PersistentMemory, key: string, value: string): PersistentMemory {
   return { ...m, prefs: { ...m.prefs, [key]: value } };
+}
+
+/**
+ * Set a typed profile field. Use this instead of setPref when the
+ * field has KNOWN SEMANTICS that the preamble logic uses for time-
+ * aware injection. For ad-hoc facts that don't fit a known field,
+ * use setProfileExtra instead.
+ */
+export function setProfileField<K extends keyof OperatorProfile>(
+  m: PersistentMemory,
+  field: K,
+  value: OperatorProfile[K],
+): PersistentMemory {
+  return {
+    ...m,
+    profile: { ...m.profile, [field]: value },
+  };
+}
+
+/** Set an ad-hoc fact under profile.extras. The catch-all for things
+ *  that don't fit a known field but should still survive across
+ *  sessions. */
+export function setProfileExtra(
+  m: PersistentMemory,
+  key: string,
+  value: string,
+): PersistentMemory {
+  return {
+    ...m,
+    profile: {
+      ...m.profile,
+      extras: { ...(m.profile.extras ?? {}), [key]: value },
+    },
+  };
+}
+
+/** Remove a known profile field. */
+export function clearProfileField<K extends keyof OperatorProfile>(
+  m: PersistentMemory,
+  field: K,
+): PersistentMemory {
+  const next = { ...m.profile };
+  delete next[field];
+  return { ...m, profile: next };
 }
 
 /** Append a new session-summary entry, capped at MAX_SESSION_SUMMARIES. */

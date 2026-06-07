@@ -25,6 +25,7 @@ import type {
 } from "../personality/types";
 import { captureScreenContext } from "./screenContext";
 import { loadMemory, memoryPreamble, sinceLastSeen } from "./memory";
+import { composeProfilePreambleNow } from "./profilePreamble";
 import {
   captureScreenshot,
   dataUrlToBase64,
@@ -140,6 +141,14 @@ function buildContextPreamble(ctx: ActionContext, summary?: string | null): stri
   const screen = captureScreenContext();
   const mem = loadMemory();
   const memBlock = memoryPreamble(mem);
+  // Operator profile preamble (F.3) -- context-aware subset of the
+  // structured profile. Surfaces comm_style + current_focus always,
+  // plus time-of-day fields (lunch_time, workday_start/end, etc.)
+  // only when relevant to the current moment. Personal/coaching
+  // fields gated behind recent-utterance triggers, which we don't
+  // thread through here yet -- so they won't fire by default. A
+  // future pass can pass the latest user turn for finer triggering.
+  const profileBlock = composeProfilePreambleNow(mem.profile);
   const since = sinceLastSeen(mem);
 
   const parts = [
@@ -150,6 +159,7 @@ function buildContextPreamble(ctx: ActionContext, summary?: string | null): stri
   ];
   if (since) parts.push(`Time since last session: ${since}`);
   if (memBlock) parts.push("\n" + memBlock);
+  if (profileBlock) parts.push("\n" + profileBlock);
   if (summary) {
     parts.push(
       `\n<prior_conversation_summary>\n${summary}\n</prior_conversation_summary>\n(These are earlier turns in the same session, compressed. Use for continuity.)`

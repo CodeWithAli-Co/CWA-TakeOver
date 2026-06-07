@@ -44,6 +44,7 @@ import { registerVercelActions } from "./vercel";
 import { registerCalcomActions } from "./calcom";
 import { registerUnifiedMeetingsActions } from "./unified_meetings";
 import { registerUnifiedFinanceActions } from "./unified_finance";
+import { registerProfileActions } from "./profile";
 
 let registered = false;
 
@@ -94,4 +95,6 @@ export function registerAllActions() {
   registerCalcomActions();
   registerUnifiedMeetingsActions();
   registerUnifiedFinanceActions();
+  // Operator profile actions (F.3) -- the "Axon knows you" surface.
+  registerProfileActions();
 }
