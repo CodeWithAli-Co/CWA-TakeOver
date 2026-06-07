@@ -1495,6 +1495,11 @@ export const cooData = {
       items: [
         { title: "Account Management", url: "/details" },
         { title: "Axon Swarm", url: "/axonSwarm" },
+        // Axon Memory -- the "what I know about you" inspector. Route
+        // enforces (CEO|COO) AND CodeWithAli tenant; we group it here
+        // alongside Axon Swarm so both Axon admin surfaces are
+        // adjacent in the menu rather than scattered.
+        { title: "Axon Memory", url: "/axonMemory" },
         { title: "Strategy", url: "/strategy" },
         { title: "Funding", url: "/funding" },
         { title: "Mod Logs", url: "/mod_logs" },
@@ -1718,6 +1723,11 @@ export const ceoData = {
       items: [
         { title: "Account Management", url: "/details" },
         { title: "Axon Swarm", url: "/axonSwarm" },
+        // Axon Memory -- the "what I know about you" inspector. Route
+        // enforces (CEO|COO) AND CodeWithAli tenant; we group it here
+        // alongside Axon Swarm so both Axon admin surfaces are
+        // adjacent in the menu rather than scattered.
+        { title: "Axon Memory", url: "/axonMemory" },
         { title: "Strategy", url: "/strategy" },
         { title: "Funding", url: "/funding" },
         { title: "Mod Logs", url: "/mod_logs" },

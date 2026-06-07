@@ -498,6 +498,134 @@ export const MONITORS: Monitor[] = [
     })(),
   },
 
+  // ─── meeting-just-ended ──────────────────────────────────────────
+  //
+  // The FIRST behavior-aware proactive trigger -- proof that the
+  // proactive channel can do more than just state-change alerts.
+  // Detects when a meeting on today's calendar appears to have just
+  // wrapped (within the last 5 minutes) and asks the operator if they
+  // want to log a quick recap before the context fades.
+  //
+  // Why this matters: meeting recaps are the highest-decay
+  // information in an operator's day. If Axon doesn't catch it within
+  // 5-10 minutes of the meeting ending, the operator has moved on and
+  // the recap turns into a vague "I think we talked about..." log a
+  // day later. Proactivity here is genuinely useful, not nagging.
+  //
+  // Inference: cwa_meetings has no explicit duration/end_time field,
+  // so we default to 60 minutes. Operators with shorter syncs will get
+  // a false-positive prompt 30 min after a 30-min meeting ended; the
+  // urgency is "low" so it's gentle, and the dedupe means we don't
+  // double-tap. Adding an actual duration column to cwa_meetings is
+  // the proper long-term fix -- we'll catch it in the next schema
+  // migration.
+  //
+  // Dedupe: localStorage-backed (not just in-memory) so a mid-meeting
+  // app reload doesn't re-prompt after the meeting ends. Keyed on
+  // meeting id, expires after 24h via a freshness check.
+  {
+    id: "meeting-just-ended",
+    label: "Meeting recap prompt",
+    description:
+      "Asks if you want to log a recap right after a meeting wraps, while the context is still fresh. Once per meeting, never a re-prompt.",
+    intervalMs: 2 * 60 * 1000,
+    check: (() => {
+      const STORE_KEY = "axon:monitor:meeting-just-ended:v1";
+      const ASSUMED_DURATION_MS = 60 * 60 * 1000;
+      const PROMPT_WINDOW_MS = 5 * 60 * 1000;
+
+      type Persisted = Record<string, number>; // meetingId -> firedAt
+      const load = (): Persisted => {
+        try {
+          const raw = localStorage.getItem(STORE_KEY);
+          if (!raw) return {};
+          const parsed = JSON.parse(raw) as Persisted;
+          // Age out entries older than 24h so the store doesn't grow.
+          const cutoff = Date.now() - 24 * 60 * 60 * 1000;
+          const kept: Persisted = {};
+          for (const [k, v] of Object.entries(parsed)) {
+            if (v >= cutoff) kept[k] = v;
+          }
+          return kept;
+        } catch {
+          return {};
+        }
+      };
+      const save = (p: Persisted) => {
+        try {
+          localStorage.setItem(STORE_KEY, JSON.stringify(p));
+        } catch {
+          /* ignore */
+        }
+      };
+
+      // Same free-text time parser as elsewhere -- handles 14:00,
+      // 9:30, 2:30 pm, 9 am, 9:00am.
+      const parseMeetingTime = (
+        dateStr: string,
+        timeStr: string | undefined,
+      ): Date | null => {
+        if (!timeStr) return null;
+        const cleaned = timeStr.trim().toLowerCase();
+        let m = cleaned.match(/^(\d{1,2}):(\d{2})\s*$/);
+        if (m) {
+          const h = parseInt(m[1], 10);
+          const mm = parseInt(m[2], 10);
+          const d = new Date(dateStr);
+          d.setHours(h, mm, 0, 0);
+          return isNaN(d.getTime()) ? null : d;
+        }
+        m = cleaned.match(/^(\d{1,2})(?::(\d{2}))?\s*(am|pm)$/i);
+        if (m) {
+          let h = parseInt(m[1], 10);
+          const mm = m[2] ? parseInt(m[2], 10) : 0;
+          if (m[3].toLowerCase() === "pm" && h < 12) h += 12;
+          if (m[3].toLowerCase() === "am" && h === 12) h = 0;
+          const d = new Date(dateStr);
+          d.setHours(h, mm, 0, 0);
+          return isNaN(d.getTime()) ? null : d;
+        }
+        return null;
+      };
+
+      return async (ctx) => {
+        const todayIso = new Date().toISOString().slice(0, 10);
+        let q = takeOversupabase
+          .from("cwa_meetings")
+          .select("id, meeting_title, time, date")
+          .eq("date", todayIso)
+          .limit(20);
+        if (ctx.activeCompany !== "all")
+          q = q.eq("company", companyLabel(ctx.activeCompany));
+        const { data, error } = await q;
+        if (error || !data || data.length === 0) return null;
+
+        const now = Date.now();
+        const fired = load();
+
+        for (const m of data as any[]) {
+          const id = String(m.id);
+          if (fired[id]) continue;
+          const start = parseMeetingTime(m.date, m.time);
+          if (!start) continue;
+          const estimatedEnd = start.getTime() + ASSUMED_DURATION_MS;
+          const sinceEnd = now - estimatedEnd;
+          // Within the 5-minute post-meeting window: 0 < sinceEnd < 5min.
+          if (sinceEnd <= 0 || sinceEnd > PROMPT_WINDOW_MS) continue;
+
+          // Mark fired BEFORE returning so a slow speak path can't
+          // double-trigger before the next poll updates state.
+          fired[id] = now;
+          save(fired);
+
+          const title = (m.meeting_title as string) || "that meeting";
+          return `Looks like ${title} just wrapped -- want me to log a quick recap while it's fresh?`;
+        }
+        return null;
+      };
+    })(),
+  },
+
   // ─── meetings-soon ───────────────────────────────────────────────
   //
   // Fires when a meeting on today's calendar is about to start (within

@@ -39,8 +39,126 @@ export function AxonSettingsPane() {
     }
   };
 
+  // ── Diagnostics state ──────────────────────────────────────────
+  //
+  // Surfaces effective runtime state so the operator can audit Axon
+  // without DevTools. The big "Reset Axon" button is the escape hatch
+  // for any combination of stuck state (forceSleep, dormant, off,
+  // alwaysListening false, mic dead). Same effect as Cmd+Shift+R but
+  // visible and clickable.
+  const resetAxon = () => {
+    updateSettings({
+      enabled: true,
+      forceSleep: false,
+      alwaysListening: true,
+    });
+    // After a reset, the constructor effect will rebuild the voice
+    // input. We don't try to nudge voiceState from here because the
+    // provider's live-config effect handles dormancy when the flags
+    // change.
+  };
+
+  const pillFor = (label: string, value: string, healthy: boolean) => (
+    <span
+      style={{
+        display: "inline-flex",
+        alignItems: "center",
+        gap: 6,
+        padding: "3px 8px",
+        borderRadius: 6,
+        fontSize: 10.5,
+        fontFamily: "ui-monospace, SFMono-Regular, Menlo, monospace",
+        background: healthy
+          ? "hsl(140 50% 40% / 0.12)"
+          : "hsl(0 60% 50% / 0.12)",
+        border: `1px solid ${healthy ? "hsl(140 50% 40% / 0.3)" : "hsl(0 60% 50% / 0.35)"}`,
+        color: healthy ? "hsl(140 50% 72%)" : "hsl(0 60% 75%)",
+      }}
+    >
+      <span style={{ opacity: 0.75 }}>{label}</span>
+      <span style={{ fontWeight: 700 }}>{value}</span>
+    </span>
+  );
+
+  // What "healthy" means here: forceSleep OFF, alwaysListening ON,
+  // enabled ON. The diagnostics block isn't checking voiceState /
+  // isMicLive because those live on the AxonContext, not the settings;
+  // exposing them well would require threading them into this pane,
+  // which we may do in a follow-up.
+  const looksHealthy =
+    settings.enabled &&
+    !settings.forceSleep &&
+    settings.alwaysListening !== false;
+
   return (
     <div style={{ padding: 2 }}>
+      {/* Diagnostics + Reset -- always first so a stuck operator sees the way out before scrolling. */}
+      <div
+        className="axon-settings-group"
+        style={{
+          padding: 12,
+          borderRadius: 10,
+          background: looksHealthy
+            ? "transparent"
+            : "hsl(0 60% 50% / 0.06)",
+          border: looksHealthy
+            ? "1px solid hsl(0 0% 50% / 0.15)"
+            : "1px solid hsl(0 60% 50% / 0.25)",
+          marginBottom: 14,
+        }}
+      >
+        <label className="axon-settings-label" style={{ marginBottom: 8 }}>
+          Diagnostics
+        </label>
+        <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 10 }}>
+          {pillFor("AXON", settings.enabled ? "ON" : "OFF", settings.enabled)}
+          {pillFor(
+            "MUTE",
+            settings.forceSleep ? "ON" : "OFF",
+            !settings.forceSleep,
+          )}
+          {pillFor(
+            "WAKE WORD",
+            settings.alwaysListening === false ? "OFF" : "ON",
+            settings.alwaysListening !== false,
+          )}
+        </div>
+        {!looksHealthy && (
+          <div
+            style={{
+              fontSize: 11.5,
+              color: "var(--axon-muted)",
+              lineHeight: 1.5,
+              marginBottom: 10,
+            }}
+          >
+            Something&rsquo;s off &mdash; Axon won&rsquo;t hear you in the
+            current state. Hit <b>Reset Axon</b> below, or use
+            <b> Ctrl+Shift+R</b> from anywhere. The reset flips everything
+            back to healthy defaults without restarting the app.
+          </div>
+        )}
+        <button
+          type="button"
+          className="axon-btn"
+          onClick={resetAxon}
+          style={{
+            width: "100%",
+            padding: "8px 12px",
+            fontSize: 12,
+            background: looksHealthy
+              ? "transparent"
+              : "hsl(0 60% 50% / 0.18)",
+            border: `1px solid ${looksHealthy ? "hsl(0 0% 50% / 0.25)" : "hsl(0 60% 50% / 0.45)"}`,
+            color: looksHealthy ? "var(--axon-fg, inherit)" : "hsl(0 60% 85%)",
+            fontWeight: 600,
+          }}
+          title="Restore Axon to healthy defaults: enabled, not muted, wake word on. Same as Ctrl+Shift+R."
+        >
+          Reset Axon to defaults
+        </button>
+      </div>
+
       {/* Master */}
       <div className="axon-settings-group">
         <label className="axon-settings-label">Master</label>
@@ -640,6 +758,61 @@ export function AxonSettingsPane() {
         <div style={{ fontSize: 11, color: "var(--axon-muted)", marginTop: 4 }}>
           Transcripts below this score are treated as tentative.
         </div>
+      </div>
+
+      {/* Memory -- promoted to /axonMemory.
+       *
+       *  The catalog gets long once decisions + notes accumulate, and
+       *  a 320px Settings panel cramps it. The inspector moved to its
+       *  own full-page admin route (CodeWithAli CEO + COO only). What
+       *  stays here is a deep-link card so an operator opening
+       *  Settings still finds the door.
+       *
+       *  The link card is visible to everyone in Settings -- the
+       *  route itself enforces the role + tenant gate. A non-C-level
+       *  user clicking this lands on the RestrictedView, which is
+       *  the right behavior (better than hiding a feature that
+       *  exists, which feels like Settings is broken).
+       */}
+      <div className="axon-settings-group">
+        <label className="axon-settings-label">Memory</label>
+        <div style={{ fontSize: 11.5, color: "var(--axon-muted)", marginBottom: 10, lineHeight: 1.5 }}>
+          Everything Axon has persisted across sessions &mdash; decisions,
+          notes, deferrals, preferences. Audit + edit on the full-page
+          inspector.
+        </div>
+        <a
+          href="/axonMemory"
+          style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            padding: "10px 12px",
+            borderRadius: 8,
+            border: "1px solid hsl(0 0% 50% / 0.2)",
+            background: "transparent",
+            color: "var(--axon-fg, inherit)",
+            textDecoration: "none",
+            fontSize: 12.5,
+            transition: "background 120ms ease, border-color 120ms ease",
+          }}
+          onMouseEnter={(e) => {
+            (e.currentTarget as HTMLAnchorElement).style.background =
+              "hsl(0 0% 100% / 0.04)";
+            (e.currentTarget as HTMLAnchorElement).style.borderColor =
+              "hsl(0 0% 50% / 0.35)";
+          }}
+          onMouseLeave={(e) => {
+            (e.currentTarget as HTMLAnchorElement).style.background =
+              "transparent";
+            (e.currentTarget as HTMLAnchorElement).style.borderColor =
+              "hsl(0 0% 50% / 0.2)";
+          }}
+          title="Opens /axonMemory in a new view"
+        >
+          <span>Open memory inspector</span>
+          <span style={{ opacity: 0.6, fontSize: 14 }}>&rarr;</span>
+        </a>
       </div>
     </div>
   );

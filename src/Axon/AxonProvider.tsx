@@ -1348,6 +1348,56 @@ export function AxonProvider({ children }: { children: React.ReactNode }) {
         return;
       }
 
+      // ── Cmd/Ctrl+Shift+R -- UNCONDITIONAL RESET ──────────────────
+      //
+      // The "I'm stuck, get me out of this" shortcut. Bypasses every
+      // guard:
+      //   - Flips forceSleep OFF (escape hatch from hard mute)
+      //   - Flips alwaysListening ON (escape hatch from PTT-only)
+      //   - Yanks voiceState back to "standby" (escape hatch from
+      //     dormant)
+      //   - Force-starts the recognizer (watchdog would catch this on
+      //     its next 3s tick, but we don't make the operator wait)
+      //
+      // The previous mute-debug session went on for 45 minutes because
+      // recovery required DevTools. This shortcut is the answer.
+      // It's intentionally a single keystroke combo a non-technical
+      // operator can remember -- and it works even when Axon is fully
+      // muted, because the keyboard listener doesn't care about
+      // settings.forceSleep.
+      //
+      // Speaks via the local synth (not voiceOutRef) so the
+      // confirmation lands even if the ElevenLabs voice path is down.
+      if (
+        (e.metaKey || e.ctrlKey) &&
+        e.shiftKey &&
+        e.key.toLowerCase() === "r"
+      ) {
+        // Defer to next tick so we don't fight any modifier-key
+        // browser handlers (Cmd+Shift+R is browser reload). We
+        // preventDefault here so the page does NOT reload.
+        e.preventDefault();
+        // Inline the partial setSettings + persistSettings to avoid
+        // TDZ on updateSettings (same dance as the Cmd+Shift+A path).
+        setSettings((prev) => {
+          const next = {
+            ...prev,
+            forceSleep: false,
+            alwaysListening: true,
+            enabled: true,
+          };
+          persistSettings(next);
+          return next;
+        });
+        const vi = voiceInRef.current;
+        if (vi) {
+          if (vi.getState() !== "standby") vi.setState("standby");
+          if (!vi.isRunning()) vi.start();
+        }
+        speakLocal("Reset. Listening again.");
+        return;
+      }
+
       // Escape — close panel (but only if no other modal is open).
       if (e.key === "Escape" && !isTyping) {
         if (document.querySelector(".axon-confirm-overlay")) return; // confirm modal wins
