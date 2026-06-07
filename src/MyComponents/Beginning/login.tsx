@@ -74,10 +74,6 @@ export const LoginPage = () => {
             return;
           }
 
-          // Save creds to stronghold
-          await stronghold.insertRecord("companydb_url", tkData.companydb_url);
-          await stronghold.insertRecord("companydb_key", tkData.companydb_key);
-
           const companySupabase = await getCompanySupabase();
 
           // Check if user already initialzed account or not
@@ -88,7 +84,21 @@ export const LoginPage = () => {
             .single()
             .overrideTypes<{ init_pw: string }>();
 
-          if (!data || error) {
+          // If error, user doesnt exist in company ( or something else )
+          if (error) {
+            console.error("User not Found in Company");
+            setSubmitting(false);
+            return;
+          }
+
+          // Save creds to stronghold
+          await stronghold.insertManyRecords([
+            { key: "company_name", value: value.company },
+            { key: "companydb_url", value: tkData.companydb_url },
+            { key: "companydb_key", value: tkData.companydb_key },
+          ]);
+
+          if (!data) {
             setSubmitting(false);
             return;
           }

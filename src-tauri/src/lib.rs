@@ -3,11 +3,13 @@ use aes_gcm::{
     Aes256Gcm, Key, Nonce,
     aead::{Aead, AeadCore, KeyInit, OsRng},
 };
-use std::fs::File;
-use std::io::Read;
-use std::sync::atomic::{AtomicBool, Ordering};
+use std::{fs::File, str::FromStr};
+use std::{
+    io::Read,
+    sync::atomic::{AtomicBool, Ordering},
+};
 use tauri::{
-    Manager, WindowEvent,
+    AppHandle, Manager, Url, WindowEvent,
     menu::{Menu, MenuItem},
     tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent},
 };
@@ -149,8 +151,60 @@ async fn send_broadcast(broadcast_id: &str) -> Result<(), ()> {
     Ok(())
 }
 
-async fn update(app: tauri::AppHandle) -> tauri_plugin_updater::Result<()> {
-    if let Some(update) = app.updater()?.check().await? {
+#[tauri::command(async)]
+async fn check_for_update(
+    app: AppHandle,
+    company: String,
+    is_dev: bool,
+) -> tauri_plugin_updater::Result<()> {
+    let update_url: Url = Url::from_str(&format!(
+        "https://www.takeover.systems/api/releases/{{{{target}}}}-{{{{arch}}}}"
+    ))?;
+
+    // if is_dev {
+    //     println!(
+    //         "Inputted Updater Args:\nCompany: {}\nIs Dev? {}\nURL: {}",
+    //         company, is_dev, update_url
+    //     );
+    // }
+
+    let update = app
+        .updater_builder()
+        .timeout(std::time::Duration::from_secs(30))
+        .endpoints(vec![update_url])?
+        .header("TakeOver-App", "true")?
+        .header("X-Tenant-Company-Name", company)?
+        .version_comparator(|current, update| {
+            // default comparison: `update.version > current`
+
+            // *This allows for downgrades.
+            // Now update version to download, is determined by Supabase `takeover_version` column
+            update.version != current
+        })
+        .on_before_exit(|| {
+            /*
+               Due to a limitation of Windows installers, Tauri will automatically quit your application before installing updates on Windows. To perform an action before that happens, use the on_before_exit function
+            */
+            println!("app is about to exit on Windows!");
+        })
+        .build()?;
+
+    // if is_dev {
+    //     println!("Updater Successfully built!");
+    // }
+
+    if let Some(update) = update.check().await? {
+        // Skip download & install during development
+        if is_dev {
+            println!("[updater]: Dev Mode detected. Skipping download");
+            println!(
+                "Update Found: {}, {}",
+                update.version,
+                update.body.unwrap_or(String::from("(No Body)"))
+            );
+            return Ok(());
+        }
+
         let mut downloaded = 0;
 
         // alternatively we could also call update.download() and update.install() separately
@@ -285,14 +339,13 @@ pub fn run() {
             // Calling SetCurrentProcessExplicitAppUserModelID claims
             // the AUMID (matching tauri.conf.json `identifier`)
             // for the running process so toasts surface even in
-            // dev mode, AND the installed production exe still
-            // works as before.
+            // dev mode, AND the installed production exe sT   O    Systems A/ works as before.
             #[cfg(windows)]
             {
                 use windows::Win32::UI::Shell::SetCurrentProcessExplicitAppUserModelID;
                 use windows::core::PCWSTR;
                 // Must match `bundle.identifier` in tauri.conf.json.
-                let aumid: Vec<u16> = "com.cwa-takeover.app\0".encode_utf16().collect();
+                let aumid: Vec<u16> = "TakeOver.Systems.App\0".encode_utf16().collect();
                 unsafe {
                     let _ = SetCurrentProcessExplicitAppUserModelID(PCWSTR(aumid.as_ptr()));
                 }
@@ -352,14 +405,6 @@ pub fn run() {
                 let _ = window.show();
             }
 
-            // Spawn updater check in background.
-            let handle = app.handle().clone();
-            tauri::async_runtime::spawn(async move {
-                if let Err(e) = update(handle).await {
-                    eprintln!("updater check failed: {e}");
-                }
-            });
-
             Ok(())
         })
         // ─── Window close → hide to tray instead of quit ──────────────
@@ -388,6 +433,7 @@ pub fn run() {
             send_invite,
             quit_app,
             focus_window,
+            check_for_update,
             // GitHub webhook commands
             github_webhooks::get_github_webhooks,
             github_webhooks::handle_github_webhook,

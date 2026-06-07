@@ -120,6 +120,7 @@ const _LegacyOnboardingBanner = lazy(() =>
 // matches the destination page, so the transition feels seamless.
 import { PageSkeleton, ChatSkeleton, RoadmapSkeleton, SplitSkeleton, TableSkeleton, FormSkeleton } from "@/MyComponents/Reusables/PageSkeletons";
 import InitialOnboarding from "@/MyComponents/Beginning/initialOnboarding";
+import { getStronghold } from "@/stores/stronghold";
 
 function RouteFallback() {
   const loc = useLocation();
@@ -735,47 +736,58 @@ export const Route = createRootRoute({
       Create();
     }, []);
 
-    // Add global pressence if possible
-
+    // Check for update
     useEffect(() => {
       async function RunUpdater() {
-        const update = await check();
         if (import.meta.env.DEV) {
           console.log("Checking for app update...");
         }
-        // Run when update has an actual version and has 'rid' value
-        if (update && update.rid !== null && update.version !== null) {
-          sendNotification({
-            title: `New Update Available: v${update.version}`,
-            body: `${update.body || "Get new Update now!"}`,
-          });
-          let downloaded = 0;
-          let contentLength = 0;
-          // alternatively we could also call update.download() and update.install() separately
-          await update.downloadAndInstall((event) => {
-            switch (event.event) {
-              case "Started":
-                contentLength = event.data.contentLength!;
-                console.log(
-                  `started downloading ${event.data.contentLength} bytes`
-                );
-                break;
-              case "Progress":
-                downloaded += event.data.chunkLength;
-                console.log(`downloaded ${downloaded} from ${contentLength}`);
-                break;
-              case "Finished":
-                sendNotification({
-                  title: `Version ${update.version} has been downloaded!`
-                })
-                console.log("download finished");
-                break;
-            }
-          });
-
-          console.log("update installed");
-          await relaunch();
+        const sh = await getStronghold();
+        const companyName = await sh.getRecord("company_name");
+        if (!companyName) {
+          console.warn("No Company name found - skipping update check!");
+          return;
         }
+
+        const res = await invoke("check_for_update", { company: companyName, isDev: import.meta.env.DEV });
+          console.log("Finished checking. Result: ", res);
+        // const update = await check();
+        // // Run when update has an actual version and has 'rid' value
+        // if (update && update.rid !== null && update.version !== null) {
+        //   sendNotification({
+        //     title: `New Update Available: v${update.version}`,
+        //     body: `${update.body || "Get new Update now!"}`,
+        //   });
+
+          // **UPDATE HAPPENS IN RUST BACKEND NOW**
+
+          // let downloaded = 0;
+          // let contentLength = 0;
+          // // alternatively we could also call update.download() and update.install() separately
+          // await update.downloadAndInstall((event) => {
+          //   switch (event.event) {
+          //     case "Started":
+          //       contentLength = event.data.contentLength!;
+          //       console.log(
+          //         `started downloading ${event.data.contentLength} bytes`
+          //       );
+          //       break;
+          //     case "Progress":
+          //       downloaded += event.data.chunkLength;
+          //       console.log(`downloaded ${downloaded} from ${contentLength}`);
+          //       break;
+          //     case "Finished":
+          //       sendNotification({
+          //         title: `Version ${update.version} has been downloaded!`
+          //       })
+          //       console.log("download finished");
+          //       break;
+          //   }
+          // });
+
+          // console.log("update installed");
+          // await relaunch();
+        // }
       }
 
       // *If the updater is downloading and trying to install during `dev` mode, that means you didnt `git pull`.

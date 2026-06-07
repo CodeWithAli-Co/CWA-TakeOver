@@ -115,6 +115,9 @@ export default defineConfig(async () => ({
   css: {
     postcss: './postcss.config.ts',
   },
+  build: {
+    target: "es2024",
+  },
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "./src"),
