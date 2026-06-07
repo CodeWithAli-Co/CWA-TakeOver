@@ -89,10 +89,20 @@ export async function observeRoute(
   if (p === "/s-dev-console") return "Simplicity dev console — careful in here.";
 
   // Home / index.
+  //
+  // The home page observation USED to inject "N overdue tasks waiting"
+  // every turn. That primed Claude to bring up task counts as filler
+  // material whenever conversational space opened up -- the operator
+  // reported tasks getting mentioned far too often, including as a
+  // deflection when other requests were refused.
+  //
+  // The overdue monitor already surfaces task counts when something
+  // materially changes (it has dedupe + cooldown). The contextual
+  // injection here was redundant and counterproductive. If the
+  // operator wants their task status, they'll ask -- and we have an
+  // action for that. Until then, silence on /. is the correct default.
   if (p === "/") {
-    const n = await overdueCount(active).catch(() => 0);
-    if (n > 0) return `Home. ${n} overdue task${n === 1 ? "" : "s"} waiting.`;
-    return null; // nothing notable → stay quiet
+    return null;
   }
 
   // Settings / chat / others — don't narrate.
