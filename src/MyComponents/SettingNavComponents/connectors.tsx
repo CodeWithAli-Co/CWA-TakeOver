@@ -29,6 +29,7 @@ import {
   type Connector as PersistedConnector,
 } from "@/stores/connectors";
 import { ConnectorCredentialDialog } from "./ConnectorCredentialDialog";
+import { ConnectorDetailModal } from "./ConnectorDetailModal";
 import { GmailConnection } from "@/MyComponents/Settings/GmailConnection";
 import {
   CONNECTORS,
@@ -52,6 +53,10 @@ type Connector = CatalogEntry;
 export const ConnectorsSettings = () => {
   const [query, setQuery] = useState("");
   const [tierFilter, setTierFilter] = useState<Tier | "All">("All");
+  // Connector currently shown in the detail modal. Null = closed.
+  // Lives at the page level so all card "Inspect" buttons share
+  // the same modal instance.
+  const [inspecting, setInspecting] = useState<PersistedConnector | null>(null);
 
   // Real persistence — read from the `connectors` table.
   const { data: persisted = [], isLoading } = useConnectors();
@@ -177,6 +182,7 @@ export const ConnectorsSettings = () => {
                 persistedRow={row}
                 onConnect={() => setOpenKind(c.id)}
                 onDisconnect={() => handleDisconnect(c.id)}
+                onInspect={() => row && setInspecting(row)}
                 delay={Math.min(i, 8) * 0.03}
               />
             );
@@ -202,6 +208,15 @@ export const ConnectorsSettings = () => {
           onClose={() => setOpenKind(null)}
         />
       )}
+
+      {/* Detail modal — opens via the Inspect button on connected
+        * cards. Shows capabilities + imported data + where it shows
+        * up in the rest of the app. */}
+      <ConnectorDetailModal
+        connector={inspecting}
+        onClose={() => setInspecting(null)}
+        onDisconnect={(id) => deleteMut.mutate(id)}
+      />
     </div>
   );
 };
@@ -257,6 +272,7 @@ function ConnectorCard({
   persistedRow,
   onConnect,
   onDisconnect,
+  onInspect,
   delay,
 }: {
   connector: Connector;
@@ -264,6 +280,10 @@ function ConnectorCard({
   persistedRow: PersistedConnector | null;
   onConnect: () => void;
   onDisconnect: () => void;
+  /** Opens the read-only Details modal (capabilities + imported
+   *  data + where this connector's data is displayed). Only shown
+   *  when the connector is wired up. */
+  onInspect: () => void;
   delay: number;
 }) {
   const t = tierStyle(connector.tier);
@@ -369,17 +389,28 @@ function ConnectorCard({
         )}
       </div>
 
-      {/* Footer — connect / manage buttons */}
+      {/* Footer -- connect / inspect / disconnect buttons. When
+        * connected we surface a primary "Details" pill (opens the
+        * read-only inspection modal) plus a quieter Edit creds shortcut.
+        * Disconnect lives at the end to stay out of the way. */}
       <div className="px-4 pb-4 pt-1 flex items-center gap-2">
         {connected ? (
           <>
             <button
               type="button"
-              onClick={onConnect}
+              onClick={onInspect}
               className="flex-1 inline-flex items-center justify-center gap-1.5 h-8 px-3 rounded-full text-[11px] font-semibold bg-success/[0.08] text-success border border-success/30 hover:bg-success/[0.12] transition-colors"
             >
               <CheckCircle2 size={11} strokeWidth={2.4} />
-              Manage
+              Details
+            </button>
+            <button
+              type="button"
+              onClick={onConnect}
+              title="Re-enter credentials"
+              className="inline-flex items-center justify-center h-8 px-3 rounded-full text-[10.5px] font-semibold text-text-tertiary border border-border-soft hover:border-foreground/30 hover:text-foreground hover:bg-foreground/[0.04] transition-colors"
+            >
+              Edit
             </button>
             <button
               type="button"
