@@ -497,6 +497,108 @@ export const MONITORS: Monitor[] = [
       };
     })(),
   },
+
+  // ─── meetings-soon ───────────────────────────────────────────────
+  //
+  // Fires when a meeting on today's calendar is about to start (within
+  // a 10-minute window). Different from a calendar app's pop-up
+  // notification in two ways:
+  //   1. It speaks. Operator might be heads-down in another tab and
+  //      miss a visual ping.
+  //   2. It's once-per-meeting. The classic 5-min + 1-min "are you
+  //      coming?" double-tap is exactly what we DON'T do.
+  //
+  // Dedupe is closure-scoped (Set keyed on meeting id) so reloading
+  // the app resets it -- intentional. If you reload right before a
+  // meeting and the announce hasn't fired yet, you want to hear it.
+  //
+  // The 10-minute window is wider than the typical 5-min calendar
+  // ping so a slow-poll (60s) doesn't miss the alert when the meeting
+  // sneaks up between checks.
+  {
+    id: "meetings-soon",
+    label: "Meetings starting soon",
+    description:
+      "Fires once when a meeting is 10 minutes (or less) away. Voice-only — no double-tap, no nagging.",
+    intervalMs: 60 * 1000,
+    check: (() => {
+      const announced = new Set<string>();
+      // Parse the wide variety of free-text time formats that have
+      // leaked into cwa_meetings.time over the months. Returns null
+      // when the format isn't recognized -- we'd rather stay silent
+      // than fire on a phantom 12:00 we guessed wrong about.
+      const parseMeetingTime = (
+        dateStr: string,
+        timeStr: string | undefined,
+      ): Date | null => {
+        if (!timeStr) return null;
+        const cleaned = timeStr.trim().toLowerCase();
+        // "14:00", "9:30"
+        let m = cleaned.match(/^(\d{1,2}):(\d{2})\s*$/);
+        if (m) {
+          const h = parseInt(m[1], 10);
+          const mm = parseInt(m[2], 10);
+          const d = new Date(dateStr);
+          d.setHours(h, mm, 0, 0);
+          return isNaN(d.getTime()) ? null : d;
+        }
+        // "2:30 pm", "9 am", "9:00am"
+        m = cleaned.match(/^(\d{1,2})(?::(\d{2}))?\s*(am|pm)$/i);
+        if (m) {
+          let h = parseInt(m[1], 10);
+          const mm = m[2] ? parseInt(m[2], 10) : 0;
+          if (m[3].toLowerCase() === "pm" && h < 12) h += 12;
+          if (m[3].toLowerCase() === "am" && h === 12) h = 0;
+          const d = new Date(dateStr);
+          d.setHours(h, mm, 0, 0);
+          return isNaN(d.getTime()) ? null : d;
+        }
+        return null;
+      };
+
+      return async (ctx) => {
+        const today = new Date();
+        const todayIso = today.toISOString().slice(0, 10);
+
+        let q = takeOversupabase
+          .from("cwa_meetings")
+          .select("id, meeting_title, time, date, location, meeting_type")
+          .eq("date", todayIso)
+          .limit(20);
+        if (ctx.activeCompany !== "all")
+          q = q.eq("company", companyLabel(ctx.activeCompany));
+        const { data, error } = await q;
+        if (error || !data || data.length === 0) return null;
+
+        const now = Date.now();
+        const WINDOW_MS = 10 * 60 * 1000;
+
+        for (const m of data as any[]) {
+          const id = String(m.id);
+          if (announced.has(id)) continue;
+          const start = parseMeetingTime(m.date, m.time);
+          if (!start) continue;
+          const delta = start.getTime() - now;
+          // Within the 10-minute warning window AND not already
+          // started (we don't surface "this started 3 minutes ago" --
+          // by then the operator either joined or they're not joining).
+          if (delta <= 0 || delta > WINDOW_MS) continue;
+          announced.add(id);
+          const minutes = Math.max(1, Math.round(delta / 60000));
+          const title = (m.meeting_title as string) || "meeting";
+          // Light location hint when it's clearly online/in-person.
+          const where =
+            m.meeting_type === "Online" || /zoom|meet|teams/i.test(m.location || "")
+              ? " online"
+              : m.location
+                ? ` at ${m.location}`
+                : "";
+          return `${title} starts in ${minutes} minute${minutes === 1 ? "" : "s"}${where}.`;
+        }
+        return null;
+      };
+    })(),
+  },
 ];
 
 export function getMonitor(id: string): Monitor | undefined {

@@ -82,6 +82,12 @@ import { VoiceOutput } from "./engine/voiceOutput";
 import { MONITORS } from "./engine/monitors";
 import { speakNow } from "./engine/proactiveChannel";
 import {
+  composeMorningBrief,
+  loadLastMorningBriefDay,
+  saveMorningBriefFired,
+  todayKey as morningBriefDayKey,
+} from "./engine/morningBrief";
+import {
   loadMemory,
   saveMemory,
   appendSessionSummary,
@@ -1177,6 +1183,108 @@ export function AxonProvider({ children }: { children: React.ReactNode }) {
     settings.forceSleep,
     buildActionContext,
     appendTurn,
+  ]);
+
+  // ── Morning brief (once per local day) ─────────────────────────
+  //
+  // Fires at the first signed-in launch of each local day. Wraps
+  // the composeMorningBrief() output in a proactiveChannel.speakNow
+  // call so it respects the same budget / cooldown / urgency gates as
+  // monitor alerts. A 15-second settle delay after mount keeps the
+  // brief from speaking over the operator if they're already
+  // mid-action (auto-rehydrate, sign-in flows, etc.).
+  //
+  // Dedupe is localStorage-backed via morningBriefDayKey() so a reload
+  // mid-day doesn't re-fire the brief. The key resets at local
+  // midnight implicitly because the date string changes.
+  //
+  // No-fire conditions:
+  //   - Axon disabled / operator not admin
+  //   - forceSleep is on (hard mute)
+  //   - proactiveMode is "off"
+  //   - Already fired today
+  //   - Composer returned null (no signal to share)
+  useEffect(() => {
+    if (!isAdmin) return;
+    if (!settings.enabled) return;
+    if (settings.forceSleep) return;
+    if (settings.proactiveMode === "off") return;
+    const today = morningBriefDayKey();
+    if (loadLastMorningBriefDay() === today) return;
+
+    let cancelled = false;
+    const fire = async () => {
+      try {
+        // First-name extraction: take the part before the @ in the
+        // username, or fall back to the raw username. Keeps the
+        // greeting human ("Morning, Ali.") without exposing the
+        // full email if the username is one.
+        const raw = operatorRef.current?.username ?? "";
+        const opName = raw.includes("@") ? raw.split("@")[0] : raw;
+        const text = await composeMorningBrief({
+          operatorName: opName || undefined,
+          active: activeCompanyRef.current,
+        });
+        if (!text || cancelled) return;
+
+        const cur = statusRef.current;
+        const busy =
+          cur === "listening" ||
+          cur === "speaking" ||
+          cur === "processing" ||
+          cur === "executing" ||
+          cur === "coding";
+
+        const result = speakNow(
+          {
+            sourceId: "morning_brief",
+            text,
+            urgency: "normal",
+            // The morning brief is once-per-day by design; the channel
+            // cooldown is belt-and-suspenders. 6h is generous so it
+            // can't accidentally fire twice in one launch.
+            cooldownMs: 6 * 60 * 60 * 1000,
+          },
+          {
+            mode: settings.proactiveMode,
+            muted: settings.forceSleep,
+            busy,
+            speak: (line) => voiceOutRef.current?.speak(line),
+            logTurn: (line) =>
+              appendTurn({
+                id: newId("t"),
+                role: "axon",
+                text: line,
+                modality: "voice",
+                timestamp: Date.now(),
+              }),
+          },
+        );
+        // Only mark today's fire complete when speakNow actually
+        // emitted the line. If we were muted / busy / cooldowned, leave
+        // the day key alone so a later attempt (next launch within the
+        // day) can retry. The proactiveChannel cooldown still gates.
+        if (result.spoken) saveMorningBriefFired(today);
+      } catch (e) {
+        console.warn("[AXON] morning brief:", e);
+      }
+    };
+
+    // Settle delay -- 15s after mount feels right. Long enough that
+    // sign-in flows / company rehydrate / route resolution have all
+    // finished; short enough that the operator hasn't started
+    // working on something else.
+    const t = window.setTimeout(fire, 15_000);
+    return () => {
+      cancelled = true;
+      window.clearTimeout(t);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [
+    isAdmin,
+    settings.enabled,
+    settings.forceSleep,
+    settings.proactiveMode,
   ]);
 
   // ── Keyboard shortcuts ─────────────────────────────────────────
