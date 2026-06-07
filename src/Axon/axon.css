@@ -128,9 +128,69 @@
 .axon-orb-v3[data-voice="dormant"] { filter: saturate(0.3) brightness(0.65); }
 .axon-orb-v3[data-state="error"] { filter: hue-rotate(-10deg); }
 
+/* Muted overrides dormant -- both desaturated, but muted also gets
+ * a slash overlay via ::after so the operator can tell at a glance
+ * that it's an INTENTIONAL mute (forceSleep), not a passive dormant
+ * state waiting for the wake word. */
+.axon-orb-v3[data-muted="true"] {
+  filter: saturate(0.15) brightness(0.55);
+}
+.axon-orb-v3[data-muted="true"]::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  pointer-events: none;
+  background: linear-gradient(
+    135deg,
+    transparent calc(50% - 1.5px),
+    rgba(255, 100, 100, 0.85) calc(50% - 1px),
+    rgba(255, 100, 100, 0.85) calc(50% + 1px),
+    transparent calc(50% + 1.5px)
+  );
+  /* Slash sits flat across the orb -- the linear-gradient already
+   * defines the diagonal, so no rotation needed. */
+}
+
 .axon-orb-v3-canvas {
   display: block;
   pointer-events: none;
+}
+
+/* Status pill — single source of visual truth for what voice state
+ * Axon is in. Pinned under the orb; never blocks pointer events so
+ * the orb stays draggable / clickable. */
+.axon-orb-status-pill {
+  position: fixed;
+  z-index: 10000;
+  pointer-events: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  height: 18px;
+  padding: 0 8px;
+  border-radius: 9px;
+  background: rgba(20, 20, 22, 0.72);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  font-family: ui-monospace, "SF Mono", Menlo, monospace;
+  font-size: 9.5px;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  user-select: none;
+  -webkit-user-select: none;
+  transition: opacity 200ms ease;
+}
+.axon-orb-status-pill-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  box-shadow: 0 0 6px currentColor;
 }
 
 /* Legacy orb class kept for compatibility if referenced elsewhere. */

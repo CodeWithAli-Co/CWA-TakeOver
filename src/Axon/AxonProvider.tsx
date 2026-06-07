@@ -804,9 +804,12 @@ export function AxonProvider({ children }: { children: React.ReactNode }) {
         // Tightened from 1400 — we now have early-dispatch + final-dedup,
         // so a long cooldown only adds perceived latency.
         dispatchCooldownMs: 700,
-        // Force-finalize an interim transcript after this much silence —
-        // 650ms feels instant vs. browser's ~1.8s endpointing.
-        earlyDispatchSilenceMs: 650,
+        // Silence-before-dispatch is user-tuneable now. 650ms used to be
+        // the default; operators reported it cut them off mid-pause, so
+        // settings.endOfTurnMs defaults to 1200ms and is exposed as a
+        // slider in Settings. Hot-swappable via the live-config patch
+        // useEffect below — no recognizer restart on change.
+        earlyDispatchSilenceMs: settings.endOfTurnMs ?? 1200,
         continuousAfterWake: settings.continuousAfterWake,
         standDownPhrases: settings.standDownPhrases,
         forceSleep: settings.forceSleep,
@@ -900,6 +903,10 @@ export function AxonProvider({ children }: { children: React.ReactNode }) {
       continuousAfterWake: settings.continuousAfterWake,
       standDownPhrases: settings.standDownPhrases,
       interruptPhrases: settings.interruptPhrases,
+      // Live-tune the end-of-turn silence threshold without restarting
+      // the recognizer. Settings -> Voice -> "Pause before Axon
+      // responds" slider feeds straight into this.
+      earlyDispatchSilenceMs: settings.endOfTurnMs ?? 1200,
     });
     // If forced sleep just turned ON and we're not already dormant,
     // drop to dormant immediately so the orb + state reflect it.
@@ -911,6 +918,7 @@ export function AxonProvider({ children }: { children: React.ReactNode }) {
     settings.continuousAfterWake,
     settings.standDownPhrases,
     settings.interruptPhrases,
+    settings.endOfTurnMs,
   ]);
 
   // ── voice output wiring ─────────────────────────────────────────
@@ -1004,6 +1012,27 @@ export function AxonProvider({ children }: { children: React.ReactNode }) {
   }, [isAdmin, settings.enabled, settings.autoGreet, appendTurn]);
 
   // ── monitors ────────────────────────────────────────────────────
+  //
+  // Proactive utterance pipeline. Each enabled monitor polls on its
+  // own interval, and when its check() returns a non-null alert
+  // string, we'd LIKE to speak it. But three guards have to fire
+  // in order or Axon ends up talking over the operator:
+  //
+  //   1. proactiveMode gate -- "off" silences every monitor regardless
+  //      of which ones are enabled. (enabledMonitors says WHICH
+  //      monitors run; proactiveMode says whether their output
+  //      reaches the voice channel.)
+  //
+  //   2. forceSleep gate -- when the operator has explicitly muted
+  //      Axon, proactive alerts must respect that too.
+  //
+  //   3. Status gate -- monitors NEVER speak while Axon is
+  //      listening / processing / speaking / executing / coding.
+  //      Before today's fix, monitors called voiceOut.speak()
+  //      unconditionally and would talk straight over a mid-sentence
+  //      user transcription. Now we drop on conflict. (Acceptable
+  //      because monitors run on their own intervals -- skip one
+  //      tick, next tick re-fires when the conflict clears.)
   useEffect(() => {
     if (!isAdmin || !settings.enabled || settings.enabledMonitors.length === 0) return;
     const ctx = buildActionContext();
@@ -1015,17 +1044,36 @@ export function AxonProvider({ children }: { children: React.ReactNode }) {
       const fire = async () => {
         try {
           const alert = await m.check(ctx);
-          if (alert) {
-            // Use voice modality so the subtitle overlay picks it up.
-            appendTurn({
-              id: newId("t"),
-              role: "axon",
-              text: `Heads up — ${alert}`,
-              modality: "voice",
-              timestamp: Date.now(),
-            });
-            voiceOutRef.current?.speak(`Heads up. ${alert}`);
+          if (!alert) return;
+
+          // Guard 1: proactive volume.
+          if (settings.proactiveMode === "off") return;
+
+          // Guard 2: hard mute.
+          if (settings.forceSleep) return;
+
+          // Guard 3: don't barge in on an in-flight turn. Skipping
+          // is correct -- the next interval will re-fire when Axon
+          // is idle and the alert remains true.
+          const cur = statusRef.current;
+          if (
+            cur === "listening" ||
+            cur === "speaking" ||
+            cur === "processing" ||
+            cur === "executing" ||
+            cur === "coding"
+          ) {
+            return;
           }
+
+          appendTurn({
+            id: newId("t"),
+            role: "axon",
+            text: `Heads up — ${alert}`,
+            modality: "voice",
+            timestamp: Date.now(),
+          });
+          voiceOutRef.current?.speak(`Heads up. ${alert}`);
         } catch (e) {
           console.warn("[AXON] monitor:", e);
         }
@@ -1038,6 +1086,8 @@ export function AxonProvider({ children }: { children: React.ReactNode }) {
     isAdmin,
     settings.enabled,
     settings.enabledMonitors,
+    settings.proactiveMode,
+    settings.forceSleep,
     buildActionContext,
     appendTurn,
   ]);
@@ -1063,6 +1113,42 @@ export function AxonProvider({ children }: { children: React.ReactNode }) {
       if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "j") {
         e.preventDefault();
         setPanelOpen((v) => !v);
+        return;
+      }
+
+      // Cmd/Ctrl+Shift+A — toggle Axon's mute state.
+      //
+      // Toggles the forceSleep setting (the same flag the "stand down"
+      // voice phrase flips). When ON, Axon is fully dormant: no wake-
+      // word matching, no monitor speech, no proactive utterances --
+      // the orb's status pill reflects this so the operator always
+      // knows whether Axon is hot or muted. The shortcut is reserved
+      // for parity with the voice command, NOT a kill-switch for the
+      // whole assistant: use Settings -> Enabled to disable Axon
+      // entirely.
+      //
+      // NOTE: inlined setSettings + persistSettings instead of the
+      // top-level updateSettings helper to avoid a temporal-dead-zone
+      // ref -- updateSettings is declared further down in the
+      // component, and React reads useEffect dep arrays at render
+      // time (not handler-invocation time). Same reason the
+      // voicePrint accessor block has the same workaround.
+      if (
+        (e.metaKey || e.ctrlKey) &&
+        e.shiftKey &&
+        e.key.toLowerCase() === "a"
+      ) {
+        e.preventDefault();
+        const nextForceSleep = !settings.forceSleep;
+        setSettings((prev) => {
+          const next = { ...prev, forceSleep: nextForceSleep };
+          persistSettings(next);
+          return next;
+        });
+        // Verbal ack so the operator knows the toggle landed even when
+        // the orb isn't visible. Mirrors the speakLocal call in the
+        // voice-driven "stand down" / "wake up" intent path.
+        speakLocal(nextForceSleep ? "Standing down." : "Back online.");
         return;
       }
 
@@ -1099,7 +1185,16 @@ export function AxonProvider({ children }: { children: React.ReactNode }) {
     };
     window.addEventListener("keydown", handler);
     return () => window.removeEventListener("keydown", handler);
-  }, [isAdmin, settings.enabled, settings.pushToTalkShortcut]);
+  }, [
+    isAdmin,
+    settings.enabled,
+    settings.pushToTalkShortcut,
+    settings.forceSleep,
+    // setSettings is stable (React state setter), persistSettings is
+    // module-scope -- neither needs to be in the dep list. speakLocal
+    // is a useCallback declared above so it's safe to reference here.
+    speakLocal,
+  ]);
 
   // ── Conversation summarization ─────────────────────────────────
   // When the turn count exceeds SUMMARY_TRIGGER_TURNS, background-summarize

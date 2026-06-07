@@ -643,6 +643,27 @@ export function Orb() {
 
   if (!settings.enabled) return null;
 
+  // ── Status pill --------------------------------------------------
+  //
+  // Always-visible chip pinned just under the orb that names the
+  // current voice state in plain English. Operators kept saying
+  // "I can't tell if Axon is listening or muted" -- this is the fix.
+  // It's a single source of visual truth for: muted / dormant /
+  // standby / listening / busy. Pill colors match the orb's own
+  // ring colors per state so the relationship reads at a glance.
+  const muted = !!settings.forceSleep;
+  const pill = muted
+    ? { label: "MUTED", tone: "rgba(180, 180, 180, 0.95)", dot: "rgba(160, 160, 160, 0.7)" }
+    : voiceState === "dormant"
+      ? { label: "DORMANT", tone: "rgba(180, 180, 180, 0.85)", dot: "rgba(120, 120, 120, 0.6)" }
+      : voiceState === "armed" || status === "listening"
+        ? { label: "LISTENING", tone: "rgba(255, 120, 120, 0.95)", dot: "rgba(255, 80, 80, 0.9)" }
+        : status === "processing" || status === "executing"
+          ? { label: "THINKING", tone: "rgba(170, 195, 255, 0.95)", dot: "rgba(140, 170, 255, 0.9)" }
+          : status === "speaking"
+            ? { label: "SPEAKING", tone: "rgba(180, 240, 200, 0.95)", dot: "rgba(120, 220, 160, 0.9)" }
+            : { label: "READY", tone: "rgba(220, 220, 220, 0.95)", dot: "rgba(200, 200, 200, 0.7)" };
+
   return (
     <>
       <div
@@ -650,6 +671,7 @@ export function Orb() {
         className="axon-orb-v3"
         data-state={status}
         data-voice={voiceState}
+        data-muted={muted ? "true" : undefined}
         style={{
           left: `${orbPosition.x - PADDING}px`,
           top: `${orbPosition.y - PADDING}px`,
@@ -659,14 +681,35 @@ export function Orb() {
         role="button"
         aria-label="AXON command orb"
         title={
-          voiceState === "dormant"
-            ? "AXON is dormant — say 'Axon wake up'"
-            : voiceState === "armed"
-            ? "AXON is listening — speak your command"
-            : "AXON standby — say 'Hey AXON'"
+          muted
+            ? "AXON is muted — Cmd+Shift+A or say 'Axon wake up' to bring back"
+            : voiceState === "dormant"
+              ? "AXON is dormant — say 'Axon wake up'"
+              : voiceState === "armed"
+                ? "AXON is listening — speak your command"
+                : "AXON standby — say 'Hey AXON'"
         }
       >
         <canvas ref={canvasRef} className="axon-orb-v3-canvas" />
+      </div>
+
+      {/* Pinned status pill -- single source of visual truth for
+       *  whether Axon is hot, muted, thinking, or speaking. Centered
+       *  under the orb; never blocks pointer events (pointer-events:
+       *  none in the wrapper) so the pill never eats orb clicks. */}
+      <div
+        className="axon-orb-status-pill"
+        style={{
+          left: orbPosition.x + ORB_SIZE / 2 - 60,
+          top: orbPosition.y + ORB_SIZE + 6,
+          width: 120,
+        }}
+      >
+        <span
+          className="axon-orb-status-pill-dot"
+          style={{ background: pill.dot }}
+        />
+        <span style={{ color: pill.tone }}>{pill.label}</span>
       </div>
 
       {liveTranscript && status === "listening" && (

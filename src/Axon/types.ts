@@ -244,6 +244,34 @@ export interface AxonSettings {
    */
   forceSleep: boolean;
   /**
+   * Voice listening mode.
+   *   "auto"          — silence-triggered end-of-turn. Calmer threshold so
+   *                     a pause to think mid-sentence doesn't cut you off.
+   *   "push_to_talk"  — Axon only listens while pushToTalkShortcut is held.
+   *                     Maximum control, never interrupts.
+   * Default: "auto".
+   */
+  voiceMode: "auto" | "push_to_talk";
+  /**
+   * Silence (ms) before Axon decides you're done speaking in "auto" mode.
+   * Tuneable so users with different cadences don't get cut off. Was
+   * hardcoded at 650ms; bumped default to 1200ms because the snappier
+   * value cut people off mid-sentence too aggressively. Slider range
+   * 600-2500 in the Settings UI.
+   */
+  endOfTurnMs: number;
+  /**
+   * Proactive volume — how often Axon should speak on his own.
+   *   "off"      — never. Only responds to commands.
+   *   "quiet"    — urgent only (runway < 60 days, deadline today, ...).
+   *   "standard" — morning brief, end-of-day, urgent alerts. ~5-10/day.
+   *   "chatty"   — frequent observations + nudges. ~15-25/day.
+   * Independent of `enabledMonitors` -- this gates whether monitor
+   * output actually reaches voice output, plus per-day budget.
+   * Default: "standard".
+   */
+  proactiveMode: "off" | "quiet" | "standard" | "chatty";
+  /**
    * Workspace safe-mode — when true, AXON's workspace + filesystem write
    * powers are scoped to NON-DESTRUCTIVE operations only:
    *   ✓ Create new docs / files
@@ -299,6 +327,15 @@ export const DEFAULT_SETTINGS: AxonSettings = {
     "at ease",
   ],
   forceSleep: false,
+  // Calmer end-of-turn so a normal pause to think doesn't get treated
+  // as "done speaking". Operators kept saying Axon cut them off; 1200ms
+  // is the sweet spot from a few rounds of dialing.
+  voiceMode: "auto",
+  endOfTurnMs: 1200,
+  // Standard proactive volume: morning brief + EOD digest + urgent alerts.
+  // Operators can dial down to "quiet" or off in Settings, or up to
+  // "chatty" if they want Axon nudging more often.
+  proactiveMode: "standard",
   workspaceSafeMode: true,
 };
 
