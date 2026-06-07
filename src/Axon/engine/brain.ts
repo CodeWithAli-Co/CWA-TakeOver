@@ -130,7 +130,11 @@ function buildCapabilitiesBlock(): string {
   );
 }
 
-function buildContextPreamble(ctx: ActionContext, summary?: string | null): string {
+function buildContextPreamble(
+  ctx: ActionContext,
+  summary?: string | null,
+  recentUtterance?: string,
+): string {
   const now = new Date();
   const companyDisplay =
     ctx.activeCompany === "simplicityFunds"
@@ -145,10 +149,10 @@ function buildContextPreamble(ctx: ActionContext, summary?: string | null): stri
   // structured profile. Surfaces comm_style + current_focus always,
   // plus time-of-day fields (lunch_time, workday_start/end, etc.)
   // only when relevant to the current moment. Personal/coaching
-  // fields gated behind recent-utterance triggers, which we don't
-  // thread through here yet -- so they won't fire by default. A
-  // future pass can pass the latest user turn for finer triggering.
-  const profileBlock = composeProfilePreambleNow(mem.profile);
+  // fields gate behind triggers in recentUtterance ("wife", "kid",
+  // "stressed", "stuck", etc.) -- F.3.2 threads the current user
+  // turn here so those triggers actually fire.
+  const profileBlock = composeProfilePreambleNow(mem.profile, recentUtterance);
   const since = sinceLastSeen(mem);
 
   const parts = [
@@ -454,7 +458,7 @@ export async function runTurn(
     };
   }
 
-  const preamble = buildContextPreamble(ctx, opts.summary);
+  const preamble = buildContextPreamble(ctx, opts.summary, userText);
   // No confidence-based confirm injection. Low confidence → still act;
   // the operator will say "undo that" or correct if wrong. This is
   // faster than a back-and-forth confirmation loop — especially on

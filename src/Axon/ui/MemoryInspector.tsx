@@ -20,6 +20,7 @@ import {
   type DecisionEntry,
   type DeferEntry,
   type SessionSummary,
+  type OperatorProfile,
 } from "../engine/memory";
 
 type Channel = "decisions" | "defers" | "notes" | "preferences" | "sessions";
@@ -351,6 +352,280 @@ function ChannelSection({
 
 // ── Top-level inspector ────────────────────────────────────────────
 
+// ── Profile section ────────────────────────────────────────────────
+//
+// Surfaces the structured OperatorProfile (F.3). Distinct from the
+// channel sections because profile fields are typed and not
+// timestamped -- they're identity-level rather than event-level. The
+// operator edits each field inline; arrays are comma-split on save.
+
+const PROFILE_FIELDS: Array<{
+  key: keyof OperatorProfile;
+  label: string;
+  array?: boolean;
+  hint?: string;
+}> = [
+  { key: "partner_name", label: "Partner" },
+  { key: "family", label: "Family", hint: "e.g. 'two kids, Lily (7) and Max (4)'" },
+  { key: "location", label: "Location" },
+  { key: "timezone", label: "Timezone" },
+  { key: "workday_start", label: "Workday start", hint: "e.g. '8am'" },
+  { key: "workday_end", label: "Workday end" },
+  { key: "lunch_time", label: "Lunch" },
+  { key: "focus_block", label: "Focus block", hint: "e.g. '9-11am Mon-Fri'" },
+  { key: "exercise", label: "Exercise" },
+  { key: "comm_style", label: "Comm style", hint: "'terse', 'detailed', 'no follow-ups'" },
+  { key: "avoid_topics", label: "Avoid topics", array: true, hint: "comma-separated" },
+  { key: "current_focus", label: "Current focus" },
+  { key: "stressors", label: "Stressors", array: true, hint: "comma-separated" },
+  { key: "wins", label: "Recent wins", array: true, hint: "comma-separated" },
+];
+
+function ProfileFieldRow({
+  field,
+  value,
+  array,
+  hint,
+  onSave,
+  onClear,
+}: {
+  field: string;
+  value: string;
+  array?: boolean;
+  hint?: string;
+  onSave: (next: string) => void;
+  onClear: () => void;
+}) {
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState(value);
+  const filled = value.length > 0;
+
+  const commit = () => {
+    if (draft.trim() !== value) onSave(draft.trim());
+    setEditing(false);
+  };
+
+  return (
+    <div
+      style={{
+        display: "flex",
+        gap: 10,
+        padding: "8px 10px",
+        borderRadius: 6,
+        border: "1px solid hsl(0 0% 50% / 0.12)",
+        background: filled ? "hsl(0 0% 100% / 0.02)" : "transparent",
+        marginBottom: 4,
+        alignItems: "center",
+      }}
+    >
+      <div
+        style={{
+          width: 110,
+          fontSize: 10.5,
+          fontWeight: 600,
+          letterSpacing: "0.04em",
+          color: "var(--axon-muted)",
+          flexShrink: 0,
+        }}
+      >
+        {field}
+      </div>
+      <div style={{ flex: 1, minWidth: 0 }}>
+        {editing ? (
+          <input
+            type="text"
+            value={draft}
+            onChange={(e) => setDraft(e.target.value)}
+            onBlur={commit}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") commit();
+              if (e.key === "Escape") {
+                setDraft(value);
+                setEditing(false);
+              }
+            }}
+            autoFocus
+            placeholder={hint}
+            style={{
+              width: "100%",
+              padding: "3px 6px",
+              fontSize: 12,
+              fontFamily: "inherit",
+              background: "var(--axon-bg, transparent)",
+              color: "var(--axon-fg, inherit)",
+              border: "1px solid hsl(210 60% 50% / 0.4)",
+              borderRadius: 3,
+            }}
+          />
+        ) : (
+          <div
+            onClick={() => setEditing(true)}
+            style={{
+              fontSize: 12,
+              lineHeight: 1.45,
+              color: filled
+                ? "var(--axon-fg, inherit)"
+                : "var(--axon-muted)",
+              fontStyle: filled ? "normal" : "italic",
+              cursor: "text",
+              wordBreak: "break-word",
+              padding: "2px 0",
+            }}
+            title="Click to edit"
+          >
+            {filled ? value : hint ?? "Not set"}
+          </div>
+        )}
+      </div>
+      {filled && !editing && (
+        <button
+          type="button"
+          onClick={onClear}
+          style={{
+            background: "transparent",
+            border: "1px solid hsl(0 0% 50% / 0.2)",
+            color: "var(--axon-muted)",
+            padding: "2px 6px",
+            fontSize: 10,
+            borderRadius: 3,
+            cursor: "pointer",
+            flexShrink: 0,
+          }}
+          title="Clear this field"
+        >
+          clear
+        </button>
+      )}
+      {array && filled && (
+        <span
+          style={{
+            fontSize: 9.5,
+            color: "var(--axon-muted)",
+            opacity: 0.6,
+            flexShrink: 0,
+          }}
+        >
+          list
+        </span>
+      )}
+    </div>
+  );
+}
+
+function ProfileSection({
+  profile,
+  onUpdate,
+}: {
+  profile: OperatorProfile;
+  onUpdate: (next: OperatorProfile) => void;
+}) {
+  const filledCount = PROFILE_FIELDS.reduce((n, f) => {
+    const v = profile[f.key];
+    if (Array.isArray(v)) return n + (v.length > 0 ? 1 : 0);
+    return n + (v ? 1 : 0);
+  }, 0);
+  const extras = profile.extras ?? {};
+  const totalFilled = filledCount + Object.keys(extras).length;
+
+  return (
+    <div style={{ marginBottom: 22 }}>
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          marginBottom: 8,
+        }}
+      >
+        <div
+          style={{
+            fontSize: 10.5,
+            fontWeight: 700,
+            letterSpacing: "0.08em",
+            color: "hsl(210 70% 70%)",
+          }}
+        >
+          PROFILE &middot; {totalFilled}/{PROFILE_FIELDS.length + Object.keys(extras).length}
+        </div>
+      </div>
+
+      <div style={{ fontSize: 11, color: "var(--axon-muted)", marginBottom: 10, lineHeight: 1.5 }}>
+        Structured facts that get surfaced in conversation at the right
+        moments &mdash; lunch time near lunch, partner only in personal
+        contexts, current focus always. Click any field to edit.
+      </div>
+
+      {PROFILE_FIELDS.map((f) => {
+        const raw = profile[f.key];
+        const display = Array.isArray(raw)
+          ? raw.join(", ")
+          : typeof raw === "string"
+            ? raw
+            : "";
+        return (
+          <ProfileFieldRow
+            key={String(f.key)}
+            field={f.label}
+            value={display}
+            array={f.array}
+            hint={f.hint}
+            onSave={(next) => {
+              const value = f.array
+                ? next
+                    .split(",")
+                    .map((s) => s.trim())
+                    .filter((s) => s.length > 0)
+                : next;
+              onUpdate({ ...profile, [f.key]: value });
+            }}
+            onClear={() => {
+              const cleared = { ...profile };
+              delete cleared[f.key];
+              onUpdate(cleared);
+            }}
+          />
+        );
+      })}
+
+      {/* Extras section -- ad-hoc facts the operator set via
+       *  set_profile_extra. Each is a key:value row with delete. */}
+      {Object.keys(extras).length > 0 && (
+        <div style={{ marginTop: 14 }}>
+          <div
+            style={{
+              fontSize: 10,
+              fontWeight: 600,
+              letterSpacing: "0.06em",
+              color: "var(--axon-muted)",
+              marginBottom: 6,
+            }}
+          >
+            EXTRAS
+          </div>
+          {Object.entries(extras).map(([key, value]) => (
+            <ProfileFieldRow
+              key={key}
+              field={key}
+              value={value}
+              onSave={(next) =>
+                onUpdate({
+                  ...profile,
+                  extras: { ...extras, [key]: next },
+                })
+              }
+              onClear={() => {
+                const nextExtras = { ...extras };
+                delete nextExtras[key];
+                onUpdate({ ...profile, extras: nextExtras });
+              }}
+            />
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export function MemoryInspector() {
   // Re-load on each render -- this component is small + memory is
   // localStorage-backed so the reads are essentially free. Avoids
@@ -400,9 +675,22 @@ export function MemoryInspector() {
     if (channel === "sessions") persist({ ...mem, sessionSummaries: [] });
   };
 
+  // ── Profile mutators ──────────────────────────────────────────
+  // ProfileSection edits the whole profile object at a time; this is
+  // cleaner than threading per-field setters through. The persist()
+  // call serializes the whole memory blob anyway, so there's no
+  // efficiency loss.
+  const updateProfile = (next: OperatorProfile) =>
+    persist({ ...mem, profile: next });
+
   return (
     <div style={{ marginTop: 4 }}>
       <KnowledgeDigest mem={mem} />
+
+      {/* Profile -- the F.3 structured "knows you" layer. Distinct
+       *  visual treatment from the channel sections because these are
+       *  typed identity fields, not timestamped events. */}
+      <ProfileSection profile={mem.profile} onUpdate={updateProfile} />
 
       {/* Decisions -- read-only historical record. */}
       <ChannelSection
