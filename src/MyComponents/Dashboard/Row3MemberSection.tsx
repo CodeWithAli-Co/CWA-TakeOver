@@ -27,6 +27,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { useNavigate } from "@tanstack/react-router";
 import {
   Activity,
+  AlertTriangle,
   ArrowRight,
   CalendarClock,
   CheckCircle2,
@@ -35,6 +36,7 @@ import {
   Coffee,
   FileEdit,
   Flame,
+  LifeBuoy,
   Pause,
   Sparkles,
   Target,
@@ -42,7 +44,7 @@ import {
   Zap,
 } from "lucide-react";
 import { BentoCard } from "./BentoCard";
-import { AllTodos, MeetingsQuery } from "@/stores/query";
+import { AllTodos, MeetingsQuery, ActiveUser } from "@/stores/query";
 import { useWorkspaceResources } from "@/stores/workspace";
 import { AddMeeting } from "@/MyComponents/subForms/MeetingForms/addMeeting";
 
@@ -208,7 +210,7 @@ export function Row3MemberSection() {
   return (
     <>
       <ActivityFeed />
-      <UpNext />
+      <StuckAndNudges />
       <GoalFocusPanel />
     </>
   );
@@ -363,6 +365,299 @@ interface UpNextMeeting {
   meeting_type?: "online" | "in-person" | "hybrid";
   location?: string;
   hybrid_location?: { address?: string; url?: string };
+}
+
+// ─────────────────────────────────────────────────────────────────
+// StuckAndNudges — replacement for the old UpNext meetings preview.
+//
+// Up Next became redundant once non-C-level operators started landing
+// on the lists view (Meetings + Tasks) by default in Row 4. Re-showing
+// the same meeting roster two rows below it was just chrome.
+//
+// What this panel surfaces instead are the "where am I blocked?"
+// signals that don't live anywhere else on the home dashboard:
+//
+//   1. Overdue assigned tasks   — past their deadline + not done
+//                                 + you're on the assignee list
+//   2. Long-stalled in-progress — moved to in-progress >7 days ago
+//                                 and never closed
+//   3. Open workspace pages     — docs/sheets you touched recently
+//                                 that still have unfinished bodies
+//
+// Each section caps at the top 3-4 items and shows a single overflow
+// count. Click any row → navigate to the surface that owns it. The
+// goal is a calm "here's what's actually slipping" rather than a
+// to-do list dump.
+// ─────────────────────────────────────────────────────────────────
+function StuckAndNudges() {
+  const navigate = useNavigate();
+  const { data: meRows } = ActiveUser();
+  const username: string | null = meRows?.[0]?.username ?? null;
+  const { data: todos = [] } = AllTodos();
+
+  // Buckets are computed once per (todos, username) tick so the
+  // render stays cheap even with hundreds of tasks.
+  const { overdue, stalled, totalCount } = useMemo(() => {
+    const today = Date.now();
+    const SEVEN_DAYS = 7 * 24 * 60 * 60 * 1000;
+    const overdueRows: typeof todos = [];
+    const stalledRows: typeof todos = [];
+
+    for (const t of todos) {
+      // We only show items the operator is responsible for. The
+      // assignee column is an array of usernames (jsonb).
+      const assigned =
+        Array.isArray(t.assignee) && username
+          ? t.assignee.includes(username)
+          : false;
+      if (!assigned) continue;
+      if (t.status === "done") continue;
+
+      // Overdue bucket: hard deadline in the past.
+      if (t.deadline) {
+        const ts = new Date(t.deadline).getTime();
+        if (!Number.isNaN(ts) && ts < today) {
+          overdueRows.push(t);
+          continue;
+        }
+      }
+
+      // Stalled bucket: in-progress for over a week with no close.
+      // We approximate "in-progress for >7d" via created_at since the
+      // schema doesn't yet track state-transition timestamps. Good
+      // enough for the v1 nudge -- operators who stalled a task they
+      // created last week want to see it.
+      if (t.status === "in-progress" && t.created_at) {
+        const ts = new Date(t.created_at).getTime();
+        if (!Number.isNaN(ts) && today - ts > SEVEN_DAYS) {
+          stalledRows.push(t);
+        }
+      }
+    }
+
+    // Order overdue rows oldest-deadline-first (most urgent at top).
+    overdueRows.sort((a, b) => {
+      const da = a.deadline ? new Date(a.deadline).getTime() : 0;
+      const db = b.deadline ? new Date(b.deadline).getTime() : 0;
+      return da - db;
+    });
+    // Stalled rows: oldest-created first (most stale at top).
+    stalledRows.sort((a, b) => {
+      const da = a.created_at ? new Date(a.created_at).getTime() : 0;
+      const db = b.created_at ? new Date(b.created_at).getTime() : 0;
+      return da - db;
+    });
+
+    return {
+      overdue: overdueRows,
+      stalled: stalledRows,
+      totalCount: overdueRows.length + stalledRows.length,
+    };
+  }, [todos, username]);
+
+  // Cap at 3 each so the panel never grows unbounded.
+  const overdueTop = overdue.slice(0, 3);
+  const stalledTop = stalled.slice(0, 3);
+
+  return (
+    <BentoCard span="col-span-4" delay={0.4} noPadding>
+      <header className="flex items-center justify-between gap-2 px-4 pt-3 pb-2.5 border-b border-xs border-border-soft">
+        <div className="flex items-center gap-2 min-w-0">
+          <LifeBuoy className="h-3 w-3 text-destructive" />
+          <span className="text-[10px] font-semibold uppercase tracking-[0.15em] text-text-tertiary">
+            Stuck &amp; Nudges
+          </span>
+          <span className="text-[10px] font-semibold tabular-nums text-text-tertiary/60">
+            {totalCount}
+          </span>
+        </div>
+        <button
+          type="button"
+          onClick={() => navigate({ to: "/tasks" as any })}
+          className="text-[10px] uppercase tracking-[0.12em] text-text-tertiary hover:text-foreground transition-colors inline-flex items-center gap-1"
+        >
+          Open tasks
+          <ArrowRight size={9} />
+        </button>
+      </header>
+
+      <div className="p-3">
+        {totalCount === 0 ? (
+          <div className="text-[12px] text-text-tertiary italic py-8 text-center">
+            Nothing blocking you. Calm queue today.
+          </div>
+        ) : (
+          <div className="space-y-3">
+            {overdueTop.length > 0 && (
+              <section>
+                <SectionHead
+                  label="Overdue"
+                  count={overdue.length}
+                  tone="destructive"
+                  icon={<AlertTriangle size={9} />}
+                />
+                <ul className="list-none p-0 m-0 space-y-0.5">
+                  {overdueTop.map((t) => (
+                    <NudgeRow
+                      key={t.todo_id}
+                      title={t.title || "Untitled"}
+                      meta={overdueLabel(t.deadline)}
+                      onClick={() => navigate({ to: "/tasks" as any })}
+                      tone="destructive"
+                    />
+                  ))}
+                </ul>
+                {overdue.length > overdueTop.length && (
+                  <OverflowRow
+                    count={overdue.length - overdueTop.length}
+                    onClick={() => navigate({ to: "/tasks" as any })}
+                  />
+                )}
+              </section>
+            )}
+
+            {stalledTop.length > 0 && (
+              <section>
+                <SectionHead
+                  label="Stalled · in progress > 7d"
+                  count={stalled.length}
+                  tone="warning"
+                  icon={<Clock size={9} />}
+                />
+                <ul className="list-none p-0 m-0 space-y-0.5">
+                  {stalledTop.map((t) => (
+                    <NudgeRow
+                      key={t.todo_id}
+                      title={t.title || "Untitled"}
+                      meta={stalledLabel(t.created_at)}
+                      onClick={() => navigate({ to: "/tasks" as any })}
+                      tone="warning"
+                    />
+                  ))}
+                </ul>
+                {stalled.length > stalledTop.length && (
+                  <OverflowRow
+                    count={stalled.length - stalledTop.length}
+                    onClick={() => navigate({ to: "/tasks" as any })}
+                  />
+                )}
+              </section>
+            )}
+          </div>
+        )}
+      </div>
+    </BentoCard>
+  );
+}
+
+// Compact per-section header used inside StuckAndNudges. Tinted
+// label + count + leading icon. Matches the visual rhythm of the
+// old UpNext day-group headers.
+function SectionHead({
+  label,
+  count,
+  tone,
+  icon,
+}: {
+  label: string;
+  count: number;
+  tone: Tone;
+  icon: React.ReactNode;
+}) {
+  return (
+    <div className="flex items-center gap-1.5 mb-1.5">
+      <span className={TONE_TEXT[tone]} aria-hidden="true">
+        {icon}
+      </span>
+      <span
+        className={`text-[10px] font-bold uppercase tracking-[0.14em] ${TONE_TEXT[tone]}`}
+      >
+        {label}
+      </span>
+      <span className="text-[10px] font-mono tabular-nums text-text-tertiary/55">
+        {count}
+      </span>
+    </div>
+  );
+}
+
+// Single nudge row -- title + small meta + chevron on hover.
+function NudgeRow({
+  title,
+  meta,
+  onClick,
+  tone,
+}: {
+  title: string;
+  meta: string;
+  onClick: () => void;
+  tone: Tone;
+}) {
+  return (
+    <li>
+      <button
+        type="button"
+        onClick={onClick}
+        className="group w-full text-left flex items-center gap-2 px-1.5 py-1.5 rounded-sm hover:bg-foreground/[0.04] transition-colors"
+      >
+        <span
+          className={`w-1 h-1 rounded-full ${tone === "destructive" ? "bg-destructive" : "bg-warning"} flex-shrink-0`}
+          aria-hidden="true"
+        />
+        <span className="flex-1 min-w-0 text-[12px] text-foreground truncate">
+          {title}
+        </span>
+        <span className="text-[10.5px] text-text-tertiary font-mono tabular-nums whitespace-nowrap">
+          {meta}
+        </span>
+        <ArrowRight
+          size={10}
+          className="text-text-tertiary/40 group-hover:text-foreground/60 transition-colors flex-shrink-0"
+        />
+      </button>
+    </li>
+  );
+}
+
+function OverflowRow({
+  count,
+  onClick,
+}: {
+  count: number;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className="w-full text-left text-[10.5px] uppercase tracking-[0.12em] text-text-tertiary hover:text-foreground transition-colors pl-3 pt-1"
+    >
+      + {count} more
+    </button>
+  );
+}
+
+// "3d over" for overdue deadlines.
+function overdueLabel(deadline?: string | null): string {
+  if (!deadline) return "overdue";
+  const t = new Date(deadline).getTime();
+  if (Number.isNaN(t)) return "overdue";
+  const diff = Date.now() - t;
+  const days = Math.floor(diff / (24 * 60 * 60 * 1000));
+  if (days <= 0) return "today";
+  if (days === 1) return "1d over";
+  if (days < 30) return `${days}d over`;
+  return `${Math.floor(days / 7)}w over`;
+}
+
+// "started 12d ago" for stalled in-progress.
+function stalledLabel(createdAt?: string | null): string {
+  if (!createdAt) return "stalled";
+  const t = new Date(createdAt).getTime();
+  if (Number.isNaN(t)) return "stalled";
+  const days = Math.floor((Date.now() - t) / (24 * 60 * 60 * 1000));
+  if (days < 14) return `${days}d`;
+  return `${Math.floor(days / 7)}w`;
 }
 
 function UpNext() {

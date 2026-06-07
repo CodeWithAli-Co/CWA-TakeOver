@@ -41,14 +41,16 @@ export function isCLevel(role?: string | null): boolean {
 /**
  * Default Row 4 variant for a given role.
  *
- * Today this is "components" for every role — the new three-card
- * Row 4 is the canonical experience. The role param is kept on
- * the surface so we can re-introduce per-role defaults later
- * (e.g. if we want C-level to see lists by default again) without
- * touching every callsite.
+ * Split by role: non-C-level operators land on the lists view
+ * (Meetings + Tasks) because those surfaces are what they actually
+ * work in day-to-day. C-level keeps the components view (Daily
+ * Check-in / Career Growth / Team Pulse) since the editorial home
+ * is more useful for them. Cmd+Shift+D toggles between the two for
+ * either role, and the user's explicit pick (persisted in
+ * `preference`) overrides the default.
  */
-export function getDefaultForRole(_role?: string | null): Row4View {
-  return "components";
+export function getDefaultForRole(role?: string | null): Row4View {
+  return isCLevel(role) ? "components" : "lists";
 }
 
 interface Row4ViewState {

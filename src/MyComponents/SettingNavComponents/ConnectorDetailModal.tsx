@@ -19,7 +19,6 @@
  */
 
 import { useEffect } from "react";
-import { useNavigate } from "@tanstack/react-router";
 import {
   X,
   Sparkles,
@@ -56,7 +55,6 @@ export function ConnectorDetailModal({
   onClose,
   onDisconnect,
 }: Props) {
-  const navigate = useNavigate();
   const isOpen = !!connector;
 
   // Esc + click-outside close. We rely on a backdrop click handler
@@ -103,9 +101,29 @@ export function ConnectorDetailModal({
               connector={connector}
               onClose={onClose}
               onDisconnect={onDisconnect}
-              onNavigateTo={(route) => {
-                onClose();
-                if (route) navigate({ to: route as any });
+              onNavigateTo={async (route) => {
+                if (!route) {
+                  onClose();
+                  return;
+                }
+                // useNavigate() anchors the `to` to the route the
+                // hook was instantiated under -- when the modal is
+                // mounted from /operations and we try to jump to
+                // /financialDashboard, TanStack treats the path as
+                // relative and lands on Not Found. The router
+                // instance imported from main is context-free, so
+                // navigation works regardless of where the click
+                // came from. See routes/__root.tsx for the same
+                // pattern used by the Tauri notification handler.
+                try {
+                  const { router } = await import("@/main");
+                  await router.navigate({ to: route as any });
+                } catch {
+                  // Last-ditch fallback so the click never feels dead.
+                  window.location.hash = route;
+                } finally {
+                  onClose();
+                }
               }}
             />
           </motion.div>
