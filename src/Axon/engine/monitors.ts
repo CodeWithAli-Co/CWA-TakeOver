@@ -18,6 +18,7 @@ import {
 import { fetchConnectorByKind } from "@/stores/connectors";
 import { vercelListDeployments } from "@/lib/vercel";
 import { slackPostMessage } from "@/lib/slack";
+import { gradeCandidatePure } from "../actions/recruiting";
 
 function companyLabel(active: string): "CodeWithAli" | "simplicity" {
   return active === "simplicityFunds" ? "simplicity" : "CodeWithAli";
@@ -494,6 +495,232 @@ export const MONITORS: Monitor[] = [
         } catch {
           return null;
         }
+      };
+    })(),
+  },
+
+  // ─── new-candidate-graded ────────────────────────────────────────
+  //
+  // When a new candidate gets through the parse → grade pipeline,
+  // Axon proactively alerts the operator with the score, the verdict
+  // tier, and a 1-line "why." Bridges the hiring pipeline's automated
+  // grading (parse_resume + rate_candidate + rate_all_pending) with
+  // the operator's attention -- they don't have to keep checking the
+  // candidate inbox.
+  //
+  // Three states the monitor handles:
+  //   1. Fresh applicant, NOT YET parsed (parse_status != "done"):
+  //      "{name} just applied for {role}. Resume parsing in progress."
+  //   2. Parsed but NOT YET graded (parse_status="done", fit_score IS
+  //      NULL): "{name} applied for {role} and is ready to grade. Say
+  //      'grade the pending' to score them."
+  //   3. Just graded (fit_score IS NOT NULL): "{name} just got rated
+  //      -- {fit_score}/100, {verdict_tier}. {verdict_summary}.
+  //      {next-step suggestion based on tier}."
+  //
+  // For TOP/STRONG verdicts, the alert nudges the operator toward
+  // scheduling a screen. Doesn't auto-book -- that's the operator's
+  // call. Voice "yes" → operator can chain into calcom_create_booking.
+  //
+  // Dedupe: localStorage-backed last-seen candidate ID per-state, so
+  // a reload doesn't re-spam alerts for candidates already surfaced.
+  {
+    id: "new-candidate-graded",
+    label: "New candidate alerts",
+    description:
+      "Alerts when a new candidate applies, gets parsed, or gets a grade. Surfaces fit score + verdict + 1-line reason. For top scorers, suggests scheduling a screen.",
+    intervalMs: 3 * 60 * 1000,
+    check: (() => {
+      const STORE_KEY = "axon:monitor:new-candidate-graded:v1";
+
+      // Track the highest seen candidate ID per state so each
+      // transition (apply → parse → grade) gets surfaced ONCE per
+      // candidate, never re-fired. The graded set is the most
+      // important -- that's where the action is.
+      type Persisted = {
+        seenApplied: string[];
+        seenParsed: string[];
+        seenGraded: string[];
+      };
+      const load = (): Persisted => {
+        try {
+          const raw = localStorage.getItem(STORE_KEY);
+          return raw
+            ? (JSON.parse(raw) as Persisted)
+            : { seenApplied: [], seenParsed: [], seenGraded: [] };
+        } catch {
+          return { seenApplied: [], seenParsed: [], seenGraded: [] };
+        }
+      };
+      const save = (p: Persisted) => {
+        try {
+          // Cap each set at 200 IDs so the store can't grow unbounded
+          // -- 200 candidates of churn is well past any reasonable
+          // alert horizon, after which a re-surface would be welcome.
+          const cap = (arr: string[]) => arr.slice(-200);
+          localStorage.setItem(
+            STORE_KEY,
+            JSON.stringify({
+              seenApplied: cap(p.seenApplied),
+              seenParsed: cap(p.seenParsed),
+              seenGraded: cap(p.seenGraded),
+            }),
+          );
+        } catch {
+          /* ignore */
+        }
+      };
+
+      // Tier-aware suggestion lines. The brain can interpret these as
+      // the operator's likely next step and follow up naturally.
+      const suggestionFor = (tier: string | null): string => {
+        switch (tier) {
+          case "TOP":
+            return "Worth a screen ASAP -- want me to pull cal.com slots?";
+          case "STRONG":
+            return "Solid -- want to schedule a screen?";
+          case "GOOD":
+            return "Worth a look at the full profile.";
+          case "OK":
+            return "Borderline -- might be worth a quick review.";
+          case "WEAK":
+            return "Probably a pass, but you decide.";
+          case "MISMATCH":
+            return "Wrong fit for the role.";
+          default:
+            return "";
+        }
+      };
+
+      return async (_ctx) => {
+        const seen = load();
+
+        // ── Priority 1: just-graded candidates ────────────────────
+        //
+        // These are the high-information events -- a score landed.
+        // Surface ONE per poll so multiple graded candidates don't
+        // become a wall of alerts.
+        const { data: graded } = await takeOversupabase
+          .from("candidates")
+          .select(
+            "id, full_name, role_slug, fit_score, verdict_tier, verdict_summary",
+          )
+          .not("fit_score", "is", null)
+          .order("created_at", { ascending: false })
+          .limit(20);
+
+        if (graded && graded.length > 0) {
+          for (const c of graded as Array<{
+            id: string;
+            full_name: string;
+            role_slug: string | null;
+            fit_score: number;
+            verdict_tier: string | null;
+            verdict_summary: string | null;
+          }>) {
+            if (seen.seenGraded.includes(c.id)) continue;
+            seen.seenGraded.push(c.id);
+            save(seen);
+            const role = c.role_slug ? ` for ${c.role_slug}` : "";
+            const tier = c.verdict_tier ?? "unrated";
+            const summary = c.verdict_summary
+              ? ` ${c.verdict_summary.slice(0, 140)}`
+              : "";
+            const suggestion = suggestionFor(c.verdict_tier);
+            return `${c.full_name}${role} just got rated -- ${c.fit_score}/100, ${tier}.${summary} ${suggestion}`.trim();
+          }
+        }
+
+        // ── Priority 2: parsed-but-not-graded → GRADE INLINE ──────
+        //
+        // G.2 (Option B): rather than punting the grading back to
+        // the operator ("say 'grade the pending'"), the monitor calls
+        // gradeCandidatePure() directly. End-to-end loop: candidate
+        // applies → resume parses → monitor polls within 3 min →
+        // monitor grades + saves fit_score → monitor's next poll
+        // (or same poll, see fall-through below) surfaces the score
+        // as a graded-tier alert via Priority 1.
+        //
+        // We do ONE grading call per poll tick. Multiple ungraded
+        // candidates get sequenced -- one per 3-minute tick. Keeps
+        // the alert flow clean (you don't hear five scores in a row)
+        // and bounds the Claude spend in case a backlog appears.
+        //
+        // Mark the candidate as seenParsed regardless of grading
+        // outcome -- if grading failed, we don't want to retry the
+        // same one every 3 minutes. The operator can re-issue
+        // rate_candidate manually if the failure was transient.
+        const { data: parsed } = await takeOversupabase
+          .from("candidates")
+          .select("id, full_name, role_slug")
+          .eq("parse_status", "done")
+          .is("fit_score", null)
+          .order("created_at", { ascending: false })
+          .limit(20);
+
+        if (parsed && parsed.length > 0) {
+          for (const c of parsed as Array<{
+            id: string;
+            full_name: string;
+            role_slug: string | null;
+          }>) {
+            if (seen.seenParsed.includes(c.id)) continue;
+            seen.seenParsed.push(c.id);
+            save(seen);
+
+            // Auto-grade. Single source of truth -- same function
+            // rate_candidate's action handler uses. ~3-8 seconds for
+            // a typical resume.
+            const result = await gradeCandidatePure(c.id);
+            if (!result.ok || !result.data) {
+              // Grading failed (Claude error, missing posting, etc).
+              // Surface degraded path so the operator knows. Don't
+              // retry next tick -- if it's a config issue (no job
+              // posting for this role), retrying won't help.
+              const role = c.role_slug ? ` for ${c.role_slug}` : "";
+              return `${c.full_name} applied${role} but I couldn't auto-grade them: ${result.reason ?? "unknown reason"}. Want to score them manually?`;
+            }
+
+            // Mark as seenGraded so the Priority 1 branch above
+            // doesn't re-fire this same candidate on the next poll.
+            seen.seenGraded.push(c.id);
+            save(seen);
+
+            const { full_name, fit_score, verdict_tier, verdict_summary } = result.data;
+            const role = c.role_slug ? ` for ${c.role_slug}` : "";
+            const summary = verdict_summary ? ` ${verdict_summary.slice(0, 140)}` : "";
+            const suggestion = suggestionFor(verdict_tier);
+            return `${full_name}${role} just got rated -- ${fit_score}/100, ${verdict_tier}.${summary} ${suggestion}`.trim();
+          }
+        }
+
+        // ── Priority 3: brand-new applicant (not yet parsed) ──────
+        //
+        // Earliest possible signal -- "someone just applied." Useful
+        // when the operator wants the heads-up before the score lands.
+        const { data: applied } = await takeOversupabase
+          .from("candidates")
+          .select("id, full_name, role_slug, parse_status")
+          .neq("parse_status", "done")
+          .order("created_at", { ascending: false })
+          .limit(20);
+
+        if (applied && applied.length > 0) {
+          for (const c of applied as Array<{
+            id: string;
+            full_name: string;
+            role_slug: string | null;
+            parse_status: string;
+          }>) {
+            if (seen.seenApplied.includes(c.id)) continue;
+            seen.seenApplied.push(c.id);
+            save(seen);
+            const role = c.role_slug ? ` for ${c.role_slug}` : "";
+            return `${c.full_name} just applied${role}. Resume parsing in progress -- I'll alert you with a score once it's done.`;
+          }
+        }
+
+        return null;
       };
     })(),
   },

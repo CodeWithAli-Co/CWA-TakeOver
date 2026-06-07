@@ -427,6 +427,206 @@ export const parseResumeAction: AxonAction<
   },
 };
 
+// ── Pure grading helper -- the single source of truth ─────────────
+//
+// Extracted from rate_candidate's handler so OTHER call sites (the
+// new-candidate-graded monitor in particular) can grade a candidate
+// without standing up an ActionContext. The action handler below is
+// now a thin wrapper around this; both flows produce identical
+// fit_score + verdict_tier + axon_assessment rows.
+//
+// Why a separate function instead of inlining the monitor's call to
+// rateCandidateAction.handler: action handlers receive an
+// ActionContext that monitors don't have (no operator, no
+// logActivity wrapper, no router reference). Rather than stub all of
+// that, we extract the pure DB + Claude work into a helper that takes
+// only what it needs. Callers attach their own logging.
+//
+// Returns a discriminated result so monitors can decide whether to
+// alert (ok=true) or surface a degraded state (ok=false with reason).
+
+export interface GradeResult {
+  ok: boolean;
+  reason?: string;
+  data?: {
+    full_name: string;
+    fit_score: number;
+    verdict_tier: VerdictTier;
+    verdict_summary: string;
+  };
+}
+
+export async function gradeCandidatePure(
+  candidate_id: string,
+  force?: boolean,
+): Promise<GradeResult> {
+  if (!ANTHROPIC_API_KEY) {
+    return { ok: false, reason: "no Anthropic API key configured" };
+  }
+
+  const { data: candidate, error: cErr } = await takeOversupabase
+    .from("candidates")
+    .select("*")
+    .eq("id", candidate_id)
+    .maybeSingle();
+  if (cErr) return { ok: false, reason: `Lookup failed: ${cErr.message}` };
+  if (!candidate) return { ok: false, reason: `No candidate with id ${candidate_id}` };
+
+  const c = candidate as CandidateRow;
+  if (!c.parsed_resume) {
+    return {
+      ok: false,
+      reason: `${c.full_name} hasn't been parsed yet`,
+    };
+  }
+  if (c.fit_score != null && !force) {
+    return {
+      ok: true,
+      data: {
+        full_name: c.full_name,
+        fit_score: c.fit_score,
+        verdict_tier: c.verdict_tier ?? "OK",
+        verdict_summary: c.verdict_summary ?? "",
+      },
+    };
+  }
+
+  // Fetch the job posting.
+  let posting: JobPostingRow | null = null;
+  if (c.job_posting_id) {
+    const { data } = await takeOversupabase
+      .from("job_postings")
+      .select("*")
+      .eq("id", c.job_posting_id)
+      .maybeSingle();
+    posting = (data ?? null) as JobPostingRow | null;
+  }
+  if (!posting && c.role_slug) {
+    const { data } = await takeOversupabase
+      .from("job_postings")
+      .select("*")
+      .eq("slug", c.role_slug)
+      .maybeSingle();
+    posting = (data ?? null) as JobPostingRow | null;
+  }
+  if (!posting) {
+    return {
+      ok: false,
+      reason: `No job_posting for role "${c.role_slug}"`,
+    };
+  }
+
+  const userPayload = {
+    role: {
+      title: posting.title,
+      team: posting.team,
+      summary: posting.summary,
+      responsibilities: posting.responsibilities,
+      qualifications: posting.qualifications,
+      bonus: posting.bonus ?? [],
+    },
+    ideal_profile: posting.ideal_profile ?? {},
+    candidate: {
+      full_name: c.full_name,
+      current_title: c.current_title,
+      current_company: c.current_company,
+      years_experience: c.years_experience,
+      linkedin_url: c.linkedin_url,
+      github_url: c.github_url,
+      portfolio_url: c.portfolio_url,
+      why_role: c.why_role,
+      why_takeover: c.why_takeover,
+      expected_compensation: c.expected_compensation,
+      parsed_resume: c.parsed_resume,
+    },
+  };
+
+  const res = await anthropicFetch(ANTHROPIC_API_URL, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "x-api-key": ANTHROPIC_API_KEY,
+      "anthropic-version": ANTHROPIC_API_VERSION,
+      "anthropic-dangerous-direct-browser-access": "true",
+    },
+    body: JSON.stringify({
+      model: CLAUDE_MODEL,
+      max_tokens: 1500,
+      system: RATE_CANDIDATE_SYSTEM,
+      messages: [
+        { role: "user", content: JSON.stringify(userPayload, null, 2) },
+      ],
+    }),
+  });
+
+  if (!res.ok) {
+    const errText = await res.text().catch(() => "");
+    return {
+      ok: false,
+      reason: `Claude ${res.status}: ${errText.slice(0, 200)}`,
+    };
+  }
+
+  const json = await res.json();
+  const text = ((json?.content ?? []) as Array<{ type: string; text?: string }>)
+    .filter((b) => b.type === "text")
+    .map((b) => String(b.text ?? ""))
+    .join("\n");
+
+  let result: {
+    fit_score: number;
+    verdict_tier: VerdictTier;
+    verdict_summary: string;
+    scores: AxonAssessment["scores"];
+    strengths: string[];
+    concerns: string[];
+    recommended_next_step: string;
+  };
+  try {
+    result = parseClaudeJson(text);
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : String(e);
+    return { ok: false, reason: `Claude returned non-JSON: ${msg}` };
+  }
+
+  const score = Math.max(0, Math.min(100, Math.round(result.fit_score ?? 0)));
+  const allowedTiers: VerdictTier[] = ["TOP", "STRONG", "GOOD", "OK", "WEAK", "MISMATCH"];
+  const tier = allowedTiers.includes(result.verdict_tier) ? result.verdict_tier : "OK";
+
+  const assessment: AxonAssessment = {
+    scores: Array.isArray(result.scores) ? result.scores : [],
+    strengths: Array.isArray(result.strengths) ? result.strengths : [],
+    concerns: Array.isArray(result.concerns) ? result.concerns : [],
+    recommended_next_step: result.recommended_next_step ?? "",
+  };
+
+  const { error: updateErr } = await takeOversupabase
+    .from("candidates")
+    .update({
+      fit_score: score,
+      verdict_tier: tier,
+      verdict_summary: result.verdict_summary ?? "",
+      axon_assessment: assessment,
+      assessed_at: new Date().toISOString(),
+      assessed_model: CLAUDE_MODEL,
+    })
+    .eq("id", candidate_id);
+
+  if (updateErr) {
+    return { ok: false, reason: `Scored but save failed: ${updateErr.message}` };
+  }
+
+  return {
+    ok: true,
+    data: {
+      full_name: c.full_name,
+      fit_score: score,
+      verdict_tier: tier,
+      verdict_summary: result.verdict_summary ?? "",
+    },
+  };
+}
+
 // ── Action 2: rate_candidate ───────────────────────────────────────
 
 export const rateCandidateAction: AxonAction<
@@ -449,173 +649,25 @@ export const rateCandidateAction: AxonAction<
   },
   mutating: true,
   handler: async ({ candidate_id, force }, ctx) => {
-    if (!ANTHROPIC_API_KEY) {
-      return { summary: "Cannot rate: no Anthropic API key configured." };
+    // Delegates to gradeCandidatePure -- the single source of truth.
+    // This handler exists to (1) surface the result via the
+    // action-result `summary` field, and (2) log to the activity feed.
+    // The grading work itself is identical to what the
+    // new-candidate-graded monitor does.
+    const result = await gradeCandidatePure(candidate_id, force);
+    if (!result.ok || !result.data) {
+      return { summary: result.reason ?? "Rate failed for an unknown reason." };
     }
-
-    const { data: candidate, error: cErr } = await takeOversupabase
-.from("candidates")
-      .select("*")
-      .eq("id", candidate_id)
-      .maybeSingle();
-    if (cErr) return { summary: `Lookup failed: ${cErr.message}` };
-    if (!candidate) return { summary: `No candidate with id ${candidate_id}.` };
-
-    const c = candidate as CandidateRow;
-    if (!c.parsed_resume) {
-      return {
-        summary: `Candidate ${c.full_name} hasn't been parsed yet. Run parse_resume first.`,
-      };
-    }
-    if (c.fit_score != null && !force) {
-      return {
-        summary: `Already scored ${c.full_name} (${c.fit_score}/100, ${c.verdict_tier}). Pass force=true to re-score.`,
-      };
-    }
-
-    // Fetch the role.
-    let posting: JobPostingRow | null = null;
-    if (c.job_posting_id) {
-      const { data } = await takeOversupabase
-  .from("job_postings")
-        .select("*")
-        .eq("id", c.job_posting_id)
-        .maybeSingle();
-      posting = (data ?? null) as JobPostingRow | null;
-    }
-    if (!posting && c.role_slug) {
-      const { data } = await takeOversupabase
-  .from("job_postings")
-        .select("*")
-        .eq("slug", c.role_slug)
-        .maybeSingle();
-      posting = (data ?? null) as JobPostingRow | null;
-    }
-    if (!posting) {
-      return {
-        summary: `No job_posting found for role "${c.role_slug}" — cannot rate. Make sure the role is seeded in job_postings.`,
-      };
-    }
-
-    const userPayload = {
-      role: {
-        title: posting.title,
-        team: posting.team,
-        summary: posting.summary,
-        responsibilities: posting.responsibilities,
-        qualifications: posting.qualifications,
-        bonus: posting.bonus ?? [],
-      },
-      ideal_profile: posting.ideal_profile ?? {},
-      candidate: {
-        full_name: c.full_name,
-        current_title: c.current_title,
-        current_company: c.current_company,
-        years_experience: c.years_experience,
-        linkedin_url: c.linkedin_url,
-        github_url: c.github_url,
-        portfolio_url: c.portfolio_url,
-        why_role: c.why_role,
-        why_takeover: c.why_takeover,
-        expected_compensation: c.expected_compensation,
-        parsed_resume: c.parsed_resume,
-      },
-    };
-
-    const body = {
-      model: CLAUDE_MODEL,
-      max_tokens: 1500,
-      system: RATE_CANDIDATE_SYSTEM,
-      messages: [
-        {
-          role: "user",
-          content: JSON.stringify(userPayload, null, 2),
-        },
-      ],
-    };
-
-    const res = await anthropicFetch(ANTHROPIC_API_URL, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "x-api-key": ANTHROPIC_API_KEY,
-        "anthropic-version": ANTHROPIC_API_VERSION,
-        "anthropic-dangerous-direct-browser-access": "true",
-      },
-      body: JSON.stringify(body),
-    });
-
-    if (!res.ok) {
-      const errText = await res.text().catch(() => "");
-      return {
-        summary: `Claude returned ${res.status} while rating ${c.full_name}: ${errText.slice(0, 200)}`,
-      };
-    }
-
-    const json = await res.json();
-    const text = ((json?.content ?? []) as Array<{ type: string; text?: string }>)
-      .filter((b) => b.type === "text")
-      .map((b) => String(b.text ?? ""))
-      .join("\n");
-
-    let result: {
-      fit_score: number;
-      verdict_tier: VerdictTier;
-      verdict_summary: string;
-      scores: AxonAssessment["scores"];
-      strengths: string[];
-      concerns: string[];
-      recommended_next_step: string;
-    };
-    try {
-      result = parseClaudeJson(text);
-    } catch (e) {
-      const msg = e instanceof Error ? e.message : String(e);
-      return { summary: `Claude returned non-JSON for ${c.full_name}: ${msg}` };
-    }
-
-    // Clamp + sanity-check the score in case Claude returns something silly.
-    const score = Math.max(0, Math.min(100, Math.round(result.fit_score ?? 0)));
-    const allowedTiers: VerdictTier[] = ["TOP", "STRONG", "GOOD", "OK", "WEAK", "MISMATCH"];
-    const tier = allowedTiers.includes(result.verdict_tier) ? result.verdict_tier : "OK";
-
-    const assessment: AxonAssessment = {
-      scores: Array.isArray(result.scores) ? result.scores : [],
-      strengths: Array.isArray(result.strengths) ? result.strengths : [],
-      concerns: Array.isArray(result.concerns) ? result.concerns : [],
-      recommended_next_step: result.recommended_next_step ?? "",
-    };
-
-    const { error: updateErr } = await takeOversupabase
-.from("candidates")
-      .update({
-        fit_score: score,
-        verdict_tier: tier,
-        verdict_summary: result.verdict_summary ?? "",
-        axon_assessment: assessment,
-        assessed_at: new Date().toISOString(),
-        assessed_model: CLAUDE_MODEL,
-      })
-      .eq("id", candidate_id);
-
-    if (updateErr) {
-      return { summary: `Scored but failed to save: ${updateErr.message}` };
-    }
-
-    const summary = `${c.full_name}: ${score}/100 (${tier}). ${result.verdict_summary ?? ""}`.trim();
+    const { full_name, fit_score, verdict_tier, verdict_summary } = result.data;
+    const summary = `${full_name}: ${fit_score}/100 (${verdict_tier}). ${verdict_summary}`.trim();
     ctx.logActivity({
       actionName: "rate_candidate",
       params: { candidate_id, force },
       summary,
     });
-
     return {
       summary,
-      data: {
-        fit_score: score,
-        verdict_tier: tier,
-        verdict_summary: result.verdict_summary ?? "",
-      },
+      data: { fit_score, verdict_tier, verdict_summary },
     };
   },
 };
