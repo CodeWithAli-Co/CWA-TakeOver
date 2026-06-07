@@ -8,6 +8,7 @@ import { ANTHROPIC_API_KEY } from "../config";
 import { AxonSettingsPane } from "./AxonSettings";
 import { listAudit, type AuditEntry } from "../engine/auditLog";
 import { MindMap } from "./MindMap";
+import { sampleStarterPrompts } from "../actions/help";
 
 type Tab = "conversation" | "mind" | "activity" | "audit" | "settings";
 
@@ -334,14 +335,62 @@ export function CommandPanel() {
   );
 }
 
+// Stable per-mount sample of 3 starter prompts shown in the empty
+// state. Picked once when the component first renders empty -- we
+// don't re-pick on every render (would flicker) and we don't store in
+// state (would persist after the conversation actually starts). The
+// useState lazy initializer captures the picks exactly once per mount.
+function StarterPrompts() {
+  const [starters] = useState(() => sampleStarterPrompts(3));
+  const { submitCommand } = useAxon();
+  return (
+    <div style={{ color: "var(--axon-muted)", fontSize: 12.5, padding: 12, lineHeight: 1.6 }}>
+      <div style={{ marginBottom: 10 }}>
+        I&rsquo;m listening. Try one of these, or just say what you need:
+      </div>
+      <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+        {starters.map((s) => (
+          <button
+            key={s}
+            type="button"
+            onClick={() => void submitCommand(s, "text")}
+            style={{
+              textAlign: "left",
+              padding: "8px 10px",
+              borderRadius: 8,
+              border: "1px solid var(--axon-divider, rgba(255,255,255,0.08))",
+              background: "transparent",
+              color: "var(--axon-fg, inherit)",
+              fontSize: 12.5,
+              lineHeight: 1.45,
+              cursor: "pointer",
+              fontStyle: "italic",
+              transition: "background 120ms ease, border-color 120ms ease",
+            }}
+            onMouseEnter={(e) => {
+              (e.currentTarget as HTMLButtonElement).style.background =
+                "var(--axon-hover, rgba(255,255,255,0.05))";
+            }}
+            onMouseLeave={(e) => {
+              (e.currentTarget as HTMLButtonElement).style.background = "transparent";
+            }}
+            title="Click to run this command"
+          >
+            &ldquo;{s}&rdquo;
+          </button>
+        ))}
+      </div>
+      <div style={{ marginTop: 12, fontSize: 11, opacity: 0.75 }}>
+        Or say &ldquo;what can you do&rdquo; for a tour.
+      </div>
+    </div>
+  );
+}
+
 function ConversationPane() {
   const { conversation } = useAxon();
   if (conversation.length === 0) {
-    return (
-      <div style={{ color: "var(--axon-muted)", fontSize: 12.5, padding: 12, lineHeight: 1.6 }}>
-        I'm listening. Try: <em>"Hey Axon, brief me."</em>
-      </div>
-    );
+    return <StarterPrompts />;
   }
   return (
     <>
