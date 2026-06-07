@@ -80,6 +80,7 @@ import {
 } from "./engine/voiceInput";
 import { VoiceOutput } from "./engine/voiceOutput";
 import { MONITORS } from "./engine/monitors";
+import { speakNow } from "./engine/proactiveChannel";
 import {
   loadMemory,
   saveMemory,
@@ -207,6 +208,12 @@ export function AxonProvider({ children }: { children: React.ReactNode }) {
   const [orbPosition, setOrbPosition] = useState({ x: 24, y: 0 });
   const [liveTranscript, setLiveTranscript] = useState("");
   const [audioLevel, setAudioLevel] = useState(0);
+  // Ground truth for "is the SpeechRecognition session actually hot
+  // right now?". Driven by VoiceInput's onRunningChange callback.
+  // Decoupled from voiceState so the orb pill can show "MIC OFF" even
+  // when voiceState is "standby" (which used to mislead the operator
+  // into thinking Axon was listening when start() had silently failed).
+  const [isMicLive, setIsMicLive] = useState(false);
   const [pendingConfirm, setPendingConfirm] = useState<ConfirmRequest | null>(null);
   const [automations, setAutomations] = useState<Automation[]>([]);
 
@@ -820,6 +827,11 @@ export function AxonProvider({ children }: { children: React.ReactNode }) {
           if (voiceStateRef.current === "armed") setStatus("listening");
         },
         onStop: () => setLiveTranscript(""),
+        // Ground-truth mic state — distinct from onStart/onStop because
+        // those are also tied to the mute lifecycle. This fires only on
+        // real start/stop of the underlying SpeechRecognition session.
+        // Drives the "MIC OFF" pill + the watchdog effect below.
+        onRunningChange: (running) => setIsMicLive(running),
         onTranscript: (t) => setLiveTranscript(t),
         onStateChange: (s) => {
           setVoiceState(s);
@@ -919,6 +931,60 @@ export function AxonProvider({ children }: { children: React.ReactNode }) {
     settings.standDownPhrases,
     settings.interruptPhrases,
     settings.endOfTurnMs,
+  ]);
+
+  // ── mic self-healing watchdog ───────────────────────────────────
+  //
+  // Tauri's WebView SpeechRecognition can silently fail at first launch
+  // — usually mic-perm timing (recognition.start() races the permission
+  // dialog) or a browser-side recognizer-exhausted state from a prior
+  // session. The visible symptom was: orb shows "READY", PTT works
+  // (because pushToTalk calls vi.start() directly), but "hey axon"
+  // never registers (because the recognizer isn't actually hot).
+  //
+  // The watchdog polls every 3s. If we SHOULD be listening (Axon
+  // enabled, alwaysListening on, forceSleep off, not dormant) but the
+  // recognizer is not running, log + call vi.start() to re-arm. The
+  // start() path is idempotent — if it's already running it's a no-op,
+  // and the running-flag is the gate so we don't spam.
+  //
+  // We deliberately do NOT add isMicLive to the dep array because we
+  // want the interval to keep checking on its own cadence rather than
+  // being torn down + recreated on every running-flag flip.
+  useEffect(() => {
+    if (!isAdmin) return;
+    if (!settings.enabled) return;
+    if (!settings.alwaysListening) return;
+    if (settings.forceSleep) return;
+    const id = window.setInterval(() => {
+      const vi = voiceInRef.current;
+      if (!vi) return;
+      // Dormant: operator explicitly muted, leave it alone.
+      if (vi.getState() === "dormant") return;
+      // Sanity check the engine actually wants to be running before
+      // poking it -- if it doesn't (e.g. cleanup mid-flight), start()
+      // would re-arm wantRunning, which we don't want here.
+      if (!vi.isWanted() && !vi.isRunning()) {
+        // Hasn't been started yet (initial mount race). Force-start.
+        console.warn(
+          "[AXON] watchdog: voice input not yet started while it should be — starting",
+        );
+        vi.start();
+        return;
+      }
+      if (vi.isWanted() && !vi.isRunning()) {
+        console.warn(
+          "[AXON] watchdog: recognizer stopped while it should be live — re-arming",
+        );
+        vi.start();
+      }
+    }, 3000);
+    return () => window.clearInterval(id);
+  }, [
+    isAdmin,
+    settings.enabled,
+    settings.alwaysListening,
+    settings.forceSleep,
   ]);
 
   // ── voice output wiring ─────────────────────────────────────────
@@ -1046,34 +1112,55 @@ export function AxonProvider({ children }: { children: React.ReactNode }) {
           const alert = await m.check(ctx);
           if (!alert) return;
 
-          // Guard 1: proactive volume.
-          if (settings.proactiveMode === "off") return;
+          // Route every proactive utterance through the channel.
+          // It absorbs mode/budget/cooldown/busy-gate concerns so the
+          // monitor body stays focused on detection.
+          //
+          // Default urgency = "normal" -- runway / round-behind /
+          // vercel-prod-failure all bubble up to "high" via the
+          // monitor returning a special prefix in alert text; we
+          // could later wire the monitor's `Monitor` interface to
+          // explicitly carry urgency, but the simple text-only
+          // contract keeps the existing monitors working without
+          // edits today.
+          const isHigh =
+            /^urgent[: ]|^critical[: ]|^alarm[: ]/i.test(alert);
 
-          // Guard 2: hard mute.
-          if (settings.forceSleep) return;
-
-          // Guard 3: don't barge in on an in-flight turn. Skipping
-          // is correct -- the next interval will re-fire when Axon
-          // is idle and the alert remains true.
           const cur = statusRef.current;
-          if (
+          const busy =
             cur === "listening" ||
             cur === "speaking" ||
             cur === "processing" ||
             cur === "executing" ||
-            cur === "coding"
-          ) {
-            return;
-          }
+            cur === "coding";
 
-          appendTurn({
-            id: newId("t"),
-            role: "axon",
-            text: `Heads up — ${alert}`,
-            modality: "voice",
-            timestamp: Date.now(),
-          });
-          voiceOutRef.current?.speak(`Heads up. ${alert}`);
+          speakNow(
+            {
+              sourceId: `monitor:${m.id}`,
+              text: `Heads up. ${alert}`,
+              urgency: isHigh ? "high" : "normal",
+              // Monitors have their own intervalMs; default the
+              // channel cooldown to the monitor's interval (so the
+              // channel doesn't over-restrict). Pass it explicitly
+              // so the default 30-min floor doesn't accidentally
+              // silence a 5-min monitor.
+              cooldownMs: m.intervalMs,
+            },
+            {
+              mode: settings.proactiveMode,
+              muted: settings.forceSleep,
+              busy,
+              speak: (line) => voiceOutRef.current?.speak(line),
+              logTurn: (line) =>
+                appendTurn({
+                  id: newId("t"),
+                  role: "axon",
+                  text: `Heads up — ${line.replace(/^Heads up\.\s*/, "")}`,
+                  modality: "voice",
+                  timestamp: Date.now(),
+                }),
+            },
+          );
         } catch (e) {
           console.warn("[AXON] monitor:", e);
         }
@@ -1116,39 +1203,40 @@ export function AxonProvider({ children }: { children: React.ReactNode }) {
         return;
       }
 
-      // Cmd/Ctrl+Shift+A — toggle Axon's mute state.
+      // Cmd/Ctrl+Shift+A — toggle Axon's SOFT mute state.
       //
-      // Toggles the forceSleep setting (the same flag the "stand down"
-      // voice phrase flips). When ON, Axon is fully dormant: no wake-
-      // word matching, no monitor speech, no proactive utterances --
-      // the orb's status pill reflects this so the operator always
-      // knows whether Axon is hot or muted. The shortcut is reserved
-      // for parity with the voice command, NOT a kill-switch for the
-      // whole assistant: use Settings -> Enabled to disable Axon
-      // entirely.
+      // Flips the voiceState between "dormant" (muted, voice-wakeable)
+      // and "standby" (active, listening for wake word). Mirrors the
+      // "axon stand down" / "axon wake up" voice phrases EXACTLY --
+      // both paths end at the same vi.setState() call, so voice
+      // unmute works after a keyboard mute and vice versa.
       //
-      // NOTE: inlined setSettings + persistSettings instead of the
-      // top-level updateSettings helper to avoid a temporal-dead-zone
-      // ref -- updateSettings is declared further down in the
-      // component, and React reads useEffect dep arrays at render
-      // time (not handler-invocation time). Same reason the
-      // voicePrint accessor block has the same workaround.
+      // Deliberately NOT touching forceSleep here. That setting is
+      // the HARD mute and lives in Settings only by design (its own
+      // docstring: "Must be toggled off via the Settings UI to use
+      // Axon again. Use when you need guaranteed silence."). If we
+      // toggled forceSleep from a keyboard shortcut, the operator
+      // would mute by accident and then voice unmute wouldn't bring
+      // Axon back -- which was the bug report behind this change.
+      //
+      // The status pill distinguishes the two visually: dormant ->
+      // "MUTED" (no slash, voice will wake), forceSleep -> "SILENCED"
+      // with the diagonal slash overlay on the orb (Settings unlock
+      // required).
       if (
         (e.metaKey || e.ctrlKey) &&
         e.shiftKey &&
         e.key.toLowerCase() === "a"
       ) {
         e.preventDefault();
-        const nextForceSleep = !settings.forceSleep;
-        setSettings((prev) => {
-          const next = { ...prev, forceSleep: nextForceSleep };
-          persistSettings(next);
-          return next;
-        });
-        // Verbal ack so the operator knows the toggle landed even when
-        // the orb isn't visible. Mirrors the speakLocal call in the
-        // voice-driven "stand down" / "wake up" intent path.
-        speakLocal(nextForceSleep ? "Standing down." : "Back online.");
+        const cur = voiceInRef.current?.getState();
+        if (cur === "dormant") {
+          voiceInRef.current?.setState("standby");
+          speakLocal("Back online.");
+        } else {
+          voiceInRef.current?.setState("dormant");
+          speakLocal("Standing down.");
+        }
         return;
       }
 
@@ -1189,10 +1277,8 @@ export function AxonProvider({ children }: { children: React.ReactNode }) {
     isAdmin,
     settings.enabled,
     settings.pushToTalkShortcut,
-    settings.forceSleep,
-    // setSettings is stable (React state setter), persistSettings is
-    // module-scope -- neither needs to be in the dep list. speakLocal
-    // is a useCallback declared above so it's safe to reference here.
+    // Cmd+Shift+A reads the live voiceState off voiceInRef -- no
+    // dependency on a snapshot, so we don't need it in the dep list.
     speakLocal,
   ]);
 
@@ -1405,6 +1491,7 @@ export function AxonProvider({ children }: { children: React.ReactNode }) {
       orbPosition,
       liveTranscript,
       audioLevel,
+      isMicLive,
       isAdmin,
       voiceState,
       callMode,
@@ -1435,6 +1522,7 @@ export function AxonProvider({ children }: { children: React.ReactNode }) {
       orbPosition,
       liveTranscript,
       audioLevel,
+      isMicLive,
       isAdmin,
       voiceState,
       callMode,

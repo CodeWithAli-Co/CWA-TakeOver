@@ -44,7 +44,7 @@ export const forceSleepAction: AxonAction<
 > = {
   name: "force_sleep",
   description:
-    "Put Axon into hard-dormant mode. Mutes the mic, stops wake-word matching, stops proactive speech. The operator must toggle Forced Sleep OFF in Axon Settings (or type 'wake up' in the composer) to bring Axon back. Use when the operator says 'force sleep', 'hard sleep', 'go silent', 'dark mode', 'shut down', 'shush', 'mute yourself', 'silence', 'be quiet for real', or similar — anything stronger than the normal sleep / standby phrases.",
+    "Put Axon into hard-dormant mode. Mutes the mic, stops wake-word matching, stops proactive speech, AND BLOCKS VOICE WAKE -- the operator MUST toggle Forced Sleep OFF in Axon Settings (or type 'wake up' in the composer) to bring Axon back. This is the nuclear option. ONLY fire on UNAMBIGUOUS phrases that explicitly invoke the forced/hard mode: 'force sleep', 'hard sleep', 'dark mode', 'guaranteed silence', 'force quiet', 'absolute silence', or the operator explicitly saying 'force sleep on'. Do NOT fire on casual quiet requests like 'mute', 'shut up', 'be quiet', 'go quiet', 'standby', 'stand down', 'goodbye' -- those are the SOFT sleep path and are handled by the voice loop's sleepPhrases (voice-wakeable). If the operator just says 'axon mute' or 'axon be quiet', it almost certainly means soft sleep, not this action.",
   input_schema: {
     type: "object",
     properties: {

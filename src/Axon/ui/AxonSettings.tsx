@@ -53,8 +53,29 @@ export function AxonSettingsPane() {
             onChange={(e) => updateSettings({ enabled: e.target.checked })}
           />
         </div>
-        <div className="axon-settings-row">
-          <span>Always-on listening</span>
+        {/*
+          Renamed from the original "Always-on listening". That label
+          collided visually with "Continuous listen mode" further down
+          (different setting, totally different effect) and operators
+          were turning the wrong one off. The new label leads with the
+          wake word and adds a sub-line so it's obvious which toggle
+          this is, even when you're skimming.
+
+          The KEY remains `alwaysListening` so existing localStorage
+          values (and any external references) keep working -- only
+          the visual label changed.
+        */}
+        <div
+          className="axon-settings-row"
+          style={{ alignItems: "flex-start" }}
+        >
+          <div style={{ display: "flex", flexDirection: "column", flex: 1, gap: 2 }}>
+            <span>Listen for &ldquo;hey axon&rdquo;</span>
+            <span style={{ fontSize: 11, color: "var(--axon-muted)", lineHeight: 1.45 }}>
+              Keep the mic hot so the wake word works without pressing
+              Ctrl+Space. Off &rarr; orb shows <b>PTT ONLY</b>.
+            </span>
+          </div>
           <input
             className="axon-switch"
             type="checkbox"
@@ -229,11 +250,20 @@ export function AxonSettingsPane() {
           </div>
         </div>
 
-        <div className="axon-settings-row" style={{ marginTop: 10 }}>
-          <div style={{ display: "flex", flexDirection: "column", flex: 1 }}>
-            <span>Continuous listen mode</span>
-            <span style={{ fontSize: 11, color: "var(--axon-muted)" }}>
-              After the wake word, stay armed until you say "stand down".
+        {/*
+          Renamed from "Continuous listen mode". The old label sounded
+          almost identical to "Always-on listening" up top, and
+          operators (correctly) couldn't tell which was which without
+          reading the sub-copy. The new lead clause says exactly what
+          this controls: what happens AFTER the wake word fires.
+        */}
+        <div className="axon-settings-row" style={{ marginTop: 10, alignItems: "flex-start" }}>
+          <div style={{ display: "flex", flexDirection: "column", flex: 1, gap: 2 }}>
+            <span>Stay armed after wake word</span>
+            <span style={{ fontSize: 11, color: "var(--axon-muted)", lineHeight: 1.45 }}>
+              After &ldquo;hey axon&rdquo; fires, keep accepting commands
+              without re-saying it &mdash; until you say &ldquo;stand down&rdquo;.
+              Does NOT control whether the mic is on.
             </span>
           </div>
           <input

@@ -36,6 +36,7 @@ export function Orb() {
     liveTranscript,
     settings,
     ensemblePhase,
+    isMicLive,
   } = useAxon();
 
   const orbRef = useRef<HTMLDivElement | null>(null);
@@ -645,24 +646,64 @@ export function Orb() {
 
   // ── Status pill --------------------------------------------------
   //
-  // Always-visible chip pinned just under the orb that names the
-  // current voice state in plain English. Operators kept saying
-  // "I can't tell if Axon is listening or muted" -- this is the fix.
-  // It's a single source of visual truth for: muted / dormant /
-  // standby / listening / busy. Pill colors match the orb's own
-  // ring colors per state so the relationship reads at a glance.
-  const muted = !!settings.forceSleep;
-  const pill = muted
-    ? { label: "MUTED", tone: "rgba(180, 180, 180, 0.95)", dot: "rgba(160, 160, 160, 0.7)" }
+  // Always-visible chip pinned under the orb that names the current
+  // voice state in plain English. Single source of visual truth for
+  // whether Axon is hot or quiet. Two distinct "quiet" labels because
+  // they have different recovery paths:
+  //
+  //   - SILENCED  -- forceSleep is on. Hard mute. Voice can't wake.
+  //                  The orb also gets a diagonal slash overlay so
+  //                  it reads as "deliberately off" without checking
+  //                  the pill. Recovery is Settings only.
+  //
+  //   - MUTED     -- voiceState is dormant. Soft mute. Either the
+  //                  keyboard shortcut OR any resume phrase
+  //                  ("axon wake up" / "axon unmute" / etc.) brings
+  //                  him back. This is what Cmd+Shift+A produces.
+  //
+  //   - MIC OFF   -- forceSleep is off and voiceState is "standby"
+  //                  (which used to render as "READY"), BUT the
+  //                  underlying SpeechRecognition session isn't
+  //                  actually running. This is the Tauri silent-fail
+  //                  case (mic perm timing, recognizer exhausted from
+  //                  prior session, browser tab throttled). Without
+  //                  this label, the operator sees "READY" and thinks
+  //                  saying "hey axon" should work -- but it never
+  //                  registers because the mic is dead. The watchdog
+  //                  in AxonProvider tries to recover automatically,
+  //                  but until it succeeds the operator needs to see
+  //                  the truth. PTT (Ctrl+Space) still works because
+  //                  it force-starts the recognizer.
+  //
+  // Active states (LISTENING / THINKING / SPEAKING / READY) light up
+  // in colors that match the orb's own ring per state.
+  const silenced = !!settings.forceSleep;
+  // Distinguish "operator chose PTT-only mode" from "we should be live
+  // but the recognizer silently failed to start". Both end the wake
+  // word's day, but the recovery paths are different:
+  //   PTT ONLY -- toggle alwaysListening back on in Settings, or use
+  //               Ctrl+Space. NOT a bug, just an opt-out.
+  //   MIC OFF  -- the recognizer broke. Watchdog is retrying; meanwhile
+  //               PTT still works as a fallback.
+  const pttOnly = !silenced && settings.alwaysListening === false;
+  const micShouldBeLive =
+    !silenced && voiceState !== "dormant" && settings.alwaysListening !== false;
+  const micDead = micShouldBeLive && !isMicLive;
+  const pill = silenced
+    ? { label: "SILENCED", tone: "rgba(180, 180, 180, 0.95)", dot: "rgba(160, 160, 160, 0.7)" }
     : voiceState === "dormant"
-      ? { label: "DORMANT", tone: "rgba(180, 180, 180, 0.85)", dot: "rgba(120, 120, 120, 0.6)" }
+      ? { label: "MUTED", tone: "rgba(190, 190, 195, 0.95)", dot: "rgba(150, 150, 155, 0.75)" }
       : voiceState === "armed" || status === "listening"
         ? { label: "LISTENING", tone: "rgba(255, 120, 120, 0.95)", dot: "rgba(255, 80, 80, 0.9)" }
         : status === "processing" || status === "executing"
           ? { label: "THINKING", tone: "rgba(170, 195, 255, 0.95)", dot: "rgba(140, 170, 255, 0.9)" }
           : status === "speaking"
             ? { label: "SPEAKING", tone: "rgba(180, 240, 200, 0.95)", dot: "rgba(120, 220, 160, 0.9)" }
-            : { label: "READY", tone: "rgba(220, 220, 220, 0.95)", dot: "rgba(200, 200, 200, 0.7)" };
+            : pttOnly
+              ? { label: "PTT ONLY", tone: "rgba(180, 200, 255, 0.95)", dot: "rgba(140, 170, 255, 0.85)" }
+              : micDead
+                ? { label: "MIC OFF", tone: "rgba(255, 180, 120, 0.95)", dot: "rgba(255, 140, 80, 0.9)" }
+                : { label: "READY", tone: "rgba(220, 220, 220, 0.95)", dot: "rgba(200, 200, 200, 0.7)" };
 
   return (
     <>
@@ -671,7 +712,7 @@ export function Orb() {
         className="axon-orb-v3"
         data-state={status}
         data-voice={voiceState}
-        data-muted={muted ? "true" : undefined}
+        data-muted={silenced ? "true" : undefined}
         style={{
           left: `${orbPosition.x - PADDING}px`,
           top: `${orbPosition.y - PADDING}px`,
@@ -681,13 +722,17 @@ export function Orb() {
         role="button"
         aria-label="AXON command orb"
         title={
-          muted
-            ? "AXON is muted — Cmd+Shift+A or say 'Axon wake up' to bring back"
+          silenced
+            ? "AXON is SILENCED — Settings → Force Sleep to bring back"
             : voiceState === "dormant"
-              ? "AXON is dormant — say 'Axon wake up'"
+              ? "AXON is muted — Cmd+Shift+A or say 'Axon wake up'"
               : voiceState === "armed"
                 ? "AXON is listening — speak your command"
-                : "AXON standby — say 'Hey AXON'"
+                : pttOnly
+                  ? "Always-listening is OFF — use Ctrl+Space to talk, or enable Always Listening in Settings"
+                  : micDead
+                    ? "Mic isn't actually live — use Ctrl+Space (PTT) or check mic permission. Watchdog is retrying."
+                    : "AXON standby — say 'Hey AXON'"
         }
       >
         <canvas ref={canvasRef} className="axon-orb-v3-canvas" />

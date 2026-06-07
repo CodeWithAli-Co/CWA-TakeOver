@@ -292,8 +292,34 @@ export const DEFAULT_SETTINGS: AxonSettings = {
   // Default ON — pure-voice operation, no button-pressing required.
   alwaysListening: true,
   wakeWord: "hey axon",
-  sleepPhrases: ["axon go to sleep", "axon stop listening", "axon standby", "axon go quiet", "goodbye axon"],
-  resumePhrases: ["axon wake up", "axon activate", "hey axon wake up", "axon come back"],
+  sleepPhrases: [
+    "axon go to sleep",
+    "axon stop listening",
+    "axon standby",
+    "axon go quiet",
+    "goodbye axon",
+    // Broader natural-language sleep vocabulary so operators don't
+    // have to remember the exact magic phrase. All of these route
+    // to the same dormant state as the explicit "axon standby".
+    "axon mute",
+    "axon shut up",
+    "axon be quiet",
+    "axon shush",
+    "shut up axon",
+    "quiet axon",
+  ],
+  resumePhrases: [
+    "axon wake up",
+    "axon activate",
+    "hey axon wake up",
+    "axon come back",
+    // Mirror vocabulary on the wake side -- if "axon mute" puts him
+    // out, "axon unmute" should bring him back without forcing the
+    // operator to remember the canonical "axon wake up".
+    "axon unmute",
+    "axon you there",
+    "axon back online",
+  ],
   interruptPhrases: ["stop", "shut up", "quiet", "cancel", "never mind", "hold on", "wait"],
   autoGreet: true,
   proactiveRouteObservations: true,
@@ -408,6 +434,15 @@ export interface AxonContextValue {
   orbPosition: { x: number; y: number };
   liveTranscript: string;
   audioLevel: number;
+  /** True only while the underlying SpeechRecognition session is actually
+   *  running — i.e. the mic is genuinely receiving audio. Distinct from
+   *  voiceState (which is the wake/armed state machine). If this is
+   *  false while voiceState is "standby" with forceSleep off and
+   *  alwaysListening on, the recognizer silently failed to start (Tauri
+   *  WebView mic-perm timing, recognition exception, browser tab
+   *  throttled). The orb surfaces this as "MIC OFF" so the operator
+   *  isn't lied to by a "READY" pill. */
+  isMicLive: boolean;
   isAdmin: boolean;
   voiceState: "dormant" | "standby" | "armed";
   /** Call mode — when true, Axon re-arms the mic after every TTS reply

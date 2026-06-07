@@ -36,6 +36,16 @@ export interface VoiceInputCallbacks {
   onAudioLevel?: (level: number) => void;
   /** State transitions — for UI / logging. */
   onStateChange?: (state: VoiceState) => void;
+  /**
+   * Fires whenever the underlying SpeechRecognition session transitions
+   * between running and stopped. Distinct from onStart/onStop because
+   * those are also tied to the muted/state-machine lifecycle and miss
+   * silent failures. This one is the ground truth: "is the mic actually
+   * hot right now?" — used by the provider to drive the "MIC OFF" pill
+   * + a self-healing watchdog when start() fails silently in Tauri's
+   * WebView.
+   */
+  onRunningChange?: (running: boolean) => void;
   onError?: (message: string) => void;
 }
 
@@ -120,7 +130,38 @@ function norm(s: string): string {
 function containsPhrase(hay: string, needle: string): boolean {
   const h = ` ${norm(hay)} `;
   const n = ` ${norm(needle)} `;
-  return h.includes(n);
+  if (h.includes(n)) return true;
+
+  // Fuzzy axon-variant fallback. STT mangles "axon" constantly --
+  // "exxon mute", "action mute", "ax on mute", etc. -- so a strict
+  // substring match drops these phrases right through to the brain,
+  // which then matches them as casual "mute" requests and fires the
+  // hard-mute force_sleep action by mistake. By substituting any
+  // known variant in the transcript with "axon" before the includes
+  // check, we recover the soft-sleep path the operator actually
+  // meant. Only worth doing for needles that start with "axon" --
+  // other phrases don't carry the wake-word mangling problem.
+  if (!n.startsWith(" axon ")) return false;
+  const normalized = normalizeAxonVariants(norm(hay));
+  return ` ${normalized} `.includes(n);
+}
+
+/** Replace any known axon-mishear at the start of a token with the
+ *  canonical "axon" so substring-based phrase matching survives STT
+ *  noise. Conservative: only swaps variants that the recognizer
+ *  has actually produced for "axon" in testing. */
+function normalizeAxonVariants(text: string): string {
+  // Iterate longest-first so multi-word variants ("ax on", "hey xon")
+  // beat single-word fragments to the punch.
+  const variants = Array.from(AXON_VARIANTS).sort(
+    (a, b) => b.length - a.length,
+  );
+  let out = ` ${text} `;
+  for (const v of variants) {
+    if (v === "axon") continue;
+    out = out.split(` ${v} `).join(" axon ");
+  }
+  return out.trim();
 }
 
 // ── Fuzzy wake-word matching ──────────────────────────────────────
@@ -284,7 +325,27 @@ export class VoiceInput {
       this.recognition = null;
     }
     this.stopMeter();
-    this.running = false;
+    if (this.running) {
+      this.running = false;
+      this.callbacks.onRunningChange?.(false);
+    }
+  }
+
+  /**
+   * Ground truth for "is the mic actually hot right now?". The watchdog
+   * in AxonProvider polls this to detect silent start() failures.
+   */
+  isRunning(): boolean {
+    return this.running;
+  }
+
+  /**
+   * Whether the engine wants to be running (i.e. start() was called and
+   * stop() hasn't been called since). The watchdog uses this together
+   * with isRunning() to decide whether a re-arm attempt is warranted.
+   */
+  isWanted(): boolean {
+    return this.wantRunning;
   }
 
   /** One-shot push-to-talk. Treats whatever is next said as a direct command. */
@@ -313,13 +374,16 @@ export class VoiceInput {
     r.onstart = () => {
       this.running = true;
       this.callbacks.onStart?.();
+      this.callbacks.onRunningChange?.(true);
       this.startMeter();
     };
 
     r.onend = () => {
+      const was = this.running;
       this.running = false;
       this.stopMeter();
       this.callbacks.onStop?.();
+      if (was) this.callbacks.onRunningChange?.(false);
       // Auto-restart if still wanted.
       if (this.wantRunning && this.restartTimer === null) {
         this.restartTimer = window.setTimeout(() => {
@@ -374,6 +438,12 @@ export class VoiceInput {
       r.start();
     } catch {
       // Race — recognition.start while another instance is finishing. Retry on next tick.
+      // Belt-and-suspenders: ensure running flag is false so the watchdog
+      // can re-arm us if the retry below silently no-ops too.
+      if (this.running) {
+        this.running = false;
+        this.callbacks.onRunningChange?.(false);
+      }
       window.setTimeout(() => this.ensureRunning(), 150);
     }
   }
@@ -410,10 +480,38 @@ export class VoiceInput {
     const hasSleep = has(this.config.sleepPhrases);
     const hasResume = has(this.config.resumePhrases);
 
-    // ── dormant state: only a resume phrase matters ──
+    // ── dormant state: resume phrases OR the wake word recover ──
+    //
+    // Used to only accept the explicit resumePhrases ("axon wake up",
+    // "axon unmute", etc.). That left "hey axon" silently no-op once
+    // the operator landed in dormant -- they had to remember the
+    // exact resume phrase, or push-to-talk. Now the wake word is
+    // also a valid resume trigger because that's what every operator
+    // naturally tries first. The mid-sentence "hey axon, brief me"
+    // shape also gets honored: we resume to armed (skipping standby)
+    // and dispatch the trailing command in the same tick -- matches
+    // how the standby block treats the same utterance shape.
     if (this.state === "dormant") {
       if (hasResume) {
         this.dispatch({ kind: "resume" }, n, now);
+        return;
+      }
+      if (hasWake) {
+        // Resume first so the state + orb visuals catch up.
+        this.dispatch({ kind: "resume" }, n, now);
+        const after = this.stripWakePrefix(text);
+        if (after.length > 2) {
+          // "Hey Axon, brief me" -- skip the intermediate standby
+          // hop and arm immediately, then dispatch the command.
+          this.setState("armed");
+          this.armedAt = now;
+          this.dispatch(
+            { kind: "command", text: after, confidence },
+            norm(after),
+            now,
+          );
+        }
+        return;
       }
       return;
     }
