@@ -15,7 +15,7 @@
  * filters by kind; the folder filter stacks on top.
  */
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, type MouseEvent as ReactMouseEvent } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import {
   FileText,
@@ -52,6 +52,8 @@ import {
   useRestoreSpreadsheet,
   useHardDeleteDocument,
   useHardDeleteSpreadsheet,
+  useDeleteDocument,
+  useDeleteSpreadsheet,
 } from "@/stores/workspace";
 import { takeOversupabase } from "@/MyComponents/supabase";
 import type {
@@ -62,6 +64,8 @@ import type {
 import { ActiveUser } from "@/stores/query";
 import { extractDocText, matchesQuery } from "./searchHelpers";
 import { useQuery } from "@tanstack/react-query";
+import { PillTabs } from "@/components/ui/PillTabs";
+import { DeleteResourceDialog } from "./DeleteResourceDialog";
 
 type TabId = "all" | "documents" | "spreadsheets" | "archived";
 
@@ -97,11 +101,25 @@ export function WorkspacePage() {
   const deleteFolder = useDeleteFolder();
   const moveFolder = useMoveFolder();
   const moveResource = useMoveResourceToFolder();
+  // Soft-delete mutations — used by the per-card Trash hover action.
+  // These archive the resource (sets archived=true); the Archive tab
+  // owns the hard-delete + restore flows.
+  const deleteDoc = useDeleteDocument();
+  const deleteSheet = useDeleteSpreadsheet();
 
   const [tab, setTab] = useState<TabId>("all");
   const [filter, setFilter] = useState("");
   /** null = workspace root. Otherwise: the active folder id. */
   const [activeFolderId, setActiveFolderId] = useState<string | null>(null);
+  // Pending delete from a card's hover Trash icon. Opens the
+  // DeleteResourceDialog, which handles the actual archive +
+  // (C-level only) permanent-delete confirm flow. Cleared on dialog
+  // close.
+  const [pendingDelete, setPendingDelete] = useState<{
+    kind: WorkspaceResourceKind;
+    id: string;
+    title: string;
+  } | null>(null);
 
   // Inline UI state — replaces browser prompt()/confirm() which are
   // suppressed in Tauri's macOS WKWebView and silently return null.
@@ -190,6 +208,37 @@ export function WorkspacePage() {
       spreadsheets: scope.filter((r) => r.kind === "spreadsheet").length,
     };
   }, [resources, activeFolderId]);
+
+  // ── Editorial header helpers ──────────────────────────────────
+  // Top 3 most-recently-touched, non-archived resources for the
+  // "Pick up where you left off" strip above the card grid. Skipped
+  // if the workspace has fewer than 4 total items -- showing the same
+  // three cards twice in a row would look silly.
+  const recentThree = useMemo<WorkspaceResource[]>(() => {
+    const active = resources.filter((r) => !(r as any).archived);
+    if (active.length < 4) return [];
+    return [...active]
+      .sort((a, b) => b.updated_at.localeCompare(a.updated_at))
+      .slice(0, 3);
+  }, [resources]);
+
+  // Plain-English "since last edit" stamp for the stats strip. Uses
+  // the freshest updated_at across the whole workspace -- a single
+  // signal that the workspace is alive.
+  const sinceLastEdit = useMemo<string>(() => {
+    if (resources.length === 0) return "—";
+    const latest = resources.reduce((max, r) =>
+      r.updated_at.localeCompare(max) > 0 ? r.updated_at : max,
+      resources[0].updated_at,
+    );
+    const t = new Date(latest).getTime();
+    if (Number.isNaN(t)) return "—";
+    const diff = Date.now() - t;
+    if (diff < 60_000) return "just now";
+    if (diff < 60 * 60_000) return `${Math.floor(diff / 60_000)}m`;
+    if (diff < 24 * 60 * 60_000) return `${Math.floor(diff / (60 * 60_000))}h`;
+    return `${Math.floor(diff / (24 * 60 * 60_000))}d`;
+  }, [resources]);
 
   // Breadcrumb walk — climb parent_folder_id from active up to root.
   const breadcrumb = useMemo<WorkspaceFolder[]>(() => {
@@ -285,7 +334,12 @@ export function WorkspacePage() {
 
   return (
     <div className="min-h-[100dvh] w-full bg-background text-foreground">
-      <div className="mx-auto w-full max-w-[1400px] px-6 py-10 grid grid-cols-[240px_1fr] gap-6">
+      {/* Full-width page shell — no max-width clamp. Folder sidebar
+        * stays at 240px, main column fills everything else edge-to-edge.
+        * Horizontal padding scales up at wider viewports so the content
+        * still breathes on ultrawide displays without forcing centered
+        * dead zones. */}
+      <div className="w-full px-6 lg:px-8 xl:px-10 py-10 grid grid-cols-[240px_1fr] gap-8">
         {/* ── Folder sidebar ─────────────────────────────────────── */}
         <aside className="lg:sticky lg:top-6 lg:self-start space-y-3">
           <div className="flex items-baseline justify-between">
@@ -364,22 +418,81 @@ export function WorkspacePage() {
 
         {/* ── Main column ────────────────────────────────────────── */}
         <main>
-          {/* Header */}
-          <header className="mb-8">
-            <div className="text-[10px] tracking-[0.16em] uppercase text-foreground/40 mb-2">
-              <span className="inline-block w-1 h-1 rounded-full bg-red-500 mr-1.5 align-middle" />
-              Workspace
-            </div>
-            <Breadcrumb
-              chain={breadcrumb}
-              onJump={(id) => setActiveFolderId(id)}
-            />
-            <p className="text-[13.5px] text-foreground/55 mt-1.5 max-w-[60ch]">
-              Write documents, build spreadsheets, share with teammates. Drop
-              docs into folders to keep your library organized.
-            </p>
+          {/* Newsreader serif loaded inline once — matches the
+            * editorial header used on SalesPage + financialDashboard
+            * so all three "operator-facing" routes read as a family. */}
+          <style>{`@import url('https://fonts.googleapis.com/css2?family=Newsreader:ital,wght@0,400;0,500;0,600;1,400&display=swap');.ed-serif{font-family:'Newsreader',Georgia,serif}`}</style>
 
-            <div className="mt-6 flex items-center gap-3 flex-wrap">
+          {/* ── Editorial masthead ───────────────────────────────
+            * Mono pulse-dot eyebrow → serif italic title → muted
+            * sub-copy on the left; live "Workspace" status pill on
+            * the right. Stats strip below sits flush against the
+            * masthead -- one tall surface, not two stacked cards. */}
+          <header className="mb-8">
+            <div className="flex items-start justify-between gap-6">
+              <div className="space-y-2 min-w-0 max-w-[62%]">
+                <p className="flex items-center gap-2 text-[10px] font-mono uppercase tracking-[0.22em] text-foreground/45">
+                  <span className="relative flex h-1.5 w-1.5">
+                    <span className="absolute inline-flex h-full w-full rounded-full bg-primary/70 opacity-75 animate-ping" />
+                    <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-primary shadow-[0_0_8px_var(--color-primary,#dc2626)]" />
+                  </span>
+                  CodeWithAli · Workspace
+                </p>
+                <h1 className="ed-serif text-[44px] leading-[1.02] text-foreground tracking-tight m-0">
+                  Docs{" "}
+                  <span className="italic font-normal text-foreground/75">
+                    &amp; sheets
+                  </span>
+                </h1>
+                <Breadcrumb
+                  chain={breadcrumb}
+                  onJump={(id) => setActiveFolderId(id)}
+                />
+                <p className="text-[12.5px] text-foreground/55 leading-snug pt-1">
+                  Documents, spreadsheets, and folders for the team. Edits
+                  sync live. Drop anything into the workspace and it lands
+                  here.
+                </p>
+              </div>
+
+              {/* Right rail — Live pill mirrors the Sales/Finance
+                * "Live · CRM" / "Live · Stripe" badge so the visual
+                * grammar is consistent across routes. */}
+              <div className="flex flex-col items-end gap-2 shrink-0">
+                <div className="flex items-center gap-2 px-2.5 py-1 rounded-full border bg-emerald-500/[0.08] border-emerald-500/25 text-emerald-300 text-[10px] font-mono uppercase tracking-[0.16em]">
+                  <span className="relative flex h-1.5 w-1.5">
+                    <span className="absolute inline-flex h-full w-full rounded-full bg-emerald-400/70 opacity-75 animate-ping" />
+                    <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-emerald-400 shadow-[0_0_6px_rgba(52,211,153,0.7)]" />
+                  </span>
+                  Live · Workspace
+                </div>
+                <div className="text-[10px] font-mono uppercase tracking-[0.18em] text-foreground/45">
+                  Since last edit · <span className="text-primary">{sinceLastEdit}</span>
+                </div>
+              </div>
+            </div>
+
+            {/* At-a-glance stats — sits below the masthead, flush
+              * against the row above + below for a single editorial
+              * column rather than separated cards. */}
+            <div className="mt-6 grid grid-cols-2 sm:grid-cols-3 gap-x-8 gap-y-3 py-4 border-y border-border/60">
+              <StatPair
+                label="Documents"
+                value={resources.filter(
+                  (r) => r.kind === "document" && !(r as any).archived,
+                ).length}
+              />
+              <StatPair
+                label="Spreadsheets"
+                value={resources.filter(
+                  (r) => r.kind === "spreadsheet" && !(r as any).archived,
+                ).length}
+              />
+              <StatPair label="Folders" value={folders.length} />
+            </div>
+
+            {/* Primary CTAs + filter on one row */}
+            <div className="mt-5 flex items-center gap-3 flex-wrap">
               <button
                 type="button"
                 onClick={handleNewDoc}
@@ -422,38 +535,83 @@ export function WorkspacePage() {
             </div>
           </header>
 
-          {/* Tab strip */}
-          <div className="flex items-center gap-1 border-b border-border/60 mb-6">
-            <Tab
-              label="All"
-              count={counts.all}
-              active={tab === "all"}
-              onClick={() => setTab("all")}
-            />
-            <Tab
-              label="Documents"
-              count={counts.documents}
-              active={tab === "documents"}
-              onClick={() => setTab("documents")}
-            />
-            <Tab
-              label="Spreadsheets"
-              count={counts.spreadsheets}
-              active={tab === "spreadsheets"}
-              onClick={() => setTab("spreadsheets")}
-            />
-            {/* Archive tab is C-level only — non-managers can still
-             *  archive items via the delete dialog, but the archive
-             *  itself (restore + hard-delete affordances) is a
-             *  managerial surface. */}
-            {isCLevel && archivedCount > 0 && (
-              <Tab
-                label="Archive"
-                count={archivedCount}
-                active={tab === "archived"}
-                onClick={() => setTab("archived")}
-              />
+          {/* ── Recents strip — "Pick up where you left off" ─────
+            * Hidden when the workspace has fewer than 4 items (the
+            * recents list would mirror the main grid). Only shown on
+            * the "All" tab + root folder -- a recents strip inside a
+            * folder filter would be confusing. */}
+          {recentThree.length > 0 &&
+            tab === "all" &&
+            activeFolderId === null &&
+            !filter.trim() && (
+              <section className="mb-7">
+                <div className="flex items-baseline justify-between mb-2.5">
+                  <h2 className="text-[10.5px] tracking-[0.14em] uppercase text-foreground/40 m-0">
+                    Pick up where you left off
+                  </h2>
+                  <span className="text-[10.5px] text-foreground/35">
+                    Last 7 days
+                  </span>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+                  {recentThree.map((r) => (
+                    <RecentCard
+                      key={`recent-${r.kind}-${r.id}`}
+                      resource={r}
+                      onOpen={() => {
+                        if (r.kind === "document") {
+                          navigate({
+                            to: "/workspace/docs/$id",
+                            params: { id: r.id },
+                          });
+                        } else {
+                          navigate({
+                            to: "/workspace/sheets/$id",
+                            params: { id: r.id },
+                          });
+                        }
+                      }}
+                    />
+                  ))}
+                </div>
+              </section>
             )}
+
+          {/* ── Tab strip ────────────────────────────────────────
+            * Pill-style segmented control matching the Connectors
+            * settings page. The sliding background between active
+            * options is shared across all PillTabs instances via the
+            * groupId. */}
+          <div className="flex items-center gap-3 mb-6">
+            <PillTabs
+              groupId="workspaceMainTabs"
+              value={tab}
+              onChange={(v) => setTab(v as TabId)}
+              options={[
+                { value: "all", label: "All", count: counts.all },
+                {
+                  value: "documents",
+                  label: "Documents",
+                  count: counts.documents,
+                },
+                {
+                  value: "spreadsheets",
+                  label: "Spreadsheets",
+                  count: counts.spreadsheets,
+                },
+                // Archive only renders for C-level + when there's
+                // something archived. Hidden chips never reach PillTabs.
+                ...(isCLevel && archivedCount > 0
+                  ? [
+                      {
+                        value: "archived" as TabId,
+                        label: "Archive",
+                        count: archivedCount,
+                      },
+                    ]
+                  : []),
+              ]}
+            />
           </div>
 
           {/* Single full-width column. Recent Activity rail removed
@@ -505,11 +663,25 @@ export function WorkspacePage() {
                   ))}
                 </ul>
               ) : (
-                <ul className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 list-none p-0 m-0">
+                // Auto-fill grid: every card claims ~280-320px and the
+                // grid packs in as many columns as fit. On a 1400px+
+                // main column this yields 4 cards/row; collapses to
+                // 3 → 2 → 1 cleanly as the viewport narrows. Beats
+                // fixed breakpoints which always leave dead space at
+                // one zoom level or another.
+                <ul
+                  className="grid gap-3 list-none p-0 m-0"
+                  style={{
+                    gridTemplateColumns:
+                      "repeat(auto-fill, minmax(280px, 1fr))",
+                  }}
+                >
                   {filtered.map((r) => (
                     <ResourceCard
                       key={`${r.kind}-${r.id}`}
                       resource={r}
+                      folders={folders}
+                      currentFolderId={r.folder_id}
                       onOpen={() => {
                         if (r.kind === "document") {
                           navigate({
@@ -523,6 +695,20 @@ export function WorkspacePage() {
                           });
                         }
                       }}
+                      onRequestDelete={() =>
+                        setPendingDelete({
+                          kind: r.kind,
+                          id: r.id,
+                          title: r.title || "Untitled",
+                        })
+                      }
+                      onMove={(folderId) =>
+                        moveResource.mutate({
+                          kind: r.kind,
+                          id: r.id,
+                          folder_id: folderId,
+                        })
+                      }
                     />
                   ))}
                 </ul>
@@ -531,6 +717,36 @@ export function WorkspacePage() {
           </div>
         </main>
       </div>
+
+      {/* ── Delete confirm dialog ────────────────────────────────
+        * Opened by any card's hover Trash icon via setPendingDelete.
+        * The dialog handles both the soft-delete (archive) and the
+        * C-level-only hard-delete (type the title to confirm) flows
+        * -- we just pass the mutations. */}
+      {pendingDelete && (
+        <DeleteResourceDialog
+          open
+          onClose={() => setPendingDelete(null)}
+          kind={pendingDelete.kind}
+          title={pendingDelete.title}
+          onArchive={async () => {
+            if (pendingDelete.kind === "document") {
+              await deleteDoc.mutateAsync(pendingDelete.id);
+            } else {
+              await deleteSheet.mutateAsync(pendingDelete.id);
+            }
+            setPendingDelete(null);
+          }}
+          onHardDelete={async () => {
+            if (pendingDelete.kind === "document") {
+              await hardDeleteDocMut.mutateAsync(pendingDelete.id);
+            } else {
+              await hardDeleteSheetMut.mutateAsync(pendingDelete.id);
+            }
+            setPendingDelete(null);
+          }}
+        />
+      )}
     </div>
   );
 }
@@ -1108,50 +1324,46 @@ function Breadcrumb({
 }
 
 // ──────────────────────────────────────────────────────────────────
-// Tab — editorial pill with count badge.
+// StatPair — one cell of the at-a-glance stats strip in the page
+// header. Number on top, dim uppercase label underneath. `accent`
+// tints the number primary (used for "since last edit" so it reads
+// as a live signal).
 // ──────────────────────────────────────────────────────────────────
-function Tab({
+function StatPair({
   label,
-  count,
-  active,
-  onClick,
+  value,
+  accent,
+  className,
 }: {
   label: string;
-  count: number;
-  active: boolean;
-  onClick: () => void;
+  value: string | number;
+  accent?: boolean;
+  className?: string;
 }) {
   return (
-    <button
-      type="button"
-      onClick={onClick}
-      className={
-        "relative px-4 h-9 text-[12px] font-bold uppercase tracking-wider transition-colors inline-flex items-center gap-2 " +
-        (active
-          ? "text-foreground"
-          : "text-foreground/45 hover:text-foreground/70")
-      }
-    >
-      {label}
+    <div className={"flex flex-col gap-0 " + (className ?? "")}>
       <span
         className={
-          "font-mono tabular-nums text-[10.5px] " +
-          (active ? "text-foreground/55" : "text-foreground/30")
+          "text-[16px] font-semibold tabular-nums leading-tight " +
+          (accent ? "text-primary" : "text-foreground")
         }
       >
-        {count}
+        {value}
       </span>
-      {active && (
-        <span className="absolute left-0 right-0 bottom-[-1px] h-[2px] bg-primary" />
-      )}
-    </button>
+      <span className="text-[9.5px] tracking-[0.12em] uppercase text-foreground/40 mt-0.5">
+        {label}
+      </span>
+    </div>
   );
 }
 
 // ──────────────────────────────────────────────────────────────────
-// ResourceCard — now draggable into folders.
+// RecentCard — larger "Pick up where you left off" tile shown above
+// the main grid. Quieter than ResourceCard (no footer, no preview)
+// because the grid below carries the full detail. Click navigates
+// directly to the resource.
 // ──────────────────────────────────────────────────────────────────
-function ResourceCard({
+function RecentCard({
   resource,
   onOpen,
 }: {
@@ -1161,6 +1373,96 @@ function ResourceCard({
   const isDoc = resource.kind === "document";
   const Icon = isDoc ? FileText : Sheet;
   const accent = isDoc ? "text-sky-400" : "text-emerald-400";
+  return (
+    <button
+      type="button"
+      onClick={onOpen}
+      className="group text-left rounded-sm border border-border bg-card hover:border-primary/30 hover:bg-card/80 transition-colors p-3.5 flex flex-col gap-2 min-h-[92px]"
+    >
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-1.5 text-[10px] tracking-[0.1em] uppercase text-foreground/40">
+          <Icon size={12} className={accent} />
+          {isDoc ? "Document" : "Spreadsheet"}
+        </div>
+        <span className="text-[10px] font-mono tabular-nums text-foreground/35">
+          {formatRelative(resource.updated_at)}
+        </span>
+      </div>
+      <div className="text-[14px] font-semibold text-foreground line-clamp-2 group-hover:text-primary transition-colors">
+        {resource.title || "Untitled"}
+      </div>
+    </button>
+  );
+}
+
+// ──────────────────────────────────────────────────────────────────
+// ResourceCard — now draggable into folders.
+// ──────────────────────────────────────────────────────────────────
+function ResourceCard({
+  resource,
+  folders,
+  currentFolderId,
+  onOpen,
+  onRequestDelete,
+  onMove,
+}: {
+  resource: WorkspaceResource;
+  /** Folder list for the move-to picker. Pass an empty array to hide
+   *  the Move action entirely. */
+  folders: WorkspaceFolder[];
+  /** The folder the resource currently lives in (or null for root).
+   *  Used to dim the matching entry in the move picker. */
+  currentFolderId: string | null;
+  onOpen: () => void;
+  /** Called when the user clicks the Trash icon. Parent is expected
+   *  to open a confirm dialog (DeleteResourceDialog) and run the
+   *  actual archive / hard-delete from there. We don't fire the
+   *  mutation directly here -- deletes always go through confirm. */
+  onRequestDelete?: () => void;
+  /** Move handler — pass null to move to the workspace root, or a
+   *  folder id to move into that folder. */
+  onMove?: (folderId: string | null) => void;
+}) {
+  const isDoc = resource.kind === "document";
+  const Icon = isDoc ? FileText : Sheet;
+  const accent = isDoc ? "text-sky-400" : "text-emerald-400";
+  // "Untitled" is a placeholder both in the DB default and when a
+  // user creates without naming. Render it italic + dim so it reads
+  // as a draft rather than an actual title.
+  const hasTitle = !!resource.title && resource.title !== "Untitled";
+
+  // body_preview is the cached plain-text snippet maintained by
+  // DocDetailPage on save. Trim & line-clamp on render so we never
+  // overflow the card. Empty docs get a neutral placeholder rather
+  // than a blank gap -- prevents the card from looking broken.
+  const preview = (resource.body_preview ?? "").trim();
+  const showPreview = preview.length > 0;
+  const emptyHint = isDoc
+    ? "Empty document — click to start."
+    : "Empty spreadsheet — click to open.";
+
+  // Hover-only action state. The folder picker stays open while the
+  // user is in the dropdown -- clicking outside or picking an option
+  // closes it. Delete just opens a confirm dialog at the page level;
+  // the card never fires the mutation directly.
+  const [showMove, setShowMove] = useState(false);
+
+  function handleDeleteClick(e: ReactMouseEvent) {
+    e.stopPropagation();
+    onRequestDelete?.();
+  }
+
+  function handleMoveClick(e: ReactMouseEvent) {
+    e.stopPropagation();
+    setShowMove((s) => !s);
+  }
+
+  function pickMove(e: ReactMouseEvent, folderId: string | null) {
+    e.stopPropagation();
+    onMove?.(folderId);
+    setShowMove(false);
+  }
+
   return (
     <li className="list-none">
       <div
@@ -1173,27 +1475,122 @@ function ResourceCard({
           e.dataTransfer.effectAllowed = "move";
         }}
         onClick={onOpen}
-        className="group w-full text-left rounded-sm border border-border bg-card hover:border-primary/30 hover:bg-card/80 transition-colors p-4 h-[124px] flex flex-col justify-between cursor-pointer"
+        className="group relative w-full text-left rounded-sm border border-border bg-card hover:border-primary/30 hover:bg-card/80 transition-colors p-3.5 min-h-[148px] flex flex-col gap-2 cursor-pointer"
       >
-        <div>
-          <div className="flex items-start justify-between gap-2">
-            <div className="flex items-center gap-2 min-w-0">
-              <Icon size={13} className={accent + " flex-shrink-0"} />
-              <span className="text-[10px] tracking-[0.12em] uppercase text-foreground/40">
-                {isDoc ? "Document" : "Spreadsheet"}
-              </span>
-            </div>
-            {resource.visibility === "shared" ? (
-              <Globe size={11} className="text-emerald-400/80 flex-shrink-0" />
-            ) : (
-              <Lock size={11} className="text-foreground/30 flex-shrink-0" />
+        {/* ── Hover actions overlay ────────────────────────────
+          * Floating top-right cluster. Stays hidden until the card
+          * is hovered (or the move picker is open). Buttons stop
+          * propagation so they never trigger card-open. */}
+        {(onRequestDelete || onMove) && (
+          <div
+            className={
+              "absolute top-2.5 right-2.5 z-10 flex items-center gap-1 transition-opacity " +
+              (showMove
+                ? "opacity-100"
+                : "opacity-0 group-hover:opacity-100 focus-within:opacity-100")
+            }
+            onClick={(e) => e.stopPropagation()}
+          >
+            {onMove && folders.length > 0 && (
+              <div className="relative">
+                <button
+                  type="button"
+                  aria-label="Move to folder"
+                  onClick={handleMoveClick}
+                  className="w-6 h-6 inline-flex items-center justify-center rounded-sm bg-background/85 backdrop-blur-sm border border-border hover:border-primary/40 hover:text-primary text-foreground/65 transition-colors"
+                >
+                  <FolderOpen size={12} />
+                </button>
+                {showMove && (
+                  <div
+                    role="menu"
+                    className="absolute right-0 mt-1 min-w-[180px] max-h-[260px] overflow-y-auto rounded-sm bg-popover border border-border shadow-lg py-1 z-20"
+                  >
+                    <button
+                      type="button"
+                      role="menuitem"
+                      onClick={(e) => pickMove(e, null)}
+                      disabled={currentFolderId === null}
+                      className="w-full text-left px-2.5 py-1.5 text-[11.5px] flex items-center gap-2 hover:bg-muted/60 disabled:opacity-40 disabled:cursor-default"
+                    >
+                      <Home size={11} className="text-foreground/45" />
+                      Workspace root
+                    </button>
+                    <div className="h-px bg-border/60 my-1" />
+                    {folders.map((f) => (
+                      <button
+                        type="button"
+                        role="menuitem"
+                        key={f.id}
+                        onClick={(e) => pickMove(e, f.id)}
+                        disabled={currentFolderId === f.id}
+                        className="w-full text-left px-2.5 py-1.5 text-[11.5px] flex items-center gap-2 hover:bg-muted/60 disabled:opacity-40 disabled:cursor-default"
+                      >
+                        <Folder size={11} className="text-foreground/45" />
+                        <span className="truncate">{f.name}</span>
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+            {onRequestDelete && (
+              <button
+                type="button"
+                aria-label="Delete document"
+                title="Delete"
+                onClick={handleDeleteClick}
+                className="w-6 h-6 inline-flex items-center justify-center rounded-sm bg-background/85 backdrop-blur-sm border border-border hover:border-destructive/40 hover:text-destructive text-foreground/65 transition-colors"
+              >
+                <Trash2 size={12} />
+              </button>
             )}
           </div>
-          <div className="mt-2 text-[14px] font-semibold text-foreground line-clamp-2 group-hover:text-primary transition-colors">
-            {resource.title || "Untitled"}
+        )}
+
+        {/* Title row -- icon inline with the title, visibility lock on
+          * the right. Replaces the old "DOCUMENT" eyebrow + separate
+          * title row; the icon color already encodes kind (sky = doc,
+          * emerald = sheet) so the explicit label is redundant. Italic
+          * + muted styling for placeholder "Untitled" docs. */}
+        <div className="flex items-start justify-between gap-2">
+          <div className="flex items-center gap-2 min-w-0 flex-1">
+            <Icon
+              size={14}
+              className={accent + " flex-shrink-0 mt-0.5"}
+            />
+            <div
+              className={
+                "text-[13.5px] line-clamp-2 transition-colors leading-tight min-w-0 " +
+                (hasTitle
+                  ? "font-semibold text-foreground group-hover:text-primary"
+                  : "font-normal italic text-foreground/45 group-hover:text-foreground/65")
+              }
+            >
+              {resource.title || "Untitled"}
+            </div>
           </div>
+          {resource.visibility === "shared" ? (
+            <Globe size={11} className="text-emerald-400/80 flex-shrink-0 mt-1" />
+          ) : (
+            <Lock size={11} className="text-foreground/30 flex-shrink-0 mt-1" />
+          )}
         </div>
-        <div className="text-[10.5px] text-foreground/45 flex items-center justify-between">
+
+        {/* 3-line preview snippet */}
+        <div
+          className={
+            "text-[11px] leading-[1.5] line-clamp-3 " +
+            (showPreview
+              ? "text-foreground/55"
+              : "text-foreground/35 italic")
+          }
+        >
+          {showPreview ? preview : emptyHint}
+        </div>
+
+        {/* Footer separated by a dashed border for the editorial feel */}
+        <div className="mt-auto pt-2 border-t border-dashed border-border/60 text-[10.5px] text-foreground/45 flex items-center justify-between">
           <span>{resource.updated_by ?? resource.owner}</span>
           <span className="font-mono tabular-nums text-foreground/35">
             {formatRelative(resource.updated_at)}

@@ -52,7 +52,15 @@ import { MarkdownHelpPalette } from "./MarkdownHelpPalette";
 import { useMarkdownHelp } from "./markdownHelpStore";
 import { DeleteResourceDialog } from "./DeleteResourceDialog";
 import { CommentDraftDialog } from "./CommentDraftDialog";
+import { extractDocText } from "./searchHelpers";
 import "./workspace.css";
+
+/**
+ * How many chars of plain text we store as the body preview on every
+ * save. Read by the workspace landing page card grid. ~180 fits ~3
+ * lines of card text comfortably without overflowing the line-clamp.
+ */
+const BODY_PREVIEW_MAX_CHARS = 180;
 import "tippy.js/dist/tippy.css";
 
 interface Props {
@@ -276,9 +284,20 @@ export function DocDetailPage({ id }: Props) {
       try {
         const json = yDocToProsemirrorJSON(ydoc);
         const yBytes = Y.encodeStateAsUpdate(ydoc);
+        // Cheap plain-text extract for the landing page card preview.
+        // Trimming here means the landing query never has to load the
+        // full content JSON to render a snippet -- big win when there
+        // are 30+ docs in the workspace.
+        const bodyPreview =
+          extractDocText(json as any).slice(0, BODY_PREVIEW_MAX_CHARS) ||
+          null;
         await updateMut.mutateAsync({
           id: doc.id,
-          patch: { content: json, y_state: bytesToB64(yBytes) } as any,
+          patch: {
+            content: json,
+            y_state: bytesToB64(yBytes),
+            body_preview: bodyPreview,
+          } as any,
           updatedBy: username,
         });
       } catch (e) {

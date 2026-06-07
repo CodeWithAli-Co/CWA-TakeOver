@@ -85,13 +85,13 @@ export function useWorkspaceResources(
         takeOversupabase
           .from(DOC_TABLE)
           .select(
-            "id, title, owner, visibility, icon, folder_id, updated_at, updated_by, archived",
+            "id, title, owner, visibility, icon, folder_id, updated_at, updated_by, archived, body_preview",
           )
           .order("updated_at", { ascending: false }),
         takeOversupabase
           .from(SHEET_TABLE)
           .select(
-            "id, title, owner, visibility, icon, folder_id, updated_at, updated_by, archived",
+            "id, title, owner, visibility, icon, folder_id, updated_at, updated_by, archived, body_preview",
           )
           .order("updated_at", { ascending: false }),
       ]);

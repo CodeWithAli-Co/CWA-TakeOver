@@ -30,6 +30,7 @@ import { SlashCommand } from "./SlashCommand";
 import { PageLinkSuggestion } from "./PageLinkSuggestion";
 import { EditorBubbleMenu } from "./EditorBubbleMenu";
 import { uploadWorkspaceImage, extractImageFiles } from "./imageUpload";
+import { useMarkdownHelp } from "./markdownHelpStore";
 import type { SupabaseYProvider } from "@/lib/yjs/SupabaseYProvider";
 import type { RemoteUser } from "@/lib/yjs/awareness";
 
@@ -183,6 +184,22 @@ export function DocEditor({
       } catch { /* noop */ }
     };
   }, [editor]);
+
+  // Register this editor with the markdown palette store so clicking
+  // a row in the palette can apply formatting here. Clears the
+  // registration on unmount / tab switch so a stale editor reference
+  // never lingers after the doc closes.
+  const setPaletteEditor = useMarkdownHelp((s) => s.setEditor);
+  useEffect(() => {
+    if (!editor) return;
+    setPaletteEditor(editor);
+    return () => {
+      // Only clear if WE are still the registered editor -- avoid
+      // racing with a sibling editor that just registered itself.
+      const current = useMarkdownHelp.getState().editor;
+      if (current === editor) setPaletteEditor(null);
+    };
+  }, [editor, setPaletteEditor]);
 
   if (!editor) return null;
 

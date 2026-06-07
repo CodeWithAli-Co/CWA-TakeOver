@@ -79,6 +79,10 @@ export interface WorkspaceDocument {
   /** Per-doc tab metadata. Empty = single-tab mode using 'default'
    *  Y.js fragment. See WorkspaceDocTab above. */
   tabs: WorkspaceDocTab[];
+  /** Cached plain-text snippet (first ~180 chars) used by the landing
+   *  page card grid. Maintained on save by DocDetailPage. May be
+   *  one save behind the editor; NULL on never-saved/empty docs. */
+  body_preview: string | null;
   created_at: string;
   updated_at: string;
   updated_by: string | null;
@@ -96,6 +100,10 @@ export interface WorkspaceSpreadsheet {
   archived: boolean;
   /** Folder this sheet belongs to. NULL = lives at the workspace root. */
   folder_id: string | null;
+  /** Same shape as WorkspaceDocument.body_preview. Most sheets leave
+   *  this NULL — the card grid renders an "Empty spreadsheet" hint
+   *  in that case. */
+  body_preview: string | null;
   created_at: string;
   updated_at: string;
   updated_by: string | null;
@@ -114,6 +122,11 @@ export interface WorkspaceResource {
   folder_id: string | null;
   updated_at: string;
   updated_by: string | null;
+  /** Cached plain-text snippet of the resource body. NULL when the
+   *  resource is empty / never saved or for spreadsheets (which
+   *  rarely populate this). The card grid line-clamps it to 3 lines
+   *  and falls back to a neutral empty-state when null/blank. */
+  body_preview: string | null;
 }
 
 // ── Collaboration (used by later phases) ──────────────────────────

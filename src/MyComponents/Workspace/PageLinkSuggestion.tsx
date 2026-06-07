@@ -48,11 +48,11 @@ async function fetchAllPageRefs(): Promise<PageRef[]> {
   if (__pageRefsPromise) return __pageRefsPromise;
   __pageRefsPromise = (async () => {
     const [docsRes, sheetsRes] = await Promise.all([
-      supabase
+      takeOversupabase
         .from("workspace_documents")
         .select("id, title, archived")
         .order("updated_at", { ascending: false }),
-      supabase
+      takeOversupabase
         .from("workspace_spreadsheets")
         .select("id, title, archived")
         .order("updated_at", { ascending: false }),
