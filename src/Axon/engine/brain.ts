@@ -24,7 +24,12 @@ import type {
   PersonalityContext, PersonalityDimensions, PresetKey,
 } from "../personality/types";
 import { captureScreenContext } from "./screenContext";
-import { loadMemory, memoryPreamble, sinceLastSeen } from "./memory";
+import {
+  loadMemory,
+  memoryPreamble,
+  memoryPreambleV2,
+  sinceLastSeen,
+} from "./memory";
 import { composeProfilePreambleNow } from "./profilePreamble";
 import {
   captureScreenshot,
@@ -144,7 +149,12 @@ function buildContextPreamble(
       : "all companies";
   const screen = captureScreenContext();
   const mem = loadMemory();
-  const memBlock = memoryPreamble(mem);
+  // F.4: relevance-scored memory selection when we have the current
+  // user turn. Falls back to the recency-based v1 when no utterance
+  // is available (e.g. brain called from a monitor, not a turn).
+  const memBlock = recentUtterance
+    ? memoryPreambleV2(mem, recentUtterance)
+    : memoryPreamble(mem);
   // Operator profile preamble (F.3) -- context-aware subset of the
   // structured profile. Surfaces comm_style + current_focus always,
   // plus time-of-day fields (lunch_time, workday_start/end, etc.)
@@ -459,11 +469,29 @@ export async function runTurn(
   }
 
   const preamble = buildContextPreamble(ctx, opts.summary, userText);
-  // No confidence-based confirm injection. Low confidence → still act;
-  // the operator will say "undo that" or correct if wrong. This is
-  // faster than a back-and-forth confirmation loop — especially on
-  // mobile/noisy-room conditions where confidence is usually < 0.65.
-  const confidenceNote = "";
+  // F.5: STT-uncertainty-aware policy. The system prompt's default
+  // posture is "even on low confidence, act" -- which is correct for
+  // read-only intents (asking, listing, navigating) where a mishear
+  // costs nothing and the operator can re-issue. But for MUTATING
+  // intents (delete, cancel, close, archive, move, send), acting on
+  // a mishear can break things in ways the undo stack can't fully
+  // catch -- a sent email is sent.
+  //
+  // When the transcribed confidence is genuinely low, this note tells
+  // the brain to switch posture for THIS turn: still act on read-only
+  // intents, but repeat-back-and-confirm for mutating ones. Read-only
+  // turns are unaffected (the brain just proceeds normally regardless
+  // of the note).
+  //
+  // Threshold: 0.6 is the working sweet spot. Anything below this is
+  // genuinely murky -- the recognizer itself isn't sure what was
+  // said. Above 0.6 the recognizer is confident enough that the
+  // mishear risk is low and the confirm tax outweighs the safety win.
+  const confidence = opts.confidence ?? 1;
+  const confidenceNote =
+    confidence < 0.6
+      ? `\n\n<low_confidence_turn>\nThis user turn was transcribed at confidence ${confidence.toFixed(2)} -- the recognizer wasn't fully sure what was said. The transcript is shown verbatim.\n\nPolicy for THIS turn only:\n- If the operator's intent is READ-ONLY (asking, listing, navigating, summarizing, checking) -- proceed normally. A mishear here costs nothing.\n- If the operator's intent is MUTATING (delete, cancel, close, archive, move, send, schedule, create) -- BEFORE calling any mutating tool, briefly repeat what you heard in one sentence and wait for a confirm. Example: operator said "drop the Acme deal" at low confidence -- you say "Dropping the Acme deal -- that right?" and stop. If they confirm, then proceed.\n- This overrides the default "act on low confidence" rule, but only for mutating intents on this single turn.\n</low_confidence_turn>`
+      : "";
 
   // ── Vision — capture screenshot when the question implies visual perception.
   const visionMode = opts.visionMode ?? "auto";

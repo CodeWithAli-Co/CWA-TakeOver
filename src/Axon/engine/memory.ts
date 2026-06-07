@@ -282,6 +282,219 @@ export function appendDefer(
   };
 }
 
+// ════════════════════════════════════════════════════════════════
+// RELEVANCE-SCORED PREAMBLE (F.4 -- Conversation Memory v2)
+//
+// The v1 memoryPreamble below dumps the most recent 5-8 of each
+// channel verbatim into the brain context. That's fine when memory
+// is small and the operator's turn is on-topic with their recent
+// activity, but it falls down two ways:
+//
+//   1. Token waste -- 30+ irrelevant lines per turn, every turn,
+//      regardless of whether any of them are about the current
+//      question.
+//
+//   2. Stale context drag -- Claude sees "Cesar Sosa Santos was a
+//      test candidate" in the preamble and brings it up when the
+//      operator was actually asking about Stripe MRR. The preamble
+//      shouldn't be a leash.
+//
+// v2 (when currentUtterance is provided): score every memory entry
+// by keyword overlap with the operator's current turn, surface top
+// K relevant + the freshest 1-2 decisions for continuity, drop the
+// rest. The "always-keep-fresh-decisions" bit prevents the case
+// where you mentioned something five minutes ago and Axon already
+// forgot the context.
+//
+// Keyword overlap (not embeddings) is deliberate -- it's <1ms,
+// requires no inference call, and works fine at the scale we have
+// (24 notes, 30 decisions, 30 defers max). If memory ever grows to
+// 1000+ entries we'd want embeddings, but we don't and won't.
+// ════════════════════════════════════════════════════════════════
+
+// Common English stopwords -- dropped from both sides of the
+// overlap so "the X" matches "the Y" only on the meaningful parts.
+const STOPWORDS = new Set([
+  "the", "a", "an", "and", "or", "but", "if", "of", "in", "on",
+  "at", "to", "for", "with", "from", "by", "as", "is", "was", "are",
+  "were", "be", "been", "being", "do", "does", "did", "doing",
+  "have", "has", "had", "having", "this", "that", "these", "those",
+  "i", "you", "he", "she", "it", "we", "they", "my", "your", "his",
+  "her", "its", "our", "their", "me", "him", "us", "them", "what",
+  "which", "who", "whom", "when", "where", "why", "how", "all",
+  "any", "some", "no", "not", "so", "than", "too", "very", "just",
+  "can", "will", "would", "should", "could", "may", "might", "must",
+  "shall", "about", "into", "over", "under", "out", "up", "down",
+  "off", "again", "more", "most", "other", "such", "yes", "okay",
+  "ok", "ya", "yeah", "nope",
+]);
+
+function tokenize(text: string): Set<string> {
+  return new Set(
+    text
+      .toLowerCase()
+      .replace(/[^\w\s]/g, " ")
+      .split(/\s+/)
+      .filter((t) => t.length >= 3 && !STOPWORDS.has(t)),
+  );
+}
+
+/**
+ * Score how relevant `entry` is to `utteranceTokens`. Higher is more
+ * relevant. Pure keyword overlap -- count of intersecting tokens. No
+ * length normalization on the entry side (so longer entries get a
+ * slight natural advantage, which is fine -- a 240-char decision
+ * with 3 overlapping terms is probably MORE relevant than a 30-char
+ * note with 2 overlapping terms).
+ */
+function relevanceScore(
+  entryText: string,
+  utteranceTokens: Set<string>,
+): number {
+  if (utteranceTokens.size === 0) return 0;
+  const entryTokens = tokenize(entryText);
+  let overlap = 0;
+  for (const t of entryTokens) {
+    if (utteranceTokens.has(t)) overlap += 1;
+  }
+  return overlap;
+}
+
+interface ScoredEntry {
+  text: string;
+  kind: "note" | "decision" | "defer";
+  ts: number;
+  score: number;
+}
+
+function rankMemory(
+  m: PersistentMemory,
+  utterance: string,
+): ScoredEntry[] {
+  const tokens = tokenize(utterance);
+  const scored: ScoredEntry[] = [];
+  for (const n of m.notes) {
+    scored.push({
+      text: n.text,
+      kind: "note",
+      ts: n.ts,
+      score: relevanceScore(n.text, tokens),
+    });
+  }
+  for (const d of m.decisions) {
+    scored.push({
+      text: d.text,
+      kind: "decision",
+      ts: d.ts,
+      score: relevanceScore(d.text, tokens),
+    });
+  }
+  for (const f of m.defers) {
+    scored.push({
+      text: f.text,
+      kind: "defer",
+      ts: f.ts,
+      score: relevanceScore(f.text, tokens),
+    });
+  }
+  // Sort by score descending, then by recency as the tiebreaker.
+  scored.sort((a, b) => b.score - a.score || b.ts - a.ts);
+  return scored;
+}
+
+/**
+ * Relevance-scored preamble. Drop-in replacement for memoryPreamble
+ * when the brain has the current user turn to compare against. Falls
+ * back to the recency-based composition when utterance is empty or
+ * yields zero matches above the threshold.
+ *
+ * Output discipline:
+ *   - Top 5 entries by relevance, score > 0
+ *   - PLUS the 2 most recent decisions regardless of score (so
+ *     conversational continuity doesn't break when the operator
+ *     suddenly switches topic)
+ *   - PLUS preferences + last session recap (identity-level context,
+ *     small footprint, always useful)
+ */
+export function memoryPreambleV2(
+  m: PersistentMemory,
+  utterance: string,
+): string {
+  if (
+    !m.notes.length &&
+    !Object.keys(m.prefs).length &&
+    !m.sessionSummaries.length &&
+    !m.decisions.length &&
+    !m.defers.length
+  )
+    return "";
+
+  // Fall back to v1 when we have no signal to score against.
+  if (!utterance || utterance.trim().length < 3) {
+    return memoryPreamble(m);
+  }
+
+  const ranked = rankMemory(m, utterance);
+  const relevant = ranked.filter((r) => r.score > 0).slice(0, 5);
+
+  // Always include the 2 most recent decisions for continuity, but
+  // dedupe against anything already in the relevant set.
+  const recentDecisions = m.decisions.slice(-2).reverse();
+  const seenTexts = new Set(relevant.map((r) => r.text));
+  const continuity = recentDecisions
+    .filter((d) => !seenTexts.has(d.text))
+    .map((d) => ({
+      text: d.text,
+      kind: "decision" as const,
+      ts: d.ts,
+      score: 0,
+    }));
+
+  const parts: string[] = [];
+
+  // Style + preferences -- cheap to include, always useful for tone.
+  if (Object.keys(m.prefs).length) {
+    const prefs = Object.entries(m.prefs)
+      .map(([k, v]) => `  - ${k}: ${v}`)
+      .join("\n");
+    parts.push(`Operator preferences:\n${prefs}`);
+  }
+
+  // Relevant memory entries.
+  if (relevant.length > 0) {
+    const lines = relevant.map((r) => {
+      const tag =
+        r.kind === "decision" ? "[decision]" :
+        r.kind === "defer" ? "[deferred]" :
+        "[note]";
+      return `${tag} ${r.text}`;
+    });
+    parts.push(
+      `Relevant memory (scored by overlap with the current question):\n${lines.join("\n")}`,
+    );
+  }
+
+  // Continuity decisions -- only if they add something the relevant
+  // set didn't already cover.
+  if (continuity.length > 0) {
+    const lines = continuity.map((c) => `[decision] ${c.text}`);
+    parts.push(`Recent decisions (continuity):\n${lines.join("\n")}`);
+  }
+
+  // Last session summary -- "you were just working on X" context.
+  if (m.sessionSummaries.length > 0) {
+    const last = m.sessionSummaries[m.sessionSummaries.length - 1];
+    parts.push(`Last session recap:\n${last.summary}`);
+  }
+
+  if (parts.length === 0) {
+    // No relevant matches AND no other content -- skip the block
+    // entirely rather than emitting an empty "Memory:" header.
+    return "";
+  }
+  return parts.join("\n\n");
+}
+
 /** Compose a compact preamble block the brain can read. */
 export function memoryPreamble(m: PersistentMemory): string {
   if (
