@@ -63,6 +63,8 @@ import { PIPELINE_STAGE_LABEL } from "@/stores/investors";
 import { FollowupsDueStrip } from "./FollowupsDueStrip";
 import { DiscoverInvestorsModal } from "./DiscoverInvestorsModal";
 import { BatchOutreachModal } from "./BatchOutreachModal";
+import { QuickSendToast } from "./QuickSendToast";
+import { useQuickSendStore } from "./quickSendStore";
 import { useBatchOutreachStore } from "./batchOutreachStore";
 import { Send as SendIcon } from "lucide-react";
 
@@ -420,6 +422,7 @@ export function FundraisePage() {
         * column buttons in future) can trigger it without prop
         * threading. */}
       <BatchOutreachModal />
+      <QuickSendToast />
       <FundraiseSettingsModal
         open={settingsOpen}
         onClose={() => setSettingsOpen(false)}

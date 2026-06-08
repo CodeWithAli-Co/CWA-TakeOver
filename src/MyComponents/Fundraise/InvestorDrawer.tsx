@@ -12,7 +12,7 @@
  * already updates it, but the drawer should support manual override).
  */
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   X,
@@ -74,6 +74,32 @@ export function InvestorDrawer({ investorId, onClose }: Props) {
     partnerId: string;
     channel: DraftChannel;
   } | null>(null);
+
+  // Phase 9.1: auto-open the draft modal when the drawer opens. As soon
+  // as we have a loaded investor + settings + a partner with an email,
+  // open the draft modal so Axon starts drafting in the background.
+  // By the time the operator is done looking at the drawer header, the
+  // draft is already ready (or close to it). Cuts ~10s + 1 click per
+  // investor from the outreach flow.
+  //
+  // Guard: only auto-open ONCE per investor open -- otherwise closing
+  // the modal would immediately re-open it. autoOpenedFor stores the
+  // investor id we last auto-opened for; we reset it when the drawer
+  // closes (investorId becomes null).
+  const autoOpenedFor = useRef<string | null>(null);
+  useEffect(() => {
+    if (!investorId) {
+      // Drawer closed -- reset so next open re-arms the auto-open.
+      autoOpenedFor.current = null;
+      return;
+    }
+    if (autoOpenedFor.current === investorId) return;
+    if (!detail || !settings) return;
+    const partnerWithEmail = detail.partners.find((p) => p.email?.trim());
+    if (!partnerWithEmail) return;
+    autoOpenedFor.current = investorId;
+    setDraftFor({ partnerId: partnerWithEmail.id, channel: "email" });
+  }, [investorId, detail, settings]);
 
   /** Post-send hook. Three things happen here:
    *

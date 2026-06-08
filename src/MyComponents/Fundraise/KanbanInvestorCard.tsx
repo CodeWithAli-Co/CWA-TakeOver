@@ -14,7 +14,7 @@
  * normal click never fires a drag.
  */
 
-import { Users } from "lucide-react";
+import { Users, Zap } from "lucide-react";
 import type { InvestorListEntry } from "@/stores/investors";
 
 interface Props {
@@ -45,6 +45,7 @@ export function KanbanInvestorCard({
   onOpen,
   onDragStart,
   onDragEnd,
+  onQuickSend,
 }: Props) {
   const rail = PRIORITY_RAIL[investor.priority];
   const ageDays =
@@ -76,14 +77,30 @@ export function KanbanInvestorCard({
         aria-hidden
       />
 
-      {/* Firm name + priority pip */}
+      {/* Firm name + priority pip + ⚡ Quick Send (Phase 9.2) */}
       <div className="flex items-start justify-between gap-2">
         <h4 className="text-[12.5px] font-semibold text-foreground leading-tight m-0 truncate flex-1">
           {investor.company_name}
         </h4>
-        <span className="text-[9.5px] font-mono uppercase tracking-[0.1em] text-foreground/45 flex-shrink-0">
-          {PRIORITY_LABEL[investor.priority]}
-        </span>
+        <div className="flex items-center gap-1.5 flex-shrink-0">
+          {onQuickSend && (
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                onQuickSend();
+              }}
+              title="Quick send -- draft + send in the background"
+              aria-label="Quick send"
+              className="inline-flex items-center justify-center w-5 h-5 rounded-sm text-foreground/40 hover:text-primary hover:bg-primary/10 transition-colors"
+            >
+              <Zap size={11} />
+            </button>
+          )}
+          <span className="text-[9.5px] font-mono uppercase tracking-[0.1em] text-foreground/45">
+            {PRIORITY_LABEL[investor.priority]}
+          </span>
+        </div>
       </div>
 
       {/* Partner count + last-outreach age */}

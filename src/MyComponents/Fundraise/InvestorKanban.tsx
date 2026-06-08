@@ -42,6 +42,8 @@ import {
 } from "@/stores/investors";
 
 import { KanbanInvestorCard } from "./KanbanInvestorCard";
+import { useQuickSendStore } from "./quickSendStore";
+import { companySupabase } from "@/routes/index.lazy";
 
 // MIME-typed dataTransfer key keeps us from picking up unrelated
 // drags (e.g. a drag from the CRM PipelineView in another window).
@@ -206,6 +208,7 @@ export function InvestorKanban({ investors, onOpen }: Props) {
                       key={inv.id}
                       investor={inv}
                       onOpen={() => onOpen(inv.id)}
+                      onQuickSend={() => quickSendForInvestor(inv)}
                       onDragStart={(e) => {
                         e.dataTransfer.setData(DT_KEY, inv.id);
                         e.dataTransfer.effectAllowed = "move";
@@ -254,3 +257,74 @@ function EmptyColumn({ stage }: { stage: InvestorPipelineStage }) {
 // Exported for the Cmd+K verb wiring later — gives the dispatcher
 // the canonical stage list without duplicating the order.
 export { COLUMN_ORDER as KANBAN_COLUMN_ORDER };
+
+// ─────────────────────────────────────────────────────────────────
+// Phase 9.2: Quick Send helper. Pulls the first partner with email
+// from the investor's contacts, then enqueues a QuickSend entry.
+// The QuickSendToast picks it up and runs the draft + send pipeline.
+// ─────────────────────────────────────────────────────────────────
+async function quickSendForInvestor(inv: InvestorListEntry) {
+  try {
+    const enqueue = useQuickSendStore.getState().enqueue;
+    // The investor row gives us the firm's CRM company via a join
+    // surface -- the kanban entries carry company-side fields. We need
+    // the company_id to look up partners. InvestorListEntry doesn't
+    // expose it directly, so we round-trip through investor_profiles.
+    const { data: profileRow } = await companySupabase
+      .from("investor_profiles")
+      .select("company_id")
+      .eq("id", inv.id)
+      .maybeSingle();
+    const companyId = (profileRow as any)?.company_id;
+    if (!companyId) {
+      const id = enqueue({
+        investor_id: inv.id,
+        firm_name: inv.company_name,
+        partner_id: "",
+        partner_name: "(no firm row)",
+        partner_email: "",
+      });
+      useQuickSendStore
+        .getState()
+        .setStatus(id, "failed", "Investor has no linked company row.");
+      return;
+    }
+    const { data: partners } = await companySupabase
+      .from("crm_contacts")
+      .select("id, name, email")
+      .eq("company_id", companyId)
+      .not("email", "is", null)
+      .limit(1);
+    if (!partners || partners.length === 0) {
+      const id = enqueue({
+        investor_id: inv.id,
+        firm_name: inv.company_name,
+        partner_id: "",
+        partner_name: "(no partner with email)",
+        partner_email: "",
+      });
+      useQuickSendStore
+        .getState()
+        .setStatus(
+          id,
+          "failed",
+          "No partner with email -- add one via Find with Axon first.",
+        );
+      return;
+    }
+    const partner = partners[0] as {
+      id: string;
+      name: string | null;
+      email: string;
+    };
+    enqueue({
+      investor_id: inv.id,
+      firm_name: inv.company_name,
+      partner_id: partner.id,
+      partner_name: partner.name ?? "Unnamed partner",
+      partner_email: partner.email,
+    });
+  } catch (e) {
+    console.error("[quickSendForInvestor]", e);
+  }
+}
