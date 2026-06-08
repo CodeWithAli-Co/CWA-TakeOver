@@ -23,7 +23,8 @@
         "theme": "Dark",
         "backgroundColor": "#0F0000",
         "center": true,
-        "visible": false
+        "visible": false,
+        "dragDropEnabled": false
       }
     ],
     "security": {

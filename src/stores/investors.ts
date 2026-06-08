@@ -243,7 +243,7 @@ export function useInvestor(id: string | null | undefined) {
             .from(ACTIVITIES_TABLE)
             .select("*")
             .in("contact_id", ids)
-            .order("occurred_at", { ascending: false })
+            .order("happened_at", { ascending: false })
             .limit(50);
         })(),
       ]);
@@ -397,6 +397,143 @@ export function useCreateInvestor() {
       }
 
       return profile as InvestorProfile;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: investorKeys.all });
+    },
+  });
+}
+
+// ─────────────────────────────────────────────────────────────────
+// Bulk create -- used by the DiscoverInvestorsModal to insert N
+// candidates at once after Axon's web-research finds them.
+// ─────────────────────────────────────────────────────────────────
+
+/** One firm + its partner(s) for bulk insert. Same shape as
+ *  CreateInvestorInput but supports multiple partners (the discover
+ *  action sometimes returns 1-2 per firm). */
+export interface BulkCreateInvestorInput
+  extends Omit<
+    CreateInvestorInput,
+    "partner_name" | "partner_email" | "partner_linkedin" | "partner_title"
+  > {
+  partners: Array<{
+    name: string;
+    email?: string | null;
+    linkedin?: string | null;
+    title?: string | null;
+  }>;
+}
+
+/** Per-row outcome reported back to the modal so we can show
+ *  "added 8 of 10" and surface specific failures. */
+export interface BulkCreateInvestorRowResult {
+  firm_name: string;
+  ok: boolean;
+  /** Only set when ok=false. */
+  error?: string;
+  /** Only set when ok=true. Useful if the caller wants to open the
+   *  drawer for the new investor afterward. */
+  investor_id?: string;
+}
+
+export function useCreateInvestorsBulk() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (
+      inputs: BulkCreateInvestorInput[],
+    ): Promise<BulkCreateInvestorRowResult[]> => {
+      const results: BulkCreateInvestorRowResult[] = [];
+
+      // We loop sequentially (not Promise.all) because:
+      // (a) the average discover batch is 8-15 firms -- parallel
+      //     wouldn't save meaningful time, and
+      // (b) Postgres + RLS would block on takeOversupabase's single
+      //     connection pool anyway,
+      // (c) any partial-failure pattern is easier to report when
+      //     errors arrive in order.
+      for (const input of inputs) {
+        try {
+          // 1) Company. Same shape as the single-create version.
+          const { data: company, error: companyErr } = await takeOversupabase
+            .from(COMPANIES_TABLE)
+            .insert({
+              name: input.firm_name,
+              domain: input.domain ?? null,
+              website: input.website ?? null,
+            })
+            .select("*")
+            .single();
+          if (companyErr) throw companyErr;
+
+          // 2) Investor profile.
+          const { data: profile, error: profileErr } = await takeOversupabase
+            .from(INVESTOR_PROFILES_TABLE)
+            .insert({
+              company_id: (company as CrmCompany).id,
+              thesis_md: input.thesis_md ?? null,
+              stage_focus: input.stage_focus ?? [],
+              check_size_min_cents: input.check_size_min_cents ?? null,
+              check_size_max_cents: input.check_size_max_cents ?? null,
+              portfolio_md: input.portfolio_md ?? null,
+              website: input.website ?? null,
+              twitter_handle: input.twitter_handle ?? null,
+              hq_location: input.hq_location ?? null,
+              fit_score: input.fit_score ?? 50,
+              fit_score_notes_md: input.fit_score_notes_md ?? null,
+              source: input.source ?? "claude_research",
+              priority: input.priority ?? 2,
+              pipeline_stage: input.pipeline_stage ?? "prospected",
+            })
+            .select("*")
+            .single();
+          if (profileErr) {
+            // Roll back company so we don't leave a stub.
+            await takeOversupabase
+              .from(COMPANIES_TABLE)
+              .delete()
+              .eq("id", (company as CrmCompany).id);
+            throw profileErr;
+          }
+
+          // 3) Partners. The discover action returns 1-2 per firm;
+          // we insert them as separate crm_contacts rows attached
+          // to the same company. Best-effort -- if one partner
+          // insert fails we still count the firm as added (the
+          // investor row exists; the operator can add the missing
+          // partner manually).
+          for (const p of input.partners ?? []) {
+            if (!p.name) continue;
+            await takeOversupabase
+              .from(CONTACTS_TABLE)
+              .insert({
+                name: p.name,
+                email: p.email ?? null,
+                title: p.title ?? "Partner",
+                company_id: (company as CrmCompany).id,
+                source: input.source ?? "claude_research",
+              })
+              .then(() => {})
+              .catch(() => {
+                /* swallow per-partner errors -- see comment above */
+              });
+          }
+
+          results.push({
+            firm_name: input.firm_name,
+            ok: true,
+            investor_id: (profile as InvestorProfile).id,
+          });
+        } catch (err: any) {
+          results.push({
+            firm_name: input.firm_name,
+            ok: false,
+            error: err?.message ?? "Unknown error",
+          });
+        }
+      }
+
+      return results;
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: investorKeys.all });

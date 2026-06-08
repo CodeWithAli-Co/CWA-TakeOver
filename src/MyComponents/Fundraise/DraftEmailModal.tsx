@@ -432,49 +432,10 @@ export function DraftEmailModal({
                   </div>
                 </section>
 
-                {/* Angle picker */}
-                <section>
-                  <h3 className="text-[10px] uppercase tracking-[0.16em] font-mono text-foreground/45 m-0 mb-2">
-                    Angle
-                  </h3>
-                  <div className="space-y-1">
-                    {ANGLE_OPTIONS.map((a) => (
-                      <button
-                        key={a.value}
-                        type="button"
-                        onClick={() => setAngle(a.value)}
-                        disabled={loading || sendMut.isPending}
-                        className={
-                          "w-full text-left px-2.5 py-1.5 rounded-sm border text-[11.5px] transition-colors " +
-                          (angle === a.value
-                            ? "border-primary/40 bg-primary/[0.08] text-foreground"
-                            : "border-border bg-background text-foreground/70 hover:text-foreground hover:border-foreground/30")
-                        }
-                      >
-                        <div className="font-semibold">{a.label}</div>
-                        <div className="text-[10px] text-foreground/45 mt-0.5">
-                          {a.hint}
-                        </div>
-                      </button>
-                    ))}
-                  </div>
-                </section>
-
-                {/* Warm-intro note */}
-                {angle === "warm_intro" && (
-                  <section>
-                    <h3 className="text-[10px] uppercase tracking-[0.16em] font-mono text-foreground/45 m-0 mb-2">
-                      Warm-intro note
-                    </h3>
-                    <textarea
-                      value={warmNote}
-                      onChange={(e) => setWarmNote(e.target.value)}
-                      placeholder="Met at YC office hours via Jane Doe last week"
-                      rows={3}
-                      className={textareaCls + " text-[11.5px]"}
-                    />
-                  </section>
-                )}
+                {/* Angle picker removed -- single-style outreach.
+                  * The system prompt now mandates Takeover/Axon/
+                  * website/calendly in every draft so there's
+                  * nothing for the operator to toggle. */}
 
                 {/* Regenerate */}
                 <button

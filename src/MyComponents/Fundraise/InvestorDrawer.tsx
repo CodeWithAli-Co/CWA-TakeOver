@@ -12,7 +12,7 @@
  * already updates it, but the drawer should support manual override).
  */
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   X,
@@ -42,6 +42,8 @@ import {
 import { DraftEmailModal } from "./DraftEmailModal";
 import type { DraftChannel } from "@/Fundraise/draftInvestorEmail";
 import { useMyFundraiseSettings } from "@/stores/fundraiseSettings";
+import { useUpdateContact } from "@/stores/crm";
+import { useAllEmployees } from "@/stores/query";
 
 interface Props {
   investorId: string | null;
@@ -185,12 +187,26 @@ export function InvestorDrawer({ investorId, onClose }: Props) {
                       }
                       saving={updateMut.isPending}
                     />
-                    <span className="text-[10px] font-mono tabular-nums text-foreground/40">
-                      P{detail.priority}
-                    </span>
-                    <span className="text-[10px] font-mono tabular-nums text-foreground/40">
-                      Fit {detail.fit_score}
-                    </span>
+                    <PriorityPicker
+                      value={detail.priority}
+                      onChange={(priority) =>
+                        updateMut.mutate({
+                          id: detail.id,
+                          patch: { priority },
+                        })
+                      }
+                      saving={updateMut.isPending}
+                    />
+                    <FitScoreEditor
+                      value={detail.fit_score}
+                      onCommit={(fit_score) =>
+                        updateMut.mutate({
+                          id: detail.id,
+                          patch: { fit_score },
+                        })
+                      }
+                      saving={updateMut.isPending}
+                    />
                   </div>
                 )}
               </div>
@@ -378,73 +394,170 @@ function PartnersPanel({
   return (
     <ul className="list-none p-0 m-0 space-y-2">
       {detail.partners.map((p) => (
-        <li
-          key={p.id}
-          className="rounded-sm border border-border bg-card/60 p-3"
-        >
-          <div className="flex items-start justify-between gap-2">
-            <div className="min-w-0 flex-1">
-              <div className="text-[13px] font-semibold text-foreground">
-                {p.name ?? "Unnamed"}
-              </div>
-              {p.title && (
-                <div className="text-[10.5px] text-foreground/55 uppercase tracking-[0.12em] mt-0.5">
-                  {p.title}
-                </div>
-              )}
-            </div>
-
-            {/* Phase 2 actions: Draft email (primary) + Draft LinkedIn.
-              * Email button is disabled if no address on file -- we
-              * can't send what we don't have a To: for. LinkedIn does
-              * not require any pre-recorded handle since the output
-              * is just copied to clipboard. */}
-            <div className="flex items-center gap-1 flex-shrink-0">
-              <button
-                type="button"
-                disabled={!p.email}
-                onClick={() => onDraft(p.id, "email")}
-                title={
-                  p.email
-                    ? "Draft a cold email with Axon"
-                    : "Add an email on the partner first"
-                }
-                className="inline-flex items-center gap-1 px-2 h-7 rounded-sm bg-primary text-primary-foreground text-[10.5px] font-bold uppercase tracking-[0.1em] hover:opacity-90 transition-opacity disabled:opacity-40 disabled:cursor-not-allowed"
-              >
-                <Sparkles size={10} />
-                Draft email
-              </button>
-              <button
-                type="button"
-                onClick={() => onDraft(p.id, "linkedin")}
-                title="Draft a LinkedIn DM (copies to clipboard)"
-                className="inline-flex items-center justify-center w-7 h-7 rounded-sm border border-border bg-secondary text-foreground/65 hover:text-foreground hover:border-foreground/30 transition-colors"
-                aria-label="Draft LinkedIn DM"
-              >
-                <Linkedin size={11} />
-              </button>
-            </div>
-          </div>
-          <div className="mt-2 space-y-1">
-            {p.email && (
-              <ContactLine
-                icon={<Mail size={11} />}
-                label="Email"
-                value={p.email}
-                href={`mailto:${p.email}`}
-              />
-            )}
-            {p.phone && (
-              <ContactLine
-                icon={<Linkedin size={11} />}
-                label="Phone"
-                value={p.phone}
-              />
-            )}
-          </div>
-        </li>
+        <PartnerRow key={p.id} partner={p} onDraft={onDraft} />
       ))}
     </ul>
+  );
+}
+
+/** Single partner row. Split out because email editing is stateful
+ *  and Axon often leaves email=null after discovery (web search
+ *  couldn't verify it), so the row needs inline edit + reflect-on-
+ *  save so the Draft email button re-enables immediately. */
+function PartnerRow({
+  partner,
+  onDraft,
+}: {
+  partner: InvestorDetail["partners"][number];
+  onDraft: (partnerId: string, channel: DraftChannel) => void;
+}) {
+  const updateContactMut = useUpdateContact();
+  const [editingEmail, setEditingEmail] = useState(false);
+  const [emailDraft, setEmailDraft] = useState(partner.email ?? "");
+
+  // Sync the draft input if the row updates from realtime / refetch.
+  useEffect(() => {
+    setEmailDraft(partner.email ?? "");
+  }, [partner.email]);
+
+  async function commitEmail() {
+    const trimmed = emailDraft.trim();
+    setEditingEmail(false);
+    if (trimmed === (partner.email ?? "")) return;
+    // Light validation -- if it doesn't look like an email, revert.
+    if (trimmed && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmed)) {
+      setEmailDraft(partner.email ?? "");
+      return;
+    }
+    try {
+      await updateContactMut.mutateAsync({
+        id: partner.id,
+        patch: { email: trimmed || null },
+      });
+    } catch {
+      setEmailDraft(partner.email ?? "");
+    }
+  }
+
+  const hasEmail = !!partner.email?.trim();
+
+  return (
+    <li className="rounded-sm border border-border bg-card/60 p-3">
+      <div className="flex items-start justify-between gap-2">
+        <div className="min-w-0 flex-1">
+          <div className="text-[13px] font-semibold text-foreground">
+            {partner.name ?? "Unnamed"}
+          </div>
+          {partner.title && (
+            <div className="text-[10.5px] text-foreground/55 uppercase tracking-[0.12em] mt-0.5">
+              {partner.title}
+            </div>
+          )}
+        </div>
+
+        {/* Phase 2 actions: Draft email (primary) + Draft LinkedIn.
+          * Phase 5.6: Email button stays enabled even with no email
+          * -- clicking with no email flips the row into email-edit
+          * mode so the operator can paste it in one click instead
+          * of hunting for an "edit partner" surface. */}
+        <div className="flex items-center gap-1 flex-shrink-0">
+          <button
+            type="button"
+            onClick={() => {
+              if (!hasEmail) {
+                setEditingEmail(true);
+                return;
+              }
+              onDraft(partner.id, "email");
+            }}
+            title={
+              hasEmail
+                ? "Draft a cold email with Axon"
+                : "Click to add the partner's email, then draft"
+            }
+            className="inline-flex items-center gap-1 px-2 h-7 rounded-sm bg-primary text-primary-foreground text-[10.5px] font-bold uppercase tracking-[0.1em] hover:opacity-90 transition-opacity"
+          >
+            <Sparkles size={10} />
+            Draft email
+          </button>
+          <button
+            type="button"
+            onClick={() => onDraft(partner.id, "linkedin")}
+            title="Draft a LinkedIn DM (copies to clipboard)"
+            className="inline-flex items-center justify-center w-7 h-7 rounded-sm border border-border bg-secondary text-foreground/65 hover:text-foreground hover:border-foreground/30 transition-colors"
+            aria-label="Draft LinkedIn DM"
+          >
+            <Linkedin size={11} />
+          </button>
+        </div>
+      </div>
+
+      {/* Email row -- editable inline */}
+      <div className="mt-2 space-y-1">
+        {editingEmail ? (
+          <div className="flex items-center gap-1.5">
+            <Mail size={11} className="text-foreground/45 flex-shrink-0" />
+            <span className="text-foreground/45 uppercase tracking-[0.1em] text-[10px] w-12 flex-shrink-0">
+              Email
+            </span>
+            <input
+              type="email"
+              autoFocus
+              value={emailDraft}
+              onChange={(e) => setEmailDraft(e.target.value)}
+              onBlur={commitEmail}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  e.preventDefault();
+                  commitEmail();
+                } else if (e.key === "Escape") {
+                  e.preventDefault();
+                  setEmailDraft(partner.email ?? "");
+                  setEditingEmail(false);
+                }
+              }}
+              disabled={updateContactMut.isPending}
+              placeholder="partner@firm.com"
+              className="flex-1 px-2 h-6 rounded-sm border border-primary/40 bg-background text-[11px] text-foreground placeholder:text-foreground/35 outline-none focus:border-primary"
+            />
+          </div>
+        ) : hasEmail ? (
+          <button
+            type="button"
+            onClick={() => setEditingEmail(true)}
+            title="Click to edit"
+            className="flex items-center gap-2 text-[12px] text-foreground/85 hover:text-foreground transition-colors text-left w-full"
+          >
+            <span className="text-foreground/45">
+              <Mail size={11} />
+            </span>
+            <span className="text-foreground/45 uppercase tracking-[0.1em] text-[10px] w-12 flex-shrink-0">
+              Email
+            </span>
+            <span className="truncate flex-1">{partner.email}</span>
+          </button>
+        ) : (
+          <button
+            type="button"
+            onClick={() => setEditingEmail(true)}
+            className="flex items-center gap-2 text-[11px] text-destructive/80 hover:text-destructive transition-colors text-left italic w-full"
+          >
+            <Mail size={11} />
+            <span className="uppercase tracking-[0.1em] text-[10px] w-12 flex-shrink-0 not-italic">
+              Email
+            </span>
+            <span>not on file — click to add</span>
+          </button>
+        )}
+        {partner.phone && (
+          <ContactLine
+            icon={<Linkedin size={11} />}
+            label="Phone"
+            value={partner.phone}
+          />
+        )}
+      </div>
+    </li>
   );
 }
 
@@ -453,6 +566,16 @@ function ActivityPanel({
 }: {
   detail: NonNullable<ReturnType<typeof useInvestor>["data"]>;
 }) {
+  // Look up "who sent it" -- actor_supa_id is set server-side by
+  // the Gmail send route. We resolve to the operator's username
+  // via app_users. Falls back to "(system)" for rows with no
+  // actor (rare -- mostly inbound emails from the reply trigger
+  // which intentionally has no acting human).
+  const { data: employees = [] } = useAllEmployees(false);
+  const actorById = new Map(
+    employees.map((e) => [e.supa_id, e.username]),
+  );
+
   if (detail.activities.length === 0) {
     return (
       <Empty>
@@ -463,7 +586,19 @@ function ActivityPanel({
   }
   return (
     <ul className="list-none p-0 m-0 space-y-2">
-      {detail.activities.map((a) => (
+      {detail.activities.map((a) => {
+        // Resolve who triggered this activity. For outbound emails
+        // this is the operator who hit "Send via Gmail" -- the
+        // Gmail send route writes actor_supa_id = the auth'd user
+        // who initiated the send.
+        const direction = (a.metadata as any)?.direction;
+        const isInbound = direction === "inbound";
+        const actorName = a.actor_supa_id
+          ? actorById.get(a.actor_supa_id) ?? "Unknown operator"
+          : isInbound
+            ? "Investor reply"
+            : "System";
+        return (
         <li
           key={a.id}
           className="rounded-sm border border-border bg-card/60 px-3 py-2.5"
@@ -471,9 +606,29 @@ function ActivityPanel({
           <div className="flex items-baseline justify-between gap-2">
             <span className="text-[10.5px] uppercase tracking-[0.12em] text-foreground/55 font-mono">
               {a.type}
+              {direction && (
+                <span className="ml-1.5 text-foreground/35">
+                  · {direction}
+                </span>
+              )}
             </span>
             <span className="text-[10px] text-foreground/40 font-mono tabular-nums">
-              {new Date(a.occurred_at ?? a.created_at).toLocaleDateString()}
+              {new Date(a.happened_at ?? a.created_at).toLocaleDateString()}
+            </span>
+          </div>
+          {/* Who triggered it -- shows on every activity row. For
+            * outbound: operator name. For inbound: "Investor reply"
+            * so the operator can scan and see who replied. */}
+          <div className="mt-1 text-[10.5px] text-foreground/55">
+            <span className="text-foreground/35">by</span>{" "}
+            <span
+              className={
+                isInbound
+                  ? "text-primary/85 font-semibold"
+                  : "text-foreground/85 font-semibold"
+              }
+            >
+              {actorName}
             </span>
           </div>
           {a.title && (
@@ -487,7 +642,8 @@ function ActivityPanel({
             </p>
           )}
         </li>
-      ))}
+        );
+      })}
     </ul>
   );
 }
@@ -653,5 +809,120 @@ function StagePicker({
         </option>
       ))}
     </select>
+  );
+}
+
+/** Priority picker -- 4 levels. Mirrors StagePicker so the visual
+ *  language stays consistent: same chip shape, same font, just a
+ *  different value set. P0 stands out (primary tint) since it's
+ *  the operator's dream-list signal. */
+function PriorityPicker({
+  value,
+  onChange,
+  saving,
+}: {
+  value: 0 | 1 | 2 | 3;
+  onChange: (priority: 0 | 1 | 2 | 3) => void;
+  saving: boolean;
+}) {
+  const tone =
+    value === 0
+      ? "border-primary/50 text-primary"
+      : value === 1
+        ? "border-amber-500/40 text-amber-400"
+        : "border-border text-foreground/65";
+  return (
+    <select
+      value={value}
+      onChange={(e) => onChange(Number(e.target.value) as 0 | 1 | 2 | 3)}
+      disabled={saving}
+      className={
+        "px-1.5 h-5 rounded-full border bg-card text-[10px] uppercase tracking-[0.1em] font-semibold hover:text-foreground transition-colors outline-none cursor-pointer disabled:opacity-40 " +
+        tone
+      }
+      title="Priority -- P0 is your dream list"
+    >
+      <option value={0}>P0 — dream</option>
+      <option value={1}>P1 — strong</option>
+      <option value={2}>P2 — standard</option>
+      <option value={3}>P3 — cold</option>
+    </select>
+  );
+}
+
+/** Fit score editor -- click the pill to open an inline number
+ *  input, edit, blur (or Enter) to commit. Escape cancels. The
+ *  click target is intentionally small (matches the other chips
+ *  in the header) so it stays unobtrusive when not being edited. */
+function FitScoreEditor({
+  value,
+  onCommit,
+  saving,
+}: {
+  value: number;
+  onCommit: (fit: number) => void;
+  saving: boolean;
+}) {
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState(String(value));
+
+  // Reset the draft if the underlying value changes (e.g. another
+  // tab updated it via realtime). Without this the edit input
+  // would stay stale across realtime updates.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(() => setDraft(String(value)), [value]);
+
+  function commit() {
+    const n = Number(draft);
+    setEditing(false);
+    if (Number.isNaN(n)) {
+      setDraft(String(value));
+      return;
+    }
+    const clamped = Math.max(0, Math.min(100, Math.round(n)));
+    setDraft(String(clamped));
+    if (clamped !== value) onCommit(clamped);
+  }
+
+  if (!editing) {
+    return (
+      <button
+        type="button"
+        onClick={() => setEditing(true)}
+        disabled={saving}
+        className="px-1.5 h-5 rounded-full border border-border bg-card text-[10px] font-mono tabular-nums font-semibold text-foreground/65 hover:text-foreground hover:border-foreground/30 transition-colors disabled:opacity-40"
+        title="Click to edit fit score"
+      >
+        Fit {value}
+      </button>
+    );
+  }
+
+  return (
+    <span className="inline-flex items-center gap-1 px-1.5 h-5 rounded-full border border-primary/40 bg-card">
+      <span className="text-[10px] font-mono uppercase tracking-[0.1em] text-foreground/55">
+        Fit
+      </span>
+      <input
+        type="number"
+        min={0}
+        max={100}
+        autoFocus
+        value={draft}
+        onChange={(e) => setDraft(e.target.value)}
+        onBlur={commit}
+        onKeyDown={(e) => {
+          if (e.key === "Enter") {
+            e.preventDefault();
+            commit();
+          } else if (e.key === "Escape") {
+            e.preventDefault();
+            setDraft(String(value));
+            setEditing(false);
+          }
+        }}
+        className="w-9 bg-transparent text-[10px] font-mono tabular-nums text-foreground outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+      />
+    </span>
   );
 }

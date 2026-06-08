@@ -61,6 +61,7 @@ import { InvestorKanban } from "./InvestorKanban";
 import { useFundraiseStore } from "./fundraiseStore";
 import { PIPELINE_STAGE_LABEL } from "@/stores/investors";
 import { FollowupsDueStrip } from "./FollowupsDueStrip";
+import { DiscoverInvestorsModal } from "./DiscoverInvestorsModal";
 
 // localStorage key for the view-mode preference. Persisted so the
 // operator's choice survives reloads -- /fundraise is a daily
@@ -82,6 +83,7 @@ export function FundraisePage() {
   const { data: investors = [], isLoading } = useInvestors();
   const { data: settings } = useMyFundraiseSettings();
   const [addOpen, setAddOpen] = useState(false);
+  const [discoverOpen, setDiscoverOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [selectedId, setSelectedId] = useState<string | null>(null);
 
@@ -99,6 +101,7 @@ export function FundraisePage() {
   // Cmd+K verbs (and any other surface) can dispatch through
   // useFundraiseStore -- we react to its state here.
   const storeActiveId = useFundraiseStore((s) => s.activeInvestorId);
+  const openInvestorInStore = useFundraiseStore((s) => s.openInvestor);
   const closeInvestorInStore = useFundraiseStore((s) => s.closeInvestor);
   const stageFilter = useFundraiseStore((s) => s.stageFilter);
   const clearStageFilter = useFundraiseStore((s) => s.clearStageFilter);
@@ -179,11 +182,11 @@ export function FundraisePage() {
       initial={{ opacity: 0, y: 4 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.3 }}
-      // Standalone route container -- matches the chrome other
-      // top-level pages use (Workspace, Operations). Responsive
-      // horizontal padding so content breathes on ultrawide
-      // monitors but doesn't get a dead-center column.
-      className="min-h-[100dvh] w-full bg-background text-foreground px-6 lg:px-8 xl:px-10 py-10"
+      // Standalone route container. Caps content at 1600px wide
+      // and centers it so the kanban + grid don't sprawl across
+      // ultrawide monitors. The horizontal padding still breathes
+      // at narrower widths.
+      className="min-h-[100dvh] w-full max-w-[1600px] mx-auto bg-background text-foreground px-6 lg:px-8 xl:px-10 py-10"
     >
       <style>{`@import url('https://fonts.googleapis.com/css2?family=Newsreader:ital,wght@0,400;0,500;0,600;1,400&display=swap');.ed-serif{font-family:'Newsreader',Georgia,serif}`}</style>
 
@@ -211,24 +214,34 @@ export function FundraisePage() {
             </p>
           </div>
 
-          {/* Primary CTAs */}
-          <div className="flex items-center gap-2 self-start">
+          {/* Primary CTAs.
+            *
+            * Phase 5: "Find with Axon" is now the primary path --
+            * the operator describes what they want, Axon researches
+            * + populates everything. "Add manually" stays as a
+            * secondary text link for warm-intro / known-investor
+            * cases where research is wasted effort. */}
+          {/* Allow the CTA row to wrap. With everything in one row
+            * (Find with Axon + manual + view toggle + gear) we ran
+            * out of horizontal space at narrower window widths and
+            * the gear icon got clipped off the right edge. */}
+          <div className="flex items-center gap-2 self-start flex-wrap justify-end">
             <button
               type="button"
-              onClick={() => setAddOpen(true)}
+              onClick={() => setDiscoverOpen(true)}
               className="inline-flex items-center gap-2 px-3.5 h-9 rounded-sm bg-primary text-primary-foreground text-[12px] font-bold uppercase tracking-wider hover:opacity-90 transition-opacity"
-            >
-              <Plus size={13} />
-              Add investor
-            </button>
-            <button
-              type="button"
-              disabled
-              title="Axon-powered investor research lands in Phase 2"
-              className="inline-flex items-center gap-2 px-3.5 h-9 rounded-sm border border-border bg-secondary text-foreground/85 text-[12px] font-bold uppercase tracking-wider opacity-60 cursor-not-allowed"
             >
               <Sparkles size={13} />
               Find with Axon
+            </button>
+            <button
+              type="button"
+              onClick={() => setAddOpen(true)}
+              title="Skip the research -- add an investor you already know"
+              className="inline-flex items-center gap-1.5 px-2.5 h-9 text-[11px] uppercase tracking-[0.14em] font-mono text-foreground/55 hover:text-foreground transition-colors"
+            >
+              <Plus size={12} />
+              or add manually
             </button>
             {/* View toggle -- Grid / Kanban. Same shape as the rest
               * of the segmented toggles in the app (Schedule, Tasks). */}
@@ -320,7 +333,10 @@ export function FundraisePage() {
           investors…
         </div>
       ) : investors.length === 0 ? (
-        <EmptyState onAdd={() => setAddOpen(true)} />
+        <EmptyState
+          onDiscover={() => setDiscoverOpen(true)}
+          onAddManual={() => setAddOpen(true)}
+        />
       ) : (
         <>
           {/* Stage filter chip -- visible when a Cmd+K verb has
@@ -380,6 +396,10 @@ export function FundraisePage() {
         open={addOpen}
         onClose={() => setAddOpen(false)}
       />
+      <DiscoverInvestorsModal
+        open={discoverOpen}
+        onClose={() => setDiscoverOpen(false)}
+      />
       <FundraiseSettingsModal
         open={settingsOpen}
         onClose={() => setSettingsOpen(false)}
@@ -425,7 +445,13 @@ function Stat({
   );
 }
 
-function EmptyState({ onAdd }: { onAdd: () => void }) {
+function EmptyState({
+  onDiscover,
+  onAddManual,
+}: {
+  onDiscover: () => void;
+  onAddManual: () => void;
+}) {
   return (
     <div className="rounded-sm border border-dashed border-border bg-card/40 px-8 py-12 text-center max-w-md mx-auto mt-12">
       <PiggyBank
@@ -436,17 +462,26 @@ function EmptyState({ onAdd }: { onAdd: () => void }) {
         No investors tracked yet.
       </p>
       <p className="text-[11.5px] text-foreground/45 mb-4">
-        Start by adding one manually. Phase 2 wires Axon to pull a
-        researched list of VCs + angels matching your stage and sector.
+        Describe the kind of investor you want, and Axon will research a
+        list of matching VCs + angels with thesis text and partners.
       </p>
-      <button
-        type="button"
-        onClick={onAdd}
-        className="inline-flex items-center gap-1.5 px-3 h-8 rounded-sm bg-primary text-primary-foreground text-[11.5px] font-bold uppercase tracking-wider hover:opacity-90 transition-opacity"
-      >
-        <Plus size={11} />
-        Add your first investor
-      </button>
+      <div className="flex items-center justify-center gap-2">
+        <button
+          type="button"
+          onClick={onDiscover}
+          className="inline-flex items-center gap-1.5 px-3 h-8 rounded-sm bg-primary text-primary-foreground text-[11.5px] font-bold uppercase tracking-wider hover:opacity-90 transition-opacity"
+        >
+          <Sparkles size={11} />
+          Find with Axon
+        </button>
+        <button
+          type="button"
+          onClick={onAddManual}
+          className="inline-flex items-center gap-1 px-2 h-8 text-[10.5px] uppercase tracking-[0.14em] font-mono text-foreground/55 hover:text-foreground transition-colors"
+        >
+          or add manually
+        </button>
+      </div>
     </div>
   );
 }
