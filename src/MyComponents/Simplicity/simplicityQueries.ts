@@ -40,7 +40,7 @@
  */
 
 import { useSuspenseQuery } from "@tanstack/react-query";
-import { takeOversupabase } from "@/MyComponents/supabase";
+import { companySupabase } from "@/routes/index.lazy";
 
 // ── Types ──
 export interface Pattern {
@@ -74,7 +74,7 @@ export interface Resource {
 
 // ── Pattern queries ──
 const fetchPatterns = async (): Promise<Pattern[]> => {
-  const { data, error } = await takeOversupabase    .from("simplicity_patterns")
+  const { data, error } = await companySupabase    .from("simplicity_patterns")
     .select("*")
     .order("created_at", { ascending: false });
   if (error) {
@@ -94,7 +94,7 @@ export const PatternsQuery = () => {
 export const addPattern = async (
   pattern: Omit<Pattern, "id" | "created_at" | "updated_at">
 ) => {
-  const { data, error } = await takeOversupabase    .from("simplicity_patterns")
+  const { data, error } = await companySupabase    .from("simplicity_patterns")
     .insert(pattern)
     .select()
     .single();
@@ -103,14 +103,14 @@ export const addPattern = async (
 };
 
 export const updatePattern = async (id: number, patch: Partial<Pattern>) => {
-  const { error } = await takeOversupabase    .from("simplicity_patterns")
+  const { error } = await companySupabase    .from("simplicity_patterns")
     .update({ ...patch, updated_at: new Date().toISOString() })
     .eq("id", id);
   if (error) throw error;
 };
 
 export const deletePattern = async (id: number) => {
-  const { error } = await takeOversupabase    .from("simplicity_patterns")
+  const { error } = await companySupabase    .from("simplicity_patterns")
     .delete()
     .eq("id", id);
   if (error) throw error;
@@ -118,7 +118,7 @@ export const deletePattern = async (id: number) => {
 
 // ── Resource queries ──
 const fetchResources = async (): Promise<Resource[]> => {
-  const { data, error } = await takeOversupabase    .from("simplicity_resources")
+  const { data, error } = await companySupabase    .from("simplicity_resources")
     .select("*")
     .order("created_at", { ascending: false });
   if (error) {
@@ -138,7 +138,7 @@ export const ResourcesQuery = () => {
 export const addResource = async (
   resource: Omit<Resource, "id" | "created_at" | "updated_at">
 ) => {
-  const { data, error } = await takeOversupabase    .from("simplicity_resources")
+  const { data, error } = await companySupabase    .from("simplicity_resources")
     .insert(resource)
     .select()
     .single();
@@ -147,14 +147,14 @@ export const addResource = async (
 };
 
 export const updateResource = async (id: number, patch: Partial<Resource>) => {
-  const { error } = await takeOversupabase    .from("simplicity_resources")
+  const { error } = await companySupabase    .from("simplicity_resources")
     .update({ ...patch, updated_at: new Date().toISOString() })
     .eq("id", id);
   if (error) throw error;
 };
 
 export const deleteResource = async (id: number) => {
-  const { error } = await takeOversupabase    .from("simplicity_resources")
+  const { error } = await companySupabase    .from("simplicity_resources")
     .delete()
     .eq("id", id);
   if (error) throw error;

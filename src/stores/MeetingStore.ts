@@ -1,4 +1,4 @@
-import { takeOversupabase } from "@/MyComponents/supabase"
+import { companySupabase } from "@/routes/index.lazy"
 import { useMutation, useQueryClient, useSuspenseQuery } from "@tanstack/react-query"
 import { create } from "zustand"
 
@@ -47,7 +47,7 @@ interface SingleMeeting {
   hybrid_location?: { address: string, url: string };
 }
 const fetchMeeting = async (id: number) => {
-  const { data, error } = await takeOversupabase.from('cwa_meetings').select('*').eq('id', id).single()
+  const { data, error } = await companySupabase.from('cwa_meetings').select('*').eq('id', id).single()
   if (error) {
     console.log('Error fetching Single Meeting from DB', error.message)
   };
@@ -97,7 +97,7 @@ export const useJoinMeeting = () => {
       }
 
       // Re-fetch the row so we don't trample concurrent joiners.
-      const { data: row, error: fetchErr } = await takeOversupabase
+      const { data: row, error: fetchErr } = await companySupabase
         .from("cwa_meetings")
         .select("id, allow_join, joiners")
         .eq("id", meetingId)
@@ -127,7 +127,7 @@ export const useJoinMeeting = () => {
       const next = [...current, userSupaId];
       // Cast through unknown to bypass the strict Update<T> overload.
       const patch = { joiners: next } as unknown as never;
-      const { error: updateErr } = await takeOversupabase
+      const { error: updateErr } = await companySupabase
         .from("cwa_meetings")
         .update(patch)
         .eq("id", meetingId);

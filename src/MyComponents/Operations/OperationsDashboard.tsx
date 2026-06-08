@@ -64,7 +64,7 @@ import {
   Todos,
   type TodosInterface,
 } from "@/stores/query";
-import { takeOversupabase } from "@/MyComponents/supabase";
+import { companySupabase } from "@/routes/index.lazy";
 import {
   useProjects,
   useProjectsRealtime,
@@ -503,7 +503,7 @@ function TasksSection({
   const { data: AllEmployees } = Employees();
 
   useEffect(() => {
-    const ch = takeOversupabase
+    const ch = companySupabase
       .channel("ops_dash_tasks")
       .on(
         "postgres_changes",
@@ -554,7 +554,7 @@ function TasksSection({
       status,
       completed_at: status === "done" ? new Date().toISOString() : null,
     };
-    await takeOversupabase
+    await companySupabase
 .from("cwa_todos")
       .update(patch)
       .eq("todo_id", id);
@@ -844,7 +844,7 @@ function QuotasSection({ me }: { me: any }) {
   useEffect(() => {
     let alive = true;
     const fetchQuotas = async () => {
-      const { data } = await takeOversupabase
+      const { data } = await companySupabase
   .from("weekly_quotas")
         .select("*")
         .gte("week_start", format(ws, "yyyy-MM-dd"))
@@ -853,7 +853,7 @@ function QuotasSection({ me }: { me: any }) {
       if (alive) setQuotas((data as Quota[] | null) ?? []);
     };
     fetchQuotas();
-    const ch = takeOversupabase
+    const ch = companySupabase
       .channel("ops_dash_quotas")
       .on(
         "postgres_changes",
@@ -885,7 +885,7 @@ function QuotasSection({ me }: { me: any }) {
   const onSave = async (data: any) => {
     if (!me?.supa_id) return;
     if (data.id) {
-      await takeOversupabase
+      await companySupabase
   .from("weekly_quotas")
         .update({
           title: data.title,
@@ -897,7 +897,7 @@ function QuotasSection({ me }: { me: any }) {
         })
         .eq("id", data.id);
     } else {
-      await takeOversupabase.from("weekly_quotas").insert({
+      await companySupabase.from("weekly_quotas").insert({
         title: data.title,
         description: data.description,
         status: data.status,
@@ -913,7 +913,7 @@ function QuotasSection({ me }: { me: any }) {
   };
 
   const onStatusChange = async (id: number, status: string) => {
-    await takeOversupabase
+    await companySupabase
 .from("weekly_quotas")
       .update({ status, updated_at: new Date().toISOString() })
       .eq("id", id);
@@ -1117,17 +1117,17 @@ function ActivityFeed() {
     let alive = true;
     const load = async () => {
       const [tasksRes, quotasRes, projectsRes] = await Promise.all([
-        takeOversupabase
+        companySupabase
           .from("cwa_todos")
           .select("todo_id, title, created_at, status")
           .order("created_at", { ascending: false })
           .limit(8),
-        takeOversupabase
+        companySupabase
           .from("weekly_quotas")
           .select("id, title, created_at, status")
           .order("created_at", { ascending: false })
           .limit(8),
-        takeOversupabase
+        companySupabase
           .from("cwa_projects")
           .select("id, title, created_at, status")
           .order("created_at", { ascending: false })
@@ -1510,19 +1510,19 @@ function useOpsAggregate(
 
     (async () => {
       const [quotasRes, doneRes, stuckRes] = await Promise.all([
-        takeOversupabase
+        companySupabase
           .from("weekly_quotas")
           .select("id", { count: "exact", head: true })
           .eq("status", "pending")
           .gte("week_start", format(ws, "yyyy-MM-dd"))
           .lte("week_end", format(we, "yyyy-MM-dd")),
-        takeOversupabase
+        companySupabase
           .from("cwa_todos")
           .select("todo_id", { count: "exact", head: true })
           .eq("status", "done")
           .not("completed_at", "is", null)
           .gte("completed_at", ws.toISOString()),
-        takeOversupabase
+        companySupabase
           .from("cwa_todos")
           .select("todo_id", { count: "exact", head: true })
           .neq("status", "done")
@@ -1852,7 +1852,7 @@ function TodaysFocus({
     const ws = startOfWeek(new Date(), { weekStartsOn: 1 });
     const we = endOfWeek(new Date(), { weekStartsOn: 1 });
     (async () => {
-      const { data } = await takeOversupabase
+      const { data } = await companySupabase
   .from("weekly_quotas")
         .select("id, title, status, deadline, priority")
         .gte("week_start", format(ws, "yyyy-MM-dd"))
@@ -2001,14 +2001,14 @@ function StuckItems() {
       // `cwa_todos` has no `updated_at` column; use `created_at`.
       // `cwa_projects` does have `updated_at` so keep that.
       const [tasksRes, projectsRes] = await Promise.all([
-        takeOversupabase
+        companySupabase
           .from("cwa_todos")
           .select("todo_id, title, status, created_at")
           .neq("status", "done")
           .lt("created_at", sevenDaysAgo)
           .order("created_at", { ascending: true })
           .limit(8),
-        takeOversupabase
+        companySupabase
           .from("cwa_projects")
           .select("id, title, status, updated_at")
           .neq("status", "completed")
@@ -2125,7 +2125,7 @@ function VelocityPulse() {
     start.setHours(0, 0, 0, 0);
 
     (async () => {
-      const { data } = await takeOversupabase
+      const { data } = await companySupabase
   .from("cwa_todos")
         .select("updated_at")
         .eq("status", "done")
@@ -2628,7 +2628,7 @@ function CompletionVelocity() {
       // that column makes this range scan cheap. `status` filter
       // is belt-and-suspenders — only done rows ever get a
       // non-null completed_at, but keeps the planner happy.
-      const { data } = await takeOversupabase
+      const { data } = await companySupabase
   .from("cwa_todos")
         .select("completed_at")
         .eq("status", "done")

@@ -7,8 +7,8 @@
  * when they pressed the shortcut.
  *
  * Send path:
- *   - "#General"          → takeOversupabase.from("cwa_chat").insert(...)
- *   - "@user" / dm name   → takeOversupabase.from("cwa_dm_chat").insert(...)
+ *   - "#General"          → companySupabase.from("cwa_chat").insert(...)
+ *   - "@user" / dm name   → companySupabase.from("cwa_dm_chat").insert(...)
  *
  * Wire-up: mounted once in __root.tsx. Subscribes to the
  * useQuickCompose zustand store; rendered only when open=true.
@@ -19,7 +19,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { Hash, AtSign, Send, X, ChevronUp, ChevronDown, Clock } from "lucide-react";
-import { takeOversupabase } from "../supabase";
 import { ActiveUser, DMGroups } from "@/stores/query";
 import {
   useQuickCompose,
@@ -27,6 +26,7 @@ import {
   pushRecentTarget,
 } from "./quickComposeStore";
 import { displayLabelForDM } from "./displayName";
+import { companySupabase } from "@/routes/index.lazy";
 
 // ── Target types ──────────────────────────────────────────────
 
@@ -181,14 +181,14 @@ export function QuickComposeModal() {
     setError(null);
     try {
       if (chosen.kind === "channel") {
-        const { error: insertErr } = await takeOversupabase.from("cwa_chat").insert({
+        const { error: insertErr } = await companySupabase.from("cwa_chat").insert({
           sent_by: user.username,
           message: body.trim(),
           userAvatar: user.avatarURL,
         });
         if (insertErr) throw insertErr;
       } else {
-        const { error: insertErr } = await takeOversupabase.from("cwa_dm_chat").insert({
+        const { error: insertErr } = await companySupabase.from("cwa_dm_chat").insert({
           dm_group: chosen.id,
           sent_by: user.username,
           message: body.trim(),

@@ -50,7 +50,7 @@ import { useShiftsInRange } from "@/stores/shifts";
 import { Suspense, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
-import { takeOversupabase } from "@/MyComponents/supabase";
+import { companySupabase } from "@/routes/index.lazy";
 import { useCandidates } from "@/MyComponents/Hiring/recruitingQueries";
 import { useStripeDashboard } from "@/lib/useStripeDashboard";
 
@@ -603,8 +603,8 @@ function EmployeeKudosCard() {
   const { data: employees } = useQuery({
     queryKey: ["app_users_lookup_for_kudos"],
     queryFn: async () => {
-      const { data } = await takeOversupabase
-  .from("app_users")
+      const { data } = await companySupabase
+  .from("employee")
         .select("supa_id, username");
       return (data ?? []) as Array<{ supa_id: string; username: string }>;
     },
@@ -812,7 +812,7 @@ function CWADashboardContent() {
   const { data: bugReports } = useQuery({
     queryKey: ["dashboard", "open-bug-reports"],
     queryFn: async () => {
-      const { data, error } = await takeOversupabase
+      const { data, error } = await companySupabase
   .from("bug_reports")
         .select("id, title, severity, created_at")
         .eq("status", "open")
@@ -882,7 +882,7 @@ function CWADashboardContent() {
   const { data: monthlyBurnDollars = 0 } = useQuery({
     queryKey: ["dashboard", "monthly-expense-burn"],
     queryFn: async () => {
-      const { data, error } = await takeOversupabase
+      const { data, error } = await companySupabase
         .from("cwa_expenses")
         .select("amount, frequency");
       if (error) return 0;

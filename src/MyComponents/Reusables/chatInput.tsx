@@ -1,5 +1,5 @@
+import { companySupabase } from "@/routes/index.lazy";
 import { useForm } from "@tanstack/react-form";
-import { takeOversupabase } from "../supabase";
 import { message } from "@tauri-apps/plugin-dialog";
 
 interface Props {
@@ -18,7 +18,7 @@ export const ChatInputBox = (props: Props) => {
     },
     onSubmit: async ({ value }) => {
       if (props.Group === "General") {
-        const { error } = await takeOversupabase.from("cwa_chat").insert({
+        const { error } = await companySupabase.from("cwa_chat").insert({
           sent_by: props.activeUser,
           message: value.Message,
           userAvatar: props.UserAvatar,
@@ -29,7 +29,7 @@ export const ChatInputBox = (props: Props) => {
           });
         }
       } else {
-        const { error } = await takeOversupabase.from(props.table).insert({
+        const { error } = await companySupabase.from(props.table).insert({
           dm_group: props.Group,
           sent_by: props.activeUser,
           message: value.Message,

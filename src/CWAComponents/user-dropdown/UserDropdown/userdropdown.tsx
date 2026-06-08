@@ -61,7 +61,7 @@ export const UserDropdown: React.FC = () => {
   // };
 
   // const onLogoutClick = async () => {
-  //   // const { error } = await takeOversupabase.auth.signOut();
+  //   // const { error } = await companySupabase.auth.signOut();
   //   if (error) {
   //     console.log("There was an error signing you out", error.message);
   //   } else {

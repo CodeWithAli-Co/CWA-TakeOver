@@ -22,7 +22,7 @@ import {
   CalendarDays, Sparkles, ArrowRight, Inbox,
 } from "lucide-react";
 import { useNavigate } from "@tanstack/react-router";
-import { takeOversupabase } from "@/MyComponents/supabase";
+import { companySupabase } from "@/routes/index.lazy";
 import { ActiveUser } from "@/stores/query";
 import {
   REPORT_TEMPLATES,
@@ -140,9 +140,9 @@ export function SubmitReportPage() {
   const reload = async () => {
     setLoading(true);
     const [p, r, a] = await Promise.all([
-      takeOversupabase.from("projects").select("id, name, company").order("name"),
+      companySupabase.from("projects").select("id, name, company").order("name"),
       mySupaId
-        ? takeOversupabase
+        ? companySupabase
             .from("reports")
             .select(
               "id, title, body, type, priority, project_id, status, review_notes, submitted_at, reviewed_at",
@@ -152,7 +152,7 @@ export function SubmitReportPage() {
             .limit(15)
         : Promise.resolve({ data: [], error: null } as any),
       username
-        ? takeOversupabase
+        ? companySupabase
             .from("report_assignments")
             .select("*")
             .eq("assignee_username", username)
@@ -237,7 +237,7 @@ export function SubmitReportPage() {
 
     const cleanedBody = stripEmptyScaffoldHeadings(body).trim();
 
-    const { data: inserted, error } = await takeOversupabase
+    const { data: inserted, error } = await companySupabase
 .from("reports")
       .insert({
         title: title.trim(),
@@ -269,7 +269,7 @@ export function SubmitReportPage() {
     if (fulfilingAssignmentId && inserted?.id) {
       const a = assignments.find((x) => x.id === fulfilingAssignmentId);
       const now = new Date().toISOString();
-      await takeOversupabase
+      await companySupabase
   .from("report_assignments")
         .update({
           status: "submitted",
@@ -286,7 +286,7 @@ export function SubmitReportPage() {
                    : a.recurrence === "biweekly" ? 14
                    : 30;
         next.setDate(next.getDate() + days);
-        await takeOversupabase
+        await companySupabase
     .from("report_assignments")
           .insert({
             assignee_username: a.assignee_username,

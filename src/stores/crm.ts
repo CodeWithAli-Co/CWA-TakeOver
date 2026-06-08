@@ -22,7 +22,7 @@ import {
   useMutation,
   useQueryClient,
 } from "@tanstack/react-query";
-import { takeOversupabase } from "@/MyComponents/supabase";
+import { companySupabase } from "@/routes/index.lazy";
 
 // ============================================================
 // Tables
@@ -221,7 +221,7 @@ export function useCrmCompanies(opts: { search?: string } = {}) {
   return useQuery({
     queryKey: crmKeys.companiesList(opts),
     queryFn: async (): Promise<CrmCompany[]> => {
-      let q = takeOversupabase
+      let q = companySupabase
         .from(COMPANIES_TABLE)
         .select("*")
         .order("name", { ascending: true });
@@ -238,7 +238,7 @@ export function useCrmCompany(id: string | undefined) {
     queryKey: crmKeys.company(id ?? ""),
     enabled: !!id,
     queryFn: async (): Promise<CrmCompany | null> => {
-      const { data, error } = await takeOversupabase
+      const { data, error } = await companySupabase
         .from(COMPANIES_TABLE)
         .select("*")
         .eq("id", id)
@@ -265,7 +265,7 @@ export function useCreateCompany() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (input: CreateCompanyInput): Promise<CrmCompany> => {
-      const { data, error } = await takeOversupabase
+      const { data, error } = await companySupabase
         .from(COMPANIES_TABLE)
         .insert({
           name:                input.name,
@@ -296,7 +296,7 @@ export function useUpdateCompany() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (args: { id: string; patch: UpdateCompanyPatch }) => {
-      const { data, error } = await takeOversupabase
+      const { data, error } = await companySupabase
         .from(COMPANIES_TABLE)
         .update(args.patch)
         .eq("id", args.id)
@@ -316,7 +316,7 @@ export function useDeleteCompany() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await takeOversupabase
+      const { error } = await companySupabase
         .from(COMPANIES_TABLE)
         .delete()
         .eq("id", id);
@@ -346,7 +346,7 @@ export function useCrmContacts(opts: {
   return useQuery({
     queryKey: crmKeys.contactsList(opts),
     queryFn: async (): Promise<CrmContact[]> => {
-      let q = takeOversupabase
+      let q = companySupabase
         .from(CONTACTS_TABLE)
         .select("*")
         .order("updated_at", { ascending: false });
@@ -372,7 +372,7 @@ export function useCrmContact(id: string | undefined) {
     queryKey: crmKeys.contact(id ?? ""),
     enabled: !!id,
     queryFn: async (): Promise<CrmContact | null> => {
-      const { data, error } = await takeOversupabase
+      const { data, error } = await companySupabase
         .from(CONTACTS_TABLE)
         .select("*")
         .eq("id", id)
@@ -402,7 +402,7 @@ export function useCreateContact() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (input: CreateContactInput): Promise<CrmContact> => {
-      const { data, error } = await takeOversupabase
+      const { data, error } = await companySupabase
         .from(CONTACTS_TABLE)
         .insert({
           name:               input.name ?? null,
@@ -436,7 +436,7 @@ export function useUpdateContact() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (args: { id: string; patch: UpdateContactPatch }) => {
-      const { data, error } = await takeOversupabase
+      const { data, error } = await companySupabase
         .from(CONTACTS_TABLE)
         .update(args.patch)
         .eq("id", args.id)
@@ -456,7 +456,7 @@ export function useDeleteContact() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await takeOversupabase
+      const { error } = await companySupabase
         .from(CONTACTS_TABLE)
         .delete()
         .eq("id", id);
@@ -541,7 +541,7 @@ export function useSyncStripeCustomers() {
     ): Promise<SyncStripeCustomersResult> => {
       // Pull the whole contacts table once so we can do match lookups
       // in memory instead of hammering the API per row.
-      const { data: existing, error: fetchErr } = await takeOversupabase
+      const { data: existing, error: fetchErr } = await companySupabase
         .from(CONTACTS_TABLE)
         .select("id, email, stripe_customer_id");
       if (fetchErr) throw fetchErr;
@@ -575,7 +575,7 @@ export function useSyncStripeCustomers() {
 
         try {
           if (matched) {
-            const { error } = await takeOversupabase
+            const { error } = await companySupabase
               .from(CONTACTS_TABLE)
               .update({
                 name:               cust.name ?? undefined,
@@ -594,7 +594,7 @@ export function useSyncStripeCustomers() {
             // creating a row that's just an opaque id.
             skipped += 1;
           } else {
-            const { error } = await takeOversupabase
+            const { error } = await companySupabase
               .from(CONTACTS_TABLE)
               .insert({
                 name:               cust.name,
@@ -635,7 +635,7 @@ export function useCrmDeals(opts: { ownerId?: string | null } = {}) {
   return useQuery({
     queryKey: crmKeys.dealsList(opts),
     queryFn: async (): Promise<CrmDeal[]> => {
-      let q = takeOversupabase
+      let q = companySupabase
         .from(DEALS_TABLE)
         .select("*")
         .order("stage", { ascending: true })
@@ -657,7 +657,7 @@ export function useDealsByStage(opts: { ownerId?: string | null } = {}) {
   const q = useQuery({
     queryKey: crmKeys.dealsByStage(opts),
     queryFn: async (): Promise<Record<DealStage, CrmDeal[]>> => {
-      let req = takeOversupabase
+      let req = companySupabase
         .from(DEALS_TABLE)
         .select("*")
         .order("position", { ascending: true, nullsFirst: false });
@@ -682,7 +682,7 @@ export function useCrmDeal(id: string | undefined) {
     queryKey: crmKeys.deal(id ?? ""),
     enabled: !!id,
     queryFn: async (): Promise<CrmDeal | null> => {
-      const { data, error } = await takeOversupabase
+      const { data, error } = await companySupabase
         .from(DEALS_TABLE)
         .select("*")
         .eq("id", id)
@@ -711,7 +711,7 @@ export function useCreateDeal() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (input: CreateDealInput): Promise<CrmDeal> => {
-      const { data, error } = await takeOversupabase
+      const { data, error } = await companySupabase
         .from(DEALS_TABLE)
         .insert({
           name:                input.name,
@@ -744,7 +744,7 @@ export function useUpdateDeal() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (args: { id: string; patch: UpdateDealPatch }) => {
-      const { data, error } = await takeOversupabase
+      const { data, error } = await companySupabase
         .from(DEALS_TABLE)
         .update(args.patch)
         .eq("id", args.id)
@@ -774,7 +774,7 @@ export function useMoveDeal() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (args: { id: string; stage: DealStage; position: number }) => {
-      const { data, error } = await takeOversupabase
+      const { data, error } = await companySupabase
         .from(DEALS_TABLE)
         .update({ stage: args.stage, position: args.position })
         .eq("id", args.id)
@@ -823,7 +823,7 @@ export function useDeleteDeal() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await takeOversupabase
+      const { error } = await companySupabase
         .from(DEALS_TABLE)
         .delete()
         .eq("id", id);
@@ -845,7 +845,7 @@ export function useActivitiesForContact(contactId: string | undefined) {
     queryKey: crmKeys.activitiesForContact(contactId ?? ""),
     enabled: !!contactId,
     queryFn: async (): Promise<CrmActivity[]> => {
-      const { data, error } = await takeOversupabase
+      const { data, error } = await companySupabase
         .from(ACTIVITIES_TABLE)
         .select("*")
         .eq("contact_id", contactId)
@@ -862,7 +862,7 @@ export function useActivitiesForDeal(dealId: string | undefined) {
     queryKey: crmKeys.activitiesForDeal(dealId ?? ""),
     enabled: !!dealId,
     queryFn: async (): Promise<CrmActivity[]> => {
-      const { data, error } = await takeOversupabase
+      const { data, error } = await companySupabase
         .from(ACTIVITIES_TABLE)
         .select("*")
         .eq("deal_id", dealId)
@@ -879,7 +879,7 @@ export function useActivitiesForCompany(companyId: string | undefined) {
     queryKey: crmKeys.activitiesForCompany(companyId ?? ""),
     enabled: !!companyId,
     queryFn: async (): Promise<CrmActivity[]> => {
-      const { data, error } = await takeOversupabase
+      const { data, error } = await companySupabase
         .from(ACTIVITIES_TABLE)
         .select("*")
         .eq("company_id", companyId)
@@ -895,7 +895,7 @@ export function useRecentActivities(limit = 20) {
   return useQuery({
     queryKey: crmKeys.activitiesRecent(limit),
     queryFn: async (): Promise<CrmActivity[]> => {
-      const { data, error } = await takeOversupabase
+      const { data, error } = await companySupabase
         .from(ACTIVITIES_TABLE)
         .select("*")
         .order("happened_at", { ascending: false })
@@ -933,7 +933,7 @@ export function useLogActivity() {
           "Activity must attach to a contact, deal, or company.",
         );
       }
-      const { data, error } = await takeOversupabase
+      const { data, error } = await companySupabase
         .from(ACTIVITIES_TABLE)
         .insert({
           type:              input.type,
@@ -983,7 +983,7 @@ export function useDeleteActivity() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await takeOversupabase
+      const { error } = await companySupabase
         .from(ACTIVITIES_TABLE)
         .delete()
         .eq("id", id);
@@ -1008,7 +1008,7 @@ export function useDeleteActivity() {
 export function useCrmRealtime() {
   const qc = useQueryClient();
   useEffect(() => {
-    const ch = takeOversupabase
+    const ch = companySupabase
       .channel("crm-realtime")
       .on(
         "postgres_changes",
@@ -1062,7 +1062,7 @@ export function useCrmRealtime() {
       )
       .subscribe();
     return () => {
-      void takeOversupabase.removeChannel(ch);
+      void companySupabase.removeChannel(ch);
     };
   }, [qc]);
 }

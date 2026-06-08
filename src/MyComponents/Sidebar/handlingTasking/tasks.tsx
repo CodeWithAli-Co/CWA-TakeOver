@@ -22,7 +22,7 @@ import {
   Briefcase, Sparkles, Layers, Users, Edit3, Save, Trash2,
 } from "lucide-react";
 import { ActiveUser, AllTodos, Employees, Todos, TodosInterface } from "@/stores/query";
-import { takeOversupabase } from "@/MyComponents/supabase";
+import { companySupabase } from "@/routes/index.lazy";
 import { message } from "@tauri-apps/plugin-dialog";
 import { AddTodo } from "./addTodo";
 import { Tracker, TrackerDot } from "@/components/editorial/Tracker";
@@ -355,7 +355,7 @@ const TaskSettings: React.FC<TaskSettingsProps> = ({ embedded = false }) => {
       if (typeof e.avatar === "string" && e.avatar.startsWith("http")) {
         url = e.avatar;
       } else if (e.avatar) {
-        const { data } = takeOversupabase.storage
+        const { data } = companySupabase.storage
           .from("avatars")
           .getPublicUrl(e.avatar);
         url = data?.publicUrl;
@@ -386,7 +386,7 @@ const TaskSettings: React.FC<TaskSettingsProps> = ({ embedded = false }) => {
   const [view, setView] = useState<"inbox" | "kanban">("inbox");
 
   useEffect(() => {
-    const channel = takeOversupabase
+    const channel = companySupabase
       .channel("task-realtime")
       .on(
         "postgres_changes",
@@ -408,7 +408,7 @@ const TaskSettings: React.FC<TaskSettingsProps> = ({ embedded = false }) => {
   const handleStatusChange = async (id: number, status: TaskStatus) => {
     // Stamp completed_at when transitioning to done; null it when
     // moving out of done. Keeps the Velocity widget honest.
-    const { error } = await takeOversupabase
+    const { error } = await companySupabase
 .from("cwa_todos")
       .update({
         status,
@@ -1065,7 +1065,7 @@ export const TaskEditDrawer: React.FC<{
         completed_at: status === "done" ? new Date().toISOString() : null,
       }),
     };
-    const { error } = await takeOversupabase.from("cwa_todos").update(patch).eq("todo_id", task.todo_id);
+    const { error } = await companySupabase.from("cwa_todos").update(patch).eq("todo_id", task.todo_id);
     setSaving(false);
     if (error) {
       await message(error.message, { title: "Error saving task", kind: "error" });
@@ -1076,7 +1076,7 @@ export const TaskEditDrawer: React.FC<{
 
   async function handleDelete() {
     setDeleting(true);
-    const { error } = await takeOversupabase.from("cwa_todos").delete().eq("todo_id", task.todo_id);
+    const { error } = await companySupabase.from("cwa_todos").delete().eq("todo_id", task.todo_id);
     setDeleting(false);
     if (error) {
       await message(error.message, { title: "Error deleting task", kind: "error" });

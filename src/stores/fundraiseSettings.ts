@@ -16,7 +16,7 @@ import {
   useMutation,
   useQueryClient,
 } from "@tanstack/react-query";
-import { takeOversupabase } from "@/MyComponents/supabase";
+import { companySupabase } from "@/routes/index.lazy";
 
 const TABLE = "fundraise_settings";
 
@@ -63,7 +63,7 @@ export function useMyFundraiseSettings() {
       // We don't need to filter by supa_id manually -- RLS does that
       // for us. `maybeSingle()` returns null for "no row" instead of
       // throwing, which is exactly what the first-time-open UX wants.
-      const { data, error } = await takeOversupabase
+      const { data, error } = await companySupabase
         .from(TABLE)
         .select("*")
         .maybeSingle();
@@ -86,14 +86,14 @@ export function useUpsertFundraiseSettings() {
     mutationFn: async (
       patch: FundraiseSettingsPatch,
     ): Promise<FundraiseSettings> => {
-      const { data: sessionRes } = await takeOversupabase.auth.getSession();
+      const { data: sessionRes } = await companySupabase.auth.getSession();
       const supaId = sessionRes.session?.user.id;
       if (!supaId) {
         throw new Error(
           "No active Supabase session — can't save fundraise settings.",
         );
       }
-      const { data, error } = await takeOversupabase
+      const { data, error } = await companySupabase
         .from(TABLE)
         .upsert({ supa_id: supaId, ...patch }, { onConflict: "supa_id" })
         .select("*")
@@ -128,7 +128,7 @@ export function isFundraiseSettingsUsable(
 export function useFundraiseSettingsRealtime() {
   const qc = useQueryClient();
   useEffect(() => {
-    const channel = takeOversupabase
+    const channel = companySupabase
       .channel("fundraise_settings_changes")
       .on(
         "postgres_changes" as any,
@@ -139,7 +139,7 @@ export function useFundraiseSettingsRealtime() {
       )
       .subscribe();
     return () => {
-      takeOversupabase.removeChannel(channel);
+      companySupabase.removeChannel(channel);
     };
   }, [qc]);
 }

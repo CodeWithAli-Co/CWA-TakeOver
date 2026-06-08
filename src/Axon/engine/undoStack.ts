@@ -114,7 +114,7 @@ export function hydrateUndoStack() {
 /** Register a handler for a specific descriptor `kind`. Typical usage:
  *
  *    registerUndoHandler<{ taskId: string }>("restore-task", async (p) => {
- *      await takeOversupabase.from("tasks").update({ deleted: false }).eq("id", p.taskId);
+ *      await companySupabase.from("tasks").update({ deleted: false }).eq("id", p.taskId);
  *      return "Task restored.";
  *    });
  *

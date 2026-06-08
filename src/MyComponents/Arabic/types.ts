@@ -1,6 +1,6 @@
 // ============================================================================
 // Arabic Learning — Type Definitions
-// Curriculum is authored in-repo (TS). Per-user progress lives in takeOversupabase// ============================================================================
+// Curriculum is authored in-repo (TS). Per-user progress lives in companySupabase// ============================================================================
 
 export type ActivityKind =
   | "info"          // teaching slide, not scored

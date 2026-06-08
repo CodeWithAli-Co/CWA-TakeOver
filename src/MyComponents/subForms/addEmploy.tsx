@@ -1,8 +1,8 @@
 import { useForm } from "@tanstack/react-form";
-import { takeOversupabase } from "../supabase";
 import { UserPlus } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/shadcnComponents/card";
 import { message } from "@tauri-apps/plugin-dialog";
+import { companySupabase } from "@/routes/index.lazy";
 
 export const AddEmployee = () => {
   const form = useForm({
@@ -13,7 +13,7 @@ export const AddEmployee = () => {
     },
     onSubmit: async ({ value }) => {
       console.log(value);
-      const { error } = await takeOversupabase.from("app_users").insert({
+      const { error } = await companySupabase.from("employee").insert({
         username: value.Username,
         email: value.Email,
         role: value.Role,

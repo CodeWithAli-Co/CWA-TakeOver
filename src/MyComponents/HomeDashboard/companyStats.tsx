@@ -9,9 +9,9 @@ import {
   FolderCode,
   Video,
 } from "lucide-react";
-import { takeOversupabase } from "../supabase";
 import UserView, { Role } from "../Reusables/userView";
 import { ActiveUser } from "@/stores/query";
+import { companySupabase } from "@/routes/index.lazy";
 
 // Single stat cell within the unified strip
 const StatCell = ({
@@ -58,13 +58,13 @@ const CompanyStats = () => {
   useEffect(() => {
     async function fetchStats() {
       try {
-        const { data: meeting } = await takeOversupabase.from("cwa_meetings").select("id");
-        const { data: credentials } = await takeOversupabase.from("cwa_creds").select("id, folder");
-        const { data: allTask } = await takeOversupabase.from("cwa_todos").select("todo_id, label, status").eq("label", userRole);
-        const { data: expense } = await takeOversupabase.from("cwa_expenses").select("amount");
-        const { data: revenue } = await takeOversupabase.from("cwa_calculatorProps").select("initialCapital").single();
-        const { data: userCount } = await takeOversupabase.from("app_users").select("id");
-        const { data: subscriptions } = await takeOversupabase.from("cwa_revenues").select("amount").eq("revenueType", "subscription");
+        const { data: meeting } = await companySupabase.from("cwa_meetings").select("id");
+        const { data: credentials } = await companySupabase.from("cwa_creds").select("id, folder");
+        const { data: allTask } = await companySupabase.from("cwa_todos").select("todo_id, label, status").eq("label", userRole);
+        const { data: expense } = await companySupabase.from("cwa_expenses").select("amount");
+        const { data: revenue } = await companySupabase.from("cwa_calculatorProps").select("initialCapital").single();
+        const { data: userCount } = await companySupabase.from("employee").select("id");
+        const { data: subscriptions } = await companySupabase.from("cwa_revenues").select("amount").eq("revenueType", "subscription");
 
         let totalExpense = 0;
         if (expense?.length) totalExpense = expense.reduce((total, e) => total - (e.amount || 0), 0);

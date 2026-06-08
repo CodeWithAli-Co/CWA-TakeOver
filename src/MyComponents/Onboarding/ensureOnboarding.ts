@@ -21,7 +21,7 @@
  * index on (employee_user_id) WHERE status = \'active\'.
  */
 
-import { takeOversupabase } from "@/MyComponents/supabase";
+import { companySupabase } from "@/routes/index.lazy";
 
 interface AppUserShape {
   supa_id: string;
@@ -122,7 +122,7 @@ export async function ensureOnboardingFor(
   }
 
   // (1) Already active? Done.
-  const existingInst = await takeOversupabase    .from("onboarding_instances")
+  const existingInst = await companySupabase    .from("onboarding_instances")
     .select("id")
     .eq("employee_user_id", supaId)
     .eq("status", "active")
@@ -140,7 +140,7 @@ export async function ensureOnboardingFor(
   // Use SELECT * because app_users column names vary across environments
   // (some installs have brand/employment_type columns, some don\'t).
   // Read fields off the resulting record only if they exist.
-  const userRes = await takeOversupabase    .from("app_users")
+  const userRes = await companySupabase    .from("employee")
     .select("*")
     .eq("supa_id", supaId)
     .maybeSingle();
@@ -162,7 +162,7 @@ export async function ensureOnboardingFor(
     : null;
 
   // (3) Look for a matching template — relaxed waterfall.
-  const tplRes = await takeOversupabase    .from("onboarding_templates")
+  const tplRes = await companySupabase    .from("onboarding_templates")
     .select("id, name, brand, employment_type, item_list");
   const allTemplates = ((tplRes.data ?? []) as TemplateRow[]).filter(
     (t) => Array.isArray(t.item_list) && t.item_list.length > 0,
@@ -191,7 +191,7 @@ export async function ensureOnboardingFor(
 
   // (4) No templates AT ALL — seed the built-in fallback.
   if (!template) {
-    const seed = await takeOversupabase
+    const seed = await companySupabase
 .from("onboarding_templates")
       .insert({
         name: FALLBACK_TEMPLATE.name,
@@ -211,7 +211,7 @@ export async function ensureOnboardingFor(
   }
 
   // (5) Create the instance + copy items.
-  const inst = await takeOversupabase    .from("onboarding_instances")
+  const inst = await companySupabase    .from("onboarding_instances")
     .insert({
       offer_letter_id: null,
       employee_user_id: supaId,
@@ -237,7 +237,7 @@ export async function ensureOnboardingFor(
     status: "pending",
   }));
   if (items.length > 0) {
-    const itemsRes = await takeOversupabase.from("onboarding_items").insert(items);
+    const itemsRes = await companySupabase.from("onboarding_items").insert(items);
     if (itemsRes.error) {
       return {
         outcome: "error",

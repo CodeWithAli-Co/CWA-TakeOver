@@ -8,7 +8,7 @@
 
 import { Pin, ChevronDown, ChevronUp, X } from "lucide-react";
 import { AnimatePresence, motion } from "framer-motion";
-import { takeOversupabase } from "@/MyComponents/supabase";
+import { companySupabase } from "@/routes/index.lazy";
 import { useChatStore } from "@/stores/chatStore";
 import type { MessageInterface } from "@/stores/query";
 
@@ -34,7 +34,7 @@ export function PinnedBar({
   if (pinnedMessages.length === 0) return null;
 
   const unpin = async (msgId: number) => {
-    const { error } = await takeOversupabase
+    const { error } = await companySupabase
 .from(table)
       .update({ pinned_at: null, pinned_by: null })
       .eq("msg_id", msgId);

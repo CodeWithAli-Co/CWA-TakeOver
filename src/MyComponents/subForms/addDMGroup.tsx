@@ -10,8 +10,8 @@ import { useForm } from "@tanstack/react-form";
 import Capitalize from "../Reusables/capitalize";
 import Select from "react-select";
 import { useChatStore } from "@/stores/store";
-import { takeOversupabase } from "../supabase";
 import { getActiveCompanyLabel } from "@/stores/query";
+import { companySupabase } from "@/routes/index.lazy";
 
 type Option = { value: string; label: string };
 
@@ -142,7 +142,7 @@ export const AddDMGroup = (props: Subscribers) => {
   const form = useForm({
     defaultValues: { groupName: "" },
     onSubmit: async ({ value }) => {
-      const { error } = await takeOversupabase
+      const { error } = await companySupabase
   .from("dm_groups")
         .insert({ name: value.groupName, subscribers: newOption, company: getActiveCompanyLabel() });
       if (error) console.log("Error adding DM Group:", error.message);

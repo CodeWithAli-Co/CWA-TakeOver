@@ -3,7 +3,7 @@
 // can ask AXON in natural language.
 // ───────────────────────────────────────────────────────────────────
 
-import { takeOversupabase } from "@/MyComponents/supabase";
+import { companySupabase } from "@/routes/index.lazy";
 import type { AxonAction } from "../types";
 import { registerAction } from "./registry";
 
@@ -31,7 +31,7 @@ export const countUsersAction: AxonAction<
     },
   },
   handler: async ({ role, createdSinceDays }, ctx) => {
-    let q = takeOversupabase.from("app_users").select("supa_id", { count: "exact", head: true });
+    let q = companySupabase.from("employee").select("supa_id", { count: "exact", head: true });
     if (role) q = q.eq("role", role);
     if (createdSinceDays) {
       const since = new Date();
@@ -70,8 +70,8 @@ export const recentSignupsAction: AxonAction<
   handler: async ({ days = 7, limit = 10 }, ctx) => {
     const since = new Date();
     since.setDate(since.getDate() - days);
-    const { data, error } = await takeOversupabase
-.from("app_users")
+    const { data, error } = await companySupabase
+.from("employee")
       .select("username,role,created_at")
       .gte("created_at", since.toISOString())
       .order("created_at", { ascending: false })
@@ -110,7 +110,7 @@ export const upcomingMeetingsAction: AxonAction<
     const horizon = new Date();
     horizon.setDate(horizon.getDate() + withinDays);
 
-    let q = takeOversupabase
+    let q = companySupabase
       .from("cwa_meetings")
       .select("*")
       .gte("date", today.toISOString().slice(0, 10))
@@ -138,7 +138,7 @@ export const upcomingMeetingsAction: AxonAction<
 const SAFE_TABLES = new Set([
   "cwa_todos",
   "cwa_meetings",
-  "app_users",
+  "employee",
   "interns",
   "cwa_creds",
 ]);
@@ -161,7 +161,7 @@ export const countRowsAction: AxonAction<
     if (!SAFE_TABLES.has(table)) {
       return { summary: `Table "${table}" is not in the safe-read allowlist.` };
     }
-    const { count, error } = await takeOversupabase
+    const { count, error } = await companySupabase
 .from(table)
       .select("*", { count: "exact", head: true });
     if (error) return { summary: `Query failed: ${error.message}` };

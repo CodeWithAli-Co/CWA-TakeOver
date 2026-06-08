@@ -23,7 +23,7 @@ import {
   Loader2,
   Save,
 } from "lucide-react";
-import { takeOversupabase } from "@/MyComponents/supabase";
+import { companySupabase } from "@/routes/index.lazy";
 import { getStronghold } from "@/stores/stronghold";
 import { ModulesPicker } from "@/MyComponents/Onboarding/ModulesPicker";
 import { MODULES } from "@/MyComponents/Onboarding/modulesCatalog";
@@ -41,7 +41,7 @@ async function fetchBoundCompany(): Promise<CompanyRow | null> {
   const companyName = await stronghold.getRecord("company_name");
   if (!companyName) return null;
 
-  const { data, error } = await takeOversupabase
+  const { data, error } = await companySupabase
     .from(COMPANY_TABLE)
     .select("id,components")
     .eq("company_name", companyName)
@@ -76,7 +76,7 @@ export function ModulesSettings() {
   const mutation = useMutation({
     mutationFn: async (next: string[]) => {
       if (!company) throw new Error("No bound company");
-      const { error } = await takeOversupabase
+      const { error } = await companySupabase
         .from(COMPANY_TABLE)
         .update({ components: next })
         .eq("id", company.id);

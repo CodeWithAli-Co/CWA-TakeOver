@@ -21,7 +21,7 @@ import {
   Loader2, AlertCircle, Plus, Trash2, Save,
   CalendarDays, RotateCcw, ArrowUp, ArrowDown, Check, X,
 } from "lucide-react";
-import { takeOversupabase } from "@/MyComponents/supabase";
+import { companySupabase } from "@/routes/index.lazy";
 import { ActiveUser } from "@/stores/query";
 import { SlideOver } from "./shared/SlideOver";
 import { InboxToolbar, type Density } from "./shared/InboxToolbar";
@@ -130,7 +130,7 @@ export function AssignmentsInbox({ refreshToken }: Props = {}) {
         .order("due_date", { ascending: true })
         .limit(500),
       supabase
-        .from("app_users")
+        .from("employee")
         .select("username, role")
         .not("username", "is", null),
     ]);
@@ -226,7 +226,7 @@ export function AssignmentsInbox({ refreshToken }: Props = {}) {
     if (!isAdmin || selectedIds.size === 0) return;
     if (!confirm(`Cancel ${selectedIds.size} assignment(s)?`)) return;
     const ids = [...selectedIds];
-    const { error: err } = await takeOversupabase
+    const { error: err } = await companySupabase
 .from("report_assignments")
       .update({ status: "canceled" })
       .in("id", ids);
@@ -238,7 +238,7 @@ export function AssignmentsInbox({ refreshToken }: Props = {}) {
     if (!isAdmin || selectedIds.size === 0) return;
     if (!confirm(`Permanently delete ${selectedIds.size} assignment(s)? This can't be undone.`)) return;
     const ids = [...selectedIds];
-    const { error: err } = await takeOversupabase
+    const { error: err } = await companySupabase
 .from("report_assignments")
       .delete()
       .in("id", ids);
@@ -636,8 +636,8 @@ function AssignmentEditor({
       created_by: initial?.created_by ?? currentUsername,
     };
     const result = initial
-      ? await takeOversupabase.from("report_assignments").update(payload).eq("id", initial.id)
-      : await takeOversupabase.from("report_assignments").insert(payload);
+      ? await companySupabase.from("report_assignments").update(payload).eq("id", initial.id)
+      : await companySupabase.from("report_assignments").insert(payload);
     setSaving(false);
     if (result.error) { setErr(result.error.message); return; }
     onSaved();
@@ -647,7 +647,7 @@ function AssignmentEditor({
     if (!initial) return;
     if (!confirm("Delete this assignment? This can't be undone.")) return;
     setSaving(true);
-    const { error } = await takeOversupabase.from("report_assignments").delete().eq("id", initial.id);
+    const { error } = await companySupabase.from("report_assignments").delete().eq("id", initial.id);
     setSaving(false);
     if (error) { setErr(error.message); return; }
     onSaved();

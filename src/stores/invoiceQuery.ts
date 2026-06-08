@@ -1,4 +1,4 @@
-import { takeOversupabase } from "@/MyComponents/supabase";
+import { companySupabase } from "@/routes/index.lazy";
 import { useQuery } from "@tanstack/react-query";
 import { useCompanyFilter } from "./store";
 
@@ -13,7 +13,7 @@ interface ClientType {
 }
 // Fetch All Clients — scoped by company
 const fetchClients = async (company: string) => {
-  let query = takeOversupabase.from("clients").select("*");
+  let query = companySupabase.from("clients").select("*");
   if (company !== "all") {
     const label = company === "simplicityFunds" ? "simplicity" : "CodeWithAli";
     query = query.eq("company", label);
@@ -99,7 +99,7 @@ export function getLineItems(inv: InvoiceType): LineItem[] {
 }
 // Fetch all of Client's Invoices — scoped by company
 const fetchInvoices = async (name: string, company: string) => {
-  let query = takeOversupabase
+  let query = companySupabase
     .from("invoices")
     .select("*")
     .eq("client_name", name);
@@ -126,7 +126,7 @@ export const Invoices = (name: string) => {
 
 // Fetch ALL invoices (no client filter) — used by financial dashboard — scoped by company
 const fetchAllInvoices = async (company: string) => {
-  let query = takeOversupabase
+  let query = companySupabase
     .from("invoices")
     .select("*")
     .order("creation_date", { ascending: false });
@@ -151,7 +151,7 @@ export const AllInvoices = () => {
 
 // Fetch Client's Invoice — scoped by company
 const fetchInvoice = async (id: number, company: string) => {
-  let query = takeOversupabase
+  let query = companySupabase
     .from("invoices")
     .select("*")
     .eq("invoice_id", id);

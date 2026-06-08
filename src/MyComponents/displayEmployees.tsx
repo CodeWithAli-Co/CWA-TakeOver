@@ -5,7 +5,7 @@ import { AddEmployee } from "./subForms/addEmploy";
 import { useEffect, useRef } from "react";
 import { useAppStore } from "@/stores/store";
 import { EditEmployee } from "./subForms/editEmploy";
-import { takeOversupabase } from "./supabase";
+import { companySupabase } from "@/routes/index.lazy";
 
 function DisplayEmployees() {
   const { setDialog, dialog } = useAppStore();
@@ -48,8 +48,8 @@ function DisplayEmployees() {
 
   // Delete Employee
   const DelEmployee = async (rowID: number) => {
-    const { data: result, error } = await takeOversupabase
-.from("app_users")
+    const { data: result, error } = await companySupabase
+.from("employee")
       .delete()
       .eq("id", rowID)
       .select();

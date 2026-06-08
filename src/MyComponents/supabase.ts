@@ -2,7 +2,7 @@
  * supabase.ts — dual-client Supabase setup for the multi-tenant
  * desktop app.
  *
- *   takeOversupabase — the central master DB. Holds the
+ *   companySupabase — the central master DB. Holds the
  *     `takeover_companies` registry (one row per customer,
  *     containing the per-tenant `companydb_url` / `companydb_key`).
  *     URL comes from `VITE_DB_URL`; the anon key is fetched at
@@ -57,7 +57,7 @@ const supabaseKey = await getTKSupabaseKey();
 // almost certainly why the sidebar shows "Unknown / Member"
 // intermittently. The console warning "Multiple GoTrueClient
 // instances detected" is GoTrue telling us this is happening.
-export const takeOversupabase = createClient(supabaseUrl, supabaseKey, {
+export const takeOverSupabase = createClient(supabaseUrl, supabaseKey, {
   auth: {
     storageKey: "sb-takeover-master-auth",
     persistSession: true,
@@ -96,7 +96,7 @@ const getCompSupabaseCreds = async (): Promise<{
     }
   }
 
-  const { data, error } = await takeOversupabase
+  const { data, error } = await takeOverSupabase
     .from("takeover_companies")
     .select("companydb_url,companydb_key")
     .eq("company_name", companyName)

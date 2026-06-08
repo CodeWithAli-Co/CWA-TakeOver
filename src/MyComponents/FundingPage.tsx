@@ -38,7 +38,6 @@ import {
 } from "lucide-react";
 import FundingCalculator from "./FundingCalculator";
 
-import { takeOversupabase } from "./supabase";
 import {
   FUNDING_QUERY_KEY,
   FundingCompany,
@@ -69,6 +68,7 @@ import {
   projectCapTable,
   totalRaisedAcrossCompanies,
 } from "./fundingMath";
+import { companySupabase } from "@/routes/index.lazy";
 
 // ═══════════════════════════════════════════════════════════════════
 // Top-level component
@@ -79,7 +79,7 @@ export default function FundingPage() {
 
   // Realtime sync — multi-operator (Ali + Hanif both planning)
   useEffect(() => {
-    const ch = takeOversupabase
+    const ch = companySupabase
       .channel("funding-realtime")
       .on("postgres_changes", { event: "*", schema: "public", table: "funding_companies" },
         () => qc.invalidateQueries({ queryKey: FUNDING_QUERY_KEY }))

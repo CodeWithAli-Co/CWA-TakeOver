@@ -23,7 +23,7 @@ import {
   useMutation,
   useQueryClient,
 } from "@tanstack/react-query";
-import { takeOversupabase } from "@/MyComponents/supabase";
+import { companySupabase } from "@/routes/index.lazy";
 import type { CrmCompany, CrmContact, CrmActivity } from "./crm";
 
 // ─────────────────────────────────────────────────────────────────
@@ -156,7 +156,7 @@ export function useInvestors() {
     queryFn: async (): Promise<InvestorListEntry[]> => {
       // One round-trip: profile row + nested company columns +
       // partner count (computed via a counted relation).
-      const { data, error } = await takeOversupabase
+      const { data, error } = await companySupabase
         .from(INVESTOR_PROFILES_TABLE)
         .select(
           `
@@ -178,7 +178,7 @@ export function useInvestors() {
       ) as string[];
       let partnerCounts = new Map<string, number>();
       if (companyIds.length > 0) {
-        const { data: ctRows } = await takeOversupabase
+        const { data: ctRows } = await companySupabase
           .from(CONTACTS_TABLE)
           .select("company_id")
           .in("company_id", companyIds);
@@ -209,7 +209,7 @@ export function useInvestor(id: string | null | undefined) {
     enabled: !!id,
     queryFn: async (): Promise<InvestorDetail | null> => {
       if (!id) return null;
-      const { data: profile, error: profileErr } = await takeOversupabase
+      const { data: profile, error: profileErr } = await companySupabase
         .from(INVESTOR_PROFILES_TABLE)
         .select("*")
         .eq("id", id)
@@ -219,12 +219,12 @@ export function useInvestor(id: string | null | undefined) {
 
       const companyId = (profile as InvestorProfile).company_id;
       const [companyRes, partnersRes, activitiesRes] = await Promise.all([
-        takeOversupabase
+        companySupabase
           .from(COMPANIES_TABLE)
           .select("*")
           .eq("id", companyId)
           .single(),
-        takeOversupabase
+        companySupabase
           .from(CONTACTS_TABLE)
           .select("*")
           .eq("company_id", companyId)
@@ -232,14 +232,14 @@ export function useInvestor(id: string | null | undefined) {
         // Activities scoped to any partner under this firm. We
         // pull the partner ids first then filter activities.
         (async () => {
-          const partnerIds = await takeOversupabase
+          const partnerIds = await companySupabase
             .from(CONTACTS_TABLE)
             .select("id")
             .eq("company_id", companyId);
           const ids = (partnerIds.data ?? []).map((r: any) => r.id);
           if (ids.length === 0)
             return { data: [] as CrmActivity[], error: null };
-          return takeOversupabase
+          return companySupabase
             .from(ACTIVITIES_TABLE)
             .select("*")
             .in("contact_id", ids)
@@ -276,7 +276,7 @@ export function useFollowupsDue() {
     queryFn: async (): Promise<InvestorListEntry[]> => {
       const today = new Date();
       today.setHours(23, 59, 59, 999);
-      const { data, error } = await takeOversupabase
+      const { data, error } = await companySupabase
         .from(INVESTOR_PROFILES_TABLE)
         .select(
           `
@@ -343,7 +343,7 @@ export function useCreateInvestor() {
       input: CreateInvestorInput,
     ): Promise<InvestorProfile> => {
       // 1) Create the company row.
-      const { data: company, error: companyErr } = await takeOversupabase
+      const { data: company, error: companyErr } = await companySupabase
         .from(COMPANIES_TABLE)
         .insert({
           name: input.firm_name,
@@ -356,7 +356,7 @@ export function useCreateInvestor() {
       if (companyErr) throw companyErr;
 
       // 2) Create the investor profile.
-      const { data: profile, error: profileErr } = await takeOversupabase
+      const { data: profile, error: profileErr } = await companySupabase
         .from(INVESTOR_PROFILES_TABLE)
         .insert({
           company_id: (company as CrmCompany).id,
@@ -378,7 +378,7 @@ export function useCreateInvestor() {
         .single();
       if (profileErr) {
         // Roll back the company so we don't leave a stub.
-        await takeOversupabase
+        await companySupabase
           .from(COMPANIES_TABLE)
           .delete()
           .eq("id", (company as CrmCompany).id);
@@ -387,7 +387,7 @@ export function useCreateInvestor() {
 
       // 3) Optional initial partner.
       if (input.partner_name || input.partner_email) {
-        await takeOversupabase.from(CONTACTS_TABLE).insert({
+        await companySupabase.from(CONTACTS_TABLE).insert({
           name: input.partner_name ?? null,
           email: input.partner_email ?? null,
           title: input.partner_title ?? "Partner",
@@ -448,14 +448,14 @@ export function useCreateInvestorsBulk() {
       // We loop sequentially (not Promise.all) because:
       // (a) the average discover batch is 8-15 firms -- parallel
       //     wouldn't save meaningful time, and
-      // (b) Postgres + RLS would block on takeOversupabase's single
+      // (b) Postgres + RLS would block on companySupabase's single
       //     connection pool anyway,
       // (c) any partial-failure pattern is easier to report when
       //     errors arrive in order.
       for (const input of inputs) {
         try {
           // 1) Company. Same shape as the single-create version.
-          const { data: company, error: companyErr } = await takeOversupabase
+          const { data: company, error: companyErr } = await companySupabase
             .from(COMPANIES_TABLE)
             .insert({
               name: input.firm_name,
@@ -467,7 +467,7 @@ export function useCreateInvestorsBulk() {
           if (companyErr) throw companyErr;
 
           // 2) Investor profile.
-          const { data: profile, error: profileErr } = await takeOversupabase
+          const { data: profile, error: profileErr } = await companySupabase
             .from(INVESTOR_PROFILES_TABLE)
             .insert({
               company_id: (company as CrmCompany).id,
@@ -489,7 +489,7 @@ export function useCreateInvestorsBulk() {
             .single();
           if (profileErr) {
             // Roll back company so we don't leave a stub.
-            await takeOversupabase
+            await companySupabase
               .from(COMPANIES_TABLE)
               .delete()
               .eq("id", (company as CrmCompany).id);
@@ -504,7 +504,7 @@ export function useCreateInvestorsBulk() {
           // partner manually).
           for (const p of input.partners ?? []) {
             if (!p.name) continue;
-            await takeOversupabase
+            await companySupabase
               .from(CONTACTS_TABLE)
               .insert({
                 name: p.name,
@@ -553,7 +553,7 @@ export function useUpdateInvestor() {
         Omit<InvestorProfile, "id" | "company_id" | "created_at" | "updated_at">
       >;
     }): Promise<InvestorProfile> => {
-      const { data, error } = await takeOversupabase
+      const { data, error } = await companySupabase
         .from(INVESTOR_PROFILES_TABLE)
         .update(vars.patch)
         .eq("id", vars.id)
@@ -579,7 +579,7 @@ export function useMoveInvestorStage() {
       id: string;
       stage: InvestorPipelineStage;
     }): Promise<void> => {
-      const { error } = await takeOversupabase
+      const { error } = await companySupabase
         .from(INVESTOR_PROFILES_TABLE)
         .update({ pipeline_stage: vars.stage })
         .eq("id", vars.id);
@@ -596,7 +596,7 @@ export function useMoveInvestorStage() {
 export function useInvestorsRealtime() {
   const qc = useQueryClient();
   useEffect(() => {
-    const channel = takeOversupabase
+    const channel = companySupabase
       .channel("investor_profiles_changes")
       .on(
         "postgres_changes" as any,
@@ -611,7 +611,7 @@ export function useInvestorsRealtime() {
       )
       .subscribe();
     return () => {
-      takeOversupabase.removeChannel(channel);
+      companySupabase.removeChannel(channel);
     };
   }, [qc]);
 }

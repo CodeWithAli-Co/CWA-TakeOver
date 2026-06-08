@@ -20,7 +20,7 @@ import {
   FolderKanban, Plus, Search, X, Loader2, AlertCircle, Trash2,
   Users, Pencil, Check, Building2, Circle,
 } from "lucide-react";
-import { takeOversupabase } from "@/MyComponents/supabase";
+import { companySupabase } from "@/routes/index.lazy";
 import { ActiveUser } from "@/stores/query";
 
 // ── Types ───────────────────────────────────────────────────────
@@ -84,7 +84,7 @@ export default function TeamsAndProjects() {
         .from("project_members")
         .select("project_id, user_id, role"),
       supabase
-        .from("app_users")
+        .from("employee")
         .select("supa_id, username, role, company, avatarURL")
         .not("supa_id", "is", null)
         .order("username"),
@@ -374,7 +374,7 @@ function CreateProjectPanel({
     setSaving(true);
     setErr(null);
 
-    const ins = await takeOversupabase
+    const ins = await companySupabase
 .from("projects")
       .insert({
         name: name.trim(),
@@ -396,7 +396,7 @@ function CreateProjectPanel({
         user_id,
         role: "member" as const,
       }));
-      const mi = await takeOversupabase.from("project_members").insert(rows);
+      const mi = await companySupabase.from("project_members").insert(rows);
       if (mi.error) {
         setErr(`Project created but couldn't add members: ${mi.error.message}`);
         setSaving(false);
@@ -525,7 +525,7 @@ function ProjectDetailPanel({
 
   const saveEdit = async () => {
     setBusy(true); setErr(null);
-    const { error } = await takeOversupabase
+    const { error } = await companySupabase
 .from("projects")
       .update({
         name: draft.name.trim(),
@@ -543,14 +543,14 @@ function ProjectDetailPanel({
   const toggleMember = async (userId: string) => {
     setBusy(true); setErr(null);
     if (memberIds.has(userId)) {
-      const { error } = await takeOversupabase
+      const { error } = await companySupabase
   .from("project_members")
         .delete()
         .eq("project_id", project.id)
         .eq("user_id", userId);
       if (error) { setErr(error.message); setBusy(false); return; }
     } else {
-      const { error } = await takeOversupabase
+      const { error } = await companySupabase
   .from("project_members")
         .insert({ project_id: project.id, user_id: userId, role: "member" });
       if (error) { setErr(error.message); setBusy(false); return; }
@@ -562,7 +562,7 @@ function ProjectDetailPanel({
   const deleteProject = async () => {
     if (!confirm(`Delete "${project.name}"? Member assignments are removed too. This can't be undone.`)) return;
     setBusy(true); setErr(null);
-    const { error } = await takeOversupabase.from("projects").delete().eq("id", project.id);
+    const { error } = await companySupabase.from("projects").delete().eq("id", project.id);
     setBusy(false);
     if (error) { setErr(error.message); return; }
     onClose();

@@ -30,7 +30,7 @@ const pageLinkPluginKey = new PluginKey("pageLinkSuggestion");
 import { ReactRenderer } from "@tiptap/react";
 import tippy, { type Instance as TippyInstance } from "tippy.js";
 import { FileText, Table as TableIcon } from "lucide-react";
-import { takeOversupabase } from "@/MyComponents/supabase";
+import { companySupabase } from "@/routes/index.lazy";
 
 interface PageRef {
   id: string;
@@ -48,11 +48,11 @@ async function fetchAllPageRefs(): Promise<PageRef[]> {
   if (__pageRefsPromise) return __pageRefsPromise;
   __pageRefsPromise = (async () => {
     const [docsRes, sheetsRes] = await Promise.all([
-      takeOversupabase
+      companySupabase
         .from("workspace_documents")
         .select("id, title, archived")
         .order("updated_at", { ascending: false }),
-      takeOversupabase
+      companySupabase
         .from("workspace_spreadsheets")
         .select("id, title, archived")
         .order("updated_at", { ascending: false }),

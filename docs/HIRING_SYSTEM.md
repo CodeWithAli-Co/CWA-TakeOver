@@ -459,7 +459,7 @@ threw `app_users_username_key`. Fix:
 
 ```ts
 // 1. Check if username exists.
-const existing = await supabase.from("app_users")
+const existing = await supabase.from("employee")
   .select("id, supa_id, username")
   .eq("username", baseUsername)
   .maybeSingle();

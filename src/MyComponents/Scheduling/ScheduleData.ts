@@ -1,5 +1,5 @@
 // ScheduleData.ts - Consistent data for schedule
-import { takeOversupabase } from "../supabase";
+import { companySupabase } from "@/routes/index.lazy";
 import { 
     ScheduleDataType, 
     EventType, 
@@ -8,7 +8,7 @@ import {
   } from "./ScheduleComponents";
   
 
-  const { data : events, error: eventsError } = await takeOversupabase    .schema("schedule")
+  const { data : events, error: eventsError } = await companySupabase.schema("schedule")
     .from("event")
     .select("*")
 

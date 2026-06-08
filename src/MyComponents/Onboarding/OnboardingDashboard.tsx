@@ -44,7 +44,7 @@ import {
   Award,
   TrendingUp,
 } from "lucide-react";
-import { takeOversupabase } from "@/MyComponents/supabase";
+import { companySupabase } from "@/routes/index.lazy";
 import { ActiveUser } from "@/stores/query";
 import { ProvisionOnboarding } from "./ProvisionOnboarding";
 import { TemplateManager } from "./TemplateManager";
@@ -131,7 +131,7 @@ export function OnboardingDashboard() {
       setLoadingInstances(true);
       setLoadError(null);
 
-      const { data, error } = await takeOversupabase
+      const { data, error } = await companySupabase
   .from("onboarding_instances")
         .select("id, offer_letter_id, employee_user_id, template_id, status, started_at, completed_at")
         .order("started_at", { ascending: false })
@@ -151,7 +151,7 @@ export function OnboardingDashboard() {
       ) as string[];
 
       if (offerIds.length > 0) {
-        const offers = await takeOversupabase
+        const offers = await companySupabase
     .from("offer_letters")
           .select("id, candidate_name, position_title, employer_legal_name, brand")
           .in("id", offerIds);
@@ -177,8 +177,8 @@ export function OnboardingDashboard() {
         ),
       );
       if (userIds.length > 0) {
-        const users = await takeOversupabase
-    .from("app_users")
+        const users = await companySupabase
+    .from("employee")
           .select("supa_id, username, role")
           .in("supa_id", userIds);
         if (!users.error && users.data) {
@@ -415,7 +415,7 @@ export function OnboardingDashboard() {
                 mySupaId={mySupaId}
                 onChanged={() => {
                   (async () => {
-                    const { data } = await takeOversupabase
+                    const { data } = await companySupabase
                 .from("onboarding_instances")
                       .select("id, status, completed_at")
                       .eq("id", selected.id)
@@ -550,7 +550,7 @@ function CandidateView({
     (async () => {
       setLoading(true);
       setError(null);
-      const res = await takeOversupabase
+      const res = await companySupabase
   .from("onboarding_items")
         .select("id, instance_id, title, description, owner, position, status, completed_at, completed_by_user_id, notes")
         .eq("instance_id", instance.id)
@@ -581,7 +581,7 @@ function CandidateView({
     const patch = nextStatus === "complete"
       ? { status: "complete" as ItemStatus, completed_at: new Date().toISOString(), completed_by_user_id: mySupaId }
       : { status: "pending" as ItemStatus, completed_at: null, completed_by_user_id: null };
-    const res = await takeOversupabase.from("onboarding_items").update(patch).eq("id", item.id);
+    const res = await companySupabase.from("onboarding_items").update(patch).eq("id", item.id);
     if (res.error) {
       setError(`Update failed: ${res.error.message}`);
       setUpdatingId(null);

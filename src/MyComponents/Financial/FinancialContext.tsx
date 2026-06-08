@@ -22,7 +22,7 @@ import {
   FinancialMetrics,
 } from "@/stores/FinancialField";
 import { calculateProjections } from "@/stores/FinancialUtils";
-import { takeOversupabase } from "@/MyComponents/supabase";
+import { companySupabase } from "@/routes/index.lazy";
 
 // ── State shape ──
 interface FinancialState {
@@ -90,9 +90,9 @@ export function FinancialProvider({ children }: { children: React.ReactNode }) {
     async function loadData() {
       try {
         const [expRes, revRes, propsRes] = await Promise.all([
-          takeOversupabase.from("cwa_expenses").select("*"),
-          takeOversupabase.from("cwa_revenues").select("*"),
-          takeOversupabase.from("cwa_calculatorProps").select("*"),
+          companySupabase.from("cwa_expenses").select("*"),
+          companySupabase.from("cwa_revenues").select("*"),
+          companySupabase.from("cwa_calculatorProps").select("*"),
         ]);
 
         if (expRes.data) {

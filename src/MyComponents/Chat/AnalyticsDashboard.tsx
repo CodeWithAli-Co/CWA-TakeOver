@@ -21,7 +21,7 @@ import {
   Loader2, Users, Clock,
 } from "lucide-react";
 import { ScrollArea } from "@/components/ui/shadcnComponents/scroll-area";
-import { takeOversupabase } from "@/MyComponents/supabase";
+import { companySupabase } from "@/routes/index.lazy";
 import { format, startOfDay, subDays } from "date-fns";
 import {
   Area, AreaChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis,
@@ -45,11 +45,11 @@ export function AnalyticsDashboard() {
       setLoading(true);
       const fourteenDaysAgo = subDays(new Date(), 14).toISOString();
       const [g, d] = await Promise.all([
-        takeOversupabase
+        companySupabase
           .from("cwa_chat")
           .select("sent_by, created_at, msg_id, thread_root_id")
           .gte("created_at", fourteenDaysAgo),
-        takeOversupabase
+        companySupabase
           .from("cwa_dm_chat")
           .select("sent_by, created_at, msg_id, thread_root_id, dm_group")
           .gte("created_at", fourteenDaysAgo),

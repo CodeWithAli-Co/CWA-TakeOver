@@ -11,7 +11,7 @@
  * happens in CWADashboard.tsx via UserView; this file is exec-only.
  *
  * Note on data: most strategic surfaces (clients, accounts, incidents,
- * pipeline, initiatives) don't yet have backing tables in takeOversupabase * The mock constants below are clearly labeled and each carries a
+ * pipeline, initiatives) don't yet have backing tables in companySupabase * The mock constants below are clearly labeled and each carries a
  * comment pointing to the production source it should be replaced
  * with. The UI is built first so the enterprise pitch demo is intact
  * and individual queries can be hooked up incrementally without

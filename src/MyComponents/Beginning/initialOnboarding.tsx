@@ -54,7 +54,7 @@ import {
   Trash2,
 } from "lucide-react";
 
-import { getCompanySupabase, takeOversupabase } from "../supabase";
+import { getCompanySupabase, takeOverSupabase } from "../supabase";
 import { getStronghold } from "@/stores/stronghold";
 import {
   FieldGroup,
@@ -210,7 +210,7 @@ const InitialOnboarding = ({
         }
         console.log(value);
 
-        const { data, error } = await takeOversupabase
+        const { data, error } = await takeOverSupabase
           .from("takeover_companies")
           .select("id,initialized,companydb_url,companydb_key")
           .eq("company_name", value.companyName)
@@ -258,7 +258,7 @@ const InitialOnboarding = ({
         const companySupabase = await getCompanySupabase();
         const { data: founderInitCheckData, error: founderInitCheckError } =
           await companySupabase
-            .from(import.meta.env.DEV ? "demo_employee_table" : "employee")
+            .from("employee")
             .select("email")
             .eq("email", value.founderEmail)
             .single()
@@ -398,7 +398,7 @@ const InitialOnboarding = ({
       console.log("[onboarding] persisting components:", components);
     }
 
-    const { error } = await takeOversupabase
+    const { error } = await takeOverSupabase
       .from("takeover_companies")
       .update({ components })
       .eq("id", companyId);
@@ -426,7 +426,7 @@ const InitialOnboarding = ({
 
   const finish = async () => {
     if (import.meta.env.PROD) {
-      const { error } = await takeOversupabase
+      const { error } = await takeOverSupabase
         .from("takeover_companies")
         .update({ initialized: true })
         .eq("id", companyId);

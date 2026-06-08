@@ -20,7 +20,7 @@
  */
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { takeOversupabase } from "@/MyComponents/supabase";
+import { companySupabase } from "@/routes/index.lazy";
 import {
   MOCK_AGENTS,
   MOCK_REPOS,
@@ -261,7 +261,7 @@ export function useAgents() {
     staleTime: 5 * 60_000,
     queryFn: async (): Promise<AiAgent[]> => {
       if (readSchemaState() === "missing") return MOCK_AGENTS;
-      const { data, error } = await takeOversupabase
+      const { data, error } = await companySupabase
   .from("ai_agents")
         .select("id, slug, display_name, role, accent_hsl");
       if (error) {
@@ -282,7 +282,7 @@ export function useRepos() {
       // Skip the network entirely once we've confirmed the schema
       // hasn't been applied this session.
       if (readSchemaState() === "missing") return MOCK_REPOS;
-      const { data, error } = await takeOversupabase
+      const { data, error } = await companySupabase
   .from("repos")
         .select("id, owner, name, description, status, visibility, default_branch, primary_language, language_breakdown, open_pr_count, last_commit_at, last_commit_agent_id, activity_heat")
         .order("last_commit_at", { ascending: false, nullsFirst: false });
@@ -310,7 +310,7 @@ export function useCommits(repoId: string | null | undefined) {
       if (!repoId) return [];
       const fallback = MOCK_COMMITS.filter((c) => c.repoId === repoId);
       if (!isUuid(repoId)) return fallback;
-      const { data, error } = await takeOversupabase
+      const { data, error } = await companySupabase
   .from("commits")
         .select("id, repo_id, sha, parent_sha, branch_name, message, author_username, author_agent_id, agent_reasoning, created_at, additions, deletions, changed_files")
         .eq("repo_id", repoId)
@@ -330,7 +330,7 @@ export function useFiles(repoId: string | null | undefined, branchName: string =
       if (!repoId) return [];
       const fallback = MOCK_FILES.filter((f) => f.repoId === repoId && f.branchName === branchName);
       if (!isUuid(repoId)) return fallback;
-      const { data, error } = await takeOversupabase
+      const { data, error } = await companySupabase
   .from("files")
         .select("id, repo_id, branch_name, path, content, size_bytes, language, is_binary, ai_summary, deps_out, deps_in, last_modified_at, last_modified_agent_id")
         .eq("repo_id", repoId)
@@ -351,7 +351,7 @@ export function usePullRequests(repoId: string | null | undefined) {
       if (!repoId) return [];
       const fallback = MOCK_PRS.filter((p) => p.repoId === repoId);
       if (!isUuid(repoId)) return fallback;
-      const { data, error } = await takeOversupabase
+      const { data, error } = await companySupabase
   .from("pull_requests")
         .select("id, repo_id, number, title, body, status, author_username, author_agent_id, source_branch, target_branch, head_sha, created_at, updated_at, ai_explanation, additions, deletions, changed_files, comment_count")
         .eq("repo_id", repoId)
@@ -371,7 +371,7 @@ export function usePullRequest(prId: string | null | undefined) {
       if (!prId) return null;
       const fallback = MOCK_PRS.find((p) => p.id === prId) ?? null;
       if (!isUuid(prId)) return fallback;
-      const { data, error } = await takeOversupabase
+      const { data, error } = await companySupabase
   .from("pull_requests")
         .select("id, repo_id, number, title, body, status, author_username, author_agent_id, source_branch, target_branch, head_sha, created_at, updated_at, ai_explanation, additions, deletions, changed_files, comment_count")
         .eq("id", prId)
@@ -391,7 +391,7 @@ export function usePrComments(prId: string | null | undefined) {
       if (!prId) return [];
       const fallback = MOCK_PR_COMMENTS.filter((c) => c.prId === prId);
       if (!isUuid(prId)) return fallback;
-      const { data, error } = await takeOversupabase
+      const { data, error } = await companySupabase
   .from("pr_comments")
         .select("id, pr_id, file_path, line_number, parent_id, author_username, author_agent_id, body, created_at")
         .eq("pr_id", prId)
@@ -411,7 +411,7 @@ export function usePrReviews(prId: string | null | undefined) {
       if (!prId) return [];
       const fallback = MOCK_PR_REVIEWS.filter((r) => r.prId === prId);
       if (!isUuid(prId)) return fallback;
-      const { data, error } = await takeOversupabase
+      const { data, error } = await companySupabase
   .from("pr_reviews")
         .select("id, pr_id, reviewer_username, reviewer_agent_id, state, body, created_at")
         .eq("pr_id", prId)
@@ -432,7 +432,7 @@ export function useActivity(repoId?: string | null) {
         : MOCK_ACTIVITY;
       if (repoId && !isUuid(repoId)) return fallback;
       if (readSchemaState() === "missing") return fallback;
-      let q = takeOversupabase
+      let q = companySupabase
         .from("code_activity")
         .select("id, repo_id, agent_id, kind, summary, created_at")
         .order("created_at", { ascending: false })
@@ -457,7 +457,7 @@ export function usePermissions(repoId: string | null | undefined) {
       if (!repoId) return [];
       const fallback = MOCK_PERMISSIONS.filter((p) => p.repoId === repoId);
       if (!isUuid(repoId)) return fallback;
-      const { data, error } = await takeOversupabase
+      const { data, error } = await companySupabase
   .from("agent_permissions")
         .select("id, repo_id, agent_id, branch_pattern, can_commit_direct, can_open_pr, can_review_pr, can_merge_pr, can_merge_own_pr, can_force_push, notes")
         .eq("repo_id", repoId);
@@ -476,7 +476,7 @@ export function useBranchProtection(repoId: string | null | undefined) {
       if (!repoId) return [];
       const fallback = MOCK_BRANCH_PROTECTION.filter((bp) => bp.repoId === repoId);
       if (!isUuid(repoId)) return fallback;
-      const { data, error } = await takeOversupabase
+      const { data, error } = await companySupabase
   .from("branch_protection")
         .select("id, repo_id, branch_pattern, required_approvals, require_human_approval, required_approver_roles, require_resolved_threads, block_force_push, delete_after_merge")
         .eq("repo_id", repoId);
@@ -495,7 +495,7 @@ export function useLabels(repoId: string | null | undefined) {
       if (!repoId) return [];
       const fallback = MOCK_LABELS.filter((l) => l.repoId === repoId);
       if (!isUuid(repoId)) return fallback;
-      const { data, error } = await takeOversupabase
+      const { data, error } = await companySupabase
   .from("issue_labels")
         .select("id, repo_id, name, color_hsl")
         .eq("repo_id", repoId);
@@ -577,7 +577,7 @@ export function useSaveFile() {
       // rows on a seeded repo, fall through to the upsert path which
       // uses the (repo_id, branch_name, path) unique index.
       if (input.fileId && isUuid(input.fileId)) {
-        const { data, error } = await takeOversupabase
+        const { data, error } = await companySupabase
     .from("files")
           .update(row)
           .eq("id", input.fileId)
@@ -586,7 +586,7 @@ export function useSaveFile() {
         if (error) throw error;
         return (data?.id as string | undefined) ?? input.fileId;
       }
-      const { data, error } = await takeOversupabase
+      const { data, error } = await companySupabase
   .from("files")
         .upsert(row, { onConflict: "repo_id,branch_name,path" })
         .select("id")

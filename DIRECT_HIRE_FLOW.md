@@ -24,7 +24,7 @@ A direct hire was **never** a candidate in the application sense — they don't 
        │                                     │                            │
        │◄──── { userId, actionLink } ◄───────┘                            │
        │                                                                  │
-   4. supabase.from("app_users").insert({                                  │
+   4. supabase.from("employee").insert({                                  │
         username, role, company, email,                                   │
         supa_id: <auth UUID>,                                             │
         hire_source: "direct_referral",                                   │

@@ -19,7 +19,7 @@
 import { useEffect, useState } from "react";
 import { Users } from "lucide-react";
 import type { RealtimeChannel } from "@supabase/supabase-js";
-import { takeOversupabase } from "@/MyComponents/supabase";
+import { companySupabase } from "@/routes/index.lazy";
 import { colorForUser } from "@/lib/yjs/awareness";
 import type { SupabaseYProvider } from "@/lib/yjs/SupabaseYProvider";
 
@@ -144,7 +144,7 @@ function useChannelPresence(
       setPeers(out);
     };
 
-    channel = takeOversupabase.channel(`workspace-presence:${channelName}`, {
+    channel = companySupabase.channel(`workspace-presence:${channelName}`, {
       config: { presence: { key: self } },
     });
 

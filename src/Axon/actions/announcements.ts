@@ -15,7 +15,7 @@
 // reload.
 // ───────────────────────────────────────────────────────────────────
 
-import { takeOversupabase } from "@/MyComponents/supabase";
+import { companySupabase } from "@/routes/index.lazy";
 import { sendNotification } from "@tauri-apps/plugin-notification";
 import type { AxonAction } from "../types";
 import { registerAction } from "./registry";
@@ -48,7 +48,7 @@ registerUndoHandler<{
   rowId: string | number;
   title: string;
 }>("announcement.delete-posted", async ({ table, rowId, title }) => {
-  const { error } = await takeOversupabase    .from(table as any)
+  const { error } = await companySupabase    .from(table as any)
     .delete()
     .eq("id", rowId);
   if (error) throw new Error(error.message);
@@ -162,7 +162,7 @@ export const confirmAnnouncementAction: AxonAction<
       message: chatBody,
     };
 
-    const { data: inserted, error } = await takeOversupabase
+    const { data: inserted, error } = await companySupabase
 .from("cwa_chat")
       .insert(payload)
       .select()

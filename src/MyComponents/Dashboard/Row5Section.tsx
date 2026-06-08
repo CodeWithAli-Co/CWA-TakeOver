@@ -33,7 +33,7 @@ import {
 import { BentoCard } from "./BentoCard";
 import { DailySnapshotCard, QuickStartCard } from "./Row5Fallback";
 import { colorForUser } from "@/lib/yjs/awareness";
-import { takeOversupabase } from "@/MyComponents/supabase";
+import { companySupabase } from "@/routes/index.lazy";
 import { ActiveUser, Employees } from "@/stores/query";
 import { useChatStore } from "@/stores/chatStore";
 
@@ -107,7 +107,7 @@ function useAvatarsByName(): Map<string, string> {
       if (typeof e.avatar === "string" && e.avatar.startsWith("http")) {
         url = e.avatar;
       } else if (e.avatar) {
-        const { data } = takeOversupabase.storage
+        const { data } = companySupabase.storage
           .from("avatars")
           .getPublicUrl(e.avatar);
         url = data?.publicUrl;
@@ -141,7 +141,7 @@ function useMentionsForUser(currentUsername: string) {
       ).toISOString();
       const needle = `%@${currentUsername}%`;
       const [generalRes, dmRes] = await Promise.all([
-        takeOversupabase
+        companySupabase
           .from("cwa_chat")
           .select("msg_id, sent_by, message, created_at")
           .ilike("message", needle)
@@ -149,7 +149,7 @@ function useMentionsForUser(currentUsername: string) {
           .neq("sent_by", currentUsername)
           .order("created_at", { ascending: false })
           .limit(10),
-        takeOversupabase
+        companySupabase
           .from("cwa_dm_chat")
           .select("msg_id, sent_by, message, created_at, dm_group")
           .ilike("message", needle)
@@ -233,7 +233,7 @@ function useCoEditedResources(currentUsername: string) {
     enabled: !!currentUsername,
     staleTime: 60_000,
     queryFn: async (): Promise<CoEditedDoc[]> => {
-      const { data: collabRows } = await takeOversupabase
+      const { data: collabRows } = await companySupabase
   .from("workspace_collaborators")
         .select("resource_type, resource_id")
         .eq("username", currentUsername);
@@ -248,7 +248,7 @@ function useCoEditedResources(currentUsername: string) {
       const [docsRes, sheetsRes, docCommentsRes, sheetCommentsRes] =
         await Promise.all([
           docIds.length
-            ? takeOversupabase
+            ? companySupabase
                 .from("workspace_documents")
                 .select("id, title, owner, updated_at, updated_by, archived")
                 .in("id", docIds)
@@ -256,7 +256,7 @@ function useCoEditedResources(currentUsername: string) {
                 .limit(10)
             : Promise.resolve({ data: [] as any[] }),
           sheetIds.length
-            ? takeOversupabase
+            ? companySupabase
                 .from("workspace_spreadsheets")
                 .select("id, title, owner, updated_at, updated_by, archived")
                 .in("id", sheetIds)
@@ -264,14 +264,14 @@ function useCoEditedResources(currentUsername: string) {
                 .limit(10)
             : Promise.resolve({ data: [] as any[] }),
           docIds.length
-            ? takeOversupabase
+            ? companySupabase
                 .from("workspace_comments")
                 .select("resource_id")
                 .eq("resource_type", "document")
                 .in("resource_id", docIds)
             : Promise.resolve({ data: [] as any[] }),
           sheetIds.length
-            ? takeOversupabase
+            ? companySupabase
                 .from("workspace_comments")
                 .select("resource_id")
                 .eq("resource_type", "spreadsheet")
@@ -328,7 +328,7 @@ function useRecentFeedback(currentUsername: string) {
     enabled: !!currentUsername,
     staleTime: 60_000,
     queryFn: async (): Promise<FeedbackComment[]> => {
-      const { data: collabRows } = await takeOversupabase
+      const { data: collabRows } = await companySupabase
   .from("workspace_collaborators")
         .select("resource_type, resource_id")
         .eq("username", currentUsername);
@@ -343,7 +343,7 @@ function useRecentFeedback(currentUsername: string) {
       const [docCommentsRes, sheetCommentsRes, docsRes, sheetsRes] =
         await Promise.all([
           docIds.length
-            ? takeOversupabase
+            ? companySupabase
                 .from("workspace_comments")
                 .select("id, body, author, created_at, resource_id, resource_type, status")
                 .eq("resource_type", "document")
@@ -353,7 +353,7 @@ function useRecentFeedback(currentUsername: string) {
                 .limit(15)
             : Promise.resolve({ data: [] as any[] }),
           sheetIds.length
-            ? takeOversupabase
+            ? companySupabase
                 .from("workspace_comments")
                 .select("id, body, author, created_at, resource_id, resource_type, status")
                 .eq("resource_type", "spreadsheet")
@@ -363,13 +363,13 @@ function useRecentFeedback(currentUsername: string) {
                 .limit(15)
             : Promise.resolve({ data: [] as any[] }),
           docIds.length
-            ? takeOversupabase
+            ? companySupabase
                 .from("workspace_documents")
                 .select("id, title")
                 .in("id", docIds)
             : Promise.resolve({ data: [] as any[] }),
           sheetIds.length
-            ? takeOversupabase
+            ? companySupabase
                 .from("workspace_spreadsheets")
                 .select("id, title")
                 .in("id", sheetIds)

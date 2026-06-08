@@ -17,7 +17,7 @@
 
 import { useEffect, useMemo } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { takeOversupabase } from "@/MyComponents/supabase";
+import { companySupabase } from "@/routes/index.lazy";
 import { ActiveUser } from "@/stores/query";
 import type { TimeCategory } from "@/stores/timeTrackingTypes";
 
@@ -188,7 +188,7 @@ export function useDailySnapshot(weekOffset: number = 0) {
   const queryClient = useQueryClient();
   useEffect(() => {
     if (!username || !supaId) return;
-    const channel = takeOversupabase
+    const channel = companySupabase
       .channel(`daily-snapshot:${supaId}`)
       .on(
         "postgres_changes",
@@ -250,7 +250,7 @@ export function useDailySnapshot(weekOffset: number = 0) {
       // ── Todos: pull all completions in the last 5 weeks ───────
       // Single query, partition in memory. Cheaper than 5 round trips.
       // Include title so the day-bar tooltip can list what got shipped.
-      const { data: todoRows = [] } = await takeOversupabase
+      const { data: todoRows = [] } = await companySupabase
         .from("cwa_todos")
         .select("status,completed_at,assignee,title")
         .contains("assignee", [username])
@@ -258,7 +258,7 @@ export function useDailySnapshot(weekOffset: number = 0) {
         .gte("completed_at", fourWeeksAgoStart.toISOString());
 
       // ── Time entries: same window, my user_id only ────────────
-      const { data: entryRows = [] } = await takeOversupabase
+      const { data: entryRows = [] } = await companySupabase
         .from("time_entries")
         .select("date,duration_minutes,category")
         .eq("user_id", supaId)
@@ -351,18 +351,18 @@ export function useDailySnapshot(weekOffset: number = 0) {
 
       const [streakTodosRes, streakEntriesRes, openTodosRes] =
         await Promise.all([
-          takeOversupabase
+          companySupabase
             .from("cwa_todos")
             .select("completed_at,assignee")
             .contains("assignee", [username])
             .eq("status", "done")
             .gte("completed_at", streakWindowStart.toISOString()),
-          takeOversupabase
+          companySupabase
             .from("time_entries")
             .select("date")
             .eq("user_id", supaId)
             .gte("date", isoDate(streakWindowStart)),
-          takeOversupabase
+          companySupabase
             .from("cwa_todos")
             .select("todo_id,title,priority,deadline,status,assignee")
             .contains("assignee", [username])

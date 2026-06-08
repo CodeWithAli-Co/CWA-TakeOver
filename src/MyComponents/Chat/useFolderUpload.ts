@@ -28,7 +28,7 @@
  */
 
 import { useCallback, useState } from "react";
-import { takeOversupabase } from "@/MyComponents/supabase";
+import { companySupabase } from "@/routes/index.lazy";
 
 const CHAT_BUCKET = "chat-images";
 const MAX_FILES_PER_FOLDER = 50;
@@ -293,7 +293,7 @@ export function useFolderUpload(groupName: string, currentUsername: string) {
           .join("/");
         const key = `${basePrefix}/${safePath}`;
 
-        const { error } = await takeOversupabase.storage
+        const { error } = await companySupabase.storage
           .from(CHAT_BUCKET)
           .upload(key, entry.file, {
             cacheControl: "3600",
@@ -314,7 +314,7 @@ export function useFolderUpload(groupName: string, currentUsername: string) {
           return null;
         }
 
-        const { data } = takeOversupabase.storage
+        const { data } = companySupabase.storage
           .from(CHAT_BUCKET)
           .getPublicUrl(key);
 

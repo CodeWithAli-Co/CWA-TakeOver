@@ -37,7 +37,7 @@ import { CreateGrowthTrackDialog } from "@/MyComponents/Dashboard/CreateGrowthTr
 import { LogActivityModal } from "@/MyComponents/Sales/LogActivityModal";
 import { useQuickCompose } from "@/MyComponents/Chat/quickComposeStore";
 import { displayLabelForDM, isDMKey } from "@/MyComponents/Chat/displayName";
-import { takeOversupabase } from "@/MyComponents/supabase";
+import { companySupabase } from "@/routes/index.lazy";
 import { useEffect, useState, lazy, Suspense } from "react";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import LoginPage from "@/MyComponents/Beginning/login";
@@ -163,7 +163,7 @@ export const Route = createRootRoute({
 
     // Keep DMGroups in sync across the app (channel is idempotent for same name)
     useEffect(() => {
-      const channel = takeOversupabase
+      const channel = companySupabase
         .channel("dm-groups-sync")
         .on(
           "postgres_changes",
@@ -179,7 +179,7 @@ export const Route = createRootRoute({
     // other teammates' changes also flow through automatically.
     const queryClient = useQueryClient();
     useEffect(() => {
-      const meetingsCh = takeOversupabase
+      const meetingsCh = companySupabase
         .channel("meetings-sync")
         .on(
           "postgres_changes",
@@ -189,7 +189,7 @@ export const Route = createRootRoute({
           },
         )
         .subscribe();
-      const todosCh = takeOversupabase
+      const todosCh = companySupabase
         .channel("todos-sync")
         .on(
           "postgres_changes",
@@ -423,7 +423,7 @@ export const Route = createRootRoute({
         return status === "online";
       };
 
-      const unreadChannel = takeOversupabase
+      const unreadChannel = companySupabase
         .channel("unread-tracker")
         .on(
           "postgres_changes",
@@ -812,7 +812,7 @@ export const Route = createRootRoute({
           for (const item of due) {
             // Only the author's client fires. Prevents dupes across devices.
             if (item.createdBy !== uname) continue;
-            const { error } = await takeOversupabase
+            const { error } = await companySupabase
         .from(item.table)
               .insert(item.payload);
             if (!error) {
@@ -840,7 +840,7 @@ export const Route = createRootRoute({
     useEffect(() => {
       const uname = user?.[0]?.username;
       if (!uname) return;
-      const channel = takeOversupabase.channel("chat-presence", {
+      const channel = companySupabase.channel("chat-presence", {
         config: { presence: { key: uname } },
       });
 

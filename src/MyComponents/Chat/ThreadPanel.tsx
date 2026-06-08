@@ -16,7 +16,7 @@ import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { X, MessagesSquare } from "lucide-react";
 import { ScrollArea } from "@/components/ui/shadcnComponents/scroll-area";
-import { takeOversupabase } from "@/MyComponents/supabase";
+import { companySupabase } from "@/routes/index.lazy";
 import type { MessageInterface } from "@/stores/query";
 import { fetchThreadReplies } from "@/stores/query";
 import { MessageBubble } from "./MessageBubble";
@@ -61,7 +61,7 @@ export function ThreadPanel({
 
   // Realtime subscription for new replies in this thread
   useEffect(() => {
-    const channel = takeOversupabase
+    const channel = companySupabase
       .channel(`thread-${table}-${rootMsg.msg_id}`)
       .on(
         "postgres_changes",

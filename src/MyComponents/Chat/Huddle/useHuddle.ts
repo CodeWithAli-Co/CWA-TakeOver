@@ -24,7 +24,7 @@
  */
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { takeOversupabase } from "@/MyComponents/supabase";
+import { companySupabase } from "@/routes/index.lazy";
 import { QUALITY_PRESETS, type HuddleQuality, type QualitySpec } from "@/stores/huddleStore";
 
 export interface HuddlePeer {
@@ -191,7 +191,7 @@ export function useHuddle({ group, username, joined, muted, camera, quality = "s
   const [sharing, setSharing] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const channelRef = useRef<ReturnType<typeof takeOversupabase.channel> | null>(null);
+  const channelRef = useRef<ReturnType<typeof companySupabase.channel> | null>(null);
   const connectionsRef = useRef<Map<string, RTCPeerConnection>>(new Map());
   const remoteStreamsRef = useRef<Map<string, MediaStream>>(new Map());
   const remoteScreenStreamsRef = useRef<Map<string, MediaStream>>(new Map());
@@ -768,7 +768,7 @@ export function useHuddle({ group, username, joined, muted, camera, quality = "s
     if (!joined || !username) return;
 
     let cancelled = false;
-    let channel: ReturnType<typeof takeOversupabase.channel> | null = null;
+    let channel: ReturnType<typeof companySupabase.channel> | null = null;
 
     const setup = async () => {
       // ── Pre-flight: WebView media-device support ──────────────────────
@@ -867,7 +867,7 @@ export function useHuddle({ group, username, joined, muted, camera, quality = "s
       setLocalStream(combined);
 
       // 4. NOW it's safe to subscribe. Initial offers will include tracks.
-      channel = takeOversupabase.channel(`huddle:${group}`, {
+      channel = companySupabase.channel(`huddle:${group}`, {
         config: { presence: { key: username } },
       });
       channelRef.current = channel;

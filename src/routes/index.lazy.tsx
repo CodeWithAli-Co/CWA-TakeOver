@@ -24,7 +24,6 @@ import InitialOnboarding from "@/MyComponents/Beginning/initialOnboarding";
 import { QuickActionCard } from "@/MyComponents/HomeDashboard/Components/quickActionCard";
 import { useNavigate } from "@tanstack/react-router";
 import { useQueryClient } from "@tanstack/react-query";
-import { takeOversupabase } from "@/MyComponents/supabase";
 import { TasksComponent } from "@/MyComponents/HomeDashboard/tasks";
 import { ActiveUser } from "@/stores/query";
 import { CompanyCard } from "@/MyComponents/HomeDashboard/Components/companyCard";
@@ -32,6 +31,9 @@ import { ActivityFeed } from "@/MyComponents/HomeDashboard/Components/activityFe
 import { TeamPresence } from "@/MyComponents/HomeDashboard/Components/teamPresence";
 import { CWADashboard } from "@/MyComponents/Dashboard/CWADashboard";
 import { SimplicityDashboard } from "@/MyComponents/Dashboard/SimplicityDashboard";
+import { getCompanySupabase } from "@/MyComponents/supabase";
+
+export const companySupabase = await getCompanySupabase();
 
 const getGreeting = () => {
   const hour = new Date().getHours();
@@ -440,8 +442,8 @@ function OnboardingDebugPill() {
       alert("No supa_id — can't reset.");
       return;
     }
-    const { error } = await takeOversupabase
-      .from("app_users")
+    const { error } = await companySupabase
+      .from("employee")
       .update({
         onboarded_at: null,
         role: null,

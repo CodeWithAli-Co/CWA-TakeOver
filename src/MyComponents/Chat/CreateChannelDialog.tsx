@@ -11,7 +11,7 @@
 import { useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { Hash, Loader2, X } from "lucide-react";
-import { takeOversupabase } from "@/MyComponents/supabase";
+import { companySupabase } from "@/routes/index.lazy";
 import { useAppStore } from "@/stores/store";
 import { getActiveCompanyLabel } from "@/stores/query";
 
@@ -47,7 +47,7 @@ export function CreateChannelDialog({
       const subscribers = Array.from(
         new Set([currentUsername, ...allEmployees.filter(Boolean)]),
       );
-      const { error: insertErr } = await takeOversupabase
+      const { error: insertErr } = await companySupabase
   .from("dm_groups")
         .insert({
           name: channelName,
@@ -59,7 +59,7 @@ export function CreateChannelDialog({
         });
       if (insertErr) {
         // Retry without description/company for schemas missing them
-        const minimal = await takeOversupabase
+        const minimal = await companySupabase
     .from("dm_groups")
           .insert({ name: channelName, subscribers });
         if (minimal.error) {

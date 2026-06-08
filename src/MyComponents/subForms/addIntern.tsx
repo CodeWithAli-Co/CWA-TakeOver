@@ -1,5 +1,5 @@
+import { companySupabase } from "@/routes/index.lazy";
 import { useForm } from "@tanstack/react-form";
-import { takeOversupabase } from "../supabase";
 
 export const AddIntern = () => {
   const form = useForm({
@@ -10,7 +10,7 @@ export const AddIntern = () => {
     },
     onSubmit: async ({ value }) => {
       console.log(value);
-      const { error } = await takeOversupabase.from("interns").insert({
+      const { error } = await companySupabase.from("interns").insert({
         username: value.Username,
         email: value.Email,
         role: value.Role,

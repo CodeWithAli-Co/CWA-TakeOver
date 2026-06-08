@@ -29,7 +29,7 @@ import {
   Flame, Gauge, AlertTriangle, Sparkles,
 } from "lucide-react";
 import { AllInvoices, InvoiceType } from "@/stores/invoiceQuery";
-import { takeOversupabase } from "@/MyComponents/supabase";
+import { companySupabase } from "@/routes/index.lazy";
 import { FinancialProvider } from "@/MyComponents/Financial/FinancialContext";
 import ModelerBentoView from "@/MyComponents/Financial/ModelerBentoView";
 import { EXPENSE_COLORS, REVENUE_COLORS } from "@/stores/FinancialConstants";
@@ -1896,9 +1896,9 @@ const FinancialDashboardContent: React.FC = () => {
   useEffect(() => {
     async function loadAggregates() {
       const [propsRes, expRes, revRes] = await Promise.all([
-        takeOversupabase.from("cwa_calculatorProps").select("initialCapital").single(),
-        takeOversupabase.from("cwa_expenses").select("amount, frequency, category"),
-        takeOversupabase.from("cwa_revenues").select("amount, frequency, category, clients, revenueType"),
+        companySupabase.from("cwa_calculatorProps").select("initialCapital").single(),
+        companySupabase.from("cwa_expenses").select("amount, frequency, category"),
+        companySupabase.from("cwa_revenues").select("amount, frequency, category, clients, revenueType"),
       ]);
 
       if (propsRes.data) setBankBalance(propsRes.data.initialCapital || 0);

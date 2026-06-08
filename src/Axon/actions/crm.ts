@@ -21,7 +21,7 @@
 // under a coherent "Sales" group.
 // ───────────────────────────────────────────────────────────────────
 
-import { takeOversupabase } from "@/MyComponents/supabase";
+import { companySupabase } from "@/routes/index.lazy";
 import type { AxonAction } from "../types";
 import { registerAction } from "./registry";
 import { registerUndoHandler } from "../engine/undoStack";
@@ -45,7 +45,7 @@ const ACTIVITIES = "crm_activities";
 registerUndoHandler<{ dealId: string; name: string }>(
   "crm.delete-deal",
   async ({ dealId, name }) => {
-    const { error } = await takeOversupabase.from(DEALS).delete().eq("id", dealId);
+    const { error } = await companySupabase.from(DEALS).delete().eq("id", dealId);
     if (error) throw new Error(error.message);
     return `Reverted — deleted deal "${name}".`;
   },
@@ -57,7 +57,7 @@ registerUndoHandler<{
   previousStage: DealStage;
   previousPosition: number;
 }>("crm.restore-stage", async ({ dealId, name, previousStage, previousPosition }) => {
-  const { error } = await takeOversupabase
+  const { error } = await companySupabase
     .from(DEALS)
     .update({ stage: previousStage, position: previousPosition })
     .eq("id", dealId);
@@ -68,7 +68,7 @@ registerUndoHandler<{
 registerUndoHandler<{ activityId: string; title: string }>(
   "crm.delete-activity",
   async ({ activityId, title }) => {
-    const { error } = await takeOversupabase
+    const { error } = await companySupabase
       .from(ACTIVITIES)
       .delete()
       .eq("id", activityId);
@@ -132,7 +132,7 @@ function resolveActivityType(raw: string | undefined): ActivityType | null {
  *  query for "Acme" matches "Acme renewal" rather than the longest
  *  unrelated row containing the letters. */
 async function findDealByName(name: string): Promise<{ id: string; name: string; stage: DealStage; position: number; amount_cents: number; currency: string } | null> {
-  const { data, error } = await takeOversupabase
+  const { data, error } = await companySupabase
     .from(DEALS)
     .select("id, name, stage, position, amount_cents, currency")
     .ilike("name", `%${name}%`)
@@ -147,7 +147,7 @@ async function findDealByName(name: string): Promise<{ id: string; name: string;
 }
 
 async function findContactByQuery(q: string): Promise<{ id: string; name: string | null; email: string | null; lifecycle_stage: string; company_id: string | null } | null> {
-  const { data, error } = await takeOversupabase
+  const { data, error } = await companySupabase
     .from(CONTACTS)
     .select("id, name, email, lifecycle_stage, company_id")
     .or(`name.ilike.%${q}%,email.ilike.%${q}%`)
@@ -184,7 +184,7 @@ export const listDealsAction: AxonAction<
     const limit = Math.max(1, Math.min(50, input.limit ?? 10));
     const stage = resolveStage(input.stage);
 
-    let q = takeOversupabase
+    let q = companySupabase
       .from(DEALS)
       .select("id, name, stage, amount_cents, currency, owner_supa_id, company_id, contact_id")
       .order("position", { ascending: true })
@@ -271,7 +271,7 @@ export const createDealAction: AxonAction<
     // Best-effort lookups for company + contact.
     let companyId: string | null = null;
     if (input.company) {
-      const { data } = await takeOversupabase
+      const { data } = await companySupabase
         .from("crm_companies")
         .select("id, name")
         .ilike("name", `%${input.company}%`)
@@ -299,7 +299,7 @@ export const createDealAction: AxonAction<
       };
     }
 
-    const { data, error } = await takeOversupabase
+    const { data, error } = await companySupabase
       .from(DEALS)
       .insert({
         name: input.name,
@@ -374,7 +374,7 @@ export const moveDealAction: AxonAction<
       };
     }
 
-    const { error } = await takeOversupabase
+    const { error } = await companySupabase
       .from(DEALS)
       .update({ stage: targetStage, position: Date.now() })
       .eq("id", deal.id);
@@ -484,7 +484,7 @@ export const logCrmActivityAction: AxonAction<
       dealId = d?.id ?? null;
     }
     if (input.company) {
-      const { data } = await takeOversupabase
+      const { data } = await companySupabase
         .from("crm_companies")
         .select("id")
         .ilike("name", `%${input.company}%`)
@@ -507,7 +507,7 @@ export const logCrmActivityAction: AxonAction<
       };
     }
 
-    const { data, error } = await takeOversupabase
+    const { data, error } = await companySupabase
       .from(ACTIVITIES)
       .insert({
         type,
@@ -557,7 +557,7 @@ export const summarizePipelineAction: AxonAction<
     "Speak a one-sentence pipeline summary: open deal count, weighted forecast, MTD booked revenue, and which stage holds the most pipeline.",
   input_schema: { type: "object", properties: {} },
   handler: async () => {
-    const { data, error } = await takeOversupabase
+    const { data, error } = await companySupabase
       .from(DEALS)
       .select("stage, amount_cents, probability, currency, close_date_actual, close_date_expected");
     if (error) return { summary: `Couldn't load deals: ${error.message}` };

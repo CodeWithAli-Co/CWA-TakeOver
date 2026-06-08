@@ -9,7 +9,7 @@
  * handler, and (later) the toolbar's image button.
  */
 
-import { takeOversupabase } from "@/MyComponents/supabase";
+import { companySupabase } from "@/routes/index.lazy";
 
 const BUCKET = "workspace-images";
 
@@ -55,7 +55,7 @@ export async function uploadWorkspaceImage(file: File | Blob): Promise<UploadedI
   const ext = extFromMime(type, fallbackExt);
   const storagePath = `${new Date().toISOString().slice(0, 10)}/${uid()}.${ext}`;
 
-  const { error } = await takeOversupabase.storage
+  const { error } = await companySupabase.storage
     .from(BUCKET)
     .upload(storagePath, file, {
       cacheControl: "31536000",
@@ -64,7 +64,7 @@ export async function uploadWorkspaceImage(file: File | Blob): Promise<UploadedI
     });
   if (error) throw error;
 
-  const { data } = takeOversupabase.storage.from(BUCKET).getPublicUrl(storagePath);
+  const { data } = companySupabase.storage.from(BUCKET).getPublicUrl(storagePath);
   if (!data?.publicUrl) {
     throw new Error("Upload succeeded but public URL is missing.");
   }

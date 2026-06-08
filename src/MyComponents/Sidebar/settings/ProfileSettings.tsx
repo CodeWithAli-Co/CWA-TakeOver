@@ -23,7 +23,7 @@ import {
   UserCircle, Mail, Briefcase, Building2, Save, Check, AlertCircle, Loader2,
   ShieldCheck, Sun, Moon, Monitor, Palette,
 } from "lucide-react";
-import { takeOversupabase } from "@/MyComponents/supabase";
+import { companySupabase } from "@/routes/index.lazy";
 import UploadAvatar from "@/MyComponents/Reusables/uploadAvatar";
 import { useThemeMode, type ThemeMode } from "@/stores/themeModeStore";
 
@@ -63,8 +63,8 @@ export function ProfileSettings({ user }: ProfileSettingsProps) {
       bio: bio.trim(),
     };
 
-    const { error: upErr } = await takeOversupabase
-.from("app_users")
+    const { error: upErr } = await companySupabase
+.from("employee")
       .update(patch)
       .eq("supa_id", user.supa_id);
 

@@ -9,7 +9,7 @@
 // ────────────────────────────────────────────────────────────────
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { takeOversupabase } from "@/MyComponents/supabase";
+import { companySupabase } from "@/routes/index.lazy";
 import {
   rowToItem,
   rowToItemWithLatest,
@@ -38,7 +38,7 @@ export interface ListItemsOptions {
 }
 
 async function fetchItems(opts: ListItemsOptions = {}): Promise<RegistryItemWithLatest[]> {
-  let q = takeOversupabase
+  let q = companySupabase
     .from("registry_items_with_latest")
     .select("*")
     .order("install_count", { ascending: false })
@@ -70,7 +70,7 @@ export function useRegistryItems(opts: ListItemsOptions = {}) {
 
 // ── Single item detail ─────────────────────────────────────────
 async function fetchItem(id: string): Promise<RegistryItem | null> {
-  const { data, error } = await takeOversupabase    .from("registry_items")
+  const { data, error } = await companySupabase    .from("registry_items")
     .select("*")
     .eq("id", id)
     .maybeSingle();
@@ -88,7 +88,7 @@ export function useRegistryItem(id: string | null) {
 
 // ── Version history for an item ────────────────────────────────
 async function fetchVersions(itemId: string): Promise<RegistryVersion[]> {
-  const { data, error } = await takeOversupabase    .from("registry_versions")
+  const { data, error } = await companySupabase    .from("registry_versions")
     .select("*")
     .eq("item_id", itemId)
     .order("published_at", { ascending: false });
@@ -128,7 +128,7 @@ export function useCreateRegistryItem() {
       // 1. Insert item row (or reuse if name+kind already exists —
       //    that lets the same mutation function handle "create + first
       //    publish" *and* "publish a new version of an existing item").
-      const { data: existing } = await takeOversupabase
+      const { data: existing } = await companySupabase
   .from("registry_items")
         .select("*")
         .eq("name", input.name)
@@ -139,7 +139,7 @@ export function useCreateRegistryItem() {
       if (existing) {
         itemRow = existing;
       } else {
-        const { data, error } = await takeOversupabase
+        const { data, error } = await companySupabase
     .from("registry_items")
           .insert({
             name: input.name,
@@ -159,7 +159,7 @@ export function useCreateRegistryItem() {
 
       // 2. Upload tarball.
       const storagePath = `artifacts/${itemId}/${version}.tgz`;
-      const { error: upErr } = await takeOversupabase.storage
+      const { error: upErr } = await companySupabase.storage
         .from(BUCKET)
         .upload(storagePath, input.tarball, {
           cacheControl: "31536000",
@@ -173,7 +173,7 @@ export function useCreateRegistryItem() {
         const ext = input.cover.type.includes("png") ? "png" :
                     input.cover.type.includes("webp") ? "webp" : "jpg";
         const coverPath = `covers/${itemId}.${ext}`;
-        const { error: coverErr } = await takeOversupabase.storage
+        const { error: coverErr } = await companySupabase.storage
           .from(BUCKET)
           .upload(coverPath, input.cover, {
             cacheControl: "3600",
@@ -181,8 +181,8 @@ export function useCreateRegistryItem() {
             contentType: input.cover.type || "image/jpeg",
           });
         if (!coverErr) {
-          const { data: pub } = takeOversupabase.storage.from(BUCKET).getPublicUrl(coverPath);
-          await takeOversupabase
+          const { data: pub } = companySupabase.storage.from(BUCKET).getPublicUrl(coverPath);
+          await companySupabase
       .from("registry_items")
             .update({ cover_url: pub.publicUrl })
             .eq("id", itemId);
@@ -190,7 +190,7 @@ export function useCreateRegistryItem() {
       }
 
       // 4. Insert version row.
-      const { error: verErr } = await takeOversupabase
+      const { error: verErr } = await companySupabase
   .from("registry_versions")
         .insert({
           item_id: itemId,
@@ -204,7 +204,7 @@ export function useCreateRegistryItem() {
       if (verErr) throw new Error(`version insert: ${verErr.message}`);
 
       // 5. Update latest_version pointer + description/tags if changed.
-      await takeOversupabase
+      await companySupabase
   .from("registry_items")
         .update({
           latest_version: version,
@@ -245,7 +245,7 @@ export function usePublishVersion() {
           : "1.0.0");
 
       const storagePath = `artifacts/${input.itemId}/${next}.tgz`;
-      const { error: upErr } = await takeOversupabase.storage
+      const { error: upErr } = await companySupabase.storage
         .from(BUCKET)
         .upload(storagePath, input.tarball, {
           cacheControl: "31536000",
@@ -254,7 +254,7 @@ export function usePublishVersion() {
         });
       if (upErr) throw new Error(`tarball upload: ${upErr.message}`);
 
-      const { data: verRow, error: verErr } = await takeOversupabase
+      const { data: verRow, error: verErr } = await companySupabase
   .from("registry_versions")
         .insert({
           item_id: input.itemId,
@@ -269,7 +269,7 @@ export function usePublishVersion() {
         .single();
       if (verErr || !verRow) throw new Error(verErr?.message ?? "version insert failed");
 
-      await takeOversupabase
+      await companySupabase
   .from("registry_items")
         .update({ latest_version: next })
         .eq("id", input.itemId);
@@ -289,7 +289,7 @@ export function useYankVersion() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async ({ versionId, yanked }: { versionId: string; yanked: boolean }) => {
-      const { error } = await takeOversupabase
+      const { error } = await companySupabase
   .from("registry_versions")
         .update({ yanked })
         .eq("id", versionId);
@@ -308,7 +308,7 @@ export function useDeleteRegistryItem() {
   return useMutation({
     mutationFn: async (itemId: string) => {
       // Fetch all storage paths so we can clean the bucket after DB cascade.
-      const { data: versions } = await takeOversupabase
+      const { data: versions } = await companySupabase
   .from("registry_versions")
         .select("storage_path")
         .eq("item_id", itemId);
@@ -322,10 +322,10 @@ export function useDeleteRegistryItem() {
       );
 
       if (paths.length > 0) {
-        await takeOversupabase.storage.from(BUCKET).remove(paths);
+        await companySupabase.storage.from(BUCKET).remove(paths);
       }
 
-      const { error } = await takeOversupabase
+      const { error } = await companySupabase
   .from("registry_items")
         .delete()
         .eq("id", itemId);
@@ -359,7 +359,7 @@ export function useUpdateRegistryItem() {
         const ext = input.cover.type.includes("png") ? "png" :
                     input.cover.type.includes("webp") ? "webp" : "jpg";
         const coverPath = `covers/${input.id}.${ext}`;
-        const { error: coverErr } = await takeOversupabase.storage
+        const { error: coverErr } = await companySupabase.storage
           .from(BUCKET)
           .upload(coverPath, input.cover, {
             cacheControl: "3600",
@@ -367,13 +367,13 @@ export function useUpdateRegistryItem() {
             contentType: input.cover.type || "image/jpeg",
           });
         if (!coverErr) {
-          const { data: pub } = takeOversupabase.storage.from(BUCKET).getPublicUrl(coverPath);
+          const { data: pub } = companySupabase.storage.from(BUCKET).getPublicUrl(coverPath);
           patch.cover_url = pub.publicUrl;
         }
       }
 
       if (Object.keys(patch).length === 0) return;
-      const { error } = await takeOversupabase
+      const { error } = await companySupabase
   .from("registry_items")
         .update(patch)
         .eq("id", input.id);
@@ -388,7 +388,7 @@ export function useUpdateRegistryItem() {
 
 // ── Tarball download URL (CLI + UI use this) ──────────────────
 export function registryTarballUrl(storagePath: string): string {
-  const { data } = takeOversupabase.storage.from(BUCKET).getPublicUrl(storagePath);
+  const { data } = companySupabase.storage.from(BUCKET).getPublicUrl(storagePath);
   return data.publicUrl;
 }
 
@@ -400,7 +400,7 @@ export async function logInstall(params: {
   projectName?: string;
   machineId?: string;
 }): Promise<void> {
-  await takeOversupabase.from("registry_installs").insert({
+  await companySupabase.from("registry_installs").insert({
     item_id: params.itemId,
     version: params.version,
     installed_by: params.installedBy,
@@ -420,7 +420,7 @@ export interface InstallRow {
 }
 
 async function fetchInstalls(itemId: string): Promise<InstallRow[]> {
-  const { data, error } = await takeOversupabase    .from("registry_installs")
+  const { data, error } = await companySupabase    .from("registry_installs")
     .select("id, version, installed_by, project_name, machine_id, installed_at")
     .eq("item_id", itemId)
     .order("installed_at", { ascending: false })
@@ -447,7 +447,7 @@ export function useRegistryInstalls(itemId: string | null) {
 
 // ── CLI tokens (personal access tokens) ────────────────────────
 async function fetchTokens(owner: string): Promise<RegistryToken[]> {
-  const { data, error } = await takeOversupabase    .from("registry_tokens")
+  const { data, error } = await companySupabase    .from("registry_tokens")
     .select("*")
     .eq("owner", owner)
     .order("created_at", { ascending: false });
@@ -487,7 +487,7 @@ export function useCreateRegistryToken() {
     }): Promise<RegistryTokenCreateResult> => {
       const raw = generateRawToken();
       const tokenHash = await sha256Hex(raw);
-      const { data, error } = await takeOversupabase
+      const { data, error } = await companySupabase
   .from("registry_tokens")
         .insert({
           token_hash: tokenHash,
@@ -511,7 +511,7 @@ export function useDeleteRegistryToken() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (tokenId: string) => {
-      const { error } = await takeOversupabase
+      const { error } = await companySupabase
   .from("registry_tokens")
         .delete()
         .eq("id", tokenId);

@@ -40,7 +40,7 @@ import {
   Dialog, DialogContent, DialogTitle, DialogTrigger,
 } from "@/components/ui/shadcnComponents/dialog";
 import { AddDMGroup } from "@/MyComponents/subForms/addDMGroup";
-import { takeOversupabase } from "@/MyComponents/supabase";
+import { companySupabase } from "@/routes/index.lazy";
 import { displayLabelForDM, isDMKey } from "./displayName";
 
 const ADMIN_ROLES = ["CEO", "COO", "CFO", "Admin"];
@@ -81,7 +81,7 @@ export const ChatLayout = () => {
     const channelName = `messages-${GroupName}`;
     const channel =
       GroupName === "General"
-        ? takeOversupabase
+        ? companySupabase
             .channel(channelName)
             .on(
               "postgres_changes",
@@ -89,7 +89,7 @@ export const ChatLayout = () => {
               () => refetchMessages(),
             )
             .subscribe()
-        : takeOversupabase
+        : companySupabase
             .channel(channelName)
             .on(
               "postgres_changes",
@@ -189,7 +189,7 @@ export const ChatLayout = () => {
     const replyMatch = current.slice(prefix.length).match(/^\{reply:\d+\|[^}]+\}\s*\n?/);
     if (replyMatch) prefix += replyMatch[0];
     const nextBody = prefix + nextText;
-    const { error } = await takeOversupabase
+    const { error } = await companySupabase
 .from(table)
       .update({ message: nextBody })
       .eq("msg_id", m.msg_id);
@@ -203,13 +203,13 @@ export const ChatLayout = () => {
   const deleteMessage = async (m: MessageInterface) => {
     // Soft-delete: tombstone the body so reply references + timeline
     // continuity aren't broken.
-    const { error } = await takeOversupabase
+    const { error } = await companySupabase
 .from(table)
       .update({ message: "[message deleted]", image_urls: null })
       .eq("msg_id", m.msg_id);
     if (error) {
       // Fallback without image_urls if column missing
-      const r2 = await takeOversupabase
+      const r2 = await companySupabase
   .from(table)
         .update({ message: "[message deleted]" })
         .eq("msg_id", m.msg_id);
@@ -226,7 +226,7 @@ export const ChatLayout = () => {
     const payload = nextPin
       ? { pinned_at: nextPin, pinned_by: username }
       : { pinned_at: null, pinned_by: null };
-    const { error } = await takeOversupabase.from(table).update(payload).eq("msg_id", m.msg_id);
+    const { error } = await companySupabase.from(table).update(payload).eq("msg_id", m.msg_id);
     if (error) {
       console.error("[pin] toggle failed:", error.message);
       return;
@@ -256,14 +256,14 @@ export const ChatLayout = () => {
     )) return;
     // Delete messages first so orphaned rows aren't left behind if the
     // group delete succeeds but the purge below fails.
-    const purge = await takeOversupabase
+    const purge = await companySupabase
 .from("cwa_dm_chat")
       .delete()
       .eq("dm_group", group.name);
     if (purge.error) {
       console.warn("[chat] purge messages failed:", purge.error.message);
     }
-    const { error } = await takeOversupabase
+    const { error } = await companySupabase
 .from("dm_groups")
       .delete()
       .eq("name", group.name);
@@ -299,7 +299,7 @@ export const ChatLayout = () => {
     }
 
     // Try the DB column first.
-    const col = await takeOversupabase
+    const col = await companySupabase
 .from(table)
       .update({ reactions: next })
       .eq("msg_id", msgId);
@@ -316,7 +316,7 @@ export const ChatLayout = () => {
     // the original body and every other embedded marker (reply, etc.).
     const bodyWithoutReactions = stripReactionsMarker(m.message || "");
     const nextBody = encodeReactionsMarker(next) + bodyWithoutReactions;
-    const { error: textErr } = await takeOversupabase
+    const { error: textErr } = await companySupabase
 .from(table)
       .update({ message: nextBody })
       .eq("msg_id", msgId);

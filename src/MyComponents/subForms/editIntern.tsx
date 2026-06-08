@@ -1,5 +1,5 @@
 import { useForm } from "@tanstack/react-form";
-import { takeOversupabase } from "../supabase";
+import { companySupabase } from "@/routes/index.lazy";
 import { useAppStore } from "@/stores/store";
 import {
   Card,
@@ -29,7 +29,7 @@ export const EditIntern = (props: Props) => {
       console.log(value);
 
       if (value.Username !== "") {
-        const { error } = await takeOversupabase
+        const { error } = await companySupabase
     .from("interns")
           .update({ username: value.Username })
           .eq("id", props.rowID);
@@ -37,7 +37,7 @@ export const EditIntern = (props: Props) => {
       }
 
       if (value.Email !== "") {
-        const { error } = await takeOversupabase
+        const { error } = await companySupabase
     .from("interns")
           .update({ email: value.Email })
           .eq("id", props.rowID);

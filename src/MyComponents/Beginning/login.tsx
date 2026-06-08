@@ -20,7 +20,7 @@
 import { useForm } from "@tanstack/react-form";
 import { useState } from "react";
 import { useAppStore } from "@/stores/store";
-import { getCompanySupabase, takeOversupabase } from "../supabase";
+import { getCompanySupabase, takeOverSupabase } from "../supabase";
 import {
   Loader2,
   Mail,
@@ -68,7 +68,7 @@ export const LoginPage = () => {
       if (loginPhase === 1) {
         try {
           // Check if user is valid employee at company
-          const { data: tkData, error: tkError } = await takeOversupabase
+          const { data: tkData, error: tkError } = await takeOverSupabase
             .from("takeover_companies")
             .select("companydb_url,companydb_key")
             .eq("company_name", value.company)
@@ -82,7 +82,7 @@ export const LoginPage = () => {
 
           // Check if user already initialzed account or not
           const { data, error } = await companySupabase
-            .from(import.meta.env.DEV ? "demo_employee_table" : "employee")
+            .from("employee")
             .select("init_pw")
             .eq("email", value.email)
             .single()
@@ -201,7 +201,7 @@ export const LoginPage = () => {
           if (has_authenticated_role && verified) {
             // Remove `init_pw` from database
             const { error: remInitPwError } = await companySupabase
-              .from(import.meta.env.DEV ? "demo_employee_table" : "employee")
+              .from("employee")
               .update({ init_pw: null })
               .eq("email", userVerify.user!.email);
 
@@ -374,6 +374,7 @@ export const LoginPage = () => {
                             type="button"
                             disabled={resetting}
                             onClick={async () => {
+                              const companySupabase = await getCompanySupabase();
                               // Send a Supabase password-reset email to the
                               // address currently in the email field. If the
                               // field is empty, prompt for one rather than
@@ -398,7 +399,7 @@ export const LoginPage = () => {
                                 ? `${siteUrl}/auth/set-password`
                                 : undefined;
                               const { error } =
-                                await takeOversupabase.auth.resetPasswordForEmail(
+                                await companySupabase.auth.resetPasswordForEmail(
                                   email,
                                   redirectTo ? { redirectTo } : undefined,
                                 );

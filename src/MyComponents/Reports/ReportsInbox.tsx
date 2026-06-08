@@ -18,7 +18,7 @@ import {
   Eye, FileText, FolderKanban, ClipboardList, AlertTriangle,
   MessageSquare, Save, Building2, ArrowUp, ArrowDown,
 } from "lucide-react";
-import { takeOversupabase } from "@/MyComponents/supabase";
+import { companySupabase } from "@/routes/index.lazy";
 import { SlideOver } from "./shared/SlideOver";
 import { InboxToolbar, type Density } from "./shared/InboxToolbar";
 
@@ -135,7 +135,7 @@ export function ReportsInbox({ refreshToken }: Props = {}) {
     setError(null);
 
     const [r, u, p] = await Promise.all([
-      takeOversupabase
+      companySupabase
         .from("reports")
         .select(
           "id, title, body, type, priority, company, project_id, sender_user_id, status, review_notes, reviewer_user_id, created_at, submitted_at, reviewed_at",
@@ -143,11 +143,11 @@ export function ReportsInbox({ refreshToken }: Props = {}) {
         .order("submitted_at", { ascending: false, nullsFirst: false })
         .order("created_at", { ascending: false })
         .limit(500),
-      takeOversupabase
-        .from("app_users")
+      companySupabase
+        .from("employee")
         .select("supa_id, username, role, avatarURL")
         .not("supa_id", "is", null),
-      takeOversupabase.from("projects").select("id, name"),
+      companySupabase.from("projects").select("id, name"),
     ]);
 
     if (r.error) {
@@ -273,7 +273,7 @@ export function ReportsInbox({ refreshToken }: Props = {}) {
   const bulkSetStatus = async (next: ReportStatus) => {
     if (selectedIds.size === 0) return;
     const ids = [...selectedIds];
-    const { data: { user: authUser } } = await takeOversupabase.auth.getUser();
+    const { data: { user: authUser } } = await companySupabase.auth.getUser();
     const patch: any = { status: next };
     if (next === "reviewed") {
       patch.reviewer_user_id = authUser?.id ?? null;
@@ -283,7 +283,7 @@ export function ReportsInbox({ refreshToken }: Props = {}) {
       patch.reviewer_user_id = null;
       patch.reviewed_at = null;
     }
-    const { error: err } = await takeOversupabase
+    const { error: err } = await companySupabase
 .from("reports")
       .update(patch)
       .in("id", ids);
@@ -712,8 +712,8 @@ function ReportDetailBody({
 
   const markReviewed = async () => {
     setSaving(true); setErr(null);
-    const { data: { user: authUser } } = await takeOversupabase.auth.getUser();
-    const { error } = await takeOversupabase
+    const { data: { user: authUser } } = await companySupabase.auth.getUser();
+    const { error } = await companySupabase
 .from("reports")
       .update({
         status: "reviewed",
@@ -730,7 +730,7 @@ function ReportDetailBody({
 
   const saveNotesOnly = async () => {
     setSaving(true); setErr(null);
-    const { error } = await takeOversupabase
+    const { error } = await companySupabase
 .from("reports")
       .update({ review_notes: notes.trim() || null })
       .eq("id", report.id);
@@ -742,7 +742,7 @@ function ReportDetailBody({
   const archive = async () => {
     if (!confirm("Archive this report?")) return;
     setSaving(true); setErr(null);
-    const { error } = await takeOversupabase
+    const { error } = await companySupabase
 .from("reports")
       .update({ status: "archived" })
       .eq("id", report.id);
@@ -754,7 +754,7 @@ function ReportDetailBody({
 
   const unreview = async () => {
     setSaving(true); setErr(null);
-    const { error } = await takeOversupabase
+    const { error } = await companySupabase
 .from("reports")
       .update({
         status: "submitted",

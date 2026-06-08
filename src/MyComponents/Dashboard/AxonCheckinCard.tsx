@@ -32,7 +32,7 @@ import {
   useMyAxonCheckins,
   type AxonCheckinRow,
 } from "@/stores/query";
-import { takeOversupabase } from "@/MyComponents/supabase";
+import { companySupabase } from "@/routes/index.lazy";
 import { useQueryClient } from "@tanstack/react-query";
 
 type TimeOfDay = "morning" | "midday" | "afternoon" | "evening";
@@ -166,7 +166,7 @@ export function AxonCheckinCard() {
   const canSubmit = trimmed.length > 0 && !submitting && !alreadyDone;
 
   async function getMyAuthId(): Promise<string | null> {
-    const { data } = await takeOversupabase.auth.getUser();
+    const { data } = await companySupabase.auth.getUser();
     return data?.user?.id ?? null;
   }
 
@@ -180,7 +180,7 @@ export function AxonCheckinCard() {
       setSubmitting(false);
       return;
     }
-    const { error: err } = await takeOversupabase.from("axon_checkins").insert({
+    const { error: err } = await companySupabase.from("axon_checkins").insert({
       user_id: userId,
       prompt: todayPrompt,
       entry: trimmed,
@@ -207,7 +207,7 @@ export function AxonCheckinCard() {
       setSubmitting(false);
       return;
     }
-    const { error: err } = await takeOversupabase.from("axon_checkins").insert({
+    const { error: err } = await companySupabase.from("axon_checkins").insert({
       user_id: userId,
       prompt: todayPrompt,
       entry: null,

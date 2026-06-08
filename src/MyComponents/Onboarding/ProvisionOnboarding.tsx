@@ -17,7 +17,7 @@
 
 import { useEffect, useState } from "react";
 import { Loader2, Sparkles, X } from "lucide-react";
-import { takeOversupabase } from "@/MyComponents/supabase";
+import { companySupabase } from "@/routes/index.lazy";
 
 interface UserRow {
   supa_id: string;
@@ -58,15 +58,15 @@ export function ProvisionOnboarding({ onClose }: { onClose: () => void }) {
       setError(null);
       try {
         // All users
-        const usersRes = await takeOversupabase
-    .from("app_users")
+        const usersRes = await companySupabase
+    .from("employee")
           .select("supa_id, username, role, email")
           .order("username", { ascending: true });
         if (cancelled) return;
         if (usersRes.error) throw usersRes.error;
 
         // Active instances — to filter out users who already have one
-        const instRes = await takeOversupabase
+        const instRes = await companySupabase
     .from("onboarding_instances")
           .select("employee_user_id")
           .eq("status", "active");
@@ -83,7 +83,7 @@ export function ProvisionOnboarding({ onClose }: { onClose: () => void }) {
         setUsers(eligible as UserRow[]);
 
         // Templates
-        const tplRes = await takeOversupabase
+        const tplRes = await companySupabase
     .from("onboarding_templates")
           .select("id, name, brand, employment_type, item_list")
           .order("name", { ascending: true });
@@ -110,7 +110,7 @@ export function ProvisionOnboarding({ onClose }: { onClose: () => void }) {
       const tpl = templates.find((t) => t.id === selectedTemplate);
       if (!tpl) throw new Error("Template not found.");
 
-      const inst = await takeOversupabase
+      const inst = await companySupabase
   .from("onboarding_instances")
         .insert({
           offer_letter_id: null,
@@ -131,7 +131,7 @@ export function ProvisionOnboarding({ onClose }: { onClose: () => void }) {
         status: "pending",
       }));
       if (items.length > 0) {
-        const itemsRes = await takeOversupabase
+        const itemsRes = await companySupabase
     .from("onboarding_items")
           .insert(items);
         if (itemsRes.error) throw itemsRes.error;

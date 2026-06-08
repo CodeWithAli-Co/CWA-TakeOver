@@ -55,7 +55,7 @@ import {
   useDeleteDocument,
   useDeleteSpreadsheet,
 } from "@/stores/workspace";
-import { takeOversupabase } from "@/MyComponents/supabase";
+import { companySupabase } from "@/routes/index.lazy";
 import type {
   WorkspaceResource,
   WorkspaceFolder,
@@ -139,7 +139,7 @@ export function WorkspacePage() {
     queryKey: ["workspace", "search", "bodies", trimmedQuery],
     enabled: trimmedQuery.length >= 2,
     queryFn: async (): Promise<Set<string>> => {
-      const { data, error } = await takeOversupabase
+      const { data, error } = await companySupabase
         .from("workspace_documents")
         .select("id, content")
         .eq("archived", false);

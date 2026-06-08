@@ -44,13 +44,14 @@ import {
   Users,
   Zap,
 } from "lucide-react";
-import { takeOversupabase } from "@/MyComponents/supabase";
+import { companySupabase } from "@/routes/index.lazy";
 import { useConnectors } from "@/stores/connectors";
 import { listActions } from "@/Axon/actions/registry";
 import { MONITORS } from "@/Axon/engine/monitors";
 import { CONNECTORS as CATALOG } from "@/MyComponents/SettingNavComponents/connectorCatalog";
 import { DATA_SOURCES } from "@/lib/unified/types";
 import { SourceBadge } from "@/lib/unified/SourceBadge";
+import { takeOverSupabase } from "@/MyComponents/supabase";
 
 // ────────────────────────────────────────────────
 // Types
@@ -77,7 +78,7 @@ export function InfrastructurePage() {
     queryKey: ["infra", "tenants"],
     staleTime: 60_000,
     queryFn: async () => {
-      const { data, error } = await takeOversupabase
+      const { data, error } = await takeOverSupabase
         .from("takeover_companies")
         .select(
           "company_name, display_name, companydb_url, companydb_key, _companydb_secret_key, created_at",

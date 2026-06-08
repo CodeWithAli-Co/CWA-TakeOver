@@ -16,7 +16,7 @@
 export type ConnectorTier = "Easy" | "Medium" | "Hard";
 
 export interface CatalogEntry {
-  /** Matches `connectors.kind` in takeOversupabase.*/
+  /** Matches `connectors.kind` in companySupabase.*/
   id: string;
   /** Display name. */
   name: string;

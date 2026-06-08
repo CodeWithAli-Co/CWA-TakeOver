@@ -6,7 +6,7 @@
 // Channel resolution heuristics are shared with the chat action.
 // ───────────────────────────────────────────────────────────────────
 
-import { takeOversupabase } from "@/MyComponents/supabase";
+import { companySupabase } from "@/routes/index.lazy";
 import type { AxonAction } from "../types";
 import { registerAction } from "./registry";
 import { pushUndo } from "../engine/undoStack";
@@ -18,7 +18,7 @@ async function resolveChannel(name: string): Promise<{ table: "cwa_chat" | "cwa_
     return { table: "cwa_chat", group: "General" };
   }
   const bare = n.replace(/^#/, "");
-  const { data, error } = await takeOversupabase    .from("dm_groups")
+  const { data, error } = await companySupabase    .from("dm_groups")
     .select("name")
     .ilike("name", `%${bare}%`)
     .limit(5);
@@ -48,10 +48,10 @@ export const deleteTaskAction: AxonAction<
     let target: any = null;
     const asId = Number(titleOrId);
     if (Number.isFinite(asId)) {
-      const r = await takeOversupabase.from("cwa_todos").select("*").eq("todo_id", asId).single();
+      const r = await companySupabase.from("cwa_todos").select("*").eq("todo_id", asId).single();
       target = r.data;
     } else {
-      const r = await takeOversupabase
+      const r = await companySupabase
   .from("cwa_todos")
         .select("*")
         .ilike("title", `%${titleOrId}%`)
@@ -62,7 +62,7 @@ export const deleteTaskAction: AxonAction<
       return { summary: `Couldn't find a task matching "${titleOrId}".` };
     }
 
-    const { error } = await takeOversupabase.from("cwa_todos").delete().eq("todo_id", target.todo_id);
+    const { error } = await companySupabase.from("cwa_todos").delete().eq("todo_id", target.todo_id);
     if (error) return { summary: `Delete failed: ${error.message}` };
 
     pushUndo({
@@ -70,7 +70,7 @@ export const deleteTaskAction: AxonAction<
       label: `deleted task "${target.title}"`,
       undo: async () => {
         const { todo_id: _drop, ...restoreRow } = target;
-        const { error } = await takeOversupabase.from("cwa_todos").insert(restoreRow);
+        const { error } = await companySupabase.from("cwa_todos").insert(restoreRow);
         if (error) throw error;
         return "restored.";
       },
@@ -109,10 +109,10 @@ export const deleteMeetingAction: AxonAction<
     let target: any = null;
     const asId = Number(titleOrId);
     if (Number.isFinite(asId)) {
-      const r = await takeOversupabase.from("cwa_meetings").select("*").eq("id", asId).single();
+      const r = await companySupabase.from("cwa_meetings").select("*").eq("id", asId).single();
       target = r.data;
     } else {
-      const r = await takeOversupabase
+      const r = await companySupabase
   .from("cwa_meetings")
         .select("*")
         .ilike("meeting_title", `%${titleOrId}%`)
@@ -121,7 +121,7 @@ export const deleteMeetingAction: AxonAction<
     }
     if (!target) return { summary: `No meeting matches "${titleOrId}".` };
 
-    const { error } = await takeOversupabase
+    const { error } = await companySupabase
 .from("cwa_meetings")
       .delete()
       .eq("id", target.id);
@@ -134,7 +134,7 @@ export const deleteMeetingAction: AxonAction<
         // Strip the id so Postgres regenerates it; we've already
         // deleted the original and don't want the PK to collide.
         const { id: _drop, ...restoreRow } = target;
-        const { error } = await takeOversupabase.from("cwa_meetings").insert(restoreRow);
+        const { error } = await companySupabase.from("cwa_meetings").insert(restoreRow);
         if (error) throw error;
         return "restored.";
       },
@@ -172,7 +172,7 @@ export const deleteMessageAction: AxonAction<
     const resolved = await resolveChannel(channel);
     if (!resolved) return { summary: `No channel matches "${channel}".` };
 
-    let query = takeOversupabase.from(resolved.table).select("*");
+    let query = companySupabase.from(resolved.table).select("*");
     if (resolved.table === "cwa_dm_chat") query = query.eq("dm_group", resolved.group);
     query = query.ilike("message", `%${match}%`).order("msg_id", { ascending: false }).limit(1);
     const { data } = await query;
@@ -180,7 +180,7 @@ export const deleteMessageAction: AxonAction<
     if (!row) return { summary: `No message in #${resolved.group} matches "${match}".` };
 
     const previousBody = row.message;
-    const { error } = await takeOversupabase
+    const { error } = await companySupabase
 .from(resolved.table)
       .update({ message: "[message deleted by Axon]", image_urls: null })
       .eq("msg_id", row.msg_id);
@@ -190,7 +190,7 @@ export const deleteMessageAction: AxonAction<
       actionName: "delete_message",
       label: `deleted message in #${resolved.group}`,
       undo: async () => {
-        const { error } = await takeOversupabase
+        const { error } = await companySupabase
     .from(resolved.table)
           .update({ message: previousBody })
           .eq("msg_id", row.msg_id);
@@ -231,14 +231,14 @@ export const deleteChannelAction: AxonAction<
     }
 
     // Capture the group row for undo before we delete it.
-    const { data: groupRow } = await takeOversupabase
+    const { data: groupRow } = await companySupabase
 .from("dm_groups")
       .select("*")
       .eq("name", resolved.group)
       .single();
 
-    await takeOversupabase.from("cwa_dm_chat").delete().eq("dm_group", resolved.group);
-    const { error } = await takeOversupabase.from("dm_groups").delete().eq("name", resolved.group);
+    await companySupabase.from("cwa_dm_chat").delete().eq("dm_group", resolved.group);
+    const { error } = await companySupabase.from("dm_groups").delete().eq("name", resolved.group);
     if (error) return { summary: `Delete failed: ${error.message}` };
 
     if (groupRow) {
@@ -246,7 +246,7 @@ export const deleteChannelAction: AxonAction<
         actionName: "delete_channel",
         label: `deleted channel "${resolved.group}"`,
         undo: async () => {
-          const { error } = await takeOversupabase.from("dm_groups").insert(groupRow);
+          const { error } = await companySupabase.from("dm_groups").insert(groupRow);
           if (error) throw error;
           return "channel recreated (messages were not restored).";
         },
@@ -291,14 +291,14 @@ export const createDmAction: AxonAction<
     if (!target) return { summary: "Which teammate should I start a DM with?" };
     const name = canonicalDMName(me, target);
 
-    const existing = await takeOversupabase
+    const existing = await companySupabase
 .from("dm_groups")
       .select("id, name")
       .eq("name", name)
       .limit(1);
     let created = false;
     if (!existing.data || existing.data.length === 0) {
-      const { error } = await takeOversupabase
+      const { error } = await companySupabase
   .from("dm_groups")
         .insert({ name, subscribers: [me, target] });
       if (error && !/duplicate key|unique/i.test(error.message)) {
@@ -312,8 +312,8 @@ export const createDmAction: AxonAction<
         actionName: "create_dm",
         label: `opened DM with ${target}`,
         undo: async () => {
-          await takeOversupabase.from("cwa_dm_chat").delete().eq("dm_group", name);
-          const { error } = await takeOversupabase.from("dm_groups").delete().eq("name", name);
+          await companySupabase.from("cwa_dm_chat").delete().eq("dm_group", name);
+          const { error } = await companySupabase.from("dm_groups").delete().eq("name", name);
           if (error) throw error;
           return "DM removed.";
         },

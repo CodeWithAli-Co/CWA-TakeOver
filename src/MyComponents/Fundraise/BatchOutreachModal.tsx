@@ -54,7 +54,7 @@ import {
 } from "@/stores/investors";
 import { useSendEmail } from "@/stores/gmail";
 import { useMyFundraiseSettings } from "@/stores/fundraiseSettings";
-import { takeOversupabase } from "@/MyComponents/supabase";
+import { companySupabase } from "@/routes/index.lazy";
 import {
   draftInvestorEmail,
   type DraftMode,
@@ -795,7 +795,7 @@ async function runParallelDraft(args: {
 
   // We need the operator's settings + each investor's detail.
   const { data: sessionRes } =
-    await takeOversupabase.auth.getSession();
+    await companySupabase.auth.getSession();
   if (!sessionRes.session) {
     args.setDraftError("Not signed in.");
     args.setStage("picker");
@@ -803,7 +803,7 @@ async function runParallelDraft(args: {
   }
 
   // Load operator settings once.
-  const settingsRes = await takeOversupabase
+  const settingsRes = await companySupabase
     .from("fundraise_settings")
     .select("*")
     .maybeSingle();
@@ -942,7 +942,7 @@ async function runSequentialSend(args: {
 async function loadInvestorDetailForBatch(
   id: string,
 ): Promise<InvestorDetail | null> {
-  const { data: profile, error } = await takeOversupabase
+  const { data: profile, error } = await companySupabase
     .from("investor_profiles")
     .select(
       `
@@ -954,11 +954,11 @@ async function loadInvestorDetailForBatch(
     .maybeSingle();
   if (error || !profile) return null;
   const company = (profile as any).company;
-  const partnersRes = await takeOversupabase
+  const partnersRes = await companySupabase
     .from("crm_contacts")
     .select("*")
     .eq("company_id", company.id);
-  const activitiesRes = await takeOversupabase
+  const activitiesRes = await companySupabase
     .from("crm_activities")
     .select("*")
     .in("contact_id", (partnersRes.data ?? []).map((p: any) => p.id))
@@ -996,7 +996,7 @@ async function applyPostSendHook(
   const now = new Date();
   // Re-read current row to get the actual followup_count + stage
   // (the cached list may be stale).
-  const { data: profile } = await takeOversupabase
+  const { data: profile } = await companySupabase
     .from("investor_profiles")
     .select("pipeline_stage, followup_count")
     .eq("id", investor_id)

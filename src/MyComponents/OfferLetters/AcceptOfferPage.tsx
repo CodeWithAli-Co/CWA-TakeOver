@@ -13,7 +13,7 @@ import { motion } from "framer-motion";
 import {
   AlertTriangle, CheckCircle2, Loader2, XCircle, FileText,
 } from "lucide-react";
-import { takeOversupabase } from "@/MyComponents/supabase";
+import { companySupabase } from "@/routes/index.lazy";
 
 interface OfferRow {
   id: string;
@@ -63,7 +63,7 @@ export function AcceptOfferPage() {
     if (!token) return;
     let cancelled = false;
     (async () => {
-      const { data, error } = await takeOversupabase
+      const { data, error } = await companySupabase
   .from("offer_letters")
         .select(
           "id, candidate_name, position_title, employer_legal_name, employer_signer_name, employer_signer_title, generated_body, status, offer_expires_at, start_date",
@@ -101,7 +101,7 @@ export function AcceptOfferPage() {
     }
     setSubmitting(true);
     setError(null);
-    const { error } = await takeOversupabase
+    const { error } = await companySupabase
 .from("offer_letters")
       .update({
         status: "accepted",
@@ -122,7 +122,7 @@ export function AcceptOfferPage() {
     if (!offer) return;
     setSubmitting(true);
     setError(null);
-    const { error } = await takeOversupabase
+    const { error } = await companySupabase
 .from("offer_letters")
       .update({
         status: "declined",

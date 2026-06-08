@@ -1,5 +1,4 @@
 import { useForm } from "@tanstack/react-form";
-import { takeOversupabase } from "../supabase";
 import { invoke } from "@tauri-apps/api/core";
 import { getActiveCompanyLabel } from "@/stores/query";
 import { motion } from "framer-motion";
@@ -22,6 +21,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/shadcnComponents/dialog";
+import { companySupabase } from "@/routes/index.lazy";
 
 export const AddData = () => {
   const [open, setOpen] = useState(false);
@@ -43,7 +43,7 @@ export const AddData = () => {
         plaintext: value.Password,
       });
       encPassword.then(async (res) => {
-        const { error } = await takeOversupabase.from("cwa_creds").insert({
+        const { error } = await companySupabase.from("cwa_creds").insert({
           platform_name: value.platformName,
           acc_username: value.Username,
           acc_email: value.Email,

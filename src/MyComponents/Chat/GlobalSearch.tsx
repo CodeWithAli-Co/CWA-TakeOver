@@ -9,7 +9,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { Hash, MessageSquare, Search, Loader2, ArrowRight } from "lucide-react";
-import { takeOversupabase } from "@/MyComponents/supabase";
+import { companySupabase } from "@/routes/index.lazy";
 import { useAppStore } from "@/stores/store";
 import { ActiveUser } from "@/stores/query";
 import { displayLabelForDM, isDMKey } from "./displayName";
@@ -66,7 +66,7 @@ export function GlobalSearch({ open, onOpenChange }: Props) {
         // applied. Falls back to the legacy parallel ilike queries
         // gracefully if the RPC returns an error.
         let merged: Hit[] = [];
-        const rpc = await takeOversupabase.rpc("chat_search", { needle, lim: 40 });
+        const rpc = await companySupabase.rpc("chat_search", { needle, lim: 40 });
         if (!rpc.error && Array.isArray(rpc.data)) {
           merged = (rpc.data as any[]).map((r) => ({
             msg_id: r.msg_id,

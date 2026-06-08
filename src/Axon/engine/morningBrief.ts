@@ -22,7 +22,7 @@
 //     morning brief is calendar + day shape only.
 // ───────────────────────────────────────────────────────────────────
 
-import { takeOversupabase } from "@/MyComponents/supabase";
+import { companySupabase } from "@/routes/index.lazy";
 import type { CompanyFilter } from "@/stores/store";
 
 function companyLabel(active: CompanyFilter): "CodeWithAli" | "simplicity" {
@@ -97,7 +97,7 @@ export async function composeMorningBrief(
   const todayIso = now.toISOString().slice(0, 10);
 
   // Today's meetings.
-  let q = takeOversupabase
+  let q = companySupabase
     .from("cwa_meetings")
     .select("id, meeting_title, time, date, meeting_type, location")
     .eq("date", todayIso)
@@ -127,7 +127,7 @@ export async function composeMorningBrief(
   try {
     const endOfDay = new Date(now);
     endOfDay.setHours(23, 59, 59, 999);
-    const { count } = await takeOversupabase
+    const { count } = await companySupabase
       .from("investor_profiles")
       .select("id", { count: "exact", head: true })
       .not("next_followup_at", "is", null)

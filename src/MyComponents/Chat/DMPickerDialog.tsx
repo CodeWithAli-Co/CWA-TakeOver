@@ -11,7 +11,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { Search, X, MessageSquare, Check } from "lucide-react";
-import { takeOversupabase } from "@/MyComponents/supabase";
+import { companySupabase } from "@/routes/index.lazy";
 import { useAppStore } from "@/stores/store";
 import { groupAvatarInitials, groupAvatarStyle } from "./ChatSidebar";
 
@@ -88,14 +88,14 @@ export function DMPickerDialog({
     try {
       // Idempotent upsert: if the canonical row already exists, we just
       // pick it up.
-      const { data: existing } = await takeOversupabase
+      const { data: existing } = await companySupabase
   .from("dm_groups")
         .select("id, name, subscribers")
         .eq("name", name)
         .limit(1);
 
       if (!existing || existing.length === 0) {
-        const { error } = await takeOversupabase.from("dm_groups").insert({
+        const { error } = await companySupabase.from("dm_groups").insert({
           name,
           subscribers: [currentUsername, target.username],
         });
@@ -112,7 +112,7 @@ export function DMPickerDialog({
           const merged = Array.from(
             new Set([...subs, currentUsername, target.username]),
           );
-          await takeOversupabase.from("dm_groups").update({ subscribers: merged }).eq("name", name);
+          await companySupabase.from("dm_groups").update({ subscribers: merged }).eq("name", name);
         }
       }
 

@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { takeOversupabase } from "@/MyComponents/supabase";
+import { companySupabase } from "@/routes/index.lazy";
 import {
   SEED_CHECKPOINTS,
   SEED_DEPENDENCIES,
@@ -29,7 +29,7 @@ const HAS_SUPABASE_ENV = !!(
 async function fetchRoadmapProfiles(): Promise<RoadmapProfile[]> {
   if (!HAS_SUPABASE_ENV) return SEED_PROFILES;
   try {
-    const { data, error } = await takeOversupabase
+    const { data, error } = await companySupabase
 .from("roadmap_profiles")
       .select("*");
     if (error || !data || data.length === 0) return SEED_PROFILES;
@@ -60,7 +60,7 @@ export function useRoadmapProfiles() {
 async function fetchRoadmapLanes(): Promise<Lane[]> {
   if (!HAS_SUPABASE_ENV) return LANES;
   try {
-    const { data, error } = await takeOversupabase
+    const { data, error } = await companySupabase
 .from("roadmap_lanes")
       .select("*")
       .order("sort_order", { ascending: true });
@@ -89,7 +89,7 @@ export function useRoadmapLanes() {
 async function fetchRoadmapCheckpoints(): Promise<Checkpoint[]> {
   if (!HAS_SUPABASE_ENV) return SEED_CHECKPOINTS;
   try {
-    const { data, error } = await takeOversupabase
+    const { data, error } = await companySupabase
 .from("roadmap_checkpoints")
       .select("*");
     if (error || !data || data.length === 0) return SEED_CHECKPOINTS;
@@ -130,7 +130,7 @@ export function useRoadmapCheckpoints() {
 async function fetchRoadmapDependencies(): Promise<Dependency[]> {
   if (!HAS_SUPABASE_ENV) return SEED_DEPENDENCIES;
   try {
-    const { data, error } = await takeOversupabase
+    const { data, error } = await companySupabase
 .from("roadmap_dependencies")
       .select("*");
     if (error || !data || data.length === 0) return SEED_DEPENDENCIES;

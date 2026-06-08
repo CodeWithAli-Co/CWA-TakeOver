@@ -15,7 +15,7 @@
 // ───────────────────────────────────────────────────────────────────
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { takeOversupabase } from "@/MyComponents/supabase";
+import { companySupabase } from "@/routes/index.lazy";
 import type { CompanyFilter } from "@/stores/store";
 import {
   parseResumeAction,
@@ -158,7 +158,7 @@ export function useCandidates(filters: CandidateListFilters = {}) {
   return useQuery({
     queryKey: [...CANDIDATES_KEY, "list", { roleSlug, status, minScore, sortBy, limit }],
     queryFn: async () => {
-      let q = takeOversupabase.from("candidates").select("*").limit(limit);
+      let q = companySupabase.from("candidates").select("*").limit(limit);
 
       if (roleSlug) q = q.eq("role_slug", roleSlug);
       if (status !== "all") q = q.eq("status", status);
@@ -184,7 +184,7 @@ export function useCandidate(id: string | null) {
     enabled: !!id,
     queryFn: async () => {
       if (!id) return null;
-      const { data, error } = await takeOversupabase
+      const { data, error } = await companySupabase
   .from("candidates")
         .select("*")
         .eq("id", id)
@@ -199,7 +199,7 @@ export function useJobPostings() {
   return useQuery({
     queryKey: ["job_postings"],
     queryFn: async () => {
-      const { data, error } = await takeOversupabase
+      const { data, error } = await companySupabase
   .from("job_postings")
         .select("id, slug, title, team, status")
         .order("title", { ascending: true });
@@ -214,7 +214,7 @@ export function useJobPostings() {
  *  viewer can render it. The bucket is private (per RLS) so we
  *  re-sign every time the drawer opens — 5min is plenty. */
 export async function getResumeSignedUrl(storagePath: string): Promise<string | null> {
-  const { data, error } = await takeOversupabase.storage
+  const { data, error } = await companySupabase.storage
     .from("resumes")
     .createSignedUrl(storagePath, 300);
   if (error) return null;

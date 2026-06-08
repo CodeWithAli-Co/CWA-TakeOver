@@ -1,8 +1,8 @@
 import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import { useAppStore } from "@/stores/store";
-import { takeOversupabase } from "../supabase";
 import { Database } from "lucide-react";
+import { companySupabase } from "@/routes/index.lazy";
 
 const STORAGE_LIMIT = 500;
 const TIER = "Free";
@@ -12,7 +12,7 @@ export const StorageUsageChart = () => {
 
   useEffect(() => {
     async function getDBUsage() {
-      const { data, error } = await takeOversupabase.rpc("get_dbsize");
+      const { data, error } = await companySupabase.rpc("get_dbsize");
       if (error) { console.log("Error getting DB Size:", error.message); return; }
       let size: string = data.toString();
       if (size.includes(" MB")) size = size.replace(" MB", "").trim();

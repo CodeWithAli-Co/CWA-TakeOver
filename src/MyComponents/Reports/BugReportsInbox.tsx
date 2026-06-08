@@ -25,7 +25,7 @@ import {
   Clock, Image as ImageIcon, ChevronDown, Globe, Wifi, Terminal,
   Save, ArrowUp, ArrowDown,
 } from "lucide-react";
-import { takeOversupabase } from "@/MyComponents/supabase";
+import { companySupabase } from "@/routes/index.lazy";
 import { ActiveUser } from "@/stores/query";
 import { SlideOver } from "./shared/SlideOver";
 import { InboxToolbar, type Density } from "./shared/InboxToolbar";
@@ -164,7 +164,7 @@ export function BugReportsInbox({ refreshToken }: Props = {}) {
     setRefreshing(true);
     setError(null);
 
-    const { data, error: err } = await takeOversupabase
+    const { data, error: err } = await companySupabase
 .from("bug_reports")
       .select("*")
       .order("created_at", { ascending: false })
@@ -286,7 +286,7 @@ export function BugReportsInbox({ refreshToken }: Props = {}) {
       triaged_by: username || null,
       triaged_at: new Date().toISOString(),
     };
-    const { error: err } = await takeOversupabase
+    const { error: err } = await companySupabase
 .from("bug_reports")
       .update(patch)
       .in("id", ids);
@@ -721,7 +721,7 @@ function BugDetailBody({
       triaged_by: currentUsername || null,
       triaged_at: new Date().toISOString(),
     };
-    const { error } = await takeOversupabase
+    const { error } = await companySupabase
 .from("bug_reports")
       .update(patch)
       .eq("id", report.id);

@@ -38,7 +38,7 @@ import {
   useQuery,
   useQueryClient,
 } from "@tanstack/react-query";
-import { takeOversupabase } from "@/MyComponents/supabase";
+import { companySupabase } from "@/routes/index.lazy";
 import { getActiveCompanyLabel } from "@/stores/query";
 import { useCompanyFilter } from "@/stores/store";
 
@@ -71,7 +71,7 @@ export interface Connector {
  */
 async function getViewerSupaId(): Promise<string | null> {
   try {
-    const { data } = await takeOversupabase.auth.getUser();
+    const { data } = await companySupabase.auth.getUser();
     return data?.user?.id ?? null;
   } catch {
     return null;

@@ -24,7 +24,7 @@ import {
   Mail,
 } from "lucide-react";
 import { Employees } from "@/stores/query";
-import { takeOversupabase } from "@/MyComponents/supabase";
+import { companySupabase } from "@/routes/index.lazy";
 import { EditEmployee } from "@/MyComponents/subForms/editEmploy";
 import { PromoteUser } from "@/MyComponents/subForms/promoteUser";
 import { message } from "@tauri-apps/plugin-dialog";
@@ -346,11 +346,11 @@ function CWAEmployeeView() {
 
   // Realtime
   useEffect(() => {
-    const channel = takeOversupabase
+    const channel = companySupabase
       .channel("employees-realtime")
       .on(
         "postgres_changes",
-        { event: "*", schema: "public", table: "app_users" },
+        { event: "*", schema: "public", table: "employee" },
         () => refetchEmployees()
       )
       .subscribe();
@@ -361,8 +361,8 @@ function CWAEmployeeView() {
   }, [refetchEmployees]);
 
   const DelEmployee = async (rowID: number) => {
-    const { error } = await takeOversupabase
-      .from("app_users")
+    const { error } = await companySupabase
+      .from("employee")
       .delete()
       .eq("id", rowID);
     if (error) {

@@ -13,7 +13,7 @@
 import { useState, useRef, useEffect } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { Send, X, Paperclip, Smile, Sparkles, Loader2, Image as ImgIcon, Reply, Mic, Square, Trash2, Clock, Gift, FolderUp, Folder } from "lucide-react";
-import { takeOversupabase } from "@/MyComponents/supabase";
+import { companySupabase } from "@/routes/index.lazy";
 import { useChatStore } from "@/stores/chatStore";
 import { getActiveCompanyLabel } from "@/stores/query";
 import {
@@ -206,7 +206,7 @@ export const MessageComposer: React.FC<Props> = ({
 
   // ── typing presence ───────────────────────────────────────────────────
   useEffect(() => {
-    const channel = takeOversupabase.channel(`typing-${group}`, {
+    const channel = companySupabase.channel(`typing-${group}`, {
       config: { presence: { key: currentUsername } },
     });
     channel
@@ -621,7 +621,7 @@ export const MessageComposer: React.FC<Props> = ({
     }
     let error: { message: string } | null = null;
     for (let attempt = 0; attempt <= dropOrder.length; attempt++) {
-      const res = await takeOversupabase.from(table).insert(payload);
+      const res = await companySupabase.from(table).insert(payload);
       error = res.error ? { message: res.error.message } : null;
       if (!error) break;
 
@@ -1199,10 +1199,10 @@ export const MessageComposer: React.FC<Props> = ({
             read_by: [currentUsername],
             company: getActiveCompanyLabel(),
           };
-          let { error } = await takeOversupabase.from(table).insert(aggressive);
+          let { error } = await companySupabase.from(table).insert(aggressive);
           if (error) {
             // Progressive fallback — drop columns that don't exist.
-            await takeOversupabase.from(table).insert(basePayload);
+            await companySupabase.from(table).insert(basePayload);
           }
           onAfterSend?.();
           setPollInitialQ("");

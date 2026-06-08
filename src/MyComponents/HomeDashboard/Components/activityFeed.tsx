@@ -9,7 +9,7 @@ import {
   Calendar,
   AlertCircle,
 } from "lucide-react";
-import { takeOversupabase } from "@/MyComponents/supabase";
+import { companySupabase } from "@/routes/index.lazy";
 import { useCompanyFilter } from "@/stores/store";
 
 interface ActivityItem {
@@ -54,20 +54,20 @@ export const ActivityFeed = () => {
 
   useEffect(() => {
     async function loadActivity() {
-      const { data: doneTasks } = await takeOversupabase
+      const { data: doneTasks } = await companySupabase
   .from("cwa_todos")
         .select("todo_id, title, created_at")
         .eq("status", "done")
         .order("created_at", { ascending: false })
         .limit(3);
 
-      const { data: meetings } = await takeOversupabase
+      const { data: meetings } = await companySupabase
   .from("cwa_meetings")
         .select("id, meeting_title, date")
         .order("id", { ascending: false })
         .limit(2);
 
-      const { data: quotas } = await takeOversupabase
+      const { data: quotas } = await companySupabase
   .from("weekly_quotas")
         .select("id, title, updated_at")
         .eq("status", "completed")

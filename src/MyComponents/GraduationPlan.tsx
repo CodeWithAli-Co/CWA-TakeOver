@@ -55,10 +55,10 @@ import {
   useUpdateMeta,
   PLAN_QUERY_KEY,
 } from "./GraduationPlan.queries";
-import { takeOversupabase } from "./supabase";
 import { useQueryClient } from "@tanstack/react-query";
 import CourseDrawer from "./CourseDrawer";
 import { RiskTermView, BufferView } from "./ScenarioViews";
+import { companySupabase } from "@/routes/index.lazy";
 
 // ─── Danger pairs (UI-only, not DB-backed) ──────────────────────────
 const DANGER_PAIRS: { pair: string; why: string }[] = [
@@ -79,7 +79,7 @@ export default function GraduationPlan() {
 
   // Realtime sync — both Ali and Hanif see edits live.
   useEffect(() => {
-    const ch = takeOversupabase
+    const ch = companySupabase
       .channel("graduation-plan-realtime")
       .on(
         "postgres_changes",

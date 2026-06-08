@@ -29,7 +29,7 @@ import {
   SidebarMenuItem,
   useSidebar,
 } from "@/components/ui/shadcnComponents/sidebar";
-import { takeOversupabase } from "@/MyComponents/supabase";
+import { companySupabase } from "@/routes/index.lazy";
 import { ActiveUser } from "@/stores/query";
 import { useRolePreview } from "@/stores/store";
 import { useNavigate } from "@tanstack/react-router";
@@ -62,7 +62,7 @@ export function NavUser({ }: NavUserProps) {
 
   const handleLogout = async () => {
     const stronghold = await getStronghold();
-    const { error } = await takeOversupabase.auth.signOut();
+    const { error } = await companySupabase.auth.signOut();
     if (error) {
       console.log("Error Signing Out:", error.message);
     } else {

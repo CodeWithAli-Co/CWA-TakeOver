@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/shadcn
 import { Badge } from "@/components/ui/shadcnComponents/badge";
 import { Button } from "@/components/ui/shadcnComponents/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/shadcnComponents/tabs";
-import { takeOversupabase } from "../supabase";
+import { companySupabase } from "@/routes/index.lazy";
 
 
 // Type definitions for GitHub webhook payload
@@ -69,7 +69,7 @@ const GitHubWebhookComponent: React.FC<GitHubWebhookComponentProps> = ({
   // Function to fetch stored webhooks from Supabase
   const fetchStoredWebhooks = async () => {
     try {
-      const { data, error } = await takeOversupabase
+      const { data, error } = await companySupabase
   .from('github_webhooks')
         .select('*')
         .order('timestamp', { ascending: false })
@@ -93,7 +93,7 @@ const GitHubWebhookComponent: React.FC<GitHubWebhookComponentProps> = ({
     try {
       if (webhooks.length === 0) return;
 
-      const { data, error } = await takeOversupabase
+      const { data, error } = await companySupabase
   .from('github_webhooks')
         .upsert(webhooks, { 
           onConflict: 'id',
@@ -207,7 +207,7 @@ const GitHubWebhookComponent: React.FC<GitHubWebhookComponentProps> = ({
     if (window.confirm('Are you sure you want to clear the webhook history?')) {
       try {
         // Delete all records from Supabase
-        const { error } = await takeOversupabase
+        const { error } = await companySupabase
     .from('github_webhooks')
           .delete()
           .not('id', 'is', null); // Safety check to avoid deleting all rows if something goes wrong

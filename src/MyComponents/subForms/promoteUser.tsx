@@ -1,6 +1,6 @@
 import { useForm } from "@tanstack/react-form";
 import { useSubMenuStore } from "@/stores/store";
-import { takeOversupabase } from "../supabase";
+import { companySupabase } from "@/routes/index.lazy";
 import { message } from "@tauri-apps/plugin-dialog";
 import {
   Select,
@@ -20,7 +20,7 @@ import {
 import { Shield, X } from "lucide-react";
 
 const fetchEmployeeName = async (id: number) => {
-  const { data } = await takeOversupabase    .from("app_users")
+  const { data } = await companySupabase    .from("employee")
     .select("*")
     .eq("id", id)
     .single();
@@ -55,8 +55,8 @@ export const PromoteUser = (props: PromoteInterface) => {
     },
     onSubmit: async ({ value }) => {
       const rank = getRoleRank(value.Role);
-      const { error } = await takeOversupabase
-  .from("app_users")
+      const { error } = await companySupabase
+  .from("employee")
         .update({ role: value.Role, role_rank: rank })
         .eq("id", props.userID);
       if (error) {

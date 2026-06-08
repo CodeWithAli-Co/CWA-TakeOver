@@ -21,7 +21,7 @@
 //   - update_candidate_status({ candidate_id, status, reason? })
 // ───────────────────────────────────────────────────────────────────
 
-import { takeOversupabase } from "@/MyComponents/supabase";
+import { companySupabase } from "@/routes/index.lazy";
 import type { AxonAction } from "../types";
 import { registerAction } from "./registry";
 import {
@@ -146,7 +146,7 @@ async function downloadResumeAsBase64(
   storagePath: string,
   contentType: string,
 ): Promise<{ base64: string; mediaType: string }> {
-  const { data, error } = await takeOversupabase.storage
+  const { data, error } = await companySupabase.storage
     .from("resumes")
     .createSignedUrl(storagePath, 60); // 60s — plenty for one fetch
   if (error || !data?.signedUrl) {
@@ -275,7 +275,7 @@ export const parseResumeAction: AxonAction<
     // Find candidates to parse.
     let targets: CandidateRow[] = [];
     if (candidate_id) {
-      const { data, error } = await takeOversupabase
+      const { data, error } = await companySupabase
   .from("candidates")
         .select("*")
         .eq("id", candidate_id)
@@ -284,7 +284,7 @@ export const parseResumeAction: AxonAction<
       if (!data) return { summary: `No candidate with id ${candidate_id}.` };
       targets = [data as CandidateRow];
     } else {
-      const { data, error } = await takeOversupabase
+      const { data, error } = await companySupabase
   .from("candidates")
         .select("*")
         .eq("parse_status", "pending")
@@ -305,7 +305,7 @@ export const parseResumeAction: AxonAction<
 
     for (const c of targets) {
       // Mark in-flight so concurrent operators don't double-parse.
-      await takeOversupabase
+      await companySupabase
   .from("candidates")
         .update({ parse_status: "processing", parse_error: null })
         .eq("id", c.id);
@@ -376,7 +376,7 @@ export const parseResumeAction: AxonAction<
 
         const parsed = parseClaudeJson<ParsedResume>(text);
 
-        await takeOversupabase
+        await companySupabase
     .from("candidates")
           .update({
             parsed_resume: parsed,
@@ -396,7 +396,7 @@ export const parseResumeAction: AxonAction<
       } catch (err) {
         const message = err instanceof Error ? err.message : String(err);
         failed.push({ id: c.id, name: c.full_name, err: message });
-        await takeOversupabase
+        await companySupabase
     .from("candidates")
           .update({
             parse_status: "failed",
@@ -464,7 +464,7 @@ export async function gradeCandidatePure(
     return { ok: false, reason: "no Anthropic API key configured" };
   }
 
-  const { data: candidate, error: cErr } = await takeOversupabase
+  const { data: candidate, error: cErr } = await companySupabase
     .from("candidates")
     .select("*")
     .eq("id", candidate_id)
@@ -494,7 +494,7 @@ export async function gradeCandidatePure(
   // Fetch the job posting.
   let posting: JobPostingRow | null = null;
   if (c.job_posting_id) {
-    const { data } = await takeOversupabase
+    const { data } = await companySupabase
       .from("job_postings")
       .select("*")
       .eq("id", c.job_posting_id)
@@ -502,7 +502,7 @@ export async function gradeCandidatePure(
     posting = (data ?? null) as JobPostingRow | null;
   }
   if (!posting && c.role_slug) {
-    const { data } = await takeOversupabase
+    const { data } = await companySupabase
       .from("job_postings")
       .select("*")
       .eq("slug", c.role_slug)
@@ -600,7 +600,7 @@ export async function gradeCandidatePure(
     recommended_next_step: result.recommended_next_step ?? "",
   };
 
-  const { error: updateErr } = await takeOversupabase
+  const { error: updateErr } = await companySupabase
     .from("candidates")
     .update({
       fit_score: score,
@@ -693,7 +693,7 @@ export const rateAllPendingAction: AxonAction<
   },
   mutating: true,
   handler: async ({ role_slug, max_to_rate = 20 }, ctx) => {
-    let q = takeOversupabase
+    let q = companySupabase
       .from("candidates")
       .select("id, full_name")
       .eq("parse_status", "done")
@@ -768,7 +768,7 @@ export const listCandidatesAction: AxonAction<
   },
   handler: async ({ role_slug, status, min_score, sort_by = "fit_score", limit = 25, offset = 0 }, ctx) => {
     const cappedLimit = Math.max(1, Math.min(limit, 100));
-    let q = takeOversupabase
+    let q = companySupabase
       .from("candidates")
       .select("id, full_name, role_slug, fit_score, verdict_tier, status, created_at", { count: "exact" })
       .range(offset, offset + cappedLimit - 1);
@@ -830,7 +830,7 @@ export const candidateDetailAction: AxonAction<
     required: ["candidate_id"],
   },
   handler: async ({ candidate_id }, ctx) => {
-    const { data, error } = await takeOversupabase
+    const { data, error } = await companySupabase
 .from("candidates")
       .select("*")
       .eq("id", candidate_id)
@@ -873,13 +873,13 @@ export const updateCandidateStatusAction: AxonAction<
   requiresConfirmation: false, // status moves are cheap + undoable
   handler: async ({ candidate_id, status, reason }, ctx) => {
     // Snapshot previous status so undo can revert.
-    const { data: prev } = await takeOversupabase
+    const { data: prev } = await companySupabase
 .from("candidates")
       .select("status, full_name")
       .eq("id", candidate_id)
       .maybeSingle();
 
-    const { error } = await takeOversupabase
+    const { error } = await companySupabase
 .from("candidates")
       .update({ status, status_reason: reason ?? null })
       .eq("id", candidate_id);

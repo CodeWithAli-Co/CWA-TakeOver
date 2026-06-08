@@ -9,7 +9,7 @@
 // ───────────────────────────────────────────────────────────────────
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { takeOversupabase } from "@/MyComponents/supabase";
+import { companySupabase } from "@/routes/index.lazy";
 import type { CompanyFilter } from "@/stores/store";
 import {
   generateOnboardingPlanAction,
@@ -82,7 +82,7 @@ export function useOnboardingCandidates() {
   return useQuery({
     queryKey: [...ONBOARDING_KEY, "candidates"],
     queryFn: async () => {
-      const { data, error } = await takeOversupabase
+      const { data, error } = await companySupabase
   .from("candidates")
         .select("*")
         .in("status", ["offer", "hired"])
@@ -110,7 +110,7 @@ export function useCandidateMeetings(candidateId: string | null) {
     enabled: !!candidateId,
     queryFn: async () => {
       if (!candidateId) return [];
-      const { data, error } = await takeOversupabase
+      const { data, error } = await companySupabase
   .from("candidate_meetings")
         .select("*")
         .eq("candidate_id", candidateId)
@@ -129,7 +129,7 @@ export function useUpcomingHiringMeetings(withinDays: number = 14) {
       const now = new Date();
       const horizon = new Date();
       horizon.setDate(horizon.getDate() + withinDays);
-      const { data, error } = await takeOversupabase
+      const { data, error } = await companySupabase
   .from("candidate_meetings")
         .select("*, candidates ( full_name, role_slug, email )")
         .gte("scheduled_at", now.toISOString())

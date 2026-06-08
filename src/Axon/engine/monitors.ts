@@ -7,7 +7,7 @@
 // Adding more is: append an entry to MONITORS.
 // ───────────────────────────────────────────────────────────────────
 
-import { takeOversupabase } from "@/MyComponents/supabase";
+import { companySupabase } from "@/routes/index.lazy";
 import type { Monitor } from "../types";
 import {
   fetchUnifiedFinance,
@@ -69,7 +69,7 @@ export const MONITORS: Monitor[] = [
 
       return async (ctx) => {
         const now = new Date().toISOString();
-        let q = takeOversupabase
+        let q = companySupabase
           .from("cwa_todos")
           .select("todo_id", { count: "exact", head: true })
           .neq("status", "done")
@@ -136,7 +136,7 @@ export const MONITORS: Monitor[] = [
         const fiveDaysAgo = new Date(today);
         fiveDaysAgo.setDate(fiveDaysAgo.getDate() - 5);
 
-        let mq = takeOversupabase
+        let mq = companySupabase
           .from("cwa_meetings")
           .select("id, meeting_title, date")
           .lte("date", twoDaysAgo.toISOString().slice(0, 10))
@@ -153,7 +153,7 @@ export const MONITORS: Monitor[] = [
           const title = ((m as any).meeting_title as string | undefined)?.trim();
           if (!title || title.length < 4) continue;
           const safeTitle = title.replace(/[%_]/g, "").slice(0, 40);
-          const { count: matches } = await takeOversupabase
+          const { count: matches } = await companySupabase
       .from("cwa_todos")
             .select("todo_id", { count: "exact", head: true })
             .ilike("title", `%${safeTitle}%`);
@@ -181,7 +181,7 @@ export const MONITORS: Monitor[] = [
         const cutoff14 = new Date(now);
         cutoff14.setDate(cutoff14.getDate() - 14);
 
-        let q = takeOversupabase
+        let q = companySupabase
           .from("cwa_invoices")
           .select("outcome, creation_date")
           .gte("creation_date", cutoff14.toISOString())
@@ -221,8 +221,8 @@ export const MONITORS: Monitor[] = [
     check: (() => {
       let baseline: number | null = null;
       return async (_ctx) => {
-        const { count, error } = await takeOversupabase
-    .from("app_users")
+        const { count, error } = await companySupabase
+    .from("employee")
           .select("supa_id", { count: "exact", head: true });
         if (error) return null;
         const now = count ?? 0;
@@ -265,7 +265,7 @@ export const MONITORS: Monitor[] = [
 
           // Look up the next planning/raising round to add the
           // "you'll be empty before close" urgency line.
-          const { data: rounds } = await takeOversupabase
+          const { data: rounds } = await companySupabase
             .from("capital_rounds")
             .select("name, target_close_date, status")
             .in("status", ["planning", "raising"])
@@ -338,7 +338,7 @@ export const MONITORS: Monitor[] = [
           "verbal",
           "term-sheet",
         ];
-        const { data, error } = await takeOversupabase
+        const { data, error } = await companySupabase
           .from("capital_checks")
           .select("investor_name, last_touch_at, created_at")
           .in("status", ACTIVE)
@@ -384,7 +384,7 @@ export const MONITORS: Monitor[] = [
         const WARNING_DAYS = 14;
         const MIN_PROGRESS = 0.6;
 
-        const { data: rounds, error } = await takeOversupabase
+        const { data: rounds, error } = await companySupabase
           .from("capital_rounds")
           .select("id, name, status, target_amount, target_close_date")
           .in("status", ["planning", "raising"])
@@ -401,7 +401,7 @@ export const MONITORS: Monitor[] = [
           );
           if (daysToClose < 0 || daysToClose > WARNING_DAYS) continue;
 
-          const { data: checks } = await takeOversupabase
+          const { data: checks } = await companySupabase
             .from("capital_checks")
             .select("committed_amount")
             .eq("round_id", r.id);
@@ -600,7 +600,7 @@ export const MONITORS: Monitor[] = [
         // These are the high-information events -- a score landed.
         // Surface ONE per poll so multiple graded candidates don't
         // become a wall of alerts.
-        const { data: graded } = await takeOversupabase
+        const { data: graded } = await companySupabase
           .from("candidates")
           .select(
             "id, full_name, role_slug, fit_score, verdict_tier, verdict_summary",
@@ -650,7 +650,7 @@ export const MONITORS: Monitor[] = [
         // outcome -- if grading failed, we don't want to retry the
         // same one every 3 minutes. The operator can re-issue
         // rate_candidate manually if the failure was transient.
-        const { data: parsed } = await takeOversupabase
+        const { data: parsed } = await companySupabase
           .from("candidates")
           .select("id, full_name, role_slug")
           .eq("parse_status", "done")
@@ -698,7 +698,7 @@ export const MONITORS: Monitor[] = [
         //
         // Earliest possible signal -- "someone just applied." Useful
         // when the operator wants the heads-up before the score lands.
-        const { data: applied } = await takeOversupabase
+        const { data: applied } = await companySupabase
           .from("candidates")
           .select("id, full_name, role_slug, parse_status")
           .neq("parse_status", "done")
@@ -817,7 +817,7 @@ export const MONITORS: Monitor[] = [
 
       return async (ctx) => {
         const todayIso = new Date().toISOString().slice(0, 10);
-        let q = takeOversupabase
+        let q = companySupabase
           .from("cwa_meetings")
           .select("id, meeting_title, time, date")
           .eq("date", todayIso)
@@ -915,7 +915,7 @@ export const MONITORS: Monitor[] = [
         const today = new Date();
         const todayIso = today.toISOString().slice(0, 10);
 
-        let q = takeOversupabase
+        let q = companySupabase
           .from("cwa_meetings")
           .select("id, meeting_title, time, date, location, meeting_type")
           .eq("date", todayIso)

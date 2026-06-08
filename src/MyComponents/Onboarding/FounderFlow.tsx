@@ -41,7 +41,7 @@ import {
   Briefcase,
   type LucideIcon,
 } from "lucide-react";
-import { takeOversupabase } from "@/MyComponents/supabase";
+import { companySupabase } from "@/routes/index.lazy";
 import {
   useMarkOnboarded,
   useUpdateOnboardingState,
@@ -58,6 +58,7 @@ import {
   type PillOption,
 } from "./onboardingPrimitives";
 import { MODULES, defaultModulesFor } from "./modulesCatalog";
+import { takeOverSupabase } from "../supabase";
 
 // ─────────────────────────────────────────────────────────────────
 // Step list + data shape
@@ -165,10 +166,10 @@ export function FounderFlow({
     if (companyId) return companyId;
     if (!data.company?.name) return null;
 
-    const { data: authData } = await takeOversupabase.auth.getUser();
+    const { data: authData } = await companySupabase.auth.getUser();
     const founderEmail = authData?.user?.email ?? null;
 
-    const { data: row, error } = await takeOversupabase
+    const { data: row, error } = await takeOverSupabase
 .from("takeover_companies")
       .insert({
         company_name: data.company.name,
@@ -208,7 +209,7 @@ export function FounderFlow({
     // invite link. Don't substitute Math.random() here.
     const token = crypto.randomUUID();
 
-    const { error } = await takeOversupabase.from("pending_invites").insert({
+    const { error } = await companySupabase.from("pending_invites").insert({
       token,
       email,
       company_id: cid,
@@ -248,8 +249,8 @@ export function FounderFlow({
     const finalCompanyId = await ensureCompanyExists();
 
     const onboardingStatePayload = { ...data, companyId: finalCompanyId };
-    const { error: userErr } = await takeOversupabase
-.from("app_users")
+    const { error: userErr } = await companySupabase
+.from("employee")
       .update({
         role: data.profile?.roleTitle ?? null,
         username: data.profile?.displayName ?? undefined,

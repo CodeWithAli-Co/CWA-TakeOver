@@ -2,9 +2,9 @@ import { useAppStore } from "@/stores/store";
 import "./compAssets/dispInterns.css";
 import { useEffect, useRef } from "react";
 import { Interns } from "@/stores/query";
-import { takeOversupabase } from "./supabase";
 import { AddIntern } from "./subForms/addIntern";
 import { EditIntern } from "./subForms/editIntern";
+import { companySupabase } from "@/routes/index.lazy";
 
 
 function DisplayInterns() {
@@ -43,7 +43,7 @@ function DisplayInterns() {
 
   // Delete Intern
   const DelIntern = async (rowID: number) => {
-    const { data: result, error } = await takeOversupabase
+    const { data: result, error } = await companySupabase
 .from("interns")
       .delete()
       .eq("id", rowID)

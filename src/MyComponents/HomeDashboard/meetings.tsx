@@ -19,7 +19,6 @@ import { Button } from "@/components/ui/button";
 import { ActiveUser, Employees, MeetingsQuery } from "@/stores/query";
 import { useJoinMeeting } from "@/stores/MeetingStore";
 import { AddMeeting, type MeetingAttendeeOption } from "../subForms/MeetingForms/addMeeting";
-import { takeOversupabase } from "../supabase";
 import { message } from "@tauri-apps/plugin-dialog";
 import { useState } from "react";
 import {
@@ -34,6 +33,7 @@ import {
 } from "@/components/ui/shadcnComponents/dropdown-menu";
 import UserView from "../Reusables/userView";
 import { EditMeeting } from "../subForms/MeetingForms/editMeeting";
+import { companySupabase } from "@/routes/index.lazy";
 
 // ── Company tinting — small dot used in header counts and as a
 //    top-right marker on each card. The card-level dot is the only
@@ -605,7 +605,7 @@ const Meetings = () => {
       if (typeof e.avatar === "string" && e.avatar.startsWith("http")) {
         avatarUrl = e.avatar;
       } else if (e.avatar) {
-        const { data } = takeOversupabase.storage
+        const { data } = companySupabase.storage
           .from("avatars")
           .getPublicUrl(e.avatar);
         avatarUrl = data?.publicUrl;
@@ -629,7 +629,7 @@ const Meetings = () => {
   const simpCount = list.filter((m: any) => m.company === "simplicity").length;
 
   const delMeeting = async (id: number) => {
-    const { error } = await takeOversupabase.from("cwa_meetings").delete().eq("id", id);
+    const { error } = await companySupabase.from("cwa_meetings").delete().eq("id", id);
     if (error)
       await message(error.message, {
         title: "Error Deleting Meeting",

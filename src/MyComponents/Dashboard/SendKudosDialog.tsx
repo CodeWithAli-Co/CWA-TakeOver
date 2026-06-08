@@ -11,7 +11,7 @@
  * from the recipient list).
  *
  * Send path:
- *   takeOversupabase.from("team_activity").insert({
+ *   companySupabase.from("team_activity").insert({
  *     actor_id: auth.uid(),     // RLS enforces this
  *     target_id: chosen.supa_id,
  *     activity_type: "kudos",
@@ -25,10 +25,10 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { HandHeart, Search, Send, Sparkles, X } from "lucide-react";
-import { takeOversupabase } from "../supabase";
 import { ActiveUser, useAllEmployees, type EmployeeRow } from "@/stores/query";
 import { useSendKudosDialog } from "./sendKudosStore";
 import { useQueryClient } from "@tanstack/react-query";
+import { companySupabase } from "@/routes/index.lazy";
 
 const MAX_BODY_LEN = 280;
 
@@ -169,14 +169,14 @@ export function SendKudosDialog() {
 
     const description = `${myName || "Someone"} → ${chosen.username}: ${trimmed}`;
 
-    const { error: err } = await takeOversupabase.from("team_activity").insert({
+    const { error: err } = await companySupabase.from("team_activity").insert({
       target_id: chosen.supa_id,
       activity_type: "kudos",
       description,
       metadata: { message: trimmed },
       // actor_id is set by RLS WITH CHECK — we still pass auth.uid
       // explicitly because the column is NOT NULL.
-      actor_id: (await takeOversupabase.auth.getUser()).data.user?.id,
+      actor_id: (await companySupabase.auth.getUser()).data.user?.id,
     });
 
     if (err) {

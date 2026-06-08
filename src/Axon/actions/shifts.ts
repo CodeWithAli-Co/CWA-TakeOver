@@ -20,7 +20,7 @@
 
 import type { AxonAction } from "../types";
 import { registerAction } from "./registry";
-import { takeOversupabase } from "@/MyComponents/supabase";
+import { companySupabase } from "@/routes/index.lazy";
 
 const TABLE = "shifts";
 
@@ -51,21 +51,21 @@ async function resolveUser(
   }
   // UUID?
   if (/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(q)) {
-    const { data } = await takeOversupabase
-.from("app_users")
+    const { data } = await companySupabase
+.from("employee")
       .select("supa_id, username")
       .eq("supa_id", q)
       .maybeSingle();
     if (data) return { supa_id: data.supa_id, username: data.username };
   }
   // Username (case-insensitive, exact match first)
-  const { data: exact } = await takeOversupabase    .from("app_users")
+  const { data: exact } = await companySupabase    .from("employee")
     .select("supa_id, username")
     .ilike("username", q)
     .maybeSingle();
   if (exact) return { supa_id: exact.supa_id, username: exact.username };
   // Fuzzy fallback — first prefix match.
-  const { data: prefix } = await takeOversupabase    .from("app_users")
+  const { data: prefix } = await companySupabase    .from("employee")
     .select("supa_id, username")
     .ilike("username", `${q}%`)
     .limit(1);
@@ -194,7 +194,7 @@ export const createShiftAction: AxonAction<
     const ends_at = combineLocal(input.date, input.end_time);
     const company = companyLabelFor(String(ctx.activeCompany));
 
-    const { data, error } = await takeOversupabase
+    const { data, error } = await companySupabase
 .from(TABLE)
       .insert({
         user_supa_id: target.supa_id,
@@ -232,7 +232,7 @@ export const createShiftAction: AxonAction<
     ctx.pushUndo({
       label: `Undo: scheduled ${target.username}`,
       undo: async () => {
-        await takeOversupabase.from(TABLE).delete().eq("id", data!.id);
+        await companySupabase.from(TABLE).delete().eq("id", data!.id);
       },
     } as any);
     return { summary, data: { shift_id: data!.id, username: target.username } };
@@ -288,7 +288,7 @@ export const listShiftsAction: AxonAction<
     })();
     const toIso = toDate.toISOString();
 
-    let q = takeOversupabase
+    let q = companySupabase
       .from(TABLE)
       .select("id, username, starts_at, ends_at, status, title, type")
       .lte("starts_at", toIso)
@@ -340,7 +340,7 @@ export const clockInAction: AxonAction<
     const now = new Date();
     const winStart = new Date(now.getTime() - 60 * 60_000).toISOString();
     const winEnd   = new Date(now.getTime() + 60 * 60_000).toISOString();
-    const { data: candidates } = await takeOversupabase
+    const { data: candidates } = await companySupabase
 .from(TABLE)
       .select("id")
       .eq("user_supa_id", userId)
@@ -352,7 +352,7 @@ export const clockInAction: AxonAction<
     const target = candidates?.[0];
 
     if (target) {
-      const { error } = await takeOversupabase
+      const { error } = await companySupabase
   .from(TABLE)
         .update({ clock_in: now.toISOString() })
         .eq("id", target.id);
@@ -364,7 +364,7 @@ export const clockInAction: AxonAction<
 
     // No scheduled shift → create ad-hoc.
     const plannedEnd = new Date(Date.now() + 4 * 3600_000).toISOString();
-    const { data, error } = await takeOversupabase
+    const { data, error } = await companySupabase
 .from(TABLE)
       .insert({
         user_supa_id: userId,
@@ -399,7 +399,7 @@ export const clockOutAction: AxonAction<
   handler: async (_input, ctx) => {
     if (ctx.dryRun) return { summary: `Dry-run: would clock you out.` };
     const userId = ctx.operator.supa_id;
-    const { data: active } = await takeOversupabase
+    const { data: active } = await companySupabase
 .from(TABLE)
       .select("id")
       .eq("user_supa_id", userId)
@@ -411,7 +411,7 @@ export const clockOutAction: AxonAction<
       return { summary: "You're not clocked in to anything right now." };
     }
     const now = new Date().toISOString();
-    const { error } = await takeOversupabase
+    const { error } = await companySupabase
 .from(TABLE)
       .update({ clock_out: now, ends_at: now })
       .eq("id", target.id);
@@ -450,7 +450,7 @@ export const requestCoverageAction: AxonAction<
     if (ctx.dryRun) return { summary: `Dry-run: would mark your shift as needing cover.` };
     let shiftId = input.shift_id;
     if (!shiftId) {
-      const { data } = await takeOversupabase
+      const { data } = await companySupabase
   .from(TABLE)
         .select("id")
         .eq("user_supa_id", ctx.operator.supa_id)
@@ -461,7 +461,7 @@ export const requestCoverageAction: AxonAction<
       shiftId = data?.[0]?.id;
       if (!shiftId) return { summary: "You don't have any upcoming shifts to request coverage on." };
     }
-    const { error } = await takeOversupabase
+    const { error } = await companySupabase
 .from(TABLE)
       .update({
         coverage_requested_at: new Date().toISOString(),
@@ -501,7 +501,7 @@ export const claimOpenShiftAction: AxonAction<
   requiresConfirmation: false,
   handler: async ({ shift_id }, ctx) => {
     if (ctx.dryRun) return { summary: `Dry-run: would claim shift ${shift_id}.` };
-    const { error } = await takeOversupabase
+    const { error } = await companySupabase
 .from(TABLE)
       .update({
         user_supa_id: ctx.operator.supa_id,
@@ -554,7 +554,7 @@ export const suggestPatternsAction: AxonAction<
 
     const since = new Date();
     since.setDate(since.getDate() - lookback * 7);
-    const { data, error } = await takeOversupabase
+    const { data, error } = await companySupabase
 .from(TABLE)
       .select("starts_at, ends_at, user_supa_id, type, status")
       .eq("user_supa_id", target.supa_id)
@@ -662,7 +662,7 @@ export const applyPatternAction: AxonAction<
         created_by: ctx.operator.supa_id,
       };
     });
-    const { error, data } = await takeOversupabase.from(TABLE).insert(rows).select("id");
+    const { error, data } = await companySupabase.from(TABLE).insert(rows).select("id");
     if (error) return { summary: `Couldn't apply the pattern — ${error.message}` };
     const created = data?.length ?? rows.length;
     ctx.speak(`Filled in ${created} shifts.`);

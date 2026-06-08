@@ -1,8 +1,8 @@
 import { useForm } from "@tanstack/react-form";
-import { takeOversupabase } from "../supabase";
 import { useAppStore } from "@/stores/store";
 import { UserPlus, X } from "lucide-react";
 import { AnimatePresence, motion } from "framer-motion";
+import { companySupabase } from "@/routes/index.lazy";
 
 interface Props {
   rowID: number;
@@ -22,16 +22,16 @@ export const EditEmployee = (props: Props) => {
     },
     onSubmit: async ({ value }) => {
       if (value.Username !== "") {
-        const { error } = await takeOversupabase
-    .from("app_users")
+        const { error } = await companySupabase
+    .from("employee")
           .update({ username: value.Username })
           .eq("id", props.rowID);
         if (error) return console.log("Username Error:", error.message);
       }
 
       if (value.Email !== "") {
-        const { error } = await takeOversupabase
-    .from("app_users")
+        const { error } = await companySupabase
+    .from("employee")
           .update({ email: value.Email })
           .eq("id", props.rowID);
         if (error) return console.log("Email Error:", error.message);

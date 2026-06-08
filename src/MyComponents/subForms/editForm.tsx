@@ -1,6 +1,6 @@
 import { useForm } from "@tanstack/react-form";
 import { invoke } from "@tauri-apps/api/core";
-import { takeOversupabase } from "../supabase";
+import { companySupabase } from "@/routes/index.lazy";
 import { motion } from "framer-motion";
 import { Input } from "@/components/ui/shadcnComponents/input";
 import { Label } from "@/components/ui/shadcnComponents/label";
@@ -40,7 +40,7 @@ export const EditData = (props: Props) => {
     onSubmit: async ({ value }) => {
       console.log(value);
       if (value.platformName !== "") {
-        const { error } = await takeOversupabase
+        const { error } = await companySupabase
     .from("cwa_creds")
           .update({ platform_name: value.platformName })
           .eq("id", props.rowID);
@@ -48,7 +48,7 @@ export const EditData = (props: Props) => {
       }
 
       if (value.Username !== "") {
-        const { error } = await takeOversupabase
+        const { error } = await companySupabase
     .from("cwa_creds")
           .update({ acc_username: value.Username })
           .eq("id", props.rowID);
@@ -56,7 +56,7 @@ export const EditData = (props: Props) => {
       }
 
       if (value.Email !== "") {
-        const { error } = await takeOversupabase
+        const { error } = await companySupabase
     .from("cwa_creds")
           .update({ acc_email: value.Email })
           .eq("id", props.rowID);
@@ -70,7 +70,7 @@ export const EditData = (props: Props) => {
           plaintext: value.Password,
         });
         encPassword.then(async (res) => {
-          const { error } = await takeOversupabase
+          const { error } = await companySupabase
       .from("cwa_creds")
             .update({
               acc_enc_password: res,
@@ -81,7 +81,7 @@ export const EditData = (props: Props) => {
       }
 
       if (value.AddInfo !== "") {
-        const { error } = await takeOversupabase
+        const { error } = await companySupabase
     .from("cwa_creds")
           .update({ acc_addinfo: value.AddInfo })
           .eq("id", props.rowID);
@@ -89,7 +89,7 @@ export const EditData = (props: Props) => {
       }
 
       if (value.Active !== "") {
-        const { error } = await takeOversupabase
+        const { error } = await companySupabase
     .from("cwa_creds")
           .update({ active: JSON.parse(value.Active) })
           .eq("id", props.rowID);

@@ -24,7 +24,7 @@
 
 import { useEffect, useMemo } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { takeOversupabase } from "@/MyComponents/supabase";
+import { companySupabase } from "@/routes/index.lazy";
 import { ActiveUser } from "@/stores/query";
 
 // ─────────────────────────────────────────────────────────────────
@@ -312,7 +312,7 @@ export function useAxonObservations() {
   // reacts when the founder closes a task or moves a meeting.
   useEffect(() => {
     if (!username) return;
-    const ch = takeOversupabase
+    const ch = companySupabase
       .channel(`axon-coach:${username}`)
       .on(
         "postgres_changes",
@@ -354,14 +354,14 @@ export function useAxonObservations() {
         await Promise.all([
           // Open assigned tasks with deadlines — drives overdue +
           // due-today counts.
-          takeOversupabase
+          companySupabase
             .from("cwa_todos")
             .select("todo_id,title,priority,deadline,status,assignee")
             .contains("assignee", [username])
             .neq("status", "done")
             .not("deadline", "is", null),
           // Recent closures — drives streak + closed-today count.
-          takeOversupabase
+          companySupabase
             .from("cwa_todos")
             .select("completed_at,assignee")
             .contains("assignee", [username])
@@ -369,12 +369,12 @@ export function useAxonObservations() {
             .gte("completed_at", ninetyDaysAgo.toISOString()),
           // Meetings — free-text date column means we filter in
           // memory after parsing. Limit to a reasonable window.
-          takeOversupabase
+          companySupabase
             .from("cwa_meetings")
             .select("id,meeting_title,date,time,attendees")
             .limit(80),
           // Time entries — drives focused-hours signal.
-          takeOversupabase
+          companySupabase
             .from("time_entries")
             .select("date,duration_minutes")
             .eq("user_id", (user as any)?.supa_id ?? "")

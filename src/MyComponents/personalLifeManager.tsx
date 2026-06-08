@@ -45,7 +45,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/shadcnComponents/dropdown-menu";
 import { Textarea } from "@/components/ui/textarea";
-import { Label } from "@/components/ui/shadcnComponents/Label";
+import { Label } from "@/components/ui/shadcnComponents/label";
 import {
   Tabs,
   TabsContent,
@@ -59,8 +59,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/shadcnComponents/select";
-
-import { takeOversupabase } from "./supabase";
 import {
   PersonalActivity,
   HalalRestaurant,
@@ -80,6 +78,7 @@ import {
 } from "@/stores/personalScheduleTypes";
 import { Switch } from "@/components/ui/shadcnComponents/switch";
 import ToggleSwitch from "./Reusables/switchUI";
+import { companySupabase } from "@/routes/index.lazy";
 
 const ACTIVITY_ICONS: Record<string, React.ReactNode> = {
   medication: <Pill className="w-4 h-4" />,
@@ -118,7 +117,7 @@ const PersonalLifeManager: React.FC = () => {
 
   const loadActivities = async () => {
     try {
-      const { data, error } = await takeOversupabase
+      const { data, error } = await companySupabase
   .schema("personal")
         .from("activities")
         .select("*")
@@ -150,7 +149,7 @@ const PersonalLifeManager: React.FC = () => {
 
   const loadRestaurants = async () => {
     try {
-      const { data, error } = await takeOversupabase
+      const { data, error } = await companySupabase
   .schema("personal")
         .from("restaurants")
         .select("*")
@@ -169,7 +168,7 @@ const PersonalLifeManager: React.FC = () => {
 
   const saveActivity = async (activity: PersonalActivity) => {
     try {
-      const { error } = await takeOversupabase
+      const { error } = await companySupabase
   .schema("personal")
         .from("activities")
         .upsert(activity);
@@ -182,7 +181,7 @@ const PersonalLifeManager: React.FC = () => {
 
   const saveRestaurant = async (restaurant: HalalRestaurant) => {
     try {
-      const { error } = await takeOversupabase
+      const { error } = await companySupabase
   .schema("personal")
         .from("restaurants")
         .upsert(restaurant);
@@ -195,7 +194,7 @@ const PersonalLifeManager: React.FC = () => {
 
   const deleteActivity = async (id: string) => {
     try {
-      const { error } = await takeOversupabase
+      const { error } = await companySupabase
   .schema("personal")
         .from("activities")
         .delete()
@@ -210,7 +209,7 @@ const PersonalLifeManager: React.FC = () => {
 
   const deleteRestaurant = async (id: string) => {
     try {
-      const { error } = await takeOversupabase
+      const { error } = await companySupabase
   .schema("personal")
         .from("restaurants")
         .delete()

@@ -31,7 +31,7 @@ import {
 } from "lucide-react";
 import { motion } from "framer-motion";
 import { useEffect, useMemo, useState } from "react";
-import { takeOversupabase } from "@/MyComponents/supabase";
+import { companySupabase } from "@/routes/index.lazy";
 import { message } from "@tauri-apps/plugin-dialog";
 import { MeetingsQuery } from "@/stores/query";
 import { FetchMeetingQuery } from "@/stores/MeetingStore";
@@ -222,7 +222,7 @@ export const EditMeeting = ({ meetingID, open, setOpen, onComplete, users = [] }
       // have attendee_ids yet, retry without it so the update
       // still succeeds. Logs a hint to run the migration.
       const updateWithFallback = async (patch: Patch) => {
-        let res = await takeOversupabase
+        let res = await companySupabase
     .from("cwa_meetings")
           .update(patch)
           .eq("id", meetingID);
@@ -235,7 +235,7 @@ export const EditMeeting = ({ meetingID, open, setOpen, onComplete, users = [] }
             "cwa_meetings.attendee_ids not found — retrying without it. Run migrations/meeting_attendees.sql in Supabase.",
           );
           const { attendee_ids: _drop, ...rest } = patch;
-          res = await takeOversupabase
+          res = await companySupabase
       .from("cwa_meetings")
             .update(rest)
             .eq("id", meetingID);

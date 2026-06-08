@@ -23,7 +23,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { Plus, Save, Sparkles, Trash2, X } from "lucide-react";
-import { takeOversupabase } from "../supabase";
 import {
   useAllEmployees,
   useGrowthTrackForUser,
@@ -31,6 +30,7 @@ import {
 } from "@/stores/query";
 import { useCreateGrowthTrackDialog } from "./createGrowthTrackStore";
 import { useQueryClient } from "@tanstack/react-query";
+import { companySupabase } from "@/routes/index.lazy";
 
 type PacingStatus = "on_track" | "attention_needed" | "ahead";
 
@@ -171,12 +171,12 @@ export function CreateGrowthTrackDialog() {
       due_date: s.due_date || null,
     }));
 
-    const { data: auth } = await takeOversupabase.auth.getUser();
+    const { data: auth } = await companySupabase.auth.getUser();
     const authoredBy = auth?.user?.id;
 
     let upsertError: string | null = null;
     if (existingTrack) {
-      const { error: err } = await takeOversupabase
+      const { error: err } = await companySupabase
   .from("growth_tracks")
         .update({
           role_title: trimmedRole,
@@ -190,7 +190,7 @@ export function CreateGrowthTrackDialog() {
         .eq("id", existingTrack.id);
       if (err) upsertError = err.message;
     } else {
-      const { error: err } = await takeOversupabase.from("growth_tracks").insert({
+      const { error: err } = await companySupabase.from("growth_tracks").insert({
         user_id: chosenUserId,
         role_title: trimmedRole,
         next_milestone: trimmedMilestone,

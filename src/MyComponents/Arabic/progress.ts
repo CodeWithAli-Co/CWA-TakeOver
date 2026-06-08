@@ -1,9 +1,9 @@
 // ============================================================================
-// Progress layer — per-user reads/writes against takeOversupabase// Every row is scoped by `username` so CEO, Hanif, etc. each have isolated
+// Progress layer — per-user reads/writes against companySupabase// Every row is scoped by `username` so CEO, Hanif, etc. each have isolated
 // progress. No table-wide writes, ever.
 // ============================================================================
 
-import { takeOversupabase } from "@/MyComponents/supabase";
+import { companySupabase } from "@/routes/index.lazy";
 import { useSuspenseQuery, useQueryClient } from "@tanstack/react-query";
 import type {
   LessonProgressRow,
@@ -33,7 +33,7 @@ const fetchLessonProgress = async (
   username: string,
 ): Promise<LessonProgressRow[]> => {
   if (!username) return [];
-  const { data, error } = await takeOversupabase    .from("arabic_lesson_progress")
+  const { data, error } = await companySupabase    .from("arabic_lesson_progress")
     .select("*")
     .eq("username", username);
   if (error) {
@@ -51,7 +51,7 @@ export const useLessonProgress = (username: string) =>
 
 const fetchUserStats = async (username: string): Promise<UserStatsRow> => {
   if (!username) return DEFAULT_STATS("");
-  const { data, error } = await takeOversupabase    .from("arabic_user_stats")
+  const { data, error } = await companySupabase    .from("arabic_user_stats")
     .select("*")
     .eq("username", username)
     .maybeSingle();
@@ -62,7 +62,7 @@ const fetchUserStats = async (username: string): Promise<UserStatsRow> => {
   if (!data) {
     // First-time user — insert a default row so subsequent upserts are cheap.
     const fresh = DEFAULT_STATS(username);
-    const { error: insertErr } = await takeOversupabase
+    const { error: insertErr } = await companySupabase
 .from("arabic_user_stats")
       .insert(fresh);
     if (insertErr) console.error("insert default stats:", insertErr.message);
@@ -92,7 +92,7 @@ export async function recordLessonRun(
   const today = new Date().toISOString().slice(0, 10);
 
   // Existing row, if any.
-  const { data: existing } = await takeOversupabase    .from("arabic_lesson_progress")
+  const { data: existing } = await companySupabase    .from("arabic_lesson_progress")
     .select("*")
     .eq("username", username)
     .eq("lesson_id", result.lessonId)
@@ -118,12 +118,12 @@ export async function recordLessonRun(
     completed_at: isCompletion ? new Date().toISOString() : existing?.completed_at ?? null,
   };
 
-  const { error: upsertErr } = await takeOversupabase    .from("arabic_lesson_progress")
+  const { error: upsertErr } = await companySupabase    .from("arabic_lesson_progress")
     .upsert(baseRow, { onConflict: "username,lesson_id" });
   if (upsertErr) console.error("upsert lesson progress:", upsertErr.message);
 
   // Update aggregate stats.
-  const { data: statsRow } = await takeOversupabase    .from("arabic_user_stats")
+  const { data: statsRow } = await companySupabase    .from("arabic_user_stats")
     .select("*")
     .eq("username", username)
     .maybeSingle();
@@ -173,7 +173,7 @@ export async function recordLessonRun(
     nextStats.achievements = [...nextStats.achievements, ...earned.map((a) => a.key)];
   }
 
-  const { error: statsErr } = await takeOversupabase    .from("arabic_user_stats")
+  const { error: statsErr } = await companySupabase    .from("arabic_user_stats")
     .upsert(nextStats, { onConflict: "username" });
   if (statsErr) console.error("upsert user stats:", statsErr.message);
 
@@ -193,7 +193,7 @@ export async function updateGoals(
   username: string,
   patch: Partial<Pick<UserStatsRow, "daily_goal_minutes" | "target_days_per_week">>,
 ) {
-  const { error } = await takeOversupabase    .from("arabic_user_stats")
+  const { error } = await companySupabase    .from("arabic_user_stats")
     .update(patch)
     .eq("username", username);
   if (error) console.error("update goals:", error.message);

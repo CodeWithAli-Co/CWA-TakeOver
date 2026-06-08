@@ -34,7 +34,7 @@ import {
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/shadcnComponents/select";
-import { takeOversupabase } from "@/MyComponents/supabase";
+import { companySupabase } from "@/routes/index.lazy";
 import { format, startOfWeek, endOfWeek, addWeeks, subWeeks } from "date-fns";
 
 type QuotaStatus = "pending" | "in-progress" | "completed";
@@ -399,7 +399,7 @@ export const WeeklyQuotas = ({ embedded = false }: WeeklyQuotasProps = {}) => {
   useEffect(() => {
     const loadQuotas = async () => {
       if (!currentUser) return;
-      const { data, error } = await takeOversupabase
+      const { data, error } = await companySupabase
   .from("weekly_quotas")
         .select("*")
         .gte("week_start", format(startDate, "yyyy-MM-dd"))
@@ -414,7 +414,7 @@ export const WeeklyQuotas = ({ embedded = false }: WeeklyQuotasProps = {}) => {
 
     const loadLastWeek = async () => {
       if (!currentUser) return;
-      const { data } = await takeOversupabase
+      const { data } = await companySupabase
   .from("weekly_quotas")
         .select("*")
         .gte("week_start", format(lastStart, "yyyy-MM-dd"))
@@ -425,7 +425,7 @@ export const WeeklyQuotas = ({ embedded = false }: WeeklyQuotasProps = {}) => {
     loadQuotas();
     loadLastWeek();
 
-    const subscription = takeOversupabase
+    const subscription = companySupabase
       .channel("weekly_quotas_changes")
       .on("postgres_changes", { event: "*", schema: "public", table: "weekly_quotas" }, () => loadQuotas())
       .subscribe();
@@ -438,7 +438,7 @@ export const WeeklyQuotas = ({ embedded = false }: WeeklyQuotasProps = {}) => {
     const week_end = format(endDate, "yyyy-MM-dd");
 
     if (data.id) {
-      await takeOversupabase.from("weekly_quotas").update({
+      await companySupabase.from("weekly_quotas").update({
         title: data.title,
         description: data.description,
         status: data.status,
@@ -447,7 +447,7 @@ export const WeeklyQuotas = ({ embedded = false }: WeeklyQuotasProps = {}) => {
         updated_at: new Date().toISOString(),
       }).eq("id", data.id);
     } else {
-      await takeOversupabase.from("weekly_quotas").insert({
+      await companySupabase.from("weekly_quotas").insert({
         title: data.title,
         description: data.description,
         status: data.status,
@@ -462,10 +462,10 @@ export const WeeklyQuotas = ({ embedded = false }: WeeklyQuotasProps = {}) => {
   };
 
   const handleStatusChange = async (id: number, status: QuotaStatus) => {
-    await takeOversupabase.from("weekly_quotas").update({ status, updated_at: new Date().toISOString() }).eq("id", id);
+    await companySupabase.from("weekly_quotas").update({ status, updated_at: new Date().toISOString() }).eq("id", id);
   };
   const handleDelete = async (id: number) => {
-    await takeOversupabase.from("weekly_quotas").delete().eq("id", id);
+    await companySupabase.from("weekly_quotas").delete().eq("id", id);
   };
   const handleEdit = (q: Quota) => { setEditingQuota(q); setDialogOpen(true); };
 

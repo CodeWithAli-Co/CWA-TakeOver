@@ -6,7 +6,7 @@
 // call on every navigation).
 // ───────────────────────────────────────────────────────────────────
 
-import { takeOversupabase } from "@/MyComponents/supabase";
+import { companySupabase } from "@/routes/index.lazy";
 import type { CompanyFilter } from "@/stores/store";
 
 function companyLabel(active: string): "CodeWithAli" | "simplicity" {
@@ -15,7 +15,7 @@ function companyLabel(active: string): "CodeWithAli" | "simplicity" {
 
 async function overdueCount(active: CompanyFilter): Promise<number> {
   const now = new Date().toISOString();
-  let q = takeOversupabase
+  let q = companySupabase
     .from("cwa_todos")
     .select("todo_id", { count: "exact", head: true })
     .neq("status", "done")
@@ -30,7 +30,7 @@ async function upcomingMeetingCount(active: CompanyFilter): Promise<number> {
   const today = new Date().toISOString().slice(0, 10);
   const in7 = new Date();
   in7.setDate(in7.getDate() + 7);
-  let q = takeOversupabase
+  let q = companySupabase
     .from("cwa_meetings")
     .select("id", { count: "exact", head: true })
     .gte("date", today)

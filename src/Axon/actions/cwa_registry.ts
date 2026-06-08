@@ -14,10 +14,10 @@
 // "Axon, undo that" can put things back.
 // ───────────────────────────────────────────────────────────────────
 
-import { takeOversupabase } from "@/MyComponents/supabase";
 import type { AxonAction } from "../types";
 import { registerAction } from "./registry";
 import { pushUndo } from "../engine/undoStack";
+import { companySupabase } from "@/routes/index.lazy";
 
 type RegistryKind = "component" | "template";
 type RegistryCompany = "cwa" | "simplicity" | "shared";
@@ -44,7 +44,7 @@ async function findItem(
   kind?: RegistryKind,
 ): Promise<{ id: string; name: string; kind: RegistryKind; company: string; latest_version: string | null; description: string | null } | null> {
   const kebabName = kebab(nameRaw);
-  let q = takeOversupabase
+  let q = companySupabase
     .from("registry_items")
     .select("id, name, kind, company, latest_version, description")
     .limit(5);
@@ -74,7 +74,7 @@ export const registryStatsAction: AxonAction<
     properties: {},
   },
   handler: async () => {
-    const { data, error } = await takeOversupabase
+    const { data, error } = await companySupabase
 .from("registry_items_with_latest")
       .select("name, kind, company, install_count, latest_published_at")
       .limit(200);
@@ -148,7 +148,7 @@ export const registrySearchAction: AxonAction<
     if (q.length < 2) return { summary: "Search query must be at least 2 characters." };
     const limit = Math.max(1, Math.min(inLimit ?? 15, 100));
     const offset = Math.max(0, inOffset ?? 0);
-    let sb = takeOversupabase
+    let sb = companySupabase
       .from("registry_items_with_latest")
       .select("name, kind, company, latest_version_str, description")
       .order("install_count", { ascending: false })
@@ -200,7 +200,7 @@ export const registryInfoAction: AxonAction<
     if (!item) return { summary: `No registry item matching "${name}" ${kind ? `(${kind})` : ""}.` };
 
     // Second query to pull install_count — findItem query was narrow.
-    const { data } = await takeOversupabase
+    const { data } = await companySupabase
 .from("registry_items")
       .select("install_count, created_by")
       .eq("id", item.id)
@@ -261,14 +261,14 @@ export const registryDeleteAction: AxonAction<
     // in theory but their tarballs are gone, so we don't bother restoring
     // them (an undo would re-insert an orphan item with no installable
     // version, and we surface that in the undo label).
-    const { data: snapshot } = await takeOversupabase
+    const { data: snapshot } = await companySupabase
 .from("registry_items")
       .select("*")
       .eq("id", item.id)
       .maybeSingle();
 
     // Grab storage paths to purge.
-    const { data: versions } = await takeOversupabase
+    const { data: versions } = await companySupabase
 .from("registry_versions")
       .select("storage_path")
       .eq("item_id", item.id);
@@ -279,10 +279,10 @@ export const registryDeleteAction: AxonAction<
       `covers/${item.id}.webp`,
     );
     if (paths.length > 0) {
-      try { await takeOversupabase.storage.from("registry").remove(paths); } catch { /* noop */ }
+      try { await companySupabase.storage.from("registry").remove(paths); } catch { /* noop */ }
     }
 
-    const { error } = await takeOversupabase.from("registry_items").delete().eq("id", item.id);
+    const { error } = await companySupabase.from("registry_items").delete().eq("id", item.id);
     if (error) return { summary: `Delete failed: ${error.message}` };
 
     if (snapshot) {
@@ -292,7 +292,7 @@ export const registryDeleteAction: AxonAction<
         undo: async () => {
           const restorePayload = { ...snapshot };
           delete (restorePayload as any).id;  // let DB assign new id
-          const { error } = await takeOversupabase.from("registry_items").insert(restorePayload);
+          const { error } = await companySupabase.from("registry_items").insert(restorePayload);
           return error ? `Restore failed: ${error.message}` : `Restored ${item.name} metadata (republish to make it installable).`;
         },
       });
@@ -329,7 +329,7 @@ export const registryYankVersionAction: AxonAction<
     const item = await findItem(name, kind);
     if (!item) return { summary: `No registry item matching "${name}".` };
 
-    const { data: verRow } = await takeOversupabase
+    const { data: verRow } = await companySupabase
 .from("registry_versions")
       .select("id, yanked")
       .eq("item_id", item.id)
@@ -339,7 +339,7 @@ export const registryYankVersionAction: AxonAction<
     if (verRow.yanked) return { summary: `${item.name} v${version} is already yanked.` };
 
     // Executor handles the confirm prompt based on requiresConfirmation.
-    const { error } = await takeOversupabase
+    const { error } = await companySupabase
 .from("registry_versions")
       .update({ yanked: true })
       .eq("id", verRow.id);
@@ -349,7 +349,7 @@ export const registryYankVersionAction: AxonAction<
       actionName: "yank_registry_version",
       label: `un-yank ${item.name} v${version}`,
       undo: async () => {
-        const { error } = await takeOversupabase
+        const { error } = await companySupabase
     .from("registry_versions")
           .update({ yanked: false })
           .eq("id", verRow.id);
@@ -448,7 +448,7 @@ export const registryRecentActivityAction: AxonAction<
 
     // Query registry_versions joined back to items — gives us one row
     // per publish event rather than one row per item.
-    let q = takeOversupabase
+    let q = companySupabase
       .from("registry_versions")
       .select("version, published_at, published_by, registry_items!inner(name, kind, company)")
       .gte("published_at", cutoff)
@@ -514,7 +514,7 @@ export const registryUpdateDescriptionAction: AxonAction<
     if (!item) return { summary: `No registry item matching "${name}".` };
 
     // Snapshot previous values for the undo.
-    const { data: prev } = await takeOversupabase
+    const { data: prev } = await companySupabase
 .from("registry_items")
       .select("description, tags")
       .eq("id", item.id)
@@ -527,7 +527,7 @@ export const registryUpdateDescriptionAction: AxonAction<
       return { summary: "Nothing to update — pass description or tags." };
     }
 
-    const { error } = await takeOversupabase
+    const { error } = await companySupabase
 .from("registry_items")
       .update(patch)
       .eq("id", item.id);
@@ -541,7 +541,7 @@ export const registryUpdateDescriptionAction: AxonAction<
         const revertPatch: Record<string, unknown> = {};
         if (description !== undefined) revertPatch.description = prev.description;
         if (tags !== undefined)        revertPatch.tags = prev.tags;
-        const { error } = await takeOversupabase
+        const { error } = await companySupabase
     .from("registry_items")
           .update(revertPatch)
           .eq("id", item.id);

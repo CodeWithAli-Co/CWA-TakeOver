@@ -24,7 +24,7 @@ import {
   QUALITY_PRESETS,
   type HuddleQuality,
 } from "@/stores/huddleStore";
-import { takeOversupabase } from "@/MyComponents/supabase";
+import { companySupabase } from "@/routes/index.lazy";
 import { Employees } from "@/stores/query";
 import { displayLabelForDM, isDMKey } from "../displayName";
 
@@ -144,7 +144,7 @@ export function HuddleBar({
       const name = u?.username;
       const file = u?.avatar;
       if (!name || !file) continue;
-      const { data } = takeOversupabase.storage.from("avatars").getPublicUrl(file);
+      const { data } = companySupabase.storage.from("avatars").getPublicUrl(file);
       if (data?.publicUrl) map.set(name, data.publicUrl);
     }
     return map;
