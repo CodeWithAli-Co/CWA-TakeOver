@@ -44,6 +44,11 @@ import type { DraftChannel } from "@/Fundraise/draftInvestorEmail";
 import { useMyFundraiseSettings } from "@/stores/fundraiseSettings";
 import { useUpdateContact } from "@/stores/crm";
 import { useAllEmployees } from "@/stores/query";
+import {
+  findPartnerEmail,
+  type EmailCandidate,
+} from "@/Fundraise/findPartnerEmail";
+import { AlertCircle } from "lucide-react";
 
 interface Props {
   investorId: string | null;
@@ -391,29 +396,68 @@ function PartnersPanel({
   if (detail.partners.length === 0) {
     return <Empty>No partners added yet. Add one via the CRM contacts view.</Empty>;
   }
+  // Pull the firm's domain so PartnerRow can use it when the
+  // operator hits "Find email with Axon". Falls back to the
+  // investor.website domain if the CRM company row doesn't have
+  // one set.
+  const firmDomain =
+    detail.company.domain ?? extractDomain(detail.website) ?? null;
   return (
     <ul className="list-none p-0 m-0 space-y-2">
       {detail.partners.map((p) => (
-        <PartnerRow key={p.id} partner={p} onDraft={onDraft} />
+        <PartnerRow
+          key={p.id}
+          partner={p}
+          onDraft={onDraft}
+          firmDomain={firmDomain}
+        />
       ))}
     </ul>
   );
 }
 
+/** Best-effort URL -> bare domain. Returns null when the input is
+ *  null or not parseable. */
+function extractDomain(url: string | null): string | null {
+  if (!url) return null;
+  try {
+    const u = new URL(url.startsWith("http") ? url : `https://${url}`);
+    return u.hostname.replace(/^www\./, "");
+  } catch {
+    return null;
+  }
+}
+
 /** Single partner row. Split out because email editing is stateful
  *  and Axon often leaves email=null after discovery (web search
  *  couldn't verify it), so the row needs inline edit + reflect-on-
- *  save so the Draft email button re-enables immediately. */
+ *  save so the Draft email button re-enables immediately.
+ *
+ *  Phase 6: also handles the "Find email with Axon" flow -- when
+ *  the firm has a domain on file, the operator can pattern-search
+ *  for likely partner emails without leaving the drawer. */
 function PartnerRow({
   partner,
   onDraft,
+  firmDomain,
 }: {
   partner: InvestorDetail["partners"][number];
   onDraft: (partnerId: string, channel: DraftChannel) => void;
+  firmDomain: string | null;
 }) {
   const updateContactMut = useUpdateContact();
   const [editingEmail, setEditingEmail] = useState(false);
   const [emailDraft, setEmailDraft] = useState(partner.email ?? "");
+
+  // Phase 6: Find email with Axon. State = "idle" | "searching" |
+  // "results" -- when results show, the operator can click a
+  // candidate to commit it via the same useUpdateContact mutation.
+  const [findState, setFindState] = useState<
+    "idle" | "searching" | "results"
+  >("idle");
+  const [findError, setFindError] = useState<string | null>(null);
+  const [candidates, setCandidates] = useState<EmailCandidate[]>([]);
+  const [domainHasMx, setDomainHasMx] = useState(true);
 
   // Sync the draft input if the row updates from realtime / refetch.
   useEffect(() => {
@@ -436,6 +480,39 @@ function PartnerRow({
       });
     } catch {
       setEmailDraft(partner.email ?? "");
+    }
+  }
+
+  // Phase 6: ask the server for likely email candidates.
+  async function runFindEmail() {
+    if (!firmDomain) {
+      setFindError("No firm domain on file -- add a website to the firm.");
+      setFindState("results");
+      return;
+    }
+    setFindState("searching");
+    setFindError(null);
+    const result = await findPartnerEmail({
+      partner_name: partner.name ?? "",
+      firm_domain: firmDomain,
+    });
+    setCandidates(result.candidates);
+    setDomainHasMx(result.domain_has_mx);
+    setFindError(result.error ?? null);
+    setFindState("results");
+  }
+
+  // Phase 6: commit a clicked candidate as the partner's email.
+  async function pickCandidate(c: EmailCandidate) {
+    setEmailDraft(c.email);
+    setFindState("idle");
+    try {
+      await updateContactMut.mutateAsync({
+        id: partner.id,
+        patch: { email: c.email },
+      });
+    } catch (e: any) {
+      setFindError(e?.message ?? "Save failed.");
     }
   }
 
@@ -537,17 +614,90 @@ function PartnerRow({
             <span className="truncate flex-1">{partner.email}</span>
           </button>
         ) : (
-          <button
-            type="button"
-            onClick={() => setEditingEmail(true)}
-            className="flex items-center gap-2 text-[11px] text-destructive/80 hover:text-destructive transition-colors text-left italic w-full"
-          >
-            <Mail size={11} />
-            <span className="uppercase tracking-[0.1em] text-[10px] w-12 flex-shrink-0 not-italic">
-              Email
-            </span>
-            <span>not on file — click to add</span>
-          </button>
+          <div className="space-y-1.5">
+            <div className="flex items-center gap-2 text-[11px] text-destructive/80 italic">
+              <Mail size={11} />
+              <span className="uppercase tracking-[0.1em] text-[10px] w-12 flex-shrink-0 not-italic">
+                Email
+              </span>
+              <span>not on file</span>
+              <div className="ml-auto flex items-center gap-1.5">
+                <button
+                  type="button"
+                  onClick={() => setEditingEmail(true)}
+                  className="px-2 h-6 rounded-sm border border-border bg-secondary text-[10px] uppercase tracking-[0.1em] font-mono text-foreground/65 hover:text-foreground hover:border-foreground/30 transition-colors not-italic"
+                >
+                  Type it
+                </button>
+                {firmDomain && (
+                  <button
+                    type="button"
+                    onClick={runFindEmail}
+                    disabled={findState === "searching"}
+                    title={`Search likely emails at ${firmDomain}`}
+                    className="inline-flex items-center gap-1 px-2 h-6 rounded-sm bg-primary text-primary-foreground text-[10px] uppercase tracking-[0.1em] font-bold hover:opacity-90 transition-opacity disabled:opacity-40 not-italic"
+                  >
+                    {findState === "searching" ? (
+                      <Loader2 size={9} className="animate-spin" />
+                    ) : (
+                      <Sparkles size={9} />
+                    )}
+                    Find with Axon
+                  </button>
+                )}
+              </div>
+            </div>
+
+            {/* Phase 6: candidate list. Surfaces after runFindEmail
+              * finishes. Operator clicks any row to commit it as
+              * the partner's email via the same useUpdateContact
+              * mutation. */}
+            {findState === "results" && (
+              <div className="ml-[60px] space-y-1">
+                {findError && (
+                  <div className="flex items-start gap-1.5 text-[10.5px] text-destructive">
+                    <AlertCircle size={10} className="mt-0.5 flex-shrink-0" />
+                    <span>{findError}</span>
+                  </div>
+                )}
+                {!domainHasMx && candidates.length > 0 && (
+                  <div className="text-[10px] italic text-amber-500/85">
+                    Warning: {firmDomain} has no mail records -- these may bounce.
+                  </div>
+                )}
+                {candidates.length === 0 && !findError && (
+                  <div className="text-[10.5px] italic text-foreground/45">
+                    No candidates generated.
+                  </div>
+                )}
+                {candidates.length > 0 && (
+                  <div className="text-[9.5px] uppercase tracking-[0.12em] font-mono text-foreground/45">
+                    Best guesses -- click to use, top candidate first
+                  </div>
+                )}
+                {candidates.map((c) => (
+                  <button
+                    key={c.email}
+                    type="button"
+                    onClick={() => pickCandidate(c)}
+                    disabled={updateContactMut.isPending}
+                    className="w-full flex items-center gap-2 px-2 py-1 rounded-sm border border-border bg-card hover:bg-card/80 hover:border-foreground/25 transition-colors text-left disabled:opacity-40"
+                  >
+                    <ConfidenceDot confidence={c.confidence} />
+                    <span className="text-[11.5px] font-mono text-foreground/85 truncate flex-1">
+                      {c.email}
+                    </span>
+                    <span className="text-[9.5px] uppercase tracking-[0.12em] font-mono text-foreground/40">
+                      {c.pattern}
+                    </span>
+                    <span className="text-[10px] font-mono tabular-nums text-foreground/55 w-6 text-right">
+                      {c.confidence}
+                    </span>
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
         )}
         {partner.phone && (
           <ContactLine
@@ -784,6 +934,27 @@ function ContactLine({
 function Empty({ children }: { children: React.ReactNode }) {
   return (
     <p className="text-[11.5px] italic text-foreground/40">{children}</p>
+  );
+}
+
+/** Confidence indicator for the Find-email candidate list. Color-
+ *  graded so the operator can scan and pick the most-likely
+ *  pattern at a glance. NOT a verification signal -- just how
+ *  often the pattern is used at VC firms. */
+function ConfidenceDot({ confidence }: { confidence: number }) {
+  const tone =
+    confidence >= 70
+      ? "bg-emerald-500"
+      : confidence >= 50
+        ? "bg-primary"
+        : confidence >= 30
+          ? "bg-amber-500"
+          : "bg-foreground/25";
+  return (
+    <span
+      className={"inline-block w-1.5 h-1.5 rounded-full flex-shrink-0 " + tone}
+      title={`Pattern confidence: ${confidence}/100 -- not a verification`}
+    />
   );
 }
 
