@@ -76,6 +76,14 @@ import { MODULES } from "@/MyComponents/Onboarding/modulesCatalog";
 // Onboarding uses the live-preview Builder; Settings keeps the
 // flat ModulesPicker (imported there directly).
 import { ModulesBuilder } from "@/MyComponents/Onboarding/ModulesBuilder";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import GradientText from "../Reusables/gradientText";
 
 // ─────────────────────────────────────────────────────────────
 // Catalog
@@ -141,6 +149,7 @@ const FOUNDER_STEPS: FounderStepId[] = [
 interface ParsedEmployees {
   name: string;
   email: string;
+  is_founder: boolean;
 }
 
 interface Props {
@@ -157,6 +166,8 @@ const InitialOnboarding = ({
   debugMode = false,
 }: Props) => {
   const [isFounder, setIsFounder] = useState<boolean | null>(null);
+  const [phase, setPhase] = useState(1);
+  const [openDialog, setOpenDialog] = useState(false);
   const [stepId, setStepId] = useState<FounderStepId>("identity");
 
   const [companyId, setCompanyId] = useState<number | null>(null);
@@ -179,6 +190,7 @@ const InitialOnboarding = ({
 
   const founderForm = useForm({
     defaultValues: {
+      founderName: "",
       founderEmail: "",
       companyName: "",
       companyEmail: "",
@@ -186,57 +198,130 @@ const InitialOnboarding = ({
     onSubmit: async ({ value }) => {
       setBindError(null);
 
-      // Debug mode: skip the DB lookup + Stronghold write and
-      // fake-advance. Lets the dashboard preview pill walk
-      // through the entire wizard without touching real data.
-      if (debugMode) {
-        setCompanyId(0);
-        setCompanyName(value.companyName || "Preview Co.");
+      if (phase === 1) {
+        // Debug mode: skip the DB lookup + Stronghold write and
+        // fake-advance. Lets the dashboard preview pill walk
+        // through the entire wizard without touching real data.
+        if (debugMode) {
+          setCompanyId(0);
+          setCompanyName(value.companyName || "Preview Co.");
+          setStepId("industry");
+          return;
+        }
+        console.log(value);
+
+        const { data, error } = await takeOversupabase
+          .from("takeover_companies")
+          .select("id,initialized,companydb_url,companydb_key")
+          .eq("company_name", value.companyName)
+          .eq("founder_email", value.founderEmail)
+          .eq("company_email", value.companyEmail)
+          // *The `initialized` column is a safety value.
+          // Because there's no password/authentication, after founder initializes their company someone may get a hold of their information
+          // and try to initalize again ( therefore getting secret keys ).
+          // So this column value **IS** the authentication check.
+          // A company can only be initialized once, unless changed by us admins - TakeOver
+          .eq("initialized", false)
+          .single()
+          .overrideTypes<{
+            id: number;
+            initialized: boolean;
+            companydb_url: string;
+            companydb_key: string;
+          }>();
+
+        if (!data || error) {
+          setBindError(
+            "We couldn't find a company matching those details. Double-check the founder email, company name, and company email - they must match exactly what was set up with us.",
+          );
+          return;
+        }
+
+        try {
+          const sh = await getStronghold();
+          await sh.insertManyRecords([
+            { key: "company_name", value: value.companyName },
+            { key: "companydb_url", value: data.companydb_url },
+            { key: "companydb_key", value: data.companydb_key },
+          ]);
+          setCompanyId((data as { id: number }).id);
+          setCompanyName(value.companyName);
+        } catch (err) {
+          console.error("[onboarding] stronghold write failed:", err);
+          setBindError(
+            "Found your company, but failed to remember it locally. Restart the app and try again.",
+          );
+          return;
+        }
+
+        // Check if Founder is initialized or not
+        const companySupabase = await getCompanySupabase();
+        const { data: founderInitCheckData, error: founderInitCheckError } =
+          await companySupabase
+            .from(import.meta.env.DEV ? "demo_employee_table" : "employee")
+            .select("email")
+            .eq("email", value.founderEmail)
+            .single()
+            .overrideTypes<{ email: string }>();
+
+        // Let founder enter their name to initialize themselves
+        if (founderInitCheckError || !founderInitCheckData) {
+          console.warn(
+            "[initial_onboarding]: Founder not initialized. Letting Founder initialize themselves...",
+          );
+
+          // Open dialog
+          setOpenDialog(true);
+          setPhase(2);
+          return;
+        }
+      }
+
+      if (phase === 2) {
+        // Save Founder to `employee` table
+        const headers: Record<string, string> = import.meta.env.DEV
+          ? {
+              "Content-Type": "application/json",
+              "TakeOver-App": "true",
+              DevTakeOver: "true",
+            }
+          : { "Content-Type": "application/json", "TakeOver-App": "true" };
+        const res = await fetch(
+          `${import.meta.env.VITE_TAKEOVER_SITE_URL}/api/initialize_employees`,
+          {
+            method: "POST",
+            headers: headers,
+            body: JSON.stringify({
+              companyID: companyId,
+              list: [
+                {
+                  name: value.founderName,
+                  email: value.founderEmail,
+                  is_founder: true,
+                },
+              ],
+            } as {
+              companyID: number | null;
+              list: ParsedEmployees[];
+            }), // *Keep in mind that max payload is 2MB
+          },
+        );
+
+        const response: { success: boolean; error_msg?: string } =
+          await res.json();
+        if (!response.success) {
+          console.error(response.error_msg);
+          setBindError(response.error_msg ?? "Couldnt Initialize Founder.");
+          return;
+        }
+
         setStepId("industry");
         return;
       }
-      console.log(value);
 
-      const { data, error } = await takeOversupabase
-        .from("takeover_companies")
-        .select("id,initialized,companydb_url,companydb_key")
-        .eq("company_name", value.companyName)
-        .eq("founder_email", value.founderEmail)
-        .eq("company_email", value.companyEmail)
-        .eq("initialized", false)
-        .single()
-        .overrideTypes<{
-          id: number;
-          initialized: boolean;
-          companydb_url: string;
-          companydb_key: string;
-        }>();
-
-      if (!data || error) {
-        setBindError(
-          "We couldn't find a company matching those details. Double-check the founder email, company name, and company email - they must match exactly what was set up with us.",
-        );
-        return;
-      }
-
-      try {
-        const sh = await getStronghold();
-        await sh.insertManyRecords([
-          { key: "company_name", value: value.companyName },
-          { key: "companydb_url", value: data.companydb_url },
-          { key: "companydb_key", value: data.companydb_key },
-        ]);
-      } catch (err) {
-        console.error("[onboarding] stronghold write failed:", err);
-        setBindError(
-          "Found your company, but failed to remember it locally. Restart the app and try again.",
-        );
-        return;
-      }
-
-      setCompanyId((data as { id: number }).id);
-      setCompanyName(value.companyName);
       setStepId("industry");
+      founderForm.reset();
+      return;
     },
   });
 
@@ -245,6 +330,7 @@ const InitialOnboarding = ({
       mailListFile: "",
       mailList: [] as ParsedEmployees[],
       mailListImportKind: "" as "txt" | "csv",
+      singleAddText: "",
       singleAdd: [] as ParsedEmployees[],
     },
     onSubmit: async ({ value }) => {
@@ -272,6 +358,9 @@ const InitialOnboarding = ({
           body: JSON.stringify({
             companyID: companyId,
             list: mailList,
+          } as {
+            companyID: number | null;
+            list: ParsedEmployees[];
           }), // *Keep in mind that max payload is 2MB
         },
       );
@@ -384,12 +473,101 @@ const InitialOnboarding = ({
           )}
 
           {stepId === "company" && (
-            <CompanyBindingStep
-              key="company"
-              form={founderForm}
-              bindError={bindError}
-              onBack={goBack}
-            />
+            <>
+              <CompanyBindingStep
+                key="company"
+                form={founderForm}
+                bindError={bindError}
+                onBack={goBack}
+              />
+
+              <Dialog open={phase === 2 && openDialog}>
+                <DialogContent>
+                  <DialogHeader>
+                    <DialogTitle>
+                      Initializing Founder for{" "}
+                      <GradientText>
+                        {founderForm.getFieldValue("companyName")}
+                      </GradientText>
+                      !
+                    </DialogTitle>
+                    <DialogDescription>
+                      This is a one time process to initialize the company.
+                    </DialogDescription>
+                  </DialogHeader>
+                  <form
+                    onSubmit={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      founderForm.handleSubmit();
+                    }}
+                    className="space-y-3.5"
+                  >
+                    <founderForm.Field
+                      name="founderName"
+                      children={(field) => {
+                        return (
+                          <FormField label="Founder Name">
+                            <input
+                              name={field.name}
+                              type="text"
+                              autoComplete="off"
+                              autoCapitalize="words"
+                              placeholder="Sarah Smith"
+                              className="w-full px-3.5 py-2.5 bg-foreground/[0.04] border border-border-soft rounded-xl text-[13.5px] text-foreground placeholder:text-text-tertiary/60 outline-none focus:border-foreground/20 focus:bg-foreground/[0.06] transition-colors"
+                              value={field.state.value}
+                              onChange={(e) =>
+                                field.handleChange(e.target.value)
+                              }
+                            />
+                          </FormField>
+                        );
+                      }}
+                    />
+
+                    <founderForm.Subscribe
+                      selector={(state) => [
+                        state.canSubmit,
+                        state.isSubmitting,
+                      ]}
+                      children={([canSubmit, isSubmitting]) => {
+                        return (
+                          <div className="flex items-center justify-between gap-3 mt-7">
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setOpenDialog(false);
+                                setPhase(1);
+                              }}
+                              disabled={isSubmitting}
+                              className="inline-flex items-center gap-1.5 h-10 px-3.5 rounded-full text-[12px] font-semibold text-text-tertiary hover:text-foreground transition-colors disabled:opacity-50"
+                            >
+                              Cancel
+                            </button>
+                            <button
+                              type="submit"
+                              disabled={
+                                !canSubmit || isSubmitting || !!bindError
+                              }
+                              className="inline-flex items-center gap-2 h-10 px-5 rounded-full text-[12.5px] font-semibold bg-primary text-primary-foreground hover:bg-primary/90 shadow-[0_2px_12px_-2px_hsl(var(--primary)/0.45)] transition-all disabled:opacity-40 disabled:cursor-not-allowed disabled:shadow-none"
+                            >
+                              {isSubmitting ? (
+                                <>
+                                  <Loader2 size={13} className="animate-spin" />
+                                  Initializing...
+                                </>
+                              ) : (
+                                "Initialize Founder"
+                              )}
+                            </button>
+                          </div>
+                        );
+                      }}
+                    />
+                  </form>
+                </DialogContent>
+              </Dialog>
+            </>
           )}
 
           {stepId === "industry" && (
@@ -478,7 +656,7 @@ const InitialOnboarding = ({
 
                                   const matches = [
                                     ...content.matchAll(
-                                      /(?:\w+\.?)+@\w+\.com/gmu,
+                                      /(?:\w+\.?)+@\w+\.\w+/gimu,
                                     ),
                                   ];
                                   if (!matches) {
@@ -486,13 +664,17 @@ const InitialOnboarding = ({
                                     return;
                                   }
                                   for (const [
-                                    idx,
+                                    _,
                                     [email],
                                   ] of matches.entries()) {
                                     parsedContent.push({
                                       email: email,
-                                      name: `employee-${idx}`,
+                                      name: `employee-${Date.now()}`,
+                                      is_founder: false,
                                     });
+                                    setTimeout(() => {
+                                      return;
+                                    }, 100);
                                   }
                                 };
                                 return parsedContent;
@@ -582,78 +764,118 @@ const InitialOnboarding = ({
                 </FieldGroup>
 
                 <FieldGroup title="Manual Import" icon={Keyboard}>
-                  <employeesForm.Field
-                    name="singleAdd"
-                    children={(field) => {
-                      const regex = /((?:\w+\s?)+) - ((?:\w+\.?)+@\w+\.com)/iu;
-                      const parseInput = (input: string): ParsedEmployees => {
-                        const match = input.match(regex)!;
-                        return {
-                          email: match[2],
-                          name: match[1],
-                        };
-                      };
+                  <employeesForm.Subscribe
+                    selector={(state) => state.values.singleAddText}
+                    children={(singleAddText) => {
                       return (
-                        <FormField label="Employee">
-                          <input
-                            id={`${field.name}_id`}
-                            name={field.name}
-                            type="text"
-                            autoComplete="off"
-                            onChange={(e) => {
-                              if (regex.test(e.target.value)) {
-                                field.pushValue(parseInput(e.target.value));
-                                setBindError(null);
-                              } else {
-                                setBindError(
-                                  e.target.value.length > 0
-                                    ? "Invalid Format. Must be <name> - <email>"
-                                    : null,
-                                );
-                              }
-                            }}
-                            className="w-full px-3.5 py-2.5 bg-foreground/[0.04] border border-border-soft rounded-xl text-[13.5px] text-foreground placeholder:text-text-tertiary/60 outline-none focus:border-foreground/20 focus:bg-foreground/[0.06] transition-colors"
-                          />
-
-                          {field.state.value.map((empl, i) => {
+                        <employeesForm.Field
+                          name="singleAdd"
+                          children={(field) => {
+                            const regex =
+                              /((?:\w+\s?)+) - ((?:\w+\.?)+@\w+\.\w+)/iu;
+                            const parseInput = (
+                              input: string,
+                            ): ParsedEmployees => {
+                              const match = input.match(regex)!;
+                              return {
+                                email: match[2],
+                                name: match[1],
+                                is_founder: false,
+                              };
+                            };
                             return (
-                              <section
-                                key={empl.name}
-                                onClick={() => {
-                                  employeesForm.removeFieldValue(
-                                    "singleAdd",
-                                    i,
-                                  );
-                                }}
-                                className="my-2 text-left rounded-2xl border p-4 transition-colors relative border-border-soft bg-foreground/[0.03] hover:bg-foreground/[0.05] hover:border-foreground/20 cursor-pointer select-none"
-                              >
-                                <div className="flex items-start gap-3">
-                                  {/* Monogram */}
-                                  <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0 border">
-                                    <span
-                                      className="font-bold leading-none"
-                                      style={{
-                                        fontSize: Math.round(40 * 0.4),
-                                        fontFamily:
-                                          "var(--ed-font-display, Inter), system-ui, sans-serif",
+                              <FormField label="Employee">
+                                <section className="flex items-center gap-4">
+                                  <input
+                                    id={`${field.name}_id`}
+                                    name={field.name}
+                                    type="text"
+                                    autoComplete="off"
+                                    value={singleAddText}
+                                    onChange={(e) =>
+                                      employeesForm.setFieldValue(
+                                        "singleAddText",
+                                        e.target.value,
+                                      )
+                                    }
+                                    placeholder="e.g. Sarah Smith - ssmith@acme.co"
+                                    className="w-full px-3.5 py-2.5 bg-foreground/[0.04] border border-border-soft rounded-xl text-[13.5px] text-foreground placeholder:text-text-tertiary/60 outline-none focus:border-foreground/20 focus:bg-foreground/[0.06] transition-colors"
+                                  />
+                                  <button
+                                    type="button"
+                                    disabled={!regex.test(singleAddText)}
+                                    className="inline-flex items-center gap-2 h-8 px-5 rounded-lg text-[12.5px] font-semibold bg-emerald-700 text-emerald-200 shadow-sm shadow-emerald-500 hover:bg-emerald-500/90 border border-emerald-600 transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+                                    onClick={() => {
+                                      if (regex.test(singleAddText)) {
+                                        const empl = parseInput(singleAddText);
+                                        // *Avoid duplicate entries
+                                        if (
+                                          !field.state.value.some(
+                                            (v) => v.email == empl.email,
+                                          )
+                                        ) {
+                                          field.pushValue(empl);
+                                          employeesForm.setFieldValue(
+                                            "singleAddText",
+                                            "",
+                                          );
+                                        }
+                                        setBindError(null);
+                                      } else {
+                                        setBindError(
+                                          singleAddText.length > 0
+                                            ? "Invalid Format. Must be: name - email"
+                                            : null,
+                                        );
+                                      }
+                                    }}
+                                  >
+                                    Insert
+                                  </button>
+                                </section>
+
+                                {field.state.value.map((empl, i) => {
+                                  return (
+                                    <section
+                                      key={empl.name}
+                                      onClick={() => {
+                                        employeesForm.removeFieldValue(
+                                          "singleAdd",
+                                          i,
+                                        );
                                       }}
+                                      className="my-2 text-left rounded-2xl border p-4 transition-colors relative border-border-soft bg-foreground/[0.03] hover:bg-foreground/[0.05] hover:border-foreground/20 cursor-pointer select-none"
                                     >
-                                      {empl.name.charAt(0)}
-                                    </span>
-                                  </div>
-                                  <div className="min-w-0 flex-1">
-                                    <h3 className="text-[13.5px] font-bold text-foreground/90 leading-tight">
-                                      {empl.name}
-                                    </h3>
-                                    <p className="text-[11.5px] text-text-tertiary mt-1 leading-relaxed">
-                                      {empl.email}
-                                    </p>
-                                  </div>
-                                </div>
-                              </section>
+                                      <div className="flex items-start gap-3">
+                                        {/* Monogram */}
+                                        <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0 border">
+                                          <span
+                                            className="font-bold leading-none"
+                                            style={{
+                                              fontSize: Math.round(40 * 0.4),
+                                              fontFamily:
+                                                "var(--ed-font-display, Inter), system-ui, sans-serif",
+                                            }}
+                                          >
+                                            {empl.name.charAt(0)}
+                                          </span>
+                                        </div>
+                                        <div className="min-w-0 flex-1">
+                                          <h3 className="text-[13.5px] font-bold text-foreground/90 leading-tight">
+                                            {empl.name}
+                                          </h3>
+                                          <p className="text-[11.5px] text-text-tertiary mt-1 leading-relaxed">
+                                            {empl.email}
+                                          </p>
+                                        </div>
+                                      </div>
+                                    </section>
+                                  );
+                                })}
+                              </FormField>
                             );
-                          })}
-                        </FormField>
+                          }}
+                        />
                       );
                     }}
                   />

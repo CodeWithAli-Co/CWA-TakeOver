@@ -42,8 +42,12 @@ export const LoginPage = () => {
   const [submitting, setSubmitting] = useState(false);
   const [authError, setAuthError] = useState<string | null>(null);
   const [compLookUpError, setCompLookUpError] = useState<string | null>(null);
+  const [employeeLookUpError, setEmployeeLookUpError] = useState<string | null>(
+    null,
+  );
   const [loginPhase, setLoginPhase] = useState<number>(1);
   const [hasInit, setHasInit] = useState<boolean>(false);
+  const [initPW, setInitPW] = useState<string | null>(null);
   // Forgot-password flow state — lets us show a success toast
   // inline instead of a blocking dialog.
   const [resetting, setResetting] = useState(false);
@@ -54,8 +58,10 @@ export const LoginPage = () => {
     onSubmit: async ({ value }) => {
       setAuthError(null);
       setCompLookUpError(null);
+      setEmployeeLookUpError(null);
       setSubmitting(true);
       const stronghold = await getStronghold();
+      const companySupabase = await getCompanySupabase();
 
       // --- PHASE 1 ---
 
@@ -74,8 +80,6 @@ export const LoginPage = () => {
             return;
           }
 
-          const companySupabase = await getCompanySupabase();
-
           // Check if user already initialzed account or not
           const { data, error } = await companySupabase
             .from(import.meta.env.DEV ? "demo_employee_table" : "employee")
@@ -87,6 +91,7 @@ export const LoginPage = () => {
           // If error, user doesnt exist in company ( or something else )
           if (error) {
             console.error("User not Found in Company");
+            setEmployeeLookUpError("You are not registered at that Company.");
             setSubmitting(false);
             return;
           }
@@ -107,6 +112,8 @@ export const LoginPage = () => {
             ? console.log("User INIT PW: ", data)
             : console.log("[login_page]: Moving to Login Phase 2...");
 
+          setInitPW(data.init_pw);
+
           if (!data.init_pw) {
             // User is already initialized
             setHasInit(true);
@@ -123,27 +130,58 @@ export const LoginPage = () => {
       // --- PHASE 2 ---
 
       if (loginPhase === 2) {
-        try {
-          // Auto-login user from company DB and let them set new pw ( dont save )
-          const { data, error } =
-            await takeOversupabase.auth.signInWithPassword({
-              email: value.email.trim(),
-              password: value.password,
-            });
+        let has_authenticated_role: boolean = false;
 
-          if (error) {
-            // Map Supabase's exact error messages to user-friendly copy.
-            const msg = error.message.toLowerCase();
-            if (msg.includes("invalid login credentials")) {
-              setAuthError("Email or password is incorrect.");
-            } else if (msg.includes("email not confirmed")) {
-              setAuthError(
-                "Check your email to confirm the account, then try again.",
-              );
-            } else {
-              setAuthError(error.message);
+        try {
+          // Auto-login NEW user from company DB and let them set new pw ( dont save )
+          if (!hasInit && initPW) {
+            const { data, error } =
+              await companySupabase.auth.signInWithPassword({
+                email: value.email.trim(),
+                password: initPW,
+              });
+
+            if (error) {
+              console.log(initPW)
+              setAuthError("Email or Initialization password is incorrect.");
+              return;
             }
-            return;
+
+            const { error: pwSetError } = await companySupabase.auth.updateUser(
+              {
+                password: value.password,
+              },
+            );
+
+            if (pwSetError) {
+              setAuthError(pwSetError.message);
+              return;
+            }
+
+            has_authenticated_role = data.user.role === "authenticated";
+          } else {
+            const { data, error } =
+              await companySupabase.auth.signInWithPassword({
+                email: value.email.trim(),
+                password: value.password,
+              });
+
+            if (error) {
+              // Map Supabase's exact error messages to user-friendly copy.
+              const msg = error.message.toLowerCase();
+              if (msg.includes("invalid login credentials")) {
+                setAuthError("Email or password is incorrect.");
+              } else if (msg.includes("email not confirmed")) {
+                setAuthError(
+                  "Check your email to confirm the account, then try again.",
+                );
+              } else {
+                setAuthError(error.message);
+              }
+              return;
+            }
+
+            has_authenticated_role = data.user.role === "authenticated";
           }
 
           // Load Company Components
@@ -152,11 +190,26 @@ export const LoginPage = () => {
           // Double-check the identity is email-verified before flipping
           // the store flag. Keeps the "user half-signed-up and stuck"
           // edge case from landing them in a broken state.
-          const { data: verify } =
-            await takeOversupabase.auth.getUserIdentities();
-          const verified =
-            verify?.identities?.[0]?.identity_data?.email_verified;
-          if (data.user?.role === "authenticated" && verified) {
+          const { data: userVerify, error: userVerifyError } =
+            await companySupabase.auth.getUser();
+
+          if (!userVerify || userVerifyError) {
+            setAuthError("No Session detected. Contact Support if needed.");
+            return;
+          }
+          const verified = userVerify.user?.email_confirmed_at;
+          if (has_authenticated_role && verified) {
+            // Remove `init_pw` from database
+            const { error: remInitPwError } = await companySupabase
+              .from(import.meta.env.DEV ? "demo_employee_table" : "employee")
+              .update({ init_pw: null })
+              .eq("email", userVerify.user!.email);
+
+            if (remInitPwError) {
+              setAuthError("Couldnt update password properly.");
+              return;
+            }
+
             setIsLoggedIn("true");
             localStorage.setItem("isLoggedIn", "true");
           } else {
@@ -267,6 +320,15 @@ export const LoginPage = () => {
                     This process might take a minute
                   </p>
                 </section>
+
+                {employeeLookUpError && (
+                  <div className="flex items-start gap-2 rounded-md border border-red-500/30 bg-red-500/10 px-3 py-2">
+                    <AlertCircle className="h-3.5 w-3.5 mt-0.5 text-red-400 shrink-0" />
+                    <p className="text-[12px] text-red-200 leading-snug">
+                      {employeeLookUpError}
+                    </p>
+                  </div>
+                )}
               </>
             )}
 

@@ -132,8 +132,8 @@ export const getCompanySupabase = async () => {
   return createClient(compDB_URL, compDB_KEY, {
     auth: {
       storageKey: "sb-takeover-tenant-auth",
-      persistSession: false,
-      autoRefreshToken: false,
+      persistSession: true,
+      autoRefreshToken: true,
     },
   });
 };
