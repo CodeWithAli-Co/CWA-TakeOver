@@ -87,6 +87,10 @@ const SALES_TABS = [
   { value: "contacts",  label: "Contacts",  icon: Users },
   { value: "companies", label: "Companies", icon: Building2 },
   { value: "activity",  label: "Activity",  icon: Activity },
+  // Fundraise was briefly a tab here -- promoted to its own
+  // /fundraise route since the motion (raising money) is
+  // sufficiently distinct from regular sales. The underlying
+  // investor_profiles table still references crm_companies + crm_contacts.
 ] as const;
 
 export const SalesPage: React.FC = () => {

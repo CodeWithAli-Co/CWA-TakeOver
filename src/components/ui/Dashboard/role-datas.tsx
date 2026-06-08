@@ -37,6 +37,7 @@ import {
   Briefcase,
   Compass,
   TrendingUp,
+  PiggyBank,
   type LucideIcon,
 } from "lucide-react";
 
@@ -1045,6 +1046,16 @@ export const adminData = {
       icon: TrendingUp,
     },
     {
+      // Fundraise — investor outreach pipeline. Standalone surface
+      // (not a Sales sub-tab) since raising money is a sufficiently
+      // distinct working mode from selling product. Shares the
+      // underlying crm_companies + crm_contacts tables.
+      title: "Fundraise",
+      url: "/fundraise",
+      isActive: false,
+      icon: PiggyBank,
+    },
+    {
       // Inbox — send email from inside Takeover via the operator's
       // connected Gmail. Compose-to-anyone surface; deal-attached
       // sends still live in the deal drawer.
@@ -1428,6 +1439,14 @@ export const cooData = {
       company: "codeWithAli" as const,
     },
     {
+      // Fundraise — investor outreach. See sister Sales entry above.
+      title: "Fundraise",
+      url: "/fundraise",
+      icon: PiggyBank,
+      isActive: false,
+      company: "codeWithAli" as const,
+    },
+    {
       // Inbox — send email via the operator's connected Gmail.
       title: "Inbox",
       url: "/inbox",
@@ -1652,6 +1671,14 @@ export const ceoData = {
       title: "Sales",
       url: "/sales",
       icon: TrendingUp,
+      isActive: false,
+      company: "codeWithAli" as const,
+    },
+    {
+      // Fundraise — investor outreach. See sister Sales entry above.
+      title: "Fundraise",
+      url: "/fundraise",
+      icon: PiggyBank,
       isActive: false,
       company: "codeWithAli" as const,
     },
@@ -1970,6 +1997,16 @@ export const cfoData = {
       url: "/sales",
       isActive: false,
       icon: TrendingUp,
+    },
+    {
+      // Fundraise — investor outreach pipeline. Standalone surface
+      // (not a Sales sub-tab) since raising money is a sufficiently
+      // distinct working mode from selling product. Shares the
+      // underlying crm_companies + crm_contacts tables.
+      title: "Fundraise",
+      url: "/fundraise",
+      isActive: false,
+      icon: PiggyBank,
     },
     {
       // Inbox — send email from inside Takeover via the operator's
