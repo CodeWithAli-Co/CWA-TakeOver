@@ -62,6 +62,9 @@ import { useFundraiseStore } from "./fundraiseStore";
 import { PIPELINE_STAGE_LABEL } from "@/stores/investors";
 import { FollowupsDueStrip } from "./FollowupsDueStrip";
 import { DiscoverInvestorsModal } from "./DiscoverInvestorsModal";
+import { BatchOutreachModal } from "./BatchOutreachModal";
+import { useBatchOutreachStore } from "./batchOutreachStore";
+import { Send as SendIcon } from "lucide-react";
 
 // localStorage key for the view-mode preference. Persisted so the
 // operator's choice survives reloads -- /fundraise is a daily
@@ -234,6 +237,18 @@ export function FundraisePage() {
               <Sparkles size={13} />
               Find with Axon
             </button>
+            {/* Phase 7: batch outreach. Opens the BatchOutreachModal
+              * which handles the picker + parallel draft + sequential
+              * send pipeline. */}
+            <button
+              type="button"
+              onClick={() => useBatchOutreachStore.getState().openModal()}
+              title="Draft + send to multiple investors in one pass"
+              className="inline-flex items-center gap-2 px-3.5 h-9 rounded-sm border border-primary/40 bg-primary/[0.08] text-[12px] font-bold uppercase tracking-wider text-primary hover:bg-primary/[0.15] transition-colors"
+            >
+              <SendIcon size={13} />
+              Batch outreach
+            </button>
             <button
               type="button"
               onClick={() => setAddOpen(true)}
@@ -400,6 +415,11 @@ export function FundraisePage() {
         open={discoverOpen}
         onClose={() => setDiscoverOpen(false)}
       />
+      {/* Phase 7: batch outreach. Reads its own open state from
+        * useBatchOutreachStore so other surfaces (Cmd+K, kanban
+        * column buttons in future) can trigger it without prop
+        * threading. */}
+      <BatchOutreachModal />
       <FundraiseSettingsModal
         open={settingsOpen}
         onClose={() => setSettingsOpen(false)}
