@@ -392,7 +392,16 @@ async function uploadInstaller(
   const initRes = await fetch(UPLOAD_URL, {
     method: "POST",
     headers,
-    body: JSON.stringify({ filename: fileName, signature, notes, target }),
+    body: JSON.stringify({
+      filename: fileName,
+      signature,
+      notes,
+      target,
+      // Explicit version. macOS .app.tar.gz has no version in its filename,
+      // so the server can't parse one out -- we send the version we derived
+      // from the sibling .dmg here.
+      version: derivedVersion,
+    }),
   });
   if (!initRes.ok) {
     throw new Error(
