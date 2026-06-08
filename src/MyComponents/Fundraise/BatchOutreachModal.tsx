@@ -66,6 +66,11 @@ import {
   makeBatchDraft,
   type BatchDraft,
 } from "./batchOutreachStore";
+import {
+  checkBounces,
+  filterBouncesByCandidates,
+  type BounceRecord,
+} from "@/Fundraise/checkBounces";
 
 // Spacing between sequential sends. 2.5s feels natural to the
 // recipients (they don't all land in the same minute) and stays
@@ -734,12 +739,14 @@ function StatusIcon({ status }: { status: BatchDraft["status"] }) {
 // ─────────────────────────────────────────────────────────────────
 function DoneState({ onClose }: { onClose: () => void }) {
   const drafts = useBatchOutreachStore((s) => s.drafts);
+  const sendStartedAt = useBatchOutreachStore((s) => s.sendStartedAt);
   const list = Array.from(drafts.values());
   const sent = list.filter((d) => d.status === "sent").length;
   const failed = list.filter((d) => d.status === "failed").length;
   const skipped = list.filter((d) => d.status === "skipped").length;
+  const sentDrafts = list.filter((d) => d.status === "sent");
   return (
-    <div className="flex flex-col items-center justify-center py-12 text-center">
+    <div className="flex flex-col items-center justify-center py-8">
       <div
         className={
           "inline-flex items-center justify-center w-12 h-12 rounded-full mb-3 " +
@@ -750,22 +757,160 @@ function DoneState({ onClose }: { onClose: () => void }) {
       >
         <CheckCircle2 size={22} />
       </div>
-      <h3 className="text-[14px] font-semibold text-foreground mb-1 m-0">
+      <h3 className="text-[14px] font-semibold text-foreground mb-1 m-0 text-center">
         Sent {sent} emails
       </h3>
       {(failed > 0 || skipped > 0) && (
-        <p className="text-[11.5px] text-foreground/55 max-w-sm">
+        <p className="text-[11.5px] text-foreground/55 max-w-sm text-center">
           {failed > 0 && `${failed} failed. `}
           {skipped > 0 && `${skipped} skipped (aborted).`}
         </p>
       )}
+
+      {/* Phase 8.3: bounce-check panel. Operator-driven check; bounces
+        * typically arrive 10-90s after send so manual feels right. */}
+      {sent > 0 && sendStartedAt && (
+        <BounceCheckPanel since={sendStartedAt} sentDrafts={sentDrafts} />
+      )}
+
       <button
         type="button"
         onClick={onClose}
-        className="mt-4 inline-flex items-center gap-1.5 px-3 h-8 rounded-sm bg-primary text-primary-foreground text-[11.5px] font-bold uppercase tracking-wider hover:opacity-90 transition-opacity"
+        className="mt-6 inline-flex items-center gap-1.5 px-3 h-8 rounded-sm bg-primary text-primary-foreground text-[11.5px] font-bold uppercase tracking-wider hover:opacity-90 transition-opacity"
       >
         Close
       </button>
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────
+// BounceCheckPanel -- manual "did anything bounce?" check after the
+// batch finishes. Operator-driven (not auto-polling): bounces arrive
+// at unpredictable times, and a manual button means no orphaned
+// timers if the operator closes the modal early.
+// ─────────────────────────────────────────────────────────────────
+function BounceCheckPanel({
+  since,
+  sentDrafts,
+}: {
+  since: string;
+  sentDrafts: BatchDraft[];
+}) {
+  const [state, setState] = useState<
+    | { phase: "idle" }
+    | { phase: "checking" }
+    | { phase: "done"; matched: BounceRecord[]; error: string | null }
+  >({ phase: "idle" });
+
+  const sentEmails = useMemo(
+    () => sentDrafts.map((d) => d.partner_email),
+    [sentDrafts],
+  );
+
+  async function runCheck() {
+    setState({ phase: "checking" });
+    const result = await checkBounces({
+      sinceIso: since,
+      limit: 30,
+    });
+    const matched = filterBouncesByCandidates(result.bounces, sentEmails);
+    setState({
+      phase: "done",
+      matched,
+      error: result.error ?? null,
+    });
+  }
+
+  return (
+    <div className="mt-6 w-full max-w-md">
+      <div className="flex items-center justify-between gap-3 mb-2">
+        <div className="text-[10.5px] uppercase tracking-[0.14em] font-mono text-foreground/45">
+          Deliverability
+        </div>
+        {state.phase !== "checking" && (
+          <button
+            type="button"
+            onClick={runCheck}
+            className="inline-flex items-center gap-1 px-2 h-7 rounded-sm border border-border bg-secondary text-[10.5px] uppercase tracking-[0.1em] font-bold text-foreground/75 hover:text-foreground hover:border-foreground/30 transition-colors"
+          >
+            <RefreshCcw size={10} />
+            {state.phase === "done" ? "Check again" : "Check for bounces"}
+          </button>
+        )}
+      </div>
+
+      {state.phase === "idle" && (
+        <div className="text-[11px] text-foreground/55 italic px-3 py-2.5 rounded-sm border border-dashed border-border/70 bg-card/40">
+          Bounces usually land within ~30 seconds. Wait a beat, then click
+          to scan your inbox for delivery failures from this batch.
+        </div>
+      )}
+
+      {state.phase === "checking" && (
+        <div className="flex items-center gap-2 px-3 py-2.5 rounded-sm border border-border bg-card/60 text-[11.5px] text-foreground/65">
+          <Loader2 size={12} className="animate-spin text-primary" />
+          Scanning Gmail for bounces...
+        </div>
+      )}
+
+      {state.phase === "done" && (
+        <>
+          {state.error && (
+            <div className="flex items-start gap-1.5 text-[10.5px] text-destructive mb-2">
+              <AlertCircle size={10} className="mt-0.5 flex-shrink-0" />
+              <span>{state.error}</span>
+            </div>
+          )}
+          {state.matched.length === 0 ? (
+            <div className="flex items-center gap-2 px-3 py-2.5 rounded-sm border border-emerald-500/40 bg-emerald-500/[0.07] text-[11.5px] text-emerald-300/90">
+              <CheckCircle2 size={12} className="text-emerald-400" />
+              No bounces detected. All sends delivered.
+            </div>
+          ) : (
+            <div className="space-y-1.5">
+              <div className="text-[10.5px] font-mono text-destructive/80 uppercase tracking-[0.12em]">
+                {state.matched.length} bounce
+                {state.matched.length === 1 ? "" : "s"} detected
+              </div>
+              {state.matched.map((b) => {
+                const draft = sentDrafts.find(
+                  (d) =>
+                    d.partner_email.toLowerCase() === b.failed_email,
+                );
+                return (
+                  <div
+                    key={b.bounce_message_id}
+                    className="rounded-sm border border-destructive/40 bg-destructive/[0.05] px-3 py-2"
+                  >
+                    <div className="flex items-baseline justify-between gap-2">
+                      <span className="text-[12px] font-semibold text-foreground truncate">
+                        {draft?.firm_name ?? "Unknown firm"}
+                      </span>
+                      <span className="text-[10px] font-mono tabular-nums text-foreground/40">
+                        {new Date(b.bounce_time_iso).toLocaleTimeString(
+                          undefined,
+                          { hour: "2-digit", minute: "2-digit" },
+                        )}
+                      </span>
+                    </div>
+                    <div className="text-[10.5px] font-mono text-destructive/85 truncate">
+                      {b.failed_email}
+                    </div>
+                    <div className="text-[10.5px] text-foreground/55 mt-1 line-clamp-2">
+                      {b.reason_snippet || "No reason in bounce body."}
+                    </div>
+                    <div className="text-[10px] text-foreground/45 italic mt-1">
+                      Open this firm in the drawer and re-run Find with Axon
+                      for a fresh candidate.
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </>
+      )}
     </div>
   );
 }
@@ -874,6 +1019,10 @@ async function runSequentialSend(args: {
 
   args.setStage("sending");
   args.setProgress(0, approved.length);
+  // Stamp the start time so the bounce-check panel in the Done state
+  // can scope its Gmail query to "since this batch began" instead of
+  // returning ancient bounces from prior rounds.
+  useBatchOutreachStore.getState().markSendStarted();
 
   for (let i = 0; i < approved.length; i++) {
     const draft = approved[i]!;

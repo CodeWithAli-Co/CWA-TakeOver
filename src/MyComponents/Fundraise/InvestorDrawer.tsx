@@ -48,7 +48,7 @@ import {
   findPartnerEmail,
   type EmailCandidate,
 } from "@/Fundraise/findPartnerEmail";
-import { AlertCircle } from "lucide-react";
+import { AlertCircle, CheckCircle2 } from "lucide-react";
 
 interface Props {
   investorId: string | null;
@@ -402,6 +402,10 @@ function PartnersPanel({
   // one set.
   const firmDomain =
     detail.company.domain ?? extractDomain(detail.website) ?? null;
+  // Firm name -- helps Axon's web_search disambiguate when the
+  // partner has a common name. "Mike Vernal at Conviction" is
+  // unambiguous; "Mike Vernal" alone is not.
+  const firmName = detail.company_name ?? detail.company.name ?? "";
   return (
     <ul className="list-none p-0 m-0 space-y-2">
       {detail.partners.map((p) => (
@@ -410,6 +414,7 @@ function PartnersPanel({
           partner={p}
           onDraft={onDraft}
           firmDomain={firmDomain}
+          firmName={firmName}
         />
       ))}
     </ul>
@@ -440,10 +445,12 @@ function PartnerRow({
   partner,
   onDraft,
   firmDomain,
+  firmName,
 }: {
   partner: InvestorDetail["partners"][number];
   onDraft: (partnerId: string, channel: DraftChannel) => void;
   firmDomain: string | null;
+  firmName: string;
 }) {
   const updateContactMut = useUpdateContact();
   const [editingEmail, setEditingEmail] = useState(false);
@@ -495,6 +502,7 @@ function PartnerRow({
     const result = await findPartnerEmail({
       partner_name: partner.name ?? "",
       firm_domain: firmDomain,
+      firm_name: firmName,
     });
     setCandidates(result.candidates);
     setDomainHasMx(result.domain_has_mx);
@@ -672,29 +680,71 @@ function PartnerRow({
                 )}
                 {candidates.length > 0 && (
                   <div className="text-[9.5px] uppercase tracking-[0.12em] font-mono text-foreground/45">
-                    Best guesses -- click to use, top candidate first
+                    {candidates[0]?.source === "web"
+                      ? "Verified by Axon at top, pattern guesses below"
+                      : "Best guesses -- click to use, top candidate first"}
                   </div>
                 )}
-                {candidates.map((c) => (
-                  <button
-                    key={c.email}
-                    type="button"
-                    onClick={() => pickCandidate(c)}
-                    disabled={updateContactMut.isPending}
-                    className="w-full flex items-center gap-2 px-2 py-1 rounded-sm border border-border bg-card hover:bg-card/80 hover:border-foreground/25 transition-colors text-left disabled:opacity-40"
-                  >
-                    <ConfidenceDot confidence={c.confidence} />
-                    <span className="text-[11.5px] font-mono text-foreground/85 truncate flex-1">
-                      {c.email}
-                    </span>
-                    <span className="text-[9.5px] uppercase tracking-[0.12em] font-mono text-foreground/40">
-                      {c.pattern}
-                    </span>
-                    <span className="text-[10px] font-mono tabular-nums text-foreground/55 w-6 text-right">
-                      {c.confidence}
-                    </span>
-                  </button>
-                ))}
+                {candidates.map((c) => {
+                  const isVerified = c.source === "web";
+                  return (
+                    <button
+                      key={c.email}
+                      type="button"
+                      onClick={() => pickCandidate(c)}
+                      disabled={updateContactMut.isPending}
+                      title={
+                        isVerified && c.source_url
+                          ? `Verified at ${c.source_url}`
+                          : undefined
+                      }
+                      className={
+                        isVerified
+                          ? "w-full flex items-center gap-2 px-2 py-1 rounded-sm border border-emerald-500/50 bg-emerald-500/[0.07] hover:bg-emerald-500/[0.12] hover:border-emerald-500/70 transition-colors text-left disabled:opacity-40"
+                          : "w-full flex items-center gap-2 px-2 py-1 rounded-sm border border-border bg-card hover:bg-card/80 hover:border-foreground/25 transition-colors text-left disabled:opacity-40"
+                      }
+                    >
+                      {isVerified ? (
+                        <CheckCircle2
+                          size={11}
+                          className="text-emerald-400 flex-shrink-0"
+                        />
+                      ) : (
+                        <ConfidenceDot confidence={c.confidence} />
+                      )}
+                      <span
+                        className={
+                          isVerified
+                            ? "text-[11.5px] font-mono text-foreground truncate flex-1"
+                            : "text-[11.5px] font-mono text-foreground/85 truncate flex-1"
+                        }
+                      >
+                        {c.email}
+                      </span>
+                      {isVerified ? (
+                        <span
+                          className="text-[9.5px] uppercase tracking-[0.12em] font-mono text-emerald-400/85 truncate max-w-[140px]"
+                          title={c.source_url ?? undefined}
+                        >
+                          {c.source_label ?? "verified"}
+                        </span>
+                      ) : (
+                        <span className="text-[9.5px] uppercase tracking-[0.12em] font-mono text-foreground/40">
+                          {c.pattern}
+                        </span>
+                      )}
+                      <span
+                        className={
+                          isVerified
+                            ? "text-[10px] font-mono tabular-nums text-emerald-400/85 w-6 text-right"
+                            : "text-[10px] font-mono tabular-nums text-foreground/55 w-6 text-right"
+                        }
+                      >
+                        {c.confidence}
+                      </span>
+                    </button>
+                  );
+                })}
               </div>
             )}
           </div>

@@ -83,6 +83,12 @@ export interface BatchOutreachState {
    *  send loop checks this between rows and bails. */
   aborted: boolean;
 
+  /** ISO timestamp captured when the send loop starts. Used by the
+   *  bounce-check panel in the Done state to scope its Gmail query
+   *  to bounces from THIS batch (not ancient ones). Null until the
+   *  first send goes out. */
+  sendStartedAt: string | null;
+
   // ── Actions ────────────────────────────────────────────────
   openModal: () => void;
   closeModal: () => void;
@@ -98,6 +104,11 @@ export interface BatchOutreachState {
 
   setProgress: (current: number, total: number) => void;
   abort: () => void;
+
+  /** Stamp sendStartedAt with the current time. Call once, right
+   *  before the first send goes out. The bounce checker uses this
+   *  as the `since` bound. */
+  markSendStarted: () => void;
 }
 
 const emptyDrafts = new Map<string, BatchDraft>();
@@ -110,6 +121,7 @@ export const useBatchOutreachStore = create<BatchOutreachState>((set) => ({
   drafts: emptyDrafts,
   progress: { current: 0, total: 0 },
   aborted: false,
+  sendStartedAt: null,
 
   openModal: () => set({ open: true }),
   closeModal: () => set({ open: false }),
@@ -121,6 +133,7 @@ export const useBatchOutreachStore = create<BatchOutreachState>((set) => ({
       drafts: new Map(),
       progress: { current: 0, total: 0 },
       aborted: false,
+      sendStartedAt: null,
     }),
 
   setStage: (stage) => set({ stage }),
@@ -156,6 +169,11 @@ export const useBatchOutreachStore = create<BatchOutreachState>((set) => ({
     set({ progress: { current, total } }),
 
   abort: () => set({ aborted: true }),
+
+  markSendStarted: () =>
+    set((s) =>
+      s.sendStartedAt ? {} : { sendStartedAt: new Date().toISOString() },
+    ),
 }));
 
 /** Build a BatchDraft skeleton from an Axon result + investor metadata.
