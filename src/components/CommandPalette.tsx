@@ -35,6 +35,14 @@ import type { ActivityType } from "@/stores/crm";
 import { ActiveUser } from "@/stores/query";
 import { useRolePreview } from "@/stores/store";
 import { isCLevel } from "@/MyComponents/Dashboard/row4ViewStore";
+import { useFundraiseStore } from "@/MyComponents/Fundraise/fundraiseStore";
+import {
+  useInvestors,
+  PIPELINE_STAGE_LABEL,
+  INVESTOR_PIPELINE_STAGES,
+  type InvestorPipelineStage,
+} from "@/stores/investors";
+import { PiggyBank } from "lucide-react";
 
 interface CommandItem {
   /** Stable key for selection state. */
@@ -64,6 +72,16 @@ export function CommandPalette() {
   const openCreateGrowthTrack = useCreateGrowthTrackDialog((s) => s.openDialog);
   const openLogActivity = useLogActivityDialog((s) => s.openDialog);
   const toggleFromRow4 = useRow4View((s) => s.toggleFrom);
+
+  // Fundraise: read the investor list (live) + the global store
+  // dispatch so the palette can open the drawer or filter the
+  // kanban from anywhere. useInvestors() returns [] when not
+  // authenticated -- that gracefully degrades the section to
+  // empty (no nav-fundraise broken, just no per-investor items).
+  const { data: investors = [] } = useInvestors();
+  const openInvestorInStore = useFundraiseStore((s) => s.openInvestor);
+  const setStageFilterInStore = useFundraiseStore((s) => s.setStageFilter);
+  const setPendingViewMode = useFundraiseStore((s) => s.setPendingViewMode);
   // Resolve current effective Row 4 view so the toggle works even
   // when the user hasn't set an explicit preference yet (they're on
   // the role default). Mirror Row4Swapper's resolution: preview role
@@ -124,6 +142,7 @@ export function CommandPalette() {
       { id: "nav-reports",     label: "Reports",         icon: Inbox,          hint: "Go", haystack: "reports inbox", onChoose: () => go("/reports") },
       { id: "nav-submit",      label: "Submit a report", icon: FileText,       hint: "Go", haystack: "submit report write", onChoose: () => go("/reports/submit") },
       { id: "nav-hiring",      label: "Hiring",          icon: Users,          hint: "Go", haystack: "hiring candidates", onChoose: () => go("/hiring") },
+      { id: "nav-fundraise",   label: "Fundraise",       icon: PiggyBank,      hint: "Go", haystack: "fundraise investors vc angel pipeline", onChoose: () => go("/fundraise") },
       { id: "nav-onboarding",  label: "Onboarding",      icon: FolderKanban,   hint: "Go", haystack: "onboarding pipeline", onChoose: () => go("/onboarding") },
       { id: "nav-schedule",    label: "Schedule",        icon: CalendarDays,   hint: "Go", haystack: "schedule shifts calendar", onChoose: () => go("/schedule") },
       { id: "nav-analytics",   label: "Analytics",       icon: BarChart3,      hint: "Go", haystack: "analytics insights data", onChoose: () => go("/analytics") },
@@ -295,15 +314,61 @@ export function CommandPalette() {
       }))),
     ];
 
+    // ── Fundraise ──
+    // Per-investor entries (open the drawer from anywhere) plus
+    // stage-filter verbs ("show investors in replied"). The verbs
+    // also flip view-mode to kanban -- "show investors in X" only
+    // makes sense as a column-view operation.
+    const FUNDRAISE: CommandItem[] = [
+      // One palette entry per investor. Keyed by company_name +
+      // stage so the search query "anthropic" surfaces both the
+      // firm and (eventually) its stage chip.
+      ...investors.map((inv) => ({
+        id: `inv-${inv.id}`,
+        label: inv.company_name,
+        sublabel: PIPELINE_STAGE_LABEL[inv.pipeline_stage],
+        icon: PiggyBank,
+        hint: "Open",
+        haystack:
+          `${inv.company_name} ${inv.pipeline_stage} fundraise investor ` +
+          (inv.company_domain ?? ""),
+        onChoose: () => {
+          close();
+          // Order matters: navigate first so FundraisePage mounts,
+          // then store dispatch -- the page's effect picks up the
+          // active id on next render.
+          go("/fundraise");
+          openInvestorInStore(inv.id);
+        },
+      })),
+      // One verb per stage: "show investors in <stage>". The
+      // verb flips view-mode to kanban so the filtered view
+      // is immediately useful.
+      ...INVESTOR_PIPELINE_STAGES.map((stage) => ({
+        id: `inv-stage-${stage}`,
+        label: `Show investors in ${PIPELINE_STAGE_LABEL[stage]}`,
+        icon: PiggyBank,
+        hint: "Filter",
+        haystack: `show investors ${stage} ${PIPELINE_STAGE_LABEL[stage]} kanban`,
+        onChoose: () => {
+          close();
+          go("/fundraise");
+          setStageFilterInStore(stage as InvestorPipelineStage);
+          setPendingViewMode("kanban");
+        },
+      })),
+    ];
+
     return [
       { section: "Navigation",   items: NAV },
+      { section: "Investors",    items: FUNDRAISE },
       { section: "Repositories", items: REPOS },
       { section: "Pull requests", items: PRS },
       { section: "Issues",       items: ISSUES },
       { section: "Actions",      items: AXON },
     ];
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [investors]);
 
   // Filter by query. Keep section grouping so the user can see
   // what kind of thing they're picking; collapse empty sections.

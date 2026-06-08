@@ -29,9 +29,17 @@
  * Phase 4 turns the "Follow-ups due" stat into a real strip.
  */
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { motion } from "framer-motion";
-import { Plus, Sparkles, Loader2, PiggyBank, Settings as SettingsIcon } from "lucide-react";
+import {
+  Plus,
+  Sparkles,
+  Loader2,
+  PiggyBank,
+  Settings as SettingsIcon,
+  LayoutGrid,
+  Columns3,
+} from "lucide-react";
 
 import {
   useInvestors,
@@ -49,6 +57,22 @@ import { AddInvestorModal } from "./AddInvestorModal";
 import { InvestorCard } from "./InvestorCard";
 import { InvestorDrawer } from "./InvestorDrawer";
 import { FundraiseSettingsModal } from "./FundraiseSettingsModal";
+import { InvestorKanban } from "./InvestorKanban";
+import { useFundraiseStore } from "./fundraiseStore";
+import { PIPELINE_STAGE_LABEL } from "@/stores/investors";
+
+// localStorage key for the view-mode preference. Persisted so the
+// operator's choice survives reloads -- /fundraise is a daily
+// workspace and there's nothing more annoying than re-clicking the
+// view toggle on every visit.
+const VIEW_MODE_KEY = "fundraise:viewMode";
+type ViewMode = "grid" | "kanban";
+
+function readStoredViewMode(): ViewMode {
+  if (typeof window === "undefined") return "grid";
+  const v = window.localStorage.getItem(VIEW_MODE_KEY);
+  return v === "kanban" ? "kanban" : "grid";
+}
 
 export function FundraisePage() {
   useInvestorsRealtime();
@@ -59,6 +83,61 @@ export function FundraisePage() {
   const [addOpen, setAddOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [selectedId, setSelectedId] = useState<string | null>(null);
+
+  // View toggle — Grid vs Kanban. Persisted to localStorage.
+  const [viewMode, setViewMode] = useState<ViewMode>(readStoredViewMode);
+  useEffect(() => {
+    try {
+      window.localStorage.setItem(VIEW_MODE_KEY, viewMode);
+    } catch {
+      /* private-mode etc. — view-mode persistence is best-effort */
+    }
+  }, [viewMode]);
+
+  // ── Cross-route entrypoint via the global fundraise store ─────
+  // Cmd+K verbs (and any other surface) can dispatch through
+  // useFundraiseStore -- we react to its state here.
+  const storeActiveId = useFundraiseStore((s) => s.activeInvestorId);
+  const closeInvestorInStore = useFundraiseStore((s) => s.closeInvestor);
+  const stageFilter = useFundraiseStore((s) => s.stageFilter);
+  const clearStageFilter = useFundraiseStore((s) => s.clearStageFilter);
+  const pendingViewMode = useFundraiseStore((s) => s.pendingViewMode);
+  const setPendingViewMode = useFundraiseStore((s) => s.setPendingViewMode);
+
+  // Honor pending view-mode requests (e.g. Cmd+K "show kanban").
+  useEffect(() => {
+    if (pendingViewMode && pendingViewMode !== viewMode) {
+      setViewMode(pendingViewMode);
+    }
+    if (pendingViewMode) {
+      // Clear immediately so a later view-toggle click sticks.
+      setPendingViewMode(null);
+    }
+  }, [pendingViewMode, viewMode, setPendingViewMode]);
+
+  // Honor cross-route drawer-open requests by mirroring into the
+  // local selectedId state.
+  //
+  // Important: only react to changes in storeActiveId itself, NOT
+  // to changes in selectedId -- otherwise opening a different card
+  // (which sets selectedId directly) would cause this effect to
+  // clobber it back to the stale storeActiveId. Card click handlers
+  // below route through openInvestorInStore so the two stay in
+  // sync without this race.
+  useEffect(() => {
+    if (storeActiveId) {
+      setSelectedId(storeActiveId);
+    }
+  }, [storeActiveId]);
+
+  // Unified card-open handler: route through the store so that
+  // (a) the Cmd+K palette + direct clicks both flow through the
+  // same path, and (b) the global store is correct if anything
+  // else cares about "what investor is open right now".
+  const handleOpenInvestor = (id: string) => {
+    openInvestorInStore(id);
+    setSelectedId(id);
+  };
 
   // Soft prompt for first-time setup. We don't block any flow on
   // this -- the operator can add + organize investors with no pitch
@@ -150,6 +229,44 @@ export function FundraisePage() {
               <Sparkles size={13} />
               Find with Axon
             </button>
+            {/* View toggle -- Grid / Kanban. Same shape as the rest
+              * of the segmented toggles in the app (Schedule, Tasks). */}
+            <div
+              role="tablist"
+              aria-label="View"
+              className="inline-flex items-center rounded-sm border border-border bg-secondary p-0.5 h-9"
+            >
+              <button
+                type="button"
+                role="tab"
+                aria-selected={viewMode === "grid"}
+                onClick={() => setViewMode("grid")}
+                title="Grid view (ranked by priority + fit)"
+                className={
+                  "inline-flex items-center justify-center w-8 h-8 rounded-sm transition-colors " +
+                  (viewMode === "grid"
+                    ? "bg-card text-foreground"
+                    : "text-foreground/50 hover:text-foreground")
+                }
+              >
+                <LayoutGrid size={13} />
+              </button>
+              <button
+                type="button"
+                role="tab"
+                aria-selected={viewMode === "kanban"}
+                onClick={() => setViewMode("kanban")}
+                title="Kanban view (by pipeline stage)"
+                className={
+                  "inline-flex items-center justify-center w-8 h-8 rounded-sm transition-colors " +
+                  (viewMode === "kanban"
+                    ? "bg-card text-foreground"
+                    : "text-foreground/50 hover:text-foreground")
+                }
+              >
+                <Columns3 size={13} />
+              </button>
+            </div>
             {/* Settings gear -- opens FundraiseSettingsModal. Pulse-dot
               * hint when the operator hasn't filled in pitch + name yet
               * so cold-email drafting can be high-quality. */}
@@ -188,7 +305,7 @@ export function FundraisePage() {
         </div>
       </header>
 
-      {/* ── Card grid ────────────────────────────────────────── */}
+      {/* ── Body — Grid or Kanban ───────────────────────────── */}
       {isLoading ? (
         <div className="py-16 flex items-center justify-center text-foreground/40 text-[13px]">
           <Loader2 size={14} className="animate-spin mr-2" /> Loading
@@ -197,21 +314,57 @@ export function FundraisePage() {
       ) : investors.length === 0 ? (
         <EmptyState onAdd={() => setAddOpen(true)} />
       ) : (
-        <ul
-          className="grid gap-3 list-none p-0 m-0"
-          style={{
-            gridTemplateColumns:
-              "repeat(auto-fill, minmax(280px, 1fr))",
-          }}
-        >
-          {investors.map((inv) => (
-            <InvestorCard
-              key={inv.id}
-              investor={inv}
-              onOpen={() => setSelectedId(inv.id)}
+        <>
+          {/* Stage filter chip -- visible when a Cmd+K verb has
+            * narrowed the view to a single stage. Clicking the
+            * chip clears the filter. */}
+          {stageFilter && (
+            <div className="mb-3 flex items-center gap-2">
+              <span className="text-[10px] font-mono uppercase tracking-[0.14em] text-foreground/45">
+                Filtered to
+              </span>
+              <button
+                type="button"
+                onClick={clearStageFilter}
+                className="inline-flex items-center gap-1.5 px-2 h-6 rounded-full border border-primary/40 bg-primary/[0.08] text-[10.5px] font-semibold uppercase tracking-[0.12em] text-primary hover:bg-primary/[0.14] transition-colors"
+              >
+                {PIPELINE_STAGE_LABEL[stageFilter]}
+                <span className="text-primary/70" aria-hidden>
+                  ×
+                </span>
+              </button>
+            </div>
+          )}
+          {viewMode === "kanban" ? (
+            <InvestorKanban
+              investors={
+                stageFilter
+                  ? investors.filter((i) => i.pipeline_stage === stageFilter)
+                  : investors
+              }
+              onOpen={handleOpenInvestor}
             />
-          ))}
-        </ul>
+          ) : (
+            <ul
+              className="grid gap-3 list-none p-0 m-0"
+              style={{
+                gridTemplateColumns:
+                  "repeat(auto-fill, minmax(280px, 1fr))",
+              }}
+            >
+              {(stageFilter
+                ? investors.filter((i) => i.pipeline_stage === stageFilter)
+                : investors
+              ).map((inv) => (
+                <InvestorCard
+                  key={inv.id}
+                  investor={inv}
+                  onOpen={() => handleOpenInvestor(inv.id)}
+                />
+              ))}
+            </ul>
+          )}
+        </>
       )}
 
       {/* ── Modals + drawer ─────────────────────────────────── */}
@@ -225,7 +378,10 @@ export function FundraisePage() {
       />
       <InvestorDrawer
         investorId={selectedId}
-        onClose={() => setSelectedId(null)}
+        onClose={() => {
+          setSelectedId(null);
+          closeInvestorInStore();
+        }}
       />
     </motion.div>
   );
