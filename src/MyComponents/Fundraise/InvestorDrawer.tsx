@@ -38,6 +38,7 @@ import {
   INVESTOR_PIPELINE_STAGES,
   type InvestorPipelineStage,
   type InvestorDetail,
+  investorKeys,
 } from "@/stores/investors";
 import { DraftEmailModal } from "./DraftEmailModal";
 import type { DraftChannel } from "@/Fundraise/draftInvestorEmail";
@@ -49,6 +50,7 @@ import {
   type EmailCandidate,
 } from "@/Fundraise/findPartnerEmail";
 import { AlertCircle, CheckCircle2 } from "lucide-react";
+import { useQueryClient } from "@tanstack/react-query";
 
 interface Props {
   investorId: string | null;
@@ -510,6 +512,13 @@ function PartnerRow({
     setFindState("results");
   }
 
+  // QueryClient for invalidating the investor detail query after
+  // we save a picked email. useUpdateContact only invalidates the
+  // crm.contacts list, not the per-investor detail that powers this
+  // drawer -- so without this, partner.email stays stale and the
+  // Draft button keeps flipping into edit mode.
+  const qc = useQueryClient();
+
   // Phase 6: commit a clicked candidate as the partner's email.
   async function pickCandidate(c: EmailCandidate) {
     setEmailDraft(c.email);
@@ -519,12 +528,21 @@ function PartnerRow({
         id: partner.id,
         patch: { email: c.email },
       });
+      // Force the drawer's investor detail to refetch so partner.email
+      // reflects the save -- otherwise hasEmail stays false and the
+      // Draft Email click handler opens the editor again.
+      qc.invalidateQueries({ queryKey: investorKeys.all });
     } catch (e: any) {
       setFindError(e?.message ?? "Save failed.");
     }
   }
 
-  const hasEmail = !!partner.email?.trim();
+  // hasEmail looks at BOTH the persisted partner.email AND the local
+  // emailDraft -- pickCandidate sets emailDraft synchronously, so the
+  // Draft button works even before the mutation/invalidation round-trip
+  // finishes.
+  const effectiveEmail = (partner.email ?? emailDraft)?.trim();
+  const hasEmail = !!effectiveEmail;
 
   return (
     <li className="rounded-sm border border-border bg-card/60 p-3">
