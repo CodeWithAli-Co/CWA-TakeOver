@@ -264,14 +264,22 @@ function runCommand(
 }
 
 // ---------------------------------------------------------------------------
-// Extract absolute Windows artifact paths from build output.
-// Matches: *.msi, *.exe, *.msi.sig, *.exe.sig
-// The optional `(?:\.sig)?` is greedy, so "App.msi.sig" is captured in full
-// instead of being truncated to "App.msi".
+// Extract absolute artifact paths from build output. Cross-platform.
+// Matches:
+//   Windows: *.msi, *.exe, *.msi.sig, *.exe.sig    (C:\... paths)
+//   macOS:   *.dmg, *.app.tar.gz(.sig)             (/Users/... paths)
+//   Linux:   *.AppImage, *.deb, *.rpm, *.AppImage.tar.gz(.sig)
+// `app.tar.gz` / `AppImage.tar.gz` come first in the alternation so the regex
+// captures the full compound suffix instead of truncating at `.gz`.
 // ---------------------------------------------------------------------------
 function extractArtifactPaths(buildOutput: string): string[] {
-  const regex = /[A-Za-z]:\\[^\r\n"]*?\.(?:msi|exe)(?:\.sig)?/gi;
-  const found = buildOutput.match(regex) ?? [];
+  const windowsRe = /[A-Za-z]:\\[^\r\n"]*?\.(?:msi|exe)(?:\.sig)?/gi;
+  const unixRe =
+    /\/[^\r\n"]*?\.(?:app\.tar\.gz|AppImage\.tar\.gz|dmg|AppImage|deb|rpm)(?:\.sig)?/g;
+  const found = [
+    ...(buildOutput.match(windowsRe) ?? []),
+    ...(buildOutput.match(unixRe) ?? []),
+  ];
   return [...new Set(found.map((p) => p.trim()))]; // de-dupe, preserve order
 }
 
@@ -279,22 +287,45 @@ function extractArtifactPaths(buildOutput: string): string[] {
 // Pick the installer + its matching signature out of the detected paths.
 // ---------------------------------------------------------------------------
 function selectArtifacts(paths: string[]) {
-  const msiFiles = paths.filter((p) => p.toLowerCase().endsWith(".msi"));
+  // Updater bundles -- these are what the Tauri auto-updater installs from.
+  // They're the only files that ship with a matching .sig.
+  //   Windows -> .msi (the .msi IS the updater bundle)
+  //   macOS   -> .app.tar.gz (the .dmg is for first-install download only)
+  //   Linux   -> .AppImage.tar.gz
+  // We pick the updater bundle as the "installer" because that's the artifact
+  // whose .sig the updater manifest must point at.
+  const updaterExts =
+    process.platform === "win32"
+      ? [".msi"]
+      : process.platform === "darwin"
+        ? [".app.tar.gz"]
+        : [".appimage.tar.gz"];
+
+  const installerFiles = paths.filter((p) => {
+    const lower = p.toLowerCase();
+    return (
+      updaterExts.some((ext) => lower.endsWith(ext)) && !lower.endsWith(".sig")
+    );
+  });
   const sigFiles = paths.filter((p) => p.toLowerCase().endsWith(".sig"));
 
-  if (msiFiles.length === 0) {
-    throw new Error("No .msi installer path found in the build output.");
+  if (installerFiles.length === 0) {
+    const exts = updaterExts.join(", ");
+    throw new Error(
+      `No updater bundle (${exts}) found in build output. ` +
+        `Make sure tauri.conf.json has bundle.createUpdaterArtifacts = true and a signing key configured.`,
+    );
   }
-  if (msiFiles.length > 1) {
+  if (installerFiles.length > 1) {
     log.warn(
-      `Multiple .msi files found, using the first:\n  ${msiFiles.join("\n  ")}`,
+      `Multiple installer files found, using the first:\n  ${installerFiles.join("\n  ")}`,
     );
   }
 
-  const msiPath = msiFiles[0];
+  const msiPath = installerFiles[0];
   const msiName = path.basename(msiPath);
 
-  // The correct signature is the one named "<msi-file-name>.sig".
+  // The correct signature is the one named "<installer-file-name>.sig".
   const expectedSigName = `${msiName}.sig`.toLowerCase();
   const sigPath = sigFiles.find(
     (p) => path.basename(p).toLowerCase() === expectedSigName,
@@ -307,7 +338,19 @@ function selectArtifacts(paths: string[]) {
     );
   }
 
-  return { msiPath, sigPath, executableDir: path.dirname(msiPath) };
+  // Version source: on macOS, the `.app.tar.gz` is named "TakeOver.app.tar.gz"
+  // (no version), so we can't derive a version from it. The matching `.dmg`
+  // (e.g. "TakeOver_1.8.1_aarch64.dmg") DOES carry the version -- prefer it
+  // when present. Windows / Linux installers carry the version in-name already.
+  const dmgPath = paths.find((p) => p.toLowerCase().endsWith(".dmg"));
+  const versionSource = dmgPath ?? msiPath;
+
+  return {
+    msiPath,
+    sigPath,
+    executableDir: path.dirname(msiPath),
+    versionSource,
+  };
 }
 
 // ---------------------------------------------------------------------------
@@ -317,15 +360,19 @@ async function uploadInstaller(
   msiPath: string,
   signature: string,
   notes?: string,
+  versionSource?: string,
 ): Promise<void> {
   const fileName = path.basename(msiPath);
   const fileBuffer = await readFile(msiPath);
   const sizeMb = (fileBuffer.byteLength / 1024 / 1024).toFixed(2);
 
   // Version drives the manifest path; must match what the server derives.
-  const derivedVersion = VERSION_RE.exec(fileName)?.[0];
+  // On macOS the .app.tar.gz has no version in its name -- versionSource
+  // points at a sibling .dmg ("TakeOver_1.8.1_aarch64.dmg") instead.
+  const versionFileName = path.basename(versionSource ?? msiPath);
+  const derivedVersion = VERSION_RE.exec(versionFileName)?.[0];
   if (!derivedVersion) {
-    throw new Error(`Could not derive a version from "${fileName}".`);
+    throw new Error(`Could not derive a version from "${versionFileName}".`);
   }
 
   const version = `v${derivedVersion}`;
@@ -491,10 +538,14 @@ async function main(): Promise<void> {
   }
   log.info(`Artifact paths detected:\n  ${paths.join("\n  ")}`);
 
-  const { msiPath, sigPath, executableDir } = selectArtifacts(paths);
+  const { msiPath, sigPath, executableDir, versionSource } =
+    selectArtifacts(paths);
   log.success(`Matched installer:  ${msiPath}`);
   log.success(`Matched signature:  ${sigPath}`);
   log.info(`Executable folder:  ${executableDir}`);
+  if (versionSource && versionSource !== msiPath) {
+    log.info(`Version source:     ${path.basename(versionSource)}`);
+  }
 
   // Step 4: read the signature file contents into a variable.
   log.info(`Reading signature file: ${sigPath}`);
@@ -510,7 +561,7 @@ async function main(): Promise<void> {
   log.info(`Release notes:\n${notes}`);
 
   // Step 6: upload the installer with the signature + notes.
-  await uploadInstaller(msiPath, signature, notes);
+  await uploadInstaller(msiPath, signature, notes, versionSource);
 
   log.success("Pipeline finished successfully.");
 }
