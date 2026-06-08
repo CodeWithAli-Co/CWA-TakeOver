@@ -27,6 +27,7 @@ import {
   Twitter,
   Globe,
   Save,
+  Sparkles,
 } from "lucide-react";
 
 import {
@@ -36,7 +37,10 @@ import {
   PIPELINE_STAGE_LABEL,
   INVESTOR_PIPELINE_STAGES,
   type InvestorPipelineStage,
+  type InvestorDetail,
 } from "@/stores/investors";
+import { DraftEmailModal } from "./DraftEmailModal";
+import type { DraftChannel } from "@/Fundraise/draftInvestorEmail";
 
 interface Props {
   investorId: string | null;
@@ -50,6 +54,34 @@ export function InvestorDrawer({ investorId, onClose }: Props) {
   const updateMut = useUpdateInvestor();
   const [tab, setTab] = useState<TabId>("overview");
   const open = !!investorId;
+
+  // ── Phase 2: draft modal state ────────────────────────────────
+  // The drawer is the natural owner because (a) it has the full
+  // InvestorDetail loaded already and (b) it owns the pipeline
+  // bump that happens after send.
+  const [draftFor, setDraftFor] = useState<{
+    partnerId: string;
+    channel: DraftChannel;
+  } | null>(null);
+
+  /** Post-send hook. Bumps pipeline_stage to "reaching_out" if the
+   *  investor is still in "prospected" / "researched", and updates
+   *  last_outreach_at. The activity row is written server-side by
+   *  the Gmail send route; we don't need to log here. */
+  function handleSent() {
+    if (!detail) return;
+    const patch: {
+      pipeline_stage?: InvestorPipelineStage;
+      last_outreach_at?: string;
+    } = { last_outreach_at: new Date().toISOString() };
+    if (
+      detail.pipeline_stage === "prospected" ||
+      detail.pipeline_stage === "researched"
+    ) {
+      patch.pipeline_stage = "reaching_out";
+    }
+    updateMut.mutate({ id: detail.id, patch });
+  }
 
   // Esc closes.
   // (Component re-mounts per investor selection so this is fine.)
@@ -165,7 +197,12 @@ export function InvestorDrawer({ investorId, onClose }: Props) {
               ) : tab === "overview" ? (
                 <OverviewPanel detail={detail} />
               ) : tab === "partners" ? (
-                <PartnersPanel detail={detail} />
+                <PartnersPanel
+                  detail={detail}
+                  onDraft={(partnerId, channel) =>
+                    setDraftFor({ partnerId, channel })
+                  }
+                />
               ) : tab === "activity" ? (
                 <ActivityPanel detail={detail} />
               ) : (
@@ -173,6 +210,17 @@ export function InvestorDrawer({ investorId, onClose }: Props) {
               )}
             </div>
           </motion.aside>
+
+          {/* Draft modal lives at the drawer root so it overlays
+            * the drawer scrim cleanly. */}
+          <DraftEmailModal
+            open={!!draftFor && !!detail}
+            onClose={() => setDraftFor(null)}
+            investor={detail ?? null}
+            partnerId={draftFor?.partnerId ?? null}
+            channel={draftFor?.channel ?? "email"}
+            onSent={handleSent}
+          />
         </motion.div>
       )}
     </AnimatePresence>
@@ -266,8 +314,11 @@ function OverviewPanel({ detail }: { detail: NonNullable<ReturnType<typeof useIn
 
 function PartnersPanel({
   detail,
+  onDraft,
 }: {
-  detail: NonNullable<ReturnType<typeof useInvestor>["data"]>;
+  detail: InvestorDetail;
+  /** Phase 2: opens the DraftEmailModal at the drawer root. */
+  onDraft: (partnerId: string, channel: DraftChannel) => void;
 }) {
   if (detail.partners.length === 0) {
     return <Empty>No partners added yet. Add one via the CRM contacts view.</Empty>;
@@ -280,7 +331,7 @@ function PartnersPanel({
           className="rounded-sm border border-border bg-card/60 p-3"
         >
           <div className="flex items-start justify-between gap-2">
-            <div className="min-w-0">
+            <div className="min-w-0 flex-1">
               <div className="text-[13px] font-semibold text-foreground">
                 {p.name ?? "Unnamed"}
               </div>
@@ -289,6 +340,37 @@ function PartnersPanel({
                   {p.title}
                 </div>
               )}
+            </div>
+
+            {/* Phase 2 actions: Draft email (primary) + Draft LinkedIn.
+              * Email button is disabled if no address on file -- we
+              * can't send what we don't have a To: for. LinkedIn does
+              * not require any pre-recorded handle since the output
+              * is just copied to clipboard. */}
+            <div className="flex items-center gap-1 flex-shrink-0">
+              <button
+                type="button"
+                disabled={!p.email}
+                onClick={() => onDraft(p.id, "email")}
+                title={
+                  p.email
+                    ? "Draft a cold email with Axon"
+                    : "Add an email on the partner first"
+                }
+                className="inline-flex items-center gap-1 px-2 h-7 rounded-sm bg-primary text-primary-foreground text-[10.5px] font-bold uppercase tracking-[0.1em] hover:opacity-90 transition-opacity disabled:opacity-40 disabled:cursor-not-allowed"
+              >
+                <Sparkles size={10} />
+                Draft email
+              </button>
+              <button
+                type="button"
+                onClick={() => onDraft(p.id, "linkedin")}
+                title="Draft a LinkedIn DM (copies to clipboard)"
+                className="inline-flex items-center justify-center w-7 h-7 rounded-sm border border-border bg-secondary text-foreground/65 hover:text-foreground hover:border-foreground/30 transition-colors"
+                aria-label="Draft LinkedIn DM"
+              >
+                <Linkedin size={11} />
+              </button>
             </div>
           </div>
           <div className="mt-2 space-y-1">

@@ -31,7 +31,7 @@
 
 import { useMemo, useState } from "react";
 import { motion } from "framer-motion";
-import { Plus, Sparkles, Loader2, PiggyBank } from "lucide-react";
+import { Plus, Sparkles, Loader2, PiggyBank, Settings as SettingsIcon } from "lucide-react";
 
 import {
   useInvestors,
@@ -39,17 +39,33 @@ import {
   type InvestorListEntry,
   type InvestorPipelineStage,
 } from "@/stores/investors";
+import {
+  useMyFundraiseSettings,
+  useFundraiseSettingsRealtime,
+  isFundraiseSettingsUsable,
+} from "@/stores/fundraiseSettings";
 
 import { AddInvestorModal } from "./AddInvestorModal";
 import { InvestorCard } from "./InvestorCard";
 import { InvestorDrawer } from "./InvestorDrawer";
+import { FundraiseSettingsModal } from "./FundraiseSettingsModal";
 
 export function FundraisePage() {
   useInvestorsRealtime();
+  useFundraiseSettingsRealtime();
 
   const { data: investors = [], isLoading } = useInvestors();
+  const { data: settings } = useMyFundraiseSettings();
   const [addOpen, setAddOpen] = useState(false);
+  const [settingsOpen, setSettingsOpen] = useState(false);
   const [selectedId, setSelectedId] = useState<string | null>(null);
+
+  // Soft prompt for first-time setup. We don't block any flow on
+  // this -- the operator can add + organize investors with no pitch
+  // configured -- but drafting cold emails without a pitch produces
+  // very generic copy. The pulse-dot beside the gear icon hints at
+  // "you should set this up before you start sending".
+  const needsPitchSetup = !isFundraiseSettingsUsable(settings);
 
   // Stats strip computed client-side from the loaded list. Cheap at
   // the volumes we expect (~150-1000 investors total).
@@ -134,6 +150,28 @@ export function FundraisePage() {
               <Sparkles size={13} />
               Find with Axon
             </button>
+            {/* Settings gear -- opens FundraiseSettingsModal. Pulse-dot
+              * hint when the operator hasn't filled in pitch + name yet
+              * so cold-email drafting can be high-quality. */}
+            <button
+              type="button"
+              onClick={() => setSettingsOpen(true)}
+              aria-label="Fundraise settings"
+              title={
+                needsPitchSetup
+                  ? "Configure your pitch so Axon can draft tailored cold emails"
+                  : "Fundraise settings"
+              }
+              className="relative inline-flex items-center justify-center w-9 h-9 rounded-sm border border-border bg-secondary text-foreground/70 hover:text-foreground hover:border-foreground/30 transition-colors"
+            >
+              <SettingsIcon size={14} />
+              {needsPitchSetup && (
+                <span className="absolute top-1 right-1 flex h-1.5 w-1.5">
+                  <span className="absolute inline-flex h-full w-full rounded-full bg-primary/70 opacity-75 animate-ping" />
+                  <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-primary" />
+                </span>
+              )}
+            </button>
           </div>
         </div>
 
@@ -180,6 +218,10 @@ export function FundraisePage() {
       <AddInvestorModal
         open={addOpen}
         onClose={() => setAddOpen(false)}
+      />
+      <FundraiseSettingsModal
+        open={settingsOpen}
+        onClose={() => setSettingsOpen(false)}
       />
       <InvestorDrawer
         investorId={selectedId}
