@@ -49,6 +49,11 @@ export type DraftAngle =
   | "warm_intro" // we mention a mutual or referrer
   | "generic";   // pitch-led; used when investor profile is thin
 
+/** Phase 4: cold vs follow-up. Follow-ups have a different rhetorical
+ *  shape (shorter, references prior outreach, escalates slightly with
+ *  each nudge) so we steer the LLM with a different system prompt. */
+export type DraftMode = "cold" | "followup_1" | "followup_2" | "followup_3";
+
 export interface DraftInvestorEmailInput {
   /** Loaded investor (with company + partners + activities). */
   investor: InvestorDetail;
@@ -63,6 +68,11 @@ export interface DraftInvestorEmailInput {
   angle?: DraftAngle;
   /** Optional warm-intro context: "Met at YC office hours via Jane Doe" */
   warmIntroNote?: string;
+  /** Phase 4. Cold = full pitch with hook + value prop. Follow-up
+   *  modes shorten the draft and reference prior outreach. If not
+   *  passed, defaults to "cold". The DraftEmailModal infers this
+   *  from the investor's followup_count for the operator. */
+  mode?: DraftMode;
 }
 
 export interface DraftInvestorEmailResult {
@@ -78,6 +88,9 @@ export interface DraftInvestorEmailResult {
    *  requested angle had no data — e.g. "thesis" with no thesis_md). */
   angle: DraftAngle;
   channel: DraftChannel;
+  /** Phase 4: the mode this draft was produced under. Returned so
+   *  the UI can label the modal "cold" vs "follow-up #N". */
+  mode: DraftMode;
   /** Soft error — UI shows this without crashing. */
   error?: string;
 }
@@ -86,6 +99,7 @@ export interface DraftInvestorEmailResult {
 // System prompt
 // ─────────────────────────────────────────────────────────────────
 
+/** Cold-email system prompt -- used for the initial outreach. */
 const SYSTEM_PROMPT = [
   "You are Axon, drafting a cold outreach for a pre-seed founder to a venture investor or angel.",
   "",
@@ -108,6 +122,36 @@ const SYSTEM_PROMPT = [
   "",
   "For LinkedIn channel: leave subject empty. Body must be <= 300 characters (LinkedIn's invite limit).",
   "For email channel: subject is a single line, no more than 60 characters, no exclamation marks.",
+].join("\n");
+
+/** Follow-up system prompt -- used for nudges after a cold email.
+ *  Shorter, references prior outreach, escalates slightly per nudge
+ *  but never gets pushy. The {nudgeNumber} placeholder is filled in
+ *  per call so the same template covers 1st/2nd/3rd follow-ups. */
+const FOLLOWUP_SYSTEM_PROMPT = [
+  "You are Axon, drafting a brief follow-up email from a pre-seed founder to a venture investor or angel.",
+  "",
+  "This is FOLLOW-UP #{nudgeNumber} of at most 3. You are NOT writing a cold pitch -- the prior outreach already covered the elevator pitch + value prop.",
+  "",
+  "Hard rules:",
+  "- 2 to 3 sentences total. No filler. Brevity is respect for their time.",
+  "- Reference the prior outreach naturally (\"following up on my note from {N} days ago\", \"wanted to bump this up\", etc.). Vary the phrasing across regenerates.",
+  "- Add ONE new piece of useful information if the prior outreach + thesis support it: a metric update, a portfolio company you re-read, a relevant news item. If nothing new to add, keep it to the bump alone.",
+  "- The soft ask is the same as before: 15 min to chat with the call link if provided. Don't repeat the pitch.",
+  "- Sign off with the operator's signature exactly as supplied.",
+  "- Plain text only. No markdown bold, no bullet points, no emojis.",
+  "- Never use the phrases \"I hope this finds you well\", \"reaching out\", \"quick chat\", \"circle back\", \"touch base\", \"synergy\", or \"just checking in\".",
+  "",
+  "Tone calibration by nudge number:",
+  "- #1 (3 days after cold): conversational, low-pressure. \"Wanted to bump this up in case it got buried.\"",
+  "- #2 (7 days after #1): slightly more direct, but still warm. \"Following up once more -- happy to send the deck if it's easier than the pitch.\"",
+  "- #3 (14 days after #2): final, graceful. \"Last note from me. If now's not the right time, no worries -- I'll stop pestering.\"",
+  "",
+  "Output format -- RETURN ONLY a JSON object with EXACTLY these fields, no preamble, no code fence:",
+  '{"subject": "Re: ...", "body": "...", "hook_used": "...one sentence describing why this nudge in your own words..."}',
+  "",
+  "For email: subject should be \"Re: \" + the original subject if known, otherwise a short follow-up subject. No exclamation marks.",
+  "For LinkedIn: leave subject empty. Body <= 300 chars.",
 ].join("\n");
 
 // ─────────────────────────────────────────────────────────────────
@@ -156,7 +200,7 @@ function buildUserPrompt(
   inp: DraftInvestorEmailInput,
   angle: DraftAngle,
 ): string {
-  const { investor, settings, channel, warmIntroNote } = inp;
+  const { investor, settings, channel, warmIntroNote, mode = "cold" } = inp;
   const partner = investor.partners.find((p) => p.id === inp.partnerId);
   // InvestorDetail extends InvestorListEntry extends InvestorProfile,
   // so all profile fields (thesis_md, portfolio_md, stage_focus, etc.)
@@ -166,6 +210,7 @@ function buildUserPrompt(
 
   lines.push(`Channel: ${channel}`);
   lines.push(`Angle: ${angle}`);
+  lines.push(`Mode: ${mode}`);
   lines.push("");
 
   // ── Operator context ──
@@ -215,13 +260,61 @@ function buildUserPrompt(
   }
   lines.push("");
 
+  // ── Prior outreach (follow-up mode only) ──
+  // The follow-up system prompt needs to know what was already
+  // said so it doesn't repeat itself. Pull the last few outbound
+  // emails from the activity log.
+  if (mode !== "cold") {
+    const priorEmails = investor.activities
+      .filter((a) => a.type === "email")
+      .slice(0, 4); // most-recent first
+    if (priorEmails.length > 0) {
+      lines.push("─── PRIOR OUTREACH (most recent first) ───");
+      for (const a of priorEmails) {
+        const direction =
+          (a.metadata as any)?.direction === "inbound" ? "FROM THEM" : "FROM US";
+        const date = new Date(a.happened_at ?? a.created_at)
+          .toISOString()
+          .slice(0, 10);
+        lines.push(`[${date}, ${direction}] ${a.title ?? "(no subject)"}`);
+        if (a.body_md) {
+          lines.push(a.body_md.slice(0, 400));
+        }
+        lines.push("");
+      }
+      // Days since last outbound, for the natural "following up
+      // on my note from N days ago" phrasing.
+      const lastOutbound = priorEmails.find(
+        (a) => (a.metadata as any)?.direction !== "inbound",
+      );
+      if (lastOutbound) {
+        const days = Math.max(
+          1,
+          Math.floor(
+            (Date.now() -
+              new Date(
+                lastOutbound.happened_at ?? lastOutbound.created_at,
+              ).getTime()) /
+              (24 * 60 * 60 * 1000),
+          ),
+        );
+        lines.push(`Days since last outbound email: ${days}`);
+        lines.push("");
+      }
+    }
+  }
+
   // ── Final instruction ──
   if (channel === "linkedin") {
     lines.push(
-      "Draft a LinkedIn connection-request message. Body MUST be <= 300 characters. Leave subject empty.",
+      mode === "cold"
+        ? "Draft a LinkedIn connection-request message. Body MUST be <= 300 characters. Leave subject empty."
+        : "Draft a brief LinkedIn follow-up message. Body MUST be <= 300 characters. Leave subject empty.",
     );
-  } else {
+  } else if (mode === "cold") {
     lines.push("Draft the cold email now. Return the JSON object only.");
+  } else {
+    lines.push("Draft the follow-up email now. Return the JSON object only.");
   }
 
   return lines.join("\n");
@@ -236,12 +329,31 @@ export async function draftInvestorEmail(
 ): Promise<DraftInvestorEmailResult> {
   const { angle } = resolveAngle(inp);
   const userPrompt = buildUserPrompt(inp, angle);
+  const mode: DraftMode = inp.mode ?? "cold";
+
+  // Pick the right system prompt for cold vs follow-up. Follow-ups
+  // use a different rhetorical shape (shorter, references prior
+  // outreach, escalating tone). The {nudgeNumber} placeholder is
+  // filled in here so the same template covers #1, #2, #3.
+  const nudgeNumber =
+    mode === "followup_1"
+      ? 1
+      : mode === "followup_2"
+        ? 2
+        : mode === "followup_3"
+          ? 3
+          : 0;
+  const systemPrompt =
+    mode === "cold"
+      ? SYSTEM_PROMPT
+      : FOLLOWUP_SYSTEM_PROMPT.replace("{nudgeNumber}", String(nudgeNumber));
 
   const body = {
     model: CLAUDE_MODEL,
-    max_tokens: 700,
+    // Follow-ups are shorter; smaller budget keeps responses tight.
+    max_tokens: mode === "cold" ? 700 : 400,
     temperature: 0.9,
-    system: SYSTEM_PROMPT,
+    system: systemPrompt,
     messages: [
       {
         role: "user" as const,
@@ -264,7 +376,7 @@ export async function draftInvestorEmail(
 
     if (!res.ok) {
       const err = await res.text().catch(() => res.statusText);
-      return emptyResult(angle, inp.channel, `Axon API error: ${err.slice(0, 180)}`);
+      return emptyResult(angle, inp.channel, `Axon API error: ${err.slice(0, 180)}`, mode);
     }
 
     const json = (await res.json()) as {
@@ -294,12 +406,14 @@ export async function draftInvestorEmail(
       hookUsed: (parsed.hook_used ?? "").trim() || `(${angle} angle)`,
       angle,
       channel: inp.channel,
+      mode,
     };
   } catch (err) {
     return emptyResult(
       angle,
       inp.channel,
       err instanceof Error ? err.message : "Network error reaching Axon.",
+      mode,
     );
   }
 }
@@ -312,8 +426,9 @@ function emptyResult(
   angle: DraftAngle,
   channel: DraftChannel,
   error: string,
+  mode: DraftMode = "cold",
 ): DraftInvestorEmailResult {
-  return { subject: "", body: "", hookUsed: "", angle, channel, error };
+  return { subject: "", body: "", hookUsed: "", angle, channel, mode, error };
 }
 
 function parseDraftJson(

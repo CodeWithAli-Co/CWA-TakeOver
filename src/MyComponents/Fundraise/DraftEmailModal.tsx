@@ -51,6 +51,7 @@ import {
   draftInvestorEmail,
   type DraftAngle,
   type DraftChannel,
+  type DraftMode,
   type DraftInvestorEmailResult,
 } from "@/Fundraise/draftInvestorEmail";
 
@@ -122,6 +123,27 @@ export function DraftEmailModal({
   const partner = investor?.partners.find((p) => p.id === partnerId);
   const partnerEmail = partner?.email ?? "";
 
+  // Phase 4: derive mode from the investor's followup_count. The
+  // count reflects how many follow-ups have ALREADY been sent, so
+  // the NEXT nudge we're about to draft is followup_(count+1).
+  //   0 prior → "cold" (no follow-ups yet -> this IS the cold pitch)
+  //   1 prior → "followup_1" (we already sent 1 cold; this is follow-up #1)
+  // ...wait, the cold email itself increments count to 1, so:
+  //   count 0: no prior outreach -> cold mode
+  //   count 1: cold sent; this draft is follow-up #1
+  //   count 2: cold + 1 follow-up sent; this draft is follow-up #2
+  //   count 3: cold + 2 follow-ups sent; this draft is follow-up #3
+  // After 3, the cadence engine stops scheduling -- but the
+  // operator can still manually open this modal and we'll cap at
+  // followup_3.
+  const mode: DraftMode = (() => {
+    const count = investor?.followup_count ?? 0;
+    if (count <= 0) return "cold";
+    if (count === 1) return "followup_1";
+    if (count === 2) return "followup_2";
+    return "followup_3";
+  })();
+
   // ── Reset when modal opens ─────────────────────────────────────
   useEffect(() => {
     if (!open) return;
@@ -161,6 +183,7 @@ export function DraftEmailModal({
       channel,
       angle: useAngle,
       warmIntroNote: useWarm.trim() || undefined,
+      mode,
     });
     setLoading(false);
     if (result.error) {
@@ -279,7 +302,13 @@ export function DraftEmailModal({
                 </div>
                 <div className="min-w-0">
                   <h2 className="text-[14px] font-semibold text-foreground leading-tight m-0 truncate">
-                    {channel === "email" ? "Draft cold email" : "Draft LinkedIn DM"}
+                    {mode === "cold"
+                      ? channel === "email"
+                        ? "Draft cold email"
+                        : "Draft LinkedIn DM"
+                      : channel === "email"
+                        ? `Draft follow-up #${mode === "followup_1" ? 1 : mode === "followup_2" ? 2 : 3}`
+                        : `LinkedIn follow-up #${mode === "followup_1" ? 1 : mode === "followup_2" ? 2 : 3}`}
                   </h2>
                   <p className="text-[11px] text-foreground/55 truncate mt-0.5">
                     To <b className="text-foreground/80">{partner.name || "(unnamed)"}</b>

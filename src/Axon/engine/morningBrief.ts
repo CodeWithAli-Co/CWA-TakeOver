@@ -119,11 +119,35 @@ export async function composeMorningBrief(
   }
   upcoming.sort((a, b) => a.start.getTime() - b.start.getTime());
 
+  // Fundraise follow-ups due today. Quietly skip on error -- a
+  // missing table or RLS denial shouldn't break the morning brief.
+  // The Phase 4 cadence engine sets next_followup_at, so this
+  // count == "investors I owe a nudge today".
+  let followupsDue = 0;
+  try {
+    const endOfDay = new Date(now);
+    endOfDay.setHours(23, 59, 59, 999);
+    const { count } = await takeOversupabase
+      .from("investor_profiles")
+      .select("id", { count: "exact", head: true })
+      .not("next_followup_at", "is", null)
+      .lte("next_followup_at", endOfDay.toISOString());
+    followupsDue = count ?? 0;
+  } catch {
+    /* fundraise module not yet provisioned -- skip silently */
+  }
+  const followupSuffix =
+    followupsDue === 0
+      ? ""
+      : followupsDue === 1
+        ? " One investor follow-up is also due."
+        : ` ${followupsDue} investor follow-ups are also due.`;
+
   // Compose the brief.
   const namePart = input.operatorName ? `, ${input.operatorName}` : "";
 
   if (upcoming.length === 0) {
-    return `${greeting}${namePart}. Calendar's clear today.`;
+    return `${greeting}${namePart}. Calendar's clear today.${followupSuffix}`;
   }
 
   const next = upcoming[0];
@@ -131,17 +155,17 @@ export async function composeMorningBrief(
 
   // 1 meeting -- lead with it.
   if (total === 1) {
-    return `${greeting}${namePart}. You've got ${next.title} at ${formatClock(next.start)}, and nothing else on the calendar.`;
+    return `${greeting}${namePart}. You've got ${next.title} at ${formatClock(next.start)}, and nothing else on the calendar.${followupSuffix}`;
   }
 
   // 2 meetings -- name both inline.
   if (total === 2) {
     const second = upcoming[1];
-    return `${greeting}${namePart}. ${next.title} at ${formatClock(next.start)}, then ${second.title} at ${formatClock(second.start)}.`;
+    return `${greeting}${namePart}. ${next.title} at ${formatClock(next.start)}, then ${second.title} at ${formatClock(second.start)}.${followupSuffix}`;
   }
 
   // 3+ meetings -- lead with the first, count the rest.
-  return `${greeting}${namePart}. ${next.title} at ${formatClock(next.start)} is up first, ${total - 1} more on the calendar after that.`;
+  return `${greeting}${namePart}. ${next.title} at ${formatClock(next.start)} is up first, ${total - 1} more on the calendar after that.${followupSuffix}`;
 }
 
 // ── Dedupe key helpers ──────────────────────────────────────────────

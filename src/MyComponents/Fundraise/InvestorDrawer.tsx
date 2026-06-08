@@ -41,6 +41,7 @@ import {
 } from "@/stores/investors";
 import { DraftEmailModal } from "./DraftEmailModal";
 import type { DraftChannel } from "@/Fundraise/draftInvestorEmail";
+import { useMyFundraiseSettings } from "@/stores/fundraiseSettings";
 
 interface Props {
   investorId: string | null;
@@ -51,6 +52,7 @@ type TabId = "overview" | "partners" | "activity" | "notes";
 
 export function InvestorDrawer({ investorId, onClose }: Props) {
   const { data: detail, isLoading } = useInvestor(investorId);
+  const { data: settings } = useMyFundraiseSettings();
   const updateMut = useUpdateInvestor();
   const [tab, setTab] = useState<TabId>("overview");
   const open = !!investorId;
@@ -64,22 +66,72 @@ export function InvestorDrawer({ investorId, onClose }: Props) {
     channel: DraftChannel;
   } | null>(null);
 
-  /** Post-send hook. Bumps pipeline_stage to "reaching_out" if the
-   *  investor is still in "prospected" / "researched", and updates
-   *  last_outreach_at. The activity row is written server-side by
-   *  the Gmail send route; we don't need to log here. */
+  /** Post-send hook. Three things happen here:
+   *
+   *  1. Bump pipeline_stage to "reaching_out" if the investor is
+   *     still in "prospected" / "researched". Later stages stay.
+   *  2. Set last_outreach_at = now() so the cadence math is honest.
+   *  3. Phase 4 cadence: schedule next_followup_at based on the
+   *     operator's saved cadence (followup_days_first / second /
+   *     third). The followup_count tells us which delay to use:
+   *
+   *        prior count → next nudge → delay
+   *        ────────────────────────────────
+   *        0 (cold)    → 1st        → followup_days_first  (default 3)
+   *        1           → 2nd        → followup_days_second (default 7)
+   *        2           → 3rd        → followup_days_third  (default 14)
+   *        3           → STOP       → next_followup_at = NULL
+   *
+   *  The activity row + reply-detection trigger handle everything
+   *  inbound; this hook handles everything outbound. */
   function handleSent() {
     if (!detail) return;
+    const now = new Date();
     const patch: {
       pipeline_stage?: InvestorPipelineStage;
       last_outreach_at?: string;
-    } = { last_outreach_at: new Date().toISOString() };
+      next_followup_at?: string | null;
+      followup_count?: number;
+    } = { last_outreach_at: now.toISOString() };
+
+    // Stage bump -- only for cold-funnel states.
     if (
       detail.pipeline_stage === "prospected" ||
       detail.pipeline_stage === "researched"
     ) {
       patch.pipeline_stage = "reaching_out";
     }
+
+    // Cadence scheduling. The current followup_count reflects how
+    // many nudges have been sent BEFORE this one; bumping it gives
+    // us the new count, which we use to decide whether (and when)
+    // to schedule the NEXT one.
+    const newCount = (detail.followup_count ?? 0) + 1;
+    patch.followup_count = Math.min(newCount, 3);
+
+    // Pick the delay for the NEXT scheduled nudge based on what
+    // count we'd be on after this send. If we already sent 3 nudges
+    // (newCount > 3) we stop scheduling -- let the operator decide
+    // whether to escalate manually.
+    let nextDelayDays: number | null = null;
+    if (newCount === 1) {
+      nextDelayDays = settings?.followup_days_first ?? 3;
+    } else if (newCount === 2) {
+      nextDelayDays = settings?.followup_days_second ?? 7;
+    } else if (newCount === 3) {
+      nextDelayDays = settings?.followup_days_third ?? 14;
+    } else {
+      nextDelayDays = null; // Stop nagging after the 3rd nudge.
+    }
+
+    if (nextDelayDays != null) {
+      const next = new Date(now);
+      next.setDate(next.getDate() + nextDelayDays);
+      patch.next_followup_at = next.toISOString();
+    } else {
+      patch.next_followup_at = null;
+    }
+
     updateMut.mutate({ id: detail.id, patch });
   }
 

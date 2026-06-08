@@ -103,6 +103,13 @@ export interface InvestorProfile {
   // Cadence
   last_outreach_at: string | null;
   next_followup_at: string | null;
+  /** Phase 4 cadence engine: how many follow-up nudges have been
+   *  sent in the current outreach cycle. 0 = cold email sent, no
+   *  follow-ups yet. 1-3 = N follow-ups sent. Caps at 3 -- the
+   *  cadence engine stops scheduling after the third nudge. Reset
+   *  to 0 by the reply-detection trigger whenever an inbound email
+   *  lands. */
+  followup_count: number;
   created_at: string;
   updated_at: string;
 }

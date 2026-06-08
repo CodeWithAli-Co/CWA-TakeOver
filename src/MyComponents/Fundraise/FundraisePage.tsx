@@ -60,6 +60,7 @@ import { FundraiseSettingsModal } from "./FundraiseSettingsModal";
 import { InvestorKanban } from "./InvestorKanban";
 import { useFundraiseStore } from "./fundraiseStore";
 import { PIPELINE_STAGE_LABEL } from "@/stores/investors";
+import { FollowupsDueStrip } from "./FollowupsDueStrip";
 
 // localStorage key for the view-mode preference. Persisted so the
 // operator's choice survives reloads -- /fundraise is a daily
@@ -304,6 +305,13 @@ export function FundraisePage() {
           />
         </div>
       </header>
+
+      {/* ── Follow-ups due strip ────────────────────────────── */}
+      {/* Phase 4: actionable list of investors whose next_followup_at
+        * has come due. Renders nothing when there's no work --
+        * absence is itself the signal. Auto-refreshes via the
+        * investor list realtime subscription. */}
+      <FollowupsDueStrip onOpenInvestor={handleOpenInvestor} />
 
       {/* ── Body — Grid or Kanban ───────────────────────────── */}
       {isLoading ? (
