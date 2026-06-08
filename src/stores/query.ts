@@ -1,4 +1,4 @@
-import { getCompanySupabase, takeOversupabase } from "@/MyComponents/supabase";
+import { takeOversupabase } from "@/MyComponents/supabase";
 import {
   keepPreviousData,
   useMutation,
@@ -48,10 +48,8 @@ const fetchActiveUser = async () => {
   //      tolerate a slow network here by polling briefly.
   let supaUser: { id: string } | null = null;
 
-  const companySupabase = await getCompanySupabase();
-
   // Layer 1: persisted session from storage.
-  const { data: sessionData } = await companySupabase.auth.getSession();
+  const { data: sessionData } = await takeOversupabase.auth.getSession();
   if (sessionData?.session?.user) {
     supaUser = sessionData.session.user;
     // eslint-disable-next-line no-console
@@ -64,7 +62,7 @@ const fetchActiveUser = async () => {
   // Layer 2: poll getUser() if storage didn't give us one.
   if (!supaUser) {
     for (let attempt = 0; attempt < 5; attempt++) {
-      const { data, error } = await companySupabase.auth.getUser();
+      const { data, error } = await takeOversupabase.auth.getUser();
       if (error) {
         // eslint-disable-next-line no-console
         console.debug(
@@ -103,7 +101,7 @@ const fetchActiveUser = async () => {
   }
 
   // Query user details including avatar
-  const { data, error } = await companySupabase.from(import.meta.env.DEV ? "demo_employee_table" : "employee")
+  const { data, error } = await takeOversupabase.from(import.meta.env.DEV ? "demo_employee_table" : "employee")
     .select("*") // Fetch everything
     .eq("supa_id", supaUser.id)
     .single(); // Fetch a single user
@@ -116,7 +114,7 @@ const fetchActiveUser = async () => {
     return [];
   }
 
-  const { data: AvatarUrl } = companySupabase.storage.from('avatars').getPublicUrl(data.avatar)
+  const { data: AvatarUrl } = takeOversupabase.storage.from('avatars').getPublicUrl(data.avatar)
 
   // Rehydrate Stronghold's company_name from the server if it's
   // empty -- happens on fresh installs, new machines, and after the
