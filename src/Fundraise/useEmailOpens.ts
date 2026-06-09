@@ -26,7 +26,7 @@
 
 import { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { companySupabase } from "@/routes/index.lazy";
+import { companySupabase } from "@/MyComponents/supabase";
 
 export interface OpenStats {
   /** Total outbound activities in window that had a tracking_id stamped. */
