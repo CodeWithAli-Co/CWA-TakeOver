@@ -53,6 +53,10 @@ import {
 } from "@/Fundraise/useSuccessStats";
 import { useEmailOpens } from "@/Fundraise/useEmailOpens";
 import {
+  useRecentSends,
+  type RecentSend,
+} from "@/Fundraise/useRecentSends";
+import {
   useQuickSendStore,
   type QuickSendEntry,
 } from "./quickSendStore";
@@ -63,6 +67,9 @@ export function OutreachTab() {
   const { data: stats, loading, error, refresh } = useOutreachStats(30);
   const { data: success, loading: successLoading } = useSuccessStats(30);
   const { data: opens } = useEmailOpens(30);
+  // Persistent recent-sends list from crm_activities. Survives reloads
+  // and shows audit attribution (which operator sent each email).
+  const { data: recentSends, loading: recentLoading } = useRecentSends(50);
   const entries = useQuickSendStore((s) => s.entries);
   const clearTerminal = useQuickSendStore((s) => s.clearTerminal);
   const remove = useQuickSendStore((s) => s.remove);
@@ -374,21 +381,17 @@ export function OutreachTab() {
         <Tile className="col-span-2 md:col-span-6 lg:col-span-4 p-4">
           <TileHeader
             label="Recent sends"
-            eyebrow="§02"
-            sub="Click to inspect the body."
-            action={
-              terminal.length > 0 ? (
-                <button
-                  type="button"
-                  onClick={() => clearTerminal()}
-                  className="text-[9.5px] font-mono uppercase tracking-[0.14em] text-foreground/45 hover:text-foreground transition-colors"
-                >
-                  Clear
-                </button>
-              ) : null
+            eyebrow="§02 · audit log"
+            sub={
+              recentLoading
+                ? "Loading…"
+                : `${recentSends.length} from crm_activities · click for body + sender`
             }
           />
-          <RecentList entries={terminal} onInspect={setInspectId} />
+          <PersistentRecentList
+            sends={recentSends}
+            loading={recentLoading}
+          />
         </Tile>
       </div>
 
@@ -1383,6 +1386,275 @@ function RecentList({
   );
 }
 
+// ─── Persistent recent sends from crm_activities ──────────
+//
+// Replaces the in-memory RecentList. Survives reloads; surfaces
+// the audit trail (which operator sent each row).
+
+function PersistentRecentList({
+  sends,
+  loading,
+}: {
+  sends: RecentSend[];
+  loading?: boolean;
+}) {
+  const [inspect, setInspect] = useState<RecentSend | null>(null);
+  if (loading) {
+    return (
+      <div className="h-[120px] flex items-center justify-center text-[11px] text-foreground/35">
+        <Loader2 size={13} className="animate-spin mr-2" /> Loading
+        from audit log…
+      </div>
+    );
+  }
+  if (sends.length === 0) {
+    return (
+      <div className="h-[120px] flex flex-col items-center justify-center text-center px-4">
+        <History size={16} className="text-foreground/20 mb-1.5" />
+        <p className="text-[11px] text-foreground/40 max-w-[260px]">
+          No outbound emails in the audit log yet.
+        </p>
+      </div>
+    );
+  }
+  return (
+    <>
+      <ul className="m-0 list-none max-h-[260px] overflow-y-auto space-y-1.5">
+        {sends.map((s) => (
+          <PersistentRow key={s.id} send={s} onInspect={() => setInspect(s)} />
+        ))}
+      </ul>
+      <RecentSendModal
+        send={inspect}
+        onClose={() => setInspect(null)}
+      />
+    </>
+  );
+}
+
+function PersistentRow({
+  send,
+  onInspect,
+}: {
+  send: RecentSend;
+  onInspect: () => void;
+}) {
+  const initials =
+    (send.actor_username ?? "")
+      .split(/[\s.]+/)
+      .filter(Boolean)
+      .slice(0, 2)
+      .map((s) => s[0]?.toUpperCase() ?? "")
+      .join("") || "?";
+  return (
+    <li>
+      <button
+        type="button"
+        onClick={onInspect}
+        className="w-full text-left rounded-md border border-white/[0.05] bg-white/[0.015] hover:bg-white/[0.04] hover:border-white/15 transition-colors px-3 py-2"
+      >
+        <div className="flex items-start gap-2.5">
+          <CheckCircle2
+            size={12}
+            className="text-emerald-300 mt-0.5 flex-shrink-0"
+          />
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center justify-between gap-2 mb-0.5">
+              <span className="text-[11.5px] font-semibold text-foreground truncate">
+                {send.firm_name ?? "(unknown firm)"}
+              </span>
+              <span className="text-[9.5px] font-mono text-foreground/40 flex-shrink-0">
+                {fmtPastISO(send.happened_at)}
+              </span>
+            </div>
+            <div className="text-[10.5px] text-foreground/50 truncate mb-1">
+              to {send.partner_name ?? "—"}
+              {send.to_email && (
+                <>
+                  <span className="text-foreground/30"> · </span>
+                  <span className="font-mono">{send.to_email}</span>
+                </>
+              )}
+            </div>
+            <div className="text-[10.5px] flex items-center gap-2 min-w-0">
+              <span className="inline-flex items-center gap-1.5 min-w-0">
+                <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-primary/15 text-primary text-[9px] font-bold tracking-[0.04em] flex-shrink-0">
+                  {(() => {
+                    const i = (send.actor_username ?? "")
+                      .split(/[\s.]+/)
+                      .filter(Boolean)
+                      .slice(0, 2)
+                      .map((s) => s[0]?.toUpperCase() ?? "")
+                      .join("");
+                    return i || "?";
+                  })()}
+                </span>
+                <span className="text-foreground/65 truncate">
+                  {send.actor_username ?? "(no actor)"}
+                </span>
+                {send.actor_role && (
+                  <span className="text-[9px] font-mono uppercase tracking-[0.12em] text-foreground/35 flex-shrink-0">
+                    {send.actor_role}
+                  </span>
+                )}
+              </span>
+            </div>
+          </div>
+        </div>
+      </button>
+    </li>
+  );
+}
+
+/** Minimal modal for inspecting a persistent send. Shows recipient,
+ *  subject, audit attribution, and body if it was stored on the
+ *  activity row. */
+function RecentSendModal({
+  send,
+  onClose,
+}: {
+  send: RecentSend | null;
+  onClose: () => void;
+}) {
+  if (!send) return null;
+  return (
+    <div
+      className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4"
+      onClick={onClose}
+    >
+      <div
+        onClick={(e) => e.stopPropagation()}
+        className="w-full max-w-[640px] max-h-[88vh] flex flex-col rounded-sm bg-card border border-border shadow-2xl overflow-hidden"
+      >
+        <div className="flex items-start justify-between gap-3 px-5 py-4 border-b border-border/60 bg-secondary/30">
+          <div className="min-w-0">
+            <div className="text-[10px] font-mono uppercase tracking-[0.18em] text-foreground/45 mb-1.5">
+              Outbound email · audit row
+            </div>
+            <h2 className="text-[16px] font-semibold text-foreground m-0 truncate">
+              {send.subject ?? "(no subject)"}
+            </h2>
+            <p className="text-[11px] text-foreground/55 mt-1 truncate">
+              to {send.partner_name ?? "—"} ·{" "}
+              <span className="font-mono">{send.to_email ?? ""}</span>
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            aria-label="Close"
+            className="p-1 text-foreground/45 hover:text-foreground transition-colors flex-shrink-0"
+          >
+            <XCircle size={16} />
+          </button>
+        </div>
+        <div className="flex-1 overflow-y-auto px-5 py-4 space-y-4">
+          <div className="grid grid-cols-2 gap-x-6 gap-y-3 text-[11.5px]">
+            <AuditCell label="Firm" value={send.firm_name ?? "—"} />
+            <AuditCell label="Recipient" value={send.partner_name ?? "—"} />
+            <AuditCell
+              label="Sent by"
+              value={
+                <span>
+                  {send.actor_username ?? "(unknown)"}
+                  {send.actor_role && (
+                    <span className="text-foreground/40 font-mono ml-1.5">
+                      [{send.actor_role}]
+                    </span>
+                  )}
+                </span>
+              }
+            />
+            <AuditCell
+              label="Sent at"
+              value={
+                <span className="font-mono">
+                  {new Date(send.happened_at).toLocaleString()}
+                </span>
+              }
+            />
+            <AuditCell
+              label="Pattern"
+              value={
+                send.pattern ? (
+                  <span className="font-mono uppercase tracking-[0.1em]">
+                    {send.pattern}
+                  </span>
+                ) : (
+                  <span className="text-foreground/40">—</span>
+                )
+              }
+            />
+            <AuditCell
+              label="Tracking ID"
+              value={
+                send.tracking_id ? (
+                  <span className="font-mono text-foreground/55 text-[10px] truncate">
+                    {send.tracking_id.slice(0, 16)}…
+                  </span>
+                ) : (
+                  <span className="text-foreground/40">—</span>
+                )
+              }
+            />
+          </div>
+          <div>
+            <div className="flex items-center gap-1.5 text-[9.5px] font-mono uppercase tracking-[0.18em] text-foreground/40 mb-2">
+              <Send size={10} />
+              Body
+            </div>
+            {send.body && send.body !== `To: ${send.to_email}` ? (
+              <pre className="ed-mono text-[12px] leading-[1.55] text-foreground/85 whitespace-pre-wrap break-words rounded-sm border border-border/60 bg-secondary/30 p-3.5 m-0">
+                {send.body}
+              </pre>
+            ) : (
+              <div className="text-[11.5px] text-foreground/55 italic border border-dashed border-border/60 rounded-sm p-3.5">
+                Body not stored on this activity row. To capture the
+                full email body for audit, takeover-B2B's gmail/send
+                route needs to persist body_md. See useRecentSends.ts
+                for the spec.
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function AuditCell({
+  label,
+  value,
+}: {
+  label: string;
+  value: React.ReactNode;
+}) {
+  return (
+    <div className="min-w-0">
+      <div className="text-[9.5px] font-mono uppercase tracking-[0.16em] text-foreground/40 mb-0.5">
+        {label}
+      </div>
+      <div className="text-foreground/80 truncate">{value}</div>
+    </div>
+  );
+}
+
+function fmtPastISO(iso: string): string {
+  const diff = Date.now() - new Date(iso).getTime();
+  const s = Math.floor(diff / 1000);
+  if (s < 60) return `${s}s ago`;
+  const m = Math.floor(s / 60);
+  if (m < 60) return `${m}m ago`;
+  const h = Math.floor(m / 60);
+  if (h < 24) return `${h}h ago`;
+  const d = Math.floor(h / 24);
+  if (d < 30) return `${d}d ago`;
+  return new Date(iso).toLocaleDateString(undefined, {
+    month: "short",
+    day: "numeric",
+  });
+}
+
 function RecentRow({
   entry,
   onInspect,
@@ -1432,8 +1704,6 @@ function RecentRow({
     </li>
   );
 }
-
-// ─── utils ─────────────────────────────────────────────────
 
 function fmt(secs: number) {
   const m = Math.floor(secs / 60);
