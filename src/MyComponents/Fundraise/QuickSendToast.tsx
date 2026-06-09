@@ -90,8 +90,8 @@ function QuickSendEntryRow({ entry }: { entry: QuickSendEntry }) {
       return;
     startedRef.current = true;
 
-    let cancelled = false;
     let waitTimer: ReturnType<typeof setTimeout> | null = null;
+    let waitResolve: (() => void) | null = null;
 
     (async () => {
       try {
@@ -101,9 +101,14 @@ function QuickSendEntryRow({ entry }: { entry: QuickSendEntry }) {
         const waitMs = entry.notBefore - Date.now();
         if (waitMs > 0) {
           await new Promise<void>((resolve) => {
+            waitResolve = resolve;
             waitTimer = setTimeout(resolve, waitMs);
           });
-          if (cancelled) return;
+          // After the wait: if the entry was dismissed (operator
+          // hit X), the cleanup will have cleared the timer + the
+          // store entry. Bail without poking setStatus or running
+          // the send pipeline. Otherwise proceed.
+          if (!useQuickSendStore.getState().entries.has(entry.id)) return;
           // Wake into the proper next status. Precomputed drafts
           // skip "drafting" the same way they did at enqueue time.
           setStatus(
@@ -191,12 +196,23 @@ function QuickSendEntryRow({ entry }: { entry: QuickSendEntry }) {
         );
       }
     })();
-    // Cleanup: if the operator dismisses a queued entry mid-wait,
-    // cancel the pending timer and flip the local cancelled flag so
-    // the IIFE bails before firing draft/send.
+    // Cleanup. React 18 Strict Mode mounts every effect twice in
+    // dev: setup -> cleanup -> setup. If we cancel the in-flight
+    // IIFE unconditionally, queued rows get stuck forever (the
+    // first IIFE bails on resume, the re-mounted effect bails at
+    // the startedRef guard). Distinguish:
+    //   - entry still in store  -> Strict Mode dev cleanup; don't
+    //     touch the timer, let the IIFE run normally.
+    //   - entry gone from store -> operator hit X; cancel the
+    //     pending wait + resolve the promise so the IIFE wakes
+    //     and bails at the post-wait existence check.
     return () => {
-      cancelled = true;
+      const stillExists = useQuickSendStore
+        .getState()
+        .entries.has(entry.id);
+      if (stillExists) return;
       if (waitTimer) clearTimeout(waitTimer);
+      if (waitResolve) waitResolve();
     };
     // We only want this effect to run when the entry first mounts.
     // Deps are intentionally minimal -- the startedRef guards

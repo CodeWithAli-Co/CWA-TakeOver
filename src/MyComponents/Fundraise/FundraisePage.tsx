@@ -63,11 +63,23 @@ import { PIPELINE_STAGE_LABEL } from "@/stores/investors";
 import { FollowupsDueStrip } from "./FollowupsDueStrip";
 import { DiscoverInvestorsModal } from "./DiscoverInvestorsModal";
 import { BatchOutreachModal } from "./BatchOutreachModal";
-import { QuickSendToast } from "./QuickSendToast";
-import { DeliverabilityPanel } from "./DeliverabilityPanel";
-import { useQuickSendStore } from "./quickSendStore";
+import { QuickSendRunner } from "./QuickSendRunner";
+import { OutreachTab } from "./OutreachTab";
 import { useBatchOutreachStore } from "./batchOutreachStore";
 import { Send as SendIcon } from "lucide-react";
+
+// Top-level tab inside Fundraise. Pipeline = the existing kanban /
+// grid view. Outreach = the new bento-grid dashboard with the
+// deliverability chart, live send queue, and recent-sends history
+// that replaced the bottom-right toast strip. Persisted to
+// localStorage so the operator's last view sticks across reloads.
+const TAB_KEY = "fundraise:activeTab";
+type ActiveTab = "pipeline" | "outreach";
+function readStoredTab(): ActiveTab {
+  if (typeof window === "undefined") return "pipeline";
+  const v = window.localStorage.getItem(TAB_KEY);
+  return v === "outreach" ? "outreach" : "pipeline";
+}
 
 // localStorage key for the view-mode preference. Persisted so the
 // operator's choice survives reloads -- /fundraise is a daily
@@ -93,7 +105,8 @@ export function FundraisePage() {
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [selectedId, setSelectedId] = useState<string | null>(null);
 
-  // View toggle — Grid vs Kanban. Persisted to localStorage.
+  // View toggle — Grid vs Kanban. Persisted to localStorage. Lives
+  // inside the Pipeline tab; Outreach tab ignores it.
   const [viewMode, setViewMode] = useState<ViewMode>(readStoredViewMode);
   useEffect(() => {
     try {
@@ -102,6 +115,16 @@ export function FundraisePage() {
       /* private-mode etc. — view-mode persistence is best-effort */
     }
   }, [viewMode]);
+
+  // Top-level tab inside Fundraise.
+  const [activeTab, setActiveTab] = useState<ActiveTab>(readStoredTab);
+  useEffect(() => {
+    try {
+      window.localStorage.setItem(TAB_KEY, activeTab);
+    } catch {
+      /* best-effort */
+    }
+  }, [activeTab]);
 
   // ── Cross-route entrypoint via the global fundraise store ─────
   // Cmd+K verbs (and any other surface) can dispatch through
@@ -192,7 +215,7 @@ export function FundraisePage() {
       // and centers it so the kanban + grid don't sprawl across
       // ultrawide monitors. The horizontal padding still breathes
       // at narrower widths.
-      className="min-h-[100dvh] w-full max-w-[1600px] mx-auto bg-background text-foreground px-6 lg:px-8 xl:px-10 py-10"
+      className="min-h-[100dvh] w-full max-w-[2160px] mx-auto bg-background text-foreground px-6 lg:px-10 xl:px-14 py-10"
     >
       <style>{`@import url('https://fonts.googleapis.com/css2?family=Newsreader:ital,wght@0,400;0,500;0,600;1,400&display=swap');.ed-serif{font-family:'Newsreader',Georgia,serif}`}</style>
 
@@ -337,15 +360,36 @@ export function FundraisePage() {
         </div>
       </header>
 
-      {/* ── Follow-ups due strip ────────────────────────────── */}
-      {/* Phase 4: actionable list of investors whose next_followup_at
-        * has come due. Renders nothing when there's no work --
-        * absence is itself the signal. Auto-refreshes via the
-        * investor list realtime subscription. */}
-      <FollowupsDueStrip onOpenInvestor={handleOpenInvestor} />
+      {/* ── Tab strip (soft-primary pills, matching SettingsPage) ── */}
+      {/* Pipeline = kanban / grid of investor cards. Outreach = the
+        * bento-grid dashboard with the live send queue, deliverability
+        * chart, per-pattern accuracy, and a session-history of
+        * recent sends with the employee badge that shows who/what
+        * each row went out AS. */}
+      <div className="mb-5 inline-flex items-center gap-0.5 rounded-md border border-border bg-card/40 p-1">
+        <TabPill
+          active={activeTab === "pipeline"}
+          onClick={() => setActiveTab("pipeline")}
+          label="Pipeline"
+        />
+        <TabPill
+          active={activeTab === "outreach"}
+          onClick={() => setActiveTab("outreach")}
+          label="Outreach"
+        />
+      </div>
 
-      {/* ── Body — Grid or Kanban ───────────────────────────── */}
-      {isLoading ? (
+      {/* ── Follow-ups due strip (Pipeline tab only) ─────────── */}
+      {activeTab === "pipeline" && (
+        <FollowupsDueStrip onOpenInvestor={handleOpenInvestor} />
+      )}
+
+      {/* ── Body ──────────────────────────────────────────────
+        * Pipeline tab: existing kanban / grid view.
+        * Outreach tab : bento-grid dashboard (OutreachTab). */}
+      {activeTab === "outreach" ? (
+        <OutreachTab />
+      ) : isLoading ? (
         <div className="py-16 flex items-center justify-center text-foreground/40 text-[13px]">
           <Loader2 size={14} className="animate-spin mr-2" /> Loading
           investors…
@@ -422,9 +466,13 @@ export function FundraisePage() {
         * useBatchOutreachStore so other surfaces (Cmd+K, kanban
         * column buttons in future) can trigger it without prop
         * threading. */}
-      <div className="mb-3"><DeliverabilityPanel /></div>
       <BatchOutreachModal />
-      <QuickSendToast />
+      {/* Headless pipeline driver for QuickSend entries. Mounts at
+        * the page root (regardless of tab) so sends keep running
+        * even when the operator switches to the Pipeline tab while
+        * the queue is paced. The visible queue lives on the
+        * Outreach tab's QueueTile. */}
+      <QuickSendRunner />
       <FundraiseSettingsModal
         open={settingsOpen}
         onClose={() => setSettingsOpen(false)}
@@ -443,6 +491,36 @@ export function FundraisePage() {
 // ──────────────────────────────────────────────────────────────────
 // Bits
 // ──────────────────────────────────────────────────────────────────
+
+/** Soft-primary pill tab. Same visual language as SettingsPage's
+ *  left-rail nav, adapted to horizontal. Active = soft primary tint
+ *  + primary text + bolt-weight; inactive = muted hover. */
+function TabPill({
+  active,
+  onClick,
+  label,
+}: {
+  active: boolean;
+  onClick: () => void;
+  label: string;
+}) {
+  return (
+    <button
+      type="button"
+      role="tab"
+      aria-selected={active}
+      onClick={onClick}
+      className={
+        "rounded-sm px-3.5 py-1.5 text-[12.5px] transition-colors " +
+        (active
+          ? "bg-primary/[0.12] text-primary font-semibold"
+          : "text-foreground/65 hover:bg-muted/60 hover:text-foreground font-medium")
+      }
+    >
+      {label}
+    </button>
+  );
+}
 
 function Stat({
   label,
