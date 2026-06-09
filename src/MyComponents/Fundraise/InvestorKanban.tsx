@@ -580,9 +580,3 @@ async function loadInvestorDetailMinimal(
     activities: [],
   } as InvestorDetail;
 }
-a ?? []).length,
-    company,
-    partners: partnersRes.data ?? [],
-    activities: [],
-  } as InvestorDetail;
-}
