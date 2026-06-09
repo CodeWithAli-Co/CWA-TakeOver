@@ -223,6 +223,11 @@ export interface SendEmailInput {
    *  per-pattern accuracy from bounces. Server writes it into
    *  metadata.pattern on the activity row. */
   pattern?: string;
+  /** Pixel-tracking id for open-rate measurement. Server-side:
+   *  embeds an <img src=".../track/{id}.gif"> in the outbound HTML
+   *  body and stamps the id into metadata.tracking_id. The
+   *  useEmailOpens hook reads aggregated opens by tracking_id. */
+  tracking_id?: string;
 }
 
 export interface SendEmailResult {
@@ -267,6 +272,7 @@ export function useSendEmail() {
           from_alias: input.from_alias,
           from_display_name: input.from_display_name,
           pattern: input.pattern,
+          tracking_id: input.tracking_id,
         }),
       });
       if (!res.ok) {

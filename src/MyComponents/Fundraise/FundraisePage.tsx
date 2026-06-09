@@ -211,36 +211,45 @@ export function FundraisePage() {
       initial={{ opacity: 0, y: 4 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.3 }}
-      // Standalone route container. Caps content at 1600px wide
+      // Full-width dark canvas. The inner div below caps content at 1600px wide
       // and centers it so the kanban + grid don't sprawl across
       // ultrawide monitors. The horizontal padding still breathes
       // at narrower widths.
-      className="min-h-[100dvh] w-full max-w-[2160px] mx-auto bg-background text-foreground px-6 lg:px-10 xl:px-14 py-10"
+      // Full-width dark canvas. The inner div below is what enforces
+      // the max content width + horizontal padding. Splitting the two
+      // means the dark color fills the whole viewport on ultra-wide
+      // monitors instead of leaving letterboxed strips of the
+      // underlying app background visible on either side.
+      className="min-h-[100dvh] w-full bg-[#050505] text-foreground"
     >
       <style>{`@import url('https://fonts.googleapis.com/css2?family=Newsreader:ital,wght@0,400;0,500;0,600;1,400&display=swap');.ed-serif{font-family:'Newsreader',Georgia,serif}`}</style>
 
-      {/* ── Editorial header ────────────────────────────────── */}
-      <header className="mb-6">
-        <div className="flex items-start justify-between gap-6 flex-wrap">
-          <div className="space-y-2 min-w-0 max-w-[60%]">
-            <p className="flex items-center gap-2 text-[10px] font-mono uppercase tracking-[0.22em] text-foreground/45">
+      {/* Centered content wrapper -- max width 2160px, page padding
+        * applied here so the outer dark canvas can extend to the
+        * viewport edges on ultra-wide monitors. py-6 (was 10) to
+        * trim vertical real-estate eaten by the header. */}
+      <div className="w-full max-w-[2160px] mx-auto px-6 lg:px-10 xl:px-14 py-6">
+
+      {/* ── Compact editorial header ─────────────────────────
+        * Title + eyebrow on one line; long marketing description
+        * dropped (the tabs + section labels carry the meaning).
+        * Stats strip below stays tight. */}
+      <header className="mb-4">
+        <div className="flex items-center justify-between gap-6 flex-wrap">
+          <div className="flex items-baseline gap-3 min-w-0">
+            <h1 className="ed-serif text-[24px] leading-none text-foreground tracking-tight m-0">
+              Investor{" "}
+              <span className="italic font-normal text-foreground/70">
+                outreach
+              </span>
+            </h1>
+            <span className="inline-flex items-center gap-2 text-[9.5px] font-mono uppercase tracking-[0.22em] text-foreground/40 pb-0.5">
               <span className="relative flex h-1.5 w-1.5">
                 <span className="absolute inline-flex h-full w-full rounded-full bg-primary/70 opacity-75 animate-ping" />
                 <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-primary shadow-[0_0_8px_var(--color-primary,#dc2626)]" />
               </span>
-              CodeWithAli · Fundraise · Pre-seed
-            </p>
-            <h1 className="ed-serif text-[36px] leading-[1.05] text-foreground tracking-tight m-0">
-              Investor{" "}
-              <span className="italic font-normal text-foreground/75">
-                outreach
-              </span>
-            </h1>
-            <p className="text-[12.5px] text-foreground/55 leading-snug pt-1">
-              Every VC, angel, and warm intro in one funnel. Add manually
-              or let Axon pull a researched list. Email, follow-ups, and
-              reply tracking land here automatically.
-            </p>
+              CodeWithAli · Pre-seed
+            </span>
           </div>
 
           {/* Primary CTAs.
@@ -347,8 +356,9 @@ export function FundraisePage() {
           </div>
         </div>
 
-        {/* Stats strip */}
-        <div className="mt-5 grid grid-cols-2 sm:grid-cols-4 gap-x-8 gap-y-3 py-3 border-y border-border/50">
+        {/* Stats strip -- compact: 4-up inline, no border, no
+          * vertical padding. */}
+        <div className="mt-3 grid grid-cols-2 sm:grid-cols-4 gap-x-8 gap-y-1.5">
           <Stat label="Investors" value={stats.total} />
           <Stat label="P0 dream list" value={stats.p0} accent={stats.p0 > 0} />
           <Stat label="Replied or further" value={stats.replied} />
@@ -484,6 +494,7 @@ export function FundraisePage() {
           closeInvestorInStore();
         }}
       />
+      </div>
     </motion.div>
   );
 }
@@ -580,9 +591,10 @@ function EmptyState({
         <button
           type="button"
           onClick={onAddManual}
-          className="inline-flex items-center gap-1 px-2 h-8 text-[10.5px] uppercase tracking-[0.14em] font-mono text-foreground/55 hover:text-foreground transition-colors"
+          className="inline-flex items-center gap-1.5 px-3 h-8 rounded-sm border border-border text-[11.5px] uppercase tracking-wider text-foreground/75 hover:text-foreground hover:border-foreground/30 transition-colors"
         >
-          or add manually
+          <Plus size={11} />
+          Add manually
         </button>
       </div>
     </div>

@@ -86,6 +86,12 @@ export interface QuickSendEntry {
   // so the modal can show "Sent as Ali <ali@yourco.com>".
   sentAsAlias?: string;
   sentAsDisplayName?: string;
+  // Pixel-tracking id. Generated on enqueue (UUID), passed to
+  // /api/gmail/send so the server can embed an invisible
+  // <img src=".../track/{tracking_id}.gif"> in the outbound body
+  // and stamp the same id into the activity row's metadata.
+  // useEmailOpens then aggregates opens for tracked sends.
+  tracking_id?: string;
 }
 
 export interface NewQuickSendInput {
@@ -143,6 +149,13 @@ export const useQuickSendStore = create<QuickSendState>((set) => ({
     queueClock = slotStart + gap;
     lastGroupKey = groupKey;
 
+    // Per-send pixel-tracking id. Generated upfront so it's stable
+    // across the runner's pipeline (draft -> send -> activity row).
+    const tracking_id =
+      typeof crypto !== "undefined" && crypto.randomUUID
+        ? crypto.randomUUID()
+        : `trk_${Date.now()}_${Math.random().toString(36).slice(2, 10)}`;
+
     set((s) => {
       const next = new Map(s.entries);
       next.set(id, {
@@ -156,6 +169,7 @@ export const useQuickSendStore = create<QuickSendState>((set) => ({
               : "drafting",
         startedAt: now,
         notBefore: slotStart,
+        tracking_id,
       });
       return { entries: next };
     });

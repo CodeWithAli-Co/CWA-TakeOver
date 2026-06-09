@@ -152,6 +152,10 @@ function Runner({ entry }: { entry: QuickSendEntry }) {
           from_alias: settings?.default_send_alias ?? undefined,
           from_display_name: settings?.founder_name ?? undefined,
           pattern: entry.pattern ?? "unknown",
+          // Pass the per-send tracking_id so the server can embed
+          // the open-tracking pixel + stamp the id onto the
+          // activity row's metadata.tracking_id.
+          tracking_id: entry.tracking_id,
         });
 
         try {
