@@ -806,6 +806,12 @@ export const Route = createRootRoute({
           isDev: import.meta.env.DEV,
         });
         console.log("Finished checking. Result: ", res);
+        if (res) {
+          sendNotification({
+            title: `New Update Available!`,
+            body: `Download Started...`,
+          });
+        }
         // const update = await check();
         // // Run when update has an actual version and has 'rid' value
         // if (update && update.rid !== null && update.version !== null) {
@@ -1138,7 +1144,13 @@ export const Route = createRootRoute({
   pendingComponent: () => {
     return (
       <section className="w-screen h-screen flex items-center justify-center select-none">
-        <img src="/codewithali-removebg-preview.png" width={500} height={500} draggable={false} className="opacity-75 animate-pulse" />
+        <img
+          src="/codewithali-removebg-preview.png"
+          width={500}
+          height={500}
+          draggable={false}
+          className="opacity-75 animate-pulse"
+        />
       </section>
     );
   },

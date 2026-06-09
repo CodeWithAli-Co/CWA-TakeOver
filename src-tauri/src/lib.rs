@@ -13,7 +13,7 @@ use tauri::{
     menu::{Menu, MenuItem},
     tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent},
 };
-use tauri_plugin_autostart::MacosLauncher;
+use tauri_plugin_autostart::{MacosLauncher, ManagerExt};
 use tauri_plugin_updater::UpdaterExt;
 
 // Global flag — when true, app fully exits on window close.
@@ -156,7 +156,7 @@ async fn check_for_update(
     app: AppHandle,
     company: String,
     is_dev: bool,
-) -> tauri_plugin_updater::Result<()> {
+) -> tauri_plugin_updater::Result<bool> {
     let update_url: Url = Url::from_str(&format!(
         "https://www.takeover.systems/api/releases/{{{{target}}}}-{{{{arch}}}}"
     ))?;
@@ -167,6 +167,14 @@ async fn check_for_update(
     //         company, is_dev, update_url
     //     );
     // }
+
+    // When in production, enable autostart
+    if !is_dev {
+        // Get the autostart manager
+        let autostart_manager = app.autolaunch();
+        // Enable autostart
+        let _ = autostart_manager.enable();
+    }
 
     let update = app
         .updater_builder()
@@ -202,7 +210,7 @@ async fn check_for_update(
                 update.version,
                 update.body.unwrap_or(String::from("(No Body)"))
             );
-            return Ok(());
+            return Ok(false);
         }
 
         let mut downloaded = 0;
@@ -224,7 +232,7 @@ async fn check_for_update(
         app.restart();
     }
 
-    Ok(())
+    Ok(true)
 }
 
 /// Plain transactional email — no attachment. Used by the
@@ -301,6 +309,16 @@ fn focus_window(app: tauri::AppHandle) {
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
+        .plugin(tauri_plugin_single_instance::init(|app, _args, _cwd| {
+            /*
+               By default, when you initiate a new instance while the application is already running, no action is taken.
+               To focus the window of the running instance when user tries to open a new instance, alter the callback closure as follows
+            */
+            let _ = app
+                .get_webview_window("main")
+                .expect("no main window")
+                .set_focus();
+        }))
         .plugin(tauri_plugin_shell::init()) //register the plugin in the builder chain ( basically allows axon to work with the terminal and add commands )
         .plugin(tauri_plugin_window_state::Builder::new().build())
         .plugin(tauri_plugin_updater::Builder::new().build())
@@ -331,6 +349,16 @@ pub fn run() {
                 .join("salt.txt");
             app.handle()
                 .plugin(tauri_plugin_stronghold::Builder::with_argon2(&salt_path).build())?;
+
+            // Get the autostart manager
+            let autostart_manager = app.autolaunch();
+
+            // Check if app AutoStarts
+            // *This is mostly to check during development
+            println!(
+                "Registered for autostart? {}",
+                autostart_manager.is_enabled().unwrap()
+            );
 
             // ── Windows: register the AppUserModelID at runtime ──
             // Without this, OS toasts dispatched from a `tauri dev`
