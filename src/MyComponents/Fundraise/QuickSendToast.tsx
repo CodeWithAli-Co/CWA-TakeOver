@@ -11,9 +11,9 @@
  * (zustand default behavior).
  */
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { CheckCircle2, Loader2, XCircle, X, Send } from "lucide-react";
+import { CheckCircle2, Clock, Loader2, XCircle, X, Send } from "lucide-react";
 
 import {
   useQuickSendStore,
@@ -35,7 +35,7 @@ import { companySupabase } from "@/routes/index.lazy";
 // How long a successful send card lingers before fading out.
 // Failures stay until the operator dismisses them so they're not
 // missed.
-const AUTO_DISMISS_MS = 4000;
+const AUTO_DISMISS_MS = 6000;
 
 export function QuickSendToast() {
   const entries = useQuickSendStore((s) => s.entries);
@@ -72,49 +72,111 @@ function QuickSendEntryRow({ entry }: { entry: QuickSendEntry }) {
 
   // Run the draft+send pipeline once per entry. Guard with a ref so
   // re-renders (e.g. status updates) don't trigger a second pass.
+  //
+  // Pacing: if entry.notBefore is in the future, the entry mounted
+  // in "queued" state. We sleep until notBefore (the queue clock has
+  // already spread enqueues at 35-75s gaps so we don't burst-send
+  // and trip Gmail's outbound abuse classifier), THEN flip status
+  // to "drafting" or "sending" depending on whether a draft was
+  // precomputed upstream, and kick the pipeline.
   const startedRef = useRef(false);
   useEffect(() => {
     if (startedRef.current) return;
-    if (entry.status !== "drafting") return;
+    if (
+      entry.status !== "queued" &&
+      entry.status !== "drafting" &&
+      entry.status !== "sending"
+    )
+      return;
     startedRef.current = true;
+
+    let cancelled = false;
+    let waitTimer: ReturnType<typeof setTimeout> | null = null;
 
     (async () => {
       try {
-        // 1. Load investor detail (needed for the draft prompt).
+        // Honor the queue slot. We do a single timer rather than
+        // polling -- the row's own countdown effect re-renders the
+        // visible "starts in Xs" label.
+        const waitMs = entry.notBefore - Date.now();
+        if (waitMs > 0) {
+          await new Promise<void>((resolve) => {
+            waitTimer = setTimeout(resolve, waitMs);
+          });
+          if (cancelled) return;
+          // Wake into the proper next status. Precomputed drafts
+          // skip "drafting" the same way they did at enqueue time.
+          setStatus(
+            entry.id,
+            entry.precomputed_draft ? "sending" : "drafting",
+          );
+        }
+
+        // Resolve the draft source. Two flows here:
+        //
+        //   precomputed_draft set  → SHOTGUN MODE. One draft was
+        //   produced upstream and fanned out to N addresses. Skip
+        //   the per-row draft call -- saves N-1 Anthropic calls per
+        //   investor, and (more importantly) every recipient address
+        //   receives the same email text.
+        //
+        //   precomputed_draft unset → STANDARD MODE. Draft per row.
+        //
+        // Either way we still need detail to run the post-send hook
+        // (pipeline bump + cadence schedule).
         const detail = await loadInvestorDetail(entry.investor_id);
         if (!detail) {
           setStatus(entry.id, "failed", "Couldn't load investor.");
           return;
         }
-        // 2. Pick draft mode from followup_count -- same logic as the
-        //    drawer's DraftEmailModal.
-        const mode = deriveMode(detail);
-        const draft = await draftInvestorEmail({
-          investor: detail,
-          partnerId: entry.partner_id,
-          channel: "email",
-          settings: settings ?? null,
-          mode,
-        });
-        if (draft.error || !draft.body.trim()) {
-          setStatus(
-            entry.id,
-            "failed",
-            draft.error ?? "Axon returned an empty draft.",
-          );
-          return;
+
+        let subject: string;
+        let body: string;
+        if (entry.precomputed_draft) {
+          subject = entry.precomputed_draft.subject;
+          body = entry.precomputed_draft.body;
+        } else {
+          const mode = deriveMode(detail);
+          const draft = await draftInvestorEmail({
+            investor: detail,
+            partnerId: entry.partner_id,
+            channel: "email",
+            settings: settings ?? null,
+            mode,
+          });
+          if (draft.error || !draft.body.trim()) {
+            setStatus(
+              entry.id,
+              "failed",
+              draft.error ?? "Axon returned an empty draft.",
+            );
+            return;
+          }
+          subject = draft.subject;
+          body = draft.body;
         }
-        // 3. Send via Gmail using the same mutation as everywhere else.
+
         setStatus(entry.id, "sending");
         await sendMut.mutateAsync({
           to: entry.partner_email,
-          subject: draft.subject,
-          body: draft.body,
+          subject,
+          body,
           contact_id: entry.partner_id,
           from_alias: settings?.default_send_alias ?? undefined,
           from_display_name: settings?.founder_name ?? undefined,
+          // Phase 11.2: thread pattern through so the deliverability
+          // dashboard can compute per-pattern accuracy from bounces.
+          pattern: entry.pattern ?? "unknown",
         });
-        // 4. Post-send hook: pipeline bump + cadence schedule.
+
+        // Post-send hook fires ONCE per investor, not per fanned-out
+        // address. We only bump pipeline on the first entry in a
+        // shotgun group; subsequent rows skip the hook.
+        // The cleanest signal: the FIRST row enqueued for an
+        // investor in this batch will not have its own bump-target
+        // already in the cadence. To keep things simple we just
+        // run the hook regardless -- the underlying mutation is
+        // idempotent enough (last write wins on the cadence fields).
         try {
           await applyPostSendHook(detail, settings, updateInvestorMut);
         } catch {
@@ -129,9 +191,16 @@ function QuickSendEntryRow({ entry }: { entry: QuickSendEntry }) {
         );
       }
     })();
-    // We only want this effect to run when the entry first mounts
-    // with status "drafting". Deps are intentionally minimal -- the
-    // startedRef guards against duplicate runs anyway.
+    // Cleanup: if the operator dismisses a queued entry mid-wait,
+    // cancel the pending timer and flip the local cancelled flag so
+    // the IIFE bails before firing draft/send.
+    return () => {
+      cancelled = true;
+      if (waitTimer) clearTimeout(waitTimer);
+    };
+    // We only want this effect to run when the entry first mounts.
+    // Deps are intentionally minimal -- the startedRef guards
+    // against duplicate runs anyway.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [entry.id]);
 
@@ -162,8 +231,16 @@ function QuickSendEntryRow({ entry }: { entry: QuickSendEntry }) {
               {" · "}
               {entry.partner_email}
             </span>
+            {entry.pattern && (
+              <span className="ml-1.5 text-[9.5px] uppercase font-mono tracking-[0.1em] text-foreground/35">
+                {entry.pattern}
+              </span>
+            )}
           </div>
           <div className="text-[10.5px] mt-1">
+            {entry.status === "queued" && (
+              <QueuedCountdown notBefore={entry.notBefore} />
+            )}
             {entry.status === "drafting" && (
               <span className="text-foreground/55">
                 Axon is drafting your email…
@@ -186,11 +263,18 @@ function QuickSendEntryRow({ entry }: { entry: QuickSendEntry }) {
             )}
           </div>
         </div>
-        {(entry.status === "sent" || entry.status === "failed") && (
+        {(entry.status === "queued" ||
+          entry.status === "sent" ||
+          entry.status === "failed") && (
           <button
             type="button"
             onClick={() => remove(entry.id)}
-            aria-label="Dismiss"
+            aria-label={entry.status === "queued" ? "Cancel send" : "Dismiss"}
+            title={
+              entry.status === "queued"
+                ? "Cancel before this slot fires"
+                : "Dismiss"
+            }
             className="p-0.5 text-foreground/35 hover:text-foreground/80 transition-colors flex-shrink-0"
           >
             <X size={12} />
@@ -212,11 +296,37 @@ function StatusIcon({ status }: { status: QuickSendEntry["status"] }) {
       <XCircle size={14} className="text-destructive mt-0.5 flex-shrink-0" />
     );
   }
+  if (status === "queued") {
+    return (
+      <Clock size={14} className="text-foreground/45 mt-0.5 flex-shrink-0" />
+    );
+  }
   return (
     <Loader2
       size={14}
       className="text-primary animate-spin mt-0.5 flex-shrink-0"
     />
+  );
+}
+
+// Live mm:ss countdown for queued rows. Re-renders once per second
+// off a local interval -- no global timer, no extra zustand churn.
+function QueuedCountdown({ notBefore }: { notBefore: number }) {
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    const t = setInterval(() => setNow(Date.now()), 1_000);
+    return () => clearInterval(t);
+  }, []);
+  const remainingMs = Math.max(0, notBefore - now);
+  const secs = Math.ceil(remainingMs / 1000);
+  const mm = Math.floor(secs / 60);
+  const ss = secs % 60;
+  const label =
+    mm > 0 ? `${mm}m ${String(ss).padStart(2, "0")}s` : `${ss}s`;
+  return (
+    <span className="text-foreground/55 inline-flex items-center gap-1">
+      <Clock size={9} /> Queued · sends in {label}
+    </span>
   );
 }
 

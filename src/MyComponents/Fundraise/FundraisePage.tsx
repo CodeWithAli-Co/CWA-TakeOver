@@ -64,6 +64,7 @@ import { FollowupsDueStrip } from "./FollowupsDueStrip";
 import { DiscoverInvestorsModal } from "./DiscoverInvestorsModal";
 import { BatchOutreachModal } from "./BatchOutreachModal";
 import { QuickSendToast } from "./QuickSendToast";
+import { DeliverabilityPanel } from "./DeliverabilityPanel";
 import { useQuickSendStore } from "./quickSendStore";
 import { useBatchOutreachStore } from "./batchOutreachStore";
 import { Send as SendIcon } from "lucide-react";
@@ -421,6 +422,7 @@ export function FundraisePage() {
         * useBatchOutreachStore so other surfaces (Cmd+K, kanban
         * column buttons in future) can trigger it without prop
         * threading. */}
+      <div className="mb-3"><DeliverabilityPanel /></div>
       <BatchOutreachModal />
       <QuickSendToast />
       <FundraiseSettingsModal

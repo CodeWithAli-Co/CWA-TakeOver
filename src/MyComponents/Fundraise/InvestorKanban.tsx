@@ -44,6 +44,11 @@ import {
 import { KanbanInvestorCard } from "./KanbanInvestorCard";
 import { useQuickSendStore } from "./quickSendStore";
 import { companySupabase } from "@/routes/index.lazy";
+import {
+  draftInvestorEmail,
+  type DraftMode,
+  type InvestorDetail,
+} from "@/Fundraise/draftInvestorEmail";
 
 // MIME-typed dataTransfer key keeps us from picking up unrelated
 // drags (e.g. a drag from the CRM PipelineView in another window).
@@ -264,12 +269,21 @@ export { COLUMN_ORDER as KANBAN_COLUMN_ORDER };
 // The QuickSendToast picks it up and runs the draft + send pipeline.
 // ─────────────────────────────────────────────────────────────────
 async function quickSendForInvestor(inv: InvestorListEntry) {
+  // Phase 11.1: SHOTGUN MODE. For each partner at the firm:
+  //   - If the partner has an email on file, send to that one.
+  //   - If not, generate pattern candidates from the firm's domain
+  //     (first@, first.last@, flast@, firstlast@, first_last@) and
+  //     fire ALL of them simultaneously. The investor only sees the
+  //     one that actually delivers; the rest bounce back to us.
+  // One draft is generated per partner and fanned out across the N
+  // candidate addresses, so every send for a given partner contains
+  // the same email body (important when firms run catch-alls).
   try {
     const enqueue = useQuickSendStore.getState().enqueue;
-    // The investor row gives us the firm's CRM company via a join
-    // surface -- the kanban entries carry company-side fields. We need
-    // the company_id to look up partners. InvestorListEntry doesn't
-    // expose it directly, so we round-trip through investor_profiles.
+    const setStatus = useQuickSendStore.getState().setStatus;
+
+    // Resolve the firm's company_id (InvestorListEntry exposes the
+    // joined name but not the id).
     const { data: profileRow } = await companySupabase
       .from("investor_profiles")
       .select("company_id")
@@ -284,47 +298,291 @@ async function quickSendForInvestor(inv: InvestorListEntry) {
         partner_name: "(no firm row)",
         partner_email: "",
       });
-      useQuickSendStore
-        .getState()
-        .setStatus(id, "failed", "Investor has no linked company row.");
+      setStatus(id, "failed", "Investor has no linked company row.");
       return;
     }
-    const { data: partners } = await companySupabase
+
+    // Pull EVERY partner at the firm -- previously we capped to 1.
+    // Operator can quickly send to all GPs in one click now.
+    const { data: partnerRows } = await companySupabase
       .from("crm_contacts")
       .select("id, name, email")
-      .eq("company_id", companyId)
-      .not("email", "is", null)
-      .limit(1);
-    if (!partners || partners.length === 0) {
+      .eq("company_id", companyId);
+    const partners = (partnerRows ?? []) as Array<{
+      id: string;
+      name: string | null;
+      email: string | null;
+    }>;
+    if (partners.length === 0) {
       const id = enqueue({
         investor_id: inv.id,
         firm_name: inv.company_name,
         partner_id: "",
-        partner_name: "(no partner with email)",
+        partner_name: "(no partners on file)",
         partner_email: "",
       });
-      useQuickSendStore
-        .getState()
-        .setStatus(
-          id,
-          "failed",
-          "No partner with email -- add one via Find with Axon first.",
-        );
+      setStatus(id, "failed", "No partners listed for this firm yet.");
       return;
     }
-    const partner = partners[0] as {
-      id: string;
-      name: string | null;
-      email: string;
-    };
+
+    // Resolve firm domain for pattern generation.
+    const firmDomain =
+      (inv as any).company_domain ?? cleanDomain((inv as any).website ?? "");
+
+    // For each partner, fan out. We process partners sequentially so
+    // the toast queue stays readable; sends within a partner fire in
+    // parallel.
+    for (const partner of partners) {
+      await shotgunForPartner({
+        inv,
+        partner,
+        firmDomain,
+        enqueue,
+        setStatus,
+      });
+    }
+  } catch (e) {
+    console.error("[quickSendForInvestor]", e);
+  }
+}
+
+/** Per-partner shotgun. Either sends to the known email (single
+ *  entry) or generates pattern candidates from the firm domain and
+ *  fires N parallel entries with one shared draft. */
+async function shotgunForPartner(args: {
+  inv: InvestorListEntry;
+  partner: { id: string; name: string | null; email: string | null };
+  firmDomain: string;
+  enqueue: (input: any) => string;
+  setStatus: (id: string, status: any, error?: string) => void;
+}): Promise<void> {
+  const { inv, partner, firmDomain, enqueue, setStatus } = args;
+  const partnerName = partner.name ?? "Unnamed partner";
+
+  // CASE 1: partner has a real email on file. Single send, no
+  // pattern guessing, no fan-out. precomputed_draft is unset so the
+  // toast row drafts per its standard path.
+  if (partner.email?.trim()) {
     enqueue({
       investor_id: inv.id,
       firm_name: inv.company_name,
       partner_id: partner.id,
-      partner_name: partner.name ?? "Unnamed partner",
-      partner_email: partner.email,
+      partner_name: partnerName,
+      partner_email: partner.email.trim(),
+      pattern: "verified",
     });
-  } catch (e) {
-    console.error("[quickSendForInvestor]", e);
+    return;
   }
+
+  // CASE 2: no email + no firm domain -> can't pattern-guess. Fail
+  // gracefully with a useful message.
+  if (!firmDomain) {
+    const id = enqueue({
+      investor_id: inv.id,
+      firm_name: inv.company_name,
+      partner_id: partner.id,
+      partner_name: partnerName,
+      partner_email: "",
+    });
+    setStatus(
+      id,
+      "failed",
+      "No email + no firm domain -- add a domain to enable shotgun.",
+    );
+    return;
+  }
+
+  // CASE 3: no email + we have firm domain -> SHOTGUN.
+  //   1. Generate pattern candidates client-side (no server hit).
+  //   2. Draft ONE email (we need partner_id resolved on
+  //      investor_profiles -> partners). To minimize latency we draft
+  //      via /api hit later in QuickSendToast -- but we want one
+  //      shared draft, not N. So we run a single draft here, attach
+  //      it as precomputed_draft to every enqueue.
+  //   3. Enqueue N entries, each with a different target email and
+  //      the SAME precomputed_draft.
+  const candidates = generatePatternCandidates(partner.name ?? "", firmDomain);
+  if (candidates.length === 0) {
+    const id = enqueue({
+      investor_id: inv.id,
+      firm_name: inv.company_name,
+      partner_id: partner.id,
+      partner_name: partnerName,
+      partner_email: "",
+    });
+    setStatus(
+      id,
+      "failed",
+      "Couldn't generate patterns -- check the partner's name + firm domain.",
+    );
+    return;
+  }
+
+  // Draft once for this partner. Load investor detail + settings,
+  // call draftInvestorEmail, surface a single combined error if it
+  // fails (rather than N identical failure rows).
+  const detail = await loadInvestorDetailMinimal(inv.id);
+  if (!detail) {
+    const id = enqueue({
+      investor_id: inv.id,
+      firm_name: inv.company_name,
+      partner_id: partner.id,
+      partner_name: partnerName,
+      partner_email: "",
+    });
+    setStatus(id, "failed", "Couldn't load investor detail for the draft.");
+    return;
+  }
+  const { data: settings } = await companySupabase
+    .from("fundraise_settings")
+    .select("*")
+    .maybeSingle();
+
+  const mode: DraftMode =
+    ((detail as any).followup_count ?? 0) <= 0
+      ? "cold"
+      : (detail as any).followup_count === 1
+        ? "followup_1"
+        : (detail as any).followup_count === 2
+          ? "followup_2"
+          : "followup_3";
+
+  const draft = await draftInvestorEmail({
+    investor: detail,
+    partnerId: partner.id,
+    channel: "email",
+    settings: settings ?? null,
+    mode,
+  });
+  if (draft.error || !draft.body.trim()) {
+    const id = enqueue({
+      investor_id: inv.id,
+      firm_name: inv.company_name,
+      partner_id: partner.id,
+      partner_name: partnerName,
+      partner_email: "",
+    });
+    setStatus(
+      id,
+      "failed",
+      draft.error ?? "Axon returned an empty draft.",
+    );
+    return;
+  }
+
+  // Fan out. Each candidate becomes its own toast row with the same
+  // precomputed_draft attached -- the row skips the drafting phase
+  // and jumps straight to sending.
+  for (const c of candidates) {
+    enqueue({
+      investor_id: inv.id,
+      firm_name: inv.company_name,
+      partner_id: partner.id,
+      partner_name: partnerName,
+      partner_email: c.email,
+      pattern: c.pattern,
+      precomputed_draft: {
+        subject: draft.subject,
+        body: draft.body,
+        hookUsed: draft.hookUsed,
+      },
+    });
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────
+// Local helpers for shotgun mode -- mirror the server-side pattern
+// generator + a minimal investor-detail load so we don't pull the
+// BatchOutreachModal helper indirectly.
+// ─────────────────────────────────────────────────────────────────
+
+interface ShotgunCandidate {
+  email: string;
+  pattern: string;
+}
+
+function generatePatternCandidates(
+  partnerName: string,
+  firmDomain: string,
+): ShotgunCandidate[] {
+  if (!partnerName.trim() || !firmDomain.trim()) return [];
+  const domain = cleanDomain(firmDomain);
+  if (!domain.includes(".")) return [];
+  const tokens = partnerName
+    .trim()
+    .split(/\s+/)
+    .filter((t) => !/^(jr\.?|sr\.?|ii|iii|iv|md|phd)$/i.test(t));
+  if (tokens.length === 0) return [];
+  const first = cleanToken(tokens[0]);
+  const last =
+    tokens.length > 1 ? cleanToken(tokens[tokens.length - 1]) : "";
+  if (!first) return [];
+
+  const out: ShotgunCandidate[] = [];
+  out.push({ email: `${first}@${domain}`, pattern: "first" });
+  if (last) {
+    out.push({
+      email: `${first}.${last}@${domain}`,
+      pattern: "first.last",
+    });
+    out.push({ email: `${first[0]}${last}@${domain}`, pattern: "flast" });
+    out.push({ email: `${first}${last}@${domain}`, pattern: "firstlast" });
+    out.push({
+      email: `${first}_${last}@${domain}`,
+      pattern: "first_last",
+    });
+  }
+  return out;
+}
+
+function cleanToken(raw: string): string {
+  return raw
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z]/g, "");
+}
+
+function cleanDomain(raw: string): string {
+  return raw
+    .trim()
+    .toLowerCase()
+    .replace(/^https?:\/\//, "")
+    .replace(/^www\./, "")
+    .replace(/\/.*$/, "")
+    .replace(/[^a-z0-9.\-]/g, "");
+}
+
+async function loadInvestorDetailMinimal(
+  id: string,
+): Promise<InvestorDetail | null> {
+  const { data: profile, error } = await companySupabase
+    .from("investor_profiles")
+    .select(
+      `*, company:crm_companies!inner (id, name, domain, linkedin_url, website)`,
+    )
+    .eq("id", id)
+    .maybeSingle();
+  if (error || !profile) return null;
+  const company = (profile as any).company;
+  const partnersRes = await companySupabase
+    .from("crm_contacts")
+    .select("*")
+    .eq("company_id", company.id);
+  return {
+    ...(profile as any),
+    company_name: company.name,
+    company_domain: company.domain,
+    company_linkedin: company.linkedin_url,
+    partner_count: (partnersRes.data ?? []).length,
+    company,
+    partners: partnersRes.data ?? [],
+    activities: [],
+  } as InvestorDetail;
+}
+a ?? []).length,
+    company,
+    partners: partnersRes.data ?? [],
+    activities: [],
+  } as InvestorDetail;
 }

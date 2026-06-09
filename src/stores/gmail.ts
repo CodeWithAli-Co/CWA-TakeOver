@@ -217,6 +217,12 @@ export interface SendEmailInput {
    *  unset, From: is the connected account's primary address. */
   from_alias?: string;
   from_display_name?: string;
+  /** Phase 11.2: which email pattern produced the recipient address.
+   *  'verified' / 'first' / 'first.last' / 'flast' / 'firstlast' /
+   *  'first_last'. Used by the deliverability dashboard to compute
+   *  per-pattern accuracy from bounces. Server writes it into
+   *  metadata.pattern on the activity row. */
+  pattern?: string;
 }
 
 export interface SendEmailResult {
@@ -260,6 +266,7 @@ export function useSendEmail() {
           thread_id: input.thread_id,
           from_alias: input.from_alias,
           from_display_name: input.from_display_name,
+          pattern: input.pattern,
         }),
       });
       if (!res.ok) {
