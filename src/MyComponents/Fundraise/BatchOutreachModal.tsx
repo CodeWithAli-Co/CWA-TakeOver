@@ -9,8 +9,10 @@
  *   DRAFTING Axon drafts all in parallel (~10-15s for 10 firms)
  *   REVIEW   Scrollable list of N draft cards. Each is editable
  *            inline + has an approved toggle. Regenerate any row.
- *   SENDING  Sequential Gmail sends with 2.5s spacing. Progress
- *            bar + per-row status (sending → sent / failed).
+ *   SENDING  Sequential Gmail sends with 25-50s jittered spacing
+ *            (same inter-partner cadence Quick Send uses, for the
+ *            same deliverability reason). Progress bar + per-row
+ *            status (sending → sent / failed).
  *   DONE     Summary count.
  *
  * Eligibility filter for the picker:
@@ -22,8 +24,10 @@
  *
  * Send safety rails:
  *   - Confirm modal if approved count > 10
- *   - 2.5s spacing between sends (Gmail accepts ~100/sec but
- *     real-world deliverability suffers if you blast)
+ *   - 25-50s jittered spacing between sends. Gmail's API accepts
+ *     ~100/sec but its outbound abuse classifier flags bursts of
+ *     cold mail to distinct recipients. 30s-ish is what every
+ *     serious cold-outreach tool sits at.
  *   - Kill switch ("Stop remaining") sets store.aborted=true
  *     between rows
  *   - Each row uses the same useSendEmail mutation as the single-
@@ -72,10 +76,31 @@ import {
   type BounceRecord,
 } from "@/Fundraise/checkBounces";
 
-// Spacing between sequential sends. 2.5s feels natural to the
-// recipients (they don't all land in the same minute) and stays
-// far under Gmail's API quota.
-const SEND_SPACING_MS = 2500;
+// Spacing between sequential sends. 25-50s jittered, matching the
+// Quick Send inter-partner gap. The randomized range matters as
+// much as the magnitude -- a perfectly periodic cadence is itself
+// a spam signal. Gmail's API would accept much faster, but the
+// outbound abuse classifier (and downstream spam filters on the
+// recipient side) flag bursts of cold mail; this is the cadence
+// every cold-outreach tool that actually cares about deliverability
+// sits at.
+const SEND_SPACING_MIN_MS = 25_000;
+const SEND_SPACING_MAX_MS = 50_000;
+const sendSpacing = () =>
+  SEND_SPACING_MIN_MS +
+  Math.random() * (SEND_SPACING_MAX_MS - SEND_SPACING_MIN_MS);
+// Average used only for the "~X min total" estimate label.
+const SEND_SPACING_AVG_MS =
+  (SEND_SPACING_MIN_MS + SEND_SPACING_MAX_MS) / 2;
+
+// "~3m 20s" / "~45s" formatter for the duration estimate label.
+function formatDuration(ms: number): string {
+  const secs = Math.ceil(ms / 1000);
+  if (secs < 60) return `${secs}s`;
+  const m = Math.floor(secs / 60);
+  const s = secs % 60;
+  return s === 0 ? `${m}m` : `${m}m ${s}s`;
+}
 
 // If the operator tries to send more than this in one batch, we
 // require a confirm step. Just a guard rail to prevent accidental
@@ -172,7 +197,7 @@ function Header() {
         : stage === "review"
           ? `${draftCount} drafts · ${approvedCount} approved`
           : stage === "sending"
-            ? "Sequential send with 2.5s spacing"
+            ? "Sequential send · 25-50s jittered spacing"
             : "Activity logged automatically";
 
   return (
@@ -235,7 +260,7 @@ function Footer() {
         {stage === "review" &&
           (approvedCount === 0
             ? "Approve at least one row to send"
-            : `${approvedCount} ready to send · ~${Math.ceil((approvedCount * SEND_SPACING_MS) / 1000)}s total`)}
+            : `${approvedCount} ready to send · ~${formatDuration(approvedCount * SEND_SPACING_AVG_MS)} total`)}
         {stage === "sending" &&
           (aborted ? "Aborting after current row…" : "Sending. Don't close this window.")}
       </div>
@@ -371,9 +396,10 @@ function ConfirmSendModal({
           Send {count} emails?
         </h3>
         <p className="text-[12px] text-foreground/65 mb-4">
-          That's above the safety threshold. They'll go out spaced ~2.5s
-          apart. Make sure you've reviewed each draft before continuing —
-          you can't recall them.
+          That's above the safety threshold. They'll go out one at a
+          time, 25-50s apart (deliverability-safe pacing for cold
+          mail). Make sure you've reviewed each draft before
+          continuing — you can't recall them.
         </p>
         <div className="flex items-center justify-end gap-2">
           <button
@@ -1003,8 +1029,10 @@ async function runParallelDraft(args: {
   args.setStage("review");
 }
 
-/** Sequential send with 2.5s spacing. Per-row state + abort check
- *  between rows. */
+/** Sequential send with 25-50s jittered spacing. Per-row state +
+ *  abort check between rows. The pacing matches Quick Send's
+ *  inter-partner gap -- each row is a distinct cold recipient, so
+ *  the burst-rate concern is the same. */
 async function runSequentialSend(args: {
   drafts: Map<string, BatchDraft>;
   patchDraft: (id: string, patch: Partial<BatchDraft>) => void;
@@ -1074,7 +1102,7 @@ async function runSequentialSend(args: {
 
     // Spacing between sends, except after the last one.
     if (i < approved.length - 1) {
-      await new Promise<void>((r) => setTimeout(r, SEND_SPACING_MS));
+      await new Promise<void>((r) => setTimeout(r, sendSpacing()));
     }
   }
 
