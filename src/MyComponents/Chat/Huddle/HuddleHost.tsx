@@ -18,7 +18,7 @@ import { HuddleBar } from "./HuddleBar";
 import { useHuddleStore } from "@/stores/huddleStore";
 import { useLiveHuddlesStore } from "@/stores/liveHuddlesStore";
 import { ActiveUser } from "@/stores/query";
-import { companySupabase } from "@/routes/index.lazy";
+import { companySupabase } from "@/MyComponents/supabase";
 
 export function HuddleHost() {
   const { group, muted, camera, leaveHuddle, toggleMute, toggleCamera, pttActive, quality } =

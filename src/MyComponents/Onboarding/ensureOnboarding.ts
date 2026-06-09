@@ -21,7 +21,7 @@
  * index on (employee_user_id) WHERE status = \'active\'.
  */
 
-import { companySupabase } from "@/routes/index.lazy";
+import { companySupabase } from "@/MyComponents/supabase";
 
 interface AppUserShape {
   supa_id: string;

@@ -1,5 +1,5 @@
 // ScheduleData.ts - Consistent data for schedule
-import { companySupabase } from "@/routes/index.lazy";
+import { companySupabase } from "@/MyComponents/supabase";
 import { 
     ScheduleDataType, 
     EventType, 

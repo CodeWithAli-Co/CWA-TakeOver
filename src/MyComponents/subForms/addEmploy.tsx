@@ -2,7 +2,7 @@ import { useForm } from "@tanstack/react-form";
 import { UserPlus } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/shadcnComponents/card";
 import { message } from "@tauri-apps/plugin-dialog";
-import { companySupabase } from "@/routes/index.lazy";
+import { companySupabase } from "@/MyComponents/supabase";
 
 export const AddEmployee = () => {
   const form = useForm({

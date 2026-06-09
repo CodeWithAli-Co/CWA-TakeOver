@@ -2,7 +2,7 @@
 // Supabase data access layer for time tracking system
 
 import { useSuspenseQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { companySupabase } from "@/routes/index.lazy";
+import { companySupabase } from "@/MyComponents/supabase";
 import { getActiveCompanyLabel } from "./query";
 import type {
   TimeEntry,

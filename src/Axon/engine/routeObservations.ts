@@ -6,7 +6,7 @@
 // call on every navigation).
 // ───────────────────────────────────────────────────────────────────
 
-import { companySupabase } from "@/routes/index.lazy";
+import { companySupabase } from "@/MyComponents/supabase";
 import type { CompanyFilter } from "@/stores/store";
 
 function companyLabel(active: string): "CodeWithAli" | "simplicity" {

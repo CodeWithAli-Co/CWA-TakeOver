@@ -16,7 +16,7 @@ import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { X, MessagesSquare } from "lucide-react";
 import { ScrollArea } from "@/components/ui/shadcnComponents/scroll-area";
-import { companySupabase } from "@/routes/index.lazy";
+import { companySupabase } from "@/MyComponents/supabase";
 import type { MessageInterface } from "@/stores/query";
 import { fetchThreadReplies } from "@/stores/query";
 import { MessageBubble } from "./MessageBubble";

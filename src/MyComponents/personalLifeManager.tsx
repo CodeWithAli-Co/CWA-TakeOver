@@ -78,7 +78,7 @@ import {
 } from "@/stores/personalScheduleTypes";
 import { Switch } from "@/components/ui/shadcnComponents/switch";
 import ToggleSwitch from "./Reusables/switchUI";
-import { companySupabase } from "@/routes/index.lazy";
+import { companySupabase } from "@/MyComponents/supabase";
 
 const ACTIVITY_ICONS: Record<string, React.ReactNode> = {
   medication: <Pill className="w-4 h-4" />,

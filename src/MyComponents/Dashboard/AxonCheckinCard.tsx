@@ -32,7 +32,7 @@ import {
   useMyAxonCheckins,
   type AxonCheckinRow,
 } from "@/stores/query";
-import { companySupabase } from "@/routes/index.lazy";
+import { companySupabase } from "@/MyComponents/supabase";
 import { useQueryClient } from "@tanstack/react-query";
 
 type TimeOfDay = "morning" | "midday" | "afternoon" | "evening";

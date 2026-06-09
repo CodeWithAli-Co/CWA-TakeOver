@@ -14,7 +14,7 @@
 import { useState } from "react";
 import { Loader2, ChevronRight, Clock, ExternalLink, Calendar, CalendarPlus, Check } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
-import { companySupabase } from "@/routes/index.lazy";
+import { companySupabase } from "@/MyComponents/supabase";
 import { ActiveUser } from "@/stores/query";
 import { shiftKeys } from "@/stores/shifts";
 import { useCompanyFilter } from "@/stores/store";

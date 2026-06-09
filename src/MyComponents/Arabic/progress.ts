@@ -3,7 +3,7 @@
 // progress. No table-wide writes, ever.
 // ============================================================================
 
-import { companySupabase } from "@/routes/index.lazy";
+import { companySupabase } from "@/MyComponents/supabase";
 import { useSuspenseQuery, useQueryClient } from "@tanstack/react-query";
 import type {
   LessonProgressRow,

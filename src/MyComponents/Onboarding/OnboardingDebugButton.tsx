@@ -17,7 +17,7 @@
 import { useState } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import { Loader2, Sparkles, RotateCcw, ChevronUp, X } from "lucide-react";
-import { companySupabase } from "@/routes/index.lazy";
+import { companySupabase } from "@/MyComponents/supabase";
 import { useQueryClient } from "@tanstack/react-query";
 import { ActiveUser } from "@/stores/query";
 

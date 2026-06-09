@@ -5,7 +5,7 @@ import { downloadDir } from "@tauri-apps/api/path";
 import { remove, BaseDirectory } from "@tauri-apps/plugin-fs";
 import { sendNotification } from "@tauri-apps/plugin-notification";
 import { downloadInvoice } from "../invoice";
-import { companySupabase } from "@/routes/index.lazy";
+import { companySupabase } from "@/MyComponents/supabase";
 import { InvoiceType } from "@/stores/invoiceQuery";
 
 type Props = {

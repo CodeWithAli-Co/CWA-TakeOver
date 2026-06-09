@@ -22,7 +22,7 @@ import {
 } from "lucide-react";
 import { motion } from "framer-motion";
 import { ScrollArea } from "@/components/ui/shadcnComponents/scroll-area";
-import { companySupabase } from "@/routes/index.lazy";
+import { companySupabase } from "@/MyComponents/supabase";
 import { ActiveUser } from "@/stores/query";
 import { draftOfferLetter, type OfferInput } from "./draftOffer";
 import { OfferLetterPDF } from "./OfferLetterPDF";

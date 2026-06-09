@@ -4,7 +4,7 @@ import { useEffect, useRef } from "react";
 import { Interns } from "@/stores/query";
 import { AddIntern } from "./subForms/addIntern";
 import { EditIntern } from "./subForms/editIntern";
-import { companySupabase } from "@/routes/index.lazy";
+import { companySupabase } from "@/MyComponents/supabase";
 
 
 function DisplayInterns() {

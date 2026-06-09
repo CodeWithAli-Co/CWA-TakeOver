@@ -19,7 +19,7 @@
 import { useEffect, useState } from "react";
 import { Users } from "lucide-react";
 import type { RealtimeChannel } from "@supabase/supabase-js";
-import { companySupabase } from "@/routes/index.lazy";
+import { companySupabase } from "@/MyComponents/supabase";
 import { colorForUser } from "@/lib/yjs/awareness";
 import type { SupabaseYProvider } from "@/lib/yjs/SupabaseYProvider";
 

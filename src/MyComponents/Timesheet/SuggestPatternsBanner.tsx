@@ -22,7 +22,7 @@
 import { useMemo, useState } from "react";
 import { Sparkles, Check, X, Loader2 } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { companySupabase } from "@/routes/index.lazy";
+import { companySupabase } from "@/MyComponents/supabase";
 import {
   detectPatterns,
   groupPatternsByUser,

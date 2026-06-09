@@ -55,7 +55,7 @@ import {
   useDeleteDocument,
   useDeleteSpreadsheet,
 } from "@/stores/workspace";
-import { companySupabase } from "@/routes/index.lazy";
+import { companySupabase } from "@/MyComponents/supabase";
 import type {
   WorkspaceResource,
   WorkspaceFolder,

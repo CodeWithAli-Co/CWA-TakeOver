@@ -1,5 +1,5 @@
 import { useForm } from "@tanstack/react-form";
-import { companySupabase } from "@/routes/index.lazy";
+import { companySupabase } from "@/MyComponents/supabase";
 import { useAppStore } from "@/stores/store";
 import {
   Card,

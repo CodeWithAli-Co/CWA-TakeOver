@@ -18,9 +18,9 @@
  */
 
 import { useForm } from "@tanstack/react-form";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useAppStore } from "@/stores/store";
-import { getCompanySupabase, takeOverSupabase } from "../supabase";
+import { _login_getCompanySupabase, companySupabase, takeOverSupabase } from "../supabase";
 import {
   Loader2,
   Mail,
@@ -37,6 +37,18 @@ import { getStronghold } from "@/stores/stronghold";
 
 export const LoginPage = () => {
   const { setIsLoggedIn } = useAppStore();
+  const [companyNameList, setCompanyNameList] = useState<string[]>([]);
+  useEffect(() => {
+    async function GetCompNames() {
+      const { data } = await takeOverSupabase.from("takeover_companies").select("company_name").overrideTypes<{ company_name: string }[]>();
+      if (data) {
+        const names = data.map((c) => c.company_name);
+        setCompanyNameList(names);
+      }
+    }
+
+    GetCompNames();
+  }, [])
 
   const [showPassword, setShowPassword] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -61,8 +73,6 @@ export const LoginPage = () => {
       setEmployeeLookUpError(null);
       setSubmitting(true);
       const stronghold = await getStronghold();
-      const companySupabase = await getCompanySupabase();
-
       // --- PHASE 1 ---
 
       if (loginPhase === 1) {
@@ -132,11 +142,13 @@ export const LoginPage = () => {
       if (loginPhase === 2) {
         let has_authenticated_role: boolean = false;
 
+        const loginCompanySupabase = await _login_getCompanySupabase();
+
         try {
           // Auto-login NEW user from company DB and let them set new pw ( dont save )
           if (!hasInit && initPW) {
             const { data, error } =
-              await companySupabase.auth.signInWithPassword({
+              await loginCompanySupabase.auth.signInWithPassword({
                 email: value.email.trim(),
                 password: initPW,
               });
@@ -147,7 +159,7 @@ export const LoginPage = () => {
               return;
             }
 
-            const { error: pwSetError } = await companySupabase.auth.updateUser(
+            const { error: pwSetError } = await loginCompanySupabase.auth.updateUser(
               {
                 password: value.password,
               },
@@ -161,7 +173,7 @@ export const LoginPage = () => {
             has_authenticated_role = data.user.role === "authenticated";
           } else {
             const { data, error } =
-              await companySupabase.auth.signInWithPassword({
+              await loginCompanySupabase.auth.signInWithPassword({
                 email: value.email.trim(),
                 password: value.password,
               });
@@ -191,7 +203,7 @@ export const LoginPage = () => {
           // the store flag. Keeps the "user half-signed-up and stuck"
           // edge case from landing them in a broken state.
           const { data: userVerify, error: userVerifyError } =
-            await companySupabase.auth.getUser();
+            await loginCompanySupabase.auth.getUser();
 
           if (!userVerify || userVerifyError) {
             setAuthError("No Session detected. Contact Support if needed.");
@@ -200,7 +212,7 @@ export const LoginPage = () => {
           const verified = userVerify.user?.email_confirmed_at;
           if (has_authenticated_role && verified) {
             // Remove `init_pw` from database
-            const { error: remInitPwError } = await companySupabase
+            const { error: remInitPwError } = await loginCompanySupabase
               .from("employee")
               .update({ init_pw: null })
               .eq("email", userVerify.user!.email);
@@ -259,9 +271,14 @@ export const LoginPage = () => {
                 <form.Field
                   name="company"
                   validators={{
-                    onChangeAsync: async (value) => {
+                    onChangeAsync: async ({ value }) => {
                       // Check if company exists in TK DB
-                      // setCompLookUpError("No Company found")
+                      if (!companyNameList.includes(value)) {
+                        setCompLookUpError("No Company found");
+                        return "No Company found";
+                      } else {
+                        setCompLookUpError(null);
+                      }
                     },
                     onChangeAsyncDebounceMs: 1000,
                   }}
@@ -374,7 +391,6 @@ export const LoginPage = () => {
                             type="button"
                             disabled={resetting}
                             onClick={async () => {
-                              const companySupabase = await getCompanySupabase();
                               // Send a Supabase password-reset email to the
                               // address currently in the email field. If the
                               // field is empty, prompt for one rather than

@@ -34,7 +34,7 @@ import {
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/shadcnComponents/select";
-import { companySupabase } from "@/routes/index.lazy";
+import { companySupabase } from "@/MyComponents/supabase";
 import { format, startOfWeek, endOfWeek, addWeeks, subWeeks } from "date-fns";
 
 type QuotaStatus = "pending" | "in-progress" | "completed";

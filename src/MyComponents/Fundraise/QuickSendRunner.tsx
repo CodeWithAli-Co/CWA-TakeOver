@@ -37,7 +37,7 @@ import {
   type DraftMode,
   type InvestorDetail,
 } from "@/Fundraise/draftInvestorEmail";
-import { companySupabase } from "@/routes/index.lazy";
+import { companySupabase } from "../supabase";
 
 export function QuickSendRunner() {
   const entries = useQuickSendStore((s) => s.entries);

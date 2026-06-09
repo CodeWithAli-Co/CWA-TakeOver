@@ -9,7 +9,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { Hash, MessageSquare, Search, Loader2, ArrowRight } from "lucide-react";
-import { companySupabase } from "@/routes/index.lazy";
+import { companySupabase } from "@/MyComponents/supabase";
 import { useAppStore } from "@/stores/store";
 import { ActiveUser } from "@/stores/query";
 import { displayLabelForDM, isDMKey } from "./displayName";

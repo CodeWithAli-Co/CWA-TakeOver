@@ -21,7 +21,7 @@ import {
 } from "@/components/ui/shadcnComponents/dialog";
 import { useClientStore } from "@/stores/invoiceStore";
 import { InvoiceType, LineItem } from "@/stores/invoiceQuery";
-import { companySupabase } from "@/routes/index.lazy";
+import { companySupabase } from "@/MyComponents/supabase";
 import { getActiveCompanyLabel } from "@/stores/query";
 
 interface Props {

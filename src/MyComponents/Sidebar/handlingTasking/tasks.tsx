@@ -22,7 +22,7 @@ import {
   Briefcase, Sparkles, Layers, Users, Edit3, Save, Trash2,
 } from "lucide-react";
 import { ActiveUser, AllTodos, Employees, Todos, TodosInterface } from "@/stores/query";
-import { companySupabase } from "@/routes/index.lazy";
+import { companySupabase } from "@/MyComponents/supabase";
 import { message } from "@tauri-apps/plugin-dialog";
 import { AddTodo } from "./addTodo";
 import { Tracker, TrackerDot } from "@/components/editorial/Tracker";

@@ -22,7 +22,7 @@ import { MessageBubble } from "./MessageBubble";
 import { ThreadInline } from "./ThreadInline";
 import { TypingIndicator } from "./TypingIndicator";
 import { MessageInterface } from "@/stores/query";
-import { companySupabase } from "@/routes/index.lazy";
+import { companySupabase } from "@/MyComponents/supabase";
 import { useChatStore, type ThreadStyle } from "@/stores/chatStore";
 import { displayLabelForDM, isDMKey } from "./displayName";
 import { format, isToday, isYesterday } from "date-fns";

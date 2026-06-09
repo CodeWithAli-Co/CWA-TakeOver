@@ -23,7 +23,7 @@ import {
   ClipboardList, Building2, GraduationCap, AlertTriangle,
   Sparkles, FileText, Users, Briefcase,
 } from "lucide-react";
-import { companySupabase } from "@/routes/index.lazy";
+import { companySupabase } from "@/MyComponents/supabase";
 
 // ── Constants ─────────────────────────────────────────
 

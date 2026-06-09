@@ -64,7 +64,7 @@ import {
   Todos,
   type TodosInterface,
 } from "@/stores/query";
-import { companySupabase } from "@/routes/index.lazy";
+import { companySupabase } from "@/MyComponents/supabase";
 import {
   useProjects,
   useProjectsRealtime,

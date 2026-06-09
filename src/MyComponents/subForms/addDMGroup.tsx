@@ -11,7 +11,7 @@ import Capitalize from "../Reusables/capitalize";
 import Select from "react-select";
 import { useChatStore } from "@/stores/store";
 import { getActiveCompanyLabel } from "@/stores/query";
-import { companySupabase } from "@/routes/index.lazy";
+import { companySupabase } from "@/MyComponents/supabase";
 
 type Option = { value: string; label: string };
 

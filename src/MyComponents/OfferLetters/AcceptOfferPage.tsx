@@ -13,7 +13,7 @@ import { motion } from "framer-motion";
 import {
   AlertTriangle, CheckCircle2, Loader2, XCircle, FileText,
 } from "lucide-react";
-import { companySupabase } from "@/routes/index.lazy";
+import { companySupabase } from "@/MyComponents/supabase";
 
 interface OfferRow {
   id: string;

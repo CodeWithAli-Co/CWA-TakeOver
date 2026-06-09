@@ -23,7 +23,7 @@ import {
   Loader2,
   Save,
 } from "lucide-react";
-import { companySupabase } from "@/routes/index.lazy";
+import { companySupabase } from "@/MyComponents/supabase";
 import { getStronghold } from "@/stores/stronghold";
 import { ModulesPicker } from "@/MyComponents/Onboarding/ModulesPicker";
 import { MODULES } from "@/MyComponents/Onboarding/modulesCatalog";

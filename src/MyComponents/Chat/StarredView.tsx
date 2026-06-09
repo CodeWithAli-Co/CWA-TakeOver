@@ -7,7 +7,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Star, StarOff } from "lucide-react";
 import { ScrollArea } from "@/components/ui/shadcnComponents/scroll-area";
-import { companySupabase } from "@/routes/index.lazy";
+import { companySupabase } from "@/MyComponents/supabase";
 import { useChatStore } from "@/stores/chatStore";
 import { useAppStore } from "@/stores/store";
 import type { MessageInterface } from "@/stores/query";

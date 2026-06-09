@@ -30,7 +30,7 @@ import {
 } from "@/stores/query";
 import { useCreateGrowthTrackDialog } from "./createGrowthTrackStore";
 import { useQueryClient } from "@tanstack/react-query";
-import { companySupabase } from "@/routes/index.lazy";
+import { companySupabase } from "@/MyComponents/supabase";
 
 type PacingStatus = "on_track" | "attention_needed" | "ahead";
 

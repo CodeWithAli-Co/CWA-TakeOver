@@ -2,7 +2,7 @@ import { useForm } from "@tanstack/react-form";
 import { useAppStore } from "@/stores/store";
 import { UserPlus, X } from "lucide-react";
 import { AnimatePresence, motion } from "framer-motion";
-import { companySupabase } from "@/routes/index.lazy";
+import { companySupabase } from "@/MyComponents/supabase";
 
 interface Props {
   rowID: number;

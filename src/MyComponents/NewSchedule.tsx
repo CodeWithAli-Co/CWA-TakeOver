@@ -46,7 +46,7 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/shadcnComponents/label";
 import { Employees, ActiveUser } from "@/stores/query";
-import { companySupabase } from "@/routes/index.lazy";
+import { companySupabase } from "@/MyComponents/supabase";
 import { useCompanyFilter } from "@/stores/store";
 import { Tracker, TrackerDot } from "@/components/editorial/Tracker";
 import { Mono } from "@/components/editorial/Mono";

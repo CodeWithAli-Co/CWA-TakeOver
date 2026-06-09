@@ -1,5 +1,3 @@
-import { check } from "@tauri-apps/plugin-updater";
-import { relaunch } from "@tauri-apps/plugin-process";
 import {
   isPermissionGranted,
   requestPermission,
@@ -19,7 +17,10 @@ import { sendNotification } from "@tauri-apps/plugin-notification";
 import { useAppStore } from "../stores/store";
 import { useChatStore } from "@/stores/chatStore";
 import { useQueryClient } from "@tanstack/react-query";
-import { detectCeoSlander, respondToSlander } from "@/Axon/engine/loyaltyMonitor";
+import {
+  detectCeoSlander,
+  respondToSlander,
+} from "@/Axon/engine/loyaltyMonitor";
 import {
   isMentioned as isMentionedPure,
   isHereCall as isHereCallPure,
@@ -37,7 +38,7 @@ import { CreateGrowthTrackDialog } from "@/MyComponents/Dashboard/CreateGrowthTr
 import { LogActivityModal } from "@/MyComponents/Sales/LogActivityModal";
 import { useQuickCompose } from "@/MyComponents/Chat/quickComposeStore";
 import { displayLabelForDM, isDMKey } from "@/MyComponents/Chat/displayName";
-import { companySupabase } from "@/routes/index.lazy";
+import { companySupabase } from "@/MyComponents/supabase";
 import { useEffect, useState, lazy, Suspense } from "react";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import LoginPage from "@/MyComponents/Beginning/login";
@@ -61,10 +62,12 @@ import "@/MyComponents/Onboarding/guidedTour.css";
 // per-user provisioning layer that follows install binding.
 // import { useOnboardingRedirect } from "@/stores/onboarding";
 import { SignUpPage } from "@/MyComponents/Beginning/signup";
-import { ActiveUser, DMGroups, Messages } from "@/stores/query";
+import { ActiveUser, DMGroups } from "@/stores/query";
 import UserView from "@/MyComponents/Reusables/userView";
 import CyberpunkPinPage from "@/MyComponents/Beginning/bluePinPage";
 import SecurityBreach from "@/MyComponents/Beginning/conceptIdea";
+
+const sh = await getStronghold();
 
 // AXON — lazy-loaded so the command-intelligence bundle never
 // touches the login / pin-pad paths, and stays admin-gated internally.
@@ -118,7 +121,14 @@ const _LegacyOnboardingBanner = lazy(() =>
 
 // Route-aware skeleton fallback picks a loader shape that roughly
 // matches the destination page, so the transition feels seamless.
-import { PageSkeleton, ChatSkeleton, RoadmapSkeleton, SplitSkeleton, TableSkeleton, FormSkeleton } from "@/MyComponents/Reusables/PageSkeletons";
+import {
+  PageSkeleton,
+  ChatSkeleton,
+  RoadmapSkeleton,
+  SplitSkeleton,
+  TableSkeleton,
+  FormSkeleton,
+} from "@/MyComponents/Reusables/PageSkeletons";
 import InitialOnboarding from "@/MyComponents/Beginning/initialOnboarding";
 import { getStronghold } from "@/stores/stronghold";
 
@@ -128,14 +138,26 @@ function RouteFallback() {
   if (p.startsWith("/chat")) return <ChatSkeleton />;
   if (p.startsWith("/roadmap")) return <RoadmapSkeleton />;
   if (p.startsWith("/invoicer")) return <SplitSkeleton />;
-  if (p.startsWith("/employee") || p.startsWith("/details") || p.startsWith("/mod_logs")) return <TableSkeleton />;
+  if (
+    p.startsWith("/employee") ||
+    p.startsWith("/details") ||
+    p.startsWith("/mod_logs")
+  )
+    return <TableSkeleton />;
   if (p.startsWith("/settings")) return <FormSkeleton />;
   return <PageSkeleton />;
 }
 
 export const Route = createRootRoute({
+  preload: true,
   component: () => {
-    const { pinCheck, isLoggedIn, GroupName, initial_launch, completeInitialLaunch } = useAppStore();
+    const {
+      pinCheck,
+      isLoggedIn,
+      GroupName,
+      initial_launch,
+      completeInitialLaunch,
+    } = useAppStore();
     const { data: user, error: userError } = ActiveUser();
     // First-run onboarding gate — DISABLED. Blaze's
     // InitialOnboarding (pre-login install-binder) now handles
@@ -148,7 +170,9 @@ export const Route = createRootRoute({
         body: "Error Fetching Active User on Start up!",
       });
     }
-    const { data: dmGroupsData, refetch: refetchDMGroups } = DMGroups(user[0]?.username);
+    const { data: dmGroupsData, refetch: refetchDMGroups } = DMGroups(
+      user[0]?.username,
+    );
     const userChannelNames: string[] = (dmGroupsData || [])
       .map((g: any) => g?.name)
       .filter(Boolean);
@@ -168,10 +192,12 @@ export const Route = createRootRoute({
         .on(
           "postgres_changes",
           { event: "*", schema: "public", table: "dm_groups" },
-          () => refetchDMGroups()
+          () => refetchDMGroups(),
         )
         .subscribe();
-      return () => { channel.unsubscribe(); };
+      return () => {
+        channel.unsubscribe();
+      };
     }, [refetchDMGroups]);
 
     // Invalidate meetings + tasks queries whenever the underlying tables
@@ -233,23 +259,31 @@ export const Route = createRootRoute({
           if (!raw) return true; // default on
           const parsed = JSON.parse(raw);
           return parsed?.enableNotifications !== false;
-        } catch { return true; }
+        } catch {
+          return true;
+        }
       };
 
       // Helper: channel-level mute toggle from ChatHeader's More menu.
       // "mute" here = fully muted (no toasts). Prefer the new notif-level
       // store (all/mentions/none); fall back to the legacy binary list.
-      const getGroupNotifLevel = (name: string): "all" | "mentions" | "none" => {
+      const getGroupNotifLevel = (
+        name: string,
+      ): "all" | "mentions" | "none" => {
         try {
           const lvl = useChatStore.getState().getNotifLevel(name);
           if (lvl) return lvl;
-        } catch { /* store may not be ready */ }
+        } catch {
+          /* store may not be ready */
+        }
         try {
           const raw = localStorage.getItem("cwa-chat-muted-groups");
           if (!raw) return "all";
           const arr = JSON.parse(raw);
           if (Array.isArray(arr) && arr.includes(name)) return "none";
-        } catch { /* noop */ }
+        } catch {
+          /* noop */
+        }
         return "all";
       };
       const isGroupMuted = (name: string): boolean =>
@@ -269,7 +303,9 @@ export const Route = createRootRoute({
           if (!raw) return true;
           const parsed = JSON.parse(raw);
           return parsed?.enableSound !== false;
-        } catch { return true; }
+        } catch {
+          return true;
+        }
       };
 
       // Is the app currently focused? When it's NOT, we always fire an OS
@@ -288,7 +324,8 @@ export const Route = createRootRoute({
       // user interacts with the page. We eagerly create + try to unlock
       // on first keydown/click, and fall back to resume() right before
       // each ding.
-      const AC = (window as any).AudioContext || (window as any).webkitAudioContext;
+      const AC =
+        (window as any).AudioContext || (window as any).webkitAudioContext;
       let dingCtx: AudioContext | null = AC ? new AC() : null;
       let lastDingAt = 0;
       const unlockOnce = () => {
@@ -302,7 +339,9 @@ export const Route = createRootRoute({
           s.buffer = dingCtx.createBuffer(1, 1, 22050);
           s.connect(dingCtx.destination);
           s.start(0);
-        } catch { /* noop */ }
+        } catch {
+          /* noop */
+        }
         window.removeEventListener("pointerdown", unlockOnce);
         window.removeEventListener("keydown", unlockOnce);
       };
@@ -335,7 +374,7 @@ export const Route = createRootRoute({
             const start = ctx.currentTime + offset;
             const dur = 0.12;
             gain.gain.setValueAtTime(0.0001, start);
-            gain.gain.exponentialRampToValueAtTime(0.20, start + 0.012);
+            gain.gain.exponentialRampToValueAtTime(0.2, start + 0.012);
             gain.gain.exponentialRampToValueAtTime(0.0001, start + dur);
             osc.connect(gain).connect(ctx.destination);
             osc.start(start);
@@ -440,13 +479,16 @@ export const Route = createRootRoute({
             // fire the defender protocol (public roast + CEO DM alert).
             // Runs async in the background.
             const slander = detectCeoSlander(
-              sentBy, body, groupName, "cwa_dm_chat", payload.new.msg_id,
+              sentBy,
+              body,
+              groupName,
+              "cwa_dm_chat",
+              payload.new.msg_id,
             );
             if (slander) {
               // "axon" display name is used for posting the public roast.
-              const ceoName = currentRole === "CEO"
-                ? currentUsername
-                : "aalibrahimi";
+              const ceoName =
+                currentRole === "CEO" ? currentUsername : "aalibrahimi";
               void respondToSlander(slander, "Axon", ceoName).catch(() => {});
             }
 
@@ -469,7 +511,9 @@ export const Route = createRootRoute({
             // OS toast follows the same level rules, with the override that
             // mentions + here + keyword matches always fire.
             const shouldToast =
-              mentioned || hereCall || !!keywordHit ||
+              mentioned ||
+              hereCall ||
+              !!keywordHit ||
               (!muted && !mentionsOnly && (!viewing || !focused));
             if (shouldToast) {
               // Friendly group label — DMs collapse to the other
@@ -527,12 +571,15 @@ export const Route = createRootRoute({
 
             // Loyalty monitor for #General.
             const slander = detectCeoSlander(
-              sentBy, body, "General", "cwa_chat", payload.new.msg_id,
+              sentBy,
+              body,
+              "General",
+              "cwa_chat",
+              payload.new.msg_id,
             );
             if (slander) {
-              const ceoName = currentRole === "CEO"
-                ? currentUsername
-                : "aalibrahimi";
+              const ceoName =
+                currentRole === "CEO" ? currentUsername : "aalibrahimi";
               void respondToSlander(slander, "Axon", ceoName).catch(() => {});
             }
 
@@ -550,7 +597,9 @@ export const Route = createRootRoute({
             else if (level === "all") playDing();
 
             const shouldToast =
-              mentioned || hereCall || !!keywordHit ||
+              mentioned ||
+              hereCall ||
+              !!keywordHit ||
               (!muted && !mentionsOnly && (!viewing || !focused));
             if (shouldToast) {
               const cleanBody = cleanNotificationBody(body);
@@ -573,11 +622,7 @@ export const Route = createRootRoute({
                   "General",
                 );
               } else if (!muted && !mentionsOnly) {
-                fireNotify(
-                  `${sentBy} in #general`,
-                  cleanBody,
-                  "General",
-                );
+                fireNotify(`${sentBy} in #general`, cleanBody, "General");
               }
             }
           },
@@ -590,7 +635,11 @@ export const Route = createRootRoute({
         unreadChannel.unsubscribe();
         window.removeEventListener("pointerdown", unlockOnce);
         window.removeEventListener("keydown", unlockOnce);
-        try { dingCtx?.close(); } catch { /* noop */ }
+        try {
+          dingCtx?.close();
+        } catch {
+          /* noop */
+        }
       };
       // Depend on stable primitives only — see the comment at the top
       // of this effect for why `user` itself can't be in the dep list.
@@ -626,9 +675,7 @@ export const Route = createRootRoute({
           await registerActionTypes([
             {
               id: "cwa-message",
-              actions: [
-                { id: "open", title: "Open", foreground: true },
-              ],
+              actions: [{ id: "open", title: "Open", foreground: true }],
             },
           ]);
         } catch (err) {
@@ -660,8 +707,11 @@ export const Route = createRootRoute({
           if (cancelled) {
             try {
               if (typeof handle === "function") handle();
-              else if (typeof handle?.unregister === "function") handle.unregister();
-            } catch { /* noop */ }
+              else if (typeof handle?.unregister === "function")
+                handle.unregister();
+            } catch {
+              /* noop */
+            }
           } else {
             listener = handle;
           }
@@ -712,8 +762,11 @@ export const Route = createRootRoute({
         cancelled = true;
         try {
           if (typeof listener === "function") listener();
-          else if (typeof listener?.unregister === "function") listener.unregister();
-        } catch { /* noop */ }
+          else if (typeof listener?.unregister === "function")
+            listener.unregister();
+        } catch {
+          /* noop */
+        }
       };
     }, []);
 
@@ -742,15 +795,17 @@ export const Route = createRootRoute({
         if (import.meta.env.DEV) {
           console.log("Checking for app update...");
         }
-        const sh = await getStronghold();
         const companyName = await sh.getRecord("company_name");
         if (!companyName) {
           console.warn("No Company name found - skipping update check!");
           return;
         }
 
-        const res = await invoke("check_for_update", { company: companyName, isDev: import.meta.env.DEV });
-          console.log("Finished checking. Result: ", res);
+        const res = await invoke("check_for_update", {
+          company: companyName,
+          isDev: import.meta.env.DEV,
+        });
+        console.log("Finished checking. Result: ", res);
         // const update = await check();
         // // Run when update has an actual version and has 'rid' value
         // if (update && update.rid !== null && update.version !== null) {
@@ -759,34 +814,34 @@ export const Route = createRootRoute({
         //     body: `${update.body || "Get new Update now!"}`,
         //   });
 
-          // **UPDATE HAPPENS IN RUST BACKEND NOW**
+        // **UPDATE HAPPENS IN RUST BACKEND NOW**
 
-          // let downloaded = 0;
-          // let contentLength = 0;
-          // // alternatively we could also call update.download() and update.install() separately
-          // await update.downloadAndInstall((event) => {
-          //   switch (event.event) {
-          //     case "Started":
-          //       contentLength = event.data.contentLength!;
-          //       console.log(
-          //         `started downloading ${event.data.contentLength} bytes`
-          //       );
-          //       break;
-          //     case "Progress":
-          //       downloaded += event.data.chunkLength;
-          //       console.log(`downloaded ${downloaded} from ${contentLength}`);
-          //       break;
-          //     case "Finished":
-          //       sendNotification({
-          //         title: `Version ${update.version} has been downloaded!`
-          //       })
-          //       console.log("download finished");
-          //       break;
-          //   }
-          // });
+        // let downloaded = 0;
+        // let contentLength = 0;
+        // // alternatively we could also call update.download() and update.install() separately
+        // await update.downloadAndInstall((event) => {
+        //   switch (event.event) {
+        //     case "Started":
+        //       contentLength = event.data.contentLength!;
+        //       console.log(
+        //         `started downloading ${event.data.contentLength} bytes`
+        //       );
+        //       break;
+        //     case "Progress":
+        //       downloaded += event.data.chunkLength;
+        //       console.log(`downloaded ${downloaded} from ${contentLength}`);
+        //       break;
+        //     case "Finished":
+        //       sendNotification({
+        //         title: `Version ${update.version} has been downloaded!`
+        //       })
+        //       console.log("download finished");
+        //       break;
+        //   }
+        // });
 
-          // console.log("update installed");
-          // await relaunch();
+        // console.log("update installed");
+        // await relaunch();
         // }
       }
 
@@ -805,15 +860,14 @@ export const Route = createRootRoute({
         if (running) return;
         running = true;
         try {
-          const { dueScheduled, removeScheduled } = await import(
-            "@/MyComponents/Chat/scheduledStore"
-          );
+          const { dueScheduled, removeScheduled } =
+            await import("@/MyComponents/Chat/scheduledStore");
           const due = dueScheduled();
           for (const item of due) {
             // Only the author's client fires. Prevents dupes across devices.
             if (item.createdBy !== uname) continue;
             const { error } = await companySupabase
-        .from(item.table)
+              .from(item.table)
               .insert(item.payload);
             if (!error) {
               console.log("[scheduled] sent", item.preview);
@@ -884,7 +938,11 @@ export const Route = createRootRoute({
     const [searchOpen, setSearchOpen] = useState(false);
     useEffect(() => {
       const onKey = (e: KeyboardEvent) => {
-        if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key.toLowerCase() === "f") {
+        if (
+          (e.ctrlKey || e.metaKey) &&
+          e.shiftKey &&
+          e.key.toLowerCase() === "f"
+        ) {
           e.preventDefault();
           setSearchOpen((v) => !v);
         }
@@ -922,9 +980,8 @@ export const Route = createRootRoute({
     // Public candidate-facing routes bypass the pin/login gate entirely.
     // These URLs are shared with people outside the company (candidates
     // clicking an email link) and must render without auth.
-    const publicPath = typeof window !== "undefined"
-      ? window.location.pathname
-      : "";
+    const publicPath =
+      typeof window !== "undefined" ? window.location.pathname : "";
     const isPublicRoute = publicPath.startsWith("/offer/accept/");
     if (isPublicRoute) {
       return (
@@ -936,7 +993,9 @@ export const Route = createRootRoute({
 
     // Initial Onboarding Process
     if (initial_launch && isLoggedIn !== "true") {
-      return <InitialOnboarding completeInitialLaunch={completeInitialLaunch} />;
+      return (
+        <InitialOnboarding completeInitialLaunch={completeInitialLaunch} />
+      );
     }
 
     return (
@@ -1076,6 +1135,13 @@ export const Route = createRootRoute({
       </>
     );
   },
+  pendingComponent: () => {
+    return (
+      <section className="w-screen h-screen flex items-center justify-center select-none">
+        <img src="/codewithali-removebg-preview.png" width={500} height={500} draggable={false} className="opacity-75 animate-pulse" />
+      </section>
+    );
+  },
   notFoundComponent: () => {
     const navigate = useNavigate();
 
@@ -1094,7 +1160,6 @@ export const Route = createRootRoute({
     );
   },
 });
-
 
 // ── Cmd+Shift+M quick-compose shortcut ──────────────────────────
 // Listens at the window level for Cmd/Ctrl+Shift+M and toggles the

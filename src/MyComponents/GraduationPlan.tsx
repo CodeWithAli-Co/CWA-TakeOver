@@ -58,7 +58,7 @@ import {
 import { useQueryClient } from "@tanstack/react-query";
 import CourseDrawer from "./CourseDrawer";
 import { RiskTermView, BufferView } from "./ScenarioViews";
-import { companySupabase } from "@/routes/index.lazy";
+import { companySupabase } from "@/MyComponents/supabase";
 
 // ─── Danger pairs (UI-only, not DB-backed) ──────────────────────────
 const DANGER_PAIRS: { pair: string; why: string }[] = [

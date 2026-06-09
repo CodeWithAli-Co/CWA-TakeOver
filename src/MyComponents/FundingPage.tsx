@@ -68,7 +68,7 @@ import {
   projectCapTable,
   totalRaisedAcrossCompanies,
 } from "./fundingMath";
-import { companySupabase } from "@/routes/index.lazy";
+import { companySupabase } from "@/MyComponents/supabase";
 
 // ═══════════════════════════════════════════════════════════════════
 // Top-level component

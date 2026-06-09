@@ -2,7 +2,7 @@ import { Button } from "@/components/ui/button";
 import { useForm } from "@tanstack/react-form";
 import { Loader2, Mail, Send, User } from "lucide-react";
 import Capitalize from "@/MyComponents/Reusables/capitalize";
-import { companySupabase } from "@/routes/index.lazy";
+import { companySupabase } from "@/MyComponents/supabase";
 import { getActiveCompanyLabel } from "@/stores/query";
 
 export const AddClient = () => {

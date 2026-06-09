@@ -18,7 +18,7 @@ import {
   Eye, FileText, FolderKanban, ClipboardList, AlertTriangle,
   MessageSquare, Save, Building2, ArrowUp, ArrowDown,
 } from "lucide-react";
-import { companySupabase } from "@/routes/index.lazy";
+import { companySupabase } from "@/MyComponents/supabase";
 import { SlideOver } from "./shared/SlideOver";
 import { InboxToolbar, type Density } from "./shared/InboxToolbar";
 

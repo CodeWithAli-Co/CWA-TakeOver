@@ -54,7 +54,7 @@ import {
   Trash2,
 } from "lucide-react";
 
-import { getCompanySupabase, takeOverSupabase } from "../supabase";
+import { companySupabase, takeOverSupabase } from "../supabase";
 import { getStronghold } from "@/stores/stronghold";
 import {
   FieldGroup,
@@ -255,7 +255,6 @@ const InitialOnboarding = ({
         }
 
         // Check if Founder is initialized or not
-        const companySupabase = await getCompanySupabase();
         const { data: founderInitCheckData, error: founderInitCheckError } =
           await companySupabase
             .from("employee")

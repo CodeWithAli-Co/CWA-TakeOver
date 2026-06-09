@@ -1,7 +1,7 @@
 import { message } from "@tauri-apps/plugin-dialog";
 import { AddTodo } from "@/MyComponents/Sidebar/handlingTasking/addTodo";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { companySupabase } from "@/routes/index.lazy";
+import { companySupabase } from "@/MyComponents/supabase";
 import { motion, AnimatePresence } from "framer-motion";
 import { ActiveUser, Employees, Todos } from "@/stores/query";
 import {

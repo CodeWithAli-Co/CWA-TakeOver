@@ -22,7 +22,7 @@ import {
   FinancialMetrics,
 } from "@/stores/FinancialField";
 import { calculateProjections } from "@/stores/FinancialUtils";
-import { companySupabase } from "@/routes/index.lazy";
+import { companySupabase } from "@/MyComponents/supabase";
 
 // ── State shape ──
 interface FinancialState {

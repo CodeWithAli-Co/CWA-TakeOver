@@ -22,7 +22,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/shadcnComponents/select";
-import { companySupabase } from "@/routes/index.lazy";
+import { companySupabase } from "@/MyComponents/supabase";
 import { getActiveCompanyLabel } from "@/stores/query";
 import { useCompanyFilter } from "@/stores/store";
 import { format, startOfWeek, endOfWeek, addWeeks, subWeeks } from "date-fns";

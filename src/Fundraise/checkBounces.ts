@@ -11,7 +11,7 @@
  * flow -- bounces are a nice-to-have, not a critical path.
  */
 
-import { companySupabase } from "@/routes/index.lazy";
+import { companySupabase } from "@/MyComponents/supabase";
 
 export interface BounceRecord {
   /** Recipient address that bounced (lowercase). */

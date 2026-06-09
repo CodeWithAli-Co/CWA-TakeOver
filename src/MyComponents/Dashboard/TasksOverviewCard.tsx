@@ -50,7 +50,7 @@ import {
 } from "@/stores/query";
 import { colorForUser } from "@/lib/yjs/awareness";
 import UserView, { Role } from "@/MyComponents/Reusables/userView";
-import { companySupabase } from "@/routes/index.lazy";
+import { companySupabase } from "@/MyComponents/supabase";
 
 interface Props {
   username: string;

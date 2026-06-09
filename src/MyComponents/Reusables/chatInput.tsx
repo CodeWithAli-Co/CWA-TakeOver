@@ -1,4 +1,4 @@
-import { companySupabase } from "@/routes/index.lazy";
+import { companySupabase } from "@/MyComponents/supabase";
 import { useForm } from "@tanstack/react-form";
 import { message } from "@tauri-apps/plugin-dialog";
 

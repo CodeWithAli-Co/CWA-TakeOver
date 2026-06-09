@@ -16,7 +16,7 @@ import {
   useMutation,
   useQueryClient,
 } from "@tanstack/react-query";
-import { companySupabase } from "@/routes/index.lazy";
+import { companySupabase } from "@/MyComponents/supabase";
 
 const TABLE = "fundraise_settings";
 

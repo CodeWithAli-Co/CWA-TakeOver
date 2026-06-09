@@ -44,7 +44,7 @@ import {
   Users,
   Zap,
 } from "lucide-react";
-import { companySupabase } from "@/routes/index.lazy";
+import { companySupabase } from "@/MyComponents/supabase";
 import { useConnectors } from "@/stores/connectors";
 import { listActions } from "@/Axon/actions/registry";
 import { MONITORS } from "@/Axon/engine/monitors";

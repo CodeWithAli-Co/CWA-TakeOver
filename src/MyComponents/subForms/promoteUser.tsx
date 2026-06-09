@@ -1,6 +1,6 @@
 import { useForm } from "@tanstack/react-form";
 import { useSubMenuStore } from "@/stores/store";
-import { companySupabase } from "@/routes/index.lazy";
+import { companySupabase } from "@/MyComponents/supabase";
 import { message } from "@tauri-apps/plugin-dialog";
 import {
   Select,
@@ -18,6 +18,7 @@ import {
   RoleList,
 } from "../Reusables/roleRanks";
 import { Shield, X } from "lucide-react";
+import { Employees } from "@/stores/query";
 
 const fetchEmployeeName = async (id: number) => {
   const { data } = await companySupabase    .from("employee")
@@ -39,6 +40,7 @@ interface PromoteInterface {
 
 export const PromoteUser = (props: PromoteInterface) => {
   const { resetPromote } = useSubMenuStore();
+  const { refetch } = Employees();
   const { data, error } = EmployeeName(props.userID);
   if (error) {
     console.log("Error fetching selected Employee name:", error.message);
@@ -46,6 +48,7 @@ export const PromoteUser = (props: PromoteInterface) => {
 
   const handleReset = () => {
     form.reset();
+    refetch();
     resetPromote();
   };
 
@@ -82,7 +85,7 @@ export const PromoteUser = (props: PromoteInterface) => {
           <div>
             <span className="text-[12px] text-foreground/60 font-medium">
               Change role for{" "}
-              <span className="text-foreground/80">{data?.username}</span>
+              <span className="text-foreground/80">{data.name}</span>
             </span>
           </div>
         </div>

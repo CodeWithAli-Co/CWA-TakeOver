@@ -24,7 +24,7 @@ import {
   QUALITY_PRESETS,
   type HuddleQuality,
 } from "@/stores/huddleStore";
-import { companySupabase } from "@/routes/index.lazy";
+import { companySupabase } from "@/MyComponents/supabase";
 import { Employees } from "@/stores/query";
 import { displayLabelForDM, isDMKey } from "../displayName";
 

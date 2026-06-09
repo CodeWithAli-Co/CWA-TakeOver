@@ -58,7 +58,7 @@ import {
 } from "@/stores/investors";
 import { useSendEmail } from "@/stores/gmail";
 import { useMyFundraiseSettings } from "@/stores/fundraiseSettings";
-import { companySupabase } from "@/routes/index.lazy";
+import { companySupabase } from "@/MyComponents/supabase";
 import {
   draftInvestorEmail,
   type DraftMode,

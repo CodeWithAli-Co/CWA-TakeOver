@@ -44,7 +44,7 @@ import {
   Award,
   TrendingUp,
 } from "lucide-react";
-import { companySupabase } from "@/routes/index.lazy";
+import { companySupabase } from "@/MyComponents/supabase";
 import { ActiveUser } from "@/stores/query";
 import { ProvisionOnboarding } from "./ProvisionOnboarding";
 import { TemplateManager } from "./TemplateManager";

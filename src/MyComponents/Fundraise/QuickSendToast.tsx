@@ -30,7 +30,7 @@ import {
   type DraftMode,
   type InvestorDetail,
 } from "@/Fundraise/draftInvestorEmail";
-import { companySupabase } from "@/routes/index.lazy";
+import { companySupabase } from "../supabase";
 
 // How long a successful send card lingers before fading out.
 // Failures stay until the operator dismisses them so they're not

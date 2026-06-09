@@ -21,7 +21,7 @@ import {
   ChevronRight, Eye, EyeOff, Folder, Trash2, Search, Copy, Check,
   Users, Lock,
 } from "lucide-react";
-import { companySupabase } from "@/routes/index.lazy";
+import { companySupabase } from "@/MyComponents/supabase";
 import { AddData } from "@/MyComponents/subForms/addForm";
 import { EditData } from "@/MyComponents/subForms/editForm";
 import {

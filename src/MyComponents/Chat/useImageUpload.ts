@@ -10,7 +10,7 @@
  */
 
 import { useCallback, useState } from "react";
-import { companySupabase } from "@/routes/index.lazy";
+import { companySupabase } from "@/MyComponents/supabase";
 
 export interface PendingUpload {
   id: string;

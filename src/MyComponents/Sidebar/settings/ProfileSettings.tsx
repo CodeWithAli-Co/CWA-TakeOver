@@ -23,7 +23,7 @@ import {
   UserCircle, Mail, Briefcase, Building2, Save, Check, AlertCircle, Loader2,
   ShieldCheck, Sun, Moon, Monitor, Palette,
 } from "lucide-react";
-import { companySupabase } from "@/routes/index.lazy";
+import { companySupabase } from "@/MyComponents/supabase";
 import UploadAvatar from "@/MyComponents/Reusables/uploadAvatar";
 import { useThemeMode, type ThemeMode } from "@/stores/themeModeStore";
 
@@ -34,7 +34,7 @@ interface ProfileSettingsProps {
 type SaveState = "idle" | "saving" | "saved" | "error";
 
 export function ProfileSettings({ user }: ProfileSettingsProps) {
-  const [displayName, setDisplayName] = useState(user?.username ?? "");
+  const [displayName, setDisplayName] = useState(user?.username ?? user.name);
   const [bio, setBio] = useState(user?.bio ?? "");
   const [saveState, setSaveState] = useState<SaveState>("idle");
   const [error, setError] = useState<string | null>(null);
@@ -46,7 +46,7 @@ export function ProfileSettings({ user }: ProfileSettingsProps) {
   }, [user?.username, user?.bio]);
 
   const dirty =
-    displayName !== (user?.username ?? "") ||
+    displayName !== (user?.username ?? user.name) ||
     bio !== (user?.bio ?? "");
 
   const save = async () => {

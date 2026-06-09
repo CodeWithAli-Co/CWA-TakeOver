@@ -21,7 +21,7 @@ import {
 } from "@tanstack/react-query";
 import { useEffect } from "react";
 import { useLocation, useNavigate } from "@tanstack/react-router";
-import { companySupabase } from "@/routes/index.lazy";
+import { companySupabase } from "@/MyComponents/supabase";
 
 const KEY = ["onboarding-state"] as const;
 
