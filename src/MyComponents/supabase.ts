@@ -67,11 +67,19 @@ export const takeOverSupabase = createClient(supabaseUrl, supabaseKey, {
 
 // ── Per-tenant company client ─────────────────────────────────
 
-const getCompSupabaseCreds = async (): Promise<{
+const getCompSupabaseCreds = async (for_login: boolean = false): Promise<{
   url: string;
   key: string;
 }> => {
   const companyName = await stronghold.getRecord("company_name");
+  if (import.meta.env.DEV) {
+    console.log("[supabase]: Company Supabase belongs to: ", companyName);
+  }
+
+  // For login logic, `company_name` is required to ensure login session belongs to correct supabase info
+  if (for_login && !companyName) {
+    throw Error("Company Name isnt found in Stronghold");
+  }
 
   // Fresh install — Stronghold has no bound company yet. Fall
   // back to the master URL with a deliberately-locked-down
@@ -89,11 +97,13 @@ const getCompSupabaseCreds = async (): Promise<{
   const db_key = await stronghold.getRecord("companydb_key");
 
   if (db_url && db_key) {
-    console.log("[supabase]: Retrieved Comapny DB creds from Cache ( stronghold )");
+    console.log(
+      "[supabase]: Retrieved Comapny DB creds from Cache ( stronghold )",
+    );
     return {
       url: db_url,
       key: db_key,
-    }
+    };
   }
 
   const { data, error } = await takeOverSupabase
@@ -122,18 +132,29 @@ const getCompSupabaseCreds = async (): Promise<{
   };
 };
 
-// Separate storage key so this client doesn't fight the master
-// client over the same localStorage entry. The per-tenant client
-// uses an anon / pseudo key and typically doesn't need an auth
-// session at all, but we still give it its own slot to silence
-// the multi-instance warning and prevent any cross-contamination.
-export const getCompanySupabase = async () => {
-  const { url: compDB_URL, key: compDB_KEY } = await getCompSupabaseCreds();
+/**Creating a separate client meant for the `login` page */
+export const _login_getCompanySupabase = async () => {
+  const { url: compDB_URL, key: compDB_KEY } = await getCompSupabaseCreds(true);
   return createClient(compDB_URL, compDB_KEY, {
     auth: {
+      // *Storage key must be the same as normal `companySupabase` client
       storageKey: "sb-takeover-tenant-auth",
       persistSession: true,
       autoRefreshToken: true,
     },
   });
 };
+
+// Separate storage key so this client doesn't fight the master
+// client over the same localStorage entry. The per-tenant client
+// uses an anon / pseudo key and typically doesn't need an auth
+// session at all, but we still give it its own slot to silence
+// the multi-instance warning and prevent any cross-contamination.
+const { url: compDB_URL, key: compDB_KEY } = await getCompSupabaseCreds();
+export const companySupabase = createClient(compDB_URL, compDB_KEY, {
+  auth: {
+    storageKey: "sb-takeover-tenant-auth",
+    persistSession: true,
+    autoRefreshToken: true,
+  },
+});

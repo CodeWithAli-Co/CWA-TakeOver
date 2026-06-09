@@ -28,7 +28,7 @@
  */
 
 import { useCallback, useState } from "react";
-import { companySupabase } from "@/routes/index.lazy";
+import { companySupabase } from "@/MyComponents/supabase";
 
 const CHAT_BUCKET = "chat-images";
 const MAX_FILES_PER_FOLDER = 50;

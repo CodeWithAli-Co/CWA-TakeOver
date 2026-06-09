@@ -17,7 +17,7 @@
  *   capital_scenarios           · saved what-if models
  */
 
-import { companySupabase } from "@/routes/index.lazy";
+import { companySupabase } from "@/MyComponents/supabase";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect } from "react";
 

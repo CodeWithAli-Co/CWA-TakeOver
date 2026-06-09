@@ -28,7 +28,7 @@ import { HandHeart, Search, Send, Sparkles, X } from "lucide-react";
 import { ActiveUser, useAllEmployees, type EmployeeRow } from "@/stores/query";
 import { useSendKudosDialog } from "./sendKudosStore";
 import { useQueryClient } from "@tanstack/react-query";
-import { companySupabase } from "@/routes/index.lazy";
+import { companySupabase } from "@/MyComponents/supabase";
 
 const MAX_BODY_LEN = 280;
 

@@ -1,4 +1,4 @@
-import { companySupabase } from "@/routes/index.lazy";
+import { companySupabase } from "@/MyComponents/supabase";
 import { useQuery } from "@tanstack/react-query";
 import { useCompanyFilter } from "./store";
 

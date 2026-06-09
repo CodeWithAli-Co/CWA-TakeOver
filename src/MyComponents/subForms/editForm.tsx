@@ -1,6 +1,6 @@
 import { useForm } from "@tanstack/react-form";
 import { invoke } from "@tauri-apps/api/core";
-import { companySupabase } from "@/routes/index.lazy";
+import { companySupabase } from "@/MyComponents/supabase";
 import { motion } from "framer-motion";
 import { Input } from "@/components/ui/shadcnComponents/input";
 import { Label } from "@/components/ui/shadcnComponents/label";

@@ -40,7 +40,7 @@ import {
   Dialog, DialogContent, DialogTitle, DialogTrigger,
 } from "@/components/ui/shadcnComponents/dialog";
 import { AddDMGroup } from "@/MyComponents/subForms/addDMGroup";
-import { companySupabase } from "@/routes/index.lazy";
+import { companySupabase } from "@/MyComponents/supabase";
 import { displayLabelForDM, isDMKey } from "./displayName";
 
 const ADMIN_ROLES = ["CEO", "COO", "CFO", "Admin"];

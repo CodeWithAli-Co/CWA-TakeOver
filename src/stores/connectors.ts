@@ -38,7 +38,7 @@ import {
   useQuery,
   useQueryClient,
 } from "@tanstack/react-query";
-import { companySupabase } from "@/routes/index.lazy";
+import { companySupabase } from "@/MyComponents/supabase";
 import { getActiveCompanyLabel } from "@/stores/query";
 import { useCompanyFilter } from "@/stores/store";
 

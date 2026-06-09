@@ -5,7 +5,7 @@ import { AddEmployee } from "./subForms/addEmploy";
 import { useEffect, useRef } from "react";
 import { useAppStore } from "@/stores/store";
 import { EditEmployee } from "./subForms/editEmploy";
-import { companySupabase } from "@/routes/index.lazy";
+import { companySupabase } from "@/MyComponents/supabase";
 
 function DisplayEmployees() {
   const { setDialog, dialog } = useAppStore();

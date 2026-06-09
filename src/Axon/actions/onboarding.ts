@@ -16,7 +16,7 @@
 //   list_upcoming_hiring_meetings              feeds the /schedule widget
 // ───────────────────────────────────────────────────────────────────
 
-import { companySupabase } from "@/routes/index.lazy";
+import { companySupabase } from "@/MyComponents/supabase";
 import type { AxonAction } from "../types";
 import { registerAction } from "./registry";
 import {

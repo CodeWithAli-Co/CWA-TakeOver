@@ -24,7 +24,7 @@
  */
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { companySupabase } from "@/routes/index.lazy";
+import { companySupabase } from "@/MyComponents/supabase";
 import { QUALITY_PRESETS, type HuddleQuality, type QualitySpec } from "@/stores/huddleStore";
 
 export interface HuddlePeer {

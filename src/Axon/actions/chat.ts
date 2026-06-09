@@ -10,7 +10,7 @@
 //   · Otherwise looks up dm_groups by name (case-insensitive).
 // ───────────────────────────────────────────────────────────────────
 
-import { companySupabase } from "@/routes/index.lazy";
+import { companySupabase } from "@/MyComponents/supabase";
 import type { AxonAction } from "../types";
 import { registerAction } from "./registry";
 

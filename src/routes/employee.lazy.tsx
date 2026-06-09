@@ -24,7 +24,7 @@ import {
   Mail,
 } from "lucide-react";
 import { Employees } from "@/stores/query";
-import { companySupabase } from "@/routes/index.lazy";
+import { companySupabase } from "@/MyComponents/supabase";
 import { EditEmployee } from "@/MyComponents/subForms/editEmploy";
 import { PromoteUser } from "@/MyComponents/subForms/promoteUser";
 import { message } from "@tauri-apps/plugin-dialog";
@@ -378,7 +378,8 @@ function CWAEmployeeView() {
     employees
       ?.filter(
         (e) =>
-          e.username.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          e.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          e.username?.toLowerCase().includes(searchQuery.toLowerCase()) ||
           e.email?.toLowerCase().includes(searchQuery.toLowerCase()) ||
           e.role?.toLowerCase().includes(searchQuery.toLowerCase())
       )
@@ -524,12 +525,15 @@ function CWAEmployeeView() {
                 <div className="flex items-center gap-3">
                   <div className="h-8 w-8 rounded-sm bg-primary/10 border border-border flex items-center justify-center shrink-0">
                     <span className="text-[11px] text-primary font-medium">
-                      {employee.username?.slice(0, 2).toUpperCase()}
+                      {employee.name.slice(0, 2).toUpperCase()}
                     </span>
                   </div>
-                  <span className="text-[13px] font-medium text-foreground/80 truncate">
-                    {employee.username}
+                  <span className="text-[14px] font-medium text-foreground/80 truncate">
+                    {employee.name} 
                   </span>
+                  {employee.username && (
+                    <em className="text-[12px] font-medium text-foreground/50 truncate">( {employee.username} )</em>
+                  )}
                 </div>
 
                 <span className="text-[13px] text-muted-foreground truncate">

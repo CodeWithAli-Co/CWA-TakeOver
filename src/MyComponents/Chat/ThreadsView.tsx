@@ -15,7 +15,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { MessageSquare, ChevronRight, Hash, Loader2 } from "lucide-react";
 import { ScrollArea } from "@/components/ui/shadcnComponents/scroll-area";
-import { companySupabase } from "@/routes/index.lazy";
+import { companySupabase } from "@/MyComponents/supabase";
 import { useAppStore } from "@/stores/store";
 import { useChatStore } from "@/stores/chatStore";
 import { formatDistanceToNow } from "date-fns";

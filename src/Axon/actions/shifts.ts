@@ -20,7 +20,7 @@
 
 import type { AxonAction } from "../types";
 import { registerAction } from "./registry";
-import { companySupabase } from "@/routes/index.lazy";
+import { companySupabase } from "@/MyComponents/supabase";
 
 const TABLE = "shifts";
 

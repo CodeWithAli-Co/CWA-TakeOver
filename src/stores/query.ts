@@ -1,4 +1,4 @@
-import { companySupabase } from "@/routes/index.lazy";
+import { companySupabase } from "@/MyComponents/supabase";
 import {
   keepPreviousData,
   useMutation,
@@ -53,10 +53,7 @@ const fetchActiveUser = async () => {
   if (sessionData?.session?.user) {
     supaUser = sessionData.session.user;
     // eslint-disable-next-line no-console
-    console.debug(
-      "[activeuser] session hit from getSession()",
-      supaUser.id,
-    );
+    console.debug("[activeuser] session hit from getSession()", supaUser.id);
   }
 
   // Layer 2: poll getUser() if storage didn't give us one.
@@ -75,10 +72,7 @@ const fetchActiveUser = async () => {
       if (data?.user) {
         supaUser = data.user;
         // eslint-disable-next-line no-console
-        console.debug(
-          "[activeuser] getUser hit on attempt",
-          attempt,
-        );
+        console.debug("[activeuser] getUser hit on attempt", attempt);
         break;
       }
       await new Promise((r) => setTimeout(r, 200));
@@ -101,20 +95,23 @@ const fetchActiveUser = async () => {
   }
 
   // Query user details including avatar
-  const { data, error } = await companySupabase.from("employee")
+  const { data, error } = await companySupabase
+    .from("employee")
     .select("*") // Fetch everything
     .eq("supa_id", supaUser.id)
     .single(); // Fetch a single user
 
   if (error) {
-    await message('Error Fetching Current Active User', {
-      title: 'Error Fetching User',
-      kind: 'error'
-    })
+    await message("Error Fetching Current Active User", {
+      title: "Error Fetching User",
+      kind: "error",
+    });
     return [];
   }
 
-  const { data: AvatarUrl } = companySupabase.storage.from('avatars').getPublicUrl(data.avatar)
+  const { data: AvatarUrl } = companySupabase.storage
+    .from("avatars")
+    .getPublicUrl(data.avatar);
 
   // Rehydrate Stronghold's company_name from the server if it's
   // empty -- happens on fresh installs, new machines, and after the
@@ -136,8 +133,8 @@ const fetchActiveUser = async () => {
       username: data.username,
       role: data.role,
       role_rank: data.role_rank,
-      avatarURL: AvatarUrl.publicUrl || 'default_avatar.png',
-      avatarName: data.avatar || 'default_avatar.png',
+      avatarURL: AvatarUrl.publicUrl || "default_avatar.png",
+      avatarName: data.avatar || "default_avatar.png",
       // created_at drives the first-sign-in welcome modal (14-day
       // recency window). Without it the modal's createdAt check
       // always yielded 0 and it silently refused to render.
@@ -185,31 +182,31 @@ export function subscribeActiveUserAuth(queryClient: {
 }): () => void {
   if (activeUserAuthBound) return () => {};
   activeUserAuthBound = true;
-  const { data: sub } = companySupabase.auth.onAuthStateChange(
-    (event) => {
-      if (
-        event === "SIGNED_IN" ||
-        event === "INITIAL_SESSION" ||
-        event === "TOKEN_REFRESHED" ||
-        event === "USER_UPDATED"
-      ) {
-        queryClient.invalidateQueries({ queryKey: ["activeuser"] });
-      }
-      if (event === "SIGNED_OUT") {
-        queryClient.invalidateQueries({ queryKey: ["activeuser"] });
-      }
-    },
-  );
+  const { data: sub } = companySupabase.auth.onAuthStateChange((event) => {
+    if (
+      event === "SIGNED_IN" ||
+      event === "INITIAL_SESSION" ||
+      event === "TOKEN_REFRESHED" ||
+      event === "USER_UPDATED"
+    ) {
+      queryClient.invalidateQueries({ queryKey: ["activeuser"] });
+    }
+    if (event === "SIGNED_OUT") {
+      queryClient.invalidateQueries({ queryKey: ["activeuser"] });
+    }
+  });
   return () => {
     sub.subscription.unsubscribe();
     activeUserAuthBound = false;
   };
 }
 
-
 // Fetch All CWA Credentials — scoped by company
 const fetchCreds = async (folder: string, company: string) => {
-  let query = companySupabase.from("cwa_creds").select("*").eq('folder', folder);
+  let query = companySupabase
+    .from("cwa_creds")
+    .select("*")
+    .eq("folder", folder);
   if (company !== "all") {
     const label = company === "simplicityFunds" ? "simplicity" : "CodeWithAli";
     query = query.eq("company", label);
@@ -225,7 +222,6 @@ export const CWACreds = (folder: string) => {
   });
 };
 
-
 // Fetch All CWA Employees
 const fetchEmployees = async () => {
   const { data } = await companySupabase.from("employee").select("*");
@@ -237,7 +233,6 @@ export const Employees = () => {
     queryFn: fetchEmployees,
   });
 };
-
 
 // Fetch All CWA Interns
 const fetchInterns = async () => {
@@ -251,17 +246,19 @@ export const Interns = () => {
   });
 };
 
-
 // Fetch DM Groups — scoped by company
 const fetchDMGroups = async (user: string, company: string) => {
-  let query = companySupabase.from("dm_groups").select("*").contains('subscribers', [user]);
+  let query = companySupabase
+    .from("dm_groups")
+    .select("*")
+    .contains("subscribers", [user]);
   if (company !== "all") {
     const label = company === "simplicityFunds" ? "simplicity" : "CodeWithAli";
     query = query.eq("company", label);
   }
   const { data, error: nameError } = await query;
   if (nameError) {
-    console.log("NameError:", nameError)
+    console.log("NameError:", nameError);
   }
   return data;
 };
@@ -273,28 +270,27 @@ export const DMGroups = (user: string) => {
   });
 };
 
-
 // Fetch Chat Messages
 export interface MessageReactions {
   [emoji: string]: string[]; // emoji → list of usernames who reacted
 }
 
 export interface MessageInterface {
-  msg_id: number
-  sent_by: string
-  created_at: string
-  message: string
-  userAvatar: string
-  dm_group: string
+  msg_id: number;
+  sent_by: string;
+  created_at: string;
+  message: string;
+  userAvatar: string;
+  dm_group: string;
   // Extended fields from 2025 schema migration (all optional for backward compat):
-  reply_to?: number | null;     // msg_id of message being replied to
+  reply_to?: number | null; // msg_id of message being replied to
   reactions?: MessageReactions; // emoji → usernames who reacted
-  read_by?: string[];           // list of usernames who have read this message
+  read_by?: string[]; // list of usernames who have read this message
   // 2026 chat_enhancements migration (all optional for backward compat):
   thread_root_id?: number | null; // msg_id of the thread root (if this is a thread reply)
-  image_urls?: string[];          // public URLs of attached images
-  pinned_at?: string | null;      // ISO timestamp when pinned (null = unpinned)
-  pinned_by?: string | null;      // username of the pinner
+  image_urls?: string[]; // public URLs of attached images
+  pinned_at?: string | null; // ISO timestamp when pinned (null = unpinned)
+  pinned_by?: string | null; // username of the pinner
 }
 
 /** Fetch all messages pinned in a group (General or DM). */
@@ -303,13 +299,14 @@ export const fetchPinnedMessages = async (
 ): Promise<MessageInterface[]> => {
   if (groupName === "General") {
     const { data } = await companySupabase
-.from("cwa_chat")
+      .from("cwa_chat")
       .select("*")
       .not("pinned_at", "is", null)
       .order("pinned_at", { ascending: false });
     return (data ?? []) as MessageInterface[];
   }
-  const { data } = await companySupabase    .from("cwa_dm_chat")
+  const { data } = await companySupabase
+    .from("cwa_dm_chat")
     .select("*")
     .eq("dm_group", groupName)
     .not("pinned_at", "is", null)
@@ -338,15 +335,24 @@ export const fetchThreadReplies = async (
   const { data } = await q;
   return (data ?? []) as MessageInterface[];
 };
-const fetchMessages = async (groupName: string ) => {
-  switch(groupName) {
-    case '':
-      return [{message: 'Please Select a Group DM'}]
-    case 'General':
-      const { data: general } = await companySupabase.from("cwa_chat").select("*").order('msg_id', { ascending: false }).limit(50);
+const fetchMessages = async (groupName: string) => {
+  switch (groupName) {
+    case "":
+      return [{ message: "Please Select a Group DM" }];
+    case "General":
+      const { data: general } = await companySupabase
+        .from("cwa_chat")
+        .select("*")
+        .order("msg_id", { ascending: false })
+        .limit(50);
       return general?.reverse();
     default:
-      const { data: DM } = await companySupabase.from("cwa_dm_chat").select("*").eq('dm_group', groupName).order('msg_id', { ascending: false }).limit(50);
+      const { data: DM } = await companySupabase
+        .from("cwa_dm_chat")
+        .select("*")
+        .eq("dm_group", groupName)
+        .order("msg_id", { ascending: false })
+        .limit(50);
       return DM?.reverse();
   }
 };
@@ -364,34 +370,41 @@ export const Messages = (groupName: string) => {
   });
 };
 
-
 // Fetch Todos — scoped by company
 export interface TodosInterface {
-  todo_id: number
-  created_at: string
-  title: string
-  description: string
-  label: string
-  status: string
-  allCount: number
-  todoCount: number
-  inProgressCount: number
-  doneCount: number
-  priority: 'high' | 'medium' | 'low'
-  priorityOrder: number
-  assignee: string[]
-  deadline: string
-  company?: string
+  todo_id: number;
+  created_at: string;
+  title: string;
+  description: string;
+  label: string;
+  status: string;
+  allCount: number;
+  todoCount: number;
+  inProgressCount: number;
+  doneCount: number;
+  priority: "high" | "medium" | "low";
+  priorityOrder: number;
+  assignee: string[];
+  deadline: string;
+  company?: string;
   /** Username of the operator who created / assigned this task.
    *  Populated by the UI + AXON actions on insert. May be null for
    *  legacy rows created before the tasks_assigned_by migration. */
-  assigned_by?: string | null
+  assigned_by?: string | null;
 }
 const fetchTodos = async (user: string, company: string) => {
-  const companyLabel = company === "simplicityFunds" ? "simplicity" : "CodeWithAli";
+  const companyLabel =
+    company === "simplicityFunds" ? "simplicity" : "CodeWithAli";
 
-  let baseQuery = companySupabase.from('cwa_todos').select('*').contains('assignee', [user]).order('priorityOrder', { ascending: false });
-  let countBase = companySupabase.from('cwa_todos').select('todo_id', { count: 'exact', head: true }).contains('assignee', [user]);
+  let baseQuery = companySupabase
+    .from("cwa_todos")
+    .select("*")
+    .contains("assignee", [user])
+    .order("priorityOrder", { ascending: false });
+  let countBase = companySupabase
+    .from("cwa_todos")
+    .select("todo_id", { count: "exact", head: true })
+    .contains("assignee", [user]);
 
   // Apply company filter if not "all"
   if (company !== "all") {
@@ -401,19 +414,48 @@ const fetchTodos = async (user: string, company: string) => {
 
   const { data, error: todosError } = await baseQuery;
   const { count: allTodoCount, error: allCountError } = await countBase;
-  const { count: todoCount, error: todoCountError } = await companySupabase.from('cwa_todos').select('todo_id', { count: 'exact', head: true }).contains('assignee', [user]).eq('status', 'to-do').eq("company", companyLabel);
-  const { count: inProgressTodoCount, error: inProgressCountError } = await companySupabase.from('cwa_todos').select('todo_id', { count: 'exact', head: true }).contains('assignee', [user]).eq('status', 'in-progress').eq("company", companyLabel);
-  const { count: doneTodoCount, error: doneCountError } = await companySupabase.from('cwa_todos').select('todo_id', { count: 'exact', head: true }).contains('assignee', [user]).eq('status', 'done').eq("company", companyLabel);
-  if (todosError || allCountError || todoCountError || inProgressCountError || doneCountError) {
-    console.log('Error with Todos Query: ', todosError?.message || allCountError?.message || todoCountError?.message || inProgressCountError?.message || doneCountError?.message)
+  const { count: todoCount, error: todoCountError } = await companySupabase
+    .from("cwa_todos")
+    .select("todo_id", { count: "exact", head: true })
+    .contains("assignee", [user])
+    .eq("status", "to-do")
+    .eq("company", companyLabel);
+  const { count: inProgressTodoCount, error: inProgressCountError } =
+    await companySupabase
+      .from("cwa_todos")
+      .select("todo_id", { count: "exact", head: true })
+      .contains("assignee", [user])
+      .eq("status", "in-progress")
+      .eq("company", companyLabel);
+  const { count: doneTodoCount, error: doneCountError } = await companySupabase
+    .from("cwa_todos")
+    .select("todo_id", { count: "exact", head: true })
+    .contains("assignee", [user])
+    .eq("status", "done")
+    .eq("company", companyLabel);
+  if (
+    todosError ||
+    allCountError ||
+    todoCountError ||
+    inProgressCountError ||
+    doneCountError
+  ) {
+    console.log(
+      "Error with Todos Query: ",
+      todosError?.message ||
+        allCountError?.message ||
+        todoCountError?.message ||
+        inProgressCountError?.message ||
+        doneCountError?.message,
+    );
   }
 
   return data?.map((task: TodosInterface) => ({
     todo_id: task.todo_id,
     created_at: task.created_at,
     title: task.title,
-    description: task.description || '',
-    label: task.label || '',
+    description: task.description || "",
+    label: task.label || "",
     status: task.status,
     allCount: allTodoCount || data.length,
     todoCount: todoCount || 0,
@@ -422,32 +464,38 @@ const fetchTodos = async (user: string, company: string) => {
     priority: task.priority,
     priorityOrder: task.priorityOrder,
     assignee: task.assignee,
-    deadline: task.deadline || '',
-    company: task.company || 'CodeWithAli',
+    deadline: task.deadline || "",
+    company: task.company || "CodeWithAli",
     // Carry assigned_by through so TaskDetailModal can show who
     // created the task. `select('*')` returns it from the DB; the
     // mapper just needs to forward it. Without this, every task
     // landed in the UI with assigned_by stripped → "Unknown".
     assigned_by: (task as any).assigned_by ?? null,
-  }))
-}
+  }));
+};
 export const Todos = (user: string) => {
   const { activeCompany } = useCompanyFilter();
   return useSuspenseQuery({
-    queryKey: ['todos', user, activeCompany],
-    queryFn: () => fetchTodos(user, activeCompany)
-  })
-}
+    queryKey: ["todos", user, activeCompany],
+    queryFn: () => fetchTodos(user, activeCompany),
+  });
+};
 
 // ────────────────────────────────────────────────────────────────
 // AllTodos - same shape as Todos but unfiltered by assignee.
 // Used by CEO/COO/CFO when they flip the scope toggle to "Everyone".
 // ────────────────────────────────────────────────────────────────
 const fetchAllTodos = async (company: string) => {
-  const companyLabel = company === "simplicityFunds" ? "simplicity" : "CodeWithAli";
+  const companyLabel =
+    company === "simplicityFunds" ? "simplicity" : "CodeWithAli";
 
-  let baseQuery = companySupabase.from('cwa_todos').select('*').order('priorityOrder', { ascending: false });
-  let countBase = companySupabase.from('cwa_todos').select('todo_id', { count: 'exact', head: true });
+  let baseQuery = companySupabase
+    .from("cwa_todos")
+    .select("*")
+    .order("priorityOrder", { ascending: false });
+  let countBase = companySupabase
+    .from("cwa_todos")
+    .select("todo_id", { count: "exact", head: true });
 
   if (company !== "all") {
     baseQuery = baseQuery.eq("company", companyLabel);
@@ -468,8 +516,8 @@ const fetchAllTodos = async (company: string) => {
     todo_id: task.todo_id,
     created_at: task.created_at,
     title: task.title,
-    description: task.description || '',
-    label: task.label || '',
+    description: task.description || "",
+    label: task.label || "",
     status: task.status,
     allCount: allCount || list.length,
     todoCount,
@@ -478,8 +526,8 @@ const fetchAllTodos = async (company: string) => {
     priority: task.priority,
     priorityOrder: task.priorityOrder,
     assignee: task.assignee,
-    deadline: task.deadline || '',
-    company: task.company || 'CodeWithAli',
+    deadline: task.deadline || "",
+    company: task.company || "CodeWithAli",
     // Carry assigned_by through — same fix as fetchTodos above. The
     // C-level "Everyone" scope queries this fetcher; without this
     // line the modal showed "Unknown" for every task even when the
@@ -491,11 +539,10 @@ const fetchAllTodos = async (company: string) => {
 export const AllTodos = () => {
   const { activeCompany } = useCompanyFilter();
   return useSuspenseQuery({
-    queryKey: ['allTodos', activeCompany],
-    queryFn: () => fetchAllTodos(activeCompany)
+    queryKey: ["allTodos", activeCompany],
+    queryFn: () => fetchAllTodos(activeCompany),
   });
 };
-
 
 // Meetings Query — scoped by company
 //
@@ -523,27 +570,27 @@ export interface MeetingInterface {
   attendees: number;
   meeting_type?: "online" | "in-person" | "hybrid";
   location?: string;
-  hybrid_location?: { address: string, url: string };
+  hybrid_location?: { address: string; url: string };
   company?: string;
 }
 const fetchMeetings = async (company: string) => {
-  let query = companySupabase.from('cwa_meetings').select('*');
+  let query = companySupabase.from("cwa_meetings").select("*");
   if (company !== "all") {
     const label = company === "simplicityFunds" ? "simplicity" : "CodeWithAli";
     query = query.eq("company", label);
   }
   const { data, error } = await query;
   if (error) {
-    console.log('Error fetching Meetings from DB', error.message)
-  };
+    console.log("Error fetching Meetings from DB", error.message);
+  }
 
-  return data as MeetingInterface[]
+  return data as MeetingInterface[];
 };
 export const MeetingsQuery = () => {
   const { activeCompany } = useCompanyFilter();
   return useSuspenseQuery({
     queryKey: ["meetings", activeCompany],
-    queryFn: () => fetchMeetings(activeCompany)
+    queryFn: () => fetchMeetings(activeCompany),
   });
 };
 
@@ -572,7 +619,7 @@ export const useMyAxonCheckins = (limit: number = 10) => {
     queryKey: ["axon_checkins", "mine", limit],
     queryFn: async (): Promise<AxonCheckinRow[]> => {
       const { data, error } = await companySupabase
-  .from("axon_checkins")
+        .from("axon_checkins")
         .select("*")
         .order("created_at", { ascending: false })
         .limit(limit);
@@ -620,7 +667,7 @@ export const useMyGrowthTrack = () => {
     queryKey: ["growth_tracks", "mine", "current"],
     queryFn: async (): Promise<GrowthTrackRow | null> => {
       const { data, error } = await companySupabase
-  .from("growth_tracks")
+        .from("growth_tracks")
         .select("*")
         .eq("manager_approved", true)
         .order("updated_at", { ascending: false })
@@ -656,15 +703,12 @@ export const useAllVisibleGrowthTracks = () => {
     queryFn: async (): Promise<GrowthTrackWithOwner[]> => {
       // Pull the tracks first.
       const { data: tracks, error } = await companySupabase
-  .from("growth_tracks")
+        .from("growth_tracks")
         .select("*")
         .eq("manager_approved", true)
         .order("updated_at", { ascending: false });
       if (error) {
-        console.warn(
-          "[growth_tracks/all-visible] query error:",
-          error.message,
-        );
+        console.warn("[growth_tracks/all-visible] query error:", error.message);
         return [];
       }
       const rows = (tracks ?? []) as GrowthTrackRow[];
@@ -674,10 +718,13 @@ export const useAllVisibleGrowthTracks = () => {
       // cheap, avoids needing a view or a foreign-table join.
       const ownerIds = Array.from(new Set(rows.map((r) => r.user_id)));
       const { data: owners } = await companySupabase
-  .from("employee")
+        .from("employee")
         .select("supa_id, username, role")
         .in("supa_id", ownerIds);
-      const ownerMap = new Map<string, { username: string; role: string | null }>();
+      const ownerMap = new Map<
+        string,
+        { username: string; role: string | null }
+      >();
       for (const o of (owners ?? []) as any[]) {
         ownerMap.set(o.supa_id, { username: o.username, role: o.role ?? null });
       }
@@ -703,7 +750,7 @@ export const useGrowthTrackForUser = (userId: string | null) => {
     queryFn: async (): Promise<GrowthTrackRow | null> => {
       if (!userId) return null;
       const { data, error } = await companySupabase
-  .from("growth_tracks")
+        .from("growth_tracks")
         .select("*")
         .eq("user_id", userId)
         .eq("manager_approved", true)
@@ -821,7 +868,7 @@ export const useTeamActivity = (limit: number = 20) => {
     queryKey: ["team_activity", limit],
     queryFn: async (): Promise<TeamActivityRow[]> => {
       const { data, error } = await companySupabase
-  .from("team_activity")
+        .from("team_activity")
         .select("*")
         .order("created_at", { ascending: false })
         .limit(limit);
@@ -859,7 +906,7 @@ export const useStrategicFocus = (company: string | null | undefined) => {
     queryFn: async (): Promise<StrategicFocusRow | null> => {
       if (!company) return null;
       const { data, error } = await companySupabase
-  .from("cwa_strategic_focus")
+        .from("cwa_strategic_focus")
         .select("*")
         .eq("company", company)
         .order("updated_at", { ascending: false })
@@ -894,13 +941,16 @@ export const useStrategicFocus = (company: string | null | undefined) => {
 // top-strip card to show the most recent kudos + a count of how many
 // they've received in the trailing 7 days.
 // ────────────────────────────────────────────────────────────────
-export const useKudosReceived = (targetSupaId: string | null | undefined, limit: number = 10) => {
+export const useKudosReceived = (
+  targetSupaId: string | null | undefined,
+  limit: number = 10,
+) => {
   return useQuery({
     queryKey: ["kudos_received", targetSupaId, limit],
     queryFn: async (): Promise<TeamActivityRow[]> => {
       if (!targetSupaId) return [];
       const { data, error } = await companySupabase
-  .from("team_activity")
+        .from("team_activity")
         .select("*")
         .eq("activity_type", "kudos")
         .eq("target_id", targetSupaId)
@@ -935,7 +985,7 @@ export const useAllEmployees = (excludeCurrentUser: boolean = false) => {
       const { data: auth } = await companySupabase.auth.getUser();
       const myId = auth?.user?.id;
       const { data, error } = await companySupabase
-  .from("employee")
+        .from("employee")
         .select("supa_id, username, role")
         .order("username", { ascending: true });
       if (error) {

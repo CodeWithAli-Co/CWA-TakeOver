@@ -21,7 +21,7 @@ import {
   Loader2, AlertCircle, Plus, Trash2, Save,
   CalendarDays, RotateCcw, ArrowUp, ArrowDown, Check, X,
 } from "lucide-react";
-import { companySupabase } from "@/routes/index.lazy";
+import { companySupabase } from "@/MyComponents/supabase";
 import { ActiveUser } from "@/stores/query";
 import { SlideOver } from "./shared/SlideOver";
 import { InboxToolbar, type Density } from "./shared/InboxToolbar";

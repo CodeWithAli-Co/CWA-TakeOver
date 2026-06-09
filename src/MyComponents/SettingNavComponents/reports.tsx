@@ -22,7 +22,7 @@ import {
   Send, Loader2, AlertCircle, Clock, Eye, FileText, FolderKanban,
   ClipboardList, AlertTriangle, MessageSquare,
 } from "lucide-react";
-import { companySupabase } from "@/routes/index.lazy";
+import { companySupabase } from "@/MyComponents/supabase";
 import { ActiveUser } from "@/stores/query";
 import {
   REPORT_TEMPLATES,
@@ -154,7 +154,7 @@ export default function ReportSettings() {
     const [p, r] = await Promise.all([
       companySupabase.from("projects").select("id, name, company").order("name"),
       mySupaId
-        ? supabase
+        ? companySupabase
             .from("reports")
             .select(
               "id, title, body, type, priority, project_id, status, review_notes, submitted_at, reviewed_at",

@@ -57,7 +57,7 @@ import {
   Link2,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
-import { companySupabase } from "@/routes/index.lazy";
+import { companySupabase } from "@/MyComponents/supabase";
 import { inviteUserViaTakeover } from "@/MyComponents/OfferLetters/inviteUserViaTakeover";
 import { ensureOnboardingFor } from "@/MyComponents/Onboarding/ensureOnboarding";
 import { ActiveUser } from "@/stores/query";

@@ -23,7 +23,7 @@ import {
   MultiSelectField,
   Option,
 } from "@/MyComponents/Reusables/multiselectField";
-import { companySupabase } from "@/routes/index.lazy";
+import { companySupabase } from "@/MyComponents/supabase";
 import { useMultiSelectStore } from "@/stores/store";
 import { getActiveCompanyLabel, ActiveUser } from "@/stores/query";
 import { useForm } from "@tanstack/react-form";

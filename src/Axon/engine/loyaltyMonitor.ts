@@ -12,7 +12,7 @@
  * directed at Ali/the CEO.
  */
 
-import { companySupabase } from "@/routes/index.lazy";
+import { companySupabase } from "@/MyComponents/supabase";
 import { sendNotification } from "@tauri-apps/plugin-notification";
 
 // CEO's identity strings. Match is case-insensitive.

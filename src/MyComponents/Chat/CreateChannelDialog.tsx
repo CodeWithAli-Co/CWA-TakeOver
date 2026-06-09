@@ -11,7 +11,7 @@
 import { useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { Hash, Loader2, X } from "lucide-react";
-import { companySupabase } from "@/routes/index.lazy";
+import { companySupabase } from "@/MyComponents/supabase";
 import { useAppStore } from "@/stores/store";
 import { getActiveCompanyLabel } from "@/stores/query";
 

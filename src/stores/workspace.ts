@@ -25,7 +25,7 @@ import {
   useQueryClient,
   type UseQueryOptions,
 } from "@tanstack/react-query";
-import { companySupabase } from "@/routes/index.lazy";
+import { companySupabase } from "@/MyComponents/supabase";
 import type {
   WorkspaceDocument,
   WorkspaceSpreadsheet,

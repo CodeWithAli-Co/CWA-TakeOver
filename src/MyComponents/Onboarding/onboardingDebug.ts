@@ -5,7 +5,7 @@
  * admin tools to reset the localStorage welcome flag.
  */
 
-import { companySupabase } from "@/routes/index.lazy";
+import { companySupabase } from "@/MyComponents/supabase";
 
 export interface WelcomeGateReport {
   supaId: string;

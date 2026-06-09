@@ -20,7 +20,7 @@ import {
   FolderKanban, Plus, Search, X, Loader2, AlertCircle, Trash2,
   Users, Pencil, Check, Building2, Circle,
 } from "lucide-react";
-import { companySupabase } from "@/routes/index.lazy";
+import { companySupabase } from "@/MyComponents/supabase";
 import { ActiveUser } from "@/stores/query";
 
 // ── Types ───────────────────────────────────────────────────────
@@ -76,14 +76,14 @@ export default function TeamsAndProjects() {
     setError(null);
 
     const [p, m, u] = await Promise.all([
-      supabase
+      companySupabase
         .from("projects")
         .select("id, name, description, company, status, owner_user_id, created_at, updated_at")
         .order("updated_at", { ascending: false }),
-      supabase
+      companySupabase
         .from("project_members")
         .select("project_id, user_id, role"),
-      supabase
+      companySupabase
         .from("employee")
         .select("supa_id, username, role, company, avatarURL")
         .not("supa_id", "is", null)

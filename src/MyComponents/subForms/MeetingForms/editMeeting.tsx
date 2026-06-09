@@ -31,7 +31,7 @@ import {
 } from "lucide-react";
 import { motion } from "framer-motion";
 import { useEffect, useMemo, useState } from "react";
-import { companySupabase } from "@/routes/index.lazy";
+import { companySupabase } from "@/MyComponents/supabase";
 import { message } from "@tauri-apps/plugin-dialog";
 import { MeetingsQuery } from "@/stores/query";
 import { FetchMeetingQuery } from "@/stores/MeetingStore";

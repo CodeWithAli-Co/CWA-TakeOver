@@ -33,7 +33,7 @@ import {
 import { BentoCard } from "./BentoCard";
 import { DailySnapshotCard, QuickStartCard } from "./Row5Fallback";
 import { colorForUser } from "@/lib/yjs/awareness";
-import { companySupabase } from "@/routes/index.lazy";
+import { companySupabase } from "@/MyComponents/supabase";
 import { ActiveUser, Employees } from "@/stores/query";
 import { useChatStore } from "@/stores/chatStore";
 

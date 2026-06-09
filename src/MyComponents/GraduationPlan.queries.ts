@@ -9,7 +9,7 @@
  * call invalidate to refetch — no manual cache splicing.
  */
 
-import { companySupabase } from "@/routes/index.lazy";
+import { companySupabase } from "@/MyComponents/supabase";
 import {
   useMutation,
   useQuery,

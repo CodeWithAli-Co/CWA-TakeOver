@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import { useAppStore } from "@/stores/store";
 import { Database } from "lucide-react";
-import { companySupabase } from "@/routes/index.lazy";
+import { companySupabase } from "@/MyComponents/supabase";
 
 const STORAGE_LIMIT = 500;
 const TIER = "Free";

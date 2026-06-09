@@ -15,7 +15,7 @@
 // reload.
 // ───────────────────────────────────────────────────────────────────
 
-import { companySupabase } from "@/routes/index.lazy";
+import { companySupabase } from "@/MyComponents/supabase";
 import { sendNotification } from "@tauri-apps/plugin-notification";
 import type { AxonAction } from "../types";
 import { registerAction } from "./registry";

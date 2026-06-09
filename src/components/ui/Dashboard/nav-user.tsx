@@ -29,7 +29,7 @@ import {
   SidebarMenuItem,
   useSidebar,
 } from "@/components/ui/shadcnComponents/sidebar";
-import { companySupabase } from "@/routes/index.lazy";
+import { companySupabase } from "@/MyComponents/supabase";
 import { ActiveUser } from "@/stores/query";
 import { useRolePreview } from "@/stores/store";
 import { useNavigate } from "@tanstack/react-router";
@@ -44,7 +44,7 @@ interface NavUserProps {
   };
 }
 
-export function NavUser({ }: NavUserProps) {
+export function NavUser({}: NavUserProps) {
   const { isMobile } = useSidebar();
   const { data: activeuser } = ActiveUser();
   const { previewRole } = useRolePreview();
@@ -57,7 +57,9 @@ export function NavUser({ }: NavUserProps) {
   // onClick handlers below are terse + consistent. All use Tanstack
   // Router's useNavigate so back/forward + active state behave.
   const goTo = (to: string) => {
-    navigate({ to }).catch(() => { /* noop — stale route, ignore */ });
+    navigate({ to }).catch(() => {
+      /* noop — stale route, ignore */
+    });
   };
 
   const handleLogout = async () => {
@@ -67,6 +69,8 @@ export function NavUser({ }: NavUserProps) {
       console.log("Error Signing Out:", error.message);
     } else {
       stronghold.removeRecord("company_name");
+      stronghold.removeRecord("companydb_url");
+      stronghold.removeRecord("companydb_key");
       localStorage.removeItem("isLoggedIn");
       window.location.reload();
     }
@@ -102,11 +106,15 @@ export function NavUser({ }: NavUserProps) {
                 </AvatarFallback>
               </Avatar>
               <div className="grid flex-1 text-left text-sm leading-tight">
-                <span className="truncate font-semibold text-foreground text-[13px]">{user.username}</span>
+                <span className="truncate font-semibold text-foreground text-[13px]">
+                  {user.username}
+                </span>
                 <span className="truncate text-[11px] text-muted-foreground">
                   {displayRole}
                   {previewRole && (
-                    <span className="ml-1 text-primary font-semibold">(preview)</span>
+                    <span className="ml-1 text-primary font-semibold">
+                      (preview)
+                    </span>
                   )}
                 </span>
               </div>
@@ -122,14 +130,22 @@ export function NavUser({ }: NavUserProps) {
             <DropdownMenuLabel className="p-0 font-normal">
               <div className="flex items-center gap-2 px-2 py-2 text-left text-sm">
                 <Avatar className="h-8 w-8 rounded-sm border border-border">
-                  <AvatarImage src={user.avatarURL} alt={user.username} className="object-cover" />
+                  <AvatarImage
+                    src={user.avatarURL}
+                    alt={user.username}
+                    className="object-cover"
+                  />
                   <AvatarFallback className="rounded-sm bg-muted text-foreground/80 text-[10px] font-semibold">
                     {user.username?.slice(0, 2).toUpperCase()}
                   </AvatarFallback>
                 </Avatar>
                 <div className="grid flex-1 text-left text-sm leading-tight">
-                  <span className="truncate font-semibold text-foreground text-[13px]">{user.username}</span>
-                  <span className="truncate text-[11px] text-muted-foreground">{displayRole}</span>
+                  <span className="truncate font-semibold text-foreground text-[13px]">
+                    {user.username}
+                  </span>
+                  <span className="truncate text-[11px] text-muted-foreground">
+                    {displayRole}
+                  </span>
                 </div>
               </div>
             </DropdownMenuLabel>
@@ -154,12 +170,12 @@ export function NavUser({ }: NavUserProps) {
               </DropdownMenuItem>
               <UserView userRole={[Role.CEO, Role.COO]}>
                 <DropdownMenuItem
-                onClick={() => goTo("/employee")}
-                className="text-foreground/90 hover:text-foreground hover:bg-muted/60 focus:bg-muted/60 cursor-pointer rounded-sm text-[12px] font-medium"
-              >
-                <CreditCard className="h-3.5 w-3.5 mr-2 text-muted-foreground" />
-                Manage Teams
-              </DropdownMenuItem>
+                  onClick={() => goTo("/employee")}
+                  className="text-foreground/90 hover:text-foreground hover:bg-muted/60 focus:bg-muted/60 cursor-pointer rounded-sm text-[12px] font-medium"
+                >
+                  <CreditCard className="h-3.5 w-3.5 mr-2 text-muted-foreground" />
+                  Manage Teams
+                </DropdownMenuItem>
               </UserView>
               <DropdownMenuItem
                 onClick={() => goTo("/settings")}

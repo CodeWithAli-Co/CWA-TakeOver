@@ -8,7 +8,7 @@
 
 import { Pin, ChevronDown, ChevronUp, X } from "lucide-react";
 import { AnimatePresence, motion } from "framer-motion";
-import { companySupabase } from "@/routes/index.lazy";
+import { companySupabase } from "@/MyComponents/supabase";
 import { useChatStore } from "@/stores/chatStore";
 import type { MessageInterface } from "@/stores/query";
 

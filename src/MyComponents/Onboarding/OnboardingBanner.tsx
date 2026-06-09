@@ -11,7 +11,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { ClipboardCheck, ArrowRight, X, PartyPopper, Sparkles } from "lucide-react";
 import { useNavigate } from "@tanstack/react-router";
-import { companySupabase } from "@/routes/index.lazy";
+import { companySupabase } from "@/MyComponents/supabase";
 import { ActiveUser } from "@/stores/query";
 import { useTourStore } from "./tourStore";
 import { DEFAULT_TOUR_STOPS } from "./tourSteps";

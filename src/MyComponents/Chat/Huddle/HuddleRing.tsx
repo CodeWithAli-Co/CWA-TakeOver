@@ -17,7 +17,7 @@ import { useEffect, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { Phone, X, Volume2 } from "lucide-react";
 import { useNavigate } from "@tanstack/react-router";
-import { companySupabase } from "@/routes/index.lazy";
+import { companySupabase } from "@/MyComponents/supabase";
 import { useAppStore } from "@/stores/store";
 import { displayLabelForDM, isDMKey } from "../displayName";
 

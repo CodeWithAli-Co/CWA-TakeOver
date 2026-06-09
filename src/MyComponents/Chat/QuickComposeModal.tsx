@@ -26,7 +26,7 @@ import {
   pushRecentTarget,
 } from "./quickComposeStore";
 import { displayLabelForDM } from "./displayName";
-import { companySupabase } from "@/routes/index.lazy";
+import { companySupabase } from "@/MyComponents/supabase";
 
 // ── Target types ──────────────────────────────────────────────
 

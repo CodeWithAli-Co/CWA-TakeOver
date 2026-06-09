@@ -40,12 +40,13 @@ import {
 
 import { KanbanInvestorCard } from "./KanbanInvestorCard";
 import { useQuickSendStore } from "./quickSendStore";
-import { companySupabase } from "@/routes/index.lazy";
+
 import {
   draftInvestorEmail,
   type DraftMode,
   type InvestorDetail,
 } from "@/Fundraise/draftInvestorEmail";
+import { companySupabase } from "../supabase";
 
 // MIME-typed dataTransfer key keeps us from picking up unrelated
 // drags (e.g. a drag from the CRM PipelineView in another window).

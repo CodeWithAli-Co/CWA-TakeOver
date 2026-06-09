@@ -33,7 +33,7 @@ import {
 } from "@/components/ui/shadcnComponents/dropdown-menu";
 import UserView from "../Reusables/userView";
 import { EditMeeting } from "../subForms/MeetingForms/editMeeting";
-import { companySupabase } from "@/routes/index.lazy";
+import { companySupabase } from "@/MyComponents/supabase";
 
 // ── Company tinting — small dot used in header counts and as a
 //    top-right marker on each card. The card-level dot is the only

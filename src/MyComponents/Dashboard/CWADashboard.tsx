@@ -50,7 +50,7 @@ import { useShiftsInRange } from "@/stores/shifts";
 import { Suspense, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
-import { companySupabase } from "@/routes/index.lazy";
+import { companySupabase } from "@/MyComponents/supabase";
 import { useCandidates } from "@/MyComponents/Hiring/recruitingQueries";
 import { useStripeDashboard } from "@/lib/useStripeDashboard";
 

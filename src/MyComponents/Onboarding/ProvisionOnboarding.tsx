@@ -17,7 +17,7 @@
 
 import { useEffect, useState } from "react";
 import { Loader2, Sparkles, X } from "lucide-react";
-import { companySupabase } from "@/routes/index.lazy";
+import { companySupabase } from "@/MyComponents/supabase";
 
 interface UserRow {
   supa_id: string;

@@ -15,7 +15,7 @@ import {
   PenLine, Receipt, ExternalLink,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
-import { companySupabase } from "@/routes/index.lazy";
+import { companySupabase } from "@/MyComponents/supabase";
 import { pdf } from "@react-pdf/renderer";
 import { OfferLetterPDF } from "./OfferLetterPDF";
 import {

@@ -31,9 +31,7 @@ import { ActivityFeed } from "@/MyComponents/HomeDashboard/Components/activityFe
 import { TeamPresence } from "@/MyComponents/HomeDashboard/Components/teamPresence";
 import { CWADashboard } from "@/MyComponents/Dashboard/CWADashboard";
 import { SimplicityDashboard } from "@/MyComponents/Dashboard/SimplicityDashboard";
-import { getCompanySupabase } from "@/MyComponents/supabase";
-
-export const companySupabase = await getCompanySupabase();
+import { companySupabase } from "@/MyComponents/supabase";
 
 const getGreeting = () => {
   const hour = new Date().getHours();

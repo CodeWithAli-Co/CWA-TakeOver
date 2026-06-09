@@ -36,7 +36,7 @@ import {
   removeAwarenessStates,
 } from "y-protocols/awareness";
 import type { RealtimeChannel } from "@supabase/supabase-js";
-import { companySupabase } from "@/routes/index.lazy";
+import { companySupabase } from "@/MyComponents/supabase";
 
 type Listener = () => void;
 

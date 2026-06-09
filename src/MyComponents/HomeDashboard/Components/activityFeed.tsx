@@ -9,7 +9,7 @@ import {
   Calendar,
   AlertCircle,
 } from "lucide-react";
-import { companySupabase } from "@/routes/index.lazy";
+import { companySupabase } from "@/MyComponents/supabase";
 import { useCompanyFilter } from "@/stores/store";
 
 interface ActivityItem {

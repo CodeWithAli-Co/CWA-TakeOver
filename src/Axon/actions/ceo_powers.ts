@@ -6,7 +6,7 @@
 // Channel resolution heuristics are shared with the chat action.
 // ───────────────────────────────────────────────────────────────────
 
-import { companySupabase } from "@/routes/index.lazy";
+import { companySupabase } from "@/MyComponents/supabase";
 import type { AxonAction } from "../types";
 import { registerAction } from "./registry";
 import { pushUndo } from "../engine/undoStack";

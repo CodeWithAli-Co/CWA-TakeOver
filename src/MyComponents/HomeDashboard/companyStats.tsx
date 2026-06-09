@@ -11,7 +11,7 @@ import {
 } from "lucide-react";
 import UserView, { Role } from "../Reusables/userView";
 import { ActiveUser } from "@/stores/query";
-import { companySupabase } from "@/routes/index.lazy";
+import { companySupabase } from "@/MyComponents/supabase";
 
 // Single stat cell within the unified strip
 const StatCell = ({

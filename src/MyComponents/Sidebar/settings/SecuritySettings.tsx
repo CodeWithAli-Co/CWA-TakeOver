@@ -23,7 +23,7 @@ import {
   Shield, KeyRound, Monitor, LogOut, Check, AlertCircle, Loader2,
   Mail, Fingerprint, Clock,
 } from "lucide-react";
-import { companySupabase } from "@/routes/index.lazy";
+import { companySupabase } from "@/MyComponents/supabase";
 
 type ResetState = "idle" | "sending" | "sent" | "error";
 type SignoutState = "idle" | "signing" | "error";

@@ -7,7 +7,7 @@
  * realtime subscription drop in cleanly.
  */
 
-import { companySupabase } from "@/routes/index.lazy";
+import { companySupabase } from "@/MyComponents/supabase";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 // ─── Types (mirror Postgres enums + columns) ──────────────────────

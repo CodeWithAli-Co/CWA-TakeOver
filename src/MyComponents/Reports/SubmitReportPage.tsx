@@ -22,7 +22,7 @@ import {
   CalendarDays, Sparkles, ArrowRight, Inbox,
 } from "lucide-react";
 import { useNavigate } from "@tanstack/react-router";
-import { companySupabase } from "@/routes/index.lazy";
+import { companySupabase } from "@/MyComponents/supabase";
 import { ActiveUser } from "@/stores/query";
 import {
   REPORT_TEMPLATES,

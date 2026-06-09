@@ -9,7 +9,7 @@
 // ────────────────────────────────────────────────────────────────
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { companySupabase } from "@/routes/index.lazy";
+import { companySupabase } from "@/MyComponents/supabase";
 import {
   rowToItem,
   rowToItemWithLatest,

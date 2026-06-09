@@ -17,7 +17,7 @@
 import type { AxonAction } from "../types";
 import { registerAction } from "./registry";
 import { pushUndo } from "../engine/undoStack";
-import { companySupabase } from "@/routes/index.lazy";
+import { companySupabase } from "@/MyComponents/supabase";
 
 type RegistryKind = "component" | "template";
 type RegistryCompany = "cwa" | "simplicity" | "shared";

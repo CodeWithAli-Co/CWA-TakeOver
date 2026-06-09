@@ -9,7 +9,7 @@
  * handler, and (later) the toolbar's image button.
  */
 
-import { companySupabase } from "@/routes/index.lazy";
+import { companySupabase } from "@/MyComponents/supabase";
 
 const BUCKET = "workspace-images";
 

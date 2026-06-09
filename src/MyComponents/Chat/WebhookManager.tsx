@@ -9,7 +9,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { Check, Copy, Hash, Loader2, MessageSquare, Plus, Trash2, Webhook, X } from "lucide-react";
-import { companySupabase } from "@/routes/index.lazy";
+import { companySupabase } from "@/MyComponents/supabase";
 import {
   Select,
   SelectContent,

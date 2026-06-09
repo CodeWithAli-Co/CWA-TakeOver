@@ -29,7 +29,7 @@ import {
   Flame, Gauge, AlertTriangle, Sparkles,
 } from "lucide-react";
 import { AllInvoices, InvoiceType } from "@/stores/invoiceQuery";
-import { companySupabase } from "@/routes/index.lazy";
+import { companySupabase } from "@/MyComponents/supabase";
 import { FinancialProvider } from "@/MyComponents/Financial/FinancialContext";
 import ModelerBentoView from "@/MyComponents/Financial/ModelerBentoView";
 import { EXPENSE_COLORS, REVENUE_COLORS } from "@/stores/FinancialConstants";

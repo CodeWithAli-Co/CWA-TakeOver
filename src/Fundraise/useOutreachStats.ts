@@ -21,8 +21,8 @@
 
 import { useMemo } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { companySupabase } from "@/routes/index.lazy";
 import { checkBounces, type BounceRecord } from "./checkBounces";
+import { companySupabase } from "@/MyComponents/supabase";
 
 export interface OutreachStats {
   totalSent: number;

@@ -36,7 +36,7 @@ import {
   notionTitleOf,
   type NotionPage,
 } from "@/lib/notion";
-import { companySupabase } from "@/routes/index.lazy";
+import { companySupabase } from "@/MyComponents/supabase";
 
 // ─── list_connectors ───────────────────────────────────────────────
 

@@ -27,9 +27,9 @@ import {
 } from "@tanstack/react-query";
 import { useEffect } from "react";
 import { open as openExternal } from "@tauri-apps/plugin-shell";
-import { getCompanySupabase } from "@/MyComponents/supabase";
 import { ActiveUser } from "@/stores/query";
 import { getStronghold } from "@/stores/stronghold";
+import { companySupabase } from "@/MyComponents/supabase";
 
 // ────────────────────────────────────────────────
 // Types
@@ -634,13 +634,12 @@ export function useGmailRealtime(): void {
     let unsubscribe: (() => void) | null = null;
 
     (async () => {
-      const client = await getCompanySupabase();
       if (cancelled) return;
       // The realtime channel needs the client returned from
-      // getCompanySupabase. Note: we use it here for both the
+      // companySupabase. Note: we use it here for both the
       // channel subscription AND the gmail_connections queries
       // above — same tenant client either way.
-      const channel = client
+      const channel = companySupabase
         .channel(`gmail-connections-${userSupaId}`)
         .on(
           "postgres_changes",

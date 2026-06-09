@@ -7,7 +7,7 @@
 // Adding more is: append an entry to MONITORS.
 // ───────────────────────────────────────────────────────────────────
 
-import { companySupabase } from "@/routes/index.lazy";
+import { companySupabase } from "@/MyComponents/supabase";
 import type { Monitor } from "../types";
 import {
   fetchUnifiedFinance,

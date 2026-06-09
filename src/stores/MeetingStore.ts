@@ -1,4 +1,4 @@
-import { companySupabase } from "@/routes/index.lazy"
+import { companySupabase } from "@/MyComponents/supabase";
 import { useMutation, useQueryClient, useSuspenseQuery } from "@tanstack/react-query"
 import { create } from "zustand"
 
