@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
-import { useFocus, clearFocus } from "../lib/focus";
+import { useFocus, clearFocus, requestFocus } from "../lib/focus";
+import { openInEditor, parseRef } from "../lib/code";
 import { manifest, Scenario } from "../data/manifest";
 import { Badge, Dot, Eyebrow, Modal, ModalHeader, Field, sensColor } from "../components/ui";
 
@@ -117,12 +118,17 @@ export default function ScenariosTab() {
           <section className="obs-panel" style={{ padding: 20 }}>
             <Eyebrow>Retrieved evidence · pulled from this Observatory</Eyebrow>
             <div style={{ display: "flex", flexDirection: "column", gap: 10, marginTop: 12 }}>
-              {s.retrieval.map((r, i) => (
-                <div key={i} style={{ borderLeft: "2px solid var(--obs-scenario)", paddingLeft: 12 }}>
-                  <div className="obs-mono" style={{ fontSize: 10.5, color: "var(--obs-scenario)", letterSpacing: ".08em", marginBottom: 3 }}>{r.source}</div>
-                  <div style={{ fontSize: 13, lineHeight: 1.6, color: "var(--obs-dim)" }}>{r.insight}</div>
-                </div>
-              ))}
+              {s.retrieval.map((r, i) => {
+                const fm = r.source.match(/\b(f-[a-z0-9-]+)\b/);
+                const sm = r.source.match(/\b(s-[a-z0-9-]+)\b/);
+                const go = fm ? () => requestFocus("finding", fm[1]) : sm ? () => requestFocus("scenario", sm[1]) : undefined;
+                return (
+                  <div key={i} style={{ borderLeft: "2px solid var(--obs-scenario)", paddingLeft: 12 }}>
+                    <button disabled={!go} onClick={go} className="obs-mono" style={{ fontSize: 10.5, color: "var(--obs-scenario)", letterSpacing: ".08em", marginBottom: 3, background: "transparent", border: "none", padding: 0, cursor: go ? "pointer" : "default", textAlign: "left" }}>{r.source}{go ? " →" : ""}</button>
+                    <div style={{ fontSize: 13, lineHeight: 1.6, color: "var(--obs-dim)" }}>{r.insight}</div>
+                  </div>
+                );
+              })}
             </div>
           </section>
         </div>
@@ -150,7 +156,7 @@ export default function ScenariosTab() {
                 {s.apisAffected.length === 0 ? <span style={{ fontSize: 12.5, color: "var(--obs-faint)" }}>none</span> :
                   s.apisAffected.map((id) => {
                     const r = manifest.apis.find((x) => x.id === id);
-                    return r ? <span key={id} className="obs-mono" style={{ fontSize: 11, border: "1px solid var(--obs-line)", borderRadius: 99, padding: "3px 9px", color: "var(--obs-data)" }}>{r.method} {r.path}</span> : null;
+                    return r ? <button key={id} onClick={() => requestFocus("route", id)} className="obs-mono" style={{ fontSize: 11, border: "1px solid var(--obs-line)", borderRadius: 6, padding: "3px 9px", color: "var(--obs-data)", background: "transparent", cursor: "pointer" }}>{r.method} {r.path} →</button> : null;
                   })}
               </div>
             </div>
@@ -160,7 +166,7 @@ export default function ScenariosTab() {
                 {s.assetsAffected.length === 0 ? <span style={{ fontSize: 12.5, color: "var(--obs-faint)" }}>none</span> :
                   s.assetsAffected.map((id) => {
                     const a = manifest.assets.find((x) => x.id === id);
-                    return a ? <Badge key={id} color={sensColor[a.sensitivity]}>{a.name}</Badge> : null;
+                    return a ? <button key={id} onClick={() => requestFocus("asset", id)} style={{ background: "transparent", border: "none", padding: 0, cursor: "pointer" }}><Badge color={sensColor[a.sensitivity]}>{a.name} →</Badge></button> : null;
                   })}
               </div>
             </div>
@@ -191,8 +197,14 @@ export default function ScenariosTab() {
               <Field label="What changes here">{impactModal.note}</Field>
               <Field label="Files in the diff" mono>
                 {impactModal.files.length === 0 ? "No file changes — behavior shifts around this node." :
-                  impactModal.files.map((f) => <div key={f} style={{ padding: "3px 0" }}>{f}</div>)}
+                  impactModal.files.map((f) => {
+                    const ref = /\(new\)/.test(f) ? null : parseRef(f);
+                    return ref
+                      ? <button key={f} onClick={() => openInEditor(ref)} style={{ display: "block", padding: "3px 0", background: "transparent", border: "none", color: "var(--obs-data)", cursor: "pointer", textAlign: "left", fontFamily: "inherit", fontSize: "inherit" }}>{f} ↗</button>
+                      : <div key={f} style={{ padding: "3px 0" }}>{f}</div>;
+                  })}
               </Field>
+              <button className="obs-tab" onClick={() => { requestFocus("node", impactModal.nodeId); setImpactModal(null); }} style={{ marginTop: 8 }}>Show {nodeLabel(impactModal.nodeId)} on the map →</button>
             </div>
           </>
         )}

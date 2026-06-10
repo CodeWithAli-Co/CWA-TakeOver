@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useFocus, clearFocus } from "../lib/focus";
+import { useFocus, clearFocus, requestFocus } from "../lib/focus";
 import { manifest, DataAsset, ApiRoute } from "../data/manifest";
 import {
   Badge, Dot, Modal, ModalHeader, Field,
@@ -77,7 +77,7 @@ export default function DataApiTab() {
           <div className="obs-mono" style={{ display: "grid", gridTemplateColumns: "0.7fr 2.4fr 1.4fr 1.6fr 0.9fr", gap: 12, padding: "12px 18px", fontSize: 10, letterSpacing: ".18em", textTransform: "uppercase", color: "var(--obs-faint)", borderBottom: "1px solid var(--obs-line)" }}>
             <span>Method</span><span>Route</span><span>Auth</span><span>Upstream</span><span>Verdict</span>
           </div>
-          {manifest.apis.map((r) => (
+          {[...manifest.apis].sort((a, b) => (a.auth === "none" ? 0 : 1) - (b.auth === "none" ? 0 : 1)).map((r) => (
             <div key={r.id} className="obs-row" onClick={() => setRoute(r)}
                  style={{ display: "grid", gridTemplateColumns: "0.7fr 2.4fr 1.4fr 1.6fr 0.9fr", gap: 12, padding: "14px 18px", borderBottom: "1px solid var(--obs-line)", alignItems: "center" }}>
               <span className="obs-mono" style={{ fontSize: 11.5, color: "var(--obs-data)", fontWeight: 600 }}>{r.method}</span>
@@ -106,7 +106,7 @@ export default function DataApiTab() {
                   {asset.storedIn.map((s, i) => (
                     <div key={i} className="obs-panel" style={{ padding: 14, display: "flex", justifyContent: "space-between", flexWrap: "wrap", gap: 8 }}>
                       <div>
-                        <div style={{ fontWeight: 600, fontSize: 13.5 }}>{nodeLabel(s.nodeId)}</div>
+                        <button onClick={() => { requestFocus("node", s.nodeId); setAsset(null); }} style={{ fontWeight: 600, fontSize: 13.5, background: "transparent", border: "none", padding: 0, color: "var(--obs-text)", cursor: "pointer" }}>{nodeLabel(s.nodeId)} →</button>
                         <div className="obs-mono" style={{ fontSize: 11, color: "var(--obs-dim)", marginTop: 3 }}>
                           {s.medium}{s.table ? ` · tables: ${s.table}` : ""}
                         </div>
@@ -142,15 +142,16 @@ export default function DataApiTab() {
                          right={<Badge color={verdictColor[route.verdict]}>{verdictLabel[route.verdict]}</Badge>} />
             <div style={{ padding: "20px 28px" }}>
               <Field label="Auth"><Badge color={route.auth === "none" ? "var(--obs-high)" : "var(--obs-safe)"}>{route.auth}</Badge></Field>
+              <Field label="Served by"><button onClick={() => { requestFocus("node", route.nodeId); setRoute(null); }} style={{ background: "transparent", border: "none", padding: 0, color: "var(--obs-data)", cursor: "pointer", fontSize: 13.5 }}>{nodeLabel(route.nodeId)} →</button></Field>
               {route.upstream && <Field label="Proxies to" mono>{route.upstream}</Field>}
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
                 <Field label="Reads">
                   {route.reads.length === 0 ? <span style={{ color: "var(--obs-faint)" }}>nothing sensitive</span> :
-                    route.reads.map((id) => { const a = manifest.assets.find((x) => x.id === id); return a ? <div key={id} style={{ marginBottom: 6 }}><Badge color={sensColor[a.sensitivity]}>{a.name}</Badge></div> : null; })}
+                    route.reads.map((id) => { const a = manifest.assets.find((x) => x.id === id); return a ? <button key={id} onClick={() => { requestFocus("asset", id); setRoute(null); }} style={{ display: "block", marginBottom: 6, background: "transparent", border: "none", padding: 0, cursor: "pointer" }}><Badge color={sensColor[a.sensitivity]}>{a.name} →</Badge></button> : null; })}
                 </Field>
                 <Field label="Writes">
                   {route.writes.length === 0 ? <span style={{ color: "var(--obs-faint)" }}>nothing</span> :
-                    route.writes.map((id) => { const a = manifest.assets.find((x) => x.id === id); return a ? <div key={id} style={{ marginBottom: 6 }}><Badge color={sensColor[a.sensitivity]}>{a.name}</Badge></div> : null; })}
+                    route.writes.map((id) => { const a = manifest.assets.find((x) => x.id === id); return a ? <button key={id} onClick={() => { requestFocus("asset", id); setRoute(null); }} style={{ display: "block", marginBottom: 6, background: "transparent", border: "none", padding: 0, cursor: "pointer" }}><Badge color={sensColor[a.sensitivity]}>{a.name} →</Badge></button> : null; })}
                 </Field>
               </div>
               <Field label="Notes">{route.notes}</Field>
