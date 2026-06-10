@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { manifest } from "./data/manifest";
 import { securityScore, severityCounts } from "./lib/scoring";
+import { useTriageVersion } from "./lib/triage";
 import { OBS_STYLES, Dot } from "./components/ui";
 import OverviewTab from "./tabs/OverviewTab";
 import SystemMapTab from "./tabs/SystemMapTab";
@@ -26,6 +27,7 @@ const TABS = [
 type TabId = (typeof TABS)[number]["id"];
 
 export default function Observatory() {
+  useTriageVersion(); // masthead posture re-scores live when findings are triaged
   const [tab, setTab] = useState<TabId>("overview");
   const score = securityScore();
   const counts = severityCounts();
@@ -36,7 +38,7 @@ export default function Observatory() {
     <div className="obs-root">
       <style>{OBS_STYLES}</style>
 
-      <div style={{ maxWidth: 1280, margin: "0 auto", padding: "28px 24px 80px" }}>
+      <div style={{ maxWidth: 1760, margin: "0 auto", padding: "30px 36px 96px" }}>
         {/* ── Masthead ─────────────────────────────────────────────────── */}
         <header style={{ display: "flex", flexWrap: "wrap", alignItems: "flex-end", justifyContent: "space-between", gap: 20, marginBottom: 26 }}>
           <div>

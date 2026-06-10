@@ -12,22 +12,23 @@ export const OBS_STYLES = `
 @import url('https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,300..700;1,6..72,300..600&family=Hanken+Grotesk:wght@300..700&family=JetBrains+Mono:wght@400;500;600&display=swap');
 
 .obs-root {
-  --obs-bg: #10141D;
-  --obs-panel: #151A26;
-  --obs-panel-2: #1B2130;
-  --obs-line: #262E41;
-  --obs-line-strong: #36405A;
-  --obs-text: #EDE9E0;
-  --obs-dim: #8C94A8;
-  --obs-faint: #5A6275;
+  /* Black canvas, zinc widgets. Color always *means* state. */
+  --obs-bg: #09090b;          /* zinc-950 / near-black */
+  --obs-panel: #18181b;       /* zinc-900 */
+  --obs-panel-2: #232327;     /* raised zinc-800/900 */
+  --obs-line: #27272a;        /* zinc-800 */
+  --obs-line-strong: #3f3f46; /* zinc-700 */
+  --obs-text: #fafafa;        /* zinc-50  */
+  --obs-dim: #a1a1aa;         /* zinc-400 */
+  --obs-faint: #71717a;       /* zinc-500 */
 
-  --obs-critical: #E5484D;
-  --obs-high: #E8893D;
-  --obs-medium: #D9B54A;
+  --obs-critical: #F2555A;
+  --obs-high: #F0923E;
+  --obs-medium: #E0C04C;
   --obs-low: #5FB4D9;
-  --obs-safe: #4CC38A;
-  --obs-watch: #D9B54A;
-  --obs-scenario: #9B8AFB;
+  --obs-safe: #4ADE80;
+  --obs-watch: #E0C04C;
+  --obs-scenario: #A78BFA;
   --obs-data: #5FB4D9;
   --obs-planned: #7C87A5;
 
@@ -35,14 +36,17 @@ export const OBS_STYLES = `
   --obs-body: 'Hanken Grotesk', system-ui, sans-serif;
   --obs-mono: 'JetBrains Mono', ui-monospace, monospace;
 
-  background: var(--obs-bg);
+  background:
+    radial-gradient(1400px 720px at 50% -12%, #161619 0%, rgba(9,9,11,0) 62%),
+    radial-gradient(900px 600px at 100% 0%, rgba(167,139,250,.06) 0%, rgba(9,9,11,0) 55%),
+    var(--obs-bg);
   color: var(--obs-text);
   font-family: var(--obs-body);
   min-height: 100vh;
   font-feature-settings: 'ss01';
 }
 
-.obs-root ::selection { background: rgba(155,138,251,.35); }
+.obs-root ::selection { background: rgba(167,139,250,.35); }
 .obs-root *:focus-visible { outline: 2px solid var(--obs-scenario); outline-offset: 2px; border-radius: 4px; }
 
 .obs-display { font-family: var(--obs-display); font-weight: 400; letter-spacing: -0.01em; }
@@ -53,26 +57,39 @@ export const OBS_STYLES = `
   text-transform: uppercase; color: var(--obs-faint); font-weight: 500;
 }
 
+/* zinc widget: top-lit gradient, hairline border, depth shadow */
 .obs-panel {
-  background: var(--obs-panel);
+  background:
+    linear-gradient(180deg, rgba(255,255,255,.035) 0%, rgba(255,255,255,0) 14%),
+    linear-gradient(180deg, #1d1d20 0%, var(--obs-panel) 100%);
   border: 1px solid var(--obs-line);
-  border-radius: 14px;
+  border-radius: 16px;
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.04),
+    0 1px 2px rgba(0,0,0,.4),
+    0 18px 40px -22px rgba(0,0,0,.85);
 }
-.obs-panel-hover { transition: border-color .18s ease, transform .18s ease, background .18s ease; }
-.obs-panel-hover:hover { border-color: var(--obs-line-strong); background: var(--obs-panel-2); }
+.obs-panel-hover { transition: border-color .18s ease, transform .18s ease, box-shadow .18s ease, background .18s ease; }
+.obs-panel-hover:hover {
+  border-color: var(--obs-line-strong);
+  transform: translateY(-2px);
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.06),
+    0 2px 4px rgba(0,0,0,.5),
+    0 28px 60px -22px rgba(0,0,0,.95);
+}
 
 .obs-tab {
   font-family: var(--obs-mono); font-size: 11px; letter-spacing: .14em; text-transform: uppercase;
   color: var(--obs-dim); padding: 10px 14px; border: 1px solid transparent; border-radius: 999px;
   cursor: pointer; background: transparent; transition: all .15s ease; white-space: nowrap;
 }
-.obs-tab:hover { color: var(--obs-text); }
+.obs-tab:hover { color: var(--obs-text); background: rgba(255,255,255,.03); }
 .obs-tab[data-active="true"] { color: var(--obs-text); border-color: var(--obs-line-strong); background: var(--obs-panel-2); }
 
 .obs-row { transition: background .12s ease; cursor: pointer; }
 .obs-row:hover { background: var(--obs-panel-2); }
 
-/* signature: data pulses along the system map wires */
 @keyframes obs-flow { to { stroke-dashoffset: -28; } }
 .obs-wire { stroke-dasharray: 4 24; animation: obs-flow 1.6s linear infinite; }
 @media (prefers-reduced-motion: reduce) {
@@ -84,14 +101,15 @@ export const OBS_STYLES = `
 .obs-rise { animation: obs-rise .35s ease both; }
 
 .obs-modal-backdrop {
-  position: fixed; inset: 0; background: rgba(8,10,16,.72);
-  backdrop-filter: blur(6px); z-index: 60; display: flex;
+  position: fixed; inset: 0; background: rgba(4,4,6,.78);
+  backdrop-filter: blur(7px); z-index: 60; display: flex;
   align-items: center; justify-content: center; padding: 24px;
 }
 .obs-modal {
-  background: var(--obs-panel); border: 1px solid var(--obs-line-strong);
+  background: linear-gradient(180deg, #1d1d20 0%, var(--obs-panel) 100%);
+  border: 1px solid var(--obs-line-strong);
   border-radius: 18px; max-width: 880px; width: 100%; max-height: 86vh;
-  overflow-y: auto; box-shadow: 0 40px 90px rgba(0,0,0,.55);
+  overflow-y: auto; box-shadow: 0 50px 110px rgba(0,0,0,.7);
   animation: obs-rise .25s ease both;
 }
 .obs-modal::-webkit-scrollbar { width: 8px; }
