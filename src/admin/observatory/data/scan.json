@@ -1,10 +1,10 @@
 {
-  "generatedAt": "2026-06-10T05:31:36.097Z",
+  "generatedAt": "2026-06-10T06:28:54.857Z",
   "repos": {
     "cwa": "CWA-Manager",
     "b2b": "takeover-B2B",
-    "cwaAbs": "C:\\Dev\\Python GitHub\\CWA-Manager",
-    "b2bAbs": "C:\\Dev\\Python GitHub\\takeover-B2B"
+    "cwaAbs": "/sessions/pensive-clever-archimedes/mnt/CWA-Manager",
+    "b2bAbs": "/sessions/pensive-clever-archimedes/mnt/takeover-B2B"
   },
   "summary": {
     "bundledSecrets": 9,
@@ -119,12 +119,6 @@
   ],
   "localStorage": [
     {
-      "key": "obs:triage:v1",
-      "file": "src/admin/observatory/lib/triage.ts",
-      "line": 27,
-      "secret": false
-    },
-    {
       "key": "axon:automations:v1",
       "file": "src/Axon/actions/automations.ts",
       "line": 51,
@@ -185,15 +179,15 @@
       "secret": false
     },
     {
-      "key": "isLoggedIn",
-      "file": "src/components/ui/Dashboard/nav-user.tsx",
-      "line": 74,
-      "secret": false
-    },
-    {
       "key": "loggedInState",
       "file": "src/CWAComponents/user-dropdown/UserDropdown/userdropdown.tsx",
       "line": 68,
+      "secret": false
+    },
+    {
+      "key": "isLoggedIn",
+      "file": "src/MyComponents/Beginning/CyberpunkAuth.tsx",
+      "line": 278,
       "secret": false
     },
     {
@@ -305,12 +299,6 @@
       "secret": false
     },
     {
-      "key": "cwa-welcomed-${supaId}",
-      "file": "src/MyComponents/Onboarding/onboardingDebug.ts",
-      "line": 43,
-      "secret": false
-    },
-    {
       "key": "cwa-welcomed-${me.supa_id}",
       "file": "src/MyComponents/Onboarding/WelcomeModal.tsx",
       "line": 60,
@@ -320,6 +308,12 @@
       "key": "cwa-welcomed-${me?.supa_id}",
       "file": "src/MyComponents/Onboarding/WelcomeModal.tsx",
       "line": 108,
+      "secret": false
+    },
+    {
+      "key": "cwa-welcomed-${supaId}",
+      "file": "src/MyComponents/Onboarding/onboardingDebug.ts",
+      "line": 43,
       "secret": false
     },
     {
@@ -356,6 +350,12 @@
       "key": "cwa:patterns:dismissed:${scopeLabel}:${weekStart.toISOString().split(",
       "file": "src/MyComponents/Timesheet/SuggestPatternsBanner.tsx",
       "line": 55,
+      "secret": false
+    },
+    {
+      "key": "obs:triage:v1",
+      "file": "src/admin/observatory/lib/triage.ts",
+      "line": 27,
       "secret": false
     },
     {
@@ -786,5 +786,25 @@
       "rls": "anon-readable",
       "anonReadable": true
     }
-  ]
+  ],
+  "drift": {
+    "since": "2026-06-10T06:28:54.005Z",
+    "routes": {
+      "added": [],
+      "removed": []
+    },
+    "newUnauthRoutes": [],
+    "bundledSecrets": {
+      "added": [],
+      "removed": []
+    },
+    "localStorage": {
+      "added": [],
+      "removed": []
+    },
+    "anonReadable": {
+      "added": [],
+      "removed": []
+    }
+  }
 }

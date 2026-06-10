@@ -1,6 +1,784 @@
 [
   {
-    "generatedAt": "2026-06-10T05:31:10.466Z",
+    "generatedAt": "2026-06-10T06:28:54.005Z",
+    "summary": {
+      "bundledSecrets": 9,
+      "localStorageKeys": 42,
+      "localStorageSecretKeys": 1,
+      "routes": 35,
+      "routesNoRealAuth": 33,
+      "serviceRoleRoutes": 22,
+      "migrationsTables": 9,
+      "anonReadableTables": 8,
+      "customStorageAdapter": false
+    },
+    "routes": [
+      {
+        "path": "/api/applications",
+        "methods": [
+          "POST",
+          "GET"
+        ],
+        "auth": "none",
+        "realAuth": false,
+        "serviceRole": true,
+        "file": "app/api/applications/route.ts"
+      },
+      {
+        "path": "/api/calcom/booking",
+        "methods": [
+          "POST"
+        ],
+        "auth": "header-strict (spoofable)",
+        "realAuth": false,
+        "serviceRole": true,
+        "file": "app/api/calcom/booking/route.ts"
+      },
+      {
+        "path": "/api/calcom/proxy",
+        "methods": [
+          "POST"
+        ],
+        "auth": "header-strict (spoofable)",
+        "realAuth": false,
+        "serviceRole": true,
+        "file": "app/api/calcom/proxy/route.ts"
+      },
+      {
+        "path": "/api/connectors/get",
+        "methods": [
+          "POST"
+        ],
+        "auth": "header-strict (spoofable)",
+        "realAuth": false,
+        "serviceRole": true,
+        "file": "app/api/connectors/get/route.ts"
+      },
+      {
+        "path": "/api/connectors/list",
+        "methods": [
+          "POST"
+        ],
+        "auth": "header-strict (spoofable)",
+        "realAuth": false,
+        "serviceRole": true,
+        "file": "app/api/connectors/list/route.ts"
+      },
+      {
+        "path": "/api/connectors/mutate",
+        "methods": [
+          "POST"
+        ],
+        "auth": "header-strict (spoofable)",
+        "realAuth": false,
+        "serviceRole": true,
+        "file": "app/api/connectors/mutate/route.ts"
+      },
+      {
+        "path": "/api/connectors/resolve-tenant",
+        "methods": [
+          "POST"
+        ],
+        "auth": "header-strict (spoofable)",
+        "realAuth": false,
+        "serviceRole": true,
+        "file": "app/api/connectors/resolve-tenant/route.ts"
+      },
+      {
+        "path": "/api/email/find-partner",
+        "methods": [
+          "POST"
+        ],
+        "auth": "header-strict (spoofable)",
+        "realAuth": false,
+        "serviceRole": false,
+        "file": "app/api/email/find-partner/route.ts"
+      },
+      {
+        "path": "/api/gmail/activities",
+        "methods": [
+          "POST"
+        ],
+        "auth": "header-strict (spoofable)",
+        "realAuth": false,
+        "serviceRole": true,
+        "file": "app/api/gmail/activities/route.ts"
+      },
+      {
+        "path": "/api/gmail/aliases",
+        "methods": [
+          "POST"
+        ],
+        "auth": "header-strict (spoofable)",
+        "realAuth": false,
+        "serviceRole": true,
+        "file": "app/api/gmail/aliases/route.ts"
+      },
+      {
+        "path": "/api/gmail/bounces",
+        "methods": [
+          "POST"
+        ],
+        "auth": "header-strict (spoofable)",
+        "realAuth": false,
+        "serviceRole": true,
+        "file": "app/api/gmail/bounces/route.ts"
+      },
+      {
+        "path": "/api/gmail/connection",
+        "methods": [
+          "GET"
+        ],
+        "auth": "header-strict (spoofable)",
+        "realAuth": false,
+        "serviceRole": true,
+        "file": "app/api/gmail/connection/route.ts"
+      },
+      {
+        "path": "/api/gmail/mutate",
+        "methods": [
+          "POST"
+        ],
+        "auth": "header-strict (spoofable)",
+        "realAuth": false,
+        "serviceRole": true,
+        "file": "app/api/gmail/mutate/route.ts"
+      },
+      {
+        "path": "/api/gmail/oauth-callback",
+        "methods": [
+          "GET"
+        ],
+        "auth": "signature",
+        "realAuth": true,
+        "serviceRole": true,
+        "file": "app/api/gmail/oauth-callback/route.ts"
+      },
+      {
+        "path": "/api/gmail/oauth-start",
+        "methods": [
+          "GET",
+          "POST"
+        ],
+        "auth": "signature",
+        "realAuth": true,
+        "serviceRole": true,
+        "file": "app/api/gmail/oauth-start/route.ts"
+      },
+      {
+        "path": "/api/gmail/send",
+        "methods": [
+          "POST"
+        ],
+        "auth": "header-strict (spoofable)",
+        "realAuth": false,
+        "serviceRole": true,
+        "file": "app/api/gmail/send/route.ts"
+      },
+      {
+        "path": "/api/gmail/sync",
+        "methods": [
+          "POST"
+        ],
+        "auth": "header-strict (spoofable)",
+        "realAuth": false,
+        "serviceRole": true,
+        "file": "app/api/gmail/sync/route.ts"
+      },
+      {
+        "path": "/api/initialize_employees",
+        "methods": [
+          "POST"
+        ],
+        "auth": "header-presence (spoofable)",
+        "realAuth": false,
+        "serviceRole": true,
+        "file": "app/api/initialize_employees/route.ts"
+      },
+      {
+        "path": "/api/releases/[platform]",
+        "methods": [
+          "GET"
+        ],
+        "auth": "header-presence (spoofable)",
+        "realAuth": false,
+        "serviceRole": true,
+        "file": "app/api/releases/[platform]/route.ts"
+      },
+      {
+        "path": "/api/releases/latest",
+        "methods": [
+          "GET"
+        ],
+        "auth": "header-presence (spoofable)",
+        "realAuth": false,
+        "serviceRole": true,
+        "file": "app/api/releases/latest/route.ts"
+      },
+      {
+        "path": "/api/releases/upload",
+        "methods": [
+          "POST"
+        ],
+        "auth": "header-presence (spoofable)",
+        "realAuth": false,
+        "serviceRole": true,
+        "file": "app/api/releases/upload/route.ts"
+      },
+      {
+        "path": "/api/slack/proxy",
+        "methods": [
+          "POST"
+        ],
+        "auth": "header-strict (spoofable)",
+        "realAuth": false,
+        "serviceRole": true,
+        "file": "app/api/slack/proxy/route.ts"
+      },
+      {
+        "path": "/api/stripe/balance",
+        "methods": [
+          "POST"
+        ],
+        "auth": "none",
+        "realAuth": false,
+        "serviceRole": false,
+        "file": "app/api/stripe/balance/route.ts"
+      },
+      {
+        "path": "/api/stripe/customers",
+        "methods": [
+          "POST"
+        ],
+        "auth": "none",
+        "realAuth": false,
+        "serviceRole": false,
+        "file": "app/api/stripe/customers/route.ts"
+      },
+      {
+        "path": "/api/stripe/failed",
+        "methods": [
+          "POST"
+        ],
+        "auth": "none",
+        "realAuth": false,
+        "serviceRole": false,
+        "file": "app/api/stripe/failed/route.ts"
+      },
+      {
+        "path": "/api/stripe/outstanding",
+        "methods": [
+          "POST"
+        ],
+        "auth": "none",
+        "realAuth": false,
+        "serviceRole": false,
+        "file": "app/api/stripe/outstanding/route.ts"
+      },
+      {
+        "path": "/api/stripe/payouts",
+        "methods": [
+          "POST"
+        ],
+        "auth": "none",
+        "realAuth": false,
+        "serviceRole": false,
+        "file": "app/api/stripe/payouts/route.ts"
+      },
+      {
+        "path": "/api/stripe/products",
+        "methods": [
+          "POST"
+        ],
+        "auth": "none",
+        "realAuth": false,
+        "serviceRole": false,
+        "file": "app/api/stripe/products/route.ts"
+      },
+      {
+        "path": "/api/stripe/recent",
+        "methods": [
+          "POST"
+        ],
+        "auth": "none",
+        "realAuth": false,
+        "serviceRole": false,
+        "file": "app/api/stripe/recent/route.ts"
+      },
+      {
+        "path": "/api/stripe/snapshot",
+        "methods": [
+          "POST"
+        ],
+        "auth": "none",
+        "realAuth": false,
+        "serviceRole": false,
+        "file": "app/api/stripe/snapshot/route.ts"
+      },
+      {
+        "path": "/api/stripe/subscriptions",
+        "methods": [
+          "POST"
+        ],
+        "auth": "none",
+        "realAuth": false,
+        "serviceRole": false,
+        "file": "app/api/stripe/subscriptions/route.ts"
+      },
+      {
+        "path": "/api/stripe/timeseries",
+        "methods": [
+          "POST"
+        ],
+        "auth": "none",
+        "realAuth": false,
+        "serviceRole": false,
+        "file": "app/api/stripe/timeseries/route.ts"
+      },
+      {
+        "path": "/api/stripe/verify",
+        "methods": [
+          "POST"
+        ],
+        "auth": "none",
+        "realAuth": false,
+        "serviceRole": false,
+        "file": "app/api/stripe/verify/route.ts"
+      },
+      {
+        "path": "/api/takeover_creds",
+        "methods": [
+          "GET"
+        ],
+        "auth": "header-presence (spoofable)",
+        "realAuth": false,
+        "serviceRole": false,
+        "file": "app/api/takeover_creds/route.ts"
+      },
+      {
+        "path": "/api/waitlist",
+        "methods": [
+          "POST"
+        ],
+        "auth": "none",
+        "realAuth": false,
+        "serviceRole": true,
+        "file": "app/api/waitlist/route.ts"
+      }
+    ],
+    "bundledSecrets": [
+      {
+        "name": "VITE_DB_URL",
+        "file": ".env",
+        "line": 1,
+        "bundled": true,
+        "secret": false
+      },
+      {
+        "name": "VITE_DB_KEY",
+        "file": ".env",
+        "line": 2,
+        "bundled": true,
+        "secret": true
+      },
+      {
+        "name": "VITE_TAKEOVER_PSEUDO_KEY",
+        "file": ".env",
+        "line": 3,
+        "bundled": true,
+        "secret": true
+      },
+      {
+        "name": "VITE_TAKEOVER_SITE_URL",
+        "file": ".env",
+        "line": 4,
+        "bundled": true,
+        "secret": false
+      },
+      {
+        "name": "VITE_ENCRYPTION_KEY",
+        "file": ".env",
+        "line": 5,
+        "bundled": true,
+        "secret": true
+      },
+      {
+        "name": "VITE_RESEND_KEY",
+        "file": ".env",
+        "line": 6,
+        "bundled": true,
+        "secret": true
+      },
+      {
+        "name": "VITE_UPLOADTHING_TOKEN",
+        "file": ".env",
+        "line": 8,
+        "bundled": true,
+        "secret": true
+      },
+      {
+        "name": "VITE_NEON_DB_URL",
+        "file": ".env",
+        "line": 9,
+        "bundled": true,
+        "secret": false
+      },
+      {
+        "name": "VITE_SIMPLICITY_BACKEND_URL",
+        "file": ".env",
+        "line": 12,
+        "bundled": true,
+        "secret": false
+      },
+      {
+        "name": "VITE_SIMPLICITY_SUPABASE_URL",
+        "file": ".env",
+        "line": 13,
+        "bundled": true,
+        "secret": false
+      },
+      {
+        "name": "VITE_SIMPLICITY_SUPABASE_KEY",
+        "file": ".env",
+        "line": 14,
+        "bundled": true,
+        "secret": true
+      },
+      {
+        "name": "VITE_EMAIL_HMAC_SECRET",
+        "file": ".env",
+        "line": 17,
+        "bundled": true,
+        "secret": true
+      },
+      {
+        "name": "VITE_ANTHROPIC_API_KEY",
+        "file": ".env",
+        "line": 20,
+        "bundled": true,
+        "secret": true
+      },
+      {
+        "name": "VITE_ELEVENLABS_API_KEY",
+        "file": ".env",
+        "line": 22,
+        "bundled": true,
+        "secret": true
+      }
+    ],
+    "localStorage": [
+      {
+        "key": "axon:automations:v1",
+        "file": "src/Axon/actions/automations.ts",
+        "line": 51,
+        "secret": false
+      },
+      {
+        "key": "cwa-capital-plan-cash-on-hand",
+        "file": "src/Axon/actions/capital_plan.ts",
+        "line": 50,
+        "secret": false
+      },
+      {
+        "key": "axon:credentials:v1",
+        "file": "src/Axon/engine/credentials.ts",
+        "line": 38,
+        "secret": true
+      },
+      {
+        "key": "axon:monitor:meeting-just-ended:v1",
+        "file": "src/Axon/engine/monitors.ts",
+        "line": 55,
+        "secret": false
+      },
+      {
+        "key": "axon:proactive:morning_brief:lastFiredDay",
+        "file": "src/Axon/engine/morningBrief.ts",
+        "line": 181,
+        "secret": false
+      },
+      {
+        "key": "axon:undoStack:v1",
+        "file": "src/Axon/engine/undoStack.ts",
+        "line": 78,
+        "secret": false
+      },
+      {
+        "key": "axon:opening-history",
+        "file": "src/Axon/personality/postProcess.ts",
+        "line": 339,
+        "secret": false
+      },
+      {
+        "key": "axon:settings:personalityEnabled",
+        "file": "src/Axon/personality/settings.ts",
+        "line": 39,
+        "secret": false
+      },
+      {
+        "key": "axon:settings:personality",
+        "file": "src/Axon/personality/settings.ts",
+        "line": 61,
+        "secret": false
+      },
+      {
+        "key": "axon:relationship:firstSeenAt",
+        "file": "src/Axon/personality/settings.ts",
+        "line": 135,
+        "secret": false
+      },
+      {
+        "key": "loggedInState",
+        "file": "src/CWAComponents/user-dropdown/UserDropdown/userdropdown.tsx",
+        "line": 68,
+        "secret": false
+      },
+      {
+        "key": "isLoggedIn",
+        "file": "src/MyComponents/Beginning/CyberpunkAuth.tsx",
+        "line": 278,
+        "secret": false
+      },
+      {
+        "key": "cwa-capital-plan-tab",
+        "file": "src/MyComponents/CapitalPlan/CapitalPlanPage.tsx",
+        "line": 72,
+        "secret": false
+      },
+      {
+        "key": "cwa-capital-plan-checks-round-filter",
+        "file": "src/MyComponents/CapitalPlan/tabs/ChecksTab.tsx",
+        "line": 54,
+        "secret": false
+      },
+      {
+        "key": "cwa-capital-plan-cash-mode",
+        "file": "src/MyComponents/CapitalPlan/tabs/RunwayTab.tsx",
+        "line": 57,
+        "secret": false
+      },
+      {
+        "key": "cwa-chat-muted-groups",
+        "file": "src/MyComponents/Chat/ChatHeader.tsx",
+        "line": 72,
+        "secret": false
+      },
+      {
+        "key": "cwa-huddle-minimized",
+        "file": "src/MyComponents/Chat/Huddle/HuddleBar.tsx",
+        "line": 161,
+        "secret": false
+      },
+      {
+        "key": "cwa-huddle-screen-layout",
+        "file": "src/MyComponents/Chat/Huddle/HuddleBar.tsx",
+        "line": 173,
+        "secret": false
+      },
+      {
+        "key": "cwa-huddle-screen-view",
+        "file": "src/MyComponents/Chat/Huddle/HuddleBar.tsx",
+        "line": 195,
+        "secret": false
+      },
+      {
+        "key": "cwa-huddle-offset",
+        "file": "src/MyComponents/Chat/Huddle/HuddleBar.tsx",
+        "line": 216,
+        "secret": false
+      },
+      {
+        "key": "cwa-pending-huddle-join",
+        "file": "src/MyComponents/Chat/Huddle/HuddleRing.tsx",
+        "line": 110,
+        "secret": false
+      },
+      {
+        "key": "cwa-chat-draft:",
+        "file": "src/MyComponents/Chat/MessageComposer.tsx",
+        "line": 1341,
+        "secret": false
+      },
+      {
+        "key": "axon:quickCompose:recent",
+        "file": "src/MyComponents/Chat/quickComposeStore.ts",
+        "line": 58,
+        "secret": false
+      },
+      {
+        "key": "cwa-scheduled-messages",
+        "file": "src/MyComponents/Chat/scheduledStore.ts",
+        "line": 27,
+        "secret": false
+      },
+      {
+        "key": "cwa-funding-calculator-v1",
+        "file": "src/MyComponents/FundingCalculator.tsx",
+        "line": 190,
+        "secret": false
+      },
+      {
+        "key": "cwa-funding-calculator-saves-v1",
+        "file": "src/MyComponents/FundingCalculator.tsx",
+        "line": 219,
+        "secret": false
+      },
+      {
+        "key": "cwa-funding-mode",
+        "file": "src/MyComponents/FundingPage.tsx",
+        "line": 136,
+        "secret": false
+      },
+      {
+        "key": "fundraise:activeTab",
+        "file": "src/MyComponents/Fundraise/FundraisePage.tsx",
+        "line": 80,
+        "secret": false
+      },
+      {
+        "key": "fundraise:viewMode",
+        "file": "src/MyComponents/Fundraise/FundraisePage.tsx",
+        "line": 93,
+        "secret": false
+      },
+      {
+        "key": "cwa-onb-celebrated-${instance.id}",
+        "file": "src/MyComponents/Onboarding/OnboardingBanner.tsx",
+        "line": 143,
+        "secret": false
+      },
+      {
+        "key": "cwa-welcomed-${me.supa_id}",
+        "file": "src/MyComponents/Onboarding/WelcomeModal.tsx",
+        "line": 60,
+        "secret": false
+      },
+      {
+        "key": "cwa-welcomed-${me?.supa_id}",
+        "file": "src/MyComponents/Onboarding/WelcomeModal.tsx",
+        "line": 108,
+        "secret": false
+      },
+      {
+        "key": "cwa-welcomed-${supaId}",
+        "file": "src/MyComponents/Onboarding/onboardingDebug.ts",
+        "line": 43,
+        "secret": false
+      },
+      {
+        "key": "cwa-assignments-density",
+        "file": "src/MyComponents/Reports/AssignmentsInbox.tsx",
+        "line": 110,
+        "secret": false
+      },
+      {
+        "key": "cwa-bug-density",
+        "file": "src/MyComponents/Reports/BugReportsInbox.tsx",
+        "line": 146,
+        "secret": false
+      },
+      {
+        "key": "cwa-reports-tab",
+        "file": "src/MyComponents/Reports/ReportsHub.tsx",
+        "line": 30,
+        "secret": false
+      },
+      {
+        "key": "cwa-reports-density",
+        "file": "src/MyComponents/Reports/ReportsInbox.tsx",
+        "line": 121,
+        "secret": false
+      },
+      {
+        "key": "cwa-notification-prefs",
+        "file": "src/MyComponents/Settings/NotificationSettings.tsx",
+        "line": 86,
+        "secret": false
+      },
+      {
+        "key": "cwa:patterns:dismissed:${scopeLabel}:${weekStart.toISOString().split(",
+        "file": "src/MyComponents/Timesheet/SuggestPatternsBanner.tsx",
+        "line": 55,
+        "secret": false
+      },
+      {
+        "key": "obs:triage:v1",
+        "file": "src/admin/observatory/lib/triage.ts",
+        "line": 27,
+        "secret": false
+      },
+      {
+        "key": "simplicity-mission-control",
+        "file": "src/routes/budgetary.lazy.tsx",
+        "line": 118,
+        "secret": false
+      },
+      {
+        "key": "cwa-huddle-quality",
+        "file": "src/stores/huddleStore.ts",
+        "line": 89,
+        "secret": false
+      }
+    ],
+    "migrations": [
+      {
+        "table": "bank_accs",
+        "file": "migrations/simplicity_admin_read_policies.sql",
+        "rls": "anon-readable",
+        "anonReadable": true
+      },
+      {
+        "table": "cashflow",
+        "file": "migrations/simplicity_admin_read_policies.sql",
+        "rls": "anon-readable",
+        "anonReadable": true
+      },
+      {
+        "table": "chat_webhooks",
+        "file": "migrations/chat_webhooks.sql",
+        "rls": "enabled",
+        "anonReadable": false
+      },
+      {
+        "table": "expenses",
+        "file": "migrations/simplicity_admin_read_policies.sql",
+        "rls": "anon-readable",
+        "anonReadable": true
+      },
+      {
+        "table": "financial_details",
+        "file": "migrations/simplicity_admin_read_policies.sql",
+        "rls": "anon-readable",
+        "anonReadable": true
+      },
+      {
+        "table": "income_source",
+        "file": "migrations/simplicity_admin_read_policies.sql",
+        "rls": "anon-readable",
+        "anonReadable": true
+      },
+      {
+        "table": "stripe_subscriptions",
+        "file": "migrations/simplicity_admin_read_policies.sql",
+        "rls": "anon-readable",
+        "anonReadable": true
+      },
+      {
+        "table": "user_feedbacks",
+        "file": "migrations/simplicity_admin_read_policies.sql",
+        "rls": "anon-readable",
+        "anonReadable": true
+      },
+      {
+        "table": "users",
+        "file": "migrations/simplicity_admin_read_policies.sql",
+        "rls": "anon-readable",
+        "anonReadable": true
+      }
+    ]
+  },
+  {
+    "generatedAt": "2026-06-10T06:28:54.857Z",
     "summary": {
       "bundledSecrets": 9,
       "localStorageKeys": 42,

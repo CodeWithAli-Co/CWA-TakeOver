@@ -59,29 +59,17 @@ export const OBS_STYLES = `
 
 /* zinc widget: top-lit gradient, hairline border, depth shadow */
 .obs-panel {
-  background:
-    linear-gradient(180deg, rgba(255,255,255,.035) 0%, rgba(255,255,255,0) 14%),
-    linear-gradient(180deg, #1d1d20 0%, var(--obs-panel) 100%);
+  background: #141417;
   border: 1px solid var(--obs-line);
-  border-radius: 16px;
-  box-shadow:
-    inset 0 1px 0 rgba(255,255,255,.04),
-    0 1px 2px rgba(0,0,0,.4),
-    0 18px 40px -22px rgba(0,0,0,.85);
+  border-radius: 9px;
+  box-shadow: 0 1px 2px rgba(0,0,0,.3);
 }
-.obs-panel-hover { transition: border-color .18s ease, transform .18s ease, box-shadow .18s ease, background .18s ease; }
-.obs-panel-hover:hover {
-  border-color: var(--obs-line-strong);
-  transform: translateY(-2px);
-  box-shadow:
-    inset 0 1px 0 rgba(255,255,255,.06),
-    0 2px 4px rgba(0,0,0,.5),
-    0 28px 60px -22px rgba(0,0,0,.95);
-}
+.obs-panel-hover { transition: border-color .15s ease, background .15s ease; }
+.obs-panel-hover:hover { border-color: var(--obs-line-strong); background: #17171b; }
 
 .obs-tab {
   font-family: var(--obs-mono); font-size: 11px; letter-spacing: .14em; text-transform: uppercase;
-  color: var(--obs-dim); padding: 10px 14px; border: 1px solid transparent; border-radius: 999px;
+  color: var(--obs-dim); padding: 9px 13px; border: 1px solid transparent; border-radius: 6px;
   cursor: pointer; background: transparent; transition: all .15s ease; white-space: nowrap;
 }
 .obs-tab:hover { color: var(--obs-text); background: rgba(255,255,255,.03); }
@@ -106,10 +94,10 @@ export const OBS_STYLES = `
   align-items: center; justify-content: center; padding: 24px;
 }
 .obs-modal {
-  background: linear-gradient(180deg, #1d1d20 0%, var(--obs-panel) 100%);
+  background: #141417;
   border: 1px solid var(--obs-line-strong);
-  border-radius: 18px; max-width: 880px; width: 100%; max-height: 86vh;
-  overflow-y: auto; box-shadow: 0 50px 110px rgba(0,0,0,.7);
+  border-radius: 12px; max-width: 880px; width: 100%; max-height: 86vh;
+  overflow-y: auto; box-shadow: 0 24px 64px rgba(0,0,0,.6);
   animation: obs-rise .25s ease both;
 }
 .obs-modal::-webkit-scrollbar { width: 8px; }
@@ -146,7 +134,7 @@ export function Badge({ color, children }: { color: string; children: React.Reac
         fontSize: 10, letterSpacing: ".12em", textTransform: "uppercase",
         color, border: `1px solid color-mix(in srgb, ${color} 45%, transparent)`,
         background: `color-mix(in srgb, ${color} 10%, transparent)`,
-        borderRadius: 999, padding: "3px 9px", whiteSpace: "nowrap",
+        borderRadius: 5, padding: "3px 8px", whiteSpace: "nowrap",
       }}
     >
       {children}

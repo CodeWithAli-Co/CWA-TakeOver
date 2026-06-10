@@ -193,7 +193,7 @@ export async function runAudit({ write = true, history = true, json = false } = 
   } : null;
 
   if (write) {
-    writeFileSync(SCAN, JSON.stringify(scan, null, 2));
+    writeFileSync(SCAN, JSON.stringify({ ...scan, drift }, null, 2));
     if (history) {
       hist.push({ generatedAt: scan.generatedAt, summary, routes, bundledSecrets: secrets, localStorage, migrations });
       if (hist.length > 60) hist = hist.slice(-60);

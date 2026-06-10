@@ -4,6 +4,7 @@
  * manifest is the curated narrative; this is the raw, always-current truth.
  */
 import scanJson from "../data/scan.json";
+import historyJson from "../data/scan-history.json";
 
 export interface ScanSummary {
   bundledSecrets: number;
@@ -26,7 +27,18 @@ export interface Scan {
   supabaseStorage: { found: boolean; file?: string; customStorageAdapter?: boolean; persistSession?: boolean };
   routes: ScanRoute[];
   migrations: { table: string; file: string; rls: string; anonReadable: boolean }[];
+  drift?: ScanDrift | null;
 }
+
+export interface ScanDrift {
+  since: string;
+  routes: { added: string[]; removed: string[] };
+  newUnauthRoutes: string[];
+  bundledSecrets: { added: string[]; removed: string[] };
+  localStorage: { added: string[]; removed: string[] };
+  anonReadable: { added: string[]; removed: string[] };
+}
+export interface ScanSnapshot { generatedAt: string; summary: ScanSummary }
 
 export const scan = scanJson as unknown as Scan;
 
@@ -40,4 +52,21 @@ export function relTime(iso: string): string {
   const h = Math.floor(m / 60);
   if (h < 24) return `${h}h ago`;
   return `${Math.floor(h / 24)}d ago`;
+}
+
+export const scanHistory = historyJson as unknown as ScanSnapshot[];
+
+/** Letter grade for a 0-100 posture score. */
+export function grade(score: number): string {
+  return score >= 85 ? "A" : score >= 70 ? "B" : score >= 55 ? "C" : score >= 40 ? "D" : "F";
+}
+
+/** A single "exposure" index (lower = safer) for trend tracking. */
+export function exposureIndex(s: ScanSummary): number {
+  return s.bundledSecrets * 2 + s.routesNoRealAuth + s.anonReadableTables * 2 + (s.customStorageAdapter ? 0 : 2) + (s.localStorageSecretKeys || 0);
+}
+
+export function exposureSeries(): number[] {
+  const pts = scanHistory.map((h) => exposureIndex(h.summary));
+  return pts.length ? pts : [exposureIndex(scan.summary)];
 }
