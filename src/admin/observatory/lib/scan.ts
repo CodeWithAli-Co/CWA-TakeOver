@@ -16,6 +16,11 @@ export interface ScanSummary {
   migrationsTables: number;
   anonReadableTables: number;
   customStorageAdapter: boolean;
+  hardcodedSecrets?: number;
+  envCommitted?: boolean;
+  dangerousTauriCaps?: number;
+  webhookGaps?: number;
+  corsWildcards?: number;
 }
 export interface ScanRoute { path: string; methods: string[]; auth: string; realAuth: boolean; serviceRole: boolean; file: string }
 export interface Scan {
@@ -63,7 +68,7 @@ export function grade(score: number): string {
 
 /** A single "exposure" index (lower = safer) for trend tracking. */
 export function exposureIndex(s: ScanSummary): number {
-  return s.bundledSecrets * 2 + s.routesNoRealAuth + s.anonReadableTables * 2 + (s.customStorageAdapter ? 0 : 2) + (s.localStorageSecretKeys || 0);
+  return s.bundledSecrets * 2 + s.routesNoRealAuth + s.anonReadableTables * 2 + (s.customStorageAdapter ? 0 : 2) + (s.localStorageSecretKeys || 0) + (s.hardcodedSecrets || 0) * 3 + (s.envCommitted ? 4 : 0) + (s.dangerousTauriCaps || 0) + (s.webhookGaps || 0) + (s.corsWildcards || 0);
 }
 
 export function exposureSeries(): number[] {

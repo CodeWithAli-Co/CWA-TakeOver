@@ -1,10 +1,10 @@
 {
-  "generatedAt": "2026-06-10T18:32:49.189Z",
+  "generatedAt": "2026-06-10T21:26:38.930Z",
   "repos": {
     "cwa": "CWA-Manager",
     "b2b": "takeover-B2B",
-    "cwaAbs": "C:\\Dev\\Python GitHub\\CWA-Manager",
-    "b2bAbs": "C:\\Dev\\Python GitHub\\takeover-B2B"
+    "cwaAbs": "/sessions/pensive-clever-archimedes/mnt/CWA-Manager",
+    "b2bAbs": "/sessions/pensive-clever-archimedes/mnt/takeover-B2B"
   },
   "summary": {
     "bundledSecrets": 9,
@@ -15,7 +15,12 @@
     "serviceRoleRoutes": 22,
     "migrationsTables": 9,
     "anonReadableTables": 8,
-    "customStorageAdapter": false
+    "customStorageAdapter": false,
+    "hardcodedSecrets": 0,
+    "envCommitted": false,
+    "dangerousTauriCaps": 3,
+    "webhookGaps": 0,
+    "corsWildcards": 0
   },
   "bundledSecrets": [
     {
@@ -119,12 +124,6 @@
   ],
   "localStorage": [
     {
-      "key": "obs:triage:v1",
-      "file": "src/admin/observatory/lib/triage.ts",
-      "line": 27,
-      "secret": false
-    },
-    {
       "key": "axon:automations:v1",
       "file": "src/Axon/actions/automations.ts",
       "line": 51,
@@ -185,15 +184,15 @@
       "secret": false
     },
     {
-      "key": "isLoggedIn",
-      "file": "src/components/ui/Dashboard/nav-user.tsx",
-      "line": 74,
-      "secret": false
-    },
-    {
       "key": "loggedInState",
       "file": "src/CWAComponents/user-dropdown/UserDropdown/userdropdown.tsx",
       "line": 68,
+      "secret": false
+    },
+    {
+      "key": "isLoggedIn",
+      "file": "src/MyComponents/Beginning/CyberpunkAuth.tsx",
+      "line": 278,
       "secret": false
     },
     {
@@ -305,12 +304,6 @@
       "secret": false
     },
     {
-      "key": "cwa-welcomed-${supaId}",
-      "file": "src/MyComponents/Onboarding/onboardingDebug.ts",
-      "line": 43,
-      "secret": false
-    },
-    {
       "key": "cwa-welcomed-${me.supa_id}",
       "file": "src/MyComponents/Onboarding/WelcomeModal.tsx",
       "line": 60,
@@ -320,6 +313,12 @@
       "key": "cwa-welcomed-${me?.supa_id}",
       "file": "src/MyComponents/Onboarding/WelcomeModal.tsx",
       "line": 108,
+      "secret": false
+    },
+    {
+      "key": "cwa-welcomed-${supaId}",
+      "file": "src/MyComponents/Onboarding/onboardingDebug.ts",
+      "line": 43,
       "secret": false
     },
     {
@@ -359,6 +358,12 @@
       "secret": false
     },
     {
+      "key": "obs:triage:v1",
+      "file": "src/admin/observatory/lib/triage.ts",
+      "line": 27,
+      "secret": false
+    },
+    {
       "key": "simplicity-mission-control",
       "file": "src/routes/budgetary.lazy.tsx",
       "line": 118,
@@ -387,6 +392,9 @@
       "auth": "none",
       "realAuth": false,
       "serviceRole": true,
+      "corsWildcard": false,
+      "isWebhook": false,
+      "webhookVerified": false,
       "file": "app/api/applications/route.ts"
     },
     {
@@ -397,6 +405,9 @@
       "auth": "header-strict (spoofable)",
       "realAuth": false,
       "serviceRole": true,
+      "corsWildcard": false,
+      "isWebhook": false,
+      "webhookVerified": false,
       "file": "app/api/calcom/booking/route.ts"
     },
     {
@@ -407,6 +418,9 @@
       "auth": "header-strict (spoofable)",
       "realAuth": false,
       "serviceRole": true,
+      "corsWildcard": false,
+      "isWebhook": false,
+      "webhookVerified": false,
       "file": "app/api/calcom/proxy/route.ts"
     },
     {
@@ -417,6 +431,9 @@
       "auth": "header-strict (spoofable)",
       "realAuth": false,
       "serviceRole": true,
+      "corsWildcard": false,
+      "isWebhook": false,
+      "webhookVerified": false,
       "file": "app/api/connectors/get/route.ts"
     },
     {
@@ -427,6 +444,9 @@
       "auth": "header-strict (spoofable)",
       "realAuth": false,
       "serviceRole": true,
+      "corsWildcard": false,
+      "isWebhook": false,
+      "webhookVerified": false,
       "file": "app/api/connectors/list/route.ts"
     },
     {
@@ -437,6 +457,9 @@
       "auth": "header-strict (spoofable)",
       "realAuth": false,
       "serviceRole": true,
+      "corsWildcard": false,
+      "isWebhook": false,
+      "webhookVerified": false,
       "file": "app/api/connectors/mutate/route.ts"
     },
     {
@@ -447,6 +470,9 @@
       "auth": "header-strict (spoofable)",
       "realAuth": false,
       "serviceRole": true,
+      "corsWildcard": false,
+      "isWebhook": false,
+      "webhookVerified": false,
       "file": "app/api/connectors/resolve-tenant/route.ts"
     },
     {
@@ -457,6 +483,9 @@
       "auth": "header-strict (spoofable)",
       "realAuth": false,
       "serviceRole": false,
+      "corsWildcard": false,
+      "isWebhook": false,
+      "webhookVerified": false,
       "file": "app/api/email/find-partner/route.ts"
     },
     {
@@ -467,6 +496,9 @@
       "auth": "header-strict (spoofable)",
       "realAuth": false,
       "serviceRole": true,
+      "corsWildcard": false,
+      "isWebhook": false,
+      "webhookVerified": false,
       "file": "app/api/gmail/activities/route.ts"
     },
     {
@@ -477,6 +509,9 @@
       "auth": "header-strict (spoofable)",
       "realAuth": false,
       "serviceRole": true,
+      "corsWildcard": false,
+      "isWebhook": false,
+      "webhookVerified": false,
       "file": "app/api/gmail/aliases/route.ts"
     },
     {
@@ -487,6 +522,9 @@
       "auth": "header-strict (spoofable)",
       "realAuth": false,
       "serviceRole": true,
+      "corsWildcard": false,
+      "isWebhook": false,
+      "webhookVerified": false,
       "file": "app/api/gmail/bounces/route.ts"
     },
     {
@@ -497,6 +535,9 @@
       "auth": "header-strict (spoofable)",
       "realAuth": false,
       "serviceRole": true,
+      "corsWildcard": false,
+      "isWebhook": false,
+      "webhookVerified": false,
       "file": "app/api/gmail/connection/route.ts"
     },
     {
@@ -507,6 +548,9 @@
       "auth": "header-strict (spoofable)",
       "realAuth": false,
       "serviceRole": true,
+      "corsWildcard": false,
+      "isWebhook": false,
+      "webhookVerified": false,
       "file": "app/api/gmail/mutate/route.ts"
     },
     {
@@ -517,6 +561,9 @@
       "auth": "signature",
       "realAuth": true,
       "serviceRole": true,
+      "corsWildcard": false,
+      "isWebhook": false,
+      "webhookVerified": false,
       "file": "app/api/gmail/oauth-callback/route.ts"
     },
     {
@@ -528,6 +575,9 @@
       "auth": "signature",
       "realAuth": true,
       "serviceRole": true,
+      "corsWildcard": false,
+      "isWebhook": false,
+      "webhookVerified": false,
       "file": "app/api/gmail/oauth-start/route.ts"
     },
     {
@@ -538,6 +588,9 @@
       "auth": "header-strict (spoofable)",
       "realAuth": false,
       "serviceRole": true,
+      "corsWildcard": false,
+      "isWebhook": false,
+      "webhookVerified": false,
       "file": "app/api/gmail/send/route.ts"
     },
     {
@@ -548,6 +601,9 @@
       "auth": "header-strict (spoofable)",
       "realAuth": false,
       "serviceRole": true,
+      "corsWildcard": false,
+      "isWebhook": false,
+      "webhookVerified": false,
       "file": "app/api/gmail/sync/route.ts"
     },
     {
@@ -558,6 +614,9 @@
       "auth": "header-presence (spoofable)",
       "realAuth": false,
       "serviceRole": true,
+      "corsWildcard": false,
+      "isWebhook": false,
+      "webhookVerified": false,
       "file": "app/api/initialize_employees/route.ts"
     },
     {
@@ -568,6 +627,9 @@
       "auth": "header-presence (spoofable)",
       "realAuth": false,
       "serviceRole": true,
+      "corsWildcard": false,
+      "isWebhook": false,
+      "webhookVerified": false,
       "file": "app/api/releases/[platform]/route.ts"
     },
     {
@@ -578,6 +640,9 @@
       "auth": "header-presence (spoofable)",
       "realAuth": false,
       "serviceRole": true,
+      "corsWildcard": false,
+      "isWebhook": false,
+      "webhookVerified": false,
       "file": "app/api/releases/latest/route.ts"
     },
     {
@@ -588,6 +653,9 @@
       "auth": "header-presence (spoofable)",
       "realAuth": false,
       "serviceRole": true,
+      "corsWildcard": false,
+      "isWebhook": false,
+      "webhookVerified": false,
       "file": "app/api/releases/upload/route.ts"
     },
     {
@@ -598,6 +666,9 @@
       "auth": "header-strict (spoofable)",
       "realAuth": false,
       "serviceRole": true,
+      "corsWildcard": false,
+      "isWebhook": false,
+      "webhookVerified": false,
       "file": "app/api/slack/proxy/route.ts"
     },
     {
@@ -608,6 +679,9 @@
       "auth": "none",
       "realAuth": false,
       "serviceRole": false,
+      "corsWildcard": false,
+      "isWebhook": false,
+      "webhookVerified": false,
       "file": "app/api/stripe/balance/route.ts"
     },
     {
@@ -618,6 +692,9 @@
       "auth": "none",
       "realAuth": false,
       "serviceRole": false,
+      "corsWildcard": false,
+      "isWebhook": false,
+      "webhookVerified": false,
       "file": "app/api/stripe/customers/route.ts"
     },
     {
@@ -628,6 +705,9 @@
       "auth": "none",
       "realAuth": false,
       "serviceRole": false,
+      "corsWildcard": false,
+      "isWebhook": false,
+      "webhookVerified": false,
       "file": "app/api/stripe/failed/route.ts"
     },
     {
@@ -638,6 +718,9 @@
       "auth": "none",
       "realAuth": false,
       "serviceRole": false,
+      "corsWildcard": false,
+      "isWebhook": false,
+      "webhookVerified": false,
       "file": "app/api/stripe/outstanding/route.ts"
     },
     {
@@ -648,6 +731,9 @@
       "auth": "none",
       "realAuth": false,
       "serviceRole": false,
+      "corsWildcard": false,
+      "isWebhook": false,
+      "webhookVerified": false,
       "file": "app/api/stripe/payouts/route.ts"
     },
     {
@@ -658,6 +744,9 @@
       "auth": "none",
       "realAuth": false,
       "serviceRole": false,
+      "corsWildcard": false,
+      "isWebhook": false,
+      "webhookVerified": false,
       "file": "app/api/stripe/products/route.ts"
     },
     {
@@ -668,6 +757,9 @@
       "auth": "none",
       "realAuth": false,
       "serviceRole": false,
+      "corsWildcard": false,
+      "isWebhook": false,
+      "webhookVerified": false,
       "file": "app/api/stripe/recent/route.ts"
     },
     {
@@ -678,6 +770,9 @@
       "auth": "none",
       "realAuth": false,
       "serviceRole": false,
+      "corsWildcard": false,
+      "isWebhook": false,
+      "webhookVerified": false,
       "file": "app/api/stripe/snapshot/route.ts"
     },
     {
@@ -688,6 +783,9 @@
       "auth": "none",
       "realAuth": false,
       "serviceRole": false,
+      "corsWildcard": false,
+      "isWebhook": false,
+      "webhookVerified": false,
       "file": "app/api/stripe/subscriptions/route.ts"
     },
     {
@@ -698,6 +796,9 @@
       "auth": "none",
       "realAuth": false,
       "serviceRole": false,
+      "corsWildcard": false,
+      "isWebhook": false,
+      "webhookVerified": false,
       "file": "app/api/stripe/timeseries/route.ts"
     },
     {
@@ -708,6 +809,9 @@
       "auth": "none",
       "realAuth": false,
       "serviceRole": false,
+      "corsWildcard": false,
+      "isWebhook": false,
+      "webhookVerified": false,
       "file": "app/api/stripe/verify/route.ts"
     },
     {
@@ -718,6 +822,9 @@
       "auth": "header-presence (spoofable)",
       "realAuth": false,
       "serviceRole": false,
+      "corsWildcard": false,
+      "isWebhook": false,
+      "webhookVerified": false,
       "file": "app/api/takeover_creds/route.ts"
     },
     {
@@ -728,6 +835,9 @@
       "auth": "none",
       "realAuth": false,
       "serviceRole": true,
+      "corsWildcard": false,
+      "isWebhook": false,
+      "webhookVerified": false,
       "file": "app/api/waitlist/route.ts"
     }
   ],
@@ -787,24 +897,23 @@
       "anonReadable": true
     }
   ],
-  "drift": {
-    "since": "2026-06-10T06:28:54.857Z",
-    "routes": {
-      "added": [],
-      "removed": []
+  "secretLeaks": [],
+  "tauriCaps": [
+    {
+      "file": "src-tauri/capabilities/default.json",
+      "cap": "shell:allow-execute",
+      "note": "webview can run shell commands"
     },
-    "newUnauthRoutes": [],
-    "bundledSecrets": {
-      "added": [],
-      "removed": []
+    {
+      "file": "src-tauri/capabilities/default.json",
+      "cap": "sql:allow-execute",
+      "note": "arbitrary SQL from the webview"
     },
-    "localStorage": {
-      "added": [],
-      "removed": []
-    },
-    "anonReadable": {
-      "added": [],
-      "removed": []
+    {
+      "file": "src-tauri/capabilities/default.json",
+      "cap": "broad fs scope",
+      "note": "filesystem scope includes wide globs"
     }
-  }
+  ],
+  "drift": null
 }

@@ -13,6 +13,7 @@
  *   src/admin/observatory/data/scan-history.json  (append-only snapshots)
  */
 import { readFileSync, writeFileSync, existsSync, readdirSync, statSync } from "node:fs";
+import { execSync } from "node:child_process";
 import { join, relative, resolve, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -108,7 +109,10 @@ function scanRoutes() {
     else if (/headers\.has\(["'`]TakeOver-App["'`]\)/.test(txt)) auth = "header-presence (spoofable)";
     const serviceRole = /SERVICE_ROLE|supabaseAdmin\(/.test(txt);
     const realAuth = auth === "supabase-jwt" || auth === "signature";
-    return { path: routePath, methods: methods.length ? methods : ["?"], auth, realAuth, serviceRole, file: rel(B2B, f) };
+    const corsWildcard = /access-control-allow-origin["'`:\s]+\*/i.test(txt);
+    const isWebhook = /webhook/i.test(routePath) || /stripe-signature|x-hub-signature|svix-/i.test(txt);
+    const webhookVerified = /constructEvent|timingSafeEqual|createHmac|verifySignature|svix/i.test(txt);
+    return { path: routePath, methods: methods.length ? methods : ["?"], auth, realAuth, serviceRole, corsWildcard, isWebhook, webhookVerified, file: rel(B2B, f) };
   }).sort((a, b) => a.path.localeCompare(b.path));
 }
 
@@ -143,6 +147,53 @@ function scanMigrations() {
   return [...tables.values()].sort((a, b) => a.table.localeCompare(b.table));
 }
 
+// ── 6) deeper signal: committed env, hardcoded secrets, Tauri caps ───────────
+function gitTracked(repoAbs, file) {
+  try { return execSync(`git -C "${repoAbs}" ls-files "${file}"`, { encoding: "utf8", stdio: ["ignore", "pipe", "ignore"] }).trim().length > 0; }
+  catch { return false; }
+}
+const SECRET_PATTERNS = [
+  { kind: "Anthropic key", re: /sk-ant-[a-z0-9-]{24,}/i },
+  { kind: "live secret key", re: /sk_live_[a-z0-9]{20,}/ },
+  { kind: "Postgres password URL", re: /postgres(?:ql)?:\/\/[^:\s'"`]+:[^@\s'"`]+@/i },
+  { kind: "AWS access key", re: /AKIA[0-9A-Z]{16}/ },
+  { kind: "private key", re: /-----BEGIN (?:RSA |EC )?PRIVATE KEY-----/ },
+  { kind: "Slack token", re: /xox[baprs]-[0-9A-Za-z-]{10,}/ },
+];
+function scanSecretLeaks() {
+  const out = [];
+  for (const [repo, abs] of [["cwa", CWA], ["b2b", existsSync(B2B) ? B2B : null]]) {
+    if (!abs) continue;
+    for (const f of [".env", "src-tauri/.env"]) {
+      if (existsSync(join(abs, f)) && gitTracked(abs, f)) out.push({ repo, file: f, line: 0, kind: "committed .env (secrets tracked in git)" });
+    }
+  }
+  const files = [
+    ...walk(join(CWA, "src"), (p) => /\.(t|j)sx?$/.test(p) && !p.replace(/\\/g, "/").includes("/admin/observatory/")),
+    ...walk(join(CWA, "src-tauri", "src"), (p) => /\.rs$/.test(p)),
+    ...(existsSync(B2B) ? [...walk(join(B2B, "app"), (p) => /\.(t|j)sx?$/.test(p)), ...walk(join(B2B, "lib"), (p) => /\.(t|j)sx?$/.test(p))] : []),
+  ];
+  for (const f of files) {
+    const repo = existsSync(B2B) && f.startsWith(B2B) ? "b2b" : "cwa";
+    const base = repo === "b2b" ? B2B : CWA;
+    read(f).split(/\r?\n/).forEach((ln, i) => {
+      for (const pat of SECRET_PATTERNS) { if (pat.re.test(ln)) { out.push({ repo, file: rel(base, f), line: i + 1, kind: pat.kind }); break; } }
+    });
+  }
+  return out;
+}
+function scanTauriCaps() {
+  const files = walk(join(CWA, "src-tauri", "capabilities"), (p) => /\.json$/.test(p));
+  const flags = [];
+  for (const f of files) {
+    const txt = read(f), fr = rel(CWA, f);
+    if (/shell:allow-execute/.test(txt)) flags.push({ file: fr, cap: "shell:allow-execute", note: "webview can run shell commands" });
+    if (/sql:allow-execute/.test(txt)) flags.push({ file: fr, cap: "sql:allow-execute", note: "arbitrary SQL from the webview" });
+    if (/\$HOME\/\*\*|\$DESKTOP\/\*\*|\$APPDATA\/\*\*|[A-Za-z]:\/[A-Za-z]+\/\*\*/.test(txt)) flags.push({ file: fr, cap: "broad fs scope", note: "filesystem scope includes wide globs" });
+  }
+  return flags;
+}
+
 // ── assemble + run ───────────────────────────────────────────────────────────
 export async function runAudit({ write = true, history = true, json = false } = {}) {
   const secrets = scanBundledSecrets();
@@ -150,6 +201,8 @@ export async function runAudit({ write = true, history = true, json = false } = 
   const supabaseStorage = scanSupabaseStorage();
   const routes = scanRoutes();
   const migrations = scanMigrations();
+  const secretLeaks = scanSecretLeaks();
+  const tauriCaps = scanTauriCaps();
 
   const summary = {
     bundledSecrets: secrets.filter((s) => s.secret).length,
@@ -161,12 +214,17 @@ export async function runAudit({ write = true, history = true, json = false } = 
     migrationsTables: migrations.length,
     anonReadableTables: migrations.filter((t) => t.anonReadable).length,
     customStorageAdapter: !!supabaseStorage.customStorageAdapter,
+    hardcodedSecrets: secretLeaks.filter((l) => l.line > 0).length,
+    envCommitted: secretLeaks.some((l) => l.line === 0),
+    dangerousTauriCaps: tauriCaps.length,
+    webhookGaps: routes.filter((r) => r.isWebhook && !r.webhookVerified).length,
+    corsWildcards: routes.filter((r) => r.corsWildcard).length,
   };
 
   const scan = {
     generatedAt: new Date().toISOString(),
     repos: { cwa: rel(resolve(CWA, ".."), CWA), b2b: existsSync(B2B) ? rel(resolve(CWA, ".."), B2B) : null, cwaAbs: CWA, b2bAbs: existsSync(B2B) ? B2B : null },
-    summary, bundledSecrets: secrets, localStorage, supabaseStorage, routes, migrations,
+    summary, bundledSecrets: secrets, localStorage, supabaseStorage, routes, migrations, secretLeaks, tauriCaps,
   };
 
   if (json) return { scan, drift: null };
@@ -210,6 +268,7 @@ function report({ summary, supabaseStorage, generatedAt }, drift) {
   console.log(`  bundled secrets ${c.r}${summary.bundledSecrets}${c.x} · localStorage keys ${summary.localStorageKeys} (${c.y}${summary.localStorageSecretKeys} secret-shaped${c.x})`);
   console.log(`  migrations: ${summary.migrationsTables} tables · ${c.r}${summary.anonReadableTables} anon-readable${c.x}`);
   console.log(`  supabase custom storage adapter: ${supabaseStorage.customStorageAdapter ? c.g + "yes" + c.x : c.r + "no (sessions in localStorage)" + c.x}`);
+  console.log(`  deeper: ${c.r}${summary.hardcodedSecrets}${c.x} hardcoded secrets · committed .env: ${summary.envCommitted ? c.r + "yes" + c.x : c.g + "no" + c.x} · ${c.r}${summary.dangerousTauriCaps}${c.x} risky Tauri caps · ${summary.webhookGaps} webhook gaps · ${summary.corsWildcards} CORS wildcards`);
   if (!drift) { console.log(`\n${c.d}First scan — baseline saved. Re-run after changes to see drift.${c.x}\n`); return; }
   console.log(`\n${c.b}Drift since ${drift.since}${c.x}`);
   const show = (label, arr, color = c.y) => arr.length && console.log(`  ${color}${label}:${c.x} ${arr.join(", ")}`);

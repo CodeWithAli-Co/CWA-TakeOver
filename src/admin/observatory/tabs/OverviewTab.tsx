@@ -53,6 +53,9 @@ export default function OverviewTab({ onNavigate }: { onNavigate: (tab: string) 
   if (scan.summary.routesNoRealAuth > 0) issues.push(`${scan.summary.routesNoRealAuth} of ${scan.summary.routes} API routes have no real auth`);
   if (scan.summary.anonReadableTables > 0) issues.push(`${scan.summary.anonReadableTables} tables are anon-readable`);
   if (!scan.summary.customStorageAdapter) issues.push("session tokens rest in plaintext localStorage");
+  if (scan.summary.envCommitted) issues.unshift("an .env with secrets is committed to git");
+  if ((scan.summary.hardcodedSecrets ?? 0) > 0) issues.push(`${scan.summary.hardcodedSecrets} hardcoded secrets in source`);
+  if ((scan.summary.dangerousTauriCaps ?? 0) > 0) issues.push(`${scan.summary.dangerousTauriCaps} broad Tauri capabilities granted`);
   const summary = issues.length ? capitalize(issues.slice(0, 2).join(", and ")) + " — fix those first." : "No major exposure detected. Hold the line.";
 
   const series = exposureSeries();
