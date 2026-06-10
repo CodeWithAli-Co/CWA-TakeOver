@@ -144,77 +144,74 @@ function scanMigrations() {
   return [...tables.values()].sort((a, b) => a.table.localeCompare(b.table));
 }
 
-// ── assemble ─────────────────────────────────────────────────────────────────
-const secrets = scanBundledSecrets();
-const localStorage = scanLocalStorage();
-const supabaseStorage = scanSupabaseStorage();
-const routes = scanRoutes();
-const migrations = scanMigrations();
+// ── assemble + run ───────────────────────────────────────────────────────────
+export async function runAudit({ write = true, history = true, json = false } = {}) {
+  const secrets = scanBundledSecrets();
+  const localStorage = scanLocalStorage();
+  const supabaseStorage = scanSupabaseStorage();
+  const routes = scanRoutes();
+  const migrations = scanMigrations();
 
-const summary = {
-  bundledSecrets: secrets.filter((s) => s.secret).length,
-  localStorageKeys: localStorage.length,
-  localStorageSecretKeys: localStorage.filter((k) => k.secret).length,
-  routes: routes.length,
-  routesNoRealAuth: routes.filter((r) => !r.realAuth).length,
-  serviceRoleRoutes: routes.filter((r) => r.serviceRole).length,
-  migrationsTables: migrations.length,
-  anonReadableTables: migrations.filter((t) => t.anonReadable).length,
-};
-
-const scan = {
-  generatedAt: new Date().toISOString(),
-  repos: { cwa: rel(resolve(CWA, ".."), CWA), b2b: existsSync(B2B) ? rel(resolve(CWA, ".."), B2B) : null },
-  summary,
-  bundledSecrets: secrets,
-  localStorage,
-  supabaseStorage,
-  routes,
-  migrations,
-};
-
-if (jsonOnly) { console.log(JSON.stringify(scan, null, 2)); process.exit(0); }
-
-// ── drift vs previous history snapshot ───────────────────────────────────────
-let history = [];
-try { history = JSON.parse(read(HIST) || "[]"); } catch { history = []; }
-const prev = history[history.length - 1];
-
-function diffList(prevArr, curArr, key) {
-  const ps = new Set((prevArr || []).map((x) => x[key]));
-  const cs = new Set(curArr.map((x) => x[key]));
-  return {
-    added: curArr.filter((x) => !ps.has(x[key])).map((x) => x[key]),
-    removed: (prevArr || []).filter((x) => !cs.has(x[key])).map((x) => x[key]),
+  const summary = {
+    bundledSecrets: secrets.filter((s) => s.secret).length,
+    localStorageKeys: localStorage.length,
+    localStorageSecretKeys: localStorage.filter((k) => k.secret).length,
+    routes: routes.length,
+    routesNoRealAuth: routes.filter((r) => !r.realAuth).length,
+    serviceRoleRoutes: routes.filter((r) => r.serviceRole).length,
+    migrationsTables: migrations.length,
+    anonReadableTables: migrations.filter((t) => t.anonReadable).length,
+    customStorageAdapter: !!supabaseStorage.customStorageAdapter,
   };
+
+  const scan = {
+    generatedAt: new Date().toISOString(),
+    repos: { cwa: rel(resolve(CWA, ".."), CWA), b2b: existsSync(B2B) ? rel(resolve(CWA, ".."), B2B) : null },
+    summary, bundledSecrets: secrets, localStorage, supabaseStorage, routes, migrations,
+  };
+
+  if (json) return { scan, drift: null };
+
+  let hist = [];
+  try { hist = JSON.parse(read(HIST) || "[]"); } catch { hist = []; }
+  const prev = hist[hist.length - 1];
+
+  const diffList = (prevArr, curArr, key) => {
+    const ps = new Set((prevArr || []).map((x) => x[key]));
+    const cs = new Set(curArr.map((x) => x[key]));
+    return {
+      added: curArr.filter((x) => !ps.has(x[key])).map((x) => x[key]),
+      removed: (prevArr || []).filter((x) => !cs.has(x[key])).map((x) => x[key]),
+    };
+  };
+  const drift = prev ? {
+    since: prev.generatedAt,
+    routes: diffList(prev.routes, routes, "path"),
+    newUnauthRoutes: routes.filter((r) => !r.realAuth && !(prev.routes || []).some((p) => p.path === r.path)).map((r) => `${r.methods.join("/")} ${r.path}`),
+    bundledSecrets: diffList((prev.bundledSecrets || []).filter((s) => s.secret), secrets.filter((s) => s.secret), "name"),
+    localStorage: diffList(prev.localStorage, localStorage, "key"),
+    anonReadable: diffList((prev.migrations || []).filter((t) => t.anonReadable), migrations.filter((t) => t.anonReadable), "table"),
+  } : null;
+
+  if (write) {
+    writeFileSync(SCAN, JSON.stringify(scan, null, 2));
+    if (history) {
+      hist.push({ generatedAt: scan.generatedAt, summary, routes, bundledSecrets: secrets, localStorage, migrations });
+      if (hist.length > 60) hist = hist.slice(-60);
+      writeFileSync(HIST, JSON.stringify(hist, null, 2));
+    }
+  }
+  return { scan, drift };
 }
 
-const drift = prev ? {
-  since: prev.generatedAt,
-  routes: diffList(prev.routes, routes, "path"),
-  newUnauthRoutes: routes.filter((r) => !r.realAuth && !(prev.routes || []).some((p) => p.path === r.path)).map((r) => `${r.methods.join("/")} ${r.path}`),
-  bundledSecrets: diffList(prev.bundledSecrets?.filter((s) => s.secret), secrets.filter((s) => s.secret), "name"),
-  localStorage: diffList(prev.localStorage, localStorage, "key"),
-  anonReadable: diffList((prev.migrations || []).filter((t) => t.anonReadable), migrations.filter((t) => t.anonReadable), "table"),
-} : null;
-
-// write scan + append slim history snapshot
-writeFileSync(SCAN, JSON.stringify(scan, null, 2));
-history.push({ generatedAt: scan.generatedAt, summary, routes, bundledSecrets: secrets, localStorage, migrations });
-if (history.length > 60) history = history.slice(-60);
-writeFileSync(HIST, JSON.stringify(history, null, 2));
-
-// ── console report ───────────────────────────────────────────────────────────
-const c = { r: "\x1b[31m", y: "\x1b[33m", g: "\x1b[32m", d: "\x1b[2m", b: "\x1b[1m", x: "\x1b[0m" };
-console.log(`\n${c.b}Observatory audit${c.x} ${c.d}${scan.generatedAt}${c.x}`);
-console.log(`  routes ${summary.routes} · ${c.r}${summary.routesNoRealAuth} without real auth${c.x} · ${summary.serviceRoleRoutes} service-role`);
-console.log(`  bundled secrets ${c.r}${summary.bundledSecrets}${c.x} · localStorage keys ${summary.localStorageKeys} (${c.y}${summary.localStorageSecretKeys} secret-shaped${c.x})`);
-console.log(`  migrations: ${summary.migrationsTables} tables · ${c.r}${summary.anonReadableTables} anon-readable${c.x}`);
-console.log(`  supabase custom storage adapter: ${supabaseStorage.customStorageAdapter ? c.g + "yes" + c.x : c.r + "no (sessions in localStorage)" + c.x}`);
-
-if (!drift) {
-  console.log(`\n${c.d}First scan — baseline saved. Re-run after changes to see drift.${c.x}\n`);
-} else {
+function report({ summary, supabaseStorage, generatedAt }, drift) {
+  const c = { r: "\x1b[31m", y: "\x1b[33m", g: "\x1b[32m", d: "\x1b[2m", b: "\x1b[1m", x: "\x1b[0m" };
+  console.log(`\n${c.b}Observatory audit${c.x} ${c.d}${generatedAt}${c.x}`);
+  console.log(`  routes ${summary.routes} · ${c.r}${summary.routesNoRealAuth} without real auth${c.x} · ${summary.serviceRoleRoutes} service-role`);
+  console.log(`  bundled secrets ${c.r}${summary.bundledSecrets}${c.x} · localStorage keys ${summary.localStorageKeys} (${c.y}${summary.localStorageSecretKeys} secret-shaped${c.x})`);
+  console.log(`  migrations: ${summary.migrationsTables} tables · ${c.r}${summary.anonReadableTables} anon-readable${c.x}`);
+  console.log(`  supabase custom storage adapter: ${supabaseStorage.customStorageAdapter ? c.g + "yes" + c.x : c.r + "no (sessions in localStorage)" + c.x}`);
+  if (!drift) { console.log(`\n${c.d}First scan — baseline saved. Re-run after changes to see drift.${c.x}\n`); return; }
   console.log(`\n${c.b}Drift since ${drift.since}${c.x}`);
   const show = (label, arr, color = c.y) => arr.length && console.log(`  ${color}${label}:${c.x} ${arr.join(", ")}`);
   let any = false;
@@ -228,9 +225,14 @@ if (!drift) {
   console.log("");
 }
 
-// CI signal: nonzero exit if NEW exposure appeared since last scan
-const ciFail = drift && (drift.newUnauthRoutes.length || drift.bundledSecrets.added.length || drift.anonReadable.added.length);
-if (process.argv.includes("--ci") && ciFail) {
-  console.error("observatory-audit: new exposure detected since last scan (see above).");
-  process.exit(1);
+// ── CLI (only when executed directly, not when imported by the Vite plugin) ──
+const isCli = process.argv[1] && process.argv[1].replace(/\\/g, "/").endsWith("observatory-audit.mjs");
+if (isCli) {
+  const json = process.argv.includes("--json");
+  const ci = process.argv.includes("--ci");
+  const { scan, drift } = await runAudit({ write: !json, json });
+  if (json) { console.log(JSON.stringify(scan, null, 2)); process.exit(0); }
+  report(scan, drift);
+  const ciFail = drift && (drift.newUnauthRoutes.length || drift.bundledSecrets.added.length || drift.anonReadable.added.length);
+  if (ci && ciFail) { console.error("observatory-audit: new exposure detected since last scan (see above)."); process.exit(1); }
 }

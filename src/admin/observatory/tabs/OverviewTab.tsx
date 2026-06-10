@@ -5,6 +5,7 @@ import {
   exposedAssets, coverage, nodeFindings, SEVERITY_ORDER,
 } from "../lib/scoring";
 import { useTriageVersion, effectiveStatus } from "../lib/triage";
+import { scan, relTime } from "../lib/scan";
 import { Badge, Dot, Eyebrow, ScoreRing, verdictColor, verdictLabel, sevColor, sensColor } from "../components/ui";
 
 /** Bento-grid situation report. Every cell deep-links into the tab that explains it. */
@@ -255,6 +256,31 @@ export default function OverviewTab({ onNavigate }: { onNavigate: (tab: string) 
         <p style={{ color: "var(--obs-faint)", fontSize: 11.5, lineHeight: 1.6, marginTop: 14 }}>
           {planned.length} planned node{planned.length === 1 ? "" : "s"} (server, Redis) shown dashed on the map.
         </p>
+      </section>
+
+      {/* Live repo scan strip */}
+      <section className="obs-panel" style={{ gridColumn: "span 12", padding: "15px 22px", display: "flex", flexWrap: "wrap", gap: 20, alignItems: "center" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 11 }}>
+          <Dot color="var(--obs-safe)" size={8} />
+          <div>
+            <div className="obs-eyebrow">Live repo scan</div>
+            <div className="obs-mono" style={{ fontSize: 11.5, color: "var(--obs-faint)" }}>scanned {relTime(scan.generatedAt)} · auto-refreshes on launch</div>
+          </div>
+        </div>
+        <div style={{ marginLeft: "auto", display: "flex", flexWrap: "wrap", gap: 22 }}>
+          {[
+            { label: "routes", val: String(scan.summary.routes), sub: `${scan.summary.routesNoRealAuth} no real auth`, bad: scan.summary.routesNoRealAuth > 0 },
+            { label: "bundled secrets", val: String(scan.summary.bundledSecrets), sub: "in the client binary", bad: scan.summary.bundledSecrets > 0 },
+            { label: "anon-readable tables", val: String(scan.summary.anonReadableTables), sub: "of " + scan.summary.migrationsTables + " in migrations", bad: scan.summary.anonReadableTables > 0 },
+            { label: "session storage", val: scan.summary.customStorageAdapter ? "encrypted" : "localStorage", sub: scan.summary.customStorageAdapter ? "custom adapter" : "plaintext on disk", bad: !scan.summary.customStorageAdapter },
+          ].map((m) => (
+            <div key={m.label} style={{ textAlign: "right" }}>
+              <div className="obs-display" style={{ fontSize: 22, lineHeight: 1.1, color: m.bad ? "var(--obs-critical)" : "var(--obs-safe)" }}>{m.val}</div>
+              <div className="obs-eyebrow" style={{ marginTop: 3 }}>{m.label}</div>
+              <div style={{ fontSize: 10.5, color: "var(--obs-faint)" }}>{m.sub}</div>
+            </div>
+          ))}
+        </div>
       </section>
 
       {/* Footer strip: manifest provenance */}

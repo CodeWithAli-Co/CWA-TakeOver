@@ -12,8 +12,8 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:rust": "cargo test --manifest-path src-tauri/Cargo.toml",
-    "observatory:audit": "node scripts/observatory-audit.mjs",
-    "observatory:audit:ci": "node scripts/observatory-audit.mjs --ci"
+    "observatory:audit": "bun scripts/observatory-audit.mjs",
+    "observatory:audit:ci": "bun scripts/observatory-audit.mjs --ci"
   },
   "dependencies": {
     "@hookform/resolvers": "^4.1.3",

@@ -110,6 +110,22 @@ export default defineConfig(async () => ({
           res.end(JSON.stringify(webhooks));
         });
       }
+    },
+    {
+      // Re-run the Observatory repo scan whenever the app/dev-server starts, so
+      // src/admin/observatory/data/scan.json is always fresh when you open the
+      // app. (history:false keeps dev restarts out of the posture trend.)
+      // Later, the backend server takes over this job and the UI fetches live.
+      name: 'observatory-audit',
+      async buildStart() {
+        try {
+          const { runAudit } = await import('./scripts/observatory-audit.mjs');
+          await runAudit({ write: true, history: false });
+          console.log('[observatory] repo scan refreshed');
+        } catch (e) {
+          console.warn('[observatory] audit skipped:', (e && e.message) || e);
+        }
+      },
     }
   ],
   css: {
