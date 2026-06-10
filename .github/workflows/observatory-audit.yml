@@ -1,0 +1,45 @@
+name: Observatory audit
+
+# Re-scans both repos and fails the build if NEW exposure entered the attack
+# surface since the last committed scan: a new route without real auth, a new
+# bundled secret, or a newly anon-readable table. Keeps the Observatory honest.
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    steps:
+      # cwa_manager into ./CWA-Manager, takeover_b2b alongside as a sibling so
+      # the scanner's ../takeover-B2B path resolves (matches local layout).
+      - name: Checkout cwa_manager
+        uses: actions/checkout@v4
+        with:
+          path: CWA-Manager
+
+      - name: Checkout takeover_b2b
+        uses: actions/checkout@v4
+        continue-on-error: true
+        with:
+          repository: ${{ github.repository_owner }}/takeover-B2B
+          path: takeover-B2B
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Run Observatory audit (fail on new exposure)
+        working-directory: CWA-Manager
+        run: node scripts/observatory-audit.mjs --ci
+
+      - name: Upload scan artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: observatory-scan
+          path: CWA-Manager/src/admin/observatory/data/scan.json

@@ -145,7 +145,18 @@ export default function SystemMapTab() {
               <circle cx="1" cy="1" r="1" fill="var(--obs-line)" opacity=".45" />
             </pattern>
             <linearGradient id="obs-card" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0" stopColor="#212126" /><stop offset="1" stopColor="#161619" />
+              <stop offset="0" stopColor="#26262c" />
+              <stop offset="0.42" stopColor="#1a1b20" />
+              <stop offset="1" stopColor="#131316" />
+            </linearGradient>
+            <linearGradient id="obs-card-base" x1="0" y1="0" x2="1" y2="0">
+              <stop offset="0" stopColor="#1f1f24" />
+              <stop offset="1" stopColor="#151518" />
+            </linearGradient>
+            <linearGradient id="obs-card-sheen" x1="0" y1="0" x2="1" y2="0">
+              <stop offset="0" stopColor="#ffffff" stopOpacity="0.075" />
+              <stop offset="0.55" stopColor="#ffffff" stopOpacity="0.01" />
+              <stop offset="1" stopColor="#ffffff" stopOpacity="0" />
             </linearGradient>
             <radialGradient id="obs-vign" cx="50%" cy="0%" r="90%">
               <stop offset="0" stopColor="#1a1a1f" stopOpacity=".9" /><stop offset="60%" stopColor="#0c0c0e" stopOpacity="0" />
@@ -167,7 +178,7 @@ export default function SystemMapTab() {
             return (
               <g key={l} opacity={on ? 1 : 0.3} style={{ transition: "opacity .2s" }}>
                 <rect x={laneX + 6} y={54} width={colW - 12} height={H - 54 - 14} rx="14"
-                      fill="#ffffff" fillOpacity={i % 2 === 0 ? 0.018 : 0.006} />
+                      fill="#ffffff" fillOpacity={i % 2 === 0 ? 0.011 : 0.004} />
                 <text x={colX[l]} y={32} textAnchor="middle" className="obs-mono" fontSize="10.5" letterSpacing="2.5" fill="var(--obs-dim)">
                   {l.toUpperCase()}
                   <tspan fill="var(--obs-faint)">  {counts[l]}</tspan>
@@ -222,12 +233,13 @@ export default function SystemMapTab() {
                  onClick={() => setSelNode(n)} onMouseEnter={() => setHoverNode(n.id)} onMouseLeave={() => setHoverNode(null)}
                  tabIndex={0} onKeyDown={(ev) => ev.key === "Enter" && setSelNode(n)}
                  role="button" aria-label={`${n.label}, ${verdictLabel[n.verdict]}, ${count} open findings`}>
-                {focused && <rect x={left - 3} y={top - 3} width={NODE_W + 6} height={NH + 6} rx="14" fill="none" stroke={c} strokeOpacity=".25" strokeWidth="6" />}
-                <rect x={left} y={top} width={NODE_W} height={NH} rx="12" fill="url(#obs-card)"
-                      stroke={focused ? c : "var(--obs-line)"} strokeWidth={focused ? 1.6 : 1}
+                {focused && <rect x={left - 2.5} y={top - 2.5} width={NODE_W + 5} height={NH + 5} rx="10" fill="none" stroke={c} strokeOpacity=".22" strokeWidth="4" />}
+                <rect x={left} y={top} width={NODE_W} height={NH} rx="8" fill="url(#obs-card-base)"
+                      stroke={focused ? c : "#27272a"} strokeWidth="1"
                       strokeDasharray={n.planned ? "5 4" : undefined}
-                      style={{ filter: focused ? "drop-shadow(0 8px 22px rgba(0,0,0,.7))" : "drop-shadow(0 2px 6px rgba(0,0,0,.4))", transition: "stroke .2s" }} />
-                <rect x={left + 8} y={top + 12} width="4" height={NH - 24} rx="2" fill={n.planned ? "var(--obs-planned)" : c} />
+                      style={{ filter: focused ? "drop-shadow(0 4px 14px rgba(0,0,0,.5))" : "drop-shadow(0 1px 2px rgba(0,0,0,.55))", transition: "stroke .15s, filter .15s" }} />
+                <rect x={left + 1} y={top + 1} width={NODE_W - 2} height={NH - 2} rx="7" fill="url(#obs-card-sheen)" pointerEvents="none" />
+                <rect x={left + 8} y={top + 12} width="3.5" height={NH - 22} rx="1.5" fill={n.planned ? "var(--obs-planned)" : c} />
                 {lines.map((ln, i) => (
                   <text key={i} x={left + 22} y={lines.length > 1 ? top + 24 + i * 16 : p.y - 2}
                         fontSize="13" fill="var(--obs-text)" fontFamily="var(--obs-body)" fontWeight="600">{ln}</text>
