@@ -1,8 +1,10 @@
 {
-  "generatedAt": "2026-06-10T05:04:44.084Z",
+  "generatedAt": "2026-06-10T05:17:31.288Z",
   "repos": {
     "cwa": "CWA-Manager",
-    "b2b": "takeover-B2B"
+    "b2b": "takeover-B2B",
+    "cwaAbs": "/sessions/pensive-clever-archimedes/mnt/CWA-Manager",
+    "b2bAbs": "/sessions/pensive-clever-archimedes/mnt/takeover-B2B"
   },
   "summary": {
     "bundledSecrets": 9,

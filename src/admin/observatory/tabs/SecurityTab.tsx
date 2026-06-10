@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { manifest, Finding, Severity } from "../data/manifest";
 import { SEVERITY_ORDER } from "../lib/scoring";
 import { Badge, Modal, ModalHeader, Field, Eyebrow, sevColor, sensColor } from "../components/ui";
@@ -6,6 +6,9 @@ import {
   FindingStatus, useTriageVersion, effectiveStatus, triageOf, setTriage, resetTriage, isTriaged, triagedCount,
 } from "../lib/triage";
 import { downloadRemediationPlan } from "../lib/remediation";
+import CodeViewer from "../components/CodeViewer";
+import { extractRefs, refsFromPaths, readCode } from "../lib/code";
+import { askAxonForFix } from "../lib/axon";
 
 /**
  * Threat Board — every known weakness, ranked, filterable, and now WORKABLE.
@@ -36,6 +39,27 @@ export default function SecurityTab() {
   }, [sevFilter, nodeFilter, statusFilter, v]);
 
   const sel: Finding | null = selId ? manifest.findings.find((f) => f.id === selId) ?? null : null;
+  const codeRefs = sel
+    ? (extractRefs(sel.evidence).length
+        ? extractRefs(sel.evidence)
+        : refsFromPaths(sel.nodeIds.flatMap((id) => manifest.nodes.find((n) => n.id === id)?.paths ?? [])))
+    : [];
+  const [axonText, setAxonText] = useState("");
+  const [axonLoading, setAxonLoading] = useState(false);
+  const [axonError, setAxonError] = useState<string | null>(null);
+  useEffect(() => { setAxonText(""); setAxonError(null); setAxonLoading(false); }, [selId]);
+  async function handleAskAxon() {
+    if (!sel) return;
+    setAxonLoading(true); setAxonError(null); setAxonText("");
+    try {
+      const code: { file: string; text: string }[] = [];
+      for (const r of codeRefs.slice(0, 3)) {
+        try { code.push({ file: r.file, text: await readCode(r) }); } catch { /* skip unreadable */ }
+      }
+      setAxonText(await askAxonForFix(sel, code));
+    } catch (e: any) { setAxonError(e.message || String(e)); }
+    finally { setAxonLoading(false); }
+  }
   const nodeLabel = (id: string) => manifest.nodes.find((n) => n.id === id)?.label ?? id;
   const effortColor = { hours: "var(--obs-safe)", days: "var(--obs-medium)", "week+": "var(--obs-high)" } as const;
   const nTriaged = triagedCount();
@@ -156,6 +180,20 @@ export default function SecurityTab() {
                 <div style={{ marginTop: 12, display: "flex", gap: 8 }}>
                   <Badge color={effortColor[sel.effort]}>effort: {sel.effort}</Badge>
                 </div>
+              </div>
+              {codeRefs.length > 0 && <div style={{ marginBottom: 18 }}><CodeViewer refs={codeRefs} /></div>}
+              <div style={{ marginBottom: 18 }}>
+                <button className="obs-tab" onClick={handleAskAxon} disabled={axonLoading}
+                        style={{ borderColor: "var(--obs-scenario)", color: "var(--obs-scenario)" }}>
+                  {axonLoading ? "Axon is reading the code…" : "✦ Ask Axon to fix this"}
+                </button>
+                {axonError && <div style={{ marginTop: 10, color: "var(--obs-high)", fontSize: 12.5, lineHeight: 1.6 }}>{axonError}</div>}
+                {axonText && (
+                  <div className="obs-panel" style={{ marginTop: 12, padding: 16, borderLeft: "3px solid var(--obs-scenario)" }}>
+                    <Eyebrow>Axon's remediation</Eyebrow>
+                    <div style={{ whiteSpace: "pre-wrap", fontSize: 13, lineHeight: 1.65, marginTop: 8, color: "var(--obs-text)" }}>{axonText}</div>
+                  </div>
+                )}
               </div>
               <Field label="Components implicated">
                 <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>

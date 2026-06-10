@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import { manifest, Severity, Sensitivity, Layer } from "../data/manifest";
 import {
   securityScore, severityCounts, verdictCounts, riskiestNodes,
@@ -11,6 +11,12 @@ import { Badge, Dot, Eyebrow, ScoreRing, verdictColor, verdictLabel, sevColor, s
 /** Bento-grid situation report. Every cell deep-links into the tab that explains it. */
 export default function OverviewTab({ onNavigate }: { onNavigate: (tab: string) => void }) {
   useTriageVersion(); // re-render when findings are triaged
+  const [rescanning, setRescanning] = useState(false);
+  async function rescan() {
+    setRescanning(true);
+    try { await fetch("/__obs/rescan"); setTimeout(() => location.reload(), 450); }
+    catch { setRescanning(false); }
+  }
   const score = securityScore();
   const sev = severityCounts();
   const verdicts = verdictCounts();
@@ -266,6 +272,7 @@ export default function OverviewTab({ onNavigate }: { onNavigate: (tab: string) 
             <div className="obs-eyebrow">Live repo scan</div>
             <div className="obs-mono" style={{ fontSize: 11.5, color: "var(--obs-faint)" }}>scanned {relTime(scan.generatedAt)} · auto-refreshes on launch</div>
           </div>
+          <button className="obs-tab" onClick={rescan} disabled={rescanning} style={{ padding: "5px 11px", fontSize: 10, marginLeft: 4 }}>{rescanning ? "re-scanning…" : "re-scan ↻"}</button>
         </div>
         <div style={{ marginLeft: "auto", display: "flex", flexWrap: "wrap", gap: 22 }}>
           {[

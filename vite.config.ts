@@ -126,6 +126,64 @@ export default defineConfig(async () => ({
           console.warn('[observatory] audit skipped:', (e && e.message) || e);
         }
       },
+      configureServer(server) {
+        const CWA_ROOT = __dirname;
+        const B2B_ROOT = path.resolve(__dirname, '..', 'takeover-B2B');
+        const rootFor = (repo) => (repo === 'b2b' ? B2B_ROOT : CWA_ROOT);
+
+        // On-demand re-scan: the Observatory hits this after you edit code to
+        // see whether the change made things safer. Writes scan.json (no
+        // history), Vite HMR then reloads the updated data into the UI.
+        server.middlewares.use('/__obs/rescan', async (_req, res) => {
+          try {
+            const { runAudit } = await import('./scripts/observatory-audit.mjs');
+            const { scan } = await runAudit({ write: true, history: false });
+            res.setHeader('Content-Type', 'application/json');
+            res.end(JSON.stringify({ ok: true, generatedAt: scan.generatedAt, summary: scan.summary }));
+          } catch (e) {
+            res.statusCode = 500;
+            res.end(JSON.stringify({ ok: false, error: String((e && e.message) || e) }));
+          }
+        });
+
+        // Read a repo-relative source file (server-side fs = correct paths,
+        // no Tauri scope needed). Path traversal is rejected.
+        server.middlewares.use('/__obs/file', (req, res) => {
+          try {
+            const u = new URL(req.url || '/', 'http://x');
+            const root = rootFor(u.searchParams.get('repo'));
+            const abs = path.resolve(root, u.searchParams.get('path') || '');
+            if (!abs.startsWith(root)) { res.statusCode = 403; return res.end('forbidden'); }
+            if (!fs.existsSync(abs)) { res.statusCode = 404; return res.end('not found'); }
+            res.setHeader('Content-Type', 'text/plain; charset=utf-8');
+            res.end(fs.readFileSync(abs, 'utf8'));
+          } catch (e) { res.statusCode = 500; res.end(String((e && e.message) || e)); }
+        });
+
+        // Open a file in the editor (VS Code if available, else OS default).
+        server.middlewares.use('/__obs/open', async (req, res) => {
+          try {
+            const u = new URL(req.url || '/', 'http://x');
+            const root = rootFor(u.searchParams.get('repo'));
+            const abs = path.resolve(root, u.searchParams.get('path') || '');
+            if (!abs.startsWith(root)) { res.statusCode = 403; return res.end('forbidden'); }
+            const line = u.searchParams.get('line') || '1';
+            const cp = await import('node:child_process');
+            const tryOpen = (cmd, args) => new Promise((ok) => {
+              const c = cp.spawn(cmd, args, { stdio: 'ignore', detached: true, shell: process.platform === 'win32' });
+              c.on('error', () => ok(false)); c.on('spawn', () => { c.unref(); ok(true); });
+            });
+            let opened = await tryOpen('code', ['-g', `${abs}:${line}`]);
+            if (!opened) {
+              const o = process.platform === 'win32' ? ['cmd', ['/c', 'start', '', abs]]
+                : process.platform === 'darwin' ? ['open', [abs]] : ['xdg-open', [abs]];
+              opened = await tryOpen(o[0], o[1]);
+            }
+            res.setHeader('Content-Type', 'application/json');
+            res.end(JSON.stringify({ ok: opened }));
+          } catch (e) { res.statusCode = 500; res.end(String((e && e.message) || e)); }
+        });
+      },
     }
   ],
   css: {

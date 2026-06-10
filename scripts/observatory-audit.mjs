@@ -166,7 +166,7 @@ export async function runAudit({ write = true, history = true, json = false } = 
 
   const scan = {
     generatedAt: new Date().toISOString(),
-    repos: { cwa: rel(resolve(CWA, ".."), CWA), b2b: existsSync(B2B) ? rel(resolve(CWA, ".."), B2B) : null },
+    repos: { cwa: rel(resolve(CWA, ".."), CWA), b2b: existsSync(B2B) ? rel(resolve(CWA, ".."), B2B) : null, cwaAbs: CWA, b2bAbs: existsSync(B2B) ? B2B : null },
     summary, bundledSecrets: secrets, localStorage, supabaseStorage, routes, migrations,
   };
 
