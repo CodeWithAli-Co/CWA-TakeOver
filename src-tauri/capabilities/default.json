@@ -7,6 +7,9 @@
   ],
   "permissions": [
     "core:default",
+    "autostart:allow-enable",
+    "autostart:allow-disable",
+    "autostart:allow-is-enabled",
     "core:tray:default",
     "core:window:allow-show",
     "core:window:allow-hide",
@@ -21,7 +24,6 @@
     "process:default",
     "updater:default",
     "dialog:default",
-    "autostart:default",
     "fs:default",
     "shell:default",
     "stronghold:default",

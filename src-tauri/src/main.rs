@@ -6,6 +6,6 @@ fn main() {
 }
 
 #[tauri::command]
-async fn transcribe_audio(_path: String) -> Result<String, String> {
+async fn _transcribe_audio(_path: String) -> Result<String, String> {
     Err("Whisper sidecar not installed yet".to_string())
 }

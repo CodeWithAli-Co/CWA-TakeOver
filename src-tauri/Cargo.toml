@@ -1,6 +1,6 @@
 [package]
 name = "cwa-takeover"
-version = "1.8.2"
+version = "1.9.0"
 description = "The CWA TakeOver App is used to Manage the CodeWithAli Company with precision."
 authors = ["Hanif Palm", "Ali Alibrahimi"]
 edition = "2024"
@@ -53,6 +53,7 @@ windows = { version = "0.58", features = ["Win32_UI_Shell", "Win32_Foundation"] 
 tauri-plugin-updater = "2.10"
 tauri-plugin-window-state = "2"
 tauri-plugin-autostart = "2"
+tauri-plugin-single-instance = "2"
 
 [features]
 default = ["custom-protocol"]

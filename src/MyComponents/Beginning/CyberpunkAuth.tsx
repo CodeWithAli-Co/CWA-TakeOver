@@ -351,7 +351,7 @@ export default function CyberpunkAuth() {
           <div className="flex items-center gap-4">
             <span className="text-red-500/90">SYS</span>
             <span className="text-red-700/60">·</span>
-            <span>TakeOver v1.8.2</span>
+            <span>TakeOver v1.9.0</span>
             <span className="text-red-700/60">·</span>
             <span className="text-red-700/70">BUILD 4f2c9a</span>
           </div>
