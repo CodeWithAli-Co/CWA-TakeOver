@@ -105,36 +105,47 @@ export default function SecurityTab() {
         </div>
       </div>
 
-      {/* board */}
+      {/* board — grouped by severity for a clear top-down reading order */}
       {filtered.length === 0 ? (
         <div className="obs-panel" style={{ padding: 40, textAlign: "center", color: "var(--obs-dim)" }}>
           No findings match this filter. Widen it, or enjoy the moment.
         </div>
       ) : (
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(330px, 1fr))", gap: 12 }}>
-          {filtered.map((f) => {
-            const st = effectiveStatus(f.id);
-            const closed = st !== "open";
+        <div className="obs-panel" style={{ padding: "4px 2px 8px" }}>
+          {SEVERITY_ORDER.filter((sv) => filtered.some((f) => f.severity === sv)).map((sv) => {
+            const group = filtered.filter((f) => f.severity === sv);
             return (
-              <button key={f.id} className="obs-panel obs-panel-hover" onClick={() => setSelId(f.id)}
-                      style={{ textAlign: "left", padding: 18, borderTop: `3px solid ${sevColor[f.severity]}`, cursor: "pointer", color: "inherit", display: "flex", flexDirection: "column", gap: 10, opacity: closed ? 0.62 : 1 }}>
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 10 }}>
-                  <Badge color={sevColor[f.severity]}>{f.severity}</Badge>
-                  <Badge color={STATUS_META[st].color}>{closed ? `✓ ${STATUS_META[st].label}` : `fix: ${f.effort}`}</Badge>
+              <div key={sv}>
+                <div style={{ display: "flex", alignItems: "center", gap: 9, padding: "16px 18px 8px" }}>
+                  <span style={{ width: 7, height: 7, borderRadius: 9, background: sevColor[sv], display: "inline-block" }} />
+                  <span className="obs-mono" style={{ fontSize: 11, letterSpacing: ".16em", textTransform: "uppercase", color: sevColor[sv] }}>{sv}</span>
+                  <span className="obs-mono" style={{ fontSize: 11, color: "var(--obs-faint)" }}>· {group.length}</span>
                 </div>
-                <div className="obs-display" style={{ fontSize: 18, lineHeight: 1.25, textDecoration: closed ? "line-through" : "none", textDecorationColor: "var(--obs-faint)" }}>{f.title}</div>
-                <div style={{ fontSize: 12.5, color: "var(--obs-dim)", lineHeight: 1.6, display: "-webkit-box", WebkitLineClamp: 3, WebkitBoxOrient: "vertical", overflow: "hidden" }}>
-                  {f.risk}
-                </div>
-                <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginTop: "auto", alignItems: "center" }}>
-                  {triageOf(f.id).owner && <span className="obs-mono" style={{ fontSize: 10.5, color: "var(--obs-safe)" }}>@{triageOf(f.id).owner}</span>}
-                  {f.nodeIds.map((id) => (
-                    <span key={id} className="obs-mono" style={{ fontSize: 10.5, color: "var(--obs-faint)", border: "1px solid var(--obs-line)", borderRadius: 99, padding: "2px 8px" }}>
-                      {nodeLabel(id)}
-                    </span>
-                  ))}
-                </div>
-              </button>
+                {group.map((f) => {
+                  const st = effectiveStatus(f.id);
+                  const closed = st !== "open";
+                  const owner = triageOf(f.id).owner;
+                  return (
+                    <button key={f.id} className="obs-row" onClick={() => setSelId(f.id)}
+                            style={{ width: "100%", display: "grid", gridTemplateColumns: "1fr auto", gap: 16, alignItems: "center", padding: "11px 18px", textAlign: "left", background: "transparent", border: "none", borderTop: "1px solid var(--obs-line)", cursor: "pointer", color: "inherit", opacity: closed ? 0.48 : 1 }}>
+                      <div style={{ minWidth: 0 }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: 9 }}>
+                          <span style={{ width: 5, height: 5, borderRadius: 9, background: sevColor[f.severity], flexShrink: 0, display: "inline-block" }} />
+                          <span style={{ fontSize: 14, fontWeight: 600, lineHeight: 1.3, textDecoration: closed ? "line-through" : "none", textDecorationColor: "var(--obs-faint)" }}>{f.title}</span>
+                        </div>
+                        <div style={{ fontSize: 12, color: "var(--obs-dim)", lineHeight: 1.5, marginTop: 3, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", paddingLeft: 14 }}>{f.risk}</div>
+                      </div>
+                      <div style={{ display: "flex", alignItems: "center", gap: 12, flexShrink: 0 }}>
+                        {owner && <span className="obs-mono" style={{ fontSize: 10, color: "var(--obs-safe)" }}>@{owner}</span>}
+                        {closed
+                          ? <Badge color={STATUS_META[st].color}>✓ {STATUS_META[st].label}</Badge>
+                          : <span className="obs-mono" style={{ fontSize: 10.5, color: effortColor[f.effort] }}>fix: {f.effort}</span>}
+                        <span style={{ color: "var(--obs-faint)", fontSize: 13 }}>→</span>
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
             );
           })}
         </div>
