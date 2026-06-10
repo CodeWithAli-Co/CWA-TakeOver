@@ -6,7 +6,7 @@ import {
   verdictColor, verdictLabel, sevColor, sensColor,
 } from "../components/ui";
 import CodeViewer from "../components/CodeViewer";
-import { refsFromPaths } from "../lib/code";
+import { refsFromPaths, extractAnnotations, deriveLocators } from "../lib/code";
 
 /**
  * The system map — Takeover drawn as a left-to-right pipeline. Nodes auto-layout
@@ -271,7 +271,8 @@ export default function SystemMapTab() {
             <div style={{ padding: "20px 28px" }}>
               <Field label="What this is">{selNode.detail}</Field>
               <Field label="Lives in" mono>{selNode.paths.join("  ·  ")}</Field>
-              <CodeViewer refs={refsFromPaths(selNode.paths)} />
+              <CodeViewer refs={refsFromPaths(selNode.paths)} annotations={nodeFindings(selNode.id).flatMap((f) => extractAnnotations(f.evidence, f.title))}
+                                          locators={deriveLocators(nodeFindings(selNode.id).map((f) => f.evidence + " " + f.risk + " " + f.fix).join(" "))} />
               {selNode.owns.length > 0 && (
                 <Field label="Data resting here">
                   <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>

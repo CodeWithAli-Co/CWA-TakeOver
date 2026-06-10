@@ -1,4 +1,3 @@
-#!/usr/bin/env node
 /**
  * observatory-audit.mjs — scan both repos for the hard facts the Observatory
  * cares about, write a machine-readable scan, append a history snapshot, and

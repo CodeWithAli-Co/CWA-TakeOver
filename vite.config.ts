@@ -156,6 +156,7 @@ export default defineConfig(async () => ({
             if (!abs.startsWith(root)) { res.statusCode = 403; return res.end('forbidden'); }
             if (!fs.existsSync(abs)) { res.statusCode = 404; return res.end('not found'); }
             res.setHeader('Content-Type', 'text/plain; charset=utf-8');
+            res.setHeader('X-Obs-File', '1');
             res.end(fs.readFileSync(abs, 'utf8'));
           } catch (e) { res.statusCode = 500; res.end(String((e && e.message) || e)); }
         });

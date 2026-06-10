@@ -7,8 +7,9 @@ import {
 } from "../lib/triage";
 import { downloadRemediationPlan } from "../lib/remediation";
 import CodeViewer from "../components/CodeViewer";
-import { extractRefs, refsFromPaths, readCode } from "../lib/code";
-import { askAxonForFix } from "../lib/axon";
+import { extractRefs, refsFromPaths, readCode, extractAnnotations, parseRef, deriveLocators, LineAnnotation } from "../lib/code";
+import { askAxonForPlan } from "../lib/axon";
+import Markdown from "../components/Markdown";
 
 /**
  * Threat Board — every known weakness, ranked, filterable, and now WORKABLE.
@@ -47,16 +48,26 @@ export default function SecurityTab() {
   const [axonText, setAxonText] = useState("");
   const [axonLoading, setAxonLoading] = useState(false);
   const [axonError, setAxonError] = useState<string | null>(null);
-  useEffect(() => { setAxonText(""); setAxonError(null); setAxonLoading(false); }, [selId]);
+  const [axonChanges, setAxonChanges] = useState<LineAnnotation[]>([]);
+  useEffect(() => { setAxonText(""); setAxonError(null); setAxonLoading(false); setAxonChanges([]); }, [selId]);
+  const problemAnns: LineAnnotation[] = sel ? extractAnnotations(sel.evidence, sel.title) : [];
+  const allAnns: LineAnnotation[] = [...problemAnns, ...axonChanges];
   async function handleAskAxon() {
     if (!sel) return;
-    setAxonLoading(true); setAxonError(null); setAxonText("");
+    setAxonLoading(true); setAxonError(null); setAxonText(""); setAxonChanges([]);
     try {
       const code: { file: string; text: string }[] = [];
       for (const r of codeRefs.slice(0, 3)) {
         try { code.push({ file: r.file, text: await readCode(r) }); } catch { /* skip unreadable */ }
       }
-      setAxonText(await askAxonForFix(sel, code));
+      const plan = await askAxonForPlan(sel, code);
+      setAxonText(plan.summary);
+      const anns: LineAnnotation[] = [];
+      for (const ch of plan.changes) {
+        const pr = parseRef((ch.file || "") + ":1");
+        if (pr && ch.line) anns.push({ repo: pr.repo, file: pr.file, line: ch.line, kind: "change", order: ch.order, note: ch.note });
+      }
+      setAxonChanges(anns);
     } catch (e: any) { setAxonError(e.message || String(e)); }
     finally { setAxonLoading(false); }
   }
@@ -181,7 +192,7 @@ export default function SecurityTab() {
                   <Badge color={effortColor[sel.effort]}>effort: {sel.effort}</Badge>
                 </div>
               </div>
-              {codeRefs.length > 0 && <div style={{ marginBottom: 18 }}><CodeViewer refs={codeRefs} /></div>}
+              {codeRefs.length > 0 && <div style={{ marginBottom: 18 }}><CodeViewer refs={codeRefs} annotations={allAnns} locators={deriveLocators([sel.evidence, sel.risk, sel.fix].join(" "))} /></div>}
               <div style={{ marginBottom: 18 }}>
                 <button className="obs-tab" onClick={handleAskAxon} disabled={axonLoading}
                         style={{ borderColor: "var(--obs-scenario)", color: "var(--obs-scenario)" }}>
@@ -191,7 +202,7 @@ export default function SecurityTab() {
                 {axonText && (
                   <div className="obs-panel" style={{ marginTop: 12, padding: 16, borderLeft: "3px solid var(--obs-scenario)" }}>
                     <Eyebrow>Axon's remediation</Eyebrow>
-                    <div style={{ whiteSpace: "pre-wrap", fontSize: 13, lineHeight: 1.65, marginTop: 8, color: "var(--obs-text)" }}>{axonText}</div>
+                    <div style={{ marginTop: 8 }}><Markdown text={axonText} /></div>
                   </div>
                 )}
               </div>
