@@ -73,6 +73,7 @@ const IndexLazyRouteImport = createFileRoute('/')()
 const WorkspaceIndexLazyRouteImport = createFileRoute('/workspace/')()
 const ClientIndexLazyRouteImport = createFileRoute('/client/')()
 const ReportsSubmitLazyRouteImport = createFileRoute('/reports/submit')()
+const AdminObservatoryLazyRouteImport = createFileRoute('/admin/observatory')()
 const WorkspaceSheetsIdLazyRouteImport = createFileRoute(
   '/workspace/sheets/$id',
 )()
@@ -388,6 +389,13 @@ const ReportsSubmitLazyRoute = ReportsSubmitLazyRouteImport.update({
 } as any).lazy(() =>
   import('./routes/reports.submit.lazy').then((d) => d.Route),
 )
+const AdminObservatoryLazyRoute = AdminObservatoryLazyRouteImport.update({
+  id: '/admin/observatory',
+  path: '/admin/observatory',
+  getParentRoute: () => rootRouteImport,
+} as any).lazy(() =>
+  import('./routes/admin.observatory.lazy').then((d) => d.Route),
+)
 const WorkspaceSheetsIdLazyRoute = WorkspaceSheetsIdLazyRouteImport.update({
   id: '/sheets/$id',
   path: '/sheets/$id',
@@ -467,6 +475,7 @@ export interface FileRoutesByFullPath {
   '/vercel': typeof VercelLazyRoute
   '/welcome': typeof WelcomeLazyRoute
   '/workspace': typeof WorkspaceLazyRouteWithChildren
+  '/admin/observatory': typeof AdminObservatoryLazyRoute
   '/reports/submit': typeof ReportsSubmitLazyRoute
   '/client/': typeof ClientIndexLazyRoute
   '/workspace/': typeof WorkspaceIndexLazyRoute
@@ -530,6 +539,7 @@ export interface FileRoutesByTo {
   '/trainingplan': typeof TrainingplanLazyRoute
   '/vercel': typeof VercelLazyRoute
   '/welcome': typeof WelcomeLazyRoute
+  '/admin/observatory': typeof AdminObservatoryLazyRoute
   '/reports/submit': typeof ReportsSubmitLazyRoute
   '/client': typeof ClientIndexLazyRoute
   '/workspace': typeof WorkspaceIndexLazyRoute
@@ -595,6 +605,7 @@ export interface FileRoutesById {
   '/vercel': typeof VercelLazyRoute
   '/welcome': typeof WelcomeLazyRoute
   '/workspace': typeof WorkspaceLazyRouteWithChildren
+  '/admin/observatory': typeof AdminObservatoryLazyRoute
   '/reports/submit': typeof ReportsSubmitLazyRoute
   '/client/': typeof ClientIndexLazyRoute
   '/workspace/': typeof WorkspaceIndexLazyRoute
@@ -661,6 +672,7 @@ export interface FileRouteTypes {
     | '/vercel'
     | '/welcome'
     | '/workspace'
+    | '/admin/observatory'
     | '/reports/submit'
     | '/client/'
     | '/workspace/'
@@ -724,6 +736,7 @@ export interface FileRouteTypes {
     | '/trainingplan'
     | '/vercel'
     | '/welcome'
+    | '/admin/observatory'
     | '/reports/submit'
     | '/client'
     | '/workspace'
@@ -788,6 +801,7 @@ export interface FileRouteTypes {
     | '/vercel'
     | '/welcome'
     | '/workspace'
+    | '/admin/observatory'
     | '/reports/submit'
     | '/client/'
     | '/workspace/'
@@ -853,6 +867,7 @@ export interface RootRouteChildren {
   VercelLazyRoute: typeof VercelLazyRoute
   WelcomeLazyRoute: typeof WelcomeLazyRoute
   WorkspaceLazyRoute: typeof WorkspaceLazyRouteWithChildren
+  AdminObservatoryLazyRoute: typeof AdminObservatoryLazyRoute
   ClientIndexLazyRoute: typeof ClientIndexLazyRoute
   OfferAcceptTokenLazyRoute: typeof OfferAcceptTokenLazyRoute
 }
@@ -1272,6 +1287,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ReportsSubmitLazyRouteImport
       parentRoute: typeof ReportsLazyRoute
     }
+    '/admin/observatory': {
+      id: '/admin/observatory'
+      path: '/admin/observatory'
+      fullPath: '/admin/observatory'
+      preLoaderRoute: typeof AdminObservatoryLazyRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/workspace/sheets/$id': {
       id: '/workspace/sheets/$id'
       path: '/sheets/$id'
@@ -1381,6 +1403,7 @@ const rootRouteChildren: RootRouteChildren = {
   VercelLazyRoute: VercelLazyRoute,
   WelcomeLazyRoute: WelcomeLazyRoute,
   WorkspaceLazyRoute: WorkspaceLazyRouteWithChildren,
+  AdminObservatoryLazyRoute: AdminObservatoryLazyRoute,
   ClientIndexLazyRoute: ClientIndexLazyRoute,
   OfferAcceptTokenLazyRoute: OfferAcceptTokenLazyRoute,
 }
