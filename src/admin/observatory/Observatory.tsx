@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { manifest } from "./data/manifest";
 import { securityScore, severityCounts } from "./lib/scoring";
 import { useTriageVersion } from "./lib/triage";
@@ -8,6 +8,8 @@ import SystemMapTab from "./tabs/SystemMapTab";
 import SecurityTab from "./tabs/SecurityTab";
 import DataApiTab from "./tabs/DataApiTab";
 import ScenariosTab from "./tabs/ScenariosTab";
+import CommandPalette from "./components/CommandPalette";
+import { useFocus } from "./lib/focus";
 
 /**
  * TAKEOVER OBSERVATORY
@@ -33,6 +35,20 @@ export default function Observatory() {
   const counts = severityCounts();
   const scoreColor =
     score >= 80 ? "var(--obs-safe)" : score >= 55 ? "var(--obs-medium)" : "var(--obs-critical)";
+
+  const [palette, setPalette] = useState(false);
+  const focus = useFocus();
+  const lastNonce = useRef(0);
+  useEffect(() => {
+    if (focus && focus.nonce !== lastNonce.current) { lastNonce.current = focus.nonce; setTab(focus.tab as TabId); }
+  }, [focus]);
+  useEffect(() => {
+    const h = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") { e.preventDefault(); setPalette((p) => !p); }
+    };
+    window.addEventListener("keydown", h);
+    return () => window.removeEventListener("keydown", h);
+  }, []);
 
   return (
     <div className="obs-root">
@@ -80,6 +96,10 @@ export default function Observatory() {
               {t.label}
             </button>
           ))}
+          <button className="obs-tab" onClick={() => setPalette(true)} style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 7 }} title="Search (Cmd/Ctrl+K)">
+            <span>Search</span>
+            <span className="obs-kbd">⌘K</span>
+          </button>
         </nav>
 
         {/* ── Active tab ───────────────────────────────────────────────── */}
@@ -91,6 +111,8 @@ export default function Observatory() {
           {tab === "scenarios" && <ScenariosTab />}
         </main>
       </div>
+
+      <CommandPalette open={palette} onClose={() => setPalette(false)} />
     </div>
   );
 }

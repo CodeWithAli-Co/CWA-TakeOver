@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { useFocus, clearFocus } from "../lib/focus";
 import { manifest, Scenario } from "../data/manifest";
 import { Badge, Dot, Eyebrow, Modal, ModalHeader, Field, sensColor } from "../components/ui";
 
@@ -46,6 +47,12 @@ function DeltaBar({ value, label }: { value: number; label: string }) {
 export default function ScenariosTab() {
   const [selId, setSelId] = useState(manifest.scenarios[0]?.id);
   const [impactModal, setImpactModal] = useState<Scenario["impacts"][number] | null>(null);
+  const focus = useFocus();
+  useEffect(() => {
+    if (focus && focus.tab === "scenarios" && focus.kind === "scenario" && manifest.scenarios.some((x) => x.id === focus.id)) {
+      setSelId(focus.id); clearFocus();
+    }
+  }, [focus]);
   const s = manifest.scenarios.find((x) => x.id === selId)!;
   const nodeLabel = (id: string) => manifest.nodes.find((n) => n.id === id)?.label ?? id;
 

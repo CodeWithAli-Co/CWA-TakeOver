@@ -9,6 +9,7 @@ import { downloadRemediationPlan } from "../lib/remediation";
 import CodeViewer from "../components/CodeViewer";
 import { extractRefs, refsFromPaths, readCode, extractAnnotations, parseRef, deriveLocators, LineAnnotation } from "../lib/code";
 import { askAxonForPlan } from "../lib/axon";
+import { useFocus, clearFocus, requestFocus } from "../lib/focus";
 import Markdown from "../components/Markdown";
 
 /**
@@ -29,6 +30,12 @@ export default function SecurityTab() {
   const [nodeFilter, setNodeFilter] = useState<string>("all");
   const [statusFilter, setStatusFilter] = useState<"open" | "all">("open");
   const [selId, setSelId] = useState<string | null>(null);
+  const focus = useFocus();
+  useEffect(() => {
+    if (focus && focus.tab === "security" && focus.kind === "finding" && manifest.findings.some((f) => f.id === focus.id)) {
+      setSelId(focus.id); clearFocus();
+    }
+  }, [focus]);
 
   const filtered = useMemo(() => {
     return manifest.findings
@@ -219,7 +226,11 @@ export default function SecurityTab() {
               </div>
               <Field label="Components implicated">
                 <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
-                  {sel.nodeIds.map((id) => <Badge key={id} color="var(--obs-dim)">{nodeLabel(id)}</Badge>)}
+                  {sel.nodeIds.map((id) => (
+                    <button key={id} onClick={() => { requestFocus("node", id); setSelId(null); }} style={{ background: "transparent", border: "none", padding: 0, cursor: "pointer" }} title="Show on the System Map">
+                      <Badge color="var(--obs-dim)">{nodeLabel(id)} →</Badge>
+                    </button>
+                  ))}
                 </div>
               </Field>
               {sel.assetIds.length > 0 && (

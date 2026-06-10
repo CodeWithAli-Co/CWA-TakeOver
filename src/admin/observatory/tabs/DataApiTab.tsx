@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { useFocus, clearFocus } from "../lib/focus";
 import { manifest, DataAsset, ApiRoute } from "../data/manifest";
 import {
   Badge, Dot, Modal, ModalHeader, Field,
@@ -14,6 +15,12 @@ export default function DataApiTab() {
   const [view, setView] = useState<"data" | "api">("data");
   const [asset, setAsset] = useState<DataAsset | null>(null);
   const [route, setRoute] = useState<ApiRoute | null>(null);
+  const focus = useFocus();
+  useEffect(() => {
+    if (!focus || focus.tab !== "data") return;
+    if (focus.kind === "asset") { const a = manifest.assets.find((x) => x.id === focus.id); if (a) { setView("data"); setAsset(a); clearFocus(); } }
+    else if (focus.kind === "route") { const r = manifest.apis.find((x) => x.id === focus.id); if (r) { setView("api"); setRoute(r); clearFocus(); } }
+  }, [focus]);
 
   const nodeLabel = (id: string) => manifest.nodes.find((n) => n.id === id)?.label ?? id;
   const rlsBadge = (rls?: string) =>

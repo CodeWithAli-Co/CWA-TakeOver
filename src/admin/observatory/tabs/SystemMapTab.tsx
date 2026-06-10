@@ -1,6 +1,7 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { manifest, SystemNode, SystemEdge, Layer } from "../data/manifest";
 import { nodeFindings, nodeRisk } from "../lib/scoring";
+import { useFocus, clearFocus, requestFocus } from "../lib/focus";
 import {
   Badge, Dot, Modal, ModalHeader, Field,
   verdictColor, verdictLabel, sevColor, sensColor,
@@ -48,6 +49,13 @@ export default function SystemMapTab() {
   const [hoverNode, setHoverNode] = useState<string | null>(null);
   const [hoverEdge, setHoverEdge] = useState<string | null>(null);
   const [layerFilter, setLayerFilter] = useState<Layer | "all">("all");
+  const focus = useFocus();
+  useEffect(() => {
+    if (focus && focus.tab === "map" && focus.kind === "node") {
+      const n = manifest.nodes.find((x) => x.id === focus.id);
+      if (n) { setSelNode(n); clearFocus(); }
+    }
+  }, [focus]);
 
   const byId = useMemo(() => Object.fromEntries(manifest.nodes.map((n) => [n.id, n])), []);
 
@@ -287,7 +295,7 @@ export default function SystemMapTab() {
                 <Field label="Open findings against this component">
                   <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
                     {nodeFindings(selNode.id).map((f) => (
-                      <div key={f.id} className="obs-panel" style={{ padding: 14, borderLeft: `3px solid ${sevColor[f.severity]}` }}>
+                      <div key={f.id} className="obs-panel obs-panel-hover" onClick={() => { requestFocus("finding", f.id); setSelNode(null); }} style={{ padding: 14, borderLeft: `3px solid ${sevColor[f.severity]}`, cursor: "pointer" }}>
                         <div style={{ display: "flex", justifyContent: "space-between", gap: 10, marginBottom: 6 }}>
                           <strong style={{ fontSize: 13.5 }}>{f.title}</strong>
                           <Badge color={sevColor[f.severity]}>{f.severity}</Badge>
