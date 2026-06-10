@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { manifest, SystemNode, SystemEdge } from "../data/manifest";
+import { manifest, SystemNode, SystemEdge, Layer } from "../data/manifest";
 import { nodeFindings, nodeRisk } from "../lib/scoring";
 import {
   Badge, Dot, Modal, ModalHeader, Field,
@@ -7,123 +7,238 @@ import {
 } from "../components/ui";
 
 /**
- * The signature surface: Takeover drawn as a living circuit. Pulses run along
- * every wire that carries data; planned infrastructure is sketched in dashes.
- * Click anything — node or wire — for the full dossier.
+ * The system map — Takeover drawn as a left-to-right pipeline. Nodes auto-layout
+ * into layer columns; wires are quiet until you hover a node, which traces its
+ * data flows and reveals their labels. Click anything for the full dossier.
  */
 
-const W = 1000, H = 640;
-const px = (x: number) => 60 + (x / 100) * (W - 200);
-const py = (y: number) => 50 + (y / 100) * (H - 110);
+const W = 1440;
+const PAD_X = 48;
+const TOP = 70;
+const BOT = 44;
+const NODE_W = 188;
 
-const LAYER_LABEL: Record<string, string> = {
-  client: "Client · operator machine",
-  core: "Rust core",
-  edge: "Edge · your servers",
-  persistence: "Persistence",
-  external: "External SaaS & models",
-  planned: "Planned",
+const COL_ORDER: Layer[] = ["client", "core", "edge", "planned", "persistence", "external"];
+const COL_TITLE: Record<Layer, string> = {
+  client: "operator machine",
+  core: "rust core",
+  edge: "your server",
+  planned: "not built yet",
+  persistence: "databases",
+  external: "saas & models",
 };
+
+// split a long label onto two lines, preferring the " · " seam
+function wrapLabel(label: string): string[] {
+  if (label.length <= 19) return [label];
+  const dot = label.indexOf(" · ");
+  if (dot > 2 && dot < label.length - 3) return [label.slice(0, dot), label.slice(dot + 3)];
+  const mid = Math.floor(label.length / 2);
+  let i = label.lastIndexOf(" ", mid);
+  if (i < 4) i = label.indexOf(" ", mid);
+  if (i > 0) return [label.slice(0, i), label.slice(i + 1)];
+  return [label];
+}
 
 export default function SystemMapTab() {
   const [selNode, setSelNode] = useState<SystemNode | null>(null);
   const [selEdge, setSelEdge] = useState<SystemEdge | null>(null);
-  const [hover, setHover] = useState<string | null>(null);
+  const [hoverNode, setHoverNode] = useState<string | null>(null);
+  const [hoverEdge, setHoverEdge] = useState<string | null>(null);
+  const [layerFilter, setLayerFilter] = useState<Layer | "all">("all");
 
   const byId = useMemo(() => Object.fromEntries(manifest.nodes.map((n) => [n.id, n])), []);
-  const connected = (nodeId: string) =>
-    manifest.edges.filter((e) => e.from === nodeId || e.to === nodeId).map((e) => e.id);
-  const hot = hover ? new Set([hover, ...connected(hover)]) : null;
+
+  const { pos, colX, colW, H, counts } = useMemo(() => {
+    const cols = COL_ORDER.map((l) => manifest.nodes.filter((n) => n.layer === l));
+    const tallest = Math.max(...cols.map((c) => c.length), 1);
+    const H = TOP + tallest * 92 + BOT;
+    const innerH = H - TOP - BOT;
+    const colW = (W - PAD_X * 2) / COL_ORDER.length;
+    const colX: Record<Layer, number> = {} as any;
+    const counts: Record<Layer, number> = {} as any;
+    COL_ORDER.forEach((l, i) => { colX[l] = PAD_X + colW * i + colW / 2; });
+    const pos: Record<string, { x: number; y: number }> = {};
+    cols.forEach((nodes, ci) => {
+      const l = COL_ORDER[ci];
+      counts[l] = nodes.length;
+      nodes.forEach((n, i) => {
+        const y = TOP + ((i + 0.5) / nodes.length) * innerH;
+        pos[n.id] = { x: colX[l], y };
+      });
+    });
+    return { pos, colX, colW, H, counts };
+  }, []);
+
+  const colIndex = (l: Layer) => COL_ORDER.indexOf(l);
+
+  const neighbors = (id: string) => {
+    const s = new Set<string>([id]);
+    manifest.edges.forEach((e) => { if (e.from === id) s.add(e.to); if (e.to === id) s.add(e.from); });
+    return s;
+  };
+  const connectedEdges = (id: string) => new Set(manifest.edges.filter((e) => e.from === id || e.to === id).map((e) => e.id));
+
+  const activeEdges: Set<string> | null = hoverEdge ? new Set([hoverEdge])
+    : hoverNode ? connectedEdges(hoverNode) : null;
+  const activeNodes: Set<string> | null = hoverEdge
+    ? new Set([manifest.edges.find((e) => e.id === hoverEdge)!.from, manifest.edges.find((e) => e.id === hoverEdge)!.to])
+    : hoverNode ? neighbors(hoverNode) : null;
+
+  // geometry for one wire: anchors + bezier + midpoint
+  function geom(e: SystemEdge) {
+    const a = pos[e.from], b = pos[e.to];
+    if (!a || !b) return null;
+    const half = NODE_W / 2;
+    if (e.from === e.to) {
+      const rx = a.x + half;
+      return { d: `M ${rx} ${a.y - 12} C ${rx + 58} ${a.y - 36}, ${rx + 58} ${a.y + 36}, ${rx} ${a.y + 12}`, tx: rx, ty: a.y + 12, mx: rx + 44, my: a.y };
+    }
+    const sc = colIndex(byId[e.from].layer), tc = colIndex(byId[e.to].layer);
+    let sx: number, tx: number;
+    if (tc > sc) { sx = a.x + half; tx = b.x - half; }
+    else if (tc < sc) { sx = a.x - half; tx = b.x + half; }
+    else { sx = a.x + half; tx = b.x + half; }
+    const sy = a.y, ty = b.y;
+    if (sc === tc) {
+      const off = 60;
+      return { d: `M ${sx} ${sy} C ${sx + off} ${sy}, ${tx + off} ${ty}, ${tx} ${ty}`, tx, ty, mx: tx + off * 0.7, my: (sy + ty) / 2 };
+    }
+    const mx = (sx + tx) / 2;
+    return { d: `M ${sx} ${sy} C ${mx} ${sy}, ${mx} ${ty}, ${tx} ${ty}`, tx, ty, mx, my: (sy + ty) / 2 - 9 };
+  }
+  const edgeColor = (e: SystemEdge) => e.planned ? "var(--obs-planned)" : !e.encrypted ? "var(--obs-critical)" : "var(--obs-data)";
 
   return (
     <div>
-      {/* legend */}
-      <div style={{ display: "flex", flexWrap: "wrap", gap: 16, marginBottom: 14, alignItems: "center" }}>
+      {/* legend + filter */}
+      <div style={{ display: "flex", flexWrap: "wrap", gap: 14, marginBottom: 14, alignItems: "center" }}>
         {(["safe", "watch", "at-risk"] as const).map((v) => (
           <span key={v} style={{ display: "flex", alignItems: "center", gap: 7, fontSize: 12, color: "var(--obs-dim)" }}>
             <Dot color={verdictColor[v]} size={7} /> {verdictLabel[v]}
           </span>
         ))}
         <span style={{ display: "flex", alignItems: "center", gap: 7, fontSize: 12, color: "var(--obs-dim)" }}>
-          <svg width="26" height="6"><line x1="0" y1="3" x2="26" y2="3" stroke="var(--obs-planned)" strokeWidth="1.5" strokeDasharray="3 4" /></svg>
-          Planned
+          <svg width="26" height="6"><line x1="0" y1="3" x2="26" y2="3" stroke="var(--obs-data)" strokeWidth="2" /></svg> Encrypted
         </span>
         <span style={{ display: "flex", alignItems: "center", gap: 7, fontSize: 12, color: "var(--obs-dim)" }}>
-          <svg width="26" height="6"><line x1="0" y1="3" x2="26" y2="3" stroke="var(--obs-critical)" strokeWidth="2" /></svg>
-          Unencrypted at rest
+          <svg width="26" height="6"><line x1="0" y1="3" x2="26" y2="3" stroke="var(--obs-critical)" strokeWidth="2" /></svg> Unencrypted at rest
         </span>
-        <span className="obs-mono" style={{ marginLeft: "auto", fontSize: 11, color: "var(--obs-faint)" }}>
-          click any node or wire · hover to trace connections
+        <span style={{ display: "flex", alignItems: "center", gap: 7, fontSize: 12, color: "var(--obs-dim)" }}>
+          <svg width="26" height="6"><line x1="0" y1="3" x2="26" y2="3" stroke="var(--obs-planned)" strokeWidth="1.5" strokeDasharray="3 4" /></svg> Planned
         </span>
+        <div style={{ marginLeft: "auto", display: "flex", gap: 8, alignItems: "center" }}>
+          <select value={layerFilter} onChange={(e) => setLayerFilter(e.target.value as any)} className="obs-mono"
+                  style={{ background: "var(--obs-panel-2)", color: "var(--obs-text)", border: "1px solid var(--obs-line)", borderRadius: 8, padding: "6px 10px", fontSize: 11 }}>
+            <option value="all">all layers</option>
+            {COL_ORDER.map((l) => <option key={l} value={l}>{l}</option>)}
+          </select>
+          <span className="obs-mono" style={{ fontSize: 11, color: "var(--obs-faint)" }}>hover a node to trace its flows</span>
+        </div>
       </div>
 
       {/* the map */}
-      <div className="obs-panel" style={{ padding: 8, overflowX: "auto" }}>
-        <svg viewBox={`0 0 ${W} ${H}`} style={{ width: "100%", minWidth: 760, display: "block" }} role="img" aria-label="Takeover system architecture map">
-          {/* faint grid */}
+      <div className="obs-panel" style={{ padding: 6, overflowX: "auto" }}>
+        <svg viewBox={`0 0 ${W} ${H}`} style={{ width: "100%", minWidth: 940, display: "block" }} role="img" aria-label="Takeover system architecture map">
           <defs>
-            <pattern id="obs-grid" width="40" height="40" patternUnits="userSpaceOnUse">
-              <path d="M 40 0 L 0 0 0 40" fill="none" stroke="var(--obs-line)" strokeWidth=".4" opacity=".5" />
+            <pattern id="obs-grid" width="46" height="46" patternUnits="userSpaceOnUse">
+              <circle cx="1" cy="1" r="1" fill="var(--obs-line)" opacity=".45" />
             </pattern>
+            <linearGradient id="obs-card" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0" stopColor="#212126" /><stop offset="1" stopColor="#161619" />
+            </linearGradient>
+            <radialGradient id="obs-vign" cx="50%" cy="0%" r="90%">
+              <stop offset="0" stopColor="#1a1a1f" stopOpacity=".9" /><stop offset="60%" stopColor="#0c0c0e" stopOpacity="0" />
+            </radialGradient>
+            <filter id="obs-glow" x="-60%" y="-60%" width="220%" height="220%">
+              <feGaussianBlur stdDeviation="3.2" result="b" />
+              <feMerge><feMergeNode in="b" /><feMergeNode in="SourceGraphic" /></feMerge>
+            </filter>
           </defs>
-          <rect width={W} height={H} fill="url(#obs-grid)" rx="10" />
+
+          <rect x="1" y="1" width={W - 2} height={H - 2} rx="16" fill="#0c0c0e" />
+          <rect x="1" y="1" width={W - 2} height={H - 2} rx="16" fill="url(#obs-vign)" />
+          <rect x="1" y="1" width={W - 2} height={H - 2} rx="16" fill="url(#obs-grid)" />
+
+          {/* lanes + headers */}
+          {COL_ORDER.map((l, i) => {
+            const laneX = PAD_X + colW * i;
+            const on = layerFilter === "all" || layerFilter === l;
+            return (
+              <g key={l} opacity={on ? 1 : 0.3} style={{ transition: "opacity .2s" }}>
+                <rect x={laneX + 6} y={54} width={colW - 12} height={H - 54 - 14} rx="14"
+                      fill="#ffffff" fillOpacity={i % 2 === 0 ? 0.018 : 0.006} />
+                <text x={colX[l]} y={32} textAnchor="middle" className="obs-mono" fontSize="10.5" letterSpacing="2.5" fill="var(--obs-dim)">
+                  {l.toUpperCase()}
+                  <tspan fill="var(--obs-faint)">  {counts[l]}</tspan>
+                </text>
+                <text x={colX[l]} y={46} textAnchor="middle" fontSize="9.5" className="obs-mono" fill="var(--obs-faint)" letterSpacing="1">{COL_TITLE[l]}</text>
+              </g>
+            );
+          })}
 
           {/* wires */}
           {manifest.edges.map((e) => {
-            const a = byId[e.from], b = byId[e.to];
-            if (!a || !b) return null;
-            const x1 = px(a.x), y1 = py(a.y), x2 = px(b.x), y2 = py(b.y);
-            const mx = (x1 + x2) / 2;
-            const d = `M ${x1} ${y1} C ${mx} ${y1}, ${mx} ${y2}, ${x2} ${y2}`;
-            const base = e.planned ? "var(--obs-planned)" : !e.encrypted ? "var(--obs-critical)" : "var(--obs-data)";
-            const dim = hot && !hot.has(e.id);
+            const g = geom(e);
+            if (!g) return null;
+            const color = edgeColor(e);
+            const isActive = activeEdges ? activeEdges.has(e.id) : false;
+            const dim = (activeEdges && !isActive) || (layerFilter !== "all" && byId[e.from].layer !== layerFilter && byId[e.to].layer !== layerFilter);
             return (
-              <g key={e.id} style={{ cursor: "pointer", opacity: dim ? 0.12 : 1, transition: "opacity .2s" }}
-                 onClick={() => setSelEdge(e)}
-                 onMouseEnter={() => setHover(e.from)} onMouseLeave={() => setHover(null)}>
-                <path d={d} fill="none" stroke="transparent" strokeWidth="16" />
-                <path d={d} fill="none" stroke={base} strokeWidth={e.planned ? 1.2 : 1.6}
-                      strokeDasharray={e.planned ? "3 5" : undefined} opacity={e.planned ? 0.7 : 0.45} />
-                {!e.planned && (
-                  <path className="obs-wire" d={d} fill="none" stroke={base} strokeWidth="2.4" strokeLinecap="round" />
+              <g key={e.id} style={{ cursor: "pointer", opacity: dim ? 0.06 : isActive ? 1 : 0.22, transition: "opacity .2s" }}
+                 onClick={() => setSelEdge(e)} onMouseEnter={() => setHoverEdge(e.id)} onMouseLeave={() => setHoverEdge(null)}>
+                <path d={g.d} fill="none" stroke="transparent" strokeWidth="20" />
+                <path d={g.d} fill="none" stroke={color} strokeWidth={isActive ? 2 : 1.3}
+                      strokeDasharray={e.planned ? "3 5" : undefined} strokeLinecap="round"
+                      filter={isActive ? "url(#obs-glow)" : undefined} />
+                {isActive && !e.planned && <path className="obs-wire" d={g.d} fill="none" stroke={color} strokeWidth="2.6" strokeLinecap="round" />}
+                {isActive && <circle cx={g.tx} cy={g.ty} r="3.4" fill={color} filter="url(#obs-glow)" />}
+                {isActive && (
+                  <g>
+                    <rect x={g.mx - e.label.length * 3.05 - 7} y={g.my - 11} width={e.label.length * 6.1 + 14} height="18" rx="6"
+                          fill="#0c0c0e" stroke="var(--obs-line-strong)" strokeWidth=".6" />
+                    <text className="obs-mono" fontSize="9.5" fill="var(--obs-text)" textAnchor="middle" x={g.mx} y={g.my + 1.5}>{e.label}</text>
+                  </g>
                 )}
-                <text className="obs-mono" fontSize="9" fill="var(--obs-faint)" textAnchor="middle"
-                      x={mx} y={(y1 + y2) / 2 - 7}>{e.label}</text>
               </g>
             );
           })}
 
           {/* nodes */}
           {manifest.nodes.map((n) => {
-            const x = px(n.x), y = py(n.y);
+            const p = pos[n.id];
+            if (!p) return null;
             const c = verdictColor[n.verdict];
+            const count = nodeFindings(n.id).length;
             const risk = nodeRisk(n.id);
-            const dim = hot && !hot.has(n.id);
+            const lines = wrapLabel(n.label);
+            const NH = lines.length > 1 ? 66 : 54;
+            const left = p.x - NODE_W / 2, top = p.y - NH / 2;
+            const dim = (activeNodes && !activeNodes.has(n.id)) || (layerFilter !== "all" && n.layer !== layerFilter);
+            const focused = activeNodes ? activeNodes.has(n.id) : false;
+            const riskC = risk >= 25 ? "var(--obs-critical)" : "var(--obs-high)";
             return (
-              <g key={n.id} style={{ cursor: "pointer", opacity: dim ? 0.18 : 1, transition: "opacity .2s" }}
-                 onClick={() => setSelNode(n)}
-                 onMouseEnter={() => setHover(n.id)} onMouseLeave={() => setHover(null)}
-                 tabIndex={0} onKeyDown={(e) => e.key === "Enter" && setSelNode(n)}
-                 role="button" aria-label={`${n.label}, ${verdictLabel[n.verdict]}`}>
-                <rect x={x - 78} y={y - 26} width="156" height="52" rx="11"
-                      fill="var(--obs-panel-2)"
-                      stroke={n.planned ? "var(--obs-planned)" : c}
-                      strokeWidth={n.verdict === "at-risk" ? 1.8 : 1.2}
-                      strokeDasharray={n.planned ? "4 4" : undefined} />
-                {risk > 0 && (
+              <g key={n.id} style={{ cursor: "pointer", opacity: dim ? 0.14 : 1, transition: "opacity .2s" }}
+                 onClick={() => setSelNode(n)} onMouseEnter={() => setHoverNode(n.id)} onMouseLeave={() => setHoverNode(null)}
+                 tabIndex={0} onKeyDown={(ev) => ev.key === "Enter" && setSelNode(n)}
+                 role="button" aria-label={`${n.label}, ${verdictLabel[n.verdict]}, ${count} open findings`}>
+                {focused && <rect x={left - 3} y={top - 3} width={NODE_W + 6} height={NH + 6} rx="14" fill="none" stroke={c} strokeOpacity=".25" strokeWidth="6" />}
+                <rect x={left} y={top} width={NODE_W} height={NH} rx="12" fill="url(#obs-card)"
+                      stroke={focused ? c : "var(--obs-line)"} strokeWidth={focused ? 1.6 : 1}
+                      strokeDasharray={n.planned ? "5 4" : undefined}
+                      style={{ filter: focused ? "drop-shadow(0 8px 22px rgba(0,0,0,.7))" : "drop-shadow(0 2px 6px rgba(0,0,0,.4))", transition: "stroke .2s" }} />
+                <rect x={left + 8} y={top + 12} width="4" height={NH - 24} rx="2" fill={n.planned ? "var(--obs-planned)" : c} />
+                {lines.map((ln, i) => (
+                  <text key={i} x={left + 22} y={lines.length > 1 ? top + 24 + i * 16 : p.y - 2}
+                        fontSize="13" fill="var(--obs-text)" fontFamily="var(--obs-body)" fontWeight="600">{ln}</text>
+                ))}
+                <text x={left + 22} y={top + NH - 12} fontSize="9" className="obs-mono" fill="var(--obs-faint)" letterSpacing="1.4">{n.layer.toUpperCase()}</text>
+                {count > 0 && (
                   <g>
-                    <circle cx={x + 70} cy={y - 22} r="10" fill="var(--obs-bg)" stroke={risk >= 25 ? "var(--obs-critical)" : "var(--obs-high)"} strokeWidth="1.2" />
-                    <text x={x + 70} y={y - 18.5} textAnchor="middle" fontSize="10" className="obs-mono"
-                          fill={risk >= 25 ? "var(--obs-critical)" : "var(--obs-high)"}>{nodeFindings(n.id).length}</text>
+                    <circle cx={left + NODE_W - 17} cy={top + 17} r="10.5" fill={riskC} fillOpacity=".14" stroke={riskC} strokeWidth="1.1" />
+                    <text x={left + NODE_W - 17} y={top + 20.5} textAnchor="middle" fontSize="10" className="obs-mono" fill={riskC}>{count}</text>
                   </g>
                 )}
-                <circle cx={x - 64} cy={y - 8} r="3.5" fill={c} />
-                <text x={x - 54} y={y - 4} fontSize="12.5" fill="var(--obs-text)" fontFamily="var(--obs-body)" fontWeight="600">
-                  {n.label.length > 22 ? n.label.slice(0, 22) + "…" : n.label}
-                </text>
-                <text x={x - 64} y={y + 13} fontSize="9.5" className="obs-mono" fill="var(--obs-faint)">
-                  {LAYER_LABEL[n.layer].split(" ·")[0].toUpperCase()}
-                </text>
               </g>
             );
           })}
@@ -135,14 +250,13 @@ export default function SystemMapTab() {
         {selNode && (
           <>
             <ModalHeader
-              eyebrow={`${LAYER_LABEL[selNode.layer]} · ${selNode.tech}`}
+              eyebrow={`${COL_TITLE[selNode.layer]} · ${selNode.tech}`}
               title={selNode.label}
               right={<Badge color={verdictColor[selNode.verdict]}>{verdictLabel[selNode.verdict]}</Badge>}
             />
             <div style={{ padding: "20px 28px" }}>
               <Field label="What this is">{selNode.detail}</Field>
               <Field label="Lives in" mono>{selNode.paths.join("  ·  ")}</Field>
-
               {selNode.owns.length > 0 && (
                 <Field label="Data resting here">
                   <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
@@ -153,7 +267,6 @@ export default function SystemMapTab() {
                   </div>
                 </Field>
               )}
-
               {nodeFindings(selNode.id).length > 0 && (
                 <Field label="Open findings against this component">
                   <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
@@ -169,14 +282,13 @@ export default function SystemMapTab() {
                   </div>
                 </Field>
               )}
-
               <Field label="Wires touching this node">
                 {manifest.edges.filter((e) => e.from === selNode.id || e.to === selNode.id).map((e) => (
                   <div key={e.id} className="obs-row" style={{ display: "flex", gap: 10, alignItems: "center", padding: "7px 8px", borderRadius: 8, fontSize: 13 }}
                        onClick={() => { setSelEdge(e); setSelNode(null); }}>
                     <Dot color={e.encrypted ? "var(--obs-data)" : "var(--obs-critical)"} size={6} />
                     <span className="obs-mono" style={{ fontSize: 11.5, color: "var(--obs-dim)" }}>
-                      {(manifest.nodes.find(n => n.id === e.from)?.label ?? e.from)} → {(manifest.nodes.find(n => n.id === e.to)?.label ?? e.to)}
+                      {(byId[e.from]?.label ?? e.from)} → {(byId[e.to]?.label ?? e.to)}
                     </span>
                     <span style={{ color: "var(--obs-faint)", fontSize: 12 }}>· {e.label}</span>
                   </div>
@@ -213,11 +325,7 @@ export default function SystemMapTab() {
                   </div>
                 </Field>
               )}
-              {selEdge.planned && (
-                <Field label="Status">
-                  <Badge color="var(--obs-planned)">Planned — not yet in the codebase</Badge>
-                </Field>
-              )}
+              {selEdge.planned && <Field label="Status"><Badge color="var(--obs-planned)">Planned — not yet in the codebase</Badge></Field>}
             </div>
           </>
         )}
