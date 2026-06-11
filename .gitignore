@@ -33,3 +33,7 @@ release.json
 target/**
 .tanstackdocs/INFRASTRUCTURE_OVERVIEW.md
 .tanstack/
+
+# Observatory machine-local scan output (regenerates on launch)
+src/admin/observatory/data/scan.json
+src/admin/observatory/data/scan-history.json
