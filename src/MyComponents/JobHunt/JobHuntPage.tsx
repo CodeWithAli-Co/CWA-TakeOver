@@ -8,7 +8,11 @@ import { findRecruiterEmail } from "@/JobHunt/findRecruiterEmail";
 import { useSendEmail } from "@/stores/gmail";
 import { useJobHunt, JOB_STATUSES, type JobStatus, type SavedJob } from "./jobHuntStore";
 import { inferProfileFromResume, type ApplyProfile } from "@/JobHunt/profile";
-import { autoApply, detectAts, ATS_LABEL } from "@/JobHunt/autoApply";
+import { detectAts, ATS_LABEL } from "@/JobHunt/atsDetect";
+import { autoApply, type ApplyResult } from "@/JobHunt/autoApply";
+import { open as openShell } from "@tauri-apps/plugin-shell";
+
+const goExternal = (u?: string | null) => { if (u) openShell(u).catch(() => { try { window.open(u, "_blank"); } catch { /* noop */ } }); };
 
 const STATUS_STYLE: Record<JobStatus, string> = {
   saved: "text-zinc-300 border-zinc-600/50 bg-zinc-500/10",
@@ -184,13 +188,12 @@ function JobModal({ job, onClose, masterResume, profile, onUpdate, onRemove }: {
   const [attachPdf, setAttachPdf] = useState(true);
   const ats = job.url ? detectAts(job.url) : null;
   const [applying, setApplying] = useState(false);
-  const [applyMsg, setApplyMsg] = useState<{ status: string; reason: string; applyUrl?: string | null } | null>(null);
+  const [applyMsg, setApplyMsg] = useState<ApplyResult | null>(null);
   async function doAutoApply() {
     if (applying) return;
     setApplying(true); setApplyMsg(null);
     const r = await autoApply({ url: job.url, company: job.company, tailored: job.tailored }, profile, masterResume);
-    setApplying(false);
-    setApplyMsg(r);
+    setApplying(false); setApplyMsg(r);
     if (r.status === "submitted") onUpdate({ status: "applied" });
   }
   async function makeDraft() {
@@ -256,29 +259,36 @@ function JobModal({ job, onClose, masterResume, profile, onUpdate, onRemove }: {
                     className="h-8 px-2 rounded-md bg-background border border-border text-[12px] text-foreground capitalize">
               {JOB_STATUSES.map((s) => <option key={s} value={s}>{s}</option>)}
             </select>
-            {job.url && <a href={job.url} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-[12px] text-sky-400 hover:underline">Apply <ExternalLink size={12} /></a>}
+            {job.url && <button onClick={() => goExternal(job.url)} className="inline-flex items-center gap-1 text-[12px] text-sky-400 hover:underline">Apply <ExternalLink size={12} /></button>}
             <button onClick={onRemove} className="ml-auto inline-flex items-center gap-1 text-[12px] text-red-400/80 hover:text-red-400"><Trash2 size={12} /> Remove</button>
           </div>
 
-          {/* auto-apply */}
+          {/* apply */}
           <div className="rounded-md border border-border bg-background p-3 flex flex-wrap items-center gap-3">
             <span className="text-[11px] uppercase tracking-wider text-muted-foreground">Apply</span>
-            {ats && <span className="text-[12px] text-foreground">{ATS_LABEL[ats.kind]}{ats.kind === "lever" && ats.canAutoApply ? " · auto-submittable" : " · manual"}</span>}
-            {ats && ats.kind === "lever" && ats.canAutoApply ? (
-              <button onClick={doAutoApply} disabled={applying || !profile.email}
-                      className="inline-flex items-center gap-2 h-8 px-3 rounded-md bg-primary text-primary-foreground text-[12px] font-semibold disabled:opacity-50 ml-auto">
-                {applying ? <Loader2 size={13} className="animate-spin" /> : <Send size={13} />}{applying ? "Applying…" : "Auto-apply"}
-              </button>
-            ) : (
-              job.url && <a href={job.url} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-[12px] text-sky-400 hover:underline ml-auto">Open application <ExternalLink size={12} /></a>
-            )}
-            {!profile.email && <span className="text-[11px] text-amber-400/80 w-full">Set your Apply profile first (top-right).</span>}
+            {ats && <span className="text-[12px] text-foreground">{ATS_LABEL[ats.kind]}{ats.canAutoApply ? " · auto" : " · manual"}</span>}
+            <div className="ml-auto flex items-center gap-2">
+              {ats?.canAutoApply && (
+                <button onClick={doAutoApply} disabled={applying || !profile.email}
+                        className="inline-flex items-center gap-2 h-8 px-3 rounded-md bg-primary text-primary-foreground text-[12px] font-semibold disabled:opacity-50">
+                  {applying ? <Loader2 size={13} className="animate-spin" /> : <Send size={13} />}{applying ? "Applying…" : "Auto-apply"}
+                </button>
+              )}
+              {job.url && (
+                <button onClick={() => { goExternal(job.url); onUpdate({ status: "applied" }); }}
+                        className="inline-flex items-center gap-1 h-8 px-3 rounded-md border border-border text-[12px] text-foreground hover:border-foreground/30">
+                  <ExternalLink size={13} /> Open & mark applied
+                </button>
+              )}
+            </div>
+            {!profile.email && <span className="w-full text-[11px] text-amber-400/80">Set your Apply profile first (top-right) so the bot can fill the form.</span>}
             {applyMsg && (
-              <div className="w-full text-[11.5px]" style={{ color: applyMsg.status === "submitted" ? "var(--success, #4ade80)" : applyMsg.status === "error" ? "#f87171" : "#a1a1aa" }}>
-                {applyMsg.status === "submitted" ? "✓ " : ""}{applyMsg.reason}
-                {applyMsg.applyUrl && applyMsg.status !== "submitted" && <> <a href={applyMsg.applyUrl} target="_blank" rel="noreferrer" className="text-sky-400 hover:underline">open</a></>}
+              <div className="w-full text-[11.5px]" style={{ color: applyMsg.status === "submitted" ? "#4ade80" : applyMsg.status === "error" ? "#f87171" : "#fbbf24" }}>
+                {applyMsg.status === "submitted" ? "✓ " : applyMsg.status === "needs_human" ? "⚠ " : ""}{applyMsg.reason}
+                {applyMsg.applyUrl && applyMsg.status !== "submitted" && <> <button onClick={() => goExternal(applyMsg.applyUrl)} className="text-sky-400 hover:underline">open to finish</button></>}
               </div>
             )}
+            <p className="w-full text-[11px] text-muted-foreground">Auto-apply drives a real browser via your apply-worker (Lever/Greenhouse/Ashby). Captcha'd or unusual forms fall back to "open to finish." Needs the worker running + APPLY_WORKER_URL set on takeover_b2b.</p>
           </div>
 
           {job.summary && <p className="text-[13px] text-muted-foreground leading-relaxed [overflow-wrap:anywhere]">{job.summary}</p>}
