@@ -7,6 +7,7 @@ import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import type { JobPosting } from "@/JobHunt/discoverJobs";
 import type { TailorResult } from "@/JobHunt/tailorResume";
+import { type ApplyProfile, emptyProfile } from "@/JobHunt/profile";
 
 export type JobStatus = "saved" | "applied" | "interview" | "offer" | "rejected";
 export const JOB_STATUSES: JobStatus[] = ["saved", "applied", "interview", "offer", "rejected"];
@@ -24,6 +25,8 @@ const key = (j: { company: string; title: string }) => `${j.company}::${j.title}
 interface JobHuntState {
   masterResume: string;
   jobs: SavedJob[];
+  profile: ApplyProfile;
+  setProfile: (p: ApplyProfile) => void;
   setMasterResume: (r: string) => void;
   addJobs: (jobs: JobPosting[]) => number; // returns count actually added
   updateJob: (id: string, patch: Partial<SavedJob>) => void;
@@ -35,6 +38,8 @@ export const useJobHunt = create<JobHuntState>()(
     (set, get) => ({
       masterResume: "",
       jobs: [],
+      profile: emptyProfile,
+      setProfile: (profile) => set({ profile }),
       setMasterResume: (masterResume) => set({ masterResume }),
       addJobs: (incoming) => {
         const existing = new Set(get().jobs.map((j) => key(j)));

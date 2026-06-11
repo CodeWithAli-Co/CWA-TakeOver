@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { Sparkles, FileText, ExternalLink, Trash2, X, Wand2, Copy, Check, Loader2, Briefcase, Mail, Send, Download } from "lucide-react";
+import { Sparkles, FileText, ExternalLink, Trash2, X, Wand2, Copy, Check, Loader2, Briefcase, Mail, Send, Download, IdCard } from "lucide-react";
 import { discoverJobs } from "@/JobHunt/discoverJobs";
 import { fetchJobsApi } from "@/JobHunt/fetchJobsApi";
 import { tailorResume } from "@/JobHunt/tailorResume";
@@ -7,6 +7,7 @@ import { draftRecruiterEmail } from "@/JobHunt/draftRecruiterEmail";
 import { findRecruiterEmail } from "@/JobHunt/findRecruiterEmail";
 import { useSendEmail } from "@/stores/gmail";
 import { useJobHunt, JOB_STATUSES, type JobStatus, type SavedJob } from "./jobHuntStore";
+import { inferProfileFromResume, type ApplyProfile } from "@/JobHunt/profile";
 
 const STATUS_STYLE: Record<JobStatus, string> = {
   saved: "text-zinc-300 border-zinc-600/50 bg-zinc-500/10",
@@ -28,7 +29,7 @@ function CopyBtn({ text }: { text: string }) {
 }
 
 export function JobHuntPage() {
-  const { masterResume, setMasterResume, jobs, addJobs, updateJob, removeJob } = useJobHunt();
+  const { masterResume, setMasterResume, jobs, addJobs, updateJob, removeJob, profile, setProfile } = useJobHunt();
   const [query, setQuery] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -37,6 +38,7 @@ export function JobHuntPage() {
   const [source, setSource] = useState<"boards" | "axon">("boards");
   const [openId, setOpenId] = useState<string | null>(null);
   const [resumeOpen, setResumeOpen] = useState(false);
+  const [profileOpen, setProfileOpen] = useState(false);
 
   const counts = useMemo(() => {
     const c: Record<string, number> = { all: jobs.length };
@@ -71,11 +73,18 @@ export function JobHuntPage() {
             Find a role, tailor your resume, apply.
           </h1>
         </div>
-        <button onClick={() => setResumeOpen(true)}
-                className="inline-flex items-center gap-2 h-9 px-3.5 rounded-md border border-border bg-card hover:border-foreground/30 text-[13px] text-foreground transition-colors">
-          <FileText size={14} />
-          {masterResume ? "Master resume ✓" : "Add master resume"}
-        </button>
+        <div className="flex items-center gap-2">
+          <button onClick={() => setProfileOpen(true)}
+                  className="inline-flex items-center gap-2 h-9 px-3.5 rounded-md border border-border bg-card hover:border-foreground/30 text-[13px] text-foreground transition-colors">
+            <IdCard size={14} />
+            {profile.email ? "Apply profile ✓" : "Apply profile"}
+          </button>
+          <button onClick={() => setResumeOpen(true)}
+                  className="inline-flex items-center gap-2 h-9 px-3.5 rounded-md border border-border bg-card hover:border-foreground/30 text-[13px] text-foreground transition-colors">
+            <FileText size={14} />
+            {masterResume ? "Master resume ✓" : "Add master resume"}
+          </button>
+        </div>
       </div>
 
       {/* discover bar */}
@@ -154,6 +163,7 @@ export function JobHuntPage() {
       {open && <JobModal job={open} onClose={() => setOpenId(null)} masterResume={masterResume}
                          onUpdate={(p) => updateJob(open.id, p)} onRemove={() => { removeJob(open.id); setOpenId(null); }} />}
       {resumeOpen && <ResumeModal value={masterResume} onSave={(v) => { setMasterResume(v); setResumeOpen(false); }} onClose={() => setResumeOpen(false)} />}
+      {profileOpen && <ProfileModal value={profile} resume={masterResume} onSave={(p) => { setProfile(p); setProfileOpen(false); }} onClose={() => setProfileOpen(false)} />}
     </div>
   );
 }
@@ -372,6 +382,55 @@ function ResumeModal({ value, onSave, onClose }: { value: string; onSave: (v: st
           <div className="flex justify-end gap-2 mt-3">
             <button onClick={onClose} className="h-9 px-3 rounded-md border border-border text-[13px] text-muted-foreground hover:text-foreground">Cancel</button>
             <button onClick={() => onSave(v)} className="h-9 px-4 rounded-md bg-primary text-primary-foreground text-[13px] font-semibold">Save resume</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function ProfileModal({ value, resume, onSave, onClose }: { value: ApplyProfile; resume: string; onSave: (p: ApplyProfile) => void; onClose: () => void }) {
+  const [p, setP] = useState<ApplyProfile>(value.email || value.fullName ? value : { ...value, ...inferProfileFromResume(resume) } as ApplyProfile);
+  const set = (k: keyof ApplyProfile, v: any) => setP({ ...p, [k]: v });
+  const Text = ({ label, k, ph }: { label: string; k: keyof ApplyProfile; ph?: string }) => (
+    <label className="flex flex-col gap-1">
+      <span className="text-[10.5px] uppercase tracking-wider text-muted-foreground">{label}</span>
+      <input value={String(p[k] ?? "")} onChange={(e) => set(k, e.target.value)} placeholder={ph}
+             className="bg-background border border-border rounded-md px-2.5 py-1.5 text-[12.5px] text-foreground focus:outline-none focus:border-primary/50" />
+    </label>
+  );
+  const Check = ({ label, k }: { label: string; k: keyof ApplyProfile }) => (
+    <label className="inline-flex items-center gap-2 text-[12.5px] text-foreground cursor-pointer">
+      <input type="checkbox" checked={!!p[k]} onChange={(e) => set(k, e.target.checked)} /> {label}
+    </label>
+  );
+  return (
+    <div className="fixed inset-0 z-[200] bg-black/70 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto" onClick={onClose}>
+      <div className="bg-card border border-border rounded-xl w-full max-w-2xl my-8" onClick={(e) => e.stopPropagation()}>
+        <div className="flex items-center justify-between p-5 border-b border-border">
+          <div className="text-[15px] font-semibold text-foreground">Apply profile</div>
+          <div className="flex items-center gap-3">
+            <button onClick={() => setP({ ...p, ...inferProfileFromResume(resume) })} className="text-[11.5px] text-sky-400 hover:underline">Prefill from resume</button>
+            <button onClick={onClose} className="text-muted-foreground hover:text-foreground"><X size={18} /></button>
+          </div>
+        </div>
+        <div className="p-5">
+          <p className="text-[12px] text-muted-foreground mb-3">These are the standard answers ATS forms ask for. Stored locally; reused for every auto-application.</p>
+          <div className="grid grid-cols-2 gap-3">
+            <Text label="Full name" k="fullName" /><Text label="Email" k="email" />
+            <Text label="Phone" k="phone" /><Text label="Location" k="location" ph="San Jose, CA" />
+            <Text label="LinkedIn" k="linkedin" /><Text label="GitHub" k="github" />
+            <Text label="Portfolio" k="portfolio" /><Text label="Salary expectation" k="salaryExpectation" ph="$160k–$220k" />
+            <Text label="How did you hear?" k="howHeard" />
+          </div>
+          <div className="flex flex-wrap gap-x-6 gap-y-2 mt-4">
+            <Check label="Authorized to work in the US" k="workAuthorized" />
+            <Check label="Requires visa sponsorship" k="needsSponsorship" />
+            <Check label="Decline EEO self-identification" k="eeoDecline" />
+          </div>
+          <div className="flex justify-end gap-2 mt-5">
+            <button onClick={onClose} className="h-9 px-3 rounded-md border border-border text-[13px] text-muted-foreground hover:text-foreground">Cancel</button>
+            <button onClick={() => onSave(p)} className="h-9 px-4 rounded-md bg-primary text-primary-foreground text-[13px] font-semibold">Save profile</button>
           </div>
         </div>
       </div>
