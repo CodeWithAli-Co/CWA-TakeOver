@@ -4,7 +4,7 @@
  * continuously through the day, and watch the live log.
  */
 import { useState } from "react";
-import { Bot, Play, Square, Loader2, Trash2, ChevronDown, ChevronRight, Gauge } from "lucide-react";
+import { Bot, Play, Square, Loader2, Trash2, ChevronDown, ChevronRight, Gauge, CalendarClock } from "lucide-react";
 import { useJobHunt, type AutopilotConfig, type LogLevel } from "./jobHuntStore";
 import { useAutopilot } from "./useAutopilot";
 
@@ -152,6 +152,18 @@ export function AutopilotPanel() {
               <input type="checkbox" checked={cfg.discoverFirst} onChange={(e) => set({ discoverFirst: e.target.checked })} />
               Search for new postings each run
             </label>
+          </div>
+
+          {/* daily scheduler */}
+          <div className="flex flex-wrap items-center gap-3 rounded-md border border-border bg-background px-3 py-2.5">
+            <label className="inline-flex items-center gap-2 text-[12.5px] text-foreground cursor-pointer">
+              <input type="checkbox" checked={cfg.scheduleEnabled} onChange={(e) => set({ scheduleEnabled: e.target.checked })} />
+              <CalendarClock size={14} className="text-muted-foreground" /> Auto-start daily at
+            </label>
+            <input type="time" value={cfg.scheduleTime} onChange={(e) => set({ scheduleTime: e.target.value })}
+                   disabled={!cfg.scheduleEnabled}
+                   className={`${numCls} disabled:opacity-50`} />
+            <span className="text-[11px] text-muted-foreground">fires once/day while the app is open</span>
           </div>
 
           {lastSummary && (

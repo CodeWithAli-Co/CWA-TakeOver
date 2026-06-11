@@ -31,6 +31,8 @@ export interface AutopilotConfig {
   discoverFirst: boolean;      // pull fresh listings at the start of each run
   throttleSec: number;         // pause between applications (look human, be polite)
   intervalMin: number;         // continuous mode: minutes between batches
+  scheduleEnabled: boolean;    // auto-start once per day at scheduleTime (while app is open)
+  scheduleTime: string;        // "HH:MM" 24h local time to kick off the daily run
 }
 
 export const defaultAutopilot: AutopilotConfig = {
@@ -43,13 +45,78 @@ export const defaultAutopilot: AutopilotConfig = {
   discoverFirst: true,
   throttleSec: 25,
   intervalMin: 45,
+  scheduleEnabled: false,
+  scheduleTime: "08:30",
 };
 
 export type LogLevel = "info" | "ok" | "warn" | "error";
 export interface AutopilotLog { id: string; ts: number; level: LogLevel; msg: string }
 
-const todayKey = () => new Date().toISOString().slice(0, 10); // YYYY-MM-DD, local-ish, stable per day
+const todayKey = () => new Date().toISOString().slice(0, 10); // YYYY-MM-DD, stable per day
 
 const key = (j: { company: string; title: string }) => `${j.company}::${j.title}`.toLowerCase();
 
-i
+interface JobHuntState {
+  masterResume: string;
+  jobs: SavedJob[];
+  profile: ApplyProfile;
+  setProfile: (p: ApplyProfile) => void;
+  setMasterResume: (r: string) => void;
+  addJobs: (jobs: JobPosting[]) => number; // returns count actually added
+  updateJob: (id: string, patch: Partial<SavedJob>) => void;
+  removeJob: (id: string) => void;
+
+  // autopilot
+  autopilot: AutopilotConfig;
+  applied: { date: string; count: number };
+  runLog: AutopilotLog[];
+  lastScheduledRun: string;        // date key of the last scheduled auto-start
+  setAutopilot: (patch: Partial<AutopilotConfig>) => void;
+  recordApplied: () => void;       // increment today's counter (resets on date rollover)
+  appliedToday: () => number;      // submits already made today
+  markScheduledRun: () => void;    // stamp today so the scheduler fires once/day
+  log: (level: LogLevel, msg: string) => void;
+  clearLog: () => void;
+}
+
+export const useJobHunt = create<JobHuntState>()(
+  persist(
+    (set, get) => ({
+      masterResume: "",
+      jobs: [],
+      profile: emptyProfile,
+      setProfile: (profile) => set({ profile }),
+      setMasterResume: (masterResume) => set({ masterResume }),
+      addJobs: (incoming) => {
+        const existing = new Set(get().jobs.map((j) => key(j)));
+        const fresh = incoming
+          .filter((j) => !existing.has(key(j)))
+          .map((j) => ({ ...j, id: crypto.randomUUID(), status: "saved" as JobStatus, createdAt: Date.now() }));
+        if (fresh.length) set({ jobs: [...fresh, ...get().jobs] });
+        return fresh.length;
+      },
+      updateJob: (id, patch) => set({ jobs: get().jobs.map((j) => (j.id === id ? { ...j, ...patch } : j)) }),
+      removeJob: (id) => set({ jobs: get().jobs.filter((j) => j.id !== id) }),
+
+      autopilot: defaultAutopilot,
+      applied: { date: todayKey(), count: 0 },
+      runLog: [],
+      lastScheduledRun: "",
+      setAutopilot: (patch) => set({ autopilot: { ...get().autopilot, ...patch } }),
+      recordApplied: () => {
+        const today = todayKey();
+        const a = get().applied;
+        set({ applied: a.date === today ? { date: today, count: a.count + 1 } : { date: today, count: 1 } });
+      },
+      appliedToday: () => {
+        const a = get().applied;
+        return a.date === todayKey() ? a.count : 0;
+      },
+      markScheduledRun: () => set({ lastScheduledRun: todayKey() }),
+      log: (level, msg) =>
+        set({ runLog: [{ id: crypto.randomUUID(), ts: Date.now(), level, msg }, ...get().runLog].slice(0, 200) }),
+      clearLog: () => set({ runLog: [] }),
+    }),
+    { name: "jobhunt:v1" }
+  )
+);

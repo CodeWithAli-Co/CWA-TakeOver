@@ -23,6 +23,8 @@ export function useAutopilot() {
   const stopRef = useRef(false);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const runningRef = useRef(false);
+  const continuousRef = useRef(false);
+  useEffect(() => { continuousRef.current = continuous; }, [continuous]);
 
   const clearTimer = () => { if (timerRef.current) { clearTimeout(timerRef.current); timerRef.current = null; } };
 
@@ -86,6 +88,27 @@ export function useAutopilot() {
     };
     await tick();
   }, [continuous, runOnce]);
+
+  // Daily scheduler: while the app is open, fire the autopilot once per day at
+  // the configured time. Polls every 30s so a time/enable change takes effect
+  // promptly. markScheduledRun() stamps the day so it can't double-fire.
+  useEffect(() => {
+    const id = setInterval(() => {
+      const s = useJobHunt.getState();
+      const { scheduleEnabled, scheduleTime, dailyCap } = s.autopilot;
+      if (!scheduleEnabled || continuousRef.current || runningRef.current) return;
+      const today = new Date().toISOString().slice(0, 10);
+      if (s.lastScheduledRun === today || s.appliedToday() >= dailyCap) return;
+      const now = new Date();
+      const hhmm = `${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`;
+      if (hhmm >= scheduleTime) {
+        s.markScheduledRun();
+        s.log("info", `Scheduled auto-start (${scheduleTime}).`);
+        startContinuous();
+      }
+    }, 30000);
+    return () => clearInterval(id);
+  }, [startContinuous]);
 
   // Tear down the timer if the component unmounts.
   useEffect(() => () => { stopRef.current = true; clearTimer(); }, []);
