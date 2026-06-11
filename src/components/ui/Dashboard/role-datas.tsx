@@ -1056,6 +1056,14 @@ export const adminData = {
       icon: PiggyBank,
     },
     {
+      // Job Hunt — personal day-job search + AI resume tailoring. Same
+      // discover/tailor engine as Fundraise, pointed at job postings.
+      title: "Job Hunt",
+      url: "/jobs",
+      isActive: false,
+      icon: Briefcase,
+    },
+    {
       // Inbox — send email from inside Takeover via the operator's
       // connected Gmail. Compose-to-anyone surface; deal-attached
       // sends still live in the deal drawer.
@@ -1447,6 +1455,13 @@ export const cooData = {
       company: "codeWithAli" as const,
     },
     {
+      title: "Job Hunt",
+      url: "/jobs",
+      icon: Briefcase,
+      isActive: false,
+      company: "codeWithAli" as const,
+    },
+    {
       // Inbox — send email via the operator's connected Gmail.
       title: "Inbox",
       url: "/inbox",
@@ -1680,6 +1695,13 @@ export const ceoData = {
       title: "Fundraise",
       url: "/fundraise",
       icon: PiggyBank,
+      isActive: false,
+      company: "codeWithAli" as const,
+    },
+    {
+      title: "Job Hunt",
+      url: "/jobs",
+      icon: Briefcase,
       isActive: false,
       company: "codeWithAli" as const,
     },
@@ -2009,6 +2031,14 @@ export const cfoData = {
       url: "/fundraise",
       isActive: false,
       icon: PiggyBank,
+    },
+    {
+      // Job Hunt — personal day-job search + AI resume tailoring. Same
+      // discover/tailor engine as Fundraise, pointed at job postings.
+      title: "Job Hunt",
+      url: "/jobs",
+      isActive: false,
+      icon: Briefcase,
     },
     {
       // Inbox — send email from inside Takeover via the operator's

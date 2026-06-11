@@ -39,6 +39,7 @@ const OnboardingLazyRouteImport = createFileRoute('/onboarding')()
 const OffersLazyRouteImport = createFileRoute('/offers')()
 const Mod_logsLazyRouteImport = createFileRoute('/mod_logs')()
 const LinearLazyRouteImport = createFileRoute('/linear')()
+const JobsLazyRouteImport = createFileRoute('/jobs')()
 const InvoicerLazyRouteImport = createFileRoute('/invoicer')()
 const InfrastructureLazyRouteImport = createFileRoute('/infrastructure')()
 const InboxLazyRouteImport = createFileRoute('/inbox')()
@@ -217,6 +218,11 @@ const LinearLazyRoute = LinearLazyRouteImport.update({
   path: '/linear',
   getParentRoute: () => rootRouteImport,
 } as any).lazy(() => import('./routes/linear.lazy').then((d) => d.Route))
+const JobsLazyRoute = JobsLazyRouteImport.update({
+  id: '/jobs',
+  path: '/jobs',
+  getParentRoute: () => rootRouteImport,
+} as any).lazy(() => import('./routes/jobs.lazy').then((d) => d.Route))
 const InvoicerLazyRoute = InvoicerLazyRouteImport.update({
   id: '/invoicer',
   path: '/invoicer',
@@ -448,6 +454,7 @@ export interface FileRoutesByFullPath {
   '/inbox': typeof InboxLazyRoute
   '/infrastructure': typeof InfrastructureLazyRoute
   '/invoicer': typeof InvoicerLazyRoute
+  '/jobs': typeof JobsLazyRoute
   '/linear': typeof LinearLazyRoute
   '/mod_logs': typeof Mod_logsLazyRoute
   '/offers': typeof OffersLazyRoute
@@ -513,6 +520,7 @@ export interface FileRoutesByTo {
   '/inbox': typeof InboxLazyRoute
   '/infrastructure': typeof InfrastructureLazyRoute
   '/invoicer': typeof InvoicerLazyRoute
+  '/jobs': typeof JobsLazyRoute
   '/linear': typeof LinearLazyRoute
   '/mod_logs': typeof Mod_logsLazyRoute
   '/offers': typeof OffersLazyRoute
@@ -578,6 +586,7 @@ export interface FileRoutesById {
   '/inbox': typeof InboxLazyRoute
   '/infrastructure': typeof InfrastructureLazyRoute
   '/invoicer': typeof InvoicerLazyRoute
+  '/jobs': typeof JobsLazyRoute
   '/linear': typeof LinearLazyRoute
   '/mod_logs': typeof Mod_logsLazyRoute
   '/offers': typeof OffersLazyRoute
@@ -645,6 +654,7 @@ export interface FileRouteTypes {
     | '/inbox'
     | '/infrastructure'
     | '/invoicer'
+    | '/jobs'
     | '/linear'
     | '/mod_logs'
     | '/offers'
@@ -710,6 +720,7 @@ export interface FileRouteTypes {
     | '/inbox'
     | '/infrastructure'
     | '/invoicer'
+    | '/jobs'
     | '/linear'
     | '/mod_logs'
     | '/offers'
@@ -774,6 +785,7 @@ export interface FileRouteTypes {
     | '/inbox'
     | '/infrastructure'
     | '/invoicer'
+    | '/jobs'
     | '/linear'
     | '/mod_logs'
     | '/offers'
@@ -840,6 +852,7 @@ export interface RootRouteChildren {
   InboxLazyRoute: typeof InboxLazyRoute
   InfrastructureLazyRoute: typeof InfrastructureLazyRoute
   InvoicerLazyRoute: typeof InvoicerLazyRoute
+  JobsLazyRoute: typeof JobsLazyRoute
   LinearLazyRoute: typeof LinearLazyRoute
   Mod_logsLazyRoute: typeof Mod_logsLazyRoute
   OffersLazyRoute: typeof OffersLazyRoute
@@ -1061,6 +1074,13 @@ declare module '@tanstack/react-router' {
       path: '/linear'
       fullPath: '/linear'
       preLoaderRoute: typeof LinearLazyRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/jobs': {
+      id: '/jobs'
+      path: '/jobs'
+      fullPath: '/jobs'
+      preLoaderRoute: typeof JobsLazyRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/invoicer': {
@@ -1376,6 +1396,7 @@ const rootRouteChildren: RootRouteChildren = {
   InboxLazyRoute: InboxLazyRoute,
   InfrastructureLazyRoute: InfrastructureLazyRoute,
   InvoicerLazyRoute: InvoicerLazyRoute,
+  JobsLazyRoute: JobsLazyRoute,
   LinearLazyRoute: LinearLazyRoute,
   Mod_logsLazyRoute: Mod_logsLazyRoute,
   OffersLazyRoute: OffersLazyRoute,
