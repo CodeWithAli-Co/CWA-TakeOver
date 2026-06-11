@@ -4,6 +4,7 @@ import { discoverJobs } from "@/JobHunt/discoverJobs";
 import { fetchJobsApi } from "@/JobHunt/fetchJobsApi";
 import { tailorResume } from "@/JobHunt/tailorResume";
 import { draftRecruiterEmail } from "@/JobHunt/draftRecruiterEmail";
+import { findRecruiterEmail } from "@/JobHunt/findRecruiterEmail";
 import { useSendEmail } from "@/stores/gmail";
 import { useJobHunt, JOB_STATUSES, type JobStatus, type SavedJob } from "./jobHuntStore";
 
@@ -183,6 +184,17 @@ function JobModal({ job, onClose, masterResume, onUpdate, onRemove }: {
     try { await sendEmail.mutateAsync({ to, subject: draft.subject, body: draft.body } as any); setSent(true); }
     catch (e: any) { setOerr(e?.message || "Send failed — is Gmail connected?"); }
   }
+  const [finding, setFinding] = useState(false);
+  const [emailNote, setEmailNote] = useState<string | null>(null);
+  async function findEmail() {
+    if (finding) return;
+    setFinding(true); setEmailNote(null);
+    const r = await findRecruiterEmail({ company: job.company, title: job.title });
+    setFinding(false);
+    if (r.error) { setEmailNote(r.error); return; }
+    if (r.email) { setTo(r.email); setEmailNote(r.source_label ? `Found · ${r.source_label}` : "Found a verified address."); }
+    else setEmailNote(r.note || "No verifiable email found — try the company careers page or LinkedIn.");
+  }
 
   async function tailor() {
     if (tailoring) return;
@@ -271,13 +283,18 @@ function JobModal({ job, onClose, masterResume, onUpdate, onRemove }: {
                           className="w-full resize-none bg-background border border-border rounded-md px-3 py-2 text-[12.5px] text-foreground focus:outline-none focus:border-primary/50" />
                 <div className="flex flex-wrap items-center gap-2">
                   <input value={to} onChange={(e) => setTo(e.target.value)} placeholder="recruiter@company.com"
-                         className="flex-1 min-w-[180px] bg-background border border-border rounded-md px-3 py-2 text-[12.5px] text-foreground focus:outline-none focus:border-primary/50" />
+                         className="flex-1 min-w-[160px] bg-background border border-border rounded-md px-3 py-2 text-[12.5px] text-foreground focus:outline-none focus:border-primary/50" />
+                  <button onClick={findEmail} disabled={finding}
+                          className="inline-flex items-center gap-1.5 h-8 px-3 rounded-md border border-border text-[12px] text-foreground disabled:opacity-50 hover:border-foreground/30 shrink-0">
+                    {finding ? <Loader2 size={13} className="animate-spin" /> : <Sparkles size={13} />} Find email
+                  </button>
                   <CopyBtn text={`${draft.subject}\n\n${draft.body}`} />
                   <button onClick={send} disabled={!to.includes("@") || sendEmail.isPending}
                           className="inline-flex items-center gap-1.5 h-8 px-3 rounded-md bg-primary text-primary-foreground text-[12px] font-semibold disabled:opacity-50">
                     {sendEmail.isPending ? <Loader2 size={13} className="animate-spin" /> : <Send size={13} />} Send via Gmail
                   </button>
                 </div>
+                {emailNote && <p className="text-[11px] text-muted-foreground">{emailNote}</p>}
                 {sent && <p className="text-[12px] text-emerald-400">Sent ✓</p>}
                 <p className="text-[10.5px] text-muted-foreground">Job boards rarely include a recruiter email — paste one if you find it (company site / LinkedIn), or copy and send manually.</p>
               </div>
