@@ -8,6 +8,7 @@ import { findRecruiterEmail } from "@/JobHunt/findRecruiterEmail";
 import { useSendEmail } from "@/stores/gmail";
 import { useJobHunt, JOB_STATUSES, type JobStatus, type SavedJob } from "./jobHuntStore";
 import { inferProfileFromResume, type ApplyProfile } from "@/JobHunt/profile";
+import { autoApply, detectAts, ATS_LABEL } from "@/JobHunt/autoApply";
 
 const STATUS_STYLE: Record<JobStatus, string> = {
   saved: "text-zinc-300 border-zinc-600/50 bg-zinc-500/10",
@@ -160,7 +161,7 @@ export function JobHuntPage() {
         </div>
       )}
 
-      {open && <JobModal job={open} onClose={() => setOpenId(null)} masterResume={masterResume}
+      {open && <JobModal job={open} onClose={() => setOpenId(null)} masterResume={masterResume} profile={profile}
                          onUpdate={(p) => updateJob(open.id, p)} onRemove={() => { removeJob(open.id); setOpenId(null); }} />}
       {resumeOpen && <ResumeModal value={masterResume} onSave={(v) => { setMasterResume(v); setResumeOpen(false); }} onClose={() => setResumeOpen(false)} />}
       {profileOpen && <ProfileModal value={profile} resume={masterResume} onSave={(p) => { setProfile(p); setProfileOpen(false); }} onClose={() => setProfileOpen(false)} />}
@@ -168,8 +169,8 @@ export function JobHuntPage() {
   );
 }
 
-function JobModal({ job, onClose, masterResume, onUpdate, onRemove }: {
-  job: SavedJob; onClose: () => void; masterResume: string;
+function JobModal({ job, onClose, masterResume, profile, onUpdate, onRemove }: {
+  job: SavedJob; onClose: () => void; masterResume: string; profile: ApplyProfile;
   onUpdate: (p: Partial<SavedJob>) => void; onRemove: () => void;
 }) {
   const [tailoring, setTailoring] = useState(false);
@@ -181,6 +182,17 @@ function JobModal({ job, onClose, masterResume, onUpdate, onRemove }: {
   const [to, setTo] = useState("");
   const [sent, setSent] = useState(false);
   const [attachPdf, setAttachPdf] = useState(true);
+  const ats = job.url ? detectAts(job.url) : null;
+  const [applying, setApplying] = useState(false);
+  const [applyMsg, setApplyMsg] = useState<{ status: string; reason: string; applyUrl?: string | null } | null>(null);
+  async function doAutoApply() {
+    if (applying) return;
+    setApplying(true); setApplyMsg(null);
+    const r = await autoApply({ url: job.url, company: job.company, tailored: job.tailored }, profile, masterResume);
+    setApplying(false);
+    setApplyMsg(r);
+    if (r.status === "submitted") onUpdate({ status: "applied" });
+  }
   async function makeDraft() {
     if (drafting) return;
     setDrafting(true); setOerr(null); setSent(false);
@@ -246,6 +258,27 @@ function JobModal({ job, onClose, masterResume, onUpdate, onRemove }: {
             </select>
             {job.url && <a href={job.url} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-[12px] text-sky-400 hover:underline">Apply <ExternalLink size={12} /></a>}
             <button onClick={onRemove} className="ml-auto inline-flex items-center gap-1 text-[12px] text-red-400/80 hover:text-red-400"><Trash2 size={12} /> Remove</button>
+          </div>
+
+          {/* auto-apply */}
+          <div className="rounded-md border border-border bg-background p-3 flex flex-wrap items-center gap-3">
+            <span className="text-[11px] uppercase tracking-wider text-muted-foreground">Apply</span>
+            {ats && <span className="text-[12px] text-foreground">{ATS_LABEL[ats.kind]}{ats.kind === "lever" && ats.canAutoApply ? " · auto-submittable" : " · manual"}</span>}
+            {ats && ats.kind === "lever" && ats.canAutoApply ? (
+              <button onClick={doAutoApply} disabled={applying || !profile.email}
+                      className="inline-flex items-center gap-2 h-8 px-3 rounded-md bg-primary text-primary-foreground text-[12px] font-semibold disabled:opacity-50 ml-auto">
+                {applying ? <Loader2 size={13} className="animate-spin" /> : <Send size={13} />}{applying ? "Applying…" : "Auto-apply"}
+              </button>
+            ) : (
+              job.url && <a href={job.url} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-[12px] text-sky-400 hover:underline ml-auto">Open application <ExternalLink size={12} /></a>
+            )}
+            {!profile.email && <span className="text-[11px] text-amber-400/80 w-full">Set your Apply profile first (top-right).</span>}
+            {applyMsg && (
+              <div className="w-full text-[11.5px]" style={{ color: applyMsg.status === "submitted" ? "var(--success, #4ade80)" : applyMsg.status === "error" ? "#f87171" : "#a1a1aa" }}>
+                {applyMsg.status === "submitted" ? "✓ " : ""}{applyMsg.reason}
+                {applyMsg.applyUrl && applyMsg.status !== "submitted" && <> <a href={applyMsg.applyUrl} target="_blank" rel="noreferrer" className="text-sky-400 hover:underline">open</a></>}
+              </div>
+            )}
           </div>
 
           {job.summary && <p className="text-[13px] text-muted-foreground leading-relaxed [overflow-wrap:anywhere]">{job.summary}</p>}
