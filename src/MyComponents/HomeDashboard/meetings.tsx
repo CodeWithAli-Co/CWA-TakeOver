@@ -383,7 +383,7 @@ function MeetingCard({
        *  card. Full text lives on the Schedule day view (clicking
        *  the card already navigates there). */}
       {meeting.description && (
-        <p className="text-[11.5px] text-text-tertiary leading-relaxed line-clamp-2 mt-1.5 pr-2">
+        <p className="text-[11.5px] text-text-tertiary leading-relaxed line-clamp-2 mt-1.5 pr-2 break-words [overflow-wrap:anywhere]">
           {meeting.description}
         </p>
       )}
@@ -392,7 +392,7 @@ function MeetingCard({
        *  stack on the right. mt-3 gives the title room to breathe.
        *  Avatar stack lives at the far right with ml-auto so a
        *  long location label can't push it off the card. */}
-      <div className="flex items-center gap-2 mt-3">
+      <div className="flex flex-wrap items-center gap-2 mt-3 min-w-0">
         {/* Location pill. For online meetings the pill itself is
          *  a Join link; for in-person + hybrid it shows the room
          *  name with an optional Join link beside it. */}
@@ -403,7 +403,7 @@ function MeetingCard({
             rel="noopener noreferrer"
             onClick={(e) => e.stopPropagation()}
             className="
-              inline-flex items-center gap-1 max-w-[180px]
+              flex items-center gap-1 min-w-0 max-w-[180px]
               bg-foreground/[0.06] hover:bg-foreground/[0.10]
               border border-xs border-border-soft
               rounded-md px-2 py-0.5
@@ -412,12 +412,12 @@ function MeetingCard({
             "
           >
             <Video className="h-2.5 w-2.5 shrink-0" />
-            <span className="truncate">{locLabel}</span>
+            <span className="truncate min-w-0">{locLabel}</span>
           </a>
         ) : (
           <span
             className="
-              inline-flex items-center gap-1 max-w-[200px]
+              flex items-center gap-1 min-w-0 max-w-[200px]
               bg-foreground/[0.06]
               border border-xs border-border-soft
               rounded-md px-2 py-0.5
@@ -425,7 +425,7 @@ function MeetingCard({
             "
           >
             <MapPin className="h-2.5 w-2.5 shrink-0" />
-            <span className="truncate">{locLabel}</span>
+            <span className="truncate min-w-0">{locLabel}</span>
           </span>
         )}
 

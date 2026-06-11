@@ -236,7 +236,7 @@ export function TasksOverviewCard({ username }: Props) {
   }, [scope]);
 
   return (
-    <BentoCard span="col-span-4 row-span-2" delay={0.3} noPadding>
+    <BentoCard span="col-span-12 lg:col-span-4 lg:row-span-2" delay={0.3} noPadding>
       {/* Editorial header — typography + divider match the meetings
        *  and tasks widget headers (px-5 py-3.5 + border-border/15)
        *  so the dashboard reads as one design language.

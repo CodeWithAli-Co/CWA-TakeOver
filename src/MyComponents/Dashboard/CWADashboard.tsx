@@ -506,13 +506,13 @@ function Row4Swapper() {
   // rather than just counting them.
   return (
     <>
-      <div className="col-span-5">
+      <div className="col-span-12 lg:col-span-5">
         <TasksComponent />
       </div>
-      <div className="col-span-4">
+      <div className="col-span-12 lg:col-span-4">
         <Meetings />
       </div>
-      <div className="col-span-3">
+      <div className="col-span-6 lg:col-span-3">
         <AxonCoachCard />
       </div>
     </>
@@ -937,7 +937,7 @@ function CWADashboardContent() {
        *  candidates. UserView wraps the four divs as a fragment so
        *  the grid still slots them into the row correctly. */}
       <UserView userRole={["CEO", "COO", "CFO", "Admin"]}>
-        <div className="col-span-3">
+        <div className="col-span-6 lg:col-span-3">
           <InboxCard
             label="My Tasks"
             icon={CheckSquare}
@@ -956,7 +956,7 @@ function CWADashboardContent() {
             delay={0.05}
           />
         </div>
-        <div className="col-span-3">
+        <div className="col-span-6 lg:col-span-3">
           <InboxCard
             label="Open Bug Reports"
             icon={Bug}
@@ -977,7 +977,7 @@ function CWADashboardContent() {
             delay={0.1}
           />
         </div>
-        <div className="col-span-3">
+        <div className="col-span-6 lg:col-span-3">
           {/* Today's meetings slot, with a smart fallback chain:
            *    has meetings today  → Today's Meetings card
            *    no meetings today   → Next Meeting card (closest
@@ -1040,7 +1040,7 @@ function CWADashboardContent() {
             />
           )}
         </div>
-        <div className="col-span-3">
+        <div className="col-span-6 lg:col-span-3">
           <InboxCard
             label="New Candidates"
             icon={UserPlus}
@@ -1069,22 +1069,22 @@ function CWADashboardContent() {
        *  growth-track focus. excludeRoles flips the gate so this
        *  surface shows for everyone NOT in the exec set. */}
       <UserView excludeRoles={["CEO", "COO", "CFO", "Admin"]}>
-        <div className="col-span-3">
+        <div className="col-span-6 lg:col-span-3">
           <EmployeeKudosCard />
         </div>
-        <div className="col-span-3">
+        <div className="col-span-6 lg:col-span-3">
           <EmployeeCheckinCard />
         </div>
-        <div className="col-span-3">
+        <div className="col-span-6 lg:col-span-3">
           <EmployeeHoursCard />
         </div>
-        <div className="col-span-3">
+        <div className="col-span-6 lg:col-span-3">
           <EmployeeFocusCard />
         </div>
       </UserView>
 
       {/* ── Row 2: Area Chart (8 cols) + Tasks (4 cols) ── */}
-      <BentoCard span="col-span-8 row-span-2" delay={0.25} noPadding>
+      <BentoCard span="col-span-12 lg:col-span-8 lg:row-span-2" delay={0.25} noPadding>
         {/* Editorial header — title + subtitle + period delta in
          *  one row, inline legend on the right. The delta tells the
          *  operator "are we up or down vs the prior half" at a
@@ -1199,7 +1199,7 @@ function CWADashboardContent() {
           };
 
           return (
-            <div className="grid grid-cols-4 gap-4 px-5 py-3.5 border-b border-xs border-border/15">
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 px-5 py-3.5 border-b border-xs border-border/15">
               <KpiCell
                 label="Total Revenue"
                 value={fmtMoney(totalRev)}

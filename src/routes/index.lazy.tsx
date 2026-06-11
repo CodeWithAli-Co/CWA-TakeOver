@@ -107,7 +107,7 @@ const Index = () => {
           >
             <PresenceDot />
             <h1
-              className="text-[15px] text-zinc-100 tracking-tight whitespace-nowrap font-medium"
+              className="text-[15px] text-zinc-100 tracking-tight truncate font-medium"
               style={{ fontFamily: "Newsreader, Georgia, serif" }}
             >
               {getGreeting()},{" "}
@@ -126,7 +126,7 @@ const Index = () => {
             initial={{ opacity: 0, scale: 0.98 }}
             animate={{ opacity: 1, scale: 1 }}
             transition={{ delay: 0.04, duration: 0.22, ease: [0.22, 1, 0.36, 1] }}
-            className="flex justify-center"
+            className="hidden md:flex justify-center"
           >
             <CommandKPill />
           </motion.div>
