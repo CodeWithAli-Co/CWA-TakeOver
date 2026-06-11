@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { Sparkles, FileText, ExternalLink, Trash2, X, Wand2, Copy, Check, Loader2, Briefcase, Mail, Send } from "lucide-react";
+import { Sparkles, FileText, ExternalLink, Trash2, X, Wand2, Copy, Check, Loader2, Briefcase, Mail, Send, Download } from "lucide-react";
 import { discoverJobs } from "@/JobHunt/discoverJobs";
 import { fetchJobsApi } from "@/JobHunt/fetchJobsApi";
 import { tailorResume } from "@/JobHunt/tailorResume";
@@ -170,6 +170,7 @@ function JobModal({ job, onClose, masterResume, onUpdate, onRemove }: {
   const [oerr, setOerr] = useState<string | null>(null);
   const [to, setTo] = useState("");
   const [sent, setSent] = useState(false);
+  const [attachPdf, setAttachPdf] = useState(true);
   async function makeDraft() {
     if (drafting) return;
     setDrafting(true); setOerr(null); setSent(false);
@@ -181,8 +182,16 @@ function JobModal({ job, onClose, masterResume, onUpdate, onRemove }: {
   async function send() {
     if (!draft || !to.includes("@")) return;
     setOerr(null);
-    try { await sendEmail.mutateAsync({ to, subject: draft.subject, body: draft.body } as any); setSent(true); }
-    catch (e: any) { setOerr(e?.message || "Send failed — is Gmail connected?"); }
+    try {
+      let attachments: { filename: string; mimeType: string; contentBase64: string }[] | undefined;
+      if (attachPdf && job.tailored?.tailored_resume) {
+        const { renderResumePdf, blobToBase64, safeFile } = await import("@/JobHunt/resumePdf");
+        const blob = await renderResumePdf(job.tailored.tailored_resume);
+        attachments = [{ filename: safeFile(`Resume - ${job.company}`) + ".pdf", mimeType: "application/pdf", contentBase64: await blobToBase64(blob) }];
+      }
+      await sendEmail.mutateAsync({ to, subject: draft.subject, body: draft.body, attachments } as any);
+      setSent(true);
+    } catch (e: any) { setOerr(e?.message || "Send failed — is Gmail connected?"); }
   }
   const [finding, setFinding] = useState(false);
   const [emailNote, setEmailNote] = useState<string | null>(null);
@@ -259,8 +268,8 @@ function JobModal({ job, onClose, masterResume, onUpdate, onRemove }: {
                 {t.keywords.length > 0 && (
                   <div className="flex flex-wrap gap-1.5">{t.keywords.map((k, i) => <span key={i} className="text-[10.5px] px-2 py-0.5 rounded border border-border text-muted-foreground">{k}</span>)}</div>
                 )}
-                <Section title="Tailored resume" text={t.tailored_resume} />
-                <Section title="Cover letter" text={t.cover_letter} />
+                <Section title="Tailored resume" text={t.tailored_resume} pdfName={`Resume - ${job.company}`} />
+                <Section title="Cover letter" text={t.cover_letter} pdfName={`Cover Letter - ${job.company}`} />
               </div>
             )}
           </div>
@@ -289,6 +298,11 @@ function JobModal({ job, onClose, masterResume, onUpdate, onRemove }: {
                     {finding ? <Loader2 size={13} className="animate-spin" /> : <Sparkles size={13} />} Find email
                   </button>
                   <CopyBtn text={`${draft.subject}\n\n${draft.body}`} />
+                  {job.tailored?.tailored_resume && (
+                    <label className="inline-flex items-center gap-1.5 text-[11.5px] text-muted-foreground cursor-pointer">
+                      <input type="checkbox" checked={attachPdf} onChange={(e) => setAttachPdf(e.target.checked)} /> Attach résumé PDF
+                    </label>
+                  )}
                   <button onClick={send} disabled={!to.includes("@") || sendEmail.isPending}
                           className="inline-flex items-center gap-1.5 h-8 px-3 rounded-md bg-primary text-primary-foreground text-[12px] font-semibold disabled:opacity-50">
                     {sendEmail.isPending ? <Loader2 size={13} className="animate-spin" /> : <Send size={13} />} Send via Gmail
@@ -313,12 +327,28 @@ function JobModal({ job, onClose, masterResume, onUpdate, onRemove }: {
   );
 }
 
-function Section({ title, text }: { title: string; text: string }) {
+function Section({ title, text, pdfName }: { title: string; text: string; pdfName?: string }) {
+  const [busy, setBusy] = useState(false);
+  async function dl() {
+    if (busy || !pdfName) return;
+    setBusy(true);
+    try {
+      const { renderResumePdf, downloadBlob, safeFile } = await import("@/JobHunt/resumePdf");
+      downloadBlob(await renderResumePdf(text), safeFile(pdfName) + ".pdf");
+    } finally { setBusy(false); }
+  }
   return (
     <div className="rounded-md border border-border bg-background overflow-hidden">
       <div className="flex items-center justify-between px-3 py-2 border-b border-border">
         <span className="text-[11px] uppercase tracking-wider text-muted-foreground">{title}</span>
-        <CopyBtn text={text} />
+        <div className="flex items-center gap-3">
+          {pdfName && (
+            <button onClick={dl} disabled={busy} className="inline-flex items-center gap-1 text-[11px] text-muted-foreground hover:text-foreground">
+              {busy ? <Loader2 size={12} className="animate-spin" /> : <Download size={12} />} PDF
+            </button>
+          )}
+          <CopyBtn text={text} />
+        </div>
       </div>
       <pre className="px-3 py-3 text-[12px] text-foreground/90 whitespace-pre-wrap [overflow-wrap:anywhere] max-h-[320px] overflow-y-auto" style={{ fontFamily: "inherit" }}>{text}</pre>
     </div>

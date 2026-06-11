@@ -228,6 +228,8 @@ export interface SendEmailInput {
    *  body and stamps the id into metadata.tracking_id. The
    *  useEmailOpens hook reads aggregated opens by tracking_id. */
   tracking_id?: string;
+  /** Optional file attachments (e.g. a tailored resume PDF). base64, no prefix. */
+  attachments?: { filename: string; mimeType: string; contentBase64: string }[];
 }
 
 export interface SendEmailResult {
@@ -273,6 +275,7 @@ export function useSendEmail() {
           from_display_name: input.from_display_name,
           pattern: input.pattern,
           tracking_id: input.tracking_id,
+          attachments: input.attachments,
         }),
       });
       if (!res.ok) {
