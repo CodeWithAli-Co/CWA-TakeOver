@@ -20,38 +20,36 @@ export interface SavedJob extends JobPosting {
   createdAt: number;
 }
 
-const key = (j: { company: string; title: string }) => `${j.company}::${j.title}`.toLowerCase();
-
-interface JobHuntState {
-  masterResume: string;
-  jobs: SavedJob[];
-  profile: ApplyProfile;
-  setProfile: (p: ApplyProfile) => void;
-  setMasterResume: (r: string) => void;
-  addJobs: (jobs: JobPosting[]) => number; // returns count actually added
-  updateJob: (id: string, patch: Partial<SavedJob>) => void;
-  removeJob: (id: string) => void;
+/** Autopilot — the unattended apply loop config. */
+export interface AutopilotConfig {
+  query: string;               // roles to search for, same free text as the discover bar
+  source: "boards" | "axon";   // discovery source
+  minMatch: number;            // 0-100 — only auto-apply at/above this score
+  dailyCap: number;            // hard ceiling of submits per calendar day
+  perRunCap: number;           // max submits per single batch run
+  autoTailor: boolean;         // tailor the resume per job before applying
+  discoverFirst: boolean;      // pull fresh listings at the start of each run
+  throttleSec: number;         // pause between applications (look human, be polite)
+  intervalMin: number;         // continuous mode: minutes between batches
 }
 
-export const useJobHunt = create<JobHuntState>()(
-  persist(
-    (set, get) => ({
-      masterResume: "",
-      jobs: [],
-      profile: emptyProfile,
-      setProfile: (profile) => set({ profile }),
-      setMasterResume: (masterResume) => set({ masterResume }),
-      addJobs: (incoming) => {
-        const existing = new Set(get().jobs.map((j) => key(j)));
-        const fresh = incoming
-          .filter((j) => !existing.has(key(j)))
-          .map((j) => ({ ...j, id: crypto.randomUUID(), status: "saved" as JobStatus, createdAt: Date.now() }));
-        if (fresh.length) set({ jobs: [...fresh, ...get().jobs] });
-        return fresh.length;
-      },
-      updateJob: (id, patch) => set({ jobs: get().jobs.map((j) => (j.id === id ? { ...j, ...patch } : j)) }),
-      removeJob: (id) => set({ jobs: get().jobs.filter((j) => j.id !== id) }),
-    }),
-    { name: "jobhunt:v1" }
-  )
-);
+export const defaultAutopilot: AutopilotConfig = {
+  query: "",
+  source: "boards",
+  minMatch: 70,
+  dailyCap: 15,
+  perRunCap: 5,
+  autoTailor: true,
+  discoverFirst: true,
+  throttleSec: 25,
+  intervalMin: 45,
+};
+
+export type LogLevel = "info" | "ok" | "warn" | "error";
+export interface AutopilotLog { id: string; ts: number; level: LogLevel; msg: string }
+
+const todayKey = () => new Date().toISOString().slice(0, 10); // YYYY-MM-DD, local-ish, stable per day
+
+const key = (j: { company: string; title: string }) => `${j.company}::${j.title}`.toLowerCase();
+
+i

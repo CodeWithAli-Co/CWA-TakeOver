@@ -7,6 +7,7 @@ import { draftRecruiterEmail } from "@/JobHunt/draftRecruiterEmail";
 import { findRecruiterEmail } from "@/JobHunt/findRecruiterEmail";
 import { useSendEmail } from "@/stores/gmail";
 import { useJobHunt, JOB_STATUSES, type JobStatus, type SavedJob } from "./jobHuntStore";
+import { AutopilotPanel } from "./AutopilotPanel";
 import { inferProfileFromResume, type ApplyProfile } from "@/JobHunt/profile";
 import { detectAts, ATS_LABEL } from "@/JobHunt/atsDetect";
 import { autoApply, type ApplyResult } from "@/JobHunt/autoApply";
@@ -91,6 +92,9 @@ export function JobHuntPage() {
           </button>
         </div>
       </div>
+
+      {/* autopilot */}
+      <AutopilotPanel />
 
       {/* discover bar */}
       <div className="bg-card border border-border rounded-lg p-4 mb-5">
