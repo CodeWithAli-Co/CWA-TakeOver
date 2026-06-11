@@ -159,6 +159,13 @@ export const Route = createRootRoute({
       completeInitialLaunch,
     } = useAppStore();
     const { data: user, error: userError } = ActiveUser();
+    // Owner-only text selection: the app disables selection globally
+    // (#main-section), but the CEO can select/copy. Toggles a body class
+    // the CSS keys off. See src/assets/sidebar.css.
+    useEffect(() => {
+      const role = (user?.[0] as any)?.role;
+      document.body.classList.toggle("allow-select", role === "CEO");
+    }, [user]);
     // First-run onboarding gate — DISABLED. Blaze's
     // InitialOnboarding (pre-login install-binder) now handles
     // the brand-new install flow. My post-login wizard is

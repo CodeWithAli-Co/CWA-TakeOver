@@ -31,3 +31,10 @@
   height: 100%;
   user-select: none;
 }
+/* Re-enable text selection for the owner only (body.allow-select is
+   toggled in __root.tsx when the signed-in role is CEO). */
+body.allow-select #main-section,
+body.allow-select #main-section * {
+  user-select: text !important;
+  -webkit-user-select: text !important;
+}
