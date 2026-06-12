@@ -10,6 +10,7 @@ import { useJobHunt, JOB_STATUSES, type JobStatus, type SavedJob } from "./jobHu
 import { AutopilotPanel } from "./AutopilotPanel";
 import { JobBento } from "./JobBento";
 import { useAutopilot } from "./useAutopilot";
+import { OutreachPanel } from "./OutreachPanel";
 import { inferProfileFromResume, type ApplyProfile } from "@/JobHunt/profile";
 import { detectAts, ATS_LABEL } from "@/JobHunt/atsDetect";
 import { autoApply, type ApplyResult } from "@/JobHunt/autoApply";
@@ -340,45 +341,10 @@ function JobModal({ job, onClose, masterResume, profile, onUpdate, onRemove }: {
           </div>
 
           {/* outreach */}
-          <div className="border-t border-border pt-4">
-            <div className="flex items-center justify-between gap-3 mb-3">
-              <div className="text-[13px] font-semibold text-foreground inline-flex items-center gap-1.5"><Mail size={14} /> Reach out to a recruiter</div>
-              <button onClick={makeDraft} disabled={drafting || !masterResume}
-                      className="inline-flex items-center gap-2 h-8 px-3 rounded-md border border-border text-[12px] text-foreground disabled:opacity-50 hover:border-foreground/30">
-                {drafting ? <Loader2 size={13} className="animate-spin" /> : <Wand2 size={13} />}{drafting ? "Drafting…" : draft ? "Re-draft" : "Draft intro email"}
-              </button>
-            </div>
-            {oerr && <p className="text-[12px] text-red-400 mb-2">{oerr}</p>}
-            {draft && (
-              <div className="space-y-2">
-                <input value={draft.subject} onChange={(e) => setDraft({ ...draft, subject: e.target.value })}
-                       className="w-full bg-background border border-border rounded-md px-3 py-2 text-[13px] text-foreground focus:outline-none focus:border-primary/50" placeholder="Subject" />
-                <textarea value={draft.body} onChange={(e) => setDraft({ ...draft, body: e.target.value })} rows={7}
-                          className="w-full resize-none bg-background border border-border rounded-md px-3 py-2 text-[12.5px] text-foreground focus:outline-none focus:border-primary/50" />
-                <div className="flex flex-wrap items-center gap-2">
-                  <input value={to} onChange={(e) => setTo(e.target.value)} placeholder="recruiter@company.com"
-                         className="flex-1 min-w-[160px] bg-background border border-border rounded-md px-3 py-2 text-[12.5px] text-foreground focus:outline-none focus:border-primary/50" />
-                  <button onClick={findEmail} disabled={finding}
-                          className="inline-flex items-center gap-1.5 h-8 px-3 rounded-md border border-border text-[12px] text-foreground disabled:opacity-50 hover:border-foreground/30 shrink-0">
-                    {finding ? <Loader2 size={13} className="animate-spin" /> : <Sparkles size={13} />} Find email
-                  </button>
-                  <CopyBtn text={`${draft.subject}\n\n${draft.body}`} />
-                  {job.tailored?.tailored_resume && (
-                    <label className="inline-flex items-center gap-1.5 text-[11.5px] text-muted-foreground cursor-pointer">
-                      <input type="checkbox" checked={attachPdf} onChange={(e) => setAttachPdf(e.target.checked)} /> Attach résumé PDF
-                    </label>
-                  )}
-                  <button onClick={send} disabled={!to.includes("@") || sendEmail.isPending}
-                          className="inline-flex items-center gap-1.5 h-8 px-3 rounded-md bg-primary text-primary-foreground text-[12px] font-semibold disabled:opacity-50">
-                    {sendEmail.isPending ? <Loader2 size={13} className="animate-spin" /> : <Send size={13} />} Send via Gmail
-                  </button>
-                </div>
-                {emailNote && <p className="text-[11px] text-muted-foreground">{emailNote}</p>}
-                {sent && <p className="text-[12px] text-emerald-400">Sent ✓</p>}
-                <p className="text-[10.5px] text-muted-foreground">Job boards rarely include a recruiter email — paste one if you find it (company site / LinkedIn), or copy and send manually.</p>
-              </div>
-            )}
-          </div>
+          <OutreachPanel
+            job={{ company: job.company, title: job.title, summary: job.summary, requirements: job.requirements }}
+            masterResume={masterResume}
+          />
 
           <div>
             <div className="text-[11px] uppercase tracking-wider text-muted-foreground mb-1.5">Notes</div>
