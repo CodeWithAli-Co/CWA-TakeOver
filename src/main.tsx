@@ -50,7 +50,24 @@ declare module "@tanstack/react-router" {
   }
 }
 
-const queryclient = new QueryClient();
+// App-wide React Query defaults. Without these, staleTime is 0, so
+// EVERY query refetches on each mount/navigation — which is why the
+// dashboard re-shows all its skeletons every time you land on it.
+//   · staleTime 60s   — data is treated fresh for a minute; remounting
+//                       a screen you just visited serves from cache.
+//   · gcTime 30m      — keep cached results around so back-nav is instant.
+//   · refetchOnWindowFocus false — desktop app; don't refetch on alt-tab.
+// Mutations still invalidate their queries explicitly, so writes show
+// up immediately regardless of staleTime.
+const queryclient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      staleTime: 60_000,
+      gcTime: 30 * 60_000,
+      refetchOnWindowFocus: false,
+    },
+  },
+});
 
 // Keep the ActiveUser cache honest across Supabase auth events
 // (INITIAL_SESSION / SIGNED_IN / TOKEN_REFRESHED / SIGNED_OUT).

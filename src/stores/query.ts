@@ -401,66 +401,38 @@ const fetchTodos = async (user: string, company: string) => {
     .select("*")
     .contains("assignee", [user])
     .order("priorityOrder", { ascending: false });
-  let countBase = companySupabase
-    .from("cwa_todos")
-    .select("todo_id", { count: "exact", head: true })
-    .contains("assignee", [user]);
 
   // Apply company filter if not "all"
   if (company !== "all") {
     baseQuery = baseQuery.eq("company", companyLabel);
-    countBase = countBase.eq("company", companyLabel);
   }
 
   const { data, error: todosError } = await baseQuery;
-  const { count: allTodoCount, error: allCountError } = await countBase;
-  const { count: todoCount, error: todoCountError } = await companySupabase
-    .from("cwa_todos")
-    .select("todo_id", { count: "exact", head: true })
-    .contains("assignee", [user])
-    .eq("status", "to-do")
-    .eq("company", companyLabel);
-  const { count: inProgressTodoCount, error: inProgressCountError } =
-    await companySupabase
-      .from("cwa_todos")
-      .select("todo_id", { count: "exact", head: true })
-      .contains("assignee", [user])
-      .eq("status", "in-progress")
-      .eq("company", companyLabel);
-  const { count: doneTodoCount, error: doneCountError } = await companySupabase
-    .from("cwa_todos")
-    .select("todo_id", { count: "exact", head: true })
-    .contains("assignee", [user])
-    .eq("status", "done")
-    .eq("company", companyLabel);
-  if (
-    todosError ||
-    allCountError ||
-    todoCountError ||
-    inProgressCountError ||
-    doneCountError
-  ) {
-    console.log(
-      "Error with Todos Query: ",
-      todosError?.message ||
-        allCountError?.message ||
-        todoCountError?.message ||
-        inProgressCountError?.message ||
-        doneCountError?.message,
-    );
+  if (todosError) {
+    console.log("Error with Todos Query: ", todosError.message);
   }
 
-  return data?.map((task: TodosInterface) => ({
+  // Counts computed client-side from the rows we already fetched.
+  // `data` is the full assignee(+company) set, so these are exact —
+  // this removes four extra sequential count round-trips that ran on
+  // every load (the Tasks card's main slowdown: 5 queries → 1).
+  const list = (data ?? []) as TodosInterface[];
+  const allTodoCount = list.length;
+  const todoCount = list.filter((t) => t.status === "to-do").length;
+  const inProgressTodoCount = list.filter((t) => t.status === "in-progress").length;
+  const doneTodoCount = list.filter((t) => t.status === "done").length;
+
+  return list.map((task: TodosInterface) => ({
     todo_id: task.todo_id,
     created_at: task.created_at,
     title: task.title,
     description: task.description || "",
     label: task.label || "",
     status: task.status,
-    allCount: allTodoCount || data.length,
-    todoCount: todoCount || 0,
-    inProgressCount: inProgressTodoCount || 0,
-    doneCount: doneTodoCount || 0,
+    allCount: allTodoCount,
+    todoCount,
+    inProgressCount: inProgressTodoCount,
+    doneCount: doneTodoCount,
     priority: task.priority,
     priorityOrder: task.priorityOrder,
     assignee: task.assignee,

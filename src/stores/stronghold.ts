@@ -23,6 +23,7 @@
 
 import { Client, Stronghold, Store } from "@tauri-apps/plugin-stronghold";
 import { appDataDir } from "@tauri-apps/api/path";
+import { getTakeOverCreds } from "./takeoverCreds";
 
 const CLIENT_NAME = "TakeOver Systems";
 const ONE_WEEK_MS = 7 * 24 * 60 * 60 * 1000;
@@ -192,22 +193,9 @@ export function getStronghold(): Promise<TakeOverStronghold> {
 // ── Helpers ────────────────────────────────────────────────────
 
 async function fetchVaultPassword(): Promise<string> {
-  const res = await fetch(
-    `${import.meta.env.VITE_TAKEOVER_SITE_URL}/api/takeover_creds`,
-    {
-      method: "GET",
-      headers: {
-        "Content-Type": "application/json",
-        "TakeOver-App": "true",
-      },
-    },
-  );
-  if (!res.ok) {
-    throw new Error(
-      `[stronghold] vault password fetch failed: ${res.status}`,
-    );
-  }
-  const result = await res.json();
+  // Shared, memoized fetch — same /api/takeover_creds response that
+  // supabase.ts uses for the anon key. One network round-trip total.
+  const result = await getTakeOverCreds();
   if (!result?.vault_password) {
     throw new Error("[stronghold] response missing vault_password");
   }

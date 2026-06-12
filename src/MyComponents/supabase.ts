@@ -24,6 +24,7 @@
 
 import { createClient } from "@supabase/supabase-js";
 import { getStronghold } from "@/stores/stronghold";
+import { getTakeOverCreds } from "@/stores/takeoverCreds";
 
 // Initialize the shared stronghold instance exactly once.
 // Subsequent callers anywhere in the app use getStronghold()
@@ -35,18 +36,11 @@ const stronghold = await getStronghold();
 const supabaseUrl = import.meta.env.VITE_DB_URL;
 
 const getTKSupabaseKey = async (): Promise<string> => {
-  const res = await fetch(
-    `${import.meta.env.VITE_TAKEOVER_SITE_URL}/api/takeover_creds`,
-    {
-      method: "GET",
-      headers: {
-        "Content-Type": "application/json",
-        "TakeOver-App": "true",
-      },
-    },
-  );
-  const result = await res.json();
-  return result.supabase_key;
+  // Shared, memoized fetch — Stronghold already pulled this same
+  // /api/takeover_creds response for the vault password, so this is a
+  // cache hit (no second network round-trip on boot).
+  const result = await getTakeOverCreds();
+  return result.supabase_key as string;
 };
 
 const supabaseKey = await getTKSupabaseKey();

@@ -190,6 +190,38 @@ export default defineConfig(async () => ({
   css: {
     postcss: './postcss.config.ts',
   },
+  // Pre-bundle the heavy / many-module deps with esbuild so the dev
+  // server ships each as ONE request instead of hundreds of live module
+  // requests. lucide-react is the worst offender (a separate module per
+  // icon); recharts / framer-motion / react-syntax-highlighter behave
+  // the same. This is the fix for `tauri dev` cold-loading hundreds of
+  // .js requests. Production builds already bundle, so this is dev-only.
+  optimizeDeps: {
+    include: [
+      "lucide-react",
+      "framer-motion",
+      "recharts",
+      "react-syntax-highlighter",
+      "highlight.js",
+      "lowlight",
+      "@supabase/supabase-js",
+      "@tanstack/react-query",
+      "@tanstack/react-router",
+      "@tanstack/react-form",
+      "react-hook-form",
+      "@hookform/resolvers",
+      "zod",
+      "date-fns",
+      "clsx",
+      "tailwind-merge",
+      "class-variance-authority",
+      "cmdk",
+      "zustand",
+      "react-day-picker",
+      "react-select",
+      "react-virtuoso",
+    ],
+  },
   build: {
     target: "es2024",
   },
@@ -204,6 +236,17 @@ export default defineConfig(async () => ({
   server: {
     port: 1420,
     strictPort: true,
+    // Pre-transform the boot-critical modules on server start so first
+    // paint isn't blocked waiting on them to be transformed on demand.
+    warmup: {
+      clientFiles: [
+        "./src/main.tsx",
+        "./src/routes/__root.tsx",
+        "./src/routes/index.lazy.tsx",
+        "./src/MyComponents/supabase.ts",
+        "./src/stores/query.ts",
+      ],
+    },
     host: host || false,
     hmr: host
       ? {
