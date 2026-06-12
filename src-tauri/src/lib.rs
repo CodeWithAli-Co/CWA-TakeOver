@@ -229,10 +229,11 @@ async fn check_for_update(
             .await?;
 
         println!("update installed");
-        app.restart();
+        app.request_restart();
+        return Ok(true);
     }
-
-    Ok(true)
+    
+    Ok(false)
 }
 
 /// Plain transactional email — no attachment. Used by the
