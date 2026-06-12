@@ -144,20 +144,23 @@ export async function runAutopilotBatch(ctx: AutopilotCtx): Promise<BatchSummary
     log("info", `Applying → ${tag}`);
     try {
       const res = await autoApply({ url: job.url, company: job.company, tailored }, ctx.profile, ctx.masterResume);
+      const outcome = { status: res.status, reason: res.reason, at: Date.now(), applyUrl: res.applyUrl ?? job.url };
       if (res.status === "submitted") {
         summary.submitted++;
         ctx.recordApplied();
-        ctx.updateJob(job.id, { status: "applied" });
+        ctx.updateJob(job.id, { status: "applied", applyResult: outcome });
         log("ok", `✓ Submitted → ${tag}  (${ctx.appliedToday()}/${cfg.dailyCap} today)`);
       } else if (res.status === "needs_human") {
         summary.needsHuman++;
-        ctx.updateJob(job.id, { notes: [job.notes, `Autopilot: needs you — ${res.reason}`].filter(Boolean).join("\n") });
+        ctx.updateJob(job.id, { applyResult: outcome, notes: [job.notes, `Autopilot: needs you — ${res.reason}`].filter(Boolean).join("\n") });
         log("warn", `⚠ Needs you → ${tag}: ${res.reason}`);
       } else if (res.status === "manual") {
         summary.manual++;
+        ctx.updateJob(job.id, { applyResult: outcome });
         log("info", `Manual only → ${tag}: ${res.reason}`);
       } else {
         summary.errors++;
+        ctx.updateJob(job.id, { applyResult: outcome });
         log("error", `✗ ${tag}: ${res.reason}`);
       }
     } catch (e: any) {

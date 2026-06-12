@@ -12,12 +12,22 @@ import { type ApplyProfile, emptyProfile } from "@/JobHunt/profile";
 export type JobStatus = "saved" | "applied" | "interview" | "offer" | "rejected";
 export const JOB_STATUSES: JobStatus[] = ["saved", "applied", "interview", "offer", "rejected"];
 
+/** Outcome of the last auto-apply attempt — persisted on the job so the UI
+ *  can show success / "needs you" / error without re-running anything. */
+export interface ApplyOutcome {
+  status: "submitted" | "needs_human" | "manual" | "error";
+  reason: string;
+  at: number;                 // timestamp of the attempt
+  applyUrl?: string | null;   // where to "open to finish" if it needs a human
+}
+
 export interface SavedJob extends JobPosting {
   id: string;
   status: JobStatus;
   notes?: string;
   tailored?: Omit<TailorResult, "error">;
   createdAt: number;
+  applyResult?: ApplyOutcome;
 }
 
 /** Autopilot — the unattended apply loop config. */

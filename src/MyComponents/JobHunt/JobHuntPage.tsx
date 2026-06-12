@@ -8,6 +8,8 @@ import { findRecruiterEmail } from "@/JobHunt/findRecruiterEmail";
 import { useSendEmail } from "@/stores/gmail";
 import { useJobHunt, JOB_STATUSES, type JobStatus, type SavedJob } from "./jobHuntStore";
 import { AutopilotPanel } from "./AutopilotPanel";
+import { JobBento } from "./JobBento";
+import { useAutopilot } from "./useAutopilot";
 import { inferProfileFromResume, type ApplyProfile } from "@/JobHunt/profile";
 import { detectAts, ATS_LABEL } from "@/JobHunt/atsDetect";
 import { autoApply, type ApplyResult } from "@/JobHunt/autoApply";
@@ -40,19 +42,28 @@ export function JobHuntPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [toast, setToast] = useState<string | null>(null);
-  const [filter, setFilter] = useState<JobStatus | "all">("all");
+  const [filter, setFilter] = useState<JobStatus | "all" | "needs-you">("all");
   const [source, setSource] = useState<"boards" | "axon">("boards");
   const [openId, setOpenId] = useState<string | null>(null);
   const [resumeOpen, setResumeOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
+  const [tab, setTab] = useState<"pipeline" | "autopilot">("pipeline");
+  const ap = useAutopilot();
 
   const counts = useMemo(() => {
     const c: Record<string, number> = { all: jobs.length };
     JOB_STATUSES.forEach((s) => (c[s] = jobs.filter((j) => j.status === s).length));
+    c["needs-you"] = jobs.filter((j) => j.applyResult?.status === "needs_human").length;
     return c;
   }, [jobs]);
-  const visible = filter === "all" ? jobs : jobs.filter((j) => j.status === filter);
+  const visible =
+    filter === "all" ? jobs
+    : filter === "needs-you" ? jobs.filter((j) => j.applyResult?.status === "needs_human")
+    : jobs.filter((j) => j.status === filter);
   const open = jobs.find((j) => j.id === openId) || null;
+  const dailyCap = useJobHunt((s) => s.autopilot.dailyCap);
+  const appliedObj = useJobHunt((s) => s.applied);
+  const appliedTodayN = appliedObj.date === new Date().toISOString().slice(0, 10) ? appliedObj.count : 0;
 
   async function runDiscover() {
     if (!query.trim() || loading) return;
@@ -93,9 +104,22 @@ export function JobHuntPage() {
         </div>
       </div>
 
-      {/* autopilot */}
-      <AutopilotPanel />
+      {/* tabs */}
+      <div className="flex items-center gap-2 mb-5">
+        {([["pipeline", "Pipeline"], ["autopilot", "Autopilot"]] as const).map(([k, label]) => (
+          <button key={k} onClick={() => setTab(k)}
+            className={`inline-flex items-center gap-2 h-9 px-4 rounded-md text-[13px] border transition-colors ${tab === k ? "border-foreground/40 bg-foreground/5 text-foreground" : "border-line text-fg-subtle hover:text-foreground"}`}
+            style={{ fontFamily: '"Hanken Grotesk", Inter, sans-serif' }}>
+            {k === "autopilot" && ap.continuous && <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" />}
+            {label}
+          </button>
+        ))}
+      </div>
 
+      {tab === "autopilot" ? (
+        <AutopilotPanel ap={ap} />
+      ) : (
+        <>
       {/* discover bar */}
       <div className="bg-card border border-border rounded-lg p-4 mb-5">
         <div className="flex items-center gap-2 mb-3">
@@ -125,48 +149,17 @@ export function JobHuntPage() {
         {toast && <p className="text-[12px] text-emerald-400 mt-2">{toast}</p>}
       </div>
 
-      {/* status filter */}
-      <div className="flex flex-wrap gap-2 mb-4">
-        {(["all", ...JOB_STATUSES] as const).map((s) => (
-          <button key={s} onClick={() => setFilter(s)}
-                  className={`inline-flex items-center gap-1.5 h-8 px-3 rounded-md text-[12px] border transition-colors ${
-                    filter === s ? "border-foreground/40 bg-foreground/5 text-foreground" : "border-border text-muted-foreground hover:text-foreground"}`}>
-            <span className="capitalize">{s}</span>
-            <span className="text-[10.5px] text-muted-foreground">{counts[s] ?? 0}</span>
-          </button>
-        ))}
-      </div>
-
-      {/* job grid */}
-      {visible.length === 0 ? (
-        <div className="border border-dashed border-border rounded-lg p-12 text-center text-muted-foreground text-[13px]">
-          {jobs.length === 0 ? "No jobs yet — describe what you want above and hit Discover." : "Nothing in this stage."}
-        </div>
-      ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
-          {visible.map((j) => (
-            <button key={j.id} onClick={() => setOpenId(j.id)}
-                    className="text-left bg-card border border-border hover:border-foreground/25 rounded-lg p-4 transition-colors flex flex-col gap-2 min-w-0">
-              <div className="flex items-start justify-between gap-2">
-                <div className="min-w-0">
-                  <div className="text-[14px] font-semibold text-foreground truncate">{j.title}</div>
-                  <div className="text-[12px] text-muted-foreground truncate">{j.company}</div>
-                </div>
-                <span className={`text-[13px] font-bold tabular-nums shrink-0 ${scoreColor(j.match_score)}`}>{j.match_score}</span>
-              </div>
-              <div className="flex flex-wrap items-center gap-1.5 text-[11px] text-muted-foreground">
-                {j.remote && <span className="px-1.5 py-0.5 rounded border border-border">Remote</span>}
-                {j.location && <span className="truncate max-w-[140px]">{j.location}</span>}
-                {j.salary && <span className="text-emerald-400/90">{j.salary}</span>}
-              </div>
-              <div className="text-[11.5px] text-muted-foreground line-clamp-2 [overflow-wrap:anywhere]">{j.match_reason}</div>
-              <div className="flex items-center justify-between mt-1">
-                <span className={`text-[10.5px] px-2 py-0.5 rounded border capitalize ${STATUS_STYLE[j.status]}`}>{j.status}</span>
-                {j.tailored && <span className="text-[10.5px] text-emerald-400 inline-flex items-center gap-1"><Wand2 size={11} /> tailored</span>}
-              </div>
-            </button>
-          ))}
-        </div>
+      {/* pipeline — bento grid */}
+      <JobBento
+        jobs={visible}
+        counts={counts}
+        filter={filter}
+        setFilter={setFilter}
+        onOpen={setOpenId}
+        appliedToday={appliedTodayN}
+        dailyCap={dailyCap}
+      />
+        </>
       )}
 
       {open && <JobModal job={open} onClose={() => setOpenId(null)} masterResume={masterResume} profile={profile}
@@ -192,13 +185,20 @@ function JobModal({ job, onClose, masterResume, profile, onUpdate, onRemove }: {
   const [attachPdf, setAttachPdf] = useState(true);
   const ats = job.url ? detectAts(job.url) : null;
   const [applying, setApplying] = useState(false);
+  const logActivity = useJobHunt((s) => s.log);
   const [applyMsg, setApplyMsg] = useState<ApplyResult | null>(null);
   async function doAutoApply() {
     if (applying) return;
     setApplying(true); setApplyMsg(null);
+    logActivity("info", `Applying → ${job.title} @ ${job.company}`);
     const r = await autoApply({ url: job.url, company: job.company, tailored: job.tailored }, profile, masterResume);
     setApplying(false); setApplyMsg(r);
-    if (r.status === "submitted") onUpdate({ status: "applied" });
+    const outcome = { status: r.status, reason: r.reason, at: Date.now(), applyUrl: r.applyUrl ?? job.url };
+    onUpdate(r.status === "submitted" ? { status: "applied", applyResult: outcome } : { applyResult: outcome });
+    logActivity(
+      r.status === "submitted" ? "ok" : r.status === "error" ? "error" : "warn",
+      `${r.status === "submitted" ? "✓ Submitted" : r.status === "needs_human" ? "⚠ Needs you" : r.status === "error" ? "✗ Error" : "Manual"} → ${job.title} @ ${job.company}${r.reason ? ": " + r.reason : ""}`,
+    );
   }
   async function makeDraft() {
     if (drafting) return;
@@ -290,6 +290,14 @@ function JobModal({ job, onClose, masterResume, profile, onUpdate, onRemove }: {
               <div className="w-full text-[11.5px]" style={{ color: applyMsg.status === "submitted" ? "#4ade80" : applyMsg.status === "error" ? "#f87171" : "#fbbf24" }}>
                 {applyMsg.status === "submitted" ? "✓ " : applyMsg.status === "needs_human" ? "⚠ " : ""}{applyMsg.reason}
                 {applyMsg.applyUrl && applyMsg.status !== "submitted" && <> <button onClick={() => goExternal(applyMsg.applyUrl)} className="text-sky-400 hover:underline">open to finish</button></>}
+              </div>
+            )}
+            {!applyMsg && job.applyResult && (
+              <div className="w-full text-[11.5px]" style={{ color: job.applyResult.status === "submitted" ? "#4ade80" : job.applyResult.status === "error" ? "#f87171" : job.applyResult.status === "needs_human" ? "#fbbf24" : "#a1a1aa" }}>
+                <span className="uppercase tracking-wider text-[10px] text-muted-foreground mr-1.5">last attempt</span>
+                {job.applyResult.status === "submitted" ? "✓ " : job.applyResult.status === "needs_human" ? "⚠ " : job.applyResult.status === "error" ? "✗ " : ""}{job.applyResult.reason}
+                {job.applyResult.applyUrl && job.applyResult.status !== "submitted" && <> <button onClick={() => goExternal(job.applyResult!.applyUrl)} className="text-sky-400 hover:underline">open to finish</button></>}
+                <span className="text-muted-foreground"> · {new Date(job.applyResult.at).toLocaleString([], { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}</span>
               </div>
             )}
             <p className="w-full text-[11px] text-muted-foreground">Auto-apply drives a real browser via your apply-worker (Lever/Greenhouse/Ashby). Captcha'd or unusual forms fall back to "open to finish." Needs the worker running + APPLY_WORKER_URL set on takeover_b2b.</p>
