@@ -668,3 +668,45 @@ export function useGmailRealtime(): void {
     };
   }, [userSupaId, qc]);
 }
+
+// ────────────────────────────────────────────────
+// useFindKnownContacts — warm-intro finder. Given a target company
+// domain, returns the people the operator has actually corresponded
+// with there (via /api/gmail/people-search — headers only, scoped).
+// Referrals convert ~10x a cold application, so this is the highest-
+// leverage job-search signal we have.
+// ────────────────────────────────────────────────
+
+export interface KnownContact {
+  name: string;
+  email: string;
+  count: number;     // number of exchanges
+  lastDate: number;  // ms since epoch of the most recent
+}
+
+export function useFindKnownContacts() {
+  const { data: meRows } = ActiveUser();
+  const userSupaId: string | undefined = (meRows?.[0] as any)?.supa_id;
+  return useMutation({
+    mutationFn: async (domain: string): Promise<KnownContact[]> => {
+      if (!userSupaId) throw new Error("Not signed in.");
+      const stronghold = await getStronghold();
+      const companyName = (await stronghold.getRecord("company_name")) ?? "";
+      const base = import.meta.env.VITE_TAKEOVER_SITE_URL;
+      if (!base) throw new Error("VITE_TAKEOVER_SITE_URL not configured.");
+      const res = await fetch(`${base}/api/gmail/people-search`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "TakeOver-App": "true" },
+        body: JSON.stringify({ user_supa_id: userSupaId, company_name: companyName, domain }),
+      });
+      if (!res.ok) {
+        const detail = await res.text().catch(() => "");
+        let parsed: { error?: string } = {};
+        try { parsed = JSON.parse(detail); } catch { /* noop */ }
+        throw new Error(parsed.error ?? `people-search failed: ${res.status}`);
+      }
+      const json = (await res.json()) as { contacts?: KnownContact[] };
+      return json.contacts ?? [];
+    },
+  });
+}
