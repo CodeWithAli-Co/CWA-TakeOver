@@ -9,6 +9,7 @@ import { Loader2, Sparkles, Send, Copy, Check, ExternalLink, Wand2, Mail } from 
 import { findHiringContacts, type HiringContact, type ContactKind } from "@/JobHunt/findHiringContacts";
 import { draftWarmOutreach, type OutreachMode } from "@/JobHunt/draftWarmOutreach";
 import { useSendEmail } from "@/stores/gmail";
+import { useJobHunt } from "./jobHuntStore";
 import { open as openShell } from "@tauri-apps/plugin-shell";
 
 const FONT_MONO = '"JetBrains Mono", ui-monospace, monospace';
@@ -23,11 +24,13 @@ const KIND_PILL: Record<ContactKind, string> = {
 };
 const modeFor = (k: ContactKind): OutreachMode => k === "recruiter" ? "recruiter" : k === "team" ? "referral" : "hiring_manager";
 
-export function OutreachPanel({ job, masterResume }: {
+export function OutreachPanel({ job, masterResume, jobId }: {
   job: { company: string; title: string; summary?: string | null; requirements?: string[] };
   masterResume: string;
+  jobId?: string;
 }) {
   const sendEmail = useSendEmail();
+  const addOutreach = useJobHunt((s) => s.addOutreach);
   const [finding, setFinding] = useState(false);
   const [contacts, setContacts] = useState<HiringContact[] | null>(null);
   const [note, setNote] = useState<string | null>(null);
@@ -69,8 +72,12 @@ export function OutreachPanel({ job, masterResume }: {
   async function send() {
     if (!draft || !to.includes("@")) return;
     setErr(null);
-    try { await sendEmail.mutateAsync({ to, subject: draft.subject, body: draft.body } as any); setSent(true); }
-    catch (e: any) { setErr(e?.message || "Send failed — is Gmail connected?"); }
+    try {
+      await sendEmail.mutateAsync({ to, subject: draft.subject, body: draft.body } as any);
+      setSent(true);
+      const c = activeIdx != null && contacts ? contacts[activeIdx] : null;
+      addOutreach({ jobId, company: job.company, role: job.title, contactName: c?.name ?? null, contactEmail: to, contactKind: c?.kind ?? "team", channel: "email", subject: draft.subject });
+    } catch (e: any) { setErr(e?.message || "Send failed — is Gmail connected?"); }
   }
 
   return (

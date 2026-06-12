@@ -1056,14 +1056,6 @@ export const adminData = {
       icon: PiggyBank,
     },
     {
-      // Job Hunt — personal day-job search + AI resume tailoring. Same
-      // discover/tailor engine as Fundraise, pointed at job postings.
-      title: "Job Hunt",
-      url: "/jobs",
-      isActive: false,
-      icon: Briefcase,
-    },
-    {
       // Inbox — send email from inside Takeover via the operator's
       // connected Gmail. Compose-to-anyone surface; deal-attached
       // sends still live in the deal drawer.
@@ -1455,13 +1447,6 @@ export const cooData = {
       company: "codeWithAli" as const,
     },
     {
-      title: "Job Hunt",
-      url: "/jobs",
-      icon: Briefcase,
-      isActive: false,
-      company: "codeWithAli" as const,
-    },
-    {
       // Inbox — send email via the operator's connected Gmail.
       title: "Inbox",
       url: "/inbox",
@@ -1542,6 +1527,7 @@ export const cooData = {
         { title: "Linear", url: "/linear" },
         { title: "Infrastructure", url: "/infrastructure" },
         { title: "Observatory", url: "/admin/observatory" },
+        { title: "Job Hunt", url: "/jobs" },
       ],
     },
 
@@ -1699,13 +1685,6 @@ export const ceoData = {
       company: "codeWithAli" as const,
     },
     {
-      title: "Job Hunt",
-      url: "/jobs",
-      icon: Briefcase,
-      isActive: false,
-      company: "codeWithAli" as const,
-    },
-    {
       // Inbox — send email via the operator's connected Gmail.
       title: "Inbox",
       url: "/inbox",
@@ -1786,6 +1765,7 @@ export const ceoData = {
         { title: "Linear", url: "/linear" },
         { title: "Infrastructure", url: "/infrastructure" },
         { title: "Observatory", url: "/admin/observatory" },
+        { title: "Job Hunt", url: "/jobs" },
       ],
     },
 
@@ -2031,14 +2011,6 @@ export const cfoData = {
       url: "/fundraise",
       isActive: false,
       icon: PiggyBank,
-    },
-    {
-      // Job Hunt — personal day-job search + AI resume tailoring. Same
-      // discover/tailor engine as Fundraise, pointed at job postings.
-      title: "Job Hunt",
-      url: "/jobs",
-      isActive: false,
-      icon: Briefcase,
     },
     {
       // Inbox — send email from inside Takeover via the operator's

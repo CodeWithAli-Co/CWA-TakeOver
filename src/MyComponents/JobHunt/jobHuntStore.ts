@@ -62,6 +62,34 @@ export const defaultAutopilot: AutopilotConfig = {
 export type LogLevel = "info" | "ok" | "warn" | "error";
 export interface AutopilotLog { id: string; ts: number; level: LogLevel; msg: string }
 
+/** A tracked outreach (direct note, referral, or recruiter) so we can chase
+ *  follow-ups and measure the response -> interview funnel. */
+export type OutreachStatus = "sent" | "followed_up" | "replied" | "interview" | "no_response" | "closed";
+export interface OutreachRecord {
+  id: string;
+  jobId?: string;
+  company: string;
+  role?: string;
+  contactName: string | null;
+  contactEmail?: string;
+  contactKind: string;            // hiring_manager | leadership | recruiter | team
+  channel: "email" | "linkedin";
+  subject?: string;
+  sentAt: number;
+  lastTouchAt: number;            // drives follow-up timing
+  status: OutreachStatus;
+  followUps: number;
+  note?: string;
+}
+export const FOLLOWUP_AFTER_DAYS = 4;
+export const MAX_FOLLOWUPS = 2;
+/** True if this outreach is due for a nudge: still open, gone quiet past the
+ *  window, and under the follow-up ceiling. */
+export const needsFollowUp = (o: OutreachRecord): boolean =>
+  (o.status === "sent" || o.status === "followed_up") &&
+  o.followUps < MAX_FOLLOWUPS &&
+  Date.now() - o.lastTouchAt >= FOLLOWUP_AFTER_DAYS * 86400000;
+
 const todayKey = () => new Date().toISOString().slice(0, 10); // YYYY-MM-DD, stable per day
 
 const key = (j: { company: string; title: string }) => `${j.company}::${j.title}`.toLowerCase();
@@ -87,6 +115,12 @@ interface JobHuntState {
   markScheduledRun: () => void;    // stamp today so the scheduler fires once/day
   log: (level: LogLevel, msg: string) => void;
   clearLog: () => void;
+
+  // outreach tracking
+  outreach: OutreachRecord[];
+  addOutreach: (rec: { jobId?: string; company: string; role?: string; contactName: string | null; contactEmail?: string; contactKind: string; channel: "email" | "linkedin"; subject?: string }) => void;
+  updateOutreach: (id: string, patch: Partial<OutreachRecord>) => void;
+  removeOutreach: (id: string) => void;
 }
 
 export const useJobHunt = create<JobHuntState>()(
@@ -126,6 +160,12 @@ export const useJobHunt = create<JobHuntState>()(
       log: (level, msg) =>
         set({ runLog: [{ id: crypto.randomUUID(), ts: Date.now(), level, msg }, ...get().runLog].slice(0, 200) }),
       clearLog: () => set({ runLog: [] }),
+
+      outreach: [],
+      addOutreach: (rec) =>
+        set({ outreach: [{ ...rec, id: crypto.randomUUID(), sentAt: Date.now(), lastTouchAt: Date.now(), status: "sent", followUps: 0 }, ...get().outreach] }),
+      updateOutreach: (id, patch) => set({ outreach: get().outreach.map((o) => (o.id === id ? { ...o, ...patch } : o)) }),
+      removeOutreach: (id) => set({ outreach: get().outreach.filter((o) => o.id !== id) }),
     }),
     { name: "jobhunt:v1" }
   )

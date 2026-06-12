@@ -5,7 +5,7 @@
  */
 import { ANTHROPIC_API_KEY, ANTHROPIC_API_URL, ANTHROPIC_API_VERSION, CLAUDE_MODEL } from "@/Axon/config";
 
-export type OutreachMode = "hiring_manager" | "referral" | "recruiter";
+export type OutreachMode = "hiring_manager" | "referral" | "recruiter" | "follow_up";
 export interface DraftOutreachInput {
   resume: string;
   job: { company: string; title: string; summary?: string | null; requirements?: string[] };
@@ -21,6 +21,8 @@ const MODE_GUIDE: Record<OutreachMode, string> = {
     "Mode: REFERRAL / warm intro ask. Respectful of their time. Briefly say why this role fits, then ask if they'd be open to referring you or pointing you to the right person. Make it easy to say yes (offer to send a blurb they can forward).",
   recruiter:
     "Mode: RECRUITER. Crisp and outcome-focused. State the role, one line on fit, and ask about next steps / process. Attach-ready.",
+  follow_up:
+    "Mode: FOLLOW-UP on a prior message that hasn't been answered yet. 2-4 sentences. Do NOT open with 'just following up'. Lightly reference the earlier note, add ONE new proof point, relevant update, or angle, then a soft single ask. Warm, never guilt-trippy.",
 };
 
 const SYSTEM_PROMPT = [

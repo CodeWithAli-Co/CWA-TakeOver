@@ -6,11 +6,12 @@ import { tailorResume } from "@/JobHunt/tailorResume";
 import { draftRecruiterEmail } from "@/JobHunt/draftRecruiterEmail";
 import { findRecruiterEmail } from "@/JobHunt/findRecruiterEmail";
 import { useSendEmail } from "@/stores/gmail";
-import { useJobHunt, JOB_STATUSES, type JobStatus, type SavedJob } from "./jobHuntStore";
+import { useJobHunt, JOB_STATUSES, needsFollowUp, type JobStatus, type SavedJob } from "./jobHuntStore";
 import { AutopilotPanel } from "./AutopilotPanel";
 import { JobBento } from "./JobBento";
 import { useAutopilot } from "./useAutopilot";
 import { OutreachPanel } from "./OutreachPanel";
+import { OutreachTab } from "./OutreachTab";
 import { inferProfileFromResume, type ApplyProfile } from "@/JobHunt/profile";
 import { detectAts, ATS_LABEL } from "@/JobHunt/atsDetect";
 import { autoApply, type ApplyResult } from "@/JobHunt/autoApply";
@@ -48,8 +49,9 @@ export function JobHuntPage() {
   const [openId, setOpenId] = useState<string | null>(null);
   const [resumeOpen, setResumeOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
-  const [tab, setTab] = useState<"pipeline" | "autopilot">("pipeline");
+  const [tab, setTab] = useState<"pipeline" | "autopilot" | "outreach">("pipeline");
   const ap = useAutopilot();
+  const dueCount = useJobHunt((s) => s.outreach.filter(needsFollowUp).length);
 
   const counts = useMemo(() => {
     const c: Record<string, number> = { all: jobs.length };
@@ -107,18 +109,21 @@ export function JobHuntPage() {
 
       {/* tabs */}
       <div className="flex items-center gap-2 mb-5">
-        {([["pipeline", "Pipeline"], ["autopilot", "Autopilot"]] as const).map(([k, label]) => (
+        {([["pipeline", "Pipeline"], ["autopilot", "Autopilot"], ["outreach", "Outreach"]] as const).map(([k, label]) => (
           <button key={k} onClick={() => setTab(k)}
             className={`inline-flex items-center gap-2 h-9 px-4 rounded-md text-[13px] border transition-colors ${tab === k ? "border-foreground/40 bg-foreground/5 text-foreground" : "border-line text-fg-subtle hover:text-foreground"}`}
             style={{ fontFamily: '"Hanken Grotesk", Inter, sans-serif' }}>
             {k === "autopilot" && ap.continuous && <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" />}
             {label}
+            {k === "outreach" && dueCount > 0 && <span className="ml-0.5 text-[10px] px-1.5 py-0.5 rounded-full bg-amber-500/15 text-amber-300" style={{ fontFamily: '"JetBrains Mono", monospace' }}>{dueCount}</span>}
           </button>
         ))}
       </div>
 
       {tab === "autopilot" ? (
         <AutopilotPanel ap={ap} />
+      ) : tab === "outreach" ? (
+        <OutreachTab masterResume={masterResume} />
       ) : (
         <>
       {/* discover bar */}
@@ -344,6 +349,7 @@ function JobModal({ job, onClose, masterResume, profile, onUpdate, onRemove }: {
           <OutreachPanel
             job={{ company: job.company, title: job.title, summary: job.summary, requirements: job.requirements }}
             masterResume={masterResume}
+            jobId={job.id}
           />
 
           <div>
