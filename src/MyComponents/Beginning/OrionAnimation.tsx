@@ -17,14 +17,37 @@ interface CustomCircleProps extends React.SVGProps<SVGCircleElement> {
   trail?: string | boolean
 }
 
+// The elaborate Orion intro is a once-per-app-session flourish. After it has
+// started once, later mounts — StrictMode double-invoke, re-renders while
+// auth/role resolves, or a sign-out re-show — skip straight to the PIN pad
+// instead of replaying the multi-second GSAP sequence. This is what stops the
+// boot stall where OrionAnimation mounted ~8x and replayed each time.
+// Backed by sessionStorage so a page refresh (new module load) also skips the
+// replay — only a genuine cold app launch plays the intro again.
+const ORION_PLAYED_KEY = "orion:played";
+const hasPlayedOrion = (): boolean => {
+  try { return sessionStorage.getItem(ORION_PLAYED_KEY) === "1"; } catch { return false; }
+};
+const markOrionPlayed = (): void => {
+  try { sessionStorage.setItem(ORION_PLAYED_KEY, "1"); } catch { /* ignore */ }
+};
+
 const OrionAnimation: React.FC<OrionAnimationProps> = ({ onAnimationComplete }) => {
   const svgRef = useRef<SVGSVGElement>(null)
   const containerRef = useRef<HTMLDivElement>(null)
   const [isMounted, setIsMounted] = useState(false)
-  console.log("orionAnimation mounted! hehe")
+  // Captured once per instance: if the intro already played, this mount skips it.
+  const skipRef = useRef(hasPlayedOrion())
 
   // Initial mounting effect
   useEffect(() => {
+    // Already played once this session — reveal the PIN pad immediately
+    // instead of replaying the whole sequence.
+    if (skipRef.current) {
+      if (containerRef.current) containerRef.current.style.display = "none"
+      onAnimationComplete?.()
+      return
+    }
     // Set initial state - make sure container is visible with black background first
     if (containerRef.current) {
       containerRef.current.style.opacity = "1"
@@ -46,7 +69,9 @@ const OrionAnimation: React.FC<OrionAnimationProps> = ({ onAnimationComplete }) 
 
   // Main animation effect
   useEffect(() => {
+    if (skipRef.current) return
     if (!isMounted || !svgRef.current) return
+    markOrionPlayed() // mark played so later mounts/refreshes skip the intro
 
     // Shared across the async IIFE and the cleanup fn so cleanup can kill
     // the timeline whether or not the dynamic import has resolved yet.
@@ -517,6 +542,11 @@ const OrionAnimation: React.FC<OrionAnimationProps> = ({ onAnimationComplete }) 
       if (tl) tl.kill();
     };
   }, [isMounted, onAnimationComplete])
+
+  // Already played (e.g. a refresh) — render nothing at all so there isn't
+  // even a one-frame glimpse of the overlay. The skip effect above already
+  // fired onAnimationComplete to reveal the PIN immediately.
+  if (skipRef.current) return null
 
   return (
     <div

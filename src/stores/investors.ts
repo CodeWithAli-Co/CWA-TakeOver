@@ -150,8 +150,12 @@ export const investorKeys = {
 /** List view — every investor sorted by priority + fit. The grid
  *  paginates client-side for now; if we cross ~1000 investors we'll
  *  add server-side ranges. */
-export function useInvestors() {
+export function useInvestors(opts?: { enabled?: boolean }) {
   return useQuery({
+    // Callers that mount globally (e.g. the Cmd+K palette) can pass
+    // enabled:false so this doesn't fire at app boot — it only runs
+    // when the data is actually needed. Defaults to true for everyone else.
+    enabled: opts?.enabled ?? true,
     queryKey: investorKeys.list(),
     queryFn: async (): Promise<InvestorListEntry[]> => {
       // One round-trip: profile row + nested company columns +

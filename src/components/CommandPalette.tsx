@@ -78,7 +78,9 @@ export function CommandPalette() {
   // kanban from anywhere. useInvestors() returns [] when not
   // authenticated -- that gracefully degrades the section to
   // empty (no nav-fundraise broken, just no per-investor items).
-  const { data: investors = [] } = useInvestors();
+  // Only fetch investors once the palette is actually opened — keeps
+  // investor_profiles + crm_contacts off the app's boot request flood.
+  const { data: investors = [] } = useInvestors({ enabled: open });
   const openInvestorInStore = useFundraiseStore((s) => s.openInvestor);
   const setStageFilterInStore = useFundraiseStore((s) => s.setStageFilter);
   const setPendingViewMode = useFundraiseStore((s) => s.setPendingViewMode);

@@ -1,5 +1,5 @@
 import { createLazyFileRoute } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
+import { useEffect, useState, lazy, Suspense } from "react";
 import { StorageUsageChart } from "@/MyComponents/HomeDashboard/storage";
 import {
   MessageSquare,
@@ -29,8 +29,16 @@ import { ActiveUser } from "@/stores/query";
 import { CompanyCard } from "@/MyComponents/HomeDashboard/Components/companyCard";
 import { ActivityFeed } from "@/MyComponents/HomeDashboard/Components/activityFeed";
 import { TeamPresence } from "@/MyComponents/HomeDashboard/Components/teamPresence";
-import { CWADashboard } from "@/MyComponents/Dashboard/CWADashboard";
-import { SimplicityDashboard } from "@/MyComponents/Dashboard/SimplicityDashboard";
+// Lazy-load the two bento dashboards so the home route only pulls the
+// one matching the selected company — and nothing extra when on the
+// "all" overview (the default). Each is a large subtree; this keeps
+// them out of the home boot graph until actually shown.
+const CWADashboard = lazy(() =>
+  import("@/MyComponents/Dashboard/CWADashboard").then((m) => ({ default: m.CWADashboard })),
+);
+const SimplicityDashboard = lazy(() =>
+  import("@/MyComponents/Dashboard/SimplicityDashboard").then((m) => ({ default: m.SimplicityDashboard })),
+);
 import { companySupabase } from "@/MyComponents/supabase";
 
 const getGreeting = () => {
@@ -188,7 +196,9 @@ const Index = () => {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.35 }}
           >
-            <CWADashboard />
+            <Suspense fallback={null}>
+              <CWADashboard />
+            </Suspense>
           </motion.div>
         )}
 
@@ -200,7 +210,9 @@ const Index = () => {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.35 }}
           >
-            <SimplicityDashboard />
+            <Suspense fallback={null}>
+              <SimplicityDashboard />
+            </Suspense>
           </motion.div>
         )}
 

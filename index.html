@@ -10,9 +10,40 @@
       rel="stylesheet"
     />
     <title>TakeOver</title>
+    <style>
+      /* Instant boot splash — pure HTML/CSS, no JS, no network. Fills the
+         window the moment the document parses, so there's no gray flash while
+         the JS bundle evaluates + the creds/vault init resolves before React
+         mounts. #root sits above it (z-index) and the first full-screen app
+         paint (Orion / auth, both black) covers it seamlessly. */
+      html, body { margin: 0; background: #000; }
+      #boot-splash {
+        position: fixed; inset: 0; z-index: 0;
+        display: flex; align-items: center; justify-content: center;
+        background: #000;
+      }
+      #boot-splash .dot {
+        width: 9px; height: 9px; border-radius: 9999px; background: #34d399;
+        animation: bootpulse 1.4s ease-in-out infinite;
+      }
+      #boot-splash .label {
+        margin-left: 14px; color: #71717a;
+        font-family: Georgia, "Times New Roman", serif;
+        font-size: 12px; letter-spacing: 0.32em; text-transform: uppercase;
+      }
+      #root { position: relative; z-index: 1; }
+      @keyframes bootpulse {
+        0%, 100% { opacity: 0.25; transform: scale(1); }
+        50%      { opacity: 1;    transform: scale(1.6); }
+      }
+    </style>
   </head>
 
   <body>
+    <div id="boot-splash" aria-hidden="true">
+      <span class="dot"></span>
+      <span class="label">TakeOver</span>
+    </div>
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
