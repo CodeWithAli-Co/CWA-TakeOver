@@ -45,8 +45,7 @@ const HudCorner: React.FC<{
   size?: number;
   className?: string;
 }> = ({ pos, size = 18, className = "" }) => {
-  const rot =
-    pos === "tl" ? 0 : pos === "tr" ? 90 : pos === "br" ? 180 : 270;
+  const rot = pos === "tl" ? 0 : pos === "tr" ? 90 : pos === "br" ? 180 : 270;
   return (
     <svg
       width={size}
@@ -76,8 +75,7 @@ const TelemetryMeter: React.FC<{
   suffix?: string;
   tone?: "primary" | "neutral";
 }> = ({ icon, label, value, suffix = "%", tone = "primary" }) => {
-  const color =
-    tone === "primary" ? "bg-red-600/70" : "bg-red-400/40";
+  const color = tone === "primary" ? "bg-red-600/70" : "bg-red-400/40";
   return (
     <div className="flex flex-col gap-1">
       <div className="flex items-center justify-between text-[10px] font-mono text-red-600/60 uppercase tracking-[0.15em]">
@@ -267,7 +265,9 @@ export default function CyberpunkAuth() {
   // Stable session identifier (mock). Regenerated each mount.
   const sessionId = useRef(
     Array.from({ length: 16 }, () =>
-      Math.floor(Math.random() * 16).toString(16).toUpperCase(),
+      Math.floor(Math.random() * 16)
+        .toString(16)
+        .toUpperCase(),
     )
       .join("")
       .match(/.{1,4}/g)
@@ -337,9 +337,21 @@ export default function CyberpunkAuth() {
 
         {/* 4-corner screen registration marks */}
         <HudCorner pos="tl" size={26} className="absolute top-14 left-4 z-10" />
-        <HudCorner pos="tr" size={26} className="absolute top-14 right-4 z-10" />
-        <HudCorner pos="bl" size={26} className="absolute bottom-24 left-4 z-10" />
-        <HudCorner pos="br" size={26} className="absolute bottom-24 right-4 z-10" />
+        <HudCorner
+          pos="tr"
+          size={26}
+          className="absolute top-14 right-4 z-10"
+        />
+        <HudCorner
+          pos="bl"
+          size={26}
+          className="absolute bottom-24 left-4 z-10"
+        />
+        <HudCorner
+          pos="br"
+          size={26}
+          className="absolute bottom-24 right-4 z-10"
+        />
 
         {/* ═════════════════ TOP STATUS BAR ═════════════════ */}
         <motion.div
@@ -351,7 +363,7 @@ export default function CyberpunkAuth() {
           <div className="flex items-center gap-4">
             <span className="text-red-500/90">SYS</span>
             <span className="text-red-700/60">·</span>
-            <span>TakeOver v1.9.0</span>
+            <span>TakeOver v1.9.1</span>
             <span className="text-red-700/60">·</span>
             <span className="text-red-700/70">BUILD 4f2c9a</span>
           </div>
@@ -444,10 +456,26 @@ export default function CyberpunkAuth() {
           className="relative z-10 w-full max-w-md border border-red-900/40 bg-black/85 backdrop-blur-md rounded-md overflow-hidden shadow-[0_0_60px_rgba(127,29,29,0.25)]"
         >
           {/* Card corner brackets */}
-          <HudCorner pos="tl" size={14} className="absolute top-1.5 left-1.5 z-20" />
-          <HudCorner pos="tr" size={14} className="absolute top-1.5 right-1.5 z-20" />
-          <HudCorner pos="bl" size={14} className="absolute bottom-1.5 left-1.5 z-20" />
-          <HudCorner pos="br" size={14} className="absolute bottom-1.5 right-1.5 z-20" />
+          <HudCorner
+            pos="tl"
+            size={14}
+            className="absolute top-1.5 left-1.5 z-20"
+          />
+          <HudCorner
+            pos="tr"
+            size={14}
+            className="absolute top-1.5 right-1.5 z-20"
+          />
+          <HudCorner
+            pos="bl"
+            size={14}
+            className="absolute bottom-1.5 left-1.5 z-20"
+          />
+          <HudCorner
+            pos="br"
+            size={14}
+            className="absolute bottom-1.5 right-1.5 z-20"
+          />
 
           {/* Slow vertical scan-line sweep */}
           <motion.div
@@ -494,7 +522,11 @@ export default function CyberpunkAuth() {
                     "drop-shadow(0 0 8px rgba(220,38,38,0.4))",
                   ],
                 }}
-                transition={{ duration: 3.5, repeat: Infinity, ease: "easeInOut" }}
+                transition={{
+                  duration: 3.5,
+                  repeat: Infinity,
+                  ease: "easeInOut",
+                }}
               />
             </div>
 
@@ -517,9 +549,7 @@ export default function CyberpunkAuth() {
                     <div className="space-y-5">
                       <motion.div
                         animate={
-                          error
-                            ? { x: [0, -8, 8, -6, 6, -3, 3, 0] }
-                            : { x: 0 }
+                          error ? { x: [0, -8, 8, -6, 6, -3, 3, 0] } : { x: 0 }
                         }
                         transition={{ duration: 0.45 }}
                         className="flex justify-center gap-3"
@@ -664,11 +694,7 @@ export default function CyberpunkAuth() {
                       : "text-red-500"
                 }
               >
-                {error
-                  ? "ACCESS DENIED"
-                  : isLoading
-                    ? "VERIFYING…"
-                    : "READY"}
+                {error ? "ACCESS DENIED" : isLoading ? "VERIFYING…" : "READY"}
               </span>
             </div>
             <div className="flex items-center gap-2">

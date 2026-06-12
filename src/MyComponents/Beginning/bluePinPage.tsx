@@ -126,9 +126,30 @@ const BlueHexagonWireframe: React.FC = () => (
         stroke="#38bdf8"
         strokeWidth="1.5"
       />
-      <line x1="150" y1="30" x2="150" y2="270" stroke="#38bdf8" strokeWidth="0.75" />
-      <line x1="46" y1="90" x2="254" y2="210" stroke="#38bdf8" strokeWidth="0.75" />
-      <line x1="254" y1="90" x2="46" y2="210" stroke="#38bdf8" strokeWidth="0.75" />
+      <line
+        x1="150"
+        y1="30"
+        x2="150"
+        y2="270"
+        stroke="#38bdf8"
+        strokeWidth="0.75"
+      />
+      <line
+        x1="46"
+        y1="90"
+        x2="254"
+        y2="210"
+        stroke="#38bdf8"
+        strokeWidth="0.75"
+      />
+      <line
+        x1="254"
+        y1="90"
+        x2="46"
+        y2="210"
+        stroke="#38bdf8"
+        strokeWidth="0.75"
+      />
     </svg>
   </motion.div>
 );
@@ -240,8 +261,8 @@ export default function CyberpunkPinPage() {
               .
             </h1>
             <p className="mt-6 text-base lg:text-lg text-zinc-400 max-w-lg leading-relaxed">
-              The deck is yours. Operations, hires, projections, finance —
-              every lever in one place. Built for the people who run the show.
+              The deck is yours. Operations, hires, projections, finance — every
+              lever in one place. Built for the people who run the show.
             </p>
           </motion.div>
 
@@ -251,7 +272,7 @@ export default function CyberpunkPinPage() {
             transition={{ duration: 0.6, delay: 0.9 }}
             className="relative flex items-center gap-3 text-[11px] text-zinc-600"
           >
-            <span>v1.9.0</span>
+            <span>v1.9.1</span>
             <span className="text-zinc-800">·</span>
             <span className="inline-flex items-center gap-1.5">
               <span className="h-1.5 w-1.5 rounded-full bg-sky-400/90" />
@@ -463,14 +484,13 @@ function _DeprecatedCyberpunkPinPage() {
   const [isWrongPin, setIsWrongPin] = useState(false);
   const [activePinIndex, setActivePinIndex] = useState(-1);
   const [pinDigits, setPinDigits] = useState(["", "", "", ""]);
-  const navigate = useNavigate()
-  
+  const navigate = useNavigate();
 
   const { data: activeUser, error: activeUserError } = ActiveUser();
   if (activeUserError)
     console.log(
       "Error fetching active user for pin page",
-      activeUserError.message
+      activeUserError.message,
     );
 
   // Keypad sounds
@@ -576,17 +596,12 @@ function _DeprecatedCyberpunkPinPage() {
       document.startViewTransition(() => {
         setPinCheck("true");
       });
-    } else if (pin === "1027")
-      {
-        document.startViewTransition(() => {
-          setPinCheck("true")
-          navigate({ to: "/client" });
-          
-        })
-      } 
-    
-    
-    else {
+    } else if (pin === "1027") {
+      document.startViewTransition(() => {
+        setPinCheck("true");
+        navigate({ to: "/client" });
+      });
+    } else {
       setIsWrongPin(true);
       setIsLoading(false);
       setPinDigits(["", "", "", ""]);
@@ -930,7 +945,7 @@ function _DeprecatedCyberpunkPinPage() {
           className="fixed bottom-0 left-0 right-0 bg-black border-t border-cyan-700/50 p-2 font-mono text-xs text-cyan-600 z-20"
         >
           <div className="flex justify-between items-center">
-            <div>TAKEOVER v1.9.0 // CYBERSEC MODULE ACTIVE</div>
+            <div>TAKEOVER v1.9.1 // CYBERSEC MODULE ACTIVE</div>
             <div className="flex items-center space-x-4">
               <div>CORE TEMP: 42.3°C</div>
               <div>CPU: 12%</div>

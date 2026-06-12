@@ -107,10 +107,7 @@ const HexagonWireframe: React.FC = () => (
     animate={{ rotate: 360 }}
     transition={{ duration: 120, repeat: Infinity, ease: "linear" }}
   >
-    <svg
-      viewBox="0 0 300 300"
-      className="w-[58%] max-w-[540px] opacity-[0.12]"
-    >
+    <svg viewBox="0 0 300 300" className="w-[58%] max-w-[540px] opacity-[0.12]">
       {/* Outer dashed ring */}
       <circle
         cx="150"
@@ -129,9 +126,30 @@ const HexagonWireframe: React.FC = () => (
         strokeWidth="1.5"
       />
       {/* Counter-rotating cross lines */}
-      <line x1="150" y1="30" x2="150" y2="270" stroke="#ef4444" strokeWidth="0.75" />
-      <line x1="46" y1="90" x2="254" y2="210" stroke="#ef4444" strokeWidth="0.75" />
-      <line x1="254" y1="90" x2="46" y2="210" stroke="#ef4444" strokeWidth="0.75" />
+      <line
+        x1="150"
+        y1="30"
+        x2="150"
+        y2="270"
+        stroke="#ef4444"
+        strokeWidth="0.75"
+      />
+      <line
+        x1="46"
+        y1="90"
+        x2="254"
+        y2="210"
+        stroke="#ef4444"
+        strokeWidth="0.75"
+      />
+      <line
+        x1="254"
+        y1="90"
+        x2="46"
+        y2="210"
+        stroke="#ef4444"
+        strokeWidth="0.75"
+      />
     </svg>
   </motion.div>
 );
@@ -257,7 +275,7 @@ export default function EditorialAuth() {
             transition={{ duration: 0.6, delay: 0.9 }}
             className="relative flex items-center gap-3 text-[11px] text-zinc-600"
           >
-            <span>v1.9.0</span>
+            <span>v1.9.1</span>
             <span className="text-zinc-800">·</span>
             <span className="inline-flex items-center gap-1.5">
               <span className="h-1.5 w-1.5 rounded-full bg-emerald-500/80" />

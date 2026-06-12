@@ -55,7 +55,7 @@ function SidebarBrand() {
           </span>
           <span className="text-[10px] text-muted-foreground leading-none">
             {/* *This is the version of Simplicity & TakeOver app */}
-            {isSimplicity ? "v1.4.6" : "v1.9.0"}
+            {isSimplicity ? "v1.4.6" : "v1.9.1"}
           </span>
         </div>
       )}
@@ -76,7 +76,14 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
           </div>
 
           {/* Company Toggle — switches entire dashboard theme */}
-          <UserView userRole={[Role.CEO, Role.COO, Role.HeadOfGrowth, Role.HeadOfInternalAffairs]}>
+          <UserView
+            userRole={[
+              Role.CEO,
+              Role.COO,
+              Role.HeadOfGrowth,
+              Role.HeadOfInternalAffairs,
+            ]}
+          >
             <CompanyToggle />
           </UserView>
 
@@ -103,7 +110,12 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
 
           {/* Account Manager View */}
           <UserView userRole={Role.AccManager}>
-            <NavMain items={filterNavByCompany(accountManagerData.navMain as any, activeCompany)} />
+            <NavMain
+              items={filterNavByCompany(
+                accountManagerData.navMain as any,
+                activeCompany,
+              )}
+            />
           </UserView>
 
           {/* Marketing Specialist View */}
@@ -113,12 +125,22 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
 
           {/* Head of Internal Affairs */}
           <UserView userRole={Role.HeadOfInternalAffairs}>
-            <NavMain items={filterNavByCompany(headOfInternalAffairsData.navMain as any, activeCompany)} />
+            <NavMain
+              items={filterNavByCompany(
+                headOfInternalAffairsData.navMain as any,
+                activeCompany,
+              )}
+            />
           </UserView>
 
           {/* Head of Growth */}
           <UserView userRole={Role.HeadOfGrowth}>
-            <NavMain items={filterNavByCompany(headOfGrowthData.navMain as any, activeCompany)} />
+            <NavMain
+              items={filterNavByCompany(
+                headOfGrowthData.navMain as any,
+                activeCompany,
+              )}
+            />
           </UserView>
 
           {/* Admin View */}
@@ -133,20 +155,41 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
 
           {/* COO View — company-filtered */}
           <UserView userRole={Role.COO}>
-            <NavMain items={filterNavByCompany(cooData.navMain as any, activeCompany)} />
-            <NavProjects projects={filterProjectsByCompany(cooData.projects as any, activeCompany)} />
+            <NavMain
+              items={filterNavByCompany(cooData.navMain as any, activeCompany)}
+            />
+            <NavProjects
+              projects={filterProjectsByCompany(
+                cooData.projects as any,
+                activeCompany,
+              )}
+            />
           </UserView>
 
           {/* CEO View — company-filtered */}
           <UserView userRole={Role.CEO}>
-            <NavMain items={filterNavByCompany(ceoData.navMain as any, activeCompany)} />
-            <NavProjects projects={filterProjectsByCompany(ceoData.projects as any, activeCompany)} />
+            <NavMain
+              items={filterNavByCompany(ceoData.navMain as any, activeCompany)}
+            />
+            <NavProjects
+              projects={filterProjectsByCompany(
+                ceoData.projects as any,
+                activeCompany,
+              )}
+            />
           </UserView>
 
           {/* CFO View — company-filtered */}
           <UserView userRole={Role.CFO}>
-            <NavMain items={filterNavByCompany(cfoData.navMain as any, activeCompany)} />
-            <NavProjects projects={filterProjectsByCompany(cfoData.projects as any, activeCompany)} />
+            <NavMain
+              items={filterNavByCompany(cfoData.navMain as any, activeCompany)}
+            />
+            <NavProjects
+              projects={filterProjectsByCompany(
+                cfoData.projects as any,
+                activeCompany,
+              )}
+            />
           </UserView>
         </SidebarContent>
 
