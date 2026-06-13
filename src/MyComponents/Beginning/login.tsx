@@ -133,7 +133,17 @@ export const LoginPage = () => {
           setSubmitting(false);
           return;
         } catch (error) {
+          // IMPORTANT: this catch must always clear `submitting` and surface
+          // something to the user. Previously it only logged, which left the
+          // button stuck on "Signing in…" forever whenever phase 1 threw
+          // (e.g. a Stronghold "error loading client data" after a dev
+          // hot-reload corrupted the vault's in-memory state).
           console.error("Error finding user: ", error);
+          setAuthError(
+            "Couldn't reach your account right now. Please try signing in again.",
+          );
+          setSubmitting(false);
+          return;
         }
       }
 

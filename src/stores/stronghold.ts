@@ -74,10 +74,57 @@ export class TakeOverStronghold {
     await this.maybeInvalidateStale();
   }
 
+  /**
+   * Re-open the vault and re-hydrate the client/store from disk.
+   *
+   * Tauri's Stronghold keeps an in-memory snapshot of the client. If the
+   * webview reloads while a Rust-side async op is in flight (very common
+   * under Vite HMR — you'll see "[TAURI] Couldn't find callback id …" in the
+   * console), that snapshot can be left half-loaded. Every subsequent
+   * store op then throws "error loading client data; no data present" and,
+   * because the bound company_name reads back as undefined, sign-in breaks.
+   *
+   * heal() force-reloads from the on-disk vault.hold to recover, without
+   * tearing down the module singleton.
+   */
+  private async heal(): Promise<void> {
+    const vaultPath = `${await appDataDir()}/vault.hold`;
+    const vaultPassword = await fetchVaultPassword();
+    const stronghold = await Stronghold.load(vaultPath, vaultPassword);
+    let client: Client;
+    try {
+      client = await stronghold.loadClient(CLIENT_NAME);
+    } catch {
+      client = await stronghold.createClient(CLIENT_NAME);
+    }
+    this.stronghold = stronghold;
+    this.store = client.getStore();
+    console.warn("[stronghold] healed — vault reloaded after a bad state");
+  }
+
+  /**
+   * Run a store op, and if it fails with Stronghold's "client data" /
+   * "no data present" corruption error, reload the vault once and retry.
+   * Any other error propagates unchanged.
+   */
+  private async withHeal<T>(op: () => Promise<T>): Promise<T> {
+    try {
+      return await op();
+    } catch (err) {
+      const msg = String((err as Error)?.message ?? err).toLowerCase();
+      const recoverable =
+        msg.includes("client data") || msg.includes("no data present");
+      if (!recoverable) throw err;
+      console.warn("[stronghold] op failed, attempting heal+retry:", msg);
+      await this.heal();
+      return await op();
+    }
+  }
+
   /** Read a string value by key. Returns undefined if missing. */
   public async getRecord(key: string): Promise<string | undefined> {
     this.assertReady();
-    const raw = await this.store!.get(key);
+    const raw = await this.withHeal(() => this.store!.get(key));
     if (!raw || raw.length === 0) return undefined;
     return new TextDecoder().decode(new Uint8Array(raw));
   }
@@ -88,17 +135,19 @@ export class TakeOverStronghold {
    */
   public async insertRecord(key: string, value: string): Promise<void> {
     this.assertReady();
-    const valueBytes = Array.from(new TextEncoder().encode(value));
-    await this.store!.insert(key, valueBytes);
+    await this.withHeal(async () => {
+      const valueBytes = Array.from(new TextEncoder().encode(value));
+      await this.store!.insert(key, valueBytes);
 
-    // last_synced is the canonical "this install was last
-    // touched" timestamp. Stored as an encoded string so it
-    // round-trips through the same TextDecoder path as other
-    // records.
-    const tsBytes = Array.from(new TextEncoder().encode(String(Date.now())));
-    await this.store!.insert("last_synced", tsBytes);
+      // last_synced is the canonical "this install was last
+      // touched" timestamp. Stored as an encoded string so it
+      // round-trips through the same TextDecoder path as other
+      // records.
+      const tsBytes = Array.from(new TextEncoder().encode(String(Date.now())));
+      await this.store!.insert("last_synced", tsBytes);
 
-    await this.stronghold!.save();
+      await this.stronghold!.save();
+    });
   }
 
   /**
@@ -107,19 +156,21 @@ export class TakeOverStronghold {
    */
   public async insertManyRecords(records: { key: string, value: string }[]): Promise<void> {
     this.assertReady();
-    for (const { key, value } of records) {
-      const valueBytes = Array.from(new TextEncoder().encode(value));
-      await this.store!.insert(key, valueBytes);
-    }
+    await this.withHeal(async () => {
+      for (const { key, value } of records) {
+        const valueBytes = Array.from(new TextEncoder().encode(value));
+        await this.store!.insert(key, valueBytes);
+      }
 
-    // last_synced is the canonical "this install was last
-    // touched" timestamp. Stored as an encoded string so it
-    // round-trips through the same TextDecoder path as other
-    // records.
-    const tsBytes = Array.from(new TextEncoder().encode(String(Date.now())));
-    await this.store!.insert("last_synced", tsBytes);
+      // last_synced is the canonical "this install was last
+      // touched" timestamp. Stored as an encoded string so it
+      // round-trips through the same TextDecoder path as other
+      // records.
+      const tsBytes = Array.from(new TextEncoder().encode(String(Date.now())));
+      await this.store!.insert("last_synced", tsBytes);
 
-    await this.stronghold!.save();
+      await this.stronghold!.save();
+    });
   }
 
   /** Delete a key + persist. */
