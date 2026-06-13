@@ -21,6 +21,7 @@ import { CommandPanel } from "./ui/CommandPanel";
 import { ConfirmDialog } from "./ui/ConfirmDialog";
 import { SubtitleOverlay } from "./ui/SubtitleOverlay";
 import { DiffOverlay } from "./ui/DiffOverlay";
+import { AxonActivityHud } from "./ui/AxonActivityHud";
 import "./axon.css";
 
 export function AxonRoot({ children }: { children?: ReactNode }) {
@@ -48,6 +49,10 @@ export function AxonRoot({ children }: { children?: ReactNode }) {
             a file. Mounted at root level (not inside CommandPanel) so
             it is visible even when the panel is closed. */}
         <DiffOverlay />
+        {/* Live activity HUD — its own surface (not the Mind Map, not the
+            command drawer). Auto-appears when Axon runs so you can watch
+            each action land + verify it. Just talk to the orb. */}
+        <AxonActivityHud />
       </div>
     </AxonProvider>
   );

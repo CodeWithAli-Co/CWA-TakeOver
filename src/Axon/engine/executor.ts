@@ -192,6 +192,7 @@ export async function executeAction(
         ok: true,
         summary: result.summary,
         durationMs: Math.round(performance.now() - t0),
+        result: result.data,
       });
     }
     return { ok: true, result, actionName };

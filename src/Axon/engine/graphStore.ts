@@ -440,6 +440,8 @@ export const axonGraph = {
     summary?: string;
     error?: string;
     durationMs?: number;
+    /** The action's structured result — used to surface proof (ids/links). */
+    result?: unknown;
   }) {
     const s = getCurrentSession();
     if (!s) return;
@@ -449,6 +451,7 @@ export const axonGraph = {
     node.durationMs = args.durationMs;
     if (args.summary) node.detail = args.summary;
     if (args.error) node.error = args.error;
+    if (args.result !== undefined) node.meta = { ...(node.meta || {}), result: args.result };
     // Snap active back to the previous active so child file/error
     // nodes appended during the call stayed nested under the tool.
     if (s.activeNodeId === node.id) s.activeNodeId = undefined;
