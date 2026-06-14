@@ -1,15 +1,16 @@
 // ───────────────────────────────────────────────────────────────────
 // AxonActivityHud — the live "what Axon is doing right now" surface.
 //
-// Its own floating panel (NOT the Mind Map, NOT inside the command
-// drawer). Auto-appears the moment Axon starts a run and shows each
-// action as a clean linear step: running -> done/failed, with the
-// result summary + any proof (ids / links) so you can SEE it actually
-// landed instead of trusting "thinking…". Built for demos: you just
-// talk to the orb and watch the work happen + verify it.
+// Docked to the orb (bottom-right, just above the input) — NOT the Mind
+// Map, NOT inside the command drawer. It only appears for sessions YOU
+// started by prompting the orb (kind === "conversation" with a real
+// prompt); the autonomous background monitors (kind === "agent") never
+// pop it. Each action shows as a clean step: running -> done/failed,
+// with the result summary + any proof (ids / links) so you can SEE it
+// actually landed. Collapses to a one-line pill between runs.
 // ───────────────────────────────────────────────────────────────────
 import { useEffect, useRef, useState, useSyncExternalStore } from "react";
-import { Loader2, Check, X, Sparkles, ExternalLink } from "lucide-react";
+import { Loader2, Check, X, Sparkles, ExternalLink, ChevronDown } from "lucide-react";
 import { open as openShell } from "@tauri-apps/plugin-shell";
 import { axonGraph, type GraphNode, type GraphSession } from "../engine/graphStore";
 
@@ -83,13 +84,24 @@ export function AxonActivityHud() {
   const session: GraphSession | undefined =
     snap.sessions.find((s) => s.id === snap.currentSessionId) ?? snap.sessions[snap.sessions.length - 1];
 
-  const [dismissed, setDismissed] = useState<string | null>(null);
-  const lastIdRef = useRef<string | null>(null);
-  useEffect(() => {
-    if (session && session.id !== lastIdRef.current) { lastIdRef.current = session.id; setDismissed(null); }
-  }, [session?.id]);
+  // Only surface runs the operator kicked off by talking to the orb.
+  // Conversation sessions carry the typed prompt; autonomous monitors
+  // run as kind:"agent" and must stay invisible here.
+  const isPrompted = !!session && session.kind === "conversation" && session.prompt.trim().length > 0;
 
-  if (!session) return null;
+  const [dismissed, setDismissed] = useState<string | null>(null);
+  const [collapsed, setCollapsed] = useState(false);
+  const lastIdRef = useRef<string | null>(null);
+  // A fresh prompted run re-opens the panel (un-dismiss, expand).
+  useEffect(() => {
+    if (isPrompted && session && session.id !== lastIdRef.current) {
+      lastIdRef.current = session.id;
+      setDismissed(null);
+      setCollapsed(false);
+    }
+  }, [isPrompted, session?.id]);
+
+  if (!session || !isPrompted) return null;
   const steps = session.nodes.filter((n) => SHOW_KINDS.has(n.kind));
   if (steps.length === 0 && session.endedAt) return null;       // nothing happened
   if (dismissed === session.id) return null;
@@ -98,23 +110,50 @@ export function AxonActivityHud() {
   const failed = !!session.endedAt && (session.nodes[0]?.state === "error" || steps.some((n) => n.state === "error"));
   const doneCount = steps.filter((n) => n.state !== "running" && n.kind === "tool").length;
   const toolCount = steps.filter((n) => n.kind === "tool").length;
-  const statusText = running ? `Working · ${doneCount}/${Math.max(toolCount, doneCount)} done` : failed ? "Finished with errors" : "Completed";
+  const statusText = running ? `working · ${doneCount}/${Math.max(toolCount, doneCount)} done` : failed ? "finished with errors" : "completed";
 
+  const dot = (
+    <span className="relative flex h-2 w-2">
+      {running && <span className="absolute inline-flex h-full w-full rounded-full bg-sky-400 opacity-60 animate-ping" />}
+      <span className={`relative inline-flex h-2 w-2 rounded-full ${running ? "bg-sky-400" : failed ? "bg-red-400" : "bg-emerald-400"}`} />
+    </span>
+  );
+
+  // ── Collapsed pill — one line, docked by the orb. Click to expand. ──
+  if (collapsed) {
+    return (
+      <div className="fixed bottom-24 right-5 z-[9998] max-w-[calc(100vw-2.5rem)]" data-axon-hud>
+        <button
+          onClick={() => setCollapsed(false)}
+          className="flex items-center gap-2 pl-2.5 pr-2 py-1.5 rounded-full border border-white/10 shadow-2xl hover:border-white/20"
+          style={{ background: "rgba(10,11,16,0.94)", backdropFilter: "blur(10px)" }}
+        >
+          {dot}
+          <Sparkles size={12} className="text-zinc-300" />
+          <span className="text-[12px] font-semibold text-zinc-100" style={{ fontFamily: FONT_UI }}>Axon</span>
+          <span className="text-[11px] text-zinc-400 truncate max-w-[150px]" style={{ fontFamily: FONT_MONO }}>· {statusText}</span>
+          <ChevronDown size={13} className="text-zinc-500 rotate-180" />
+        </button>
+      </div>
+    );
+  }
+
+  // ── Expanded card — docked bottom-right, just above the orb/input. ──
   return (
     <div
-      className="fixed bottom-6 left-6 z-[9998] w-[360px] max-w-[calc(100vw-3rem)] rounded-xl border border-white/10 shadow-2xl overflow-hidden"
-      style={{ background: "rgba(10,11,16,0.92)", backdropFilter: "blur(10px)" }}
+      className="fixed bottom-24 right-5 z-[9998] w-[340px] max-w-[calc(100vw-2.5rem)] rounded-xl border border-white/10 shadow-2xl overflow-hidden"
+      style={{ background: "rgba(10,11,16,0.94)", backdropFilter: "blur(10px)" }}
       data-axon-hud
     >
       <div className="flex items-center gap-2 px-3 py-2.5 border-b border-white/10">
-        <span className="relative flex h-2 w-2">
-          {running && <span className="absolute inline-flex h-full w-full rounded-full bg-sky-400 opacity-60 animate-ping" />}
-          <span className={`relative inline-flex h-2 w-2 rounded-full ${running ? "bg-sky-400" : failed ? "bg-red-400" : "bg-emerald-400"}`} />
-        </span>
+        {dot}
         <Sparkles size={13} className="text-zinc-300" />
         <span className="text-[12px] font-semibold text-zinc-100" style={{ fontFamily: FONT_UI }}>Axon</span>
         <span className="text-[11px] text-zinc-400 truncate" style={{ fontFamily: FONT_MONO }}>· {statusText}</span>
-        <button onClick={() => setDismissed(session.id)} className="ml-auto text-zinc-500 hover:text-zinc-200"><X size={14} /></button>
+        <div className="ml-auto flex items-center gap-1.5">
+          <button onClick={() => setCollapsed(true)} title="Collapse" className="text-zinc-500 hover:text-zinc-200"><ChevronDown size={15} /></button>
+          <button onClick={() => setDismissed(session.id)} title="Dismiss" className="text-zinc-500 hover:text-zinc-200"><X size={14} /></button>
+        </div>
       </div>
 
       {session.nodes[0]?.detail && (
