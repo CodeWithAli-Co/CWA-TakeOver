@@ -40,6 +40,7 @@ const SimplicityDashboard = lazy(() =>
   import("@/MyComponents/Dashboard/SimplicityDashboard").then((m) => ({ default: m.SimplicityDashboard })),
 );
 import { companySupabase } from "@/MyComponents/supabase";
+import { TodayFrame } from "@/MyComponents/Today/TodayFrame";
 
 const getGreeting = () => {
   const hour = new Date().getHours();
@@ -64,6 +65,11 @@ const Index = () => {
   const showCWADashboard = activeCompany === "codeWithAli";
   const showSimplicityDashboard = activeCompany === "simplicityFunds";
   const showOverview = activeCompany === "all";
+
+  // ── Redesigned primary interface ──────────────────────────────
+  // The home screen is now the decision feed (TodayFrame). The legacy
+  // dashboard below stays intact — delete this early return to restore it.
+  if (true as boolean) return <TodayFrame />;
 
   return (
     <main className="">
