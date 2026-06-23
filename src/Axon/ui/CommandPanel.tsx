@@ -9,6 +9,8 @@ import { AxonSettingsPane } from "./AxonSettings";
 import { listAudit, type AuditEntry } from "../engine/auditLog";
 import { MindMap } from "./MindMap";
 import { sampleStarterPrompts } from "../actions/help";
+import { ActiveUser } from "@/stores/query";
+import { Role } from "@/MyComponents/Reusables/userView";
 
 type Tab = "conversation" | "mind" | "activity" | "audit" | "settings";
 
@@ -57,6 +59,18 @@ export function CommandPanel() {
   const [mindFullScreen, setMindFullScreen] = useState(false);
   const scrollRef = useRef<HTMLDivElement | null>(null);
 
+  // Role-gated chrome. Regular employees see ONLY the conversation +
+  // composer — just talk to the orb. CEO/COO get an "Advanced" toggle
+  // that reveals the power tabs (Mind / Activity / Audit / Settings) and
+  // the voice/automation switches. effectiveTab forces the body back to
+  // the conversation whenever the advanced surface is closed or hidden.
+  const { data: meRows } = ActiveUser();
+  const myRole = (meRows?.[0] as any)?.role;
+  const isAdmin = myRole === Role.CEO || myRole === Role.COO;
+  const [showAdvanced, setShowAdvanced] = useState(false);
+  const advancedOpen = isAdmin && showAdvanced;
+  const effectiveTab: Tab = advancedOpen ? tab : "conversation";
+
   // Esc closes the full-screen Mind Map without exiting the tab.
   useEffect(() => {
     if (!mindFullScreen) return;
@@ -88,7 +102,7 @@ export function CommandPanel() {
     {/* Full-screen Mind Map portal — escapes the panel when maximized
         so the canvas owns the whole viewport. Esc closes; the
         keydown listener above wires that up. */}
-    {tab === "mind" && mindFullScreen && (
+    {effectiveTab === "mind" && mindFullScreen && (
       <MindMap fullScreen />
     )}
     <aside className="axon-panel" data-open={panelOpen} aria-hidden={!panelOpen}>
@@ -103,13 +117,28 @@ export function CommandPanel() {
             </span>
           </div>
           <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-            <span className="axon-voicepill" data-state={voiceState}>
-              <span
-                className="axon-status-dot"
-                data-state={voiceState === "armed" ? "listening" : "idle"}
-              />
-              {VOICE_LABEL[voiceState] ?? voiceState}
-            </span>
+            {advancedOpen && (
+              <span className="axon-voicepill" data-state={voiceState}>
+                <span
+                  className="axon-status-dot"
+                  data-state={voiceState === "armed" ? "listening" : "idle"}
+                />
+                {VOICE_LABEL[voiceState] ?? voiceState}
+              </span>
+            )}
+            {/* Advanced disclosure — CEO/COO only. Employees never see the
+                power tabs or voice machinery; they just talk to the orb. */}
+            {isAdmin && (
+              <button
+                className="axon-btn"
+                onClick={() => setShowAdvanced((v) => !v)}
+                data-active={showAdvanced}
+                title={showAdvanced ? "Hide advanced controls" : "Show advanced controls"}
+                aria-label="Toggle advanced controls"
+              >
+                {showAdvanced ? "Simple" : "Advanced"}
+              </button>
+            )}
             <button
               className="axon-btn axon-btn--close"
               onClick={closePanel}
@@ -121,8 +150,9 @@ export function CommandPanel() {
           </div>
         </div>
 
-        {/* Row 2 — toggle pills + transient actions */}
+        {/* Row 2 — transient actions; advanced reveals the toggle pills */}
         <div>
+          {advancedOpen && (<>
           {/* Call-mode toggle — click flips the flag locally. Voice-wise
               the operator can also say "start a call" / "hang up". */}
           <button
@@ -211,6 +241,7 @@ export function CommandPanel() {
           >
             📔 Log
           </button>
+          </>)}
 
           {/* Spacer pushes Stop / Clear to the end of the row so
               transient actions live separately from persistent toggles. */}
@@ -226,6 +257,7 @@ export function CommandPanel() {
       </header>
 
       <div className="axon-panel-body">
+        {advancedOpen && (
         <div className="axon-tabs">
           <button
             className="axon-tab"
@@ -277,15 +309,16 @@ export function CommandPanel() {
             </button>
           )}
         </div>
+        )}
 
         <div ref={scrollRef} className="axon-pane">
-          {tab === "conversation" && <ConversationPane />}
-          {tab === "mind" && !mindFullScreen && <MindMap />}
-          {tab === "activity" && <ActivityPane />}
-          {tab === "audit" && <AuditPane />}
-          {tab === "settings" && <AxonSettingsPane />}
+          {effectiveTab === "conversation" && <ConversationPane />}
+          {effectiveTab === "mind" && !mindFullScreen && <MindMap />}
+          {effectiveTab === "activity" && <ActivityPane />}
+          {effectiveTab === "audit" && <AuditPane />}
+          {effectiveTab === "settings" && <AxonSettingsPane />}
 
-          {!ANTHROPIC_API_KEY && tab === "conversation" && (
+          {!ANTHROPIC_API_KEY && effectiveTab === "conversation" && (
             <div className="axon-hint">
               <strong style={{ color: "var(--axon-fg)" }}>AXON is offline.</strong>
               <br />
@@ -295,7 +328,7 @@ export function CommandPanel() {
           )}
         </div>
 
-        {tab === "conversation" && (
+        {effectiveTab === "conversation" && (
           <>
             <div className="axon-composer">
               <button

@@ -199,14 +199,87 @@ function flattenText(node: JSONContent | null | undefined): string {
     .join(node.type === "paragraph" ? " " : "\n");
 }
 
-/** Build a short preview from a doc's content. ~200 chars, single line. */
-function buildPreview(
-  content: JSONContent | null | undefined,
-  maxChars = 200,
-): string {
-  const text = flattenText(content).replace(/\s+/g, " ").trim();
-  if (text.length <= maxChars) return text;
-  return text.slice(0, maxChars).trim() + "…";
+/** Single-line preview from already-extracted plain text. ~200 chars. */
+function previewText(text: string, maxChars = 200): string {
+  const t = (text || "").replace(/\s+/g, " ").trim();
+  return t.length <= maxChars ? t : t.slice(0, maxChars).trim() + "…";
+}
+
+// ─── Authoritative text extraction (content JSON OR y_state) ──────
+//
+// The Workspace editor is collaborative (TipTap + Yjs). Live edits are
+// persisted to the `y_state` column (base64 Y.Doc binary) which is the
+// SOURCE OF TRUTH; the `content` JSON column is only a secondary mirror
+// and frequently lands empty for docs that were typed in the editor.
+// Reading `content` alone is why AXON reported "0 characters" — the real
+// text lives in y_state. So we prefer content JSON when it actually has
+// text, and otherwise decode y_state.
+//
+// Yjs + y-prosemirror are heavy, so we lazy-load them the first time a
+// doc actually needs decoding — keeps them out of the app's boot bundle.
+
+let _yMods:
+  | Promise<{
+      Y: any;
+      yDocToProsemirrorJSON: (doc: any, field?: string) => unknown;
+      b64ToBytes: (b64: string) => Uint8Array;
+    }>
+  | null = null;
+
+function loadYMods() {
+  if (!_yMods) {
+    _yMods = Promise.all([
+      import("yjs"),
+      import("y-prosemirror"),
+      import("@/lib/yjs/SupabaseYProvider"),
+    ]).then(([Y, yp, prov]) => ({
+      Y,
+      yDocToProsemirrorJSON: (yp as any).yDocToProsemirrorJSON,
+      b64ToBytes: (prov as any).b64ToBytes,
+    }));
+  }
+  return _yMods;
+}
+
+/** Decode the authoritative Yjs state into plain text. Walks every
+ *  top-level XmlFragment in the doc — the main "default" tab plus any
+ *  per-tab fragments — so multi-tab docs read fully. Best-effort:
+ *  returns "" on any failure rather than throwing. */
+async function textFromYState(
+  yStateB64: string | null | undefined,
+): Promise<string> {
+  if (!yStateB64 || typeof yStateB64 !== "string") return "";
+  try {
+    const { Y, yDocToProsemirrorJSON, b64ToBytes } = await loadYMods();
+    const yd = new Y.Doc();
+    Y.applyUpdate(yd, b64ToBytes(yStateB64));
+    const parts: string[] = [];
+    for (const key of yd.share.keys() as Iterable<string>) {
+      try {
+        const json = yDocToProsemirrorJSON(yd, key);
+        const t = flattenText(json as JSONContent);
+        if (t && t.trim()) parts.push(t);
+      } catch {
+        // Not a prosemirror fragment (e.g. awareness/meta) — skip it.
+      }
+    }
+    yd.destroy();
+    return parts.join("\n").trim();
+  } catch {
+    return "";
+  }
+}
+
+/** Best available plain text for a doc row. Prefers the content JSON
+ *  mirror when it has real text; otherwise falls back to decoding the
+ *  authoritative y_state. Pass a select that includes both columns. */
+async function docText(row: {
+  content?: unknown;
+  y_state?: string | null;
+}): Promise<string> {
+  const fromJson = flattenText(row?.content as JSONContent);
+  if (fromJson && fromJson.trim().length > 0) return fromJson;
+  return await textFromYState(row?.y_state ?? null);
 }
 
 /** Append paragraph or heading blocks to the END of the doc's content.
@@ -359,7 +432,7 @@ export const workspaceOverviewAction: AxonAction<
         .order("position", { ascending: true }),
       companySupabase
         .from(DOC_TABLE)
-        .select("id, title, folder_id, updated_at, archived, content")
+        .select("id, title, folder_id, updated_at, archived, content, y_state")
         .order("updated_at", { ascending: false }),
       companySupabase
         .from(SHEET_TABLE)
@@ -378,13 +451,17 @@ export const workspaceOverviewAction: AxonAction<
       docsFiltered = docsFiltered.filter((d) => d.folder_id === input.folderId);
     const totalDocs = docsFiltered.length;
     const truncated = totalDocs > cap;
-    const docs = docsFiltered.slice(0, cap).map((d) => ({
-      id: d.id,
-      title: d.title,
-      folder_id: d.folder_id ?? null,
-      updated_at: d.updated_at,
-      preview: buildPreview(d.content),
-    }));
+    const docs = await Promise.all(
+      docsFiltered.slice(0, cap).map(async (d) => ({
+        id: d.id,
+        title: d.title,
+        folder_id: d.folder_id ?? null,
+        updated_at: d.updated_at,
+        // Prefer content JSON, fall back to decoding authoritative y_state
+        // so docs typed in the collaborative editor aren't shown as empty.
+        preview: previewText(await docText(d)),
+      })),
+    );
 
     const sheets = (sheetsRes.data ?? [])
       .filter((s: any) => input.includeArchived || !s.archived)
@@ -475,12 +552,12 @@ export const workspaceReadDocAction: AxonAction<
     const docId = assertId(input?.docId, "docId", "workspace_read_doc");
     const { data, error } = await companySupabase
       .from(DOC_TABLE)
-      .select("id, title, updated_at, folder_id, content")
+      .select("id, title, updated_at, folder_id, content, y_state")
       .eq("id", docId)
       .maybeSingle();
     if (error) throw new Error(error.message);
     if (!data) throw new Error(`No doc with id ${docId}.`);
-    const text = flattenText((data as any).content);
+    const text = await docText(data as any);
     return {
       summary: `Read "${data.title}" (${text.length} chars).`,
       data: {
@@ -522,32 +599,37 @@ export const workspaceSearchAction: AxonAction<
     }
     const { data, error } = await companySupabase
       .from(DOC_TABLE)
-      .select("id, title, content, archived");
+      .select("id, title, content, archived, y_state");
     if (error) throw new Error(error.message);
 
-    const ranked = ((data ?? []) as any[])
-      .filter((d) => !d.archived)
-      .map((d) => {
-        const text = flattenText(d.content);
-        const lower = text.toLowerCase();
-        let hits = 0;
-        let firstHit = -1;
-        for (const t of terms) {
-          const idx = lower.indexOf(t);
-          if (idx >= 0) {
-            hits++;
-            if (firstHit < 0 || idx < firstHit) firstHit = idx;
+    const scored = await Promise.all(
+      ((data ?? []) as any[])
+        .filter((d) => !d.archived)
+        .map(async (d) => {
+          // Authoritative text: content JSON, or decoded y_state.
+          const text = await docText(d);
+          const lower = text.toLowerCase();
+          let hits = 0;
+          let firstHit = -1;
+          for (const t of terms) {
+            const idx = lower.indexOf(t);
+            if (idx >= 0) {
+              hits++;
+              if (firstHit < 0 || idx < firstHit) firstHit = idx;
+            }
           }
-        }
-        if (hits === 0) return null;
-        const start = Math.max(0, firstHit - 40);
-        const end = Math.min(text.length, firstHit + 160);
-        const snippet =
-          (start > 0 ? "…" : "") +
-          text.slice(start, end).replace(/\s+/g, " ") +
-          (end < text.length ? "…" : "");
-        return { docId: d.id, title: d.title, hits, snippet };
-      })
+          if (hits === 0) return null;
+          const start = Math.max(0, firstHit - 40);
+          const end = Math.min(text.length, firstHit + 160);
+          const snippet =
+            (start > 0 ? "…" : "") +
+            text.slice(start, end).replace(/\s+/g, " ") +
+            (end < text.length ? "…" : "");
+          return { docId: d.id, title: d.title, hits, snippet };
+        }),
+    );
+
+    const ranked = scored
       .filter(
         (
           x,
